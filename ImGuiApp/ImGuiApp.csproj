@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  
+  <ItemGroup>
+    <None Remove="Shaders\imgui-frag.hlsl.bytes" />
+    <None Remove="Shaders\imgui-vertex.hlsl.bytes" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Shaders\imgui-frag.hlsl.bytes" />
+    <EmbeddedResource Include="Shaders\imgui-vertex.hlsl.bytes" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.89.5" />
+    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
+  </ItemGroup>
+
+</Project>
