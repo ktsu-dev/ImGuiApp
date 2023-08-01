@@ -142,7 +142,6 @@ namespace ktsu.io
 					ImGui.End();
 				}
 
-				showImGuiDemo = true;
 				if (showImGuiDemo)
 				{
 					ImGui.ShowDemoWindow(ref showImGuiDemo);
