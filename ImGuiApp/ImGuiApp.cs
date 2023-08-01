@@ -55,7 +55,7 @@ namespace ktsu.io
 		{
 			InitialWindowState = initialWindowState ?? new();
 			nint handle = GetConsoleWindow();
-			ShowWindow(handle, SW_HIDE);
+			_ = ShowWindow(handle, SW_HIDE);
 
 			VeldridStartup.CreateWindowAndGraphicsDevice
 			(
@@ -142,6 +142,7 @@ namespace ktsu.io
 					ImGui.End();
 				}
 
+				showImGuiDemo = true;
 				if (showImGuiDemo)
 				{
 					ImGui.ShowDemoWindow(ref showImGuiDemo);

@@ -61,7 +61,6 @@ namespace ktsu.io
 			io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
 			// create device resources
-			GraphicsDevice = graphicsDevice;
 			var factory = graphicsDevice.ResourceFactory;
 			VertexBuffer = factory.CreateBuffer(new(sizeInBytes: 10000, usage: BufferUsage.VertexBuffer | BufferUsage.Dynamic));
 			VertexBuffer.Name = "ImGui.NET Vertex Buffer";
