@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   
+  <PropertyGroup>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+  
   <ItemGroup>
     <None Remove="Shaders\imgui-frag.hlsl.bytes" />
     <None Remove="Shaders\imgui-vertex.hlsl.bytes" />
