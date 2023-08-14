@@ -11,10 +11,11 @@ namespace ktsu.io
 
 	public class DividerContainer
 	{
-		private string Id { get; set; }
+		public string Id { get; init; }
 		private DividerLayout Layout { get; }
 		private int DragIndex { get; set; } = -1;
 		private List<DividerZone> Zones { get; } = new();
+		private Action<DividerContainer>? OnResized { get; set; }
 
 		public DividerContainer(string id, DividerLayout layout)
 		{
@@ -26,6 +27,20 @@ namespace ktsu.io
 		{
 			Id = id;
 			Layout = DividerLayout.Columns;
+		}
+
+		public DividerContainer(string id, Action<DividerContainer> onResized, DividerLayout layout)
+		{
+			Id = id;
+			Layout = layout;
+			OnResized = onResized;
+		}
+
+		public DividerContainer(string id, Action<DividerContainer> onResized)
+		{
+			Id = id;
+			Layout = DividerLayout.Columns;
+			OnResized = onResized;
 		}
 
 		public void Tick(float dt)
@@ -184,8 +199,13 @@ namespace ktsu.io
 				float combinedSize = resizedZone.Size + neighbourZone.Size;
 				float maxSize = combinedSize - 0.1f;
 				resize = Math.Clamp(resize, 0.1f, maxSize);
+				bool sizeDidChange = resizedZone.Size != resize;
 				resizedZone.Size = resize;
 				neighbourZone.Size = combinedSize - resize;
+				if (sizeDidChange)
+				{
+					OnResized?.Invoke(this);
+				}
 			}
 		}
 
@@ -207,5 +227,41 @@ namespace ktsu.io
 				Zones.Remove(zone);
 			}
 		}
+
+		public void Clear() => Zones.Clear();
+
+		public void SetSize(string id, float size)
+		{
+			var zone = Zones.FirstOrDefault(z => z.Id == id);
+			if (zone != null)
+			{
+				zone.Size = size;
+			}
+		}
+
+		public void SetSize(int index, float size)
+		{
+			if (index >= 0 && index < Zones.Count)
+			{
+				Zones[index].Size = size;
+			}
+		}
+
+		public void SetSizesFromList(List<float> sizes)
+		{
+			ArgumentNullException.ThrowIfNull(sizes);
+
+			if (sizes.Count != Zones.Count)
+			{
+				throw new ArgumentException("List of sizes must be the same length as the zones list");
+			}
+
+			for (int i = 0; i < sizes.Count; i++)
+			{
+				Zones[i].Size = sizes[i];
+			}
+		}
+
+		public List<float> GetSizes() => Zones.Select(z => z.Size).ToList();
 	}
 }
