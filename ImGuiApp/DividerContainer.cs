@@ -1,5 +1,5 @@
-using ImGuiNET;
 using System.Numerics;
+using ImGuiNET;
 
 namespace ktsu.io
 {
@@ -17,30 +17,26 @@ namespace ktsu.io
 		private List<DividerZone> Zones { get; } = new();
 		private Action<DividerContainer>? OnResized { get; set; }
 
-		public DividerContainer(string id, DividerLayout layout)
+		public DividerContainer(string id, Action<DividerContainer>? onResized, DividerLayout layout)
 		{
 			Id = id;
 			Layout = layout;
+			OnResized = onResized;
 		}
 
 		public DividerContainer(string id)
+			: this(id, null, DividerLayout.Columns)
 		{
-			Id = id;
-			Layout = DividerLayout.Columns;
 		}
 
-		public DividerContainer(string id, Action<DividerContainer> onResized, DividerLayout layout)
+		public DividerContainer(string id, DividerLayout layout)
+			: this(id, null, layout)
 		{
-			Id = id;
-			Layout = layout;
-			OnResized = onResized;
 		}
 
-		public DividerContainer(string id, Action<DividerContainer> onResized)
+		public DividerContainer(string id, Action<DividerContainer>? onResized)
+			: this(id, onResized, DividerLayout.Columns)
 		{
-			Id = id;
-			Layout = DividerLayout.Columns;
-			OnResized = onResized;
 		}
 
 		public void Tick(float dt)
