@@ -1,4 +1,5 @@
-# Customized for maximum strictness by https://github.com/ktsu-io
+# Customized for maximum strictness
+# https://github.com/ktsu-io
 
 # Version: 4.1.1 (Using https://semver.org/)
 # Updated: 2022-05-23
@@ -249,7 +250,7 @@ csharp_preserve_single_line_statements = false
 csharp_preserve_single_line_blocks = true
 # Namespace options
 # https://docs.microsoft.com/dotnet/fundamentals/code-analysis/style-rules/formatting-rules#namespace-options
-csharp_style_namespace_declarations = block_scoped
+csharp_style_namespace_declarations = file_scoped
 
 ##########################################
 # .NET Naming Rules

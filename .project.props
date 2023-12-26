@@ -6,9 +6,8 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <VersionPrefix>1.0.0</VersionPrefix>
-    <VersionSuffix>alpha.1</VersionSuffix>
-    <RepositoryUrl>https://github.com/ktsu-io/ImGuiApp.git</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/ktsu-io/ImGuiApp</PackageProjectUrl>
+    <VersionSuffix>alpha.2</VersionSuffix>
+    <PackageDescription>A bootstrap library to give you an environment to build an ImGUI.NET application with.</PackageDescription>
   </PropertyGroup>
 
 </Project>
