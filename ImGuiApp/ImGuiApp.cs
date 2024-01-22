@@ -49,6 +49,10 @@ public static partial class ImGuiApp
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
+	private static bool shouldTick = true;
+
+	public static void Stop() => shouldTick = false;
+
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate) => Start(windowTitle, initialWindowState, tickDelegate, menuDelegate: null, windowResizedDelegate: null);
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action menuDelegate) => Start(windowTitle, initialWindowState, tickDelegate, menuDelegate, windowResizedDelegate: null);
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action? menuDelegate, Action? windowResizedDelegate)
@@ -101,7 +105,7 @@ public static partial class ImGuiApp
 			}
 
 			var snapshot = sdlWindow.PumpEvents();
-			if (!sdlWindow.Exists)
+			if (!sdlWindow.Exists || !shouldTick)
 			{
 				return;
 			}
