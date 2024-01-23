@@ -62,6 +62,8 @@ public static partial class ImGuiApp
 				window, // pass in our window
 				inputContext = window.CreateInput() // create an input context
 			);
+
+			ImGui.GetStyle().WindowRounding = 0;
 		};
 
 		// Handle resizes
@@ -104,8 +106,6 @@ public static partial class ImGuiApp
 
 		nint handle = GetConsoleWindow();
 		_ = ShowWindow(handle, SW_HIDE);
-
-		ImGui.GetStyle().WindowRounding = 0;
 
 		// Now that everything's defined, let's run this bad boy!
 		window.Run();
