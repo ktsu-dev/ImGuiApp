@@ -1,11 +1,10 @@
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using Veldrid;
-using Veldrid.StartupUtilities;
-using Window = Veldrid.Sdl2.Sdl2Window;
-using WindowSizeState = Veldrid.WindowState;
+using Silk.NET.Input;
+using Silk.NET.OpenGL;
+using Silk.NET.OpenGL.Extensions.ImGui;
+using Silk.NET.Windowing;
 
 namespace ktsu.io.ImGuiApp;
 
@@ -13,26 +12,11 @@ public class ImGuiAppWindowState
 {
 	public Vector2 Size { get; set; } = new(1280, 720);
 	public Vector2 Pos { get; set; } = new(50, 50);
-	public WindowSizeState WindowSizeState { get; set; } = WindowSizeState.Normal;
 }
 
 public static partial class ImGuiApp
 {
-	public static Window? Window => sdlWindow;
-
-	private static Window? sdlWindow;
-	private static GraphicsDevice? graphicsDevice;
-	private static CommandList? commandList;
-	private static ImGuiController? imguiController;
-
-	public static ImGuiAppWindowState WindowState => new()
-	{
-		Pos = Window is null ? Vector2.Zero : new(Window.X, Window.Y),
-		Size = Window is null ? Vector2.Zero : new(Window.Width, Window.Height),
-		WindowSizeState = Window is null ? WindowSizeState.Normal : Window.WindowState,
-	};
-
-	private static Vector4 ClearColor { get; } = new(0.45f, 0.55f, 0.6f, 1.0f);
+	private static IWindow? window;
 	private static ImGuiAppWindowState InitialWindowState { get; set; } = new();
 
 	[LibraryImport("kernel32.dll")]
@@ -44,125 +28,138 @@ public static partial class ImGuiApp
 	private static partial bool ShowWindow(nint hWnd, int nCmdShow);
 
 	private const int SW_HIDE = 0;
-	//private const int SW_SHOW = 5;
+	private const int SW_SHOW = 5;
 
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
-	private static bool shouldTick = true;
-
-	public static void Stop() => shouldTick = false;
+	public static void Stop() => window?.Close();
 
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate) => Start(windowTitle, initialWindowState, tickDelegate, menuDelegate: null, windowResizedDelegate: null);
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action menuDelegate) => Start(windowTitle, initialWindowState, tickDelegate, menuDelegate, windowResizedDelegate: null);
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action? menuDelegate, Action? windowResizedDelegate)
 	{
-		InitialWindowState = initialWindowState ?? new();
+		var options = WindowOptions.Default;
+		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
+		options.Title = windowTitle;
+
+		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
+
+		// Create a Silk.NET window as usual
+		window = Window.Create(options);
+
+		// Declare some variables
+		ImGuiController? controller = null;
+		GL? gl = null;
+		IInputContext? inputContext = null;
+
+		// Our loading function
+		window.Load += () =>
+		{
+			controller = new ImGuiController
+			(
+				gl = window.CreateOpenGL(), // load OpenGL
+				window, // pass in our window
+				inputContext = window.CreateInput() // create an input context
+			);
+		};
+
+		// Handle resizes
+		window.FramebufferResize += s =>
+		{
+			// Adjust the viewport to the new window size
+			gl?.Viewport(s);
+		};
+
+		// The render function
+		window.Render += delta =>
+		{
+			// Make sure ImGui is up-to-date
+			controller?.Update((float)delta);
+
+			// This is where you'll do any rendering beneath the ImGui context
+			// Here, we just have a blank screen.
+			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
+
+			RenderMenu(menuDelegate);
+			RenderWindowContents(tickDelegate, (float)delta);
+
+			// Make sure ImGui renders too!
+			controller?.Render();
+		};
+
+		// The closing function
+		window.Closing += () =>
+		{
+			// Dispose our controller first
+			controller?.Dispose();
+
+			// Dispose the input context
+			inputContext?.Dispose();
+
+			// Unload OpenGL
+			gl?.Dispose();
+		};
+
 		nint handle = GetConsoleWindow();
 		_ = ShowWindow(handle, SW_HIDE);
 
-		VeldridStartup.CreateWindowAndGraphicsDevice
-		(
-			windowCI: new WindowCreateInfo
-			(
-				x: (int)InitialWindowState.Pos.X,
-				y: (int)InitialWindowState.Pos.Y,
-				windowWidth: (int)InitialWindowState.Size.X,
-				windowHeight: (int)InitialWindowState.Size.Y,
-				windowInitialState: InitialWindowState.WindowSizeState,
-				windowTitle: windowTitle
-			),
-			deviceOptions: new
-			(
-				debug: true,
-				swapchainDepthFormat: null,
-				syncToVerticalBlank: true
-			),
-			window: out sdlWindow,
-			gd: out graphicsDevice
-		);
-
-		commandList = graphicsDevice.ResourceFactory.CreateCommandList();
-		imguiController = new ImGuiController(graphicsDevice, graphicsDevice.MainSwapchain.Framebuffer.OutputDescription, sdlWindow.Width, sdlWindow.Height);
-
-		sdlWindow.Resized += () =>
-		{
-			graphicsDevice.MainSwapchain.Resize((uint)sdlWindow.Width, (uint)sdlWindow.Height);
-			imguiController.WindowResized(sdlWindow.Width, sdlWindow.Height);
-			windowResizedDelegate?.Invoke();
-		};
-
 		ImGui.GetStyle().WindowRounding = 0;
 
-		Stopwatch stopWatch = new();
-		while (tickDelegate != null)
+		// Now that everything's defined, let's run this bad boy!
+		window.Run();
+
+		window.Dispose();
+	}
+
+	public static void RenderMenu(Action? menuDelegate)
+	{
+		if (menuDelegate is not null)
 		{
-			float dt = stopWatch.ElapsedMilliseconds / 1000f;
-			stopWatch.Restart();
-			if (dt == 0)
+			if (ImGui.BeginMainMenuBar())
 			{
-				dt = 1f / 60f;
-			}
+				menuDelegate();
 
-			var snapshot = sdlWindow.PumpEvents();
-			if (!sdlWindow.Exists || !shouldTick)
-			{
-				return;
-			}
-
-			imguiController.Update(dt, snapshot);
-
-			if (menuDelegate != null)
-			{
-				if (ImGui.BeginMainMenuBar())
+				if (ImGui.BeginMenu("Debug"))
 				{
-					menuDelegate();
-
-					if (ImGui.BeginMenu("Debug"))
+					if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
 					{
-						if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
-						{
-							showImGuiDemo = !showImGuiDemo;
-						}
-
-						if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
-						{
-							showImGuiMetrics = !showImGuiMetrics;
-						}
-
-						ImGui.EndMenu();
+						showImGuiDemo = !showImGuiDemo;
 					}
 
-					ImGui.EndMainMenuBar();
+					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
+					{
+						showImGuiMetrics = !showImGuiMetrics;
+					}
+
+					ImGui.EndMenu();
 				}
-			}
 
-			bool b = true;
-			ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
-			ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-			if (ImGui.Begin(windowTitle, ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoResize))
-			{
-				tickDelegate(dt);
-				ImGui.End();
+				ImGui.EndMainMenuBar();
 			}
+		}
+	}
 
-			if (showImGuiDemo)
-			{
-				ImGui.ShowDemoWindow(ref showImGuiDemo);
-			}
+	public static void RenderWindowContents(Action<float>? tickDelegate, float dt)
+	{
+		bool b = true;
+		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
+		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
+		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoResize))
+		{
+			tickDelegate?.Invoke(dt);
+			ImGui.End();
+		}
 
-			if (showImGuiMetrics)
-			{
-				ImGui.ShowMetricsWindow(ref showImGuiMetrics);
-			}
+		if (showImGuiDemo)
+		{
+			ImGui.ShowDemoWindow(ref showImGuiDemo);
+		}
 
-			commandList.Begin();
-			commandList.SetFramebuffer(graphicsDevice.MainSwapchain.Framebuffer);
-			commandList.ClearColorTarget(0, new RgbaFloat(ClearColor));
-			imguiController.Render(graphicsDevice, commandList);
-			commandList.End();
-			graphicsDevice.SubmitCommands(commandList);
-			graphicsDevice.SwapBuffers(graphicsDevice.MainSwapchain);
+		if (showImGuiMetrics)
+		{
+			ImGui.ShowMetricsWindow(ref showImGuiMetrics);
 		}
 	}
 }
