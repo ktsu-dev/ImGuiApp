@@ -81,7 +81,7 @@ public static partial class ImGuiApp
 
 			// This is where you'll do any rendering beneath the ImGui context
 			// Here, we just have a blank screen.
-			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+			gl?.ClearColor(System.Drawing.Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
 			RenderMenu(menuDelegate);

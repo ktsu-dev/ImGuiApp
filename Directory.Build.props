@@ -1,7 +1,5 @@
 <Project>
 
-  <Import Project=".project.props" />
-
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -10,6 +8,7 @@
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <WarningLevel>9999</WarningLevel>
@@ -18,8 +17,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\.project.props" />
+    <None Include="Directory.Build.props" />
     <None Include="..\$(PackageLicenseFile)" Pack="True" PackagePath="" Visible="False" />
+    <InternalsVisibleTo Include="$(RootNamespace).Test" />
   </ItemGroup>
 
 </Project>
