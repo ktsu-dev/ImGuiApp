@@ -84,6 +84,12 @@ public static partial class ImGuiApp
 		{
 			// Adjust the viewport to the new window size
 			gl?.Viewport(s);
+			windowResizedDelegate?.Invoke();
+		};
+
+		window.Move += (p) =>
+		{
+			windowResizedDelegate?.Invoke();
 		};
 
 		// The render function
