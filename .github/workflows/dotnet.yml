@@ -36,4 +36,4 @@ jobs:
     - name: Create the package for nuget
       run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} 
     - name: Publish the package to nuget
-      run: dotnet nuget push *.*nupkg --api-key ${{secrets.NUGET_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate
