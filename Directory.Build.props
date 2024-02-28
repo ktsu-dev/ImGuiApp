@@ -20,6 +20,7 @@
     <None Include="Directory.Build.props" />
     <None Include="..\$(PackageLicenseFile)" Pack="True" PackagePath="" Visible="False" />
     <InternalsVisibleTo Include="$(RootNamespace).Test" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>
