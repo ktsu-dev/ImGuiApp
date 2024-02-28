@@ -12,12 +12,23 @@ public class ImGuiAppWindowState
 {
 	public Vector2 Size { get; set; } = new(1280, 720);
 	public Vector2 Pos { get; set; } = new(50, 50);
+	public WindowState LayoutState { get; set; }
 }
 
 public static partial class ImGuiApp
 {
 	private static IWindow? window;
 	private static ImGuiAppWindowState InitialWindowState { get; set; } = new();
+
+	public static ImGuiAppWindowState WindowState
+	{
+		get => new()
+		{
+			Size = new(window?.Size.X ?? 1280, window?.Size.Y ?? 720),
+			Pos = new(window?.Position.X ?? 50, window?.Position.Y ?? 50),
+			LayoutState = window?.WindowState ?? Silk.NET.Windowing.WindowState.Normal
+		};
+	}
 
 	[LibraryImport("kernel32.dll")]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
@@ -40,8 +51,10 @@ public static partial class ImGuiApp
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action? menuDelegate, Action? windowResizedDelegate)
 	{
 		var options = WindowOptions.Default;
-		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
 		options.Title = windowTitle;
+		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
+		options.Position = new((int)initialWindowState.Pos.X, (int)initialWindowState.Pos.Y);
+		options.WindowState = initialWindowState.LayoutState;
 
 		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
 
