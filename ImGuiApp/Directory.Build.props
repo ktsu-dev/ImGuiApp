@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <VersionPrefix>1.0.0</VersionPrefix>
-    <VersionSuffix>alpha.8</VersionSuffix>
+    <VersionSuffix>alpha.9</VersionSuffix>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageDescription>A bootstrap library to give you an environment to build an ImGUI.NET application with.</PackageDescription>
   </PropertyGroup>
