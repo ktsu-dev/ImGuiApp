@@ -27,14 +27,10 @@ jobs:
         dotnet-version: 7.0.x
     - name: Install dotnet-script
       run: dotnet tool install -g dotnet-script
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore --configuration Debug --verbosity normal -p:Version=$(cat VERSION)
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
-    - name: Create the package for nuget
-      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:Version=$(cat VERSION) -p:PackageDescription='$(cat DESCRIPTION)' -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} 
+    - name: Run Tests
+      run: dotnet test
+    - name: Build the package for nuget
+      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:Version=$(cat VERSION) -p:Authors=$(cat AUTHORS) -p:PackageLicenseFile=LICENSE -p:PackageReadmeFile=README.md -p:PackageDescription='$(cat DESCRIPTION)' -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} -p:IncludeContentInPack=true
     - name: Publish the package to nuget
       if: ${{ github.event_name == 'push' }}
       run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate
