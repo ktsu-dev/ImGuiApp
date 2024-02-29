@@ -34,7 +34,7 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Create the package for nuget
-      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:Version=$(cat VERSION) -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} 
+      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:Version=$(cat VERSION) -p:PackageDescription='$(cat DESCRIPTION)' -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} 
     - name: Publish the package to nuget
       if: ${{ github.event_name == 'push' }}
       run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate

@@ -1,12 +1,14 @@
 <Project>
 
   <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>ktsu.io</Authors>
     <RootNamespace>$(Authors.Replace(" ", "")).$(MSBuildProjectName.Replace(" ", ""))</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <AnalysisLevel>latest-all</AnalysisLevel>
@@ -18,7 +20,8 @@
 
   <ItemGroup>
     <None Include="Directory.Build.props" />
-    <None Include="..\$(PackageLicenseFile)" Pack="True" PackagePath="" Visible="False" />
+    <None Include="..\$(PackageLicenseFile)" Pack="True" PackagePath="\" />
+    <None Include="..\$(PackageReadmeFile)" Pack="True" PackagePath="\"/>
     <InternalsVisibleTo Include="$(RootNamespace).Test" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
   </ItemGroup>
