@@ -1,20 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  
-  <PropertyGroup>
-    <GenerateDocumentationFile>False</GenerateDocumentationFile>
-    <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
-  </PropertyGroup>
-  
-  <ItemGroup>
-    <None Remove="Shaders\imgui-frag.hlsl.bytes" />
-    <None Remove="Shaders\imgui-vertex.hlsl.bytes" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Shaders\imgui-frag.hlsl.bytes" />
-    <EmbeddedResource Include="Shaders\imgui-vertex.hlsl.bytes" />
-  </ItemGroup>
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Silk.NET" Version="2.20.0" />

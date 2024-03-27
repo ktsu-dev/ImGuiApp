@@ -4,6 +4,9 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Authors>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("AUTHORS"))))</Authors>
+    <Version>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("VERSION"))))</Version>
+    <Description>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("DESCRIPTION"))))</Description>
     <RootNamespace>$(Authors.Replace(" ", "")).$(MSBuildProjectName.Replace(" ", ""))</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>

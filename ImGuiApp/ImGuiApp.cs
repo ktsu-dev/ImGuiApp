@@ -1,3 +1,7 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+namespace ktsu.io.ImGuiApp;
+
 using System.Numerics;
 using System.Runtime.InteropServices;
 using ImGuiNET;
@@ -6,9 +10,9 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 
-namespace ktsu.io.ImGuiApp;
 
 public class ImGuiAppWindowState
+
 {
 	public Vector2 Size { get; set; } = new(1280, 720);
 	public Vector2 Pos { get; set; } = new(50, 50);
@@ -35,6 +39,7 @@ public static partial class ImGuiApp
 
 	[LibraryImport("user32.dll")]
 	[return: MarshalAs(UnmanagedType.Bool)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	private static partial bool ShowWindow(nint hWnd, int nCmdShow);
 
 	private const int SW_HIDE = 0;
@@ -44,10 +49,13 @@ public static partial class ImGuiApp
 
 	public static void Stop() => window?.Close();
 
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action onStart, Action<float> onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action onStart, Action<float> onTick, Action onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action onStart, Action<float> onTick, Action? onMenu, Action? onWindowResized)
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized)
 	{
+		ArgumentNullException.ThrowIfNull(windowTitle, nameof(windowTitle));
+		ArgumentNullException.ThrowIfNull(initialWindowState, nameof(initialWindowState));
+
 		var options = WindowOptions.Default;
 		options.Title = windowTitle;
 		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
