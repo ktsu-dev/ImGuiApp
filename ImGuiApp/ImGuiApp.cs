@@ -75,6 +75,7 @@ public static partial class ImGuiApp
 			);
 
 			ImGui.GetStyle().WindowRounding = 0;
+			onStart?.Invoke();
 		};
 
 		// Handle resizes
@@ -123,8 +124,6 @@ public static partial class ImGuiApp
 
 		nint handle = GetConsoleWindow();
 		_ = ShowWindow(handle, SW_HIDE);
-
-		onStart?.Invoke();
 
 		// Now that everything's defined, let's run this bad boy!
 		window.Run();
