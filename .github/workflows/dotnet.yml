@@ -30,7 +30,7 @@ jobs:
     - name: Run Tests
       run: dotnet test
     - name: Build the package for nuget
-      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:Version=$(cat VERSION) -p:Authors=$(cat AUTHORS) -p:PackageLicenseFile=LICENSE -p:PackageReadmeFile=README.md -p:PackageDescription='$(cat DESCRIPTION)' -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} -p:IncludeContentInPack=true
+      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:PackageLicenseFile=LICENSE -p:PackageReadmeFile=README.md -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} -p:IncludeContentInPack=true
     - name: Publish the package to nuget
       if: ${{ github.event_name == 'push' }}
       run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate
