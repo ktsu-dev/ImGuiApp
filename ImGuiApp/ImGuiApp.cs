@@ -18,7 +18,6 @@ public class ImGuiAppWindowState
 public static partial class ImGuiApp
 {
 	private static IWindow? window;
-	private static ImGuiAppWindowState InitialWindowState { get; set; } = new();
 
 	public static ImGuiAppWindowState WindowState
 	{
@@ -39,16 +38,15 @@ public static partial class ImGuiApp
 	private static partial bool ShowWindow(nint hWnd, int nCmdShow);
 
 	private const int SW_HIDE = 0;
-	private const int SW_SHOW = 5;
 
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
 	public static void Stop() => window?.Close();
 
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate) => Start(windowTitle, initialWindowState, tickDelegate, menuDelegate: null, windowResizedDelegate: null);
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action menuDelegate) => Start(windowTitle, initialWindowState, tickDelegate, menuDelegate, windowResizedDelegate: null);
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action<float> tickDelegate, Action? menuDelegate, Action? windowResizedDelegate)
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action onStart, Action<float> onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action onStart, Action<float> onTick, Action onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action onStart, Action<float> onTick, Action? onMenu, Action? onWindowResized)
 	{
 		var options = WindowOptions.Default;
 		options.Title = windowTitle;
@@ -84,12 +82,12 @@ public static partial class ImGuiApp
 		{
 			// Adjust the viewport to the new window size
 			gl?.Viewport(s);
-			windowResizedDelegate?.Invoke();
+			onWindowResized?.Invoke();
 		};
 
 		window.Move += (p) =>
 		{
-			windowResizedDelegate?.Invoke();
+			onWindowResized?.Invoke();
 		};
 
 		// The render function
@@ -103,8 +101,8 @@ public static partial class ImGuiApp
 			gl?.ClearColor(System.Drawing.Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-			RenderMenu(menuDelegate);
-			RenderWindowContents(tickDelegate, (float)delta);
+			RenderMenu(onMenu);
+			RenderWindowContents(onTick, (float)delta);
 
 			// Make sure ImGui renders too!
 			controller?.Render();
@@ -125,6 +123,8 @@ public static partial class ImGuiApp
 
 		nint handle = GetConsoleWindow();
 		_ = ShowWindow(handle, SW_HIDE);
+
+		onStart?.Invoke();
 
 		// Now that everything's defined, let's run this bad boy!
 		window.Run();
