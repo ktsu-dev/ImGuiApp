@@ -1,3 +1,3 @@
 # ImGuiApp
 
-A windows application husk to build with ImGUI.NET inside of.
+A dotnet application husk to build with ImGUI.NET inside of.
