@@ -79,11 +79,11 @@ public static partial class ImGuiApp
 			(
 				gl = window.CreateOpenGL(), // load OpenGL
 				window, // pass in our window
-				inputContext = window.CreateInput() // create an input context
+				inputContext = window.CreateInput(), // create an input context
+				onConfigureIO: onStart
 			);
 
 			ImGui.GetStyle().WindowRounding = 0;
-			onStart?.Invoke();
 		};
 
 		// Handle resizes
