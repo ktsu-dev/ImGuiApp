@@ -13,7 +13,7 @@ internal class ImGuiAppDemo
 	private static bool showImGuiDemo;
 
 	private static void Main() =>
-		ImGuiApp.Start(nameof(ImGuiAppDemo), new ImGuiAppWindowState(), OnStart, OnTick, OnMenu, OnWindowResized);
+		ImGuiApp.Start(nameof(ImGuiAppDemo), new(), OnStart, OnTick, OnMenu, OnWindowResized);
 
 	private static void OnStart() => {}
 
