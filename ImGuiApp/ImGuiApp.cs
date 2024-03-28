@@ -10,7 +10,6 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 
-
 public class ImGuiAppWindowState
 
 {
@@ -23,12 +22,14 @@ public static partial class ImGuiApp
 {
 	private static IWindow? window;
 
+	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
+
 	public static ImGuiAppWindowState WindowState
 	{
 		get => new()
 		{
-			Size = new(window?.Size.X ?? 1280, window?.Size.Y ?? 720),
-			Pos = new(window?.Position.X ?? 50, window?.Position.Y ?? 50),
+			Size = LastNormalWindowState.Size,
+			Pos = LastNormalWindowState.Pos,
 			LayoutState = window?.WindowState ?? Silk.NET.Windowing.WindowState.Normal
 		};
 	}
@@ -61,6 +62,7 @@ public static partial class ImGuiApp
 		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
 		options.Position = new((int)initialWindowState.Pos.X, (int)initialWindowState.Pos.Y);
 		options.WindowState = initialWindowState.LayoutState;
+		LastNormalWindowState = initialWindowState;
 
 		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
 
@@ -91,11 +93,23 @@ public static partial class ImGuiApp
 		{
 			// Adjust the viewport to the new window size
 			gl?.Viewport(s);
+			if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
+			{
+				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
+				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
+				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			}
 			onWindowResized?.Invoke();
 		};
 
 		window.Move += (p) =>
 		{
+			if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
+			{
+				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
+				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
+				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			}
 			onWindowResized?.Invoke();
 		};
 
