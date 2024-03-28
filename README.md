@@ -2,6 +2,7 @@
 
 A bootstrap library to give you an environment to build an ImGUI.NET application with.
 
+## Minimal Example
 ```csharp
 namespace ktsu.io.ImGuiAppDemo;
 
