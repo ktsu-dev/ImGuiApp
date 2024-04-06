@@ -186,8 +186,12 @@ public static partial class ImGuiApp
 		bool b = true;
 		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
 		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoResize))
+		var colors = ImGui.GetStyle().Colors;
+		var borderColor = colors[(int)ImGuiCol.Border];
+		colors[(int)ImGuiCol.Border] = new();
+		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 		{
+			colors[(int)ImGuiCol.Border] = borderColor;
 			tickDelegate?.Invoke(dt);
 			ImGui.End();
 		}
