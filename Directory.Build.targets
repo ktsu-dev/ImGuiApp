@@ -1,0 +1,71 @@
+<Project>
+    <PropertyGroup>
+    <IsPrerelease Condition="$(Version.Contains('-'))">True</IsPrerelease>
+    <IsExecutable Condition="$(OutputType) == 'exe'">True</IsExecutable>
+    <IsTest Condition="$(IsTestProject) == true">True</IsTest>
+    <IsLibrary Condition="'$(IsExecutable)$(IsTest)' == ''">True</IsLibrary>
+    <IsPrimaryProject Condition="$(MSBuildProjectName) == '$(SolutionName)'">True</IsPrimaryProject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(IsTest) != true">
+    <RootNamespace>$(NamespacePrefix).$(NamespaceSuffix)</RootNamespace>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(IsTest) == true">
+    <RootNamespace>Test</RootNamespace>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591;CA2225;</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(IsLibrary) == true">
+    <LangVersion>11.0</LangVersion>
+    <IsPackable>True</IsPackable>
+    <EnablePackageValidation>True</EnablePackageValidation>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(IsLibrary) != true">
+    <IsPackable>False</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(IsPrerelease) == true">
+    <NoWarn>$(NoWarn);CS1591;</NoWarn>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(RootNamespace).Test" />
+    <InternalsVisibleTo Include="Test" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(IsTest) != true">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+    <InternalsVisibleTo Include="$(RootNamespace).Test" />
+    <InternalsVisibleTo Include="Test" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="$(IsPrimaryProject) == true">
+    <None Include="..\LICENSE" Pack="True" PackagePath="\" />
+    <None Include="..\README.md" Pack="True" PackagePath="\"/>
+    <None Include="..\DESCRIPTION" Pack="True" PackagePath="\"/>
+    <None Include="..\AUTHORS" Pack="True" PackagePath="\"/>
+    <None Include="..\VERSION" Pack="True" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="$(IsTest) == true">
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <ProjectReference Include="..\$(SolutionName)\$(SolutionName).csproj" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.4.3" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.4.3" />
+  </ItemGroup>
+
+</Project>

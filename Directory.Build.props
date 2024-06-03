@@ -1,29 +1,21 @@
 <Project>
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <SolutionPath>$([System.IO.Path]::GetFullPath($([System.IO.Directory]::GetFiles("$(MSBuildThisFileDirectory)", "*.sln")[0])))</SolutionPath>
+    <SolutionName>$([System.IO.Path]::GetFileNameWithoutExtension($(SolutionPath)))</SolutionName>
+    <SolutionDirectory>$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDirectory>
+    
     <Authors>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("AUTHORS"))))</Authors>
     <Version>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("VERSION"))))</Version>
     <Description>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("DESCRIPTION"))))</Description>
-    <RootNamespace>$(Authors.Replace(" ", "")).$(MSBuildProjectName.Replace(" ", ""))</RootNamespace>
-    <AssemblyName>$(RootNamespace)</AssemblyName>
-    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    
+    <NamespacePrefix>$(Authors.Replace(" ", ""))</NamespacePrefix>
+    <NamespaceSuffix>$(MSBuildProjectName.Replace(" ", ""))</NamespaceSuffix>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CA1724;CA1034;CA1000;</NoWarn>
+    <EnablePackageValidation>True</EnablePackageValidation>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <AnalysisLevel>latest-all</AnalysisLevel>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <WarningLevel>9999</WarningLevel>
-    <NoWarn>CA1724;CA1034;CA1000</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="..\LICENSE" Pack="True" PackagePath="\" />
-    <None Include="..\README.md" Pack="True" PackagePath="\"/>
-    <None Include="..\DESCRIPTION" Pack="True" PackagePath="\"/>
-    <None Include="..\AUTHORS" Pack="True" PackagePath="\"/>
-    <InternalsVisibleTo Include="$(RootNamespace).Test" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
-  </ItemGroup>
-
 </Project>
