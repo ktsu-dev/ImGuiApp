@@ -1,5 +1,5 @@
 <Project>
-    <PropertyGroup>
+  <PropertyGroup>
     <IsPrerelease Condition="$(Version.Contains('-'))">True</IsPrerelease>
     <IsExecutable Condition="$(OutputType) == 'exe'">True</IsExecutable>
     <IsTest Condition="$(IsTestProject) == true">True</IsTest>
@@ -8,14 +8,12 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsTest) != true">
-    <RootNamespace>$(NamespacePrefix).$(NamespaceSuffix)</RootNamespace>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsTest) == true">
-    <RootNamespace>Test</RootNamespace>
     <AnalysisLevel>latest</AnalysisLevel>
     <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);CS1591;CA2225;</NoWarn>
@@ -35,15 +33,6 @@
     <NoWarn>$(NoWarn);CS1591;</NoWarn>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
-
-  <PropertyGroup>
-    <AssemblyName>$(RootNamespace)</AssemblyName>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="$(RootNamespace).Test" />
-    <InternalsVisibleTo Include="Test" />
-  </ItemGroup>
 
   <ItemGroup Condition="$(IsTest) != true">
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
