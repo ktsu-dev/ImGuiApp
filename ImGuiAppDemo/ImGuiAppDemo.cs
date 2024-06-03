@@ -11,8 +11,8 @@ internal class ImGuiAppDemo
 	private static void Main() =>
 		ImGuiApp.Start(nameof(ImGuiAppDemo), new ImGuiAppWindowState(), OnStart, OnTick, OnMenu, OnWindowResized);
 
-	private static int[] FontSizes { get; } = { 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48 };
-	private static Dictionary<int, ImFontPtr> Fonts { get; } = new();
+	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static Dictionary<int, ImFontPtr> Fonts { get; } = [];
 
 	internal static void InitFonts()
 	{
