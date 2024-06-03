@@ -25,7 +25,7 @@ jobs:
     - name: Setup .NET Core SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 7.0.x
+        dotnet-version: 8.0.x
     - name: Install dotnet-script
       run: dotnet tool install -g dotnet-script
     - name: Run Tests
@@ -33,7 +33,8 @@ jobs:
     - name: Build the package for nuget
       run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:PackageLicenseFile=LICENSE -p:PackageReadmeFile=README.md -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} -p:IncludeContentInPack=true
     - name: Publish to NuGet
-      if: ${{ github.event_name == 'push' }}
+      if: ${{ github.event_name == 'push' && hashFiles('*.nupkg') != '' }}
       run: dotnet nuget push *.nupkg --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
     - name: Publish to GitHub
+      if: ${{ github.event_name == 'push' &&  hashFiles('*.nupkg') != '' }}
       run: dotnet nuget push *.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
