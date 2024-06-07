@@ -1,7 +1,4 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
-name: .NET
+name: build-dotnet-library
 
 on:
   push:
@@ -14,27 +11,6 @@ permissions:
   contents: read
   
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Setup .NET Core SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-    - name: Install dotnet-script
-      run: dotnet tool install -g dotnet-script
-    - name: Run Tests
-      run: dotnet test
-    - name: Build the package for nuget
-      run: dotnet pack --include-source --configuration Release --output . -p:SymbolPackageFormat=snupkg -p:PackageLicenseFile=LICENSE -p:PackageReadmeFile=README.md -p:RepositoryUrl=${{ github.server_url }}/${{ github.repository }} -p:RepositoryCommit=${{ github.sha }} -p:PackageProjectUrl=${{ github.server_url }}/${{ github.repository }} -p:IncludeContentInPack=true
-    - name: Publish to NuGet
-      if: ${{ github.event_name == 'push' && hashFiles('*.nupkg') != '' }}
-      run: dotnet nuget push *.nupkg --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-    - name: Publish to GitHub
-      if: ${{ github.event_name == 'push' &&  hashFiles('*.nupkg') != '' }}
-      run: dotnet nuget push *.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
+  build-dotnet-library:
+    uses: ktsu-io/workflows/.github/workflows/build-dotnet-library.yml@main
+    secrets: inherit
