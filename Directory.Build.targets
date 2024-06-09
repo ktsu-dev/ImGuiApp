@@ -25,7 +25,7 @@
     <EnablePackageValidation>True</EnablePackageValidation>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(IsLibrary) != true">
+  <PropertyGroup Condition="$(IsLibrary) != true Or $(IsPrimaryProject) != true">
     <IsPackable>False</IsPackable>
   </PropertyGroup>
 
