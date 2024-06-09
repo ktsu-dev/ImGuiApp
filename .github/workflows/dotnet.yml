@@ -1,10 +1,10 @@
-name: build-dotnet-library
+name: Build and Analyze
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    types: [opened, synchronize, reopened]
     
 permissions:
   packages: write
