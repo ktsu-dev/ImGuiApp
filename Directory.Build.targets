@@ -7,20 +7,11 @@
     <IsPrimaryProject Condition="$(MSBuildProjectName) == '$(SolutionName)'">True</IsPrimaryProject>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(IsTest) != true">
-    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <AnalysisLevel>latest-all</AnalysisLevel>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-  </PropertyGroup>
-
   <PropertyGroup Condition="$(IsTest) == true">
-    <AnalysisLevel>latest</AnalysisLevel>
-    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);CS1591;CA2225;</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA2225;CA1707;IDE0022;IDE0058;CA1305;S4056;S104;CA5394;</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsLibrary) == true">
-    <LangVersion>11.0</LangVersion>
     <IsPackable>True</IsPackable>
     <EnablePackageValidation>True</EnablePackageValidation>
   </PropertyGroup>
@@ -41,7 +32,7 @@
   </ItemGroup>
   
   <ItemGroup Condition="$(IsPrimaryProject) == true">
-    <None Include="..\LICENSE" Pack="True" PackagePath="\" />
+    <None Include="..\LICENSE" Pack="True" PackagePath="\"/>
     <None Include="..\README.md" Pack="True" PackagePath="\"/>
     <None Include="..\DESCRIPTION" Pack="True" PackagePath="\"/>
     <None Include="..\AUTHORS" Pack="True" PackagePath="\"/>

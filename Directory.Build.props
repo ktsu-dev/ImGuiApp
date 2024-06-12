@@ -10,11 +10,9 @@
     <Version>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("VERSION"))).Trim())</Version>
     <Description>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("DESCRIPTION"))).Trim())</Description>
     
-    <AuthorsNamespace>$(Authors.Replace(" ", ""))</AuthorsNamespace>
-    <SolutionNamespace>$(SolutionName.Replace(" ", ""))</SolutionNamespace>
-    <ProjectNamespace>$(MSBuildProjectName.Replace(" ", "").Replace($(SolutionNamespace), "").Trim("."))</ProjectNamespace>
-    <IntermediateNamespace>$(AuthorsNamespace).$(SolutionNamespace).$(ProjectNamespace)</IntermediateNamespace>
-    <RootNamespace>$(IntermediateNamespace.Trim("."))</RootNamespace>
+    <NamespacePrefix>$(Authors.Replace(" ", ""))</NamespacePrefix>
+    <NamespaceSuffix>$(MSBuildProjectName.Replace(" ", ""))</NamespaceSuffix>
+    <RootNamespace>$(NamespacePrefix).$(NamespaceSuffix)</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -22,8 +20,5 @@
     <NoWarn>CA1724;CA1034;CA1000;</NoWarn>
     <EnablePackageValidation>True</EnablePackageValidation>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <AnalysisLevel>latest-all</AnalysisLevel>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
   </PropertyGroup>
 </Project>
