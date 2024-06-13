@@ -28,15 +28,17 @@
   <ItemGroup Condition="$(IsTest) != true">
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
     <InternalsVisibleTo Include="$(RootNamespace).Test" />
+    <InternalsVisibleTo Include="$(RootNamespace).Tests" />
     <InternalsVisibleTo Include="Test" />
   </ItemGroup>
   
   <ItemGroup Condition="$(IsPrimaryProject) == true">
-    <None Include="..\LICENSE" Pack="True" PackagePath="\"/>
-    <None Include="..\README.md" Pack="True" PackagePath="\"/>
-    <None Include="..\DESCRIPTION" Pack="True" PackagePath="\"/>
-    <None Include="..\AUTHORS" Pack="True" PackagePath="\"/>
-    <None Include="..\VERSION" Pack="True" PackagePath="\"/>
+      <None Condition="Exists('$(AuthorsFilePath)')" Include="$(AuthorsFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+      <None Condition="Exists('$(DescriptionFilePath)')" Include="$(DescriptionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+      <None Condition="Exists('$(LicenseFilePath)')" Include="$(LicenseFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+      <None Condition="Exists('$(ChangelogFilePath)')" Include="$(ChangelogFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+      <None Condition="Exists('$(ReadmeFilePath)')" Include="$(ReadmeFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+      <None Condition="Exists('$(VersionFilePath)')" Include="$(VersionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <ItemGroup Condition="$(IsTest) == true">
