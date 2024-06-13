@@ -6,10 +6,44 @@
     <SolutionName>$([System.IO.Path]::GetFileNameWithoutExtension($(SolutionPath)))</SolutionName>
     <SolutionDirectory>$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDirectory>
     
-    <Authors>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("AUTHORS"))).Trim())</Authors>
-    <Version>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("VERSION"))).Trim())</Version>
-    <Description>$([System.IO.File]::ReadAllText($([MSBuild]::GetPathOfFileAbove("DESCRIPTION"))).Trim())</Description>
-    
+    <VersionFileName>VERSION</VersionFileName>
+    <AuthorsFileName>AUTHORS</AuthorsFileName>
+    <DescriptionFileName>DESCRIPTION</DescriptionFileName>
+    <LicenseFileName>LICENSE</LicenseFileName>
+    <ChangelogFileName>CHANGELOG</ChangelogFileName>
+    <ReadmeFileName>README</ReadmeFileName>
+
+    <MetadataFileExtension></MetadataFileExtension>
+    <VersionFilePath>$([MSBuild]::ValueOrDefault($(VersionFilePath),$([MSBuild]::GetPathOfFileAbove("$(VersionFileName)$(MetadataFileExtension)"))))</VersionFilePath>
+    <AuthorsFilePath>$([MSBuild]::ValueOrDefault($(AuthorsFilePath),$([MSBuild]::GetPathOfFileAbove("$(AuthorsFileName)$(MetadataFileExtension)"))))</AuthorsFilePath>
+    <DescriptionFilePath>$([MSBuild]::ValueOrDefault($(DescriptionFilePath),$([MSBuild]::GetPathOfFileAbove("$(DescriptionFileName)$(MetadataFileExtension)"))))</DescriptionFilePath>
+    <LicenseFilePath>$([MSBuild]::ValueOrDefault($(LicenseFilePath),$([MSBuild]::GetPathOfFileAbove("$(LicenseFileName)$(MetadataFileExtension)"))))</LicenseFilePath>
+    <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
+    <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
+
+    <MetadataFileExtension>.md</MetadataFileExtension>
+    <VersionFilePath>$([MSBuild]::ValueOrDefault($(VersionFilePath),$([MSBuild]::GetPathOfFileAbove("$(VersionFileName)$(MetadataFileExtension)"))))</VersionFilePath>
+    <AuthorsFilePath>$([MSBuild]::ValueOrDefault($(AuthorsFilePath),$([MSBuild]::GetPathOfFileAbove("$(AuthorsFileName)$(MetadataFileExtension)"))))</AuthorsFilePath>
+    <DescriptionFilePath>$([MSBuild]::ValueOrDefault($(DescriptionFilePath),$([MSBuild]::GetPathOfFileAbove("$(DescriptionFileName)$(MetadataFileExtension)"))))</DescriptionFilePath>
+    <LicenseFilePath>$([MSBuild]::ValueOrDefault($(LicenseFilePath),$([MSBuild]::GetPathOfFileAbove("$(LicenseFileName)$(MetadataFileExtension)"))))</LicenseFilePath>
+    <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
+    <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
+
+    <MetadataFileExtension>.txt</MetadataFileExtension>
+    <VersionFilePath>$([MSBuild]::ValueOrDefault($(VersionFilePath),$([MSBuild]::GetPathOfFileAbove("$(VersionFileName)$(MetadataFileExtension)"))))</VersionFilePath>
+    <AuthorsFilePath>$([MSBuild]::ValueOrDefault($(AuthorsFilePath),$([MSBuild]::GetPathOfFileAbove("$(AuthorsFileName)$(MetadataFileExtension)"))))</AuthorsFilePath>
+    <DescriptionFilePath>$([MSBuild]::ValueOrDefault($(DescriptionFilePath),$([MSBuild]::GetPathOfFileAbove("$(DescriptionFileName)$(MetadataFileExtension)"))))</DescriptionFilePath>
+    <LicenseFilePath>$([MSBuild]::ValueOrDefault($(LicenseFilePath),$([MSBuild]::GetPathOfFileAbove("$(LicenseFileName)$(MetadataFileExtension)"))))</LicenseFilePath>
+    <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
+    <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
+
+    <Authors Condition="Exists('$(AuthorsFilePath)')">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
+    <Description Condition="Exists('$(DescriptionFilePath)')">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
+    <License Condition="Exists('$(LicenseFilePath)')">$([System.IO.File]::ReadAllText($(LicenseFilePath)).Trim())</License>
+    <Changelog Condition="Exists('$(ChangelogFilePath)')">$([System.IO.File]::ReadAllText($(ChangelogFilePath)).Trim())</Changelog>
+    <Readme Condition="Exists('$(ReadmeFilePath)')">$([System.IO.File]::ReadAllText($(ReadmeFilePath)).Trim())</Readme>
+    <Version Condition="Exists('$(VersionFilePath)')">$([System.IO.File]::ReadAllText($(VersionFilePath)).Trim())</Version>
+
     <AuthorsNamespace>$(Authors.Replace(" ", ""))</AuthorsNamespace>
     <SolutionNamespace>$(SolutionName.Replace(" ", ""))</SolutionNamespace>
     <ProjectNamespace>$(MSBuildProjectName.Replace(" ", "").Replace($(SolutionNamespace), "").Trim("."))</ProjectNamespace>
