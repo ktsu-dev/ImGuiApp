@@ -1,5 +1,7 @@
 <Project>
   <PropertyGroup>
+    <DirectoryBuildTargetsFile>$(MSBuildThisFileFullPath)</DirectoryBuildTargetsFile>
+    
     <IsPrerelease Condition="$(Version.Contains('-'))">True</IsPrerelease>
     <IsExecutable Condition="$(OutputType) == 'exe'">True</IsExecutable>
     <IsTest Condition="$(IsTestProject) == true">True</IsTest>
@@ -31,14 +33,16 @@
     <InternalsVisibleTo Include="$(RootNamespace).Tests" />
     <InternalsVisibleTo Include="Test" />
   </ItemGroup>
-  
+
   <ItemGroup Condition="$(IsPrimaryProject) == true">
-      <None Condition="Exists('$(AuthorsFilePath)')" Include="$(AuthorsFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
-      <None Condition="Exists('$(DescriptionFilePath)')" Include="$(DescriptionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
-      <None Condition="Exists('$(LicenseFilePath)')" Include="$(LicenseFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
-      <None Condition="Exists('$(ChangelogFilePath)')" Include="$(ChangelogFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
-      <None Condition="Exists('$(ReadmeFilePath)')" Include="$(ReadmeFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
-      <None Condition="Exists('$(VersionFilePath)')" Include="$(VersionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(DirectoryBuildPropsFile)')" Include="$(DirectoryBuildPropsFile)" Pack="False" PackagePath="\" Link="MSBuild\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(DirectoryBuildTargetsFile)')" Include="$(DirectoryBuildTargetsFile)" Pack="False" PackagePath="\" Link="MSBuild\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(AuthorsFilePath)')" Include="$(AuthorsFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(DescriptionFilePath)')" Include="$(DescriptionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(LicenseFilePath)')" Include="$(LicenseFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(ChangelogFilePath)')" Include="$(ChangelogFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(ReadmeFilePath)')" Include="$(ReadmeFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(VersionFilePath)')" Include="$(VersionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <ItemGroup Condition="$(IsTest) == true">
