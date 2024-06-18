@@ -8,7 +8,7 @@ on:
     
 permissions:
   packages: write
-  contents: read
+  contents: write
   
 jobs:
   build-dotnet-library:
