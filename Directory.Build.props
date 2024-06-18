@@ -61,5 +61,6 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <RunSettingsFilePath>$(SolutionDirectory)\.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 </Project>
