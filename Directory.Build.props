@@ -61,6 +61,6 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <RunSettingsFilePath>$(SolutionDirectory)\.runsettings</RunSettingsFilePath>
+    <RunSettingsFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".runsettings").Trim())</RunSettingsFilePath>
   </PropertyGroup>
 </Project>
