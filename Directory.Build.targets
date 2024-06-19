@@ -37,6 +37,8 @@
   <ItemGroup Condition="$(IsPrimaryProject) == true">
     <None Condition="Exists('$(DirectoryBuildPropsFile)')" Include="$(DirectoryBuildPropsFile)" Pack="False" PackagePath="\" Link="MSBuild\%(RecursiveDir)%(Filename)%(Extension)"/>
     <None Condition="Exists('$(DirectoryBuildTargetsFile)')" Include="$(DirectoryBuildTargetsFile)" Pack="False" PackagePath="\" Link="MSBuild\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Condition="Exists('$(RunSettingsFilePath)')" Include="$(RunSettingsFilePath)" Pack="False" PackagePath="\" Link="MSBuild\%(RecursiveDir)%(Filename)%(Extension)"/>
+
     <None Condition="Exists('$(AuthorsFilePath)')" Include="$(AuthorsFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
     <None Condition="Exists('$(DescriptionFilePath)')" Include="$(DescriptionFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
     <None Condition="Exists('$(LicenseFilePath)')" Include="$(LicenseFilePath)" Pack="True" PackagePath="\" Link="Metadata\%(RecursiveDir)%(Filename)%(Extension)"/>
