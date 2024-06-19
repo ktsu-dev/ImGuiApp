@@ -79,7 +79,7 @@
                     <!-- Globbing filter -->
                     <!--<IncludeDirectory>../dir1/,../dir2/,</IncludeDirectory>-->
                     <SingleHit>false</SingleHit>
-                    <UseSourceLink>true</UseSourceLink>
+                    <!--<UseSourceLink>true</UseSourceLink>-->
                     <IncludeTestAssembly>true</IncludeTestAssembly>
                     <SkipAutoProps>true</SkipAutoProps>
                     <DeterministicReport>false</DeterministicReport>
