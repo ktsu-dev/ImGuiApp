@@ -1,11 +1,13 @@
-namespace ktsu.io.ImGuiAppDemo;
+// Ignore Spelling: App Im
+
+namespace ktsu.io.ImGuiApp.Demo;
 
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using ktsu.io.ImGuiApp;
-using ktsu.io.ImGuiAppDemo.Properties;
+using ktsu.io.ImGuiApp.Demo.Properties;
 
-internal class ImGuiAppDemo
+internal static class ImGuiAppDemo
 {
 	private static bool showImGuiDemo;
 	private static void Main() =>
@@ -21,7 +23,7 @@ internal class ImGuiAppDemo
 		var fontAtlasPtr = io.Fonts;
 		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
 		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
-		fontAtlasPtr.AddFontDefault();
+		_ = fontAtlasPtr.AddFontDefault();
 		foreach (int size in FontSizes)
 		{
 			unsafe
@@ -33,11 +35,11 @@ internal class ImGuiAppDemo
 					OversampleV = 2,
 					PixelSnapH = true,
 				};
-				fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
 			}
 		}
 
-		fontAtlasPtr.Build();
+		_ = fontAtlasPtr.Build();
 
 		int numFonts = fontAtlasPtr.Fonts.Size;
 		for (int i = 0; i < numFonts; i++)
@@ -52,19 +54,28 @@ internal class ImGuiAppDemo
 	private static void OnTick(float dt)
 	{
 		ImGui.ShowDemoWindow(ref showImGuiDemo);
-		ImGui.Begin("Demo");
-		ImGui.PushFont(Fonts[24]);
-		ImGui.Text("Hello, ImGui.NET!");
-		ImGui.PopFont();
-		ImGui.Text("This is a demo of ImGui.NET.");
+		if (ImGui.BeginChild("Demo"))
+		{
+			ImGui.PushFont(Fonts[24]);
+			ImGui.Text("Hello, ImGui.NET!");
+			ImGui.PopFont();
+			ImGui.Text("This is a demo of ImGui.NET.");
+		}
 		ImGui.End();
 	}
 
 	private static void OnMenu()
 	{
+		if (ImGui.BeginMenu("View"))
+		{
+			_ = ImGui.MenuItem("ImGui Demo", string.Empty, ref showImGuiDemo);
+			ImGui.EndMenu();
+		}
 	}
 
 	private static void OnWindowResized()
 	{
+		ImGui.GetIO().DisplaySize = ImGui.GetMainViewport().Size;
+		ImGui.GetIO().DisplayFramebufferScale = new(ImGui.GetMainViewport().DpiScale);
 	}
 }

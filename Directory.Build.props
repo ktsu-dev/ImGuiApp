@@ -54,6 +54,7 @@
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <NeutralLanguage>en-US</NeutralLanguage>
     <WarningLevel>9999</WarningLevel>
     <NoWarn>CA1724;CA1034;CA1000;CA2260;</NoWarn>
     <EnablePackageValidation>True</EnablePackageValidation>

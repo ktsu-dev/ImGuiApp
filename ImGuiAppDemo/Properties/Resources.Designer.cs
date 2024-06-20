@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ktsu.io.ImGuiAppDemo.Properties {
+namespace ktsu.io.ImGuiApp.Demo.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace ktsu.io.ImGuiAppDemo.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("ktsu.io.ImGuiAppDemo.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("ktsu.io.ImGuiApp.Demo.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
