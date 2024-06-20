@@ -63,5 +63,8 @@
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <RunSettingsFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".runsettings").Trim())</RunSettingsFilePath>
+    <EditorConfigFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".editorconfig").Trim())</EditorConfigFilePath>
+    <GitAttributesFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".gitattributes").Trim())</GitAttributesFilePath>
+    <GitIgnoreFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".gitignore").Trim())</GitIgnoreFilePath>
   </PropertyGroup>
 </Project>
