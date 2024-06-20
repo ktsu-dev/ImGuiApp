@@ -36,12 +36,23 @@ public static partial class ImGuiApp
 
 	[LibraryImport("kernel32.dll")]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+#if NET7_0_OR_GREATER
+	[LibraryImport("kernel32.dll")]
 	private static partial nint GetConsoleWindow();
+#else
+	[DllImport("kernel32.dll")]
+	private static extern nint GetConsoleWindow();
+#endif
 
-	[LibraryImport("user32.dll")]
-	[return: MarshalAs(UnmanagedType.Bool)]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+#if NET7_0_OR_GREATER
+	[LibraryImport("user32.dll")]
 	private static partial bool ShowWindow(nint hWnd, int nCmdShow);
+#else
+	[DllImport("user32.dll")]
+	private static extern bool ShowWindow(nint hWnd, int nCmdShow);
+#endif
 
 	private const int SW_HIDE = 0;
 
