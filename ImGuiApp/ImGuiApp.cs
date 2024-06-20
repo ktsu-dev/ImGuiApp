@@ -1,4 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+// Ignore Spelling: App Im
 
 namespace ktsu.io.ImGuiApp;
 
@@ -54,8 +54,8 @@ public static partial class ImGuiApp
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized)
 	{
-		ArgumentNullException.ThrowIfNull(windowTitle, nameof(windowTitle));
-		ArgumentNullException.ThrowIfNull(initialWindowState, nameof(initialWindowState));
+		ArgumentNullException.ThrowIfNull(windowTitle);
+		ArgumentNullException.ThrowIfNull(initialWindowState);
 
 		var options = WindowOptions.Default;
 		options.Title = windowTitle;
@@ -77,11 +77,13 @@ public static partial class ImGuiApp
 		// Our loading function
 		window.Load += () =>
 		{
+			gl = window.CreateOpenGL(); // load OpenGL
+			inputContext = window.CreateInput(); // create an input context
 			controller = new ImGuiController
 			(
-				gl = window.CreateOpenGL(), // load OpenGL
-				window, // pass in our window
-				inputContext = window.CreateInput(), // create an input context
+				gl,
+				view: window,
+				input: inputContext,
 				onConfigureIO: onStart
 			);
 
