@@ -9,6 +9,11 @@
     <IsPrimaryProject Condition="$(MSBuildProjectName) == '$(SolutionName)'">True</IsPrimaryProject>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$(IsExecutable) == true">
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
   <PropertyGroup Condition="$(IsTest) == true">
     <NoWarn>$(NoWarn);CS1591;CA2225;CA1707;IDE0022;IDE0058;CA1305;S4056;S104;CA5394;</NoWarn>
   </PropertyGroup>
