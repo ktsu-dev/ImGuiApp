@@ -74,10 +74,6 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <PublishSingleFile>true</PublishSingleFile>
-    <PublishAot>true</PublishAot>
-    <SelfContained>true</SelfContained>
     <InvariantGlobalization>true</InvariantGlobalization>
 
   </PropertyGroup>
