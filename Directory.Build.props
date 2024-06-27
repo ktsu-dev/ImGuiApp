@@ -39,6 +39,18 @@
     <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
     <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
 
+    <RunSettingsFilePath>$([MSBuild]::GetPathOfFileAbove(".runsettings"))</RunSettingsFilePath>
+    <EditorConfigFilePath>$([MSBuild]::GetPathOfFileAbove(".editorconfig"))</EditorConfigFilePath>
+    <GitAttributesFilePath>$([MSBuild]::GetPathOfFileAbove(".gitattributes"))</GitAttributesFilePath>
+    <GitIgnoreFilePath>$([MSBuild]::GetPathOfFileAbove(".gitignore"))</GitIgnoreFilePath>
+    <GitModulesFilePath>$([MSBuild]::GetPathOfFileAbove(".gitmodules"))</GitModulesFilePath>
+    <GlobalJsonFilePath>$([MSBuild]::GetPathOfFileAbove("global.json"))</GlobalJsonFilePath>
+    <MailMapFilePath>$([MSBuild]::GetPathOfFileAbove(".mailmap"))</MailMapFilePath>
+    <SetupNsiFilePath>$([MSBuild]::GetPathOfFileAbove("setup.nsi"))</SetupNsiFilePath>
+    <DotnetCoreNshFilePath>$([MSBuild]::GetPathOfFileAbove("dotnetcore.nsh"))</DotnetCoreNshFilePath>
+    <AzurePipelinesFilePath>$([MSBuild]::GetPathOfFileAbove("azure-pipelines.yml"))</AzurePipelinesFilePath>
+    <ReleasesFilePath>$([MSBuild]::GetPathOfFileAbove("RELEASES"))</ReleasesFilePath>
+
     <Authors Condition="Exists('$(AuthorsFilePath)')">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
     <Description Condition="Exists('$(DescriptionFilePath)')">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
     <License Condition="Exists('$(LicenseFilePath)')">$([System.IO.File]::ReadAllText($(LicenseFilePath)).Trim())</License>
@@ -62,9 +74,11 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <RunSettingsFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".runsettings").Trim())</RunSettingsFilePath>
-    <EditorConfigFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".editorconfig").Trim())</EditorConfigFilePath>
-    <GitAttributesFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".gitattributes").Trim())</GitAttributesFilePath>
-    <GitIgnoreFilePath>$([System.IO.Path]::Combine($(SolutionDirectory), ".gitignore").Trim())</GitIgnoreFilePath>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
   </PropertyGroup>
 </Project>
