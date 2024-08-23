@@ -2,6 +2,7 @@
 
 namespace ktsu.io.ImGuiApp;
 
+using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using ImGuiNET;
@@ -9,6 +10,10 @@ using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using Color = System.Drawing.Color;
 
 public class ImGuiAppWindowState
 
@@ -48,6 +53,8 @@ public static partial class ImGuiApp
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
+	public static string WindowIconPath { get; set; } = string.Empty;
+
 	public static void Stop() => window?.Close();
 
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
@@ -62,6 +69,7 @@ public static partial class ImGuiApp
 		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
 		options.Position = new((int)initialWindowState.Pos.X, (int)initialWindowState.Pos.Y);
 		options.WindowState = initialWindowState.LayoutState;
+
 		LastNormalWindowState = initialWindowState;
 
 		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
@@ -77,6 +85,11 @@ public static partial class ImGuiApp
 		// Our loading function
 		window.Load += () =>
 		{
+			if (!string.IsNullOrEmpty(WindowIconPath))
+			{
+				SetWindowIcon(WindowIconPath);
+			}
+
 			gl = window.CreateOpenGL(); // load OpenGL
 			inputContext = window.CreateInput(); // create an input context
 			controller = new ImGuiController
@@ -123,7 +136,7 @@ public static partial class ImGuiApp
 
 			// This is where you'll do any rendering beneath the ImGui context
 			// Here, we just have a blank screen.
-			gl?.ClearColor(System.Drawing.Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
 			RenderMenu(onMenu);
@@ -208,4 +221,39 @@ public static partial class ImGuiApp
 			ImGui.ShowMetricsWindow(ref showImGuiMetrics);
 		}
 	}
+
+	public static void SetWindowIcon(string iconPath)
+	{
+		using var stream = File.OpenRead(iconPath);
+		using var image = Image.Load<Rgba32>(stream);
+
+		int[] iconSizes = [128, 64, 48, 32, 28, 24, 22, 20, 18, 16];
+
+		var icons = new Collection<Silk.NET.Core.RawImage>();
+
+		foreach (int size in iconSizes)
+		{
+			var resizeImage = image.Clone();
+			int sourceSize = Math.Min(image.Width, image.Height);
+			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
+			byte[] iconData = new byte[size * size * 4];
+			resizeImage.ProcessPixelRows(pixelAccessor =>
+			{
+				for (int r = 0; r < size; ++r)
+				{
+					var rowSpan = pixelAccessor.GetRowSpan(r);
+					for (int c = 0; c < size; ++c)
+					{
+						byte[] pixelBytes = BitConverter.GetBytes(rowSpan[c].PackedValue);
+						pixelBytes.CopyTo(iconData, ((r * size) + c) * 4);
+					}
+				}
+			});
+
+			icons.Add(new(size, size, new Memory<byte>(iconData)));
+		}
+
+		window?.SetWindowIcon([.. icons]);
+	}
 }
+
