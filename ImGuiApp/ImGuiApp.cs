@@ -4,8 +4,10 @@ namespace ktsu.io.ImGuiApp;
 
 using System.Collections.ObjectModel;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
+using ktsu.io.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
@@ -26,6 +28,7 @@ public class ImGuiAppWindowState
 public static partial class ImGuiApp
 {
 	private static IWindow? window;
+	private static GL? gl;
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -55,6 +58,16 @@ public static partial class ImGuiApp
 
 	public static string WindowIconPath { get; set; } = string.Empty;
 
+	public class TextureInfo
+	{
+		public AbsoluteFilePath Path { get; set; } = new();
+		public uint TextureId { get; set; }
+		public int Width { get; set; }
+		public int Height { get; set; }
+	}
+
+	private static Dictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
+
 	public static void Stop() => window?.Close();
 
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
@@ -79,7 +92,6 @@ public static partial class ImGuiApp
 
 		// Declare some variables
 		ImGuiController? controller = null;
-		GL? gl = null;
 		IInputContext? inputContext = null;
 
 		// Our loading function
@@ -222,10 +234,17 @@ public static partial class ImGuiApp
 		}
 	}
 
+	public static byte[] GetImageBytes(Image<Rgba32> image)
+	{
+		byte[] pixelBytes = new byte[image.Width * image.Height * Unsafe.SizeOf<Rgba32>()];
+		image.CopyPixelDataTo(pixelBytes);
+		return pixelBytes;
+	}
+
 	public static void SetWindowIcon(string iconPath)
 	{
 		using var stream = File.OpenRead(iconPath);
-		using var image = Image.Load<Rgba32>(stream);
+		using var sourceImage = Image.Load<Rgba32>(stream);
 
 		int[] iconSizes = [128, 64, 48, 32, 28, 24, 22, 20, 18, 16];
 
@@ -233,27 +252,72 @@ public static partial class ImGuiApp
 
 		foreach (int size in iconSizes)
 		{
-			var resizeImage = image.Clone();
-			int sourceSize = Math.Min(image.Width, image.Height);
+			var resizeImage = sourceImage.Clone();
+			int sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
 			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
-			byte[] iconData = new byte[size * size * 4];
-			resizeImage.ProcessPixelRows(pixelAccessor =>
-			{
-				for (int r = 0; r < size; ++r)
-				{
-					var rowSpan = pixelAccessor.GetRowSpan(r);
-					for (int c = 0; c < size; ++c)
-					{
-						byte[] pixelBytes = BitConverter.GetBytes(rowSpan[c].PackedValue);
-						pixelBytes.CopyTo(iconData, ((r * size) + c) * 4);
-					}
-				}
-			});
-
+			byte[] iconData = GetImageBytes(resizeImage);
 			icons.Add(new(size, size, new Memory<byte>(iconData)));
 		}
 
 		window?.SetWindowIcon([.. icons]);
 	}
-}
 
+	public static uint UploadTextureRGBA(byte[] bytes, int width, int height)
+	{
+		if (gl is null)
+		{
+			throw new InvalidOperationException("OpenGL context is not initialized.");
+		}
+
+		uint textureId = gl.GenTexture();
+		gl.ActiveTexture(TextureUnit.Texture0);
+		gl.BindTexture(TextureTarget.Texture2D, textureId);
+
+		unsafe
+		{
+			fixed (byte* ptr = bytes)
+			{
+				gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+			}
+		}
+
+		gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+		gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+		gl.BindTexture(TextureTarget.Texture2D, 0);
+		return textureId;
+	}
+
+	public static void DeleteTexture(uint textureId)
+	{
+		if (gl is null)
+		{
+			throw new InvalidOperationException("OpenGL context is not initialized.");
+		}
+
+		gl.DeleteTexture(textureId);
+		Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key));
+	}
+
+	public static TextureInfo GetOrLoadTexture(AbsoluteFilePath path)
+	{
+		if (Textures.TryGetValue(path, out var textureInfo))
+		{
+			return textureInfo;
+		}
+
+		var image = Image.Load<Rgba32>(path);
+		byte[] bytes = GetImageBytes(image);
+		uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+		textureInfo = new TextureInfo
+		{
+			Path = path,
+			TextureId = textureId,
+			Width = image.Width,
+			Height = image.Height
+		};
+
+		Textures[path] = textureInfo;
+
+		return textureInfo;
+	}
+}
