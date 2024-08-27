@@ -69,6 +69,8 @@ public static partial class ImGuiApp
 
 	private static ConcurrentDictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
 
+	private static object LockGL { get; } = new();
+
 	public static void Stop() => window?.Close();
 
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
@@ -103,7 +105,11 @@ public static partial class ImGuiApp
 				SetWindowIcon(WindowIconPath);
 			}
 
-			gl = window.CreateOpenGL(); // load OpenGL
+			lock (LockGL)
+			{
+				gl = window.CreateOpenGL(); // load OpenGL
+			}
+
 			inputContext = window.CreateInput(); // create an input context
 			controller = new ImGuiController
 			(
@@ -120,7 +126,11 @@ public static partial class ImGuiApp
 		window.FramebufferResize += s =>
 		{
 			// Adjust the viewport to the new window size
-			gl?.Viewport(s);
+			lock (LockGL)
+			{
+				gl?.Viewport(s);
+			}
+
 			if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
 			{
 				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
@@ -144,19 +154,22 @@ public static partial class ImGuiApp
 		// The render function
 		window.Render += delta =>
 		{
-			// Make sure ImGui is up-to-date
-			controller?.Update((float)delta);
+			lock (LockGL)
+			{
+				// Make sure ImGui is up-to-date
+				controller?.Update((float)delta);
 
-			// This is where you'll do any rendering beneath the ImGui context
-			// Here, we just have a blank screen.
-			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
-			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
+				// This is where you'll do any rendering beneath the ImGui context
+				// Here, we just have a blank screen.
+				gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+				gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-			RenderMenu(onMenu);
-			RenderWindowContents(onTick, (float)delta);
+				RenderMenu(onMenu);
+				RenderWindowContents(onTick, (float)delta);
 
-			// Make sure ImGui renders too!
-			controller?.Render();
+				// Make sure ImGui renders too!
+				controller?.Render();
+			}
 		};
 
 		// The closing function
@@ -265,60 +278,70 @@ public static partial class ImGuiApp
 
 	public static uint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
-		if (gl is null)
+		uint textureId;
+		lock (LockGL)
 		{
-			throw new InvalidOperationException("OpenGL context is not initialized.");
-		}
-
-		uint textureId = gl.GenTexture();
-		gl.ActiveTexture(TextureUnit.Texture0);
-		gl.BindTexture(TextureTarget.Texture2D, textureId);
-
-		unsafe
-		{
-			fixed (byte* ptr = bytes)
+			if (gl is null)
 			{
-				gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+				throw new InvalidOperationException("OpenGL context is not initialized.");
 			}
-		}
 
-		gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-		gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-		gl.BindTexture(TextureTarget.Texture2D, 0);
+			textureId = gl.GenTexture();
+			gl.ActiveTexture(TextureUnit.Texture0);
+			gl.BindTexture(TextureTarget.Texture2D, textureId);
+
+			unsafe
+			{
+				fixed (byte* ptr = bytes)
+				{
+					gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+				}
+			}
+
+			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+			gl.BindTexture(TextureTarget.Texture2D, 0);
+		}
 		return textureId;
 	}
 
 	public static void DeleteTexture(uint textureId)
 	{
-		if (gl is null)
+		lock (LockGL)
 		{
-			throw new InvalidOperationException("OpenGL context is not initialized.");
-		}
+			if (gl is null)
+			{
+				throw new InvalidOperationException("OpenGL context is not initialized.");
+			}
 
-		gl.DeleteTexture(textureId);
-		Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
+			gl.DeleteTexture(textureId);
+			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
+		}
 	}
 
 	public static TextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
-		if (Textures.TryGetValue(path, out var textureInfo))
+		TextureInfo? textureInfo;
+		lock (LockGL)
 		{
-			return textureInfo;
+			if (Textures.TryGetValue(path, out textureInfo))
+			{
+				return textureInfo;
+			}
+
+			var image = Image.Load<Rgba32>(path);
+			byte[] bytes = GetImageBytes(image);
+			uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+			textureInfo = new TextureInfo
+			{
+				Path = path,
+				TextureId = textureId,
+				Width = image.Width,
+				Height = image.Height
+			};
+
+			Textures[path] = textureInfo;
 		}
-
-		var image = Image.Load<Rgba32>(path);
-		byte[] bytes = GetImageBytes(image);
-		uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
-		textureInfo = new TextureInfo
-		{
-			Path = path,
-			TextureId = textureId,
-			Width = image.Width,
-			Height = image.Height
-		};
-
-		Textures[path] = textureInfo;
-
 		return textureInfo;
 	}
 }
