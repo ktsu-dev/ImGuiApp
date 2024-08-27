@@ -2,6 +2,7 @@
 
 namespace ktsu.io.ImGuiApp;
 
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -66,7 +67,7 @@ public static partial class ImGuiApp
 		public int Height { get; set; }
 	}
 
-	private static Dictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
+	private static ConcurrentDictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
 
 	public static void Stop() => window?.Close();
 
@@ -295,7 +296,7 @@ public static partial class ImGuiApp
 		}
 
 		gl.DeleteTexture(textureId);
-		Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key));
+		Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
 	}
 
 	public static TextureInfo GetOrLoadTexture(AbsoluteFilePath path)
