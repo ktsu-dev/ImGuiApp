@@ -43,7 +43,8 @@ public static partial class ImGuiApp
 		};
 	}
 
-	public static bool IsInFocus => window?.IsVisible ?? false;
+	public static bool IsFocused { get; private set; } = true;
+	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
 
 	[LibraryImport("kernel32.dll")]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
@@ -181,6 +182,19 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
+				double currentFps = window.FramesPerSecond;
+				double currentUps = window.UpdatesPerSecond;
+				double requiredFps = IsFocused ? 30 : 15;
+				double requiredUps = IsFocused ? 30 : 15;
+				if (currentFps != requiredFps)
+				{
+					window.VSync = false;
+					window.FramesPerSecond = requiredFps;
+				}
+				if (currentUps != requiredUps)
+				{
+					window.UpdatesPerSecond = requiredUps;
+				}
 				controller?.Update((float)delta);
 				config.OnUpdate?.Invoke((float)delta);
 			}
@@ -191,7 +205,7 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
-				if (window.WindowState != Silk.NET.Windowing.WindowState.Minimized && window.IsVisible)
+				if (IsVisible)
 				{
 					gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 					gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
@@ -216,6 +230,8 @@ public static partial class ImGuiApp
 			// Unload OpenGL
 			gl?.Dispose();
 		};
+
+		window.FocusChanged += (focused) => IsFocused = focused;
 
 		nint handle = GetConsoleWindow();
 		_ = ShowWindow(handle, SW_HIDE);
