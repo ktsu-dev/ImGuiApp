@@ -43,6 +43,8 @@ public static partial class ImGuiApp
 		};
 	}
 
+	public static bool IsInFocus => window?.IsVisible ?? false;
+
 	[LibraryImport("kernel32.dll")]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	private static partial nint GetConsoleWindow();
@@ -189,7 +191,7 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
-				if (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized)
+				if (window.WindowState != Silk.NET.Windowing.WindowState.Minimized && window.IsVisible)
 				{
 					gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 					gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
