@@ -57,8 +57,6 @@ public static partial class ImGuiApp
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
-	public static string WindowIconPath { get; set; } = string.Empty;
-
 	public class TextureInfo
 	{
 		public AbsoluteFilePath Path { get; set; } = new();
@@ -73,25 +71,51 @@ public static partial class ImGuiApp
 
 	public static void Stop() => window?.Close();
 
+	public class AppConfig
+	{
+		public string Title { get; init; } = nameof(ImGuiApp);
+		public string IconPath { get; init; } = string.Empty;
+		public ImGuiAppWindowState InitialWindowState { get; init; } = new();
+		public Action OnStart { get; init; } = () => { };
+		public Action<float> OnUpdate { get; init; } = (delta) => { };
+		public Action<float> OnRender { get; init; } = (delta) => { };
+		public Action OnAppMenu { get; init; } = () => { };
+		public Action OnMoveOrResize { get; init; } = () => { };
+	}
+
+	private static AppConfig Config { get; set; } = new();
+
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized)
+	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized) =>
+		Start(new AppConfig
+		{
+			Title = windowTitle,
+			InitialWindowState = initialWindowState,
+			OnStart = onStart ?? new(() => { }),
+			OnRender = onTick ?? new((delta) => { }),
+			OnAppMenu = onMenu ?? new(() => { }),
+			OnMoveOrResize = onWindowResized ?? new(() => { }),
+		});
+
+	public static void Start(AppConfig config)
 	{
-		ArgumentNullException.ThrowIfNull(windowTitle);
-		ArgumentNullException.ThrowIfNull(initialWindowState);
+		ArgumentNullException.ThrowIfNull(config);
 
-		var options = WindowOptions.Default;
-		options.Title = windowTitle;
-		options.Size = new((int)initialWindowState.Size.X, (int)initialWindowState.Size.Y);
-		options.Position = new((int)initialWindowState.Pos.X, (int)initialWindowState.Pos.Y);
-		options.WindowState = initialWindowState.LayoutState;
+		Config = config;
 
-		LastNormalWindowState = initialWindowState;
+		var silkWindowOptions = WindowOptions.Default;
+		silkWindowOptions.Title = config.Title;
+		silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
+		silkWindowOptions.Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y);
+		silkWindowOptions.WindowState = config.InitialWindowState.LayoutState;
+
+		LastNormalWindowState = config.InitialWindowState;
 
 		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
 
 		// Create a Silk.NET window as usual
-		window = Window.Create(options);
+		window = Window.Create(silkWindowOptions);
 
 		// Declare some variables
 		ImGuiController? controller = null;
@@ -100,9 +124,9 @@ public static partial class ImGuiApp
 		// Our loading function
 		window.Load += () =>
 		{
-			if (!string.IsNullOrEmpty(WindowIconPath))
+			if (!string.IsNullOrEmpty(config.IconPath))
 			{
-				SetWindowIcon(WindowIconPath);
+				SetWindowIcon(config.IconPath);
 			}
 
 			lock (LockGL)
@@ -116,7 +140,7 @@ public static partial class ImGuiApp
 				gl,
 				view: window,
 				input: inputContext,
-				onConfigureIO: onStart
+				onConfigureIO: config.OnStart
 			);
 
 			ImGui.GetStyle().WindowRounding = 0;
@@ -137,7 +161,7 @@ public static partial class ImGuiApp
 				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
 				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 			}
-			onWindowResized?.Invoke();
+			config.OnMoveOrResize?.Invoke();
 		};
 
 		window.Move += (p) =>
@@ -148,7 +172,16 @@ public static partial class ImGuiApp
 				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
 				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 			}
-			onWindowResized?.Invoke();
+			config.OnMoveOrResize?.Invoke();
+		};
+
+		window.Update += (delta) =>
+		{
+			lock (LockGL)
+			{
+				controller?.Update((float)delta);
+				config.OnUpdate?.Invoke((float)delta);
+			}
 		};
 
 		// The render function
@@ -156,19 +189,16 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
-				// Make sure ImGui is up-to-date
-				controller?.Update((float)delta);
+				if (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized)
+				{
+					gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+					gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-				// This is where you'll do any rendering beneath the ImGui context
-				// Here, we just have a blank screen.
-				gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
-				gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
+					RenderAppMenu(config.OnAppMenu);
+					RenderWindowContents(config.OnRender, (float)delta);
 
-				RenderMenu(onMenu);
-				RenderWindowContents(onTick, (float)delta);
-
-				// Make sure ImGui renders too!
-				controller?.Render();
+					controller?.Render();
+				}
 			}
 		};
 
@@ -194,7 +224,7 @@ public static partial class ImGuiApp
 		window.Dispose();
 	}
 
-	public static void RenderMenu(Action? menuDelegate)
+	public static void RenderAppMenu(Action? menuDelegate)
 	{
 		if (menuDelegate is not null)
 		{
