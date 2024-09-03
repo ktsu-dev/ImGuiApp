@@ -75,7 +75,5 @@ internal static class ImGuiAppDemo
 
 	private static void OnWindowResized()
 	{
-		ImGui.GetIO().DisplaySize = ImGui.GetMainViewport().Size;
-		ImGui.GetIO().DisplayFramebufferScale = new(ImGui.GetMainViewport().DpiScale);
 	}
 }

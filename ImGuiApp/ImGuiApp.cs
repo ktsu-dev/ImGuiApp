@@ -43,6 +43,9 @@ public static partial class ImGuiApp
 		};
 	}
 
+	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static Dictionary<int, ImFontPtr> Fonts { get; } = [];
+
 	public static bool IsFocused { get; private set; } = true;
 	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
 
@@ -59,6 +62,8 @@ public static partial class ImGuiApp
 
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
+
+	private static float UIScaleFactor { get; set; } = 1;
 
 	public class TextureInfo
 	{
@@ -107,13 +112,17 @@ public static partial class ImGuiApp
 
 		Config = config;
 
+
+		ForceDpiAware.Windows();
+
 		var silkWindowOptions = WindowOptions.Default;
 		silkWindowOptions.Title = config.Title;
 		silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
 		silkWindowOptions.Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y);
-		silkWindowOptions.WindowState = config.InitialWindowState.LayoutState;
+		silkWindowOptions.WindowState = Silk.NET.Windowing.WindowState.Normal;
 
 		LastNormalWindowState = config.InitialWindowState;
+		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 
 		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
 
@@ -143,10 +152,16 @@ public static partial class ImGuiApp
 				gl,
 				view: window,
 				input: inputContext,
-				onConfigureIO: config.OnStart
+				onConfigureIO: () =>
+				{
+					UpdateDpiScale();
+					InitFonts();
+					config.OnStart?.Invoke();
+				}
 			);
 
 			ImGui.GetStyle().WindowRounding = 0;
+			window.WindowState = config.InitialWindowState.LayoutState;
 		};
 
 		// Handle resizes
@@ -158,12 +173,15 @@ public static partial class ImGuiApp
 				gl?.Viewport(s);
 			}
 
-			if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
+			if (window.WindowState == Silk.NET.Windowing.WindowState.Normal)
 			{
 				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
 				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
 				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 			}
+
+			UpdateDpiScale();
+
 			config.OnMoveOrResize?.Invoke();
 		};
 
@@ -175,6 +193,9 @@ public static partial class ImGuiApp
 				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
 				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 			}
+
+			UpdateDpiScale();
+
 			config.OnMoveOrResize?.Invoke();
 		};
 
@@ -210,9 +231,20 @@ public static partial class ImGuiApp
 					gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 					gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-					RenderAppMenu(config.OnAppMenu);
-					RenderWindowContents(config.OnRender, (float)delta);
+					//get scaled font size
+					const float normalFontSize = 13;
+					float scaledFontSize = normalFontSize * UIScaleFactor;
+					var (bestFontSize, bestFont) = Fonts.Where(x => x.Key >= scaledFontSize).OrderBy(x => x.Key).FirstOrDefault();
+					float scaleRatio = bestFontSize / normalFontSize;
+					ImGui.PushFont(bestFont);
 
+					using (new UIScaler(scaleRatio))
+					{
+						RenderAppMenu(config.OnAppMenu);
+						RenderWindowContents(config.OnRender, (float)delta);
+					}
+
+					ImGui.PopFont();
 					controller?.Render();
 				}
 			}
@@ -391,5 +423,40 @@ public static partial class ImGuiApp
 			Textures[path] = textureInfo;
 		}
 		return textureInfo;
+	}
+
+	private static void UpdateDpiScale() => UIScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
+
+	internal static void InitFonts()
+	{
+		byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Regular;
+		var io = ImGui.GetIO();
+		var fontAtlasPtr = io.Fonts;
+		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
+		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
+		_ = fontAtlasPtr.AddFontDefault();
+		foreach (int size in FontSizes)
+		{
+			unsafe
+			{
+				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
+				var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
+				{
+					OversampleH = 2,
+					OversampleV = 2,
+					PixelSnapH = true,
+				};
+				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+			}
+		}
+
+		_ = fontAtlasPtr.Build();
+
+		int numFonts = fontAtlasPtr.Fonts.Size;
+		for (int i = 0; i < numFonts; i++)
+		{
+			var font = fontAtlasPtr.Fonts[i];
+			Fonts[(int)font.ConfigData.SizePixels] = font;
+		}
 	}
 }

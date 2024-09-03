@@ -5,10 +5,26 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ktsu.io.ScopedAction" Version="1.0.0-alpha.4" />
     <PackageReference Include="ktsu.io.StrongPaths" Version="1.1.1" />
     <PackageReference Include="Silk.NET" Version="2.21.0" />
     <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.21.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
