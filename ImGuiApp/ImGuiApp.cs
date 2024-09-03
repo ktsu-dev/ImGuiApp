@@ -184,8 +184,8 @@ public static partial class ImGuiApp
 			{
 				double currentFps = window.FramesPerSecond;
 				double currentUps = window.UpdatesPerSecond;
-				double requiredFps = IsFocused ? 30 : 15;
-				double requiredUps = IsFocused ? 30 : 15;
+				double requiredFps = IsFocused ? 30 : 5;
+				double requiredUps = IsFocused ? 30 : 5;
 				if (currentFps != requiredFps)
 				{
 					window.VSync = false;
