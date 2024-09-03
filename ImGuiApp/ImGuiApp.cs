@@ -63,7 +63,7 @@ public static partial class ImGuiApp
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
-	private static float UIScaleFactor { get; set; } = 1;
+	public static float ScaleFactor { get; private set; } = 1;
 
 	public class TextureInfo
 	{
@@ -233,7 +233,7 @@ public static partial class ImGuiApp
 
 					//get scaled font size
 					const float normalFontSize = 13;
-					float scaledFontSize = normalFontSize * UIScaleFactor;
+					float scaledFontSize = normalFontSize * ScaleFactor;
 					var (bestFontSize, bestFont) = Fonts.Where(x => x.Key >= scaledFontSize).OrderBy(x => x.Key).FirstOrDefault();
 					float scaleRatio = bestFontSize / normalFontSize;
 					ImGui.PushFont(bestFont);
@@ -425,7 +425,7 @@ public static partial class ImGuiApp
 		return textureInfo;
 	}
 
-	private static void UpdateDpiScale() => UIScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
+	private static void UpdateDpiScale() => ScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
 	internal static void InitFonts()
 	{
