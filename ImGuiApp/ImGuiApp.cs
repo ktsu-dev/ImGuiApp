@@ -253,14 +253,17 @@ public static partial class ImGuiApp
 		// The closing function
 		window.Closing += () =>
 		{
-			// Dispose our controller first
-			controller?.Dispose();
+			lock (LockGL)
+			{
+				// Dispose our controller first
+				controller?.Dispose();
 
-			// Dispose the input context
-			inputContext?.Dispose();
+				// Dispose the input context
+				inputContext?.Dispose();
 
-			// Unload OpenGL
-			gl?.Dispose();
+				// Unload OpenGL
+				gl?.Dispose();
+			}
 		};
 
 		window.FocusChanged += (focused) => IsFocused = focused;
