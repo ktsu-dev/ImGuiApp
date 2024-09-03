@@ -63,6 +63,16 @@ namespace ktsu.io.ImGuiApp.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] RobotoMonoNerdFontMono_Medium {
+            get {
+                object obj = ResourceManager.GetObject("RobotoMonoNerdFontMono-Medium", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] RobotoMonoNerdFontMono_Regular {
             get {
                 object obj = ResourceManager.GetObject("RobotoMonoNerdFontMono-Regular", resourceCulture);

@@ -432,7 +432,7 @@ public static partial class ImGuiApp
 
 	internal static void InitFonts()
 	{
-		byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Regular;
+		byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Medium;
 		var io = ImGui.GetIO();
 		var fontAtlasPtr = io.Fonts;
 		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);

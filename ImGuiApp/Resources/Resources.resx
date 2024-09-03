@@ -121,4 +121,7 @@
   <data name="RobotoMonoNerdFontMono-Regular" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>RobotoMonoNerdFontMono-Regular.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
+  <data name="RobotoMonoNerdFontMono-Medium" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>RobotoMonoNerdFontMono-Medium.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
 </root>
