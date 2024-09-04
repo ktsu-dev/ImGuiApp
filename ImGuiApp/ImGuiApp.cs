@@ -30,6 +30,8 @@ public static partial class ImGuiApp
 {
 	private static IWindow? window;
 	private static GL? gl;
+	private static ImGuiController? controller;
+	private static IInputContext? inputContext;
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -112,7 +114,6 @@ public static partial class ImGuiApp
 
 		Config = config;
 
-
 		ForceDpiAware.Windows();
 
 		var silkWindowOptions = WindowOptions.Default;
@@ -128,10 +129,6 @@ public static partial class ImGuiApp
 
 		// Create a Silk.NET window as usual
 		window = Window.Create(silkWindowOptions);
-
-		// Declare some variables
-		ImGuiController? controller = null;
-		IInputContext? inputContext = null;
 
 		// Our loading function
 		window.Load += () =>
