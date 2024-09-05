@@ -459,4 +459,6 @@ public static partial class ImGuiApp
 			Fonts[(int)font.ConfigData.SizePixels] = font;
 		}
 	}
+
+	public static int EmsToPx(float ems) => (int)(ems * ImGui.GetFontSize());
 }
