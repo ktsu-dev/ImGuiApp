@@ -22,7 +22,7 @@ public class ImGuiAppWindowState
 
 {
 	public Vector2 Size { get; set; } = new(1280, 720);
-	public Vector2 Pos { get; set; } = new(50, 50);
+	public Vector2 Pos { get; set; } = new(-short.MinValue, -short.MinValue);
 	public WindowState LayoutState { get; set; }
 }
 
@@ -200,6 +200,8 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
+				EnsureWindowPositionIsValid();
+
 				double currentFps = window.FramesPerSecond;
 				double currentUps = window.UpdatesPerSecond;
 				double requiredFps = IsFocused ? 30 : 5;
@@ -272,6 +274,28 @@ public static partial class ImGuiApp
 		window.Run();
 
 		window.Dispose();
+	}
+
+	private static void EnsureWindowPositionIsValid()
+	{
+		if (window?.Monitor is not null && window.WindowState is not Silk.NET.Windowing.WindowState.Minimized)
+		{
+			var bounds = window.Monitor.Bounds;
+			bool onScreen = bounds.Contains(window.Position) ||
+				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, 0)) ||
+				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(0, window.Size.Y)) ||
+				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, window.Size.Y));
+
+			if (!onScreen)
+			{
+				// If the window is not on a monitor, move it to the primary monitor
+				var defaultWindowState = new ImGuiAppWindowState();
+				var halfSize = defaultWindowState.Size / 2;
+				window.Size = new((int)defaultWindowState.Size.X, (int)defaultWindowState.Size.Y);
+				window.Position = window.Monitor.Bounds.Center - new Silk.NET.Maths.Vector2D<int>((int)halfSize.X, (int)halfSize.Y);
+				window.WindowState = defaultWindowState.LayoutState;
+			}
+		}
 	}
 
 	public static void RenderAppMenu(Action? menuDelegate)
