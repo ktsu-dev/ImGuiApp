@@ -254,6 +254,16 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
+				var io = ImGui.GetIO();
+				var fontAtlasPtr = io.Fonts;
+				for (int i = 0; i < fontAtlasPtr.Fonts.Size; i++)
+				{
+					var font = fontAtlasPtr.Fonts[i];
+					font.Destroy();
+				}
+
+				fontAtlasPtr.ClearFonts();
+
 				// Dispose our controller first
 				controller?.Dispose();
 
