@@ -1,6 +1,6 @@
 // Ignore Spelling: App Im
 
-namespace ktsu.io.ImGuiApp;
+namespace ktsu.ImGuiApp;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -8,8 +8,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using ktsu.io.Extensions;
-using ktsu.io.StrongPaths;
+using ktsu.Extensions;
+using ktsu.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
