@@ -1,7 +1,7 @@
 // Adapted From: https://github.com/Ryujinx/Ryujinx/blob/master/src/Ryujinx.Common/SystemInterop/GdiPlusHelper.cs
 // License: MIT
 
-namespace ktsu.io.ImGuiApp;
+namespace ktsu.ImGuiApp;
 
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;

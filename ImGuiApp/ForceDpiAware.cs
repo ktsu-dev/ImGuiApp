@@ -1,7 +1,7 @@
 // Adapted From: https://github.com/Ryujinx/Ryujinx/blob/master/src/Ryujinx.Common/SystemInterop/ForceDpiAware.cs
 // License: MIT
 
-namespace ktsu.io.ImGuiApp;
+namespace ktsu.ImGuiApp;
 
 using System.Globalization;
 using System.Runtime.InteropServices;
