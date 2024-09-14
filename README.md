@@ -4,10 +4,10 @@ A bootstrap library to give you an environment to build an ImGUI.NET application
 
 ## Minimal Example
 ```csharp
-namespace ktsu.io.ImGuiAppDemo;
+namespace ktsu.ImGuiAppDemo;
 
 using ImGuiNET;
-using ktsu.io.ImGuiApp;
+using ktsu.ImGuiApp;
 
 internal class ImGuiAppDemo
 {
