@@ -1,6 +1,6 @@
-namespace ktsu.io.ImGuiApp;
+namespace ktsu.ImGuiApp;
 
-using ktsu.io.ScopedAction;
+using ktsu.ScopedAction;
 using ImGuiNET;
 using System.Numerics;
 
