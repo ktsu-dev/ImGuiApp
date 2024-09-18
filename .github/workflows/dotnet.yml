@@ -14,4 +14,3 @@ jobs:
   build-dotnet-library:
     uses: ktsu-dev/workflows/.github/workflows/build-dotnet-library.yml@main
     secrets: inherit
-
