@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using ktsu.Extensions;
+using ktsu.io.ImGuiApp.ImGuiController;
 using ktsu.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
@@ -30,7 +31,7 @@ public static partial class ImGuiApp
 {
 	private static IWindow? window;
 	private static GL? gl;
-	private static ImGuiController.ImGuiController? controller;
+	private static ImGuiController? controller;
 	private static IInputContext? inputContext;
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
@@ -146,7 +147,7 @@ public static partial class ImGuiApp
 					gl = window.CreateOpenGL(); // load OpenGL
 
 					inputContext = window.CreateInput(); // create an input context
-					controller = new ImGuiController.ImGuiController
+					controller = new ImGuiController
 					(
 						gl,
 						view: window,
@@ -470,41 +471,30 @@ public static partial class ImGuiApp
 			var io = ImGui.GetIO();
 			var fontAtlasPtr = io.Fonts;
 			nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
-			FontDataPtrs.Add(fontBytesPtr);
 			Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
-			_ = fontAtlasPtr.AddFontDefault();
 			foreach (int size in FontSizes)
 			{
-			
-				byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Medium;
-				var io = ImGui.GetIO();
-				var fontAtlasPtr = io.Fonts;
-				nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
-				Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
-				foreach (int size in FontSizes)
+				unsafe
 				{
-					unsafe
+					var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
+					var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
 					{
-						var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-						var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
-						{
-							OversampleH = 2,
-							OversampleV = 2,
-							PixelSnapH = true,
-							FontDataOwnedByAtlas = false,
-						};
-						_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
-					}
+						OversampleH = 2,
+						OversampleV = 2,
+						PixelSnapH = true,
+						FontDataOwnedByAtlas = false,
+					};
+					_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
 				}
+			}
 
-				_ = fontAtlasPtr.Build();
+			_ = fontAtlasPtr.Build();
 
-				int numFonts = fontAtlasPtr.Fonts.Size;
-				for (int i = 0; i < numFonts; i++)
-				{
-					var font = fontAtlasPtr.Fonts[i];
-					Fonts[(int)font.ConfigData.SizePixels] = font;
-				}
+			int numFonts = fontAtlasPtr.Fonts.Size;
+			for (int i = 0; i < numFonts; i++)
+			{
+				var font = fontAtlasPtr.Fonts[i];
+				Fonts[(int)font.ConfigData.SizePixels] = font;
 			}
 		}
 	}
