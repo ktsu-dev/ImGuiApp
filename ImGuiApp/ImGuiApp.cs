@@ -1,6 +1,6 @@
 // Ignore Spelling: App Im
 
-namespace ktsu.io.ImGuiApp;
+namespace ktsu.ImGuiApp;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -8,7 +8,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using ktsu.io.StrongPaths;
+using ktsu.Extensions;
+using ktsu.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
@@ -47,6 +48,7 @@ public static partial class ImGuiApp
 
 	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 	private static Dictionary<int, ImFontPtr> Fonts { get; } = [];
+	private static Collection<nint> FontDataPtrs { get; } = [];
 
 	public static bool IsFocused { get; private set; } = true;
 	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
@@ -254,6 +256,9 @@ public static partial class ImGuiApp
 		{
 			lock (LockGL)
 			{
+				// Free the natively allocated font data
+				FontDataPtrs.ForEach(p => Marshal.FreeHGlobal(p));
+
 				// Dispose our controller first
 				controller?.Dispose();
 
@@ -457,6 +462,7 @@ public static partial class ImGuiApp
 		var io = ImGui.GetIO();
 		var fontAtlasPtr = io.Fonts;
 		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
+		FontDataPtrs.Add(fontBytesPtr);
 		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
 		_ = fontAtlasPtr.AddFontDefault();
 		foreach (int size in FontSizes)
@@ -469,6 +475,7 @@ public static partial class ImGuiApp
 					OversampleH = 2,
 					OversampleV = 2,
 					PixelSnapH = true,
+					FontDataOwnedByAtlas = false,
 				};
 				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
 			}

@@ -1,11 +1,11 @@
 // Ignore Spelling: App Im
 
-namespace ktsu.io.ImGuiApp.Demo;
+namespace ktsu.ImGuiApp.Demo;
 
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using ktsu.io.ImGuiApp;
-using ktsu.io.ImGuiApp.Demo.Properties;
+using ktsu.ImGuiApp;
+using ktsu.ImGuiApp.Demo.Properties;
 
 internal static class ImGuiAppDemo
 {
