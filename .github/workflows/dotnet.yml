@@ -1,9 +1,10 @@
 name: .NET Library Pipeline
 
 on:
-  schedule:
-    - cron: "* * * * *"
+  push:
   pull_request:
+  schedule:
+    - cron: "43 14 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
