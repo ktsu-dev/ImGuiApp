@@ -1,14 +1,18 @@
-name: Build and Test
+name: .NET Library Pipeline
 
 on:
-  push:
+  schedule:
+    - cron: "* * * * *"
   pull_request:
-    
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 permissions:
   packages: write
   contents: write
   
 jobs:
-  build-dotnet-library:
-    uses: ktsu-dev/workflows/.github/workflows/build-dotnet-library.yml@main
+  dotnet-library:
+    uses: ktsu-dev/workflows/.github/workflows/dotnet-library.yml@main
     secrets: inherit
