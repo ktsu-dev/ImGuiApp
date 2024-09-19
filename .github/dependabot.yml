@@ -5,6 +5,15 @@ updates:
   schedule:
     interval: "daily"
   groups:
-    all:
+    ktsu:
       patterns:
-        - "*"
+        - "ktsu.*"
+    Microsoft:
+      patterns:
+        - "Microsoft.*"
+    System:
+      patterns:
+        - "System.*"
+    Silk:
+      patterns:
+        - "Silk.NET.*"
