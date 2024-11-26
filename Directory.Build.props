@@ -68,7 +68,7 @@
     <Nullable>enable</Nullable>
     <NeutralLanguage>en-US</NeutralLanguage>
     <WarningLevel>9999</WarningLevel>
-    <NoWarn>CA1724;CA1034;CA1000;CA2260;</NoWarn>
+    <NoWarn>CA1724;CA1034;CA1000;CA2260;CA1812;CA1515;</NoWarn>
     <EnablePackageValidation>True</EnablePackageValidation>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <AnalysisLevel>latest-all</AnalysisLevel>
