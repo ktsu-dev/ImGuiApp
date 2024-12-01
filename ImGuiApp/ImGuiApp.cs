@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using ktsu.Extensions;
-using ktsu.ImGuiApp.ImGuiController;
 using ktsu.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
@@ -31,7 +30,7 @@ public static partial class ImGuiApp
 {
 	private static IWindow? window;
 	private static GL? gl;
-	private static ImGuiController? controller;
+	private static ImGuiController.ImGuiController? controller;
 	private static IInputContext? inputContext;
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
@@ -147,7 +146,7 @@ public static partial class ImGuiApp
 					gl = window.CreateOpenGL(); // load OpenGL
 
 					inputContext = window.CreateInput(); // create an input context
-					controller = new ImGuiController
+					controller = new ImGuiController.ImGuiController
 					(
 						gl,
 						view: window,
