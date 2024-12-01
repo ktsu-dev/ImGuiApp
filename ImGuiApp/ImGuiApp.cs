@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using ktsu.Extensions;
-using ktsu.io.ImGuiApp.ImGuiController;
+using ktsu.ImGuiApp.ImGuiController;
 using ktsu.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;

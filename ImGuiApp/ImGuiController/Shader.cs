@@ -1,4 +1,4 @@
-namespace ktsu.io.ImGuiApp.ImGuiController;
+namespace ktsu.ImGuiApp.ImGuiController;
 
 //Adapted from https://github.com/dotnet/Silk.NET/blob/main/src/OpenGL/Extensions/Silk.NET.OpenGL.Extensions.ImGui/Shader.cs
 
