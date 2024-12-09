@@ -264,17 +264,17 @@ public static partial class ImGuiApp
 
 					inputContext = window.CreateInput(); // create an input context
 					controller = new ImGuiController.ImGuiController
-			(
-				gl,
-				view: window,
-				input: inputContext,
-				onConfigureIO: () =>
-				{
-					UpdateDpiScale();
-					InitFonts();
-					config.OnStart?.Invoke();
-				}
-			);
+					(
+						gl,
+						view: window,
+						input: inputContext,
+						onConfigureIO: () =>
+						{
+							UpdateDpiScale();
+							InitFonts();
+							config.OnStart?.Invoke();
+						}
+					);
 
 					ImGui.GetStyle().WindowRounding = 0;
 					window.WindowState = config.InitialWindowState.LayoutState;
