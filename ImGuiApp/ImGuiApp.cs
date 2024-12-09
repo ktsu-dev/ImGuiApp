@@ -18,14 +18,30 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Color = System.Drawing.Color;
 
+/// <summary>
+/// Represents the state of the ImGui application window, including size, position, and layout state.
+/// </summary>
 public class ImGuiAppWindowState
-
 {
+	/// <summary>
+	/// Gets or sets the size of the window.
+	/// </summary>
 	public Vector2 Size { get; set; } = new(1280, 720);
+
+	/// <summary>
+	/// Gets or sets the position of the window.
+	/// </summary>
 	public Vector2 Pos { get; set; } = new(-short.MinValue, -short.MinValue);
+
+	/// <summary>
+	/// Gets or sets the layout state of the window.
+	/// </summary>
 	public WindowState LayoutState { get; set; }
 }
 
+/// <summary>
+/// Provides static methods and properties to manage the ImGui application.
+/// </summary>
 public static partial class ImGuiApp
 {
 	private static IWindow? window;
@@ -35,6 +51,13 @@ public static partial class ImGuiApp
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
+	/// <summary>
+	/// Gets the current state of the ImGui application window.
+	/// </summary>
+	/// <value>
+	/// A new instance of <see cref="ImGuiAppWindowState"/> representing the current window state,
+	/// including size, position, and layout state.
+	/// </value>
 	public static ImGuiAppWindowState WindowState
 	{
 		get => new()
@@ -49,7 +72,13 @@ public static partial class ImGuiApp
 	private static ConcurrentDictionary<int, ImFontPtr> Fonts { get; } = [];
 	private static Collection<nint> FontDataPtrs { get; } = [];
 
+	/// <summary>
+	/// Gets a value indicating whether the ImGui application window is focused.
+	/// </summary>
 	public static bool IsFocused { get; private set; } = true;
+	/// <summary>
+	/// Gets a value indicating whether the ImGui application window is visible.
+	/// </summary>
 	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
 
 	[LibraryImport("kernel32.dll")]
@@ -66,38 +95,122 @@ public static partial class ImGuiApp
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
 
+	/// <summary>
+	/// Gets the scale factor for the ImGui application.
+	/// </summary>
 	public static float ScaleFactor { get; private set; } = 1;
 
+	/// <summary>
+	/// Represents information about a texture, including its file path, texture ID, width, and height.
+	/// </summary>
 	public class TextureInfo
 	{
+		/// <summary>
+		/// Gets or sets the file path of the texture.
+		/// </summary>
 		public AbsoluteFilePath Path { get; set; } = new();
+
+		/// <summary>
+		/// Gets or sets the OpenGL texture ID.
+		/// </summary>
 		public uint TextureId { get; set; }
+
+		/// <summary>
+		/// Gets or sets the width of the texture.
+		/// </summary>
 		public int Width { get; set; }
+
+		/// <summary>
+		/// Gets or sets the height of the texture.
+		/// </summary>
 		public int Height { get; set; }
 	}
 
-	private static ConcurrentDictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
+	internal static ConcurrentDictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
 
 	private static object WindowLock { get; } = new();
 
+	/// <summary>
+	/// Stops the ImGui application by closing the window.
+	/// </summary>
 	public static void Stop() => window?.Close();
 
+	/// <summary>
+	/// Represents the configuration settings for the ImGui application.
+	/// </summary>
 	public class AppConfig
 	{
+		/// <summary>
+		/// Gets or sets the title of the application window.
+		/// </summary>
 		public string Title { get; init; } = nameof(ImGuiApp);
+
+		/// <summary>
+		/// Gets or sets the file path to the application window icon.
+		/// </summary>
 		public string IconPath { get; init; } = string.Empty;
+
+		/// <summary>
+		/// Gets or sets the initial state of the application window.
+		/// </summary>
 		public ImGuiAppWindowState InitialWindowState { get; init; } = new();
+
+		/// <summary>
+		/// Gets or sets the action to be performed when the application starts.
+		/// </summary>
 		public Action OnStart { get; init; } = () => { };
+
+		/// <summary>
+		/// Gets or sets the action to be performed on each update tick.
+		/// </summary>
 		public Action<float> OnUpdate { get; init; } = (delta) => { };
+
+		/// <summary>
+		/// Gets or sets the action to be performed on each render tick.
+		/// </summary>
 		public Action<float> OnRender { get; init; } = (delta) => { };
+
+		/// <summary>
+		/// Gets or sets the action to be performed when rendering the application menu.
+		/// </summary>
 		public Action OnAppMenu { get; init; } = () => { };
+
+		/// <summary>
+		/// Gets or sets the action to be performed when the application window is moved or resized.
+		/// </summary>
 		public Action OnMoveOrResize { get; init; } = () => { };
 	}
 
 	private static AppConfig Config { get; set; } = new();
 
+	/// <summary>
+	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
+	/// </summary>
+	/// <param name="windowTitle">The title of the application window.</param>
+	/// <param name="initialWindowState">The initial state of the application window.</param>
+	/// <param name="onStart">The action to be performed when the application starts.</param>
+	/// <param name="onTick">The action to be performed on each update tick.</param>
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
+
+	/// <summary>
+	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
+	/// </summary>
+	/// <param name="windowTitle">The title of the application window.</param>
+	/// <param name="initialWindowState">The initial state of the application window.</param>
+	/// <param name="onStart">The action to be performed when the application starts.</param>
+	/// <param name="onTick">The action to be performed on each update tick.</param>
+	/// <param name="onMenu">The action to be performed when rendering the application menu.</param>
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
+
+	/// <summary>
+	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
+	/// </summary>
+	/// <param name="windowTitle">The title of the application window.</param>
+	/// <param name="initialWindowState">The initial state of the application window.</param>
+	/// <param name="onStart">The action to be performed when the application starts.</param>
+	/// <param name="onTick">The action to be performed on each update tick.</param>
+	/// <param name="onMenu">The action to be performed when rendering the application menu.</param>
+	/// <param name="onWindowResized">The action to be performed when the application window is moved or resized.</param>
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized) =>
 		Start(new AppConfig
 		{
@@ -109,6 +222,10 @@ public static partial class ImGuiApp
 			OnMoveOrResize = onWindowResized ?? new(() => { }),
 		});
 
+	/// <summary>
+	/// Starts the ImGui application with the specified configuration.
+	/// </summary>
+	/// <param name="config">The configuration settings for the ImGui application.</param>
 	public static void Start(AppConfig config)
 	{
 		lock (WindowLock)
@@ -147,17 +264,17 @@ public static partial class ImGuiApp
 
 					inputContext = window.CreateInput(); // create an input context
 					controller = new ImGuiController.ImGuiController
-					(
-						gl,
-						view: window,
-						input: inputContext,
-						onConfigureIO: () =>
-						{
-							UpdateDpiScale();
-							InitFonts();
-							config.OnStart?.Invoke();
-						}
-					);
+			(
+				gl,
+				view: window,
+				input: inputContext,
+				onConfigureIO: () =>
+				{
+					UpdateDpiScale();
+					InitFonts();
+					config.OnStart?.Invoke();
+				}
+			);
 
 					ImGui.GetStyle().WindowRounding = 0;
 					window.WindowState = config.InitialWindowState.LayoutState;
@@ -309,6 +426,10 @@ public static partial class ImGuiApp
 		}
 	}
 
+	/// <summary>
+	/// Renders the application menu using the provided delegate.
+	/// </summary>
+	/// <param name="menuDelegate">The delegate to render the menu.</param>
 	public static void RenderAppMenu(Action? menuDelegate)
 	{
 		if (menuDelegate is not null)
@@ -337,6 +458,11 @@ public static partial class ImGuiApp
 		}
 	}
 
+	/// <summary>
+	/// Renders the main window contents and handles ImGui demo and metrics windows.
+	/// </summary>
+	/// <param name="tickDelegate">The delegate to render the main window contents.</param>
+	/// <param name="dt">The delta time since the last frame.</param>
 	public static void RenderWindowContents(Action<float>? tickDelegate, float dt)
 	{
 		bool b = true;
@@ -363,13 +489,24 @@ public static partial class ImGuiApp
 		}
 	}
 
+	/// <summary>
+	/// Converts an ImageSharp image to a byte array.
+	/// </summary>
+	/// <param name="image">The ImageSharp image to convert.</param>
+	/// <returns>A byte array containing the image data.</returns>
 	public static byte[] GetImageBytes(Image<Rgba32> image)
 	{
+		ArgumentNullException.ThrowIfNull(image);
+
 		byte[] pixelBytes = new byte[image.Width * image.Height * Unsafe.SizeOf<Rgba32>()];
 		image.CopyPixelDataTo(pixelBytes);
 		return pixelBytes;
 	}
 
+	/// <summary>
+	/// Sets the window icon using the specified icon file path.
+	/// </summary>
+	/// <param name="iconPath">The file path to the icon image.</param>
 	public static void SetWindowIcon(string iconPath)
 	{
 		using var stream = File.OpenRead(iconPath);
@@ -391,6 +528,14 @@ public static partial class ImGuiApp
 		window?.SetWindowIcon([.. icons]);
 	}
 
+	/// <summary>
+	/// Uploads a texture to the GPU using the specified RGBA byte array, width, and height.
+	/// </summary>
+	/// <param name="bytes">The byte array containing the texture data in RGBA format.</param>
+	/// <param name="width">The width of the texture.</param>
+	/// <param name="height">The height of the texture.</param>
+	/// <returns>The OpenGL texture ID.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	public static uint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
 		uint textureId;
@@ -420,6 +565,11 @@ public static partial class ImGuiApp
 		return textureId;
 	}
 
+	/// <summary>
+	/// Deletes the specified texture from the GPU.
+	/// </summary>
+	/// <param name="textureId">The OpenGL texture ID to delete.</param>
+	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	public static void DeleteTexture(uint textureId)
 	{
 		lock (WindowLock)
@@ -434,6 +584,19 @@ public static partial class ImGuiApp
 		}
 	}
 
+	/// <summary>
+	/// Gets or loads a texture from the specified file path.
+	/// </summary>
+	/// <param name="path">The file path of the texture to load.</param>
+	/// <returns>
+	/// A <see cref="TextureInfo"/> object containing information about the loaded texture,
+	/// including its file path, texture ID, width, and height.
+	/// </returns>
+	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
+	/// <exception cref="ArgumentNullException">Thrown if the specified path is null.</exception>
+	/// <exception cref="FileNotFoundException">Thrown if the specified file does not exist.</exception>
+	/// <exception cref="NotSupportedException">Thrown if the image format is not supported.</exception>
+	/// <exception cref="Exception">Thrown if an error occurs while loading the image.</exception>
 	public static TextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
 		TextureInfo? textureInfo;
@@ -498,5 +661,10 @@ public static partial class ImGuiApp
 		}
 	}
 
+	/// <summary>
+	/// Converts a value in ems to pixels based on the current ImGui font size.
+	/// </summary>
+	/// <param name="ems">The value in ems to convert to pixels.</param>
+	/// <returns>The equivalent value in pixels.</returns>
 	public static int EmsToPx(float ems) => (int)(ems * ImGui.GetFontSize());
 }

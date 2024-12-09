@@ -2,19 +2,35 @@ namespace ktsu.ImGuiApp.ImGuiController;
 
 //Adapted from https://github.com/dotnet/Silk.NET/blob/main/src/OpenGL/Extensions/Silk.NET.OpenGL.Extensions.ImGui/Texture.cs
 
-#pragma warning disable CS9193 // Argument should be a variable because it is passed to a 'ref readonly' parameter
-#pragma warning disable CS9192 // Argument should be passed with 'ref' or 'in' keyword
-
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using Silk.NET.OpenGL;
 
+/// <summary>
+/// Specifies the texture coordinate axes for texture wrapping.
+/// </summary>
 public enum TextureCoordinate
 {
+	/// <summary>
+	/// No texture coordinate.
+	/// </summary>
+	None = 0,
+
+	/// <summary>
+	/// The S coordinate (corresponds to the x-axis in texture space).
+	/// </summary>
 	S = TextureParameterName.TextureWrapS,
+
+	/// <summary>
+	/// The T coordinate (corresponds to the y-axis in texture space).
+	/// </summary>
 	T = TextureParameterName.TextureWrapT,
+
+	/// <summary>
+	/// The R coordinate (corresponds to the z-axis in texture space).
+	/// </summary>
 	R = TextureParameterName.TextureWrapR
 }
 
@@ -55,7 +71,8 @@ class Texture : IDisposable
 		SetWrap(TextureCoordinate.S, TextureWrapMode.Repeat);
 		SetWrap(TextureCoordinate.T, TextureWrapMode.Repeat);
 
-		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLevel, MipmapLevels - 1);
+		uint mip = MipmapLevels - 1;
+		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLevel, ref mip);
 	}
 
 	public void Bind()
@@ -65,12 +82,14 @@ class Texture : IDisposable
 
 	public void SetMinFilter(TextureMinFilter filter)
 	{
-		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)filter);
+		int intFilter = (int)filter;
+		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, ref intFilter);
 	}
 
 	public void SetMagFilter(TextureMagFilter filter)
 	{
-		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)filter);
+		int intFilter = (int)filter;
+		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, ref intFilter);
 	}
 
 	public void SetAnisotropy(float level)
@@ -81,14 +100,15 @@ class Texture : IDisposable
 
 	public void SetLod(int @base, int min, int max)
 	{
-		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureLodBias, @base);
-		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinLod, min);
-		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLod, max);
+		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureLodBias, ref @base);
+		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinLod, ref min);
+		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLod, ref max);
 	}
 
 	public void SetWrap(TextureCoordinate coord, TextureWrapMode mode)
 	{
-		_gl.TexParameterI(GLEnum.Texture2D, (TextureParameterName)coord, (int)mode);
+		int intMode = (int)mode;
+		_gl.TexParameterI(GLEnum.Texture2D, (TextureParameterName)coord, ref intMode);
 	}
 
 	public void Dispose()

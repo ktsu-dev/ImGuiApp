@@ -4,8 +4,16 @@ using ktsu.ScopedAction;
 using ImGuiNET;
 using System.Numerics;
 
+/// <summary>
+/// Class responsible for scaling UI elements in ImGui.
+/// </summary>
 public class UIScaler : ScopedAction
 {
+	/// <summary>
+	/// Initializes a new instance of the <see cref="UIScaler"/> class.
+	/// Scales various ImGui style variables by the specified scale factor.
+	/// </summary>
+	/// <param name="scale">The scale factor to apply to the UI elements.</param>
 	public UIScaler(float scale)
 	{
 		var style = ImGui.GetStyle();
@@ -37,12 +45,24 @@ public class UIScaler : ScopedAction
 		OnClose = () => ImGui.PopStyleVar(numStyles);
 	}
 
+	/// <summary>
+	/// Pushes a style variable and increments the style count.
+	/// </summary>
+	/// <param name="style">The style variable to push.</param>
+	/// <param name="value">The value to set for the style variable.</param>
+	/// <param name="numStyles">The reference to the style count.</param>
 	private static void PushStyleAndCount(ImGuiStyleVar style, float value, ref int numStyles)
 	{
 		ImGui.PushStyleVar(style, value);
 		++numStyles;
 	}
 
+	/// <summary>
+	/// Pushes a style variable and increments the style count.
+	/// </summary>
+	/// <param name="style">The style variable to push.</param>
+	/// <param name="value">The value to set for the style variable.</param>
+	/// <param name="numStyles">The reference to the style count.</param>
 	private static void PushStyleAndCount(ImGuiStyleVar style, Vector2 value, ref int numStyles)
 	{
 		ImGui.PushStyleVar(style, value);
