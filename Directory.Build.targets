@@ -10,19 +10,25 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsExecutable) == true">
+    <IsPackable>False</IsPackable>
+    <IsPublishable>True</IsPublishable>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsTest) == true">
     <NoWarn>$(NoWarn);CS1591;CA2225;CA1707;IDE0022;IDE0058;CA1305;S4056;S104;CA5394;</NoWarn>
+    <IsPackable>False</IsPackable>
+    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsLibrary) == true">
     <IsPackable>True</IsPackable>
+    <IsPublishable>False</IsPublishable>
     <EnablePackageValidation>True</EnablePackageValidation>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(IsLibrary) != true Or $(IsPrimaryProject) != true">
+  <PropertyGroup Condition="$(IsPrimaryProject) != true">
     <IsPackable>False</IsPackable>
+    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsPrerelease) == true">
@@ -35,6 +41,15 @@
     <InternalsVisibleTo Include="$(RootNamespace).Test" />
     <InternalsVisibleTo Include="$(RootNamespace).Tests" />
     <InternalsVisibleTo Include="Test" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(IsTest) == true">
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <ProjectReference Include="..\$(SolutionName)\$(SolutionName).csproj" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
   </ItemGroup>
 
   <ItemGroup Condition="$(IsPrimaryProject) == true">
@@ -79,15 +94,6 @@
     <None Condition="Exists('$(ChangelogFilePath)')" Include="$(ChangelogFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
     <None Condition="Exists('$(ReadmeFilePath)')" Include="$(ReadmeFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
     <None Condition="Exists('$(VersionFilePath)')" Include="$(VersionFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
-  </ItemGroup>
-
-  <ItemGroup Condition="$(IsTest) == true">
-    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
-    <ProjectReference Include="..\$(SolutionName)\$(SolutionName).csproj" />
-    <PackageReference Include="coverlet.collector" Version="6.0.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
   </ItemGroup>
 
 </Project>
