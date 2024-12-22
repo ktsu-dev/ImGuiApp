@@ -7,7 +7,7 @@
     <SolutionDirectory>$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDirectory>
 
     <DirectoryBuildPropsFile>$(MSBuildThisFileFullPath)</DirectoryBuildPropsFile>
-    
+
     <VersionFileName>VERSION</VersionFileName>
     <AuthorsFileName>AUTHORS</AuthorsFileName>
     <DescriptionFileName>DESCRIPTION</DescriptionFileName>
@@ -76,6 +76,7 @@
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <InvariantGlobalization>true</InvariantGlobalization>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
 
   </PropertyGroup>
 </Project>
