@@ -28,7 +28,6 @@
 
   <PropertyGroup Condition="$(IsPrimaryProject) != true">
     <IsPackable>False</IsPackable>
-    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsPrerelease) == true">
