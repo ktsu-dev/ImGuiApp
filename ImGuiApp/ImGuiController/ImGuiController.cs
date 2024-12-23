@@ -41,7 +41,12 @@ internal class ImGuiController : IDisposable
 	private int _windowWidth;
 	private int _windowHeight;
 
+#if NET8_0
 	private readonly object contextLock = new();
+#else
+	private readonly Lock contextLock = new();
+#endif
+
 	private nint Context { get; set; }
 
 	/// <summary>
