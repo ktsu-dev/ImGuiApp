@@ -107,7 +107,7 @@
     <RollForward>LatestMinor</RollForward>
     <RuntimeFrameworkVersion>9.0.0</RuntimeFrameworkVersion>
     <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
-    <!-- <RuntimeIdentifiers>win-x64;osx-x64;linux-x64</RuntimeIdentifiers> -->
+    <RuntimeIdentifiers>win-x64;osx-x64;linux-x64</RuntimeIdentifiers>
     <!-- <SatelliteResourceLanguages>en-US;de-DE</SatelliteResourceLanguages> -->
     <!-- <SelfContained>true</SelfContained> -->
     <!-- <UseAppHost>false</UseAppHost> -->
