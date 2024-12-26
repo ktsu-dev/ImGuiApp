@@ -86,7 +86,7 @@
     <!--<ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>-->
     <!--<ApiCompatPermitUnnecessarySuppressions>true</ApiCompatPermitUnnecessarySuppressions>-->
     <!--<ApiCompatPreserveUnnecessarySuppressions>true</ApiCompatPreserveUnnecessarySuppressions>-->
-    <ApiCompatRespectInternals>true</ApiCompatRespectInternals>
+    <!-- <ApiCompatRespectInternals>true</ApiCompatRespectInternals> -->
     <EnablePackageValidation>true</EnablePackageValidation>
     <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
     <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
