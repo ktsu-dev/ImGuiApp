@@ -1,93 +1,213 @@
 <Project>
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <SolutionPath>$([System.IO.Path]::GetFullPath($([System.IO.Directory]::GetFiles("$(MSBuildThisFileDirectory)", "*.sln")[0])))</SolutionPath>
-    <SolutionName>$([System.IO.Path]::GetFileNameWithoutExtension($(SolutionPath)))</SolutionName>
-    <SolutionDirectory>$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDirectory>
+    <DirectoryBuildPropsFilePath>$(MSBuildThisFileFullPath)</DirectoryBuildPropsFilePath>
+    <DirectoryBuildPropsFileName>$([System.IO.Path]::GetFileName($(DirectoryBuildPropsFilePath)))</DirectoryBuildPropsFileName>
 
-    <DirectoryBuildPropsFile>$(MSBuildThisFileFullPath)</DirectoryBuildPropsFile>
+    <!-- Path properties-->
+    <PrimaryProjectName>$(SolutionName)</PrimaryProjectName>
+    <PrimaryProjectFileName>$(PrimaryProjectName).csproj</PrimaryProjectFileName>
+    <PrimaryProjectPath>$(SolutionDir)\$(PrimaryProjectName)\$(PrimaryProjectFileName)</PrimaryProjectPath>
+    <PrimaryProjectExists>false</PrimaryProjectExists>
+    <PrimaryProjectExists Condition="Exists($(PrimaryProjectPath))">true</PrimaryProjectExists>
 
     <VersionFileName>VERSION</VersionFileName>
+    <VersionFilePath>$(SolutionDir)\$(VersionFileName)</VersionFilePath>
+
     <AuthorsFileName>AUTHORS</AuthorsFileName>
+    <AuthorsFilePath>$(SolutionDir)\$(AuthorsFileName)</AuthorsFilePath>
+
     <DescriptionFileName>DESCRIPTION</DescriptionFileName>
-    <LicenseFileName>LICENSE</LicenseFileName>
+    <DescriptionFilePath>$(SolutionDir)\$(DescriptionFileName)</DescriptionFilePath>
+
     <ChangelogFileName>CHANGELOG</ChangelogFileName>
-    <ReadmeFileName>README</ReadmeFileName>
+    <ChangelogFilePath>$(SolutionDir)\$(ChangelogFileName)</ChangelogFilePath>
 
-    <MetadataFileExtension></MetadataFileExtension>
-    <VersionFilePath>$([MSBuild]::ValueOrDefault($(VersionFilePath),$([MSBuild]::GetPathOfFileAbove("$(VersionFileName)$(MetadataFileExtension)"))))</VersionFilePath>
-    <AuthorsFilePath>$([MSBuild]::ValueOrDefault($(AuthorsFilePath),$([MSBuild]::GetPathOfFileAbove("$(AuthorsFileName)$(MetadataFileExtension)"))))</AuthorsFilePath>
-    <DescriptionFilePath>$([MSBuild]::ValueOrDefault($(DescriptionFilePath),$([MSBuild]::GetPathOfFileAbove("$(DescriptionFileName)$(MetadataFileExtension)"))))</DescriptionFilePath>
-    <LicenseFilePath>$([MSBuild]::ValueOrDefault($(LicenseFilePath),$([MSBuild]::GetPathOfFileAbove("$(LicenseFileName)$(MetadataFileExtension)"))))</LicenseFilePath>
-    <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
-    <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
+    <ReadmeFileName>README.md</ReadmeFileName>
+    <ReadmeFilePath>$(SolutionDir)\$(ReadmeFileName)</ReadmeFilePath>
 
-    <MetadataFileExtension>.md</MetadataFileExtension>
-    <VersionFilePath>$([MSBuild]::ValueOrDefault($(VersionFilePath),$([MSBuild]::GetPathOfFileAbove("$(VersionFileName)$(MetadataFileExtension)"))))</VersionFilePath>
-    <AuthorsFilePath>$([MSBuild]::ValueOrDefault($(AuthorsFilePath),$([MSBuild]::GetPathOfFileAbove("$(AuthorsFileName)$(MetadataFileExtension)"))))</AuthorsFilePath>
-    <DescriptionFilePath>$([MSBuild]::ValueOrDefault($(DescriptionFilePath),$([MSBuild]::GetPathOfFileAbove("$(DescriptionFileName)$(MetadataFileExtension)"))))</DescriptionFilePath>
-    <LicenseFilePath>$([MSBuild]::ValueOrDefault($(LicenseFilePath),$([MSBuild]::GetPathOfFileAbove("$(LicenseFileName)$(MetadataFileExtension)"))))</LicenseFilePath>
-    <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
-    <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
+    <LicenseFileName>LICENSE.md</LicenseFileName>
+    <LicenseFilePath>$(SolutionDir)\$(LicenseFileName)</LicenseFilePath>
 
-    <MetadataFileExtension>.txt</MetadataFileExtension>
-    <VersionFilePath>$([MSBuild]::ValueOrDefault($(VersionFilePath),$([MSBuild]::GetPathOfFileAbove("$(VersionFileName)$(MetadataFileExtension)"))))</VersionFilePath>
-    <AuthorsFilePath>$([MSBuild]::ValueOrDefault($(AuthorsFilePath),$([MSBuild]::GetPathOfFileAbove("$(AuthorsFileName)$(MetadataFileExtension)"))))</AuthorsFilePath>
-    <DescriptionFilePath>$([MSBuild]::ValueOrDefault($(DescriptionFilePath),$([MSBuild]::GetPathOfFileAbove("$(DescriptionFileName)$(MetadataFileExtension)"))))</DescriptionFilePath>
-    <LicenseFilePath>$([MSBuild]::ValueOrDefault($(LicenseFilePath),$([MSBuild]::GetPathOfFileAbove("$(LicenseFileName)$(MetadataFileExtension)"))))</LicenseFilePath>
-    <ChangelogFilePath>$([MSBuild]::ValueOrDefault($(ChangelogFilePath),$([MSBuild]::GetPathOfFileAbove("$(ChangelogFileName)$(MetadataFileExtension)"))))</ChangelogFilePath>
-    <ReadmeFilePath>$([MSBuild]::ValueOrDefault($(ReadmeFilePath),$([MSBuild]::GetPathOfFileAbove("$(ReadmeFileName)$(MetadataFileExtension)"))))</ReadmeFilePath>
+    <IconFileName>icon.png</IconFileName>
+    <IconFilePath>$(SolutionDir)\$(IconFileName)</IconFilePath>
 
-    <RunSettingsFilePath>$([MSBuild]::GetPathOfFileAbove(".runsettings"))</RunSettingsFilePath>
-    <EditorConfigFilePath>$([MSBuild]::GetPathOfFileAbove(".editorconfig"))</EditorConfigFilePath>
-    <GitAttributesFilePath>$([MSBuild]::GetPathOfFileAbove(".gitattributes"))</GitAttributesFilePath>
-    <GitIgnoreFilePath>$([MSBuild]::GetPathOfFileAbove(".gitignore"))</GitIgnoreFilePath>
-    <GitModulesFilePath>$([MSBuild]::GetPathOfFileAbove(".gitmodules"))</GitModulesFilePath>
-    <GlobalJsonFilePath>$([MSBuild]::GetPathOfFileAbove("global.json"))</GlobalJsonFilePath>
-    <MailMapFilePath>$([MSBuild]::GetPathOfFileAbove(".mailmap"))</MailMapFilePath>
-    <SetupNsiFilePath>$([MSBuild]::GetPathOfFileAbove("setup.nsi"))</SetupNsiFilePath>
-    <DotnetCoreNshFilePath>$([MSBuild]::GetPathOfFileAbove("dotnetcore.nsh"))</DotnetCoreNshFilePath>
-    <AzurePipelinesFilePath>$([MSBuild]::GetPathOfFileAbove("azure-pipelines.yml"))</AzurePipelinesFilePath>
-    <ReleasesFilePath>$([MSBuild]::GetPathOfFileAbove("RELEASES"))</ReleasesFilePath>
-
-    <Authors Condition="Exists('$(AuthorsFilePath)')">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
-    <Description Condition="Exists('$(DescriptionFilePath)')">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
-    <License Condition="Exists('$(LicenseFilePath)')">$([System.IO.File]::ReadAllText($(LicenseFilePath)).Trim())</License>
-    <Changelog Condition="Exists('$(ChangelogFilePath)')">$([System.IO.File]::ReadAllText($(ChangelogFilePath)).Trim())</Changelog>
-    <Readme Condition="Exists('$(ReadmeFilePath)')">$([System.IO.File]::ReadAllText($(ReadmeFilePath)).Trim())</Readme>
-    <Version Condition="Exists('$(VersionFilePath)')">$([System.IO.File]::ReadAllText($(VersionFilePath)).Trim())</Version>
-
+    <!-- Namespace properties -->
+    <Authors Condition="Exists($(AuthorsFilePath))">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
     <AuthorsNamespace>$(Authors.Replace(" ", ""))</AuthorsNamespace>
     <SolutionNamespace>$(SolutionName.Replace(" ", ""))</SolutionNamespace>
-    <ProjectNamespace>$(MSBuildProjectName.Replace(" ", "").Replace($(SolutionNamespace), "").Trim("."))</ProjectNamespace>
-    <IntermediateNamespace>$(AuthorsNamespace).$(SolutionNamespace).$(ProjectNamespace)</IntermediateNamespace>
-    <RootNamespace>$(IntermediateNamespace.Trim("."))</RootNamespace>
+    <ProjectNamespace>$(MSBuildProjectName.Replace(" ", ""))</ProjectNamespace>
+    <RootNamespace>$(AuthorsNamespace).$(ProjectNamespace)</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
-    
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <NeutralLanguage>en-US</NeutralLanguage>
-    <WarningLevel>9999</WarningLevel>
-    <NoWarn>CA1724;CA1034;CA1000;CA2260;CA1812;CA1515;</NoWarn>
-    
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <AnalysisLevel>latest-all</AnalysisLevel>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
 
+    <!-- Assembly validation properties -->
+    <ApiCompatStrictMode>true</ApiCompatStrictMode>
+    <ApiCompatValidateAssemblies>true</ApiCompatValidateAssemblies>
+
+    <!-- Assembly attribute properties -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <!--<GeneratedAssemblyInfoFile>assemblyinfo.cs</GeneratedAssemblyInfoFile>-->
+
+    <!-- Framework properties -->
+    <!--<TargetFramework>net9.0</TargetFramework>-->
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+
+    <!-- Package properties -->
+    <PackageId>$(AssemblyName)</PackageId>
+    <Version Condition="Exists($(VersionFilePath))">$([System.IO.File]::ReadAllText($(VersionFilePath)).Trim())</Version>
+    <Title>$(AssemblyName)</Title>
+    <Description Condition="Exists($(DescriptionFilePath))">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
+    <Company>$(Authors)</Company>
+    <Copyright>$(SolutionName) Copyright (c) 2023-$([System.DateTime]::Now.Year) $(Authors)</Copyright>
+    <Changelog Condition="Exists($(ChangelogFilePath))">$([System.IO.File]::ReadAllText($(ChangelogFilePath)).Trim())</Changelog>
+    <PackageVersion>$(Version)</PackageVersion>
+    <PackageIcon>$([System.IO.Path]::GetFileName($(IconFilePath)))</PackageIcon>
     <PackageReadmeFile>$([System.IO.Path]::GetFileName($(ReadmeFilePath)))</PackageReadmeFile>
     <PackageLicenseFile>$([System.IO.Path]::GetFileName($(LicenseFilePath)))</PackageLicenseFile>
     <PackageReleaseNotes>$(Changelog)</PackageReleaseNotes>
     <PackageDescription>$(Description)</PackageDescription>
-    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-    <IncludeSource>True</IncludeSource>
-    <IncludeContentInPack>True</IncludeContentInPack>
+    <PackageProjectUrl>https://ktsu.dev</PackageProjectUrl>
+    <PackageProjectUrl Condition="$(RepositoryUrl) != ''">$($(RepositoryUrl).Replace("/.git", ""))</PackageProjectUrl>
+    <IncludeSource>true</IncludeSource>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <PackRelease>true</PackRelease>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <EnablePackageValidation>True</EnablePackageValidation>
+    <IsPackable>false</IsPackable>
+
+    <!-- Package validation properties -->
+    <ApiCompatEnableRuleAttributesMustMatch>true</ApiCompatEnableRuleAttributesMustMatch>
+    <ApiCompatEnableRuleCannotChangeParameterName>true</ApiCompatEnableRuleCannotChangeParameterName>
+    <!--<ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>-->
+    <!--<ApiCompatPermitUnnecessarySuppressions>true</ApiCompatPermitUnnecessarySuppressions>-->
+    <!--<ApiCompatPreserveUnnecessarySuppressions>true</ApiCompatPreserveUnnecessarySuppressions>-->
+    <ApiCompatRespectInternals>true</ApiCompatRespectInternals>
+    <EnablePackageValidation>true</EnablePackageValidation>
     <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
+    <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
+    <EnableStrictModeForCompatibleTfms>true</EnableStrictModeForCompatibleTfms>
+
+    <!-- Publish-related properties -->
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <ErrorOnDuplicatePublishOutputFiles>true</ErrorOnDuplicatePublishOutputFiles>
+    <IsPublishable>false</IsPublishable>
+    <ProduceReferenceAssemblyInOutDir>true</ProduceReferenceAssemblyInOutDir>
+    <PublishDocumentationFile>true</PublishDocumentationFile>
+    <PublishDocumentationFiles>true</PublishDocumentationFiles>
+    <PublishReferencesDocumentationFiles>true</PublishReferencesDocumentationFiles>
+    <PublishRelease>true</PublishRelease>
+    <PublishSelfContained>true</PublishSelfContained>
+    <RollForward>LatestMinor</RollForward>
+    <RuntimeFrameworkVersion>9.0.0</RuntimeFrameworkVersion>
+    <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
+    <!-- <RuntimeIdentifiers>win-x64;osx-x64;linux-x64</RuntimeIdentifiers> -->
+    <!-- <SatelliteResourceLanguages>en-US;de-DE</SatelliteResourceLanguages> -->
+    <!-- <SelfContained>true</SelfContained> -->
+    <!-- <UseAppHost>false</UseAppHost> -->
+
+    <!-- Build-related properties -->
+    <ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true' Or '$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+    <CopyDebugSymbolFilesFromPackages>true</CopyDebugSymbolFilesFromPackages>
+    <CopyDocumentationFilesFromPackages>true</CopyDocumentationFilesFromPackages>
+    <DisableImplicitFrameworkDefines>false</DisableImplicitFrameworkDefines>
+    <!-- <DocumentationFile>path/to/file.xml</DocumentationFile> -->
+    <!-- <EmbeddedResourceUseDependentUponConvention>true</EmbeddedResourceUseDependentUponConvention> -->
+    <EnablePreviewFeatures>false</EnablePreviewFeatures>
+    <!-- <EnableWindowsTargeting>true</EnableWindowsTargeting> -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateRequiresPreviewFeaturesAttribute>false</GenerateRequiresPreviewFeaturesAttribute>
+    <OptimizeImplicitlyTriggeredBuild>false</OptimizeImplicitlyTriggeredBuild>
+    <DisableRuntimeMarshalling>false</DisableRuntimeMarshalling>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <!-- Default item inclusion properties -->
+    <!-- <DefaultItemExcludes>$(DefaultItemExcludes);**/*.myextension</DefaultItemExcludes> -->
+    <!-- <DefaultItemExcludesInProjectFolder>$(DefaultItemExcludesInProjectFolder);**/myprefix*/**</DefaultItemExcludesInProjectFolder> -->
+    <EnableDefaultItems>true</EnableDefaultItems>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>true</EnableDefaultEmbeddedResourceItems>
+    <EnableDefaultNoneItems>true</EnableDefaultNoneItems>
+
+    <!-- Code analysis properties -->
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Runtime configuration properties -->
+    <!-- <AutoreleasePoolSupport>true</AutoreleasePoolSupport> -->
+    <!-- <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection> -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <!-- <PredefinedCulturesOnly>false</PredefinedCulturesOnly> -->
+    <!-- <RetainVMGarbageCollection>true</RetainVMGarbageCollection> -->
+    <!-- <ServerGarbageCollection>true</ServerGarbageCollection> -->
+    <!-- <ThreadPoolMaxThreads>20</ThreadPoolMaxThreads> -->
+    <!-- <ThreadPoolMinThreads>4</ThreadPoolMinThreads> -->
+    <!-- <TieredCompilation>false</TieredCompilation> -->
+    <!-- <TieredCompilationQuickJit>false</TieredCompilationQuickJit> -->
+    <!-- <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops> -->
+    <!-- <TieredPGO>true</TieredPGO> -->
+    <!-- <UseWindowsThreadPool>true</UseWindowsThreadPool> -->
+
+    <!-- Reference-related properties -->
+    <!-- <AssetTargetFallback>net461</AssetTargetFallback> -->
+    <!-- <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences> -->
+    <!-- <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads> -->
+    <!-- <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences> -->
+    
+    <!-- Restore-related properties -->
+    <!-- <RestoreIgnoreFailedSource>true</RestoreIgnoreFailedSource> -->
+    <!-- <UseMauiEssentials>true</UseMauiEssentials> -->
+    <!-- <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained> -->
+    <!-- <WindowsSdkPackageVersion>10.0.19041.18</WindowsSdkPackageVersion> -->
+
+    <!-- Run-related properties -->
+    <!-- <RunArguments>-mode dryrun</RunArguments> -->
+    <!-- <RunWorkingDirectory>c:\temp</RunWorkingDirectory> -->
+
+    <!-- SDK-related properties -->
+    <!-- <SdkAnalysisLevel>8.0.400</SdkAnalysisLevel> -->
+
+    <!-- Test project–related properties -->
+    <IsTestProject>false</IsTestProject>
+    <!-- <IsTestingPlatformApplication>false</IsTestingPlatformApplication> -->
+    <!-- <EnableAspireTesting>false</EnableAspireTesting> -->
+    <!-- <EnablePlaywright>false</EnablePlaywright> -->
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+    <EnableNUnitRunner>false</EnableNUnitRunner>
+    <!-- <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint> -->
+    <!-- <TestingPlatformCaptureOutput>false</TestingPlatformCaptureOutput> -->
+    <!-- <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> -->
+    <!-- <TestingPlatformShowTestsFailure>false</TestingPlatformShowTestsFailure> -->
+    <TestingExtensionsProfile>Default</TestingExtensionsProfile>
+    <UseVSTest>true</UseVSTest>
+
+    <!-- Hosting-related properties -->
+    <!-- <AppHostDotNetSearch>Global</AppHostDotNetSearch> -->
+    <!-- <AppHostRelativeDotNet>./relative/path/to/runtime</AppHostRelativeDotNet> -->
+    <!-- <EnableComHosting>True</EnableComHosting> -->
+    <!-- <EnableDynamicLoading>true</EnableDynamicLoading> -->
+
+    <!-- Generated file properties -->
+    <!-- <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports> -->
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- C# Compiler Options to report errors and warnings -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>CA1724;CA1034;CA1000;CA2260;CA1515;</NoWarn>
+    <!-- CA1724: Type names should not match namespaces -->
+    <!-- CA1034: Nested types should not be visible -->
+    <!-- CA1000: Do not declare static members on generic types -->
+    <!-- CA2260: Implement ISerializable correctly -->
+    <!-- CA1812: Avoid uninstantiated internal classes -->
+    <!-- CA1515: Override methods should call base methods -->    
+
+    <!-- JsonSerializer properties -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
 
   </PropertyGroup>
+
 </Project>
