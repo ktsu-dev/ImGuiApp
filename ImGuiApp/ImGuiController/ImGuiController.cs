@@ -132,7 +132,7 @@ internal class ImGuiController : IDisposable
 			_mouse.MouseDown += OnMouseDown;
 			_mouse.MouseUp += OnMouseUp;
 			_mouse.MouseMove += OnMouseMove;
-			_mouse.Scroll += onMouseScroll;
+			_mouse.Scroll += OnMouseScroll;
 		}
 	}
 
@@ -154,7 +154,7 @@ internal class ImGuiController : IDisposable
 	private static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode) =>
 		OnKeyEvent(keyboard, keycode, scancode, down: false);
 
-	private static void onMouseScroll(IMouse mouse, ScrollWheel scroll)
+	private static void OnMouseScroll(IMouse mouse, ScrollWheel scroll)
 	{
 		var io = ImGui.GetIO();
 		io.AddMouseWheelEvent(scroll.X, scroll.Y);
@@ -172,10 +172,11 @@ internal class ImGuiController : IDisposable
 
 	private static void OnMouseButton(IMouse mouse, MouseButton button, bool down)
 	{
-		if (TryGetImGuiMouseButton(button, out var imguiButton))
+		var imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
+		if (imguiMouseButton != ImGuiMouseButton.COUNT)
 		{
 			var io = ImGui.GetIO();
-			io.AddMouseButtonEvent((int)imguiButton, down);
+			io.AddMouseButtonEvent((int)imguiMouseButton, down);
 		}
 	}
 
@@ -199,9 +200,10 @@ internal class ImGuiController : IDisposable
 		io.AddKeyEvent(imGuiKey, down);
 		io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
 
-		if (TryGetImGuiModKey(imGuiKey, out var modKey))
+		var imguiModKey = TranslateImGuiKeyToImGuiModKey(imGuiKey);
+		if (imguiModKey != ImGuiKey.COUNT)
 		{
-			io.AddKeyEvent(modKey, down);
+			io.AddKeyEvent(imguiModKey, down);
 		}
 	}
 
@@ -313,11 +315,6 @@ internal class ImGuiController : IDisposable
 			io.AddInputCharacter(c);
 		}
 		_pressedChars.Clear();
-
-		io.AddKeyEvent(ImGuiKey.ModCtrl, _keyboard.IsKeyPressed(Key.ControlLeft) || _keyboard.IsKeyPressed(Key.ControlRight));
-		io.AddKeyEvent(ImGuiKey.ModAlt, _keyboard.IsKeyPressed(Key.AltLeft) || _keyboard.IsKeyPressed(Key.AltRight));
-		io.AddKeyEvent(ImGuiKey.ModShift, _keyboard.IsKeyPressed(Key.ShiftLeft) || _keyboard.IsKeyPressed(Key.ShiftRight));
-		io.AddKeyEvent(ImGuiKey.ModSuper, _keyboard.IsKeyPressed(Key.SuperLeft) || _keyboard.IsKeyPressed(Key.SuperRight));
 	}
 
 	internal void PressChar(char keyChar)
@@ -456,59 +453,46 @@ internal class ImGuiController : IDisposable
 		};
 	}
 
-	private static bool TryGetImGuiMouseButton(MouseButton button, out ImGuiMouseButton imguiMouseButton)
+	private static ImGuiMouseButton TranslateMouseButtonToImGuiMouseButton(MouseButton mouseButton)
 	{
-		if (button is MouseButton.Left)
+		return mouseButton switch
 		{
-			imguiMouseButton = ImGuiMouseButton.Left;
-			return true;
-		}
-		else if (button is MouseButton.Right)
-		{
-			imguiMouseButton = ImGuiMouseButton.Right;
-			return true;
-		}
-		else if (button is MouseButton.Middle)
-		{
-			imguiMouseButton = ImGuiMouseButton.Middle;
-			return true;
-		}
-
-		imguiMouseButton = ImGuiMouseButton.COUNT;
-		return false;
+			MouseButton.Left => ImGuiMouseButton.Left,
+			MouseButton.Right => ImGuiMouseButton.Right,
+			MouseButton.Middle => ImGuiMouseButton.Middle,
+			MouseButton.Button4 => ImGuiMouseButton.COUNT,
+			MouseButton.Button5 => ImGuiMouseButton.COUNT,
+			MouseButton.Button6 => ImGuiMouseButton.COUNT,
+			MouseButton.Button7 => ImGuiMouseButton.COUNT,
+			MouseButton.Button8 => ImGuiMouseButton.COUNT,
+			MouseButton.Button9 => ImGuiMouseButton.COUNT,
+			MouseButton.Button10 => ImGuiMouseButton.COUNT,
+			MouseButton.Button11 => ImGuiMouseButton.COUNT,
+			MouseButton.Button12 => ImGuiMouseButton.COUNT,
+			MouseButton.Unknown => ImGuiMouseButton.COUNT,
+			_ => throw new NotImplementedException($"MouseButton {mouseButton} hasn't been implemented in TranslateMouseButtonToImGuiMouseButton")
+		};
 	}
 
 	/// <summary>
-	/// Tries to get the matching mod key for an ImGuiKey.
+	/// Translate an ImGuiKey to the matching ImGuiKey.Mod*.
 	/// </summary>
-	/// <param name="key">The ImGuiKey to convert.</param>
-	/// <param name="modKey">The matching mod key.</param>
-	/// <returns>If there is an associated mod key.</returns>
-	private static bool TryGetImGuiModKey(ImGuiKey key, out ImGuiKey modKey)
+	/// <param name="key">The ImGuiKey to translate.</param>
+	/// <returns>The matching ImGuiKey.Mod*.</returns>
+	private static ImGuiKey TranslateImGuiKeyToImGuiModKey(ImGuiKey key)
 	{
-		if (key is ImGuiKey.LeftShift or ImGuiKey.RightShift)
+		return key switch
 		{
-			modKey = ImGuiKey.ModShift;
-			return true;
-		}
-		else if (key is ImGuiKey.LeftCtrl or ImGuiKey.RightCtrl)
-		{
-			modKey = ImGuiKey.ModCtrl;
-			return true;
-		}
-		else if (key is ImGuiKey.LeftAlt or ImGuiKey.RightAlt)
-		{
-			modKey = ImGuiKey.ModAlt;
-			return true;
-		}
-		else if (key is ImGuiKey.LeftSuper or ImGuiKey.RightSuper)
-		{
-			modKey = ImGuiKey.ModSuper;
-			return true;
-		}
-
-		modKey = ImGuiKey.None;
-		return false;
+			ImGuiKey.LeftShift => ImGuiKey.ModShift,
+			ImGuiKey.RightShift => ImGuiKey.ModShift,
+			ImGuiKey.LeftCtrl => ImGuiKey.ModCtrl,
+			ImGuiKey.RightCtrl => ImGuiKey.ModCtrl,
+			ImGuiKey.LeftAlt => ImGuiKey.ModAlt,
+			ImGuiKey.RightAlt => ImGuiKey.ModAlt,
+			ImGuiKey.LeftSuper => ImGuiKey.ModSuper,
+			ImGuiKey.RightSuper => ImGuiKey.ModSuper,
+			_ => ImGuiKey.COUNT
+		};
 	}
 
 	private unsafe void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
@@ -856,7 +840,7 @@ internal class ImGuiController : IDisposable
 		_mouse.MouseDown -= OnMouseDown;
 		_mouse.MouseUp -= OnMouseUp;
 		_mouse.MouseMove -= OnMouseMove;
-		_mouse.Scroll -= onMouseScroll;
+		_mouse.Scroll -= OnMouseScroll;
 
 		_gl.DeleteBuffer(_vboHandle);
 		_gl.DeleteBuffer(_elementsHandle);
