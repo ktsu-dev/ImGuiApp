@@ -3,6 +3,13 @@
     <DirectoryBuildPropsFilePath>$(MSBuildThisFileFullPath)</DirectoryBuildPropsFilePath>
     <DirectoryBuildPropsFileName>$([System.IO.Path]::GetFileName($(DirectoryBuildPropsFilePath)))</DirectoryBuildPropsFileName>
 
+    <!-- These seem to only be populated when building via the IDE -->
+    <SolutionExt Condition="'$(SolutionExt)' == ''">.sln</SolutionExt>
+    <SolutionPath Condition="'$(SolutionPath)' == ''">$([System.IO.Path]::GetFullPath($([System.IO.Directory]::GetFiles("$(MSBuildThisFileDirectory)", "*$(SolutionExt)")[0])))</SolutionPath>
+    <SolutionFileName Condition="'$(SolutionFileName)' == ''">$([System.IO.Path]::GetFileName($(SolutionPath)))</SolutionFileName>
+    <SolutionName Condition="'$(SolutionName)' == ''">$([System.IO.Path]::GetFileNameWithoutExtension($(SolutionPath)))</SolutionName>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDir>
+
     <!-- Path properties-->
     <PrimaryProjectName>$(SolutionName)</PrimaryProjectName>
     <PrimaryProjectFileName>$(PrimaryProjectName).csproj</PrimaryProjectFileName>
