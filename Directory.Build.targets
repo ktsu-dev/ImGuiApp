@@ -1,98 +1,87 @@
 <Project>
   <PropertyGroup>
-    <DirectoryBuildTargetsFile>$(MSBuildThisFileFullPath)</DirectoryBuildTargetsFile>
-    
-    <IsPrerelease Condition="$(Version.Contains('-'))">True</IsPrerelease>
-    <IsExecutable Condition="$(OutputType) == 'exe'">True</IsExecutable>
-    <IsTest Condition="$(IsTestProject) == true">True</IsTest>
-    <IsLibrary Condition="'$(IsExecutable)$(IsTest)' == ''">True</IsLibrary>
-    <IsPrimaryProject Condition="$(MSBuildProjectName) == '$(SolutionName)'">True</IsPrimaryProject>
+    <DirectoryBuildTargetsFilePath>$(MSBuildThisFileFullPath)</DirectoryBuildTargetsFilePath>
+    <DirectoryBuildTargetsFileName>$([System.IO.Path]::GetFileName($(DirectoryBuildTargetsFilePath)))</DirectoryBuildTargetsFileName>
+
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Test'))">true</IsTestProject>
+
+    <IsPrerelease>false</IsPrerelease>
+    <IsPrerelease Condition="$(Version.Contains('-'))">true</IsPrerelease>
+
+    <IsExecutable>false</IsExecutable>
+    <IsExecutable Condition="$(OutputType) == 'Exe' Or $(OutputType) == 'WinExe'">true</IsExecutable>
+
+    <IsLibrary>false</IsLibrary>
+    <IsLibrary Condition="$(OutputType) == 'Library' And !$(IsTestProject)">true</IsLibrary>
+
+    <IsPrimaryProject>false</IsPrimaryProject>
+    <IsPrimaryProject Condition="$(MSBuildProjectName) == $(PrimaryProjectName)">true</IsPrimaryProject>
+
+    <IsPublishable Condition="$(IsExecutable)">true</IsPublishable>
+    <IsPackable Condition="$(IsLibrary)">true</IsPackable>
+    <AnalysisLevel Condition="$(IsTestProject) OR $(IsPrerelease)">latest-recommended</AnalysisLevel>
+    <NoWarn Condition="$(IsTestProject) OR $(IsPrerelease)">$(NoWarn);CS1591;</NoWarn>
+    <!-- CS1591: Missing XML comment for publicly visible type or member -->
+    <NoWarn Condition="$(IsTestProject)">$(NoWarn);CS1591;CA2225;IDE0022;IDE0058;CA1305;CA5394;</NoWarn>
+    <!-- CA2225: Operator overloads have named alternates -->
+    <!-- IDE0022: Use expression body for methods -->
+    <!-- IDE0058: Expression value is never used -->
+    <!-- CA1305: Specify IFormatProvider -->
+    <!-- CA5394: Do not use insecure randomness -->
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(IsExecutable) == true">
-    <IsPackable>False</IsPackable>
-    <IsPublishable>True</IsPublishable>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(IsTest) == true">
-    <NoWarn>$(NoWarn);CS1591;CA2225;CA1707;IDE0022;IDE0058;CA1305;S4056;S104;CA5394;</NoWarn>
-    <IsPackable>False</IsPackable>
-    <IsPublishable>False</IsPublishable>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(IsLibrary) == true">
-    <IsPackable>True</IsPackable>
-    <IsPublishable>False</IsPublishable>
-    <EnablePackageValidation>True</EnablePackageValidation>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(IsPrimaryProject) != true">
-    <IsPackable>False</IsPackable>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(IsPrerelease) == true">
-    <NoWarn>$(NoWarn);CS1591;</NoWarn>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
-  </PropertyGroup>
-
-  <ItemGroup Condition="$(IsTest) != true">
+  <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
-    <InternalsVisibleTo Include="$(RootNamespace).Test" />
-    <InternalsVisibleTo Include="$(RootNamespace).Tests" />
-    <InternalsVisibleTo Include="Test" />
+    <InternalsVisibleTo Condition="!$(IsTestProject)" Include="$(AssemblyName).Test" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(IsTest) == true">
+  <ItemGroup Condition="$(IsTestProject)">
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
-    <ProjectReference Include="..\$(SolutionName)\$(SolutionName).csproj" />
+    <ProjectReference Include="$(SolutionDir)\$(SolutionName)\$(SolutionName).csproj" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.7.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.7.0" />
+    <PackageReference Include="MSTest" Version="3.7.0" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(IsPrimaryProject) == true">
-    <None Condition="Exists('$(DirectoryBuildPropsFile)')" Remove="$(DirectoryBuildPropsFile)" />
-    <None Condition="Exists('$(DirectoryBuildTargetsFile)')" Remove="$(DirectoryBuildTargetsFile)" />
-    <None Condition="Exists('$(RunSettingsFilePath)')" Remove="$(RunSettingsFilePath)" />
-    <None Condition="Exists('$(EditorConfigFilePath)')" Remove="$(EditorConfigFilePath)" />
-    <None Condition="Exists('$(GitAttributesFilePath)')" Remove="$(GitAttributesFilePath)" />
-    <None Condition="Exists('$(GitIgnoreFilePath)')" Remove="$(GitIgnoreFilePath)" />
-    <None Condition="Exists('$(GitModulesFilePath)')" Remove="$(GitModulesFilePath)" />
-    <None Condition="Exists('$(AuthorsFilePath)')" Remove="$(AuthorsFilePath)" />
-    <None Condition="Exists('$(DescriptionFilePath)')" Remove="$(DescriptionFilePath)" />
-    <None Condition="Exists('$(LicenseFilePath)')" Remove="$(LicenseFilePath)" />
-    <None Condition="Exists('$(ChangelogFilePath)')" Remove="$(ChangelogFilePath)" />
-    <None Condition="Exists('$(ReadmeFilePath)')" Remove="$(ReadmeFilePath)" />
-    <None Condition="Exists('$(VersionFilePath)')" Remove="$(VersionFilePath)" />
-    <None Condition="Exists('$(GlobalJsonFilePath)')" Remove="$(GlobalJsonFilePath)" />
-    <None Condition="Exists('$(MailMapFilePath)')" Remove="$(MailMapFilePath)" />
-    <None Condition="Exists('$(SetupNsiFilePath)')" Remove="$(SetupNsiFilePath)" />
-    <None Condition="Exists('$(DotnetCoreNshFilePath)')" Remove="$(DotnetCoreNshFilePath)" />
-    <None Condition="Exists('$(AzurePipelinesFilePath)')" Remove="$(AzurePipelinesFilePath)" />
-    <None Condition="Exists('$(ReleasesFilePath)')" Remove="$(ReleasesFilePath)" />
+  <ItemGroup Condition="$(IsPrimaryProject)">
+    <None Include="$(DirectoryBuildPropsFilePath)" Condition="Exists('$(DirectoryBuildPropsFilePath)')" Link="_Build\$(DirectoryBuildPropsFileName)" />
+    <None Include="$(DirectoryBuildTargetsFilePath)" Condition="Exists('$(DirectoryBuildTargetsFilePath)')" Link="_Build\$(DirectoryBuildTargetsFileName)" />
 
-    <None Condition="Exists('$(DirectoryBuildPropsFile)')" Include="$(DirectoryBuildPropsFile)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(DirectoryBuildTargetsFile)')" Include="$(DirectoryBuildTargetsFile)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(RunSettingsFilePath)')" Include="$(RunSettingsFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(EditorConfigFilePath)')" Include="$(EditorConfigFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(GlobalJsonFilePath)')" Include="$(GlobalJsonFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(SetupNsiFilePath)')" Include="$(SetupNsiFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(DotnetCoreNshFilePath)')" Include="$(DotnetCoreNshFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(AzurePipelinesFilePath)')" Include="$(AzurePipelinesFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(ReleasesFilePath)')" Include="$(ReleasesFilePath)" Pack="False" PackagePath="\" Link="BuildScripts\%(RecursiveDir)%(Filename)%(Extension)"/>
-    
-    <None Condition="Exists('$(GitAttributesFilePath)')" Include="$(GitAttributesFilePath)" Pack="False" PackagePath="\" Link="GitConfig\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(GitIgnoreFilePath)')" Include="$(GitIgnoreFilePath)" Pack="False" PackagePath="\" Link="GitConfig\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(GitModulesFilePath)')" Include="$(GitModulesFilePath)" Pack="False" PackagePath="\" Link="GitConfig\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(MailMapPath)')" Include="$(MailMapPath)" Pack="False" PackagePath="\" Link="GitConfig\%(RecursiveDir)%(Filename)%(Extension)"/>
-
-    <None Condition="Exists('$(AuthorsFilePath)')" Include="$(AuthorsFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(DescriptionFilePath)')" Include="$(DescriptionFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(LicenseFilePath)')" Include="$(LicenseFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(ChangelogFilePath)')" Include="$(ChangelogFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(ReadmeFilePath)')" Include="$(ReadmeFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
-    <None Condition="Exists('$(VersionFilePath)')" Include="$(VersionFilePath)" Pack="True" PackagePath="\" Link="PublishData\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <None Include="$(AuthorsFilePath)" Condition="Exists('$(AuthorsFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(AuthorsFileName)" />
+    <None Include="$(DescriptionFilePath)" Condition="Exists('$(DescriptionFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(DescriptionFileName)" />
+    <None Include="$(LicenseFilePath)" Condition="Exists('$(LicenseFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(LicenseFileName)" />
+    <None Include="$(ChangelogFilePath)" Condition="Exists('$(ChangelogFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(ChangelogFileName)" />
+    <None Include="$(ReadmeFilePath)" Condition="Exists('$(ReadmeFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(ReadmeFileName)" />
+    <None Include="$(VersionFilePath)" Condition="Exists('$(VersionFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(VersionFileName)" />
+    <None Include="$(IconFilePath)" Condition="Exists('$(IconFilePath)')" Pack="true" PackagePath="\" Link="_Data\$(IconFileName)" />
   </ItemGroup>
+
+  <Target Name="GenerateMITLicense" BeforeTargets="Build">
+    <WriteLinesToFile
+        File="$(LicenseFilePath)"
+        Lines='MIT License
+
+$(Copyright)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+'
+        Overwrite="true"
+        Encoding="Unicode" />
+  </Target>
 
 </Project>
