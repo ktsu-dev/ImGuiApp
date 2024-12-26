@@ -7,11 +7,9 @@ namespace ktsu.ImGuiApp.ImGuiController;
 
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
 using Silk.NET.Input;
-using Silk.NET.Input.Extensions;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -25,6 +23,7 @@ internal class ImGuiController : IDisposable
 	private bool _frameBegun;
 	private readonly List<char> _pressedChars = new();
 	private IKeyboard? _keyboard;
+	private IMouse? _mouse;
 
 	private int _attribLocationTex;
 	private int _attribLocationProjMtx;
@@ -117,6 +116,7 @@ internal class ImGuiController : IDisposable
 		ImGui.NewFrame();
 		_frameBegun = true;
 		_keyboard = _input?.Keyboards[0];
+		_mouse = _input?.Mice[0];
 		if (_view is not null)
 		{
 			_view.Resize += WindowResized;
@@ -126,6 +126,13 @@ internal class ImGuiController : IDisposable
 			_keyboard.KeyDown += OnKeyDown;
 			_keyboard.KeyUp += OnKeyUp;
 			_keyboard.KeyChar += OnKeyChar;
+		}
+		if (_mouse is not null)
+		{
+			_mouse.MouseDown += OnMouseDown;
+			_mouse.MouseUp += OnMouseUp;
+			_mouse.MouseMove += OnMouseMove;
+			_mouse.Scroll += onMouseScroll;
 		}
 	}
 
@@ -147,6 +154,37 @@ internal class ImGuiController : IDisposable
 	private static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode) =>
 		OnKeyEvent(keyboard, keycode, scancode, down: false);
 
+	private static void onMouseScroll(IMouse mouse, ScrollWheel scroll)
+	{
+		var io = ImGui.GetIO();
+		io.AddMouseWheelEvent(scroll.X, scroll.Y);
+	}
+
+	private static void OnMouseDown(IMouse mouse, MouseButton button)
+	{
+		OnMouseButton(mouse, button, down: true);
+	}
+
+	private static void OnMouseUp(IMouse mouse, MouseButton button)
+	{
+		OnMouseButton(mouse, button, down: false);
+	}
+
+	private static void OnMouseButton(IMouse mouse, MouseButton button, bool down)
+	{
+		if (TryGetImGuiMouseButton(button, out var imguiButton))
+		{
+			var io = ImGui.GetIO();
+			io.AddMouseButtonEvent((int)imguiButton, down);
+		}
+	}
+
+	private void OnMouseMove(IMouse mouse, Vector2 position)
+	{
+		var io = ImGui.GetIO();
+		io.AddMousePosEvent(position.X, position.Y);
+	}
+
 	/// <summary>
 	/// Delegate to receive keyboard key events.
 	/// </summary>
@@ -160,6 +198,11 @@ internal class ImGuiController : IDisposable
 		var imGuiKey = TranslateInputKeyToImGuiKey(keycode);
 		io.AddKeyEvent(imGuiKey, down);
 		io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
+
+		if (TryGetImGuiModKey(imGuiKey, out var modKey))
+		{
+			io.AddKeyEvent(modKey, down);
+		}
 	}
 
 	private void OnKeyChar(IKeyboard arg1, char arg2)
@@ -265,30 +308,16 @@ internal class ImGuiController : IDisposable
 			return;
 		}
 
-		var mouseState = _input.Mice[0].CaptureState();
-
-		io.MouseDown[0] = mouseState.IsButtonPressed(MouseButton.Left);
-		io.MouseDown[1] = mouseState.IsButtonPressed(MouseButton.Right);
-		io.MouseDown[2] = mouseState.IsButtonPressed(MouseButton.Middle);
-
-		var point = new Point((int)mouseState.Position.X, (int)mouseState.Position.Y);
-		io.MousePos = new Vector2(point.X, point.Y);
-
-		var wheel = mouseState.GetScrollWheels()[0];
-		io.MouseWheel = wheel.Y;
-		io.MouseWheelH = wheel.X;
-
 		foreach (var c in _pressedChars)
 		{
 			io.AddInputCharacter(c);
 		}
-
 		_pressedChars.Clear();
 
-		io.KeyCtrl = _keyboard.IsKeyPressed(Key.ControlLeft) || _keyboard.IsKeyPressed(Key.ControlRight);
-		io.KeyAlt = _keyboard.IsKeyPressed(Key.AltLeft) || _keyboard.IsKeyPressed(Key.AltRight);
-		io.KeyShift = _keyboard.IsKeyPressed(Key.ShiftLeft) || _keyboard.IsKeyPressed(Key.ShiftRight);
-		io.KeySuper = _keyboard.IsKeyPressed(Key.SuperLeft) || _keyboard.IsKeyPressed(Key.SuperRight);
+		io.AddKeyEvent(ImGuiKey.ModCtrl, _keyboard.IsKeyPressed(Key.ControlLeft) || _keyboard.IsKeyPressed(Key.ControlRight));
+		io.AddKeyEvent(ImGuiKey.ModAlt, _keyboard.IsKeyPressed(Key.AltLeft) || _keyboard.IsKeyPressed(Key.AltRight));
+		io.AddKeyEvent(ImGuiKey.ModShift, _keyboard.IsKeyPressed(Key.ShiftLeft) || _keyboard.IsKeyPressed(Key.ShiftRight));
+		io.AddKeyEvent(ImGuiKey.ModSuper, _keyboard.IsKeyPressed(Key.SuperLeft) || _keyboard.IsKeyPressed(Key.SuperRight));
 	}
 
 	internal void PressChar(char keyChar)
@@ -425,6 +454,61 @@ internal class ImGuiController : IDisposable
 			Key.F24 => ImGuiKey.F24,
 			_ => throw new NotImplementedException($"Key '{key}' hasn't been implemented in TranslateInputKeyToImGuiKey"),
 		};
+	}
+
+	private static bool TryGetImGuiMouseButton(MouseButton button, out ImGuiMouseButton imguiMouseButton)
+	{
+		if (button is MouseButton.Left)
+		{
+			imguiMouseButton = ImGuiMouseButton.Left;
+			return true;
+		}
+		else if (button is MouseButton.Right)
+		{
+			imguiMouseButton = ImGuiMouseButton.Right;
+			return true;
+		}
+		else if (button is MouseButton.Middle)
+		{
+			imguiMouseButton = ImGuiMouseButton.Middle;
+			return true;
+		}
+
+		imguiMouseButton = ImGuiMouseButton.COUNT;
+		return false;
+	}
+
+	/// <summary>
+	/// Tries to get the matching mod key for an ImGuiKey.
+	/// </summary>
+	/// <param name="key">The ImGuiKey to convert.</param>
+	/// <param name="modKey">The matching mod key.</param>
+	/// <returns>If there is an associated mod key.</returns>
+	private static bool TryGetImGuiModKey(ImGuiKey key, out ImGuiKey modKey)
+	{
+		if (key is ImGuiKey.LeftShift or ImGuiKey.RightShift)
+		{
+			modKey = ImGuiKey.ModShift;
+			return true;
+		}
+		else if (key is ImGuiKey.LeftCtrl or ImGuiKey.RightCtrl)
+		{
+			modKey = ImGuiKey.ModCtrl;
+			return true;
+		}
+		else if (key is ImGuiKey.LeftAlt or ImGuiKey.RightAlt)
+		{
+			modKey = ImGuiKey.ModAlt;
+			return true;
+		}
+		else if (key is ImGuiKey.LeftSuper or ImGuiKey.RightSuper)
+		{
+			modKey = ImGuiKey.ModSuper;
+			return true;
+		}
+
+		modKey = ImGuiKey.None;
+		return false;
 	}
 
 	private unsafe void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
@@ -760,13 +844,19 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	public void Dispose()
 	{
-		if (_gl is null || _view is null || _keyboard is null || _fontTexture is null || _shader is null)
+		if (_gl is null || _view is null || _keyboard is null || _mouse is null || _fontTexture is null || _shader is null)
 		{
 			return;
 		}
 
 		_view.Resize -= WindowResized;
+		_keyboard.KeyDown -= OnKeyDown;
+		_keyboard.KeyUp -= OnKeyUp;
 		_keyboard.KeyChar -= OnKeyChar;
+		_mouse.MouseDown -= OnMouseDown;
+		_mouse.MouseUp -= OnMouseUp;
+		_mouse.MouseMove -= OnMouseMove;
+		_mouse.Scroll -= onMouseScroll;
 
 		_gl.DeleteBuffer(_vboHandle);
 		_gl.DeleteBuffer(_elementsHandle);
