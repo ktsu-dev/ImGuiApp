@@ -81,7 +81,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '
         Overwrite="true"
-        Encoding="UTF8" />
+        Encoding="UTF-8" />
   </Target>
 
 </Project>
