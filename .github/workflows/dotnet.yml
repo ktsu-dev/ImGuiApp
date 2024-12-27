@@ -71,7 +71,7 @@ jobs:
       shell: pwsh
       run: |
         # find the last version that was released
-        $LAST_TAG = (git tag --list)[-1]
+        $LAST_TAG = (git tag --list --sort=-v:refname)[0]
         $LAST_VERSION = $LAST_TAG -replace 'v', ''
         $LAST_VERSION = $LAST_VERSION -replace '-alpha', ''
         $LAST_VERSION = $LAST_VERSION -replace '-beta', ''
@@ -94,23 +94,22 @@ jobs:
         $IS_PRERELEASE = $LAST_VERSION.Contains('-')
 
         $EXCLUDE_BOT_COMMITS = "--committer='^(?!.*\[bot\]|GitHub|ProjectDirector|SyncFileContents)' --author='^(?!.*\[bot\]|GitHub|ProjectDirector|SyncFileContents)' --grep='^(\[bot\]|\[skip ci\]|\[ci skip\]|\[no ci\]|\[skip actions\]|\[actions skip\])'"
-        $EXCLUDE_HIDDEN_FILES = "':(icase,exclude)*/.*'"
-        $EXCLUDE_DOCUMENTATION_FILES = "':(icase,exclude)*/*.md' ':(icase,exclude)*/*.txt'"
-        $EXCLUDE_SOLUTIONS_FILES = "':(icase,exclude)*/*.sln'"
-        $EXCLUDE_PROJECTS_FILES = "':(icase,exclude)*/*.*proj'"
-        $EXCLUDE_LINK_FILES = "':(icase,exclude)*/*.url' ':(icase,exclude)*/*.lnk'"
-        $EXCLUDE_BUILD_FILES = "':(icase,exclude)*/Directory.Build.*'"
-        $EXCLUDE_CI_FILES = "':(icase,exclude).github/workflows/*'"
+        $EXCLUDE_HIDDEN_FILES = ":(icase,exclude)*/.*"
+        $EXCLUDE_DOCUMENTATION_FILES = ":(icase,exclude)*/*.md :(icase,exclude)*/*.txt"
+        $EXCLUDE_SOLUTIONS_FILES = ":(icase,exclude)*/*.sln"
+        $EXCLUDE_PROJECTS_FILES = ":(icase,exclude)*/*.*proj"
+        $EXCLUDE_LINK_FILES = ":(icase,exclude)*/*.url' ':(icase,exclude)*/*.lnk"
+        $EXCLUDE_BUILD_FILES = ":(icase,exclude)*/Directory.Build.*"
+        $EXCLUDE_CI_FILES = ":(icase,exclude).github/workflows/*"
 
-        $INCLUDE_ALL_FILES = "'*/*.*'"
+        $INCLUDE_ALL_FILES = "*/*.*"
 
         $FIRST_COMMIT = (git rev-list HEAD)[-1]
         $LAST_COMMIT = '${{ github.sha }}'
-        $LAST_PATCH_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS `
-          $FIRST_COMMIT...$LAST_COMMIT
+        
+        $LAST_PATCH_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS $FIRST_COMMIT...$LAST_COMMIT
 
-        $LAST_MINOR_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS `
-          $FIRST_COMMIT...$LAST_COMMIT `
+        $LAST_MINOR_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS $FIRST_COMMIT...$LAST_COMMIT `
           -- `
           $INCLUDE_ALL_FILES `
           $EXCLUDE_HIDDEN_FILES `
@@ -134,17 +133,14 @@ jobs:
           if ($VERSION_INCREMENT -eq 'prerelease') {
             $NEW_PRERELEASE = $LAST_VERSION_PRERELEASE + 1
             $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$LAST_VERSION_PATCH-pre.$NEW_PRERELEASE"
-          }
-          elseif ($VERSION_INCREMENT -eq 'patch') {
+          } elseif ($VERSION_INCREMENT -eq 'patch') {
             $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$LAST_VERSION_PATCH"
           }
-        }
-        else {
+        } else {
           if ($VERSION_INCREMENT -eq 'prerelease') {
             $NEW_PATCH = $LAST_VERSION_PATCH + 1
             $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$NEW_PATCH-pre.1"
-          }
-          elseif ($VERSION_INCREMENT -eq 'patch') {
+          } elseif ($VERSION_INCREMENT -eq 'patch') {
             $NEW_PATCH = $LAST_VERSION_PATCH + 1
             $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$NEW_PATCH"
           }
