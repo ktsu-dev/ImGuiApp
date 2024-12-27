@@ -15,8 +15,332 @@ concurrency:
 permissions:
   packages: write
   contents: write
-  
+
+env:
+  OUTPUT_PATH: 'output'
+  STAGING_PATH: 'staging'
+  DOTNET_VERSION: '9.0'
+
 jobs:
-  dotnet-library:
-    uses: ktsu-dev/workflows/.github/workflows/dotnet-workflow.yml@main
-    secrets: inherit
+  dotnet:
+    name: .NET Workflow
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: true
+
+    - name: Fetch tags
+      shell: pwsh
+      run: |
+        git fetch --prune --unshallow --tags
+
+        $global:LASTEXITCODE = 0
+
+    - name: Configure Environment
+      shell: pwsh
+      run: |
+        $IS_MAIN = "${{ github.ref }}" -eq "refs/heads/main"
+        $IS_TAGGED = (git show-ref --tags -d | Out-String).Contains("${{ github.sha }}")
+        $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED)
+        $USE_DOTNET_SCRIPT = (Get-ChildItem -Recurse -Filter *.csx).Count -gt 0
+        $PACKAGE_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.nupkg"
+        $SYMBOLS_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.snupkg"
+        $APPLICATION_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.zip"
+
+        "IS_MAIN=$IS_MAIN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "IS_TAGGED=$IS_TAGGED" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "SHOULD_RELEASE=$SHOULD_RELEASE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "USE_DOTNET_SCRIPT=$USE_DOTNET_SCRIPT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "PACKAGE_PATTERN=$PACKAGE_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "SYMBOLS_PATTERN=$SYMBOLS_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "APPLICATION_PATTERN=$APPLICATION_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+        Write-Host "IS_MAIN: $IS_MAIN"
+        Write-Host "IS_TAGGED: $IS_TAGGED"
+        Write-Host "SHOULD_RELEASE: $SHOULD_RELEASE"
+        Write-Host "USE_DOTNET_SCRIPT: $USE_DOTNET_SCRIPT"
+        Write-Host "PACKAGE_PATTERN: $PACKAGE_PATTERN"
+        Write-Host "SYMBOLS_PATTERN: $SYMBOLS_PATTERN"
+        Write-Host "APPLICATION_PATTERN: $APPLICATION_PATTERN"
+        
+        $global:LASTEXITCODE = 0
+        
+    - name: Generate Version
+      shell: pwsh
+      run: |
+        # find the last version that was released
+        $LAST_TAG = (git tag --list)[-1]
+        $LAST_VERSION = $LAST_TAG -replace 'v', ''
+        $LAST_VERSION = $LAST_VERSION -replace '-alpha', ''
+        $LAST_VERSION = $LAST_VERSION -replace '-beta', ''
+        $LAST_VERSION = $LAST_VERSION -replace '-rc', ''
+        $LAST_VERSION = $LAST_VERSION -replace '-pre', ''
+        if ($LAST_VERSION -eq '') {
+          $LAST_VERSION = '1.0.0-pre.0'
+        }
+        $LAST_VERSION_COMPONENTS = $LAST_VERSION -split '\.'
+        $LAST_VERSION_MAJOR = [int]$LAST_VERSION_COMPONENTS[0]
+        $LAST_VERSION_MINOR = [int]$LAST_VERSION_COMPONENTS[1]
+        $LAST_VERSION_PATCH = [int]$LAST_VERSION_COMPONENTS[2]
+        $LAST_VERSION_PRERELEASE = 0
+        if ($LAST_VERSION_COMPONENTS.Length -gt 3) {
+          $LAST_VERSION_PRERELEASE = [int]$LAST_VERSION_COMPONENTS[3]
+        }
+        
+        # calculate which increment is needed
+
+        $IS_PRERELEASE = $LAST_VERSION.Contains('-')
+
+        $EXCLUDE_BOT_COMMITS = "--committer='^(?!.*\[bot\]|GitHub|ProjectDirector|SyncFileContents)' --author='^(?!.*\[bot\]|GitHub|ProjectDirector|SyncFileContents)' --grep='^(\[bot\]|\[skip ci\]|\[ci skip\]|\[no ci\]|\[skip actions\]|\[actions skip\])'"
+        $EXCLUDE_HIDDEN_FILES = "':!*/.*'"
+        $EXCLUDE_DOCUMENTATION_FILES = "':(icase,exclude)*/*.md' ':(icase,exclude)*/*.txt'"
+        $EXCLUDE_SOLUTIONS_FILES = "':(icase,exclude)*/*.sln'"
+        $EXCLUDE_PROJECTS_FILES = "':(icase,exclude)*/*.*proj'"
+        $EXCLUDE_LINK_FILES = "':(icase,exclude)*/*.url' ':(icase,exclude)*/*.lnk'"
+        $EXCLUDE_BUILD_FILES = "':(icase,exclude)*/Directory.Build.*'"
+        $EXCLUDE_CI_FILES = "':(icase,exclude).github/workflows/*'"
+
+        $INCLUDE_ALL_FILES = "'*/*.*'"
+
+        $FIRST_COMMIT = (git rev-list HEAD)[-1]
+        $LAST_COMMIT = '${{ github.sha }}'
+        $LAST_PATCH_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS `
+          $FIRST_COMMIT...$LAST_COMMIT
+
+        $LAST_MINOR_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS `
+          $FIRST_COMMIT...$LAST_COMMIT `
+          -- `
+          $INCLUDE_ALL_FILES `
+          $EXCLUDE_HIDDEN_FILES `
+          $EXCLUDE_DOCUMENTATION_FILES `
+          $EXCLUDE_LINK_FILES `
+          $EXCLUDE_SOLUTIONS_FILES `
+          $EXCLUDE_PROJECTS_FILES `
+          $EXCLUDE_BUILD_FILES `
+          $EXCLUDE_CI_FILES
+        
+        $VERSION_INCREMENT = 'prerelease'
+        if ($LAST_COMMIT -eq $LAST_PATCH_COMMIT) {
+          $VERSION_INCREMENT = 'patch'
+        }
+
+        if ($LAST_COMMIT -eq $LAST_MINOR_COMMIT) {
+          $VERSION_INCREMENT = 'minor'
+        }
+        
+        if ($IS_PRERELEASE) {
+          if ($VERSION_INCREMENT -eq 'prerelease') {
+            $NEW_PRERELEASE = $LAST_VERSION_PRERELEASE + 1
+            $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$LAST_VERSION_PATCH-pre.$NEW_PRERELEASE"
+          }
+          elseif ($VERSION_INCREMENT -eq 'patch') {
+            $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$LAST_VERSION_PATCH"
+          }
+        }
+        else {
+          if ($VERSION_INCREMENT -eq 'prerelease') {
+            $NEW_PATCH = $LAST_VERSION_PATCH + 1
+            $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$NEW_PATCH-pre.1"
+          }
+          elseif ($VERSION_INCREMENT -eq 'patch') {
+            $NEW_PATCH = $LAST_VERSION_PATCH + 1
+            $VERSION = "$LAST_VERSION_MAJOR.$LAST_VERSION_MINOR.$NEW_PATCH"
+          }
+        }
+
+        if ($VERSION_INCREMENT -eq 'minor') {
+          $NEW_MINOR = $LAST_VERSION_MINOR + 1
+          $VERSION = "$LAST_VERSION_MAJOR.$NEW_MINOR.0"
+        }
+
+        # Output the version information
+        Write-Host "LAST_VERSION: $LAST_VERSION"
+        Write-Host "LAST_VERSION_MAJOR: $LAST_VERSION_MAJOR"
+        Write-Host "LAST_VERSION_MINOR: $LAST_VERSION_MINOR"
+        Write-Host "LAST_VERSION_PATCH: $LAST_VERSION_PATCH"
+        Write-Host "LAST_VERSION_PRERELEASE: $LAST_VERSION_PRERELEASE"
+        Write-Host "IS_PRERELEASE: $IS_PRERELEASE"
+        Write-Host "FIRST_COMMIT: $FIRST_COMMIT"
+        Write-Host "LAST_COMMIT: $LAST_COMMIT"
+        Write-Host "LAST_PATCH_COMMIT: $LAST_PATCH_COMMIT"
+        Write-Host "LAST_MINOR_COMMIT: $LAST_MINOR_COMMIT"
+        Write-Host "VERSION_INCREMENT: $VERSION_INCREMENT"
+        Write-Host "VERSION: $VERSION"
+
+        # set the environment variables
+        "LAST_VERSION=$LAST_VERSION" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_VERSION_MAJOR=$LAST_VERSION_MAJOR" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_VERSION_MINOR=$LAST_VERSION_MINOR" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_VERSION_PATCH=$LAST_VERSION_PATCH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_VERSION_PRERELEASE=$LAST_VERSION_PRERELEASE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "IS_PRERELEASE=$IS_PRERELEASE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "FIRST_COMMIT=$FIRST_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_COMMIT=$LAST_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_PATCH_COMMIT=$LAST_PATCH_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LAST_MINOR_COMMIT=$LAST_MINOR_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "VERSION_INCREMENT=$VERSION_INCREMENT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "VERSION=$VERSION" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+        # output files
+        $VERSION | Out-File -FilePath VERSION.md -Encoding utf8
+
+        $global:LASTEXITCODE = 0
+
+    - name: Generate License
+      shell: pwsh
+      run: |
+        $AUTHORS = '${{ github.repository_owner }}'.Replace('-', '.') + ' contributors'
+        $COPYRIGHT = "Copyright (c) 2023-$(Get-Date -Format 'yyyy') $AUTHORS"
+        $PROJECT_URL = "${{ github.server_url }}/${{ github.repository }}"
+        $AUTHORS_URL = "${{ github.server_url }}/${{ github.repository_owner }}"
+
+        $LICENSE = @"
+        MIT License
+
+        $PROJECT_URL
+
+        $COPYRIGHT
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the `"Software`"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED `"AS IS`", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        "@
+
+        # output files
+        $LICENSE | Out-File -FilePath LICENSE.md -Encoding utf8
+        $AUTHORS | Out-File -FilePath AUTHORS.md -Encoding utf8
+        $COPYRIGHT | Out-File -FilePath COPYRIGHT.md -Encoding utf8
+        $PROJECT_URL | Out-File -FilePath PROJECT_URL.url -Encoding utf8
+        $AUTHORS_URL | Out-File -FilePath AUTHORS.url -Encoding utf8
+
+        # escape the urls
+        $PROJECT_URL = $PROJECT_URL.Replace(':', '%3A').Replace('/', '%2F')
+        $AUTHORS_URL = $AUTHORS_URL.Replace(':', '%3A').Replace('/', '%2F')
+
+        # output the metadata
+        Write-Host "AUTHORS: $AUTHORS"
+        Write-Host "COPYRIGHT: $COPYRIGHT"
+        Write-Host "LICENSE: $LICENSE"
+        Write-Host "PROJECT_URL: $PROJECT_URL"
+        Write-Host "AUTHORS_URL: $AUTHORS_URL"
+        
+        # set the environment variables
+        "AUTHORS=$AUTHORS" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "COPYRIGHT=$COPYRIGHT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "LICENSE=$LICENSE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "PROJECT_URL=$PROJECT_URL" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "AUTHORS_URL=$AUTHORS_URL" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+        $global:LASTEXITCODE = 0
+        
+    - name: Generate Changelog
+      shell: pwsh
+      run: |
+        $CHANGELOG = ""
+        $CHANGELOG += "## $VERSION"
+
+        Write-Host "CHANGELOG: $CHANGELOG"
+        "CHANGELOG=$CHANGELOG" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        $CHANGELOG | Out-File -FilePath CHANGELOG.md -Encoding utf8
+
+        $global:LASTEXITCODE = 0
+
+    - name: Commit Metadata
+      shell: pwsh
+      run: |
+        git config --global user.name "Github Actions"
+        git config --global user.email "actions@users.noreply.github.com"
+        git add VERSION.md LICENSE.md AUTHORS.md COPYRIGHT.md CHANGELOG.md PROJECT_URL.url AUTHORS.url
+        git commit -m "[bot][skip ci] Update Metadata"
+        git push
+
+        $RELEASE_HASH = (git rev-parse HEAD)
+        Write-Host "RELEASE_HASH: $RELEASE_HASH"
+        "RELEASE_HASH=$RELEASE_HASH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+    - name: Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          ${{ env.DOTNET_VERSION }}.x
+    
+    - name: Install dotnet-script
+      if: ${{ env.USE_DOTNET_SCRIPT == 'True' }}
+      shell: pwsh
+      run: dotnet tool install -g dotnet-script
+
+    - name: Build
+      shell: pwsh
+      run: dotnet build --configuration Release --verbosity normal --no-incremental
+
+    - name: Test
+      shell: pwsh
+      run: dotnet test --configuration Release --verbosity normal --no-build 
+
+    - name: Detect Dependencies
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
+      uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
+      
+    - name: Package Libraries
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
+      shell: pwsh
+      run: dotnet pack --configuration Release --output ${{ github.workspace }}/${{ env.STAGING_PATH }}
+
+    - name: Package Applications
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
+      shell: pwsh
+      run: |
+        if (Test-Path ${{ github.workspace }}/${{ env.OUTPUT_PATH }}) {
+          Remove-Item -Recurse -Force ${{ github.workspace }}/${{ env.OUTPUT_PATH }}
+        }
+        Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
+          $csproj = $_
+          $projName = [System.IO.Path]::GetFileNameWithoutExtension($csproj)
+          $outDir = "${{ github.workspace }}/${{ env.OUTPUT_PATH }}/$projName"
+          $stageDir = "${{ github.workspace }}/${{ env.STAGING_PATH }}"
+          $stageFile = "$stageDir/$projName-${{ env.VERSION }}.zip"
+          New-Item -Path $outDir -ItemType Directory -Force
+          New-Item -Path $stageDir -ItemType Directory -Force
+          dotnet publish $csproj --no-build --configuration Release --framework net${{ env.DOTNET_VERSION }} --output $outDir
+          Compress-Archive -Path $outDir/* -DestinationPath $stageFile
+        }
+
+    - name: Publish Libraries to GitHub
+      if: ${{ env.SHOULD_RELEASE == 'True' && hashFiles(env.PACKAGE_PATTERN) != '' }}
+      shell: pwsh
+      run: dotnet nuget push ${{ env.PACKAGE_PATTERN }} --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
+    
+    - name: Publish Libraries to NuGet
+      if: ${{ env.SHOULD_RELEASE == 'True' && hashFiles(env.PACKAGE_PATTERN) != '' }}
+      shell: pwsh
+      run: dotnet nuget push ${{ env.PACKAGE_PATTERN }} --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+    - name: Release
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "${{ env.PACKAGE_PATTERN }},${{ env.SYMBOLS_PATTERN }},${{ env.APPLICATION_PATTERN }}"
+        tag: v${{ env.VERSION }}
+        commit: ${{ env.RELEASE_HASH }}
+        allowUpdates: false
+        skipIfReleaseExists: true
+        omitBody: true
+        generateReleaseNotes: true
+        replacesArtifacts: false
+        makeLatest: true
