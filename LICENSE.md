@@ -1,6 +1,8 @@
-﻿MIT License
+MIT License
 
-ImGuiApp Copyright (c) 2023-2024 ktsu
+https://github.com/ktsu-dev/ImGuiApp
+
+Copyright (c) 2023-2024 ktsu.dev contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
