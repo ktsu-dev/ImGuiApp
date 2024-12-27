@@ -93,12 +93,13 @@ jobs:
 
         $IS_PRERELEASE = $LAST_VERSION.Contains('-')
 
-        $EXCLUDE_BOT_COMMITS = "--committer='^(?!.*\[bot\]|GitHub|ProjectDirector|SyncFileContents)' --author='^(?!.*\[bot\]|GitHub|ProjectDirector|SyncFileContents)' --grep='^(\[bot\]|\[skip ci\]|\[ci skip\]|\[no ci\]|\[skip actions\]|\[actions skip\])'"
+        $EXCLUDE_BOTS = '^(?!.*(\[bot\]|github|ProjectDirector|SyncFileContents)).*$'
         $EXCLUDE_HIDDEN_FILES = ":(icase,exclude)*/.*"
-        $EXCLUDE_DOCUMENTATION_FILES = ":(icase,exclude)*/*.md :(icase,exclude)*/*.txt"
+        $EXCLUDE_MARKDOWN_FILES = ":(icase,exclude)*/*.md"
+        $EXCLUDE_TEXT_FILES = ":(icase,exclude)*/*.txt"
         $EXCLUDE_SOLUTIONS_FILES = ":(icase,exclude)*/*.sln"
         $EXCLUDE_PROJECTS_FILES = ":(icase,exclude)*/*.*proj"
-        $EXCLUDE_LINK_FILES = ":(icase,exclude)*/*.url' ':(icase,exclude)*/*.lnk"
+        $EXCLUDE_URL_FILES = ":(icase,exclude)*/*.url"
         $EXCLUDE_BUILD_FILES = ":(icase,exclude)*/Directory.Build.*"
         $EXCLUDE_CI_FILES = ":(icase,exclude).github/workflows/*"
 
@@ -106,17 +107,20 @@ jobs:
 
         $FIRST_COMMIT = (git rev-list HEAD)[-1]
         $LAST_COMMIT = '${{ github.sha }}'
-        
-        $LAST_PATCH_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS $FIRST_COMMIT...$LAST_COMMIT
 
-        $LAST_MINOR_COMMIT = git log -n 1 --perl-regexp --format=format:%H $EXCLUDE_BOT_COMMITS $FIRST_COMMIT...$LAST_COMMIT `
+        $COMMITS = "$FIRST_COMMIT...$LAST_COMMIT"
+        
+        $LAST_PATCH_COMMIT = git log -n 1 --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" $COMMITS
+
+        $LAST_MINOR_COMMIT = git log -n 1 --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" $COMMITS `
           -- `
           $INCLUDE_ALL_FILES `
           $EXCLUDE_HIDDEN_FILES `
-          $EXCLUDE_DOCUMENTATION_FILES `
-          $EXCLUDE_LINK_FILES `
+          $EXCLUDE_MARKDOWN_FILES `
+          $EXCLUDE_TEXT_FILES `
           $EXCLUDE_SOLUTIONS_FILES `
           $EXCLUDE_PROJECTS_FILES `
+          $EXCLUDE_URL_FILES `
           $EXCLUDE_BUILD_FILES `
           $EXCLUDE_CI_FILES
         
