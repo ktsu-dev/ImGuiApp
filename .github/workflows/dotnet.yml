@@ -229,10 +229,6 @@ jobs:
         $PROJECT_URL | Out-File -FilePath PROJECT_URL.url -Encoding utf8
         $AUTHORS_URL | Out-File -FilePath AUTHORS.url -Encoding utf8
 
-        # escape the urls
-        $PROJECT_URL = $PROJECT_URL.Replace(':', '%3A').Replace('/', '%2F')
-        $AUTHORS_URL = $AUTHORS_URL.Replace(':', '%3A').Replace('/', '%2F')
-
         # output the metadata
         Write-Host "AUTHORS: $AUTHORS"
         Write-Host "COPYRIGHT: $COPYRIGHT"
@@ -243,7 +239,6 @@ jobs:
         # set the environment variables
         "AUTHORS=$AUTHORS" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "COPYRIGHT=$COPYRIGHT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "LICENSE=$LICENSE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "PROJECT_URL=$PROJECT_URL" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "AUTHORS_URL=$AUTHORS_URL" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
