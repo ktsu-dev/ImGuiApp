@@ -73,6 +73,8 @@ jobs:
         # find the last version that was released
         $LAST_TAG = (git tag --list --sort=-v:refname)[0]
         $LAST_VERSION = $LAST_TAG -replace 'v', ''
+        $IS_PRERELEASE = $LAST_VERSION.Contains('-')
+        
         $LAST_VERSION = $LAST_VERSION -replace '-alpha', ''
         $LAST_VERSION = $LAST_VERSION -replace '-beta', ''
         $LAST_VERSION = $LAST_VERSION -replace '-rc', ''
@@ -91,7 +93,7 @@ jobs:
         
         # calculate which increment is needed
 
-        $IS_PRERELEASE = $LAST_VERSION.Contains('-')
+        
 
         $EXCLUDE_BOTS = '^(?!.*(\[bot\]|github|ProjectDirector|SyncFileContents)).*$'
         $EXCLUDE_HIDDEN_FILES = ":(icase,exclude)*/.*"
