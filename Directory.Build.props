@@ -10,41 +10,66 @@
     <SolutionName Condition="'$(SolutionName)' == ''">$([System.IO.Path]::GetFileNameWithoutExtension($(SolutionPath)))</SolutionName>
     <SolutionDir Condition="'$(SolutionDir)' == ''">$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDir>
 
-    <!-- Path properties-->
+    <!-- Primary Project properties-->
     <PrimaryProjectName>$(SolutionName)</PrimaryProjectName>
     <PrimaryProjectFileName>$(PrimaryProjectName).csproj</PrimaryProjectFileName>
     <PrimaryProjectPath>$(SolutionDir)\$(PrimaryProjectName)\$(PrimaryProjectFileName)</PrimaryProjectPath>
     <PrimaryProjectExists>false</PrimaryProjectExists>
     <PrimaryProjectExists Condition="Exists($(PrimaryProjectPath))">true</PrimaryProjectExists>
 
-    <VersionFileName>VERSION</VersionFileName>
-    <VersionFilePath>$(SolutionDir)\$(VersionFileName)</VersionFilePath>
+    <!-- Descriptive properties -->
+    <ContributorsFileName>CONTRIBUTORS.md</ContributorsFileName>
+    <ContributorsFilePath>$(SolutionDir)\$(ContributorsFileName)</ContributorsFilePath>
+    <Contributors Condition="Exists($(ContributorsFilePath))">$([System.IO.File]::ReadAllText($(ContributorsFilePath)).Trim())</Contributors>
 
-    <AuthorsFileName>AUTHORS</AuthorsFileName>
-    <AuthorsFilePath>$(SolutionDir)\$(AuthorsFileName)</AuthorsFilePath>
-
-    <DescriptionFileName>DESCRIPTION</DescriptionFileName>
-    <DescriptionFilePath>$(SolutionDir)\$(DescriptionFileName)</DescriptionFilePath>
-
-    <ChangelogFileName>CHANGELOG</ChangelogFileName>
+    <ChangelogFileName>CHANGELOG.md</ChangelogFileName>
     <ChangelogFilePath>$(SolutionDir)\$(ChangelogFileName)</ChangelogFilePath>
+    <Changelog Condition="Exists($(ChangelogFilePath))">$([System.IO.File]::ReadAllText($(ChangelogFilePath)).Trim())</Changelog>
 
     <ReadmeFileName>README.md</ReadmeFileName>
     <ReadmeFilePath>$(SolutionDir)\$(ReadmeFileName)</ReadmeFilePath>
+    <Readme Condition="Exists($(ReadmeFilePath))">$([System.IO.File]::ReadAllText($(ReadmeFilePath)).Trim())</Readme>
 
     <LicenseFileName>LICENSE.md</LicenseFileName>
     <LicenseFilePath>$(SolutionDir)\$(LicenseFileName)</LicenseFilePath>
+    <License Condition="Exists($(LicenseFilePath))">$([System.IO.File]::ReadAllText($(LicenseFilePath)).Trim())</License>
+
+    <AuthorsFileName>AUTHORS.md</AuthorsFileName>
+    <AuthorsFilePath>$(SolutionDir)\$(AuthorsFileName)</AuthorsFilePath>
+    <Authors Condition="Exists($(AuthorsFilePath))">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
+
+    <AuthorsUrlFileName>AUTHORS.url</AuthorsUrlFileName>
+    <AuthorsUrlFilePath>$(SolutionDir)\$(AuthorsUrlFileName)</AuthorsUrlFilePath>
+    <AuthorsUrl Condition="Exists($(AuthorsUrlFilePath))">$([System.IO.File]::ReadAllText($(AuthorsUrlFilePath)).Trim())</AuthorsUrl>
+
+    <ProjectUrlFileName>PROJECT.url</ProjectUrlFileName>
+    <ProjectUrlFilePath>$(SolutionDir)\$(ProjectUrlFileName)</ProjectUrlFilePath>
+    <ProjectUrl Condition="Exists($(ProjectUrlFilePath))">$([System.IO.File]::ReadAllText($(ProjectUrlFilePath)).Trim())</ProjectUrl>
+
+    <CopyrightFileName>COPYRIGHT.md</CopyrightFileName>
+    <CopyrightFilePath>$(SolutionDir)\$(CopyrightFileName)</CopyrightFilePath>
+    <Copyright Condition="Exists($(CopyrightFilePath))">$([System.IO.File]::ReadAllText($(CopyrightFilePath)).Trim())</Copyright>
+
+    <VersionFileName>VERSION.md</VersionFileName>
+    <VersionFilePath>$(SolutionDir)\$(VersionFileName)</VersionFilePath>
+    <Version Condition="Exists($(VersionFilePath))">$([System.IO.File]::ReadAllText($(VersionFilePath)).Trim())</Version>
+
+    <DescriptionFileName>DESCRIPTION.md</DescriptionFileName>
+    <DescriptionFilePath>$(SolutionDir)\$(DescriptionFileName)</DescriptionFilePath>
+    <Description Condition="Exists($(DescriptionFilePath))">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
 
     <IconFileName>icon.png</IconFileName>
     <IconFilePath>$(SolutionDir)\$(IconFileName)</IconFilePath>
 
     <!-- Namespace properties -->
-    <Authors Condition="Exists($(AuthorsFilePath))">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
-    <AuthorsNamespace>$(Authors.Replace(" ", ""))</AuthorsNamespace>
+    <AuthorsNamespace>$(Authors.Replace(" ", "").Replace('-', '.').Split('.')[0])</AuthorsNamespace>
     <SolutionNamespace>$(SolutionName.Replace(" ", ""))</SolutionNamespace>
     <ProjectNamespace>$(MSBuildProjectName.Replace(" ", ""))</ProjectNamespace>
     <RootNamespace>$(AuthorsNamespace).$(ProjectNamespace)</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
+    <Title>$(AssemblyName)</Title>
+    <Company>$(Authors)</Company>
+    <Product>$(AssemblyName)</Product>
 
     <!-- Assembly validation properties -->
     <ApiCompatStrictMode>true</ApiCompatStrictMode>
@@ -60,20 +85,13 @@
 
     <!-- Package properties -->
     <PackageId>$(AssemblyName)</PackageId>
-    <Version Condition="Exists($(VersionFilePath))">$([System.IO.File]::ReadAllText($(VersionFilePath)).Trim())</Version>
-    <Title>$(AssemblyName)</Title>
-    <Description Condition="Exists($(DescriptionFilePath))">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
-    <Company>$(Authors)</Company>
-    <Copyright>$(SolutionName) Copyright (c) 2023-$([System.DateTime]::Now.Year) $(Authors)</Copyright>
-    <Changelog Condition="Exists($(ChangelogFilePath))">$([System.IO.File]::ReadAllText($(ChangelogFilePath)).Trim())</Changelog>
     <PackageVersion>$(Version)</PackageVersion>
-    <PackageIcon>$([System.IO.Path]::GetFileName($(IconFilePath)))</PackageIcon>
-    <PackageReadmeFile>$([System.IO.Path]::GetFileName($(ReadmeFilePath)))</PackageReadmeFile>
-    <PackageLicenseFile>$([System.IO.Path]::GetFileName($(LicenseFilePath)))</PackageLicenseFile>
+    <PackageIcon>$(IconFileName)</PackageIcon>
+    <PackageReadmeFile>$(ReadmeFileName)</PackageReadmeFile>
+    <PackageLicenseFile>$(LicenseFileName)</PackageLicenseFile>
     <PackageReleaseNotes>$(Changelog)</PackageReleaseNotes>
     <PackageDescription>$(Description)</PackageDescription>
-    <PackageProjectUrl>https://ktsu.dev</PackageProjectUrl>
-    <PackageProjectUrl Condition="$(RepositoryUrl) != ''">$($(RepositoryUrl).Replace("/.git", ""))</PackageProjectUrl>
+    <PackageProjectUrl>$(ProjectUrl)</PackageProjectUrl>
     <IncludeSource>true</IncludeSource>
     <IncludeContentInPack>true</IncludeContentInPack>
     <PackRelease>true</PackRelease>
