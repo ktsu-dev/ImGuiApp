@@ -41,6 +41,7 @@ jobs:
     - name: Configure Environment
       shell: pwsh
       run: |
+        
         $IS_MAIN = "${{ github.ref }}" -eq "refs/heads/main"
         $IS_TAGGED = (git show-ref --tags -d | Out-String).Contains("${{ github.sha }}")
         $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED)
@@ -49,6 +50,9 @@ jobs:
         $SYMBOLS_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.snupkg"
         $APPLICATION_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.zip"
 
+        $BUILD_ARGS = ""
+        $BUILD_ARGS += $USE_DOTNET_SCRIPT ? "-maxCpuCount:1" : ""
+
         "IS_MAIN=$IS_MAIN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "IS_TAGGED=$IS_TAGGED" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "SHOULD_RELEASE=$SHOULD_RELEASE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
@@ -56,6 +60,7 @@ jobs:
         "PACKAGE_PATTERN=$PACKAGE_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "SYMBOLS_PATTERN=$SYMBOLS_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "APPLICATION_PATTERN=$APPLICATION_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        "BUILD_ARGS=$BUILD_ARGS" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
         Write-Host "IS_MAIN: $IS_MAIN"
         Write-Host "IS_TAGGED: $IS_TAGGED"
@@ -64,6 +69,7 @@ jobs:
         Write-Host "PACKAGE_PATTERN: $PACKAGE_PATTERN"
         Write-Host "SYMBOLS_PATTERN: $SYMBOLS_PATTERN"
         Write-Host "APPLICATION_PATTERN: $APPLICATION_PATTERN"
+        Write-Host "BUILD_ARGS: $BUILD_ARGS"
         
         $global:LASTEXITCODE = 0
         
@@ -92,8 +98,6 @@ jobs:
         }
         
         # calculate which increment is needed
-
-        
 
         $EXCLUDE_BOTS = '^(?!.*(\[bot\]|github|ProjectDirector|SyncFileContents)).*$'
         $EXCLUDE_HIDDEN_FILES = ":(icase,exclude)*/.*"
@@ -284,7 +288,7 @@ jobs:
 
     - name: Build
       shell: pwsh
-      run: dotnet build --configuration Release --verbosity normal --no-incremental
+      run: dotnet build --configuration Release --verbosity normal --no-incremental ${{ env.BUILD_ARGS }}
 
     - name: Test
       shell: pwsh
