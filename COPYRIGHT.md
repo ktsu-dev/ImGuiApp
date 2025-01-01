@@ -1,1 +1,1 @@
-Copyright (c) 2023-2024 ktsu.dev contributors
+Copyright (c) 2023-2025 ktsu.dev contributors
