@@ -1,0 +1,24 @@
+name: Add issues and prs to ktsu.dev project
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+      - transferred
+      - labeled
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - labeled
+
+jobs:
+  add-to-project:
+    name: Add to project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/orgs/ktsu-dev/projects/2
+          github-token: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
