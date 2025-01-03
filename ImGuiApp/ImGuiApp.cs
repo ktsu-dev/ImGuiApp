@@ -11,8 +11,10 @@ using ImGuiNET;
 using ktsu.Extensions;
 using ktsu.StrongPaths;
 using Silk.NET.Input;
+using Silk.NET.Input.Sdl;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using Silk.NET.Windowing.Sdl;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -241,13 +243,17 @@ public static partial class ImGuiApp
 			silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
 			silkWindowOptions.Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y);
 			silkWindowOptions.WindowState = Silk.NET.Windowing.WindowState.Normal;
+			//silkWindowOptions.VSync = false;
+			silkWindowOptions.ShouldSwapAutomatically = true;
+			silkWindowOptions.FramesPerSecond = 30;
 
 			LastNormalWindowState = config.InitialWindowState;
 			LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 
 			// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
 
-			// Create a Silk.NET window as usual
+			SdlWindowing.Use();
+			SdlInput.Use();
 			window = Window.Create(silkWindowOptions);
 
 			// Our loading function
@@ -325,18 +331,13 @@ public static partial class ImGuiApp
 					EnsureWindowPositionIsValid();
 
 					double currentFps = window.FramesPerSecond;
-					double currentUps = window.UpdatesPerSecond;
 					double requiredFps = IsFocused ? 30 : 5;
-					double requiredUps = IsFocused ? 30 : 5;
+
 					if (currentFps != requiredFps)
 					{
-						window.VSync = false;
 						window.FramesPerSecond = requiredFps;
 					}
-					if (currentUps != requiredUps)
-					{
-						window.UpdatesPerSecond = requiredUps;
-					}
+
 					controller?.Update((float)delta);
 					config.OnUpdate?.Invoke((float)delta);
 				}
@@ -358,6 +359,22 @@ public static partial class ImGuiApp
 						var (bestFontSize, bestFont) = Fonts.Where(x => x.Key >= scaledFontSize).OrderBy(x => x.Key).FirstOrDefault();
 						float scaleRatio = bestFontSize / normalFontSize;
 						ImGui.PushFont(bestFont);
+
+						//Fatal error. System.AccessViolationException: Attempted to read or write protected memory.This is often an indication that other memory is corrupt.
+						//Repeat 2 times:
+						//--------------------------------
+						//   at ImGuiNET.ImGuiNative.igPushFont(ImGuiNET.ImFont*)
+						//--------------------------------
+						//   at ktsu.ImGuiApp.ImGuiApp+<>c__DisplayClass50_0.<Start>b__4(Double)
+						//   at Silk.NET.Windowing.Internals.ViewImplementationBase.DoRender()
+						//   at Silk.NET.Windowing.Internals.ViewImplementationBase.Run(System.Action)
+						//   at Silk.NET.Windowing.Glfw.GlfwWindow.Run(System.Action)
+						//   at Silk.NET.Windowing.WindowExtensions.Run(Silk.NET.Windowing.IView)
+						//   at ktsu.ImGuiApp.ImGuiApp.Start(AppConfig)
+						//   at ktsu.ImGuiApp.ImGuiApp.Start(System.String, ktsu.ImGuiApp.ImGuiAppWindowState, System.Action, System.Action`1<Single>, System.Action, System.Action)
+						//   at ktsu.BuildMonitor.BuildMonitor.Main()
+
+						//C:\dev\ktsu-dev\BuildMonitor\BuildMonitor\bin\Debug\net8.0\ktsu.BuildMonitor.exe(process 66860) exited with code -1 (0xffffffff).
 
 						using (new UIScaler(scaleRatio))
 						{
