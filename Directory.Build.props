@@ -1,65 +1,94 @@
 <Project>
   <PropertyGroup>
-    <DirectoryBuildPropsFilePath>$(MSBuildThisFileFullPath)</DirectoryBuildPropsFilePath>
-    <DirectoryBuildPropsFileName>$([System.IO.Path]::GetFileName($(DirectoryBuildPropsFilePath)))</DirectoryBuildPropsFileName>
+    <DirectoryBuildPropsFilePathActual>$([MSBuild]::NormalizePath($(MSBuildThisFileFullPath)))</DirectoryBuildPropsFilePathActual>
 
     <!-- These seem to only be populated when building via the IDE -->
     <SolutionExt Condition="'$(SolutionExt)' == ''">.sln</SolutionExt>
-    <SolutionPath Condition="'$(SolutionPath)' == ''">$([System.IO.Path]::GetFullPath($([System.IO.Directory]::GetFiles("$(MSBuildThisFileDirectory)", "*$(SolutionExt)")[0])))</SolutionPath>
+    <SolutionPath Condition="'$(SolutionPath)' == ''">$([MSBuild]::NormalizePath($([System.IO.Path]::GetFullPath($([System.IO.Directory]::GetFiles("$(MSBuildThisFileDirectory)", "*$(SolutionExt)")[0])))))</SolutionPath>
     <SolutionFileName Condition="'$(SolutionFileName)' == ''">$([System.IO.Path]::GetFileName($(SolutionPath)))</SolutionFileName>
     <SolutionName Condition="'$(SolutionName)' == ''">$([System.IO.Path]::GetFileNameWithoutExtension($(SolutionPath)))</SolutionName>
-    <SolutionDir Condition="'$(SolutionDir)' == ''">$([System.IO.Path]::GetDirectoryName($(SolutionPath)))</SolutionDir>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$([MSBuild]::NormalizePath($([System.IO.Path]::GetDirectoryName($(SolutionPath)))))</SolutionDir>
+
+    <!-- GitHub related properties -->
+    <GitHubWorkflowFileName>dotnet.yml</GitHubWorkflowFileName>
+    <GitHubCopilotInstructionsFileName>copilot-instructions.md</GitHubCopilotInstructionsFileName>
+    <GitHubDir>$([MSBuild]::NormalizePath("$(SolutionDir)\.github"))</GitHubDir>
+    <GitHubWorkflowDir>$([MSBuild]::NormalizePath("$(GitHubDir)\workflows"))</GitHubWorkflowDir>
+    <GitHubWorkflowFilePath>$([MSBuild]::NormalizePath("$(GitHubWorkflowDir)\$(GitHubWorkflowFileName)"))</GitHubWorkflowFilePath>
+    <GitHubCopilotInstructionsFilePath>$([MSBuild]::NormalizePath("$(GitHubDir)\$(GitHubCopilotInstructionsFileName)"))</GitHubCopilotInstructionsFilePath>
+
+    <!-- git related files -->
+    <GitIgnoreFileName>.gitignore</GitIgnoreFileName>
+    <GitAttributesFileName>.gitattributes</GitAttributesFileName>
+    <GitConfigFileName>.gitconfig</GitConfigFileName>
+    <GitModulesFileName>.gitmodules</GitModulesFileName>
+    <GitMailMapFileName>.mailmap</GitMailMapFileName>
+    <GitIgnoreFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(GitIgnoreFileName)"))</GitIgnoreFilePath>
+    <GitAttributesFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(GitAttributesFileName)"))</GitAttributesFilePath>
+    <GitConfigFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(GitConfigFileName)"))</GitConfigFilePath>
+    <GitModulesFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(GitModulesFileName)"))</GitModulesFilePath>
+    <GitMailMapFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(GitMailMapFileName)"))</GitMailMapFilePath>
+
+    <!-- Build related files -->
+    <DirectoryBuildPropsFileName>Directory.Build.props</DirectoryBuildPropsFileName>
+    <DirectoryBuildTargetsFileName>Directory.Build.targets</DirectoryBuildTargetsFileName>
+    <EditorConfigFileName>.editorconfig</EditorConfigFileName>
+    <RunSettingsFileName>.runsettings</RunSettingsFileName>
+    <DirectoryBuildPropsFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(DirectoryBuildPropsFileName)"))</DirectoryBuildPropsFilePath>
+    <DirectoryBuildTargetsFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(DirectoryBuildTargetsFileName)"))</DirectoryBuildTargetsFilePath>
+    <EditorConfigFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(EditorConfigFileName)"))</EditorConfigFilePath>
+    <RunSettingsFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(RunSettingsFileName)"))</RunSettingsFilePath>
 
     <!-- Primary Project properties-->
     <PrimaryProjectName>$(SolutionName)</PrimaryProjectName>
     <PrimaryProjectFileName>$(PrimaryProjectName).csproj</PrimaryProjectFileName>
-    <PrimaryProjectPath>$(SolutionDir)\$(PrimaryProjectName)\$(PrimaryProjectFileName)</PrimaryProjectPath>
+    <PrimaryProjectPath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(PrimaryProjectName)\$(PrimaryProjectFileName)"))</PrimaryProjectPath>
     <PrimaryProjectExists>false</PrimaryProjectExists>
     <PrimaryProjectExists Condition="Exists($(PrimaryProjectPath))">true</PrimaryProjectExists>
 
     <!-- Descriptive properties -->
     <ContributorsFileName>CONTRIBUTORS.md</ContributorsFileName>
-    <ContributorsFilePath>$(SolutionDir)\$(ContributorsFileName)</ContributorsFilePath>
+    <ContributorsFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(ContributorsFileName)"))</ContributorsFilePath>
     <Contributors Condition="Exists($(ContributorsFilePath))">$([System.IO.File]::ReadAllText($(ContributorsFilePath)).Trim())</Contributors>
 
     <ChangelogFileName>CHANGELOG.md</ChangelogFileName>
-    <ChangelogFilePath>$(SolutionDir)\$(ChangelogFileName)</ChangelogFilePath>
+    <ChangelogFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(ChangelogFileName)"))</ChangelogFilePath>
     <Changelog Condition="Exists($(ChangelogFilePath))">$([System.IO.File]::ReadAllText($(ChangelogFilePath)).Trim())</Changelog>
 
     <ReadmeFileName>README.md</ReadmeFileName>
-    <ReadmeFilePath>$(SolutionDir)\$(ReadmeFileName)</ReadmeFilePath>
+    <ReadmeFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(ReadmeFileName)"))</ReadmeFilePath>
     <Readme Condition="Exists($(ReadmeFilePath))">$([System.IO.File]::ReadAllText($(ReadmeFilePath)).Trim())</Readme>
 
     <LicenseFileName>LICENSE.md</LicenseFileName>
-    <LicenseFilePath>$(SolutionDir)\$(LicenseFileName)</LicenseFilePath>
+    <LicenseFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(LicenseFileName)"))</LicenseFilePath>
     <License Condition="Exists($(LicenseFilePath))">$([System.IO.File]::ReadAllText($(LicenseFilePath)).Trim())</License>
 
     <AuthorsFileName>AUTHORS.md</AuthorsFileName>
-    <AuthorsFilePath>$(SolutionDir)\$(AuthorsFileName)</AuthorsFilePath>
+    <AuthorsFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(AuthorsFileName)"))</AuthorsFilePath>
     <Authors Condition="Exists($(AuthorsFilePath))">$([System.IO.File]::ReadAllText($(AuthorsFilePath)).Trim())</Authors>
 
     <AuthorsUrlFileName>AUTHORS.url</AuthorsUrlFileName>
-    <AuthorsUrlFilePath>$(SolutionDir)\$(AuthorsUrlFileName)</AuthorsUrlFilePath>
+    <AuthorsUrlFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(AuthorsUrlFileName)"))</AuthorsUrlFilePath>
     <AuthorsUrl Condition="Exists($(AuthorsUrlFilePath))">$([System.IO.File]::ReadAllText($(AuthorsUrlFilePath)).Trim())</AuthorsUrl>
 
     <ProjectUrlFileName>PROJECT.url</ProjectUrlFileName>
-    <ProjectUrlFilePath>$(SolutionDir)\$(ProjectUrlFileName)</ProjectUrlFilePath>
+    <ProjectUrlFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(ProjectUrlFileName)"))</ProjectUrlFilePath>
     <ProjectUrl Condition="Exists($(ProjectUrlFilePath))">$([System.IO.File]::ReadAllText($(ProjectUrlFilePath)).Trim())</ProjectUrl>
 
     <CopyrightFileName>COPYRIGHT.md</CopyrightFileName>
-    <CopyrightFilePath>$(SolutionDir)\$(CopyrightFileName)</CopyrightFilePath>
+    <CopyrightFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(CopyrightFileName)"))</CopyrightFilePath>
     <Copyright Condition="Exists($(CopyrightFilePath))">$([System.IO.File]::ReadAllText($(CopyrightFilePath)).Trim())</Copyright>
 
     <VersionFileName>VERSION.md</VersionFileName>
-    <VersionFilePath>$(SolutionDir)\$(VersionFileName)</VersionFilePath>
+    <VersionFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(VersionFileName)"))</VersionFilePath>
     <Version Condition="Exists($(VersionFilePath))">$([System.IO.File]::ReadAllText($(VersionFilePath)).Trim())</Version>
 
     <DescriptionFileName>DESCRIPTION.md</DescriptionFileName>
-    <DescriptionFilePath>$(SolutionDir)\$(DescriptionFileName)</DescriptionFilePath>
+    <DescriptionFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(DescriptionFileName)"))</DescriptionFilePath>
     <Description Condition="Exists($(DescriptionFilePath))">$([System.IO.File]::ReadAllText($(DescriptionFilePath)).Trim())</Description>
 
     <IconFileName>icon.png</IconFileName>
-    <IconFilePath>$(SolutionDir)\$(IconFileName)</IconFilePath>
+    <IconFilePath>$([MSBuild]::NormalizePath("$(SolutionDir)\$(IconFileName)"))</IconFilePath>
 
     <!-- Namespace properties -->
     <AuthorsNamespace>$(Authors.Replace(" ", "").Replace('-', '.').Split('.')[0])</AuthorsNamespace>
@@ -182,7 +211,7 @@
     <!-- <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences> -->
     <!-- <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads> -->
     <!-- <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences> -->
-    
+
     <!-- Restore-related properties -->
     <!-- <RestoreIgnoreFailedSource>true</RestoreIgnoreFailedSource> -->
     <!-- <UseMauiEssentials>true</UseMauiEssentials> -->
@@ -228,7 +257,7 @@
     <!-- CA1000: Do not declare static members on generic types -->
     <!-- CA2260: Implement ISerializable correctly -->
     <!-- CA1812: Avoid uninstantiated internal classes -->
-    <!-- CA1515: Override methods should call base methods -->    
+    <!-- CA1515: Override methods should call base methods -->
 
     <!-- JsonSerializer properties -->
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
@@ -236,3 +265,4 @@
   </PropertyGroup>
 
 </Project>
+
