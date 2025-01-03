@@ -82,6 +82,12 @@ function MakeNotesForRange {
         $SEARCH_TAG = "$FROM_MAJOR_VERSION_NUMBER.0.0.0"
     }
 
+    # Handle the case where the version is the same but the prerelease number has been dropped
+    if ($TO_VERSION_MAJOR -eq $FROM_VERSION_MAJOR -and $TO_VERSION_MINOR -eq $FROM_VERSION_MINOR -and $TO_VERSION_PATCH -eq $FROM_VERSION_PATCH -and $TO_VERSION_PRERELEASE -eq "0" -and $FROM_VERSION_PRERELEASE -ne "0") {
+        $VERSION_TYPE = "patch"
+        $SEARCH_TAG = "$TO_VERSION_MAJOR.$TO_VERSION_MINOR.$FROM_PATCH_VERSION_NUMBER.0"
+    }
+
     if ($SEARCH_TAG.Contains("-")) {
         $SEARCH_TAG = $FROM_TAG
     }
