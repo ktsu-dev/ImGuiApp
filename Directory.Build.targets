@@ -1,7 +1,6 @@
 <Project>
   <PropertyGroup>
-    <DirectoryBuildTargetsFilePath>$(MSBuildThisFileFullPath)</DirectoryBuildTargetsFilePath>
-    <DirectoryBuildTargetsFileName>$([System.IO.Path]::GetFileName($(DirectoryBuildTargetsFilePath)))</DirectoryBuildTargetsFileName>
+    <DirectoryBuildTargetsFilePathActual>$(MSBuildThisFileFullPath)</DirectoryBuildTargetsFilePathActual>
 
     <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Test'))">true</IsTestProject>
 
@@ -42,18 +41,38 @@
   </ItemGroup>
 
   <ItemGroup Condition="$(IsPrimaryProject)">
+    <!-- Build related files -->
     <None Include="$(DirectoryBuildPropsFilePath)" Condition="Exists('$(DirectoryBuildPropsFilePath)')" Link="_Build\$(DirectoryBuildPropsFileName)" />
     <None Include="$(DirectoryBuildTargetsFilePath)" Condition="Exists('$(DirectoryBuildTargetsFilePath)')" Link="_Build\$(DirectoryBuildTargetsFileName)" />
+    <None Include="$(GitHubWorkflowFilePath)" Condition="Exists('$(GitHubWorkflowFilePath)')" Link="_Build\$(GitHubWorkflowFileName)" />
+    <None Include="$(GitHubCopilotInstructionsFilePath)" Condition="Exists('$(GitHubCopilotInstructionsFilePath)')" Link="_Build\$(GitHubCopilotInstructionsFileName)" />
+    <None Include="$(EditorConfigFilePath)" Condition="Exists('$(EditorConfigFilePath)')" Link="_Build\$(EditorConfigFileName)" />
+    <None Include="$(RunSettingsFilePath)" Condition="Exists('$(RunSettingsFilePath)')" Link="_Build\$(RunSettingsFileName)" />
 
-    <None Include="$(AuthorsFilePath)" Condition="Exists('$(AuthorsFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(AuthorsFileName)" />
-    <None Include="$(AuthorsUrlFilePath)" Condition="Exists('$(AuthorsUrlFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(AuthorsUrlFileName)" />
-    <None Include="$(ProjectUrlFilePath)" Condition="Exists('$(ProjectUrlFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(ProjectUrlFileName)" />
-    <None Include="$(DescriptionFilePath)" Condition="Exists('$(DescriptionFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(DescriptionFileName)" />
-    <None Include="$(LicenseFilePath)" Condition="Exists('$(LicenseFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(LicenseFileName)" />
-    <None Include="$(ChangelogFilePath)" Condition="Exists('$(ChangelogFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(ChangelogFileName)" />
-    <None Include="$(ReadmeFilePath)" Condition="Exists('$(ReadmeFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(ReadmeFileName)" />
-    <None Include="$(VersionFilePath)" Condition="Exists('$(VersionFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(VersionFileName)" />
-    <None Include="$(IconFilePath)" Condition="Exists('$(IconFilePath)')" Pack="true" PackagePath="\" Link="_MetaData\$(IconFileName)" />
+    <!-- Git related files -->
+    <None Include="$(GitIgnoreFilePath)" Condition="Exists('$(GitIgnoreFilePath)')" Link="_Git\$(GitIgnoreFileName)" />
+    <None Include="$(GitAttributesFilePath)" Condition="Exists('$(GitAttributesFilePath)')" Link="_Git\$(GitAttributesFileName)" />
+    <None Include="$(GitConfigFilePath)" Condition="Exists('$(GitConfigFilePath)')" Link="_Git\$(GitConfigFileName)" />
+    <None Include="$(GitModulesFilePath)" Condition="Exists('$(GitModulesFilePath)')" Link="_Git\$(GitModulesFileName)" />
+    <None Include="$(GitMailMapFilePath)" Condition="Exists('$(GitMailMapFilePath)')" Link="_Git\$(GitMailMapFileName)" />
+
+    <!-- Package data files -->
+    <None Include="$(AuthorsFilePath)" Condition="Exists('$(AuthorsFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(AuthorsFileName)" />
+    <None Include="$(AuthorsUrlFilePath)" Condition="Exists('$(AuthorsUrlFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(AuthorsUrlFileName)" />
+    <None Include="$(ProjectUrlFilePath)" Condition="Exists('$(ProjectUrlFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(ProjectUrlFileName)" />
+    <None Include="$(DescriptionFilePath)" Condition="Exists('$(DescriptionFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(DescriptionFileName)" />
+    <None Include="$(LicenseFilePath)" Condition="Exists('$(LicenseFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(LicenseFileName)" />
+    <None Include="$(ChangelogFilePath)" Condition="Exists('$(ChangelogFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(ChangelogFileName)" />
+    <None Include="$(ReadmeFilePath)" Condition="Exists('$(ReadmeFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(ReadmeFileName)" />
+    <None Include="$(VersionFilePath)" Condition="Exists('$(VersionFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(VersionFileName)" />
+    <None Include="$(IconFilePath)" Condition="Exists('$(IconFilePath)')" Pack="true" PackagePath="\" Link="_PackageData\$(IconFileName)" />
   </ItemGroup>
 
+  <Target Name="ValidateBuildFilePaths" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(DirectoryBuildPropsFilePath)')" Text="Directory.Build.props file not found: $(DirectoryBuildPropsFilePath)" />
+    <Error Condition="!Exists('$(DirectoryBuildTargetsFilePath)')" Text="Directory.Build.targets file not found: $(DirectoryBuildTargetsFilePath)" />
+    <Error Condition="'$(DirectoryBuildPropsFilePath)' != '$(DirectoryBuildPropsFilePathActual)'" Text="Expected: $(DirectoryBuildPropsFilePath) Actual: $(DirectoryBuildPropsFilePathActual)" />
+    <Error Condition="'$(DirectoryBuildTargetsFilePath)' != '$(DirectoryBuildTargetsFilePathActual)'" Text="Expected: $(DirectoryBuildTargetsFilePath) Actual: $(DirectoryBuildTargetsFilePathActual)" />
+  </Target>
+  
 </Project>
