@@ -37,6 +37,10 @@ $EXCLUDE_BUILD_FILES = ":(icase,exclude)*/Directory.Build.*"
 $EXCLUDE_CI_FILES = ":(icase,exclude).github/workflows/*"
 $EXCLUDE_PS_FILES = ":(icase,exclude)*/*.ps1"
 
+$EXCLUDE_PRS = @'
+^.*(Merge pull request|Merge branch 'main'|Updated packages in|Update.*package version).*$
+'@
+
 $INCLUDE_ALL_FILES = "*/*.*"
 
 $FIRST_COMMIT = (git rev-list HEAD)[-1]
@@ -44,9 +48,9 @@ $LAST_COMMIT = $github_sha
 
 $COMMITS = "$FIRST_COMMIT...$LAST_COMMIT"
 
-$LAST_PATCH_COMMIT = git log -n 1 --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" $COMMITS
+$LAST_PATCH_COMMIT = git log -n 1 --topo-order --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" --grep="$EXCLUDE_PRS" --invert-grep $COMMITS
 
-$LAST_MINOR_COMMIT = git log -n 1 --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" $COMMITS `
+$LAST_MINOR_COMMIT = git log -n 1 --topo-order --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" --grep="$EXCLUDE_PRS" --invert-grep $COMMITS `
     -- `
     $INCLUDE_ALL_FILES `
     $EXCLUDE_HIDDEN_FILES `
