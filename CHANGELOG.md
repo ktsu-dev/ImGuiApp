@@ -1,5 +1,11 @@
 ## v1.0.12 (patch)
 
+Changes since v1.0.12-pre.9:
+
+- Fix version script to exclude merge commits and order logs correctly ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v1.0.12 (patch)
+
 Changes since v1.0.11-pre.1:
 
 - Add Silk.NET packages for enhanced graphics and input support ([@matt-edmondson](https://github.com/matt-edmondson))
