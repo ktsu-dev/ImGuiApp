@@ -6,9 +6,10 @@ namespace ktsu.ImGuiApp.ImGuiController;
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using ImGuiNET;
 using Silk.NET.Input;
 using Silk.NET.Input.Extensions;
@@ -22,8 +23,8 @@ internal class ImGuiController : IDisposable
 	private GL? _gl;
 	private IView? _view;
 	private IInputContext? _input;
-	private bool _frameBegun;
-	private readonly List<char> _pressedChars = new();
+	private bool _frameReady;
+	private readonly Collection<uint> _pressedChars = [];
 	private IKeyboard? _keyboard;
 
 	private int _attribLocationTex;
@@ -92,9 +93,10 @@ internal class ImGuiController : IDisposable
 		CreateDeviceResources();
 
 		SetPerFrameImGuiData(1f / 60f);
-
-		BeginFrame();
 	}
+
+	delegate string GetClipboardTextFn();
+	delegate void SetClipboardTextFn(string text);
 
 	private void Init(GL gl, IView view, IInputContext input)
 	{
@@ -110,23 +112,33 @@ internal class ImGuiController : IDisposable
 			ImGui.SetCurrentContext(Context);
 		}
 		ImGui.StyleColorsDark();
+
+		_view.Resize += WindowResized;
+		_keyboard = _input.Keyboards[0];
+		_keyboard.KeyDown += OnKeyDown;
+		_keyboard.KeyUp += OnKeyUp;
+		_keyboard.KeyChar += OnKeyChar;
+
+		string GetClipboardText() => _keyboard.ClipboardText;
+		void SetClipboardText(string text)
+		{
+			if (_keyboard is not null)
+			{
+				_keyboard.ClipboardText = text;
+			}
+		}
+
+		GetClipboardTextFn getClipboardTextFn = GetClipboardText;
+		SetClipboardTextFn setClipboardTextFn = SetClipboardText;
+
+		ImGui.GetIO().GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(getClipboardTextFn);
+		ImGui.GetIO().SetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(setClipboardTextFn);
 	}
 
 	private void BeginFrame()
 	{
 		ImGui.NewFrame();
-		_frameBegun = true;
-		_keyboard = _input?.Keyboards[0];
-		if (_view is not null)
-		{
-			_view.Resize += WindowResized;
-		}
-		if (_keyboard is not null)
-		{
-			_keyboard.KeyDown += OnKeyDown;
-			_keyboard.KeyUp += OnKeyUp;
-			_keyboard.KeyChar += OnKeyChar;
-		}
+		_frameReady = true;
 	}
 
 	/// <summary>
@@ -159,7 +171,7 @@ internal class ImGuiController : IDisposable
 		var io = ImGui.GetIO();
 		var imGuiKey = TranslateInputKeyToImGuiKey(keycode);
 		io.AddKeyEvent(imGuiKey, down);
-		io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
+		//io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
 	}
 
 	private void OnKeyChar(IKeyboard arg1, char arg2)
@@ -175,30 +187,10 @@ internal class ImGuiController : IDisposable
 
 	public void Render()
 	{
-		if (_frameBegun)
+		if (_frameReady)
 		{
-			nint oldCtx;
-			lock (contextLock)
-			{
-				oldCtx = ImGui.GetCurrentContext();
-
-				if (oldCtx != Context)
-				{
-					ImGui.SetCurrentContext(Context);
-				}
-			}
-
-			_frameBegun = false;
-			ImGui.Render();
 			RenderImDrawData(ImGui.GetDrawData());
-
-			lock (contextLock)
-			{
-				if (oldCtx != Context)
-				{
-					ImGui.SetCurrentContext(oldCtx);
-				}
-			}
+			_frameReady = false;
 		}
 	}
 
@@ -207,35 +199,15 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	public void Update(float deltaSeconds)
 	{
-		nint oldCtx;
-		lock (contextLock)
+		if (!_frameReady)
 		{
-			oldCtx = ImGui.GetCurrentContext();
-
-			if (oldCtx != Context)
-			{
-				ImGui.SetCurrentContext(Context);
-			}
-		}
-
-		if (_frameBegun)
-		{
+			ImGui.NewFrame();
 			ImGui.Render();
+			_frameReady = true;
 		}
 
 		SetPerFrameImGuiData(deltaSeconds);
 		UpdateImGuiInput();
-
-		_frameBegun = true;
-		ImGui.NewFrame();
-
-		lock (contextLock)
-		{
-			if (oldCtx != Context)
-			{
-				ImGui.SetCurrentContext(oldCtx);
-			}
-		}
 	}
 
 	/// <summary>
@@ -289,11 +261,6 @@ internal class ImGuiController : IDisposable
 		io.KeyAlt = _keyboard.IsKeyPressed(Key.AltLeft) || _keyboard.IsKeyPressed(Key.AltRight);
 		io.KeyShift = _keyboard.IsKeyPressed(Key.ShiftLeft) || _keyboard.IsKeyPressed(Key.ShiftRight);
 		io.KeySuper = _keyboard.IsKeyPressed(Key.SuperLeft) || _keyboard.IsKeyPressed(Key.SuperRight);
-	}
-
-	internal void PressChar(char keyChar)
-	{
-		_pressedChars.Add(keyChar);
 	}
 
 	/// <summary>
