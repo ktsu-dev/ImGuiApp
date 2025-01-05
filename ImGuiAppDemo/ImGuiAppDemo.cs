@@ -1,5 +1,3 @@
-// Ignore Spelling: App Im
-
 namespace ktsu.ImGuiApp.Demo;
 
 using System.Runtime.InteropServices;
