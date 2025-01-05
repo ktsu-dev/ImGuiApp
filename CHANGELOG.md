@@ -1,3 +1,17 @@
+## v1.1.0 (minor)
+
+Changes since v1.0.0:
+
+- Add automation scripts for metadata and version management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add conditional compilation for contextLock in ImGuiController ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add Silk.NET packages for enhanced graphics and input support ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix mouse wheel scrolling and improve API usage ([@Damon3000s](https://github.com/Damon3000s))
+- Fix version script to exclude merge commits and order logs correctly ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove spelling check ignore comments in ImGuiApp files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
+- Review feedback ([@Damon3000s](https://github.com/Damon3000s))
+
 ## v1.0.12 (patch)
 
 Changes since v1.0.11-pre.1:
