@@ -1,3 +1,9 @@
+## v1.1.1 (patch)
+
+Changes since v1.1.0:
+
+- Enable debug tracing in versioning and changelog scripts; handle empty tag scenarios ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.1.0 (minor)
 
 Changes since v1.0.0:
