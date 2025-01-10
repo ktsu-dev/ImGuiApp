@@ -3,8 +3,15 @@ param (
     [string]$github_sha = "" # SHA of the commit
 )
 
+Set-PSDebug -Trace 1
+
 # find the last version that was released
-$LAST_TAG = (git tag --list --sort=-v:refname)[0]
+$ALL_TAGS = git tag --list --sort=-v:refname
+if ($null -eq $ALL_TAGS) {
+    $LAST_TAG = 'v1.0.0-pre.0'
+} else {
+    $LAST_TAG = $ALL_TAGS[0]
+}
 $LAST_VERSION = $LAST_TAG -replace 'v', ''
 $IS_PRERELEASE = $LAST_VERSION.Contains('-')
 
@@ -12,9 +19,7 @@ $LAST_VERSION = $LAST_VERSION -replace '-alpha', ''
 $LAST_VERSION = $LAST_VERSION -replace '-beta', ''
 $LAST_VERSION = $LAST_VERSION -replace '-rc', ''
 $LAST_VERSION = $LAST_VERSION -replace '-pre', ''
-if ($LAST_VERSION -eq '') {
-    $LAST_VERSION = '1.0.0-pre.0'
-}
+
 $LAST_VERSION_COMPONENTS = $LAST_VERSION -split '\.'
 $LAST_VERSION_MAJOR = [int]$LAST_VERSION_COMPONENTS[0]
 $LAST_VERSION_MINOR = [int]$LAST_VERSION_COMPONENTS[1]
