@@ -30,6 +30,8 @@ jobs:
       with:
         submodules: recursive
         persist-credentials: true
+        lfs: true
+        fetch-tags: true
 
     - name: Fetch tags
       shell: pwsh
@@ -41,7 +43,7 @@ jobs:
     - name: Configure Environment
       shell: pwsh
       run: |
-        
+
         $IS_MAIN = "${{ github.ref }}" -eq "refs/heads/main"
         $IS_TAGGED = (git show-ref --tags -d | Out-String).Contains("${{ github.sha }}")
         $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED)
@@ -70,9 +72,9 @@ jobs:
         Write-Host "SYMBOLS_PATTERN: $SYMBOLS_PATTERN"
         Write-Host "APPLICATION_PATTERN: $APPLICATION_PATTERN"
         Write-Host "BUILD_ARGS: $BUILD_ARGS"
-        
+
         $global:LASTEXITCODE = 0
-        
+
     - name: Make Version
       shell: pwsh
       run: scripts/make-version.ps1 "${{ github.sha }}"
@@ -80,7 +82,7 @@ jobs:
     - name: Make License
       shell: pwsh
       run: scripts/make-license.ps1 "${{ github.server_url }}" "${{ github.repository_owner }}" "${{ github.repository }}"
-        
+
     - name: Make Changelog
       shell: pwsh
       run: scripts/make-changelog.ps1 "${{ env.VERSION }}" "${{ github.sha }}"
@@ -94,7 +96,7 @@ jobs:
       with:
         dotnet-version: |
           ${{ env.DOTNET_VERSION }}.x
-    
+
     - name: Install dotnet-script
       if: ${{ env.USE_DOTNET_SCRIPT == 'True' }}
       shell: pwsh
@@ -106,12 +108,12 @@ jobs:
 
     - name: Test
       shell: pwsh
-      run: dotnet test --configuration Release --verbosity normal --no-build 
+      run: dotnet test --configuration Release --verbosity normal --no-build
 
     - name: Detect Dependencies
       if: ${{ env.SHOULD_RELEASE == 'True' }}
       uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
-      
+
     - name: Package Libraries
       if: ${{ env.SHOULD_RELEASE == 'True' }}
       shell: pwsh
@@ -140,7 +142,7 @@ jobs:
       if: ${{ env.SHOULD_RELEASE == 'True' && hashFiles(env.PACKAGE_PATTERN) != '' }}
       shell: pwsh
       run: dotnet nuget push ${{ env.PACKAGE_PATTERN }} --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
-    
+
     - name: Publish Libraries to NuGet
       if: ${{ env.SHOULD_RELEASE == 'True' && hashFiles(env.PACKAGE_PATTERN) != '' }}
       shell: pwsh
