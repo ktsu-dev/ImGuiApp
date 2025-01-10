@@ -1,4 +1,4 @@
-## v1.1.1 (patch)
+## v1.1.1-pre.1 (patch)
 
 Changes since v1.1.0:
 
