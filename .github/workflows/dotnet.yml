@@ -76,18 +76,22 @@ jobs:
         $global:LASTEXITCODE = 0
 
     - name: Make Version
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
       shell: pwsh
       run: scripts/make-version.ps1 "${{ github.sha }}"
 
     - name: Make License
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
       shell: pwsh
       run: scripts/make-license.ps1 "${{ github.server_url }}" "${{ github.repository_owner }}" "${{ github.repository }}"
 
     - name: Make Changelog
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
       shell: pwsh
       run: scripts/make-changelog.ps1 "${{ env.VERSION }}" "${{ github.sha }}"
 
     - name: Commit Metadata
+      if: ${{ env.SHOULD_RELEASE == 'True' }}
       shell: pwsh
       run: scripts/commit-metadata.ps1
 
