@@ -3,7 +3,7 @@ namespace ktsu.ImGuiApp.Demo;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using ktsu.ImGuiApp;
-using ktsu.ImGuiApp.Demo.Properties;
+using ktsu.ImGuiAppDemo.Properties;
 
 internal static class ImGuiAppDemo
 {
