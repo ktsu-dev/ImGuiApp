@@ -1,8 +1,11 @@
-## v1.1.1-pre.1 (patch)
+## v1.2.0 (minor)
 
 Changes since v1.1.0:
 
+- Call EndChild instead of just End ([@Damon3000s](https://github.com/Damon3000s))
 - Enable debug tracing in versioning and changelog scripts; handle empty tag scenarios ([@matt-edmondson](https://github.com/matt-edmondson))
+- Replace deprecated ImGui enum value ([@Damon3000s](https://github.com/Damon3000s))
+- Update files from Resources.resx ([@Damon3000s](https://github.com/Damon3000s))
 
 ## v1.1.0 (minor)
 
