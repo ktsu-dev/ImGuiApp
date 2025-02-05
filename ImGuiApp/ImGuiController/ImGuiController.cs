@@ -201,7 +201,7 @@ internal class ImGuiController : IDisposable
 		io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
 
 		var imguiModKey = TranslateImGuiKeyToImGuiModKey(imGuiKey);
-		if (imguiModKey != ImGuiKey.COUNT)
+		if (imguiModKey != ImGuiKey.NamedKey_END)
 		{
 			io.AddKeyEvent(imguiModKey, down);
 		}
@@ -491,7 +491,7 @@ internal class ImGuiController : IDisposable
 			ImGuiKey.RightAlt => ImGuiKey.ModAlt,
 			ImGuiKey.LeftSuper => ImGuiKey.ModSuper,
 			ImGuiKey.RightSuper => ImGuiKey.ModSuper,
-			_ => ImGuiKey.COUNT
+			_ => ImGuiKey.NamedKey_END
 		};
 	}
 

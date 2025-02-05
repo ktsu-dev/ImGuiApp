@@ -3,7 +3,7 @@ namespace ktsu.ImGuiApp.Demo;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using ktsu.ImGuiApp;
-using ktsu.ImGuiApp.Demo.Properties;
+using ktsu.ImGuiAppDemo.Properties;
 
 internal static class ImGuiAppDemo
 {
@@ -59,7 +59,7 @@ internal static class ImGuiAppDemo
 			ImGui.PopFont();
 			ImGui.Text("This is a demo of ImGui.NET.");
 		}
-		ImGui.End();
+		ImGui.EndChild();
 	}
 
 	private static void OnMenu()
