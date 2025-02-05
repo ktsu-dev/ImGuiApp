@@ -157,6 +157,12 @@ function MakeNotesForRange {
 $CHANGELOG = ""
 
 $TAG_INDEX = 0
+
+git config versionsort.suffix "-alpha"
+git config versionsort.suffix "-beta"
+git config versionsort.suffix "-rc"
+git config versionsort.suffix "-pre"
+
 $TAGS = git tag --list --sort=-v:refname
 
 if ($null -eq $TAGS) {
