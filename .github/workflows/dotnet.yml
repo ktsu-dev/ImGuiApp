@@ -42,8 +42,10 @@ jobs:
 
     - name: Configure Environment
       shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
-        $IS_FORK = (git remote | Out-String).Contains("upstream")
+        $IS_FORK = (gh repo view --json isFork | ConvertFrom-Json).isFork
         $IS_MAIN = "${{ github.ref }}" -eq "refs/heads/main"
         $IS_TAGGED = (git show-ref --tags -d | Out-String).Contains("${{ github.sha }}")
         $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED -AND -NOT $IS_FORK)
@@ -55,6 +57,7 @@ jobs:
         $BUILD_ARGS = ""
         $BUILD_ARGS += $USE_DOTNET_SCRIPT ? "-maxCpuCount:1" : ""
 
+        "IS_FORK=$IS_FORK" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "IS_MAIN=$IS_MAIN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "IS_TAGGED=$IS_TAGGED" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "SHOULD_RELEASE=$SHOULD_RELEASE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
@@ -64,6 +67,7 @@ jobs:
         "APPLICATION_PATTERN=$APPLICATION_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
         "BUILD_ARGS=$BUILD_ARGS" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
+        Write-Host "IS_FORK: $IS_FORK"
         Write-Host "IS_MAIN: $IS_MAIN"
         Write-Host "IS_TAGGED: $IS_TAGGED"
         Write-Host "SHOULD_RELEASE: $SHOULD_RELEASE"
