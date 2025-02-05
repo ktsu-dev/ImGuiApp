@@ -20,9 +20,12 @@ Changes since v1.0.0:
 
 ## v1.0.12 (patch)
 
-Changes since v1.0.11-pre.1:
+Changes since v1.0.12-pre.11:
 
-- Add Silk.NET packages for enhanced graphics and input support ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add automation scripts for metadata and version management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix mouse wheel scrolling and improve API usage ([@Damon3000s](https://github.com/Damon3000s))
+- Fix version script to exclude merge commits and order logs correctly ([@matt-edmondson](https://github.com/matt-edmondson))
+- Review feedback ([@Damon3000s](https://github.com/Damon3000s))
 
 ## v1.0.10-pre.1 (patch)
 
