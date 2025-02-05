@@ -59,7 +59,7 @@ internal static class ImGuiAppDemo
 			ImGui.PopFont();
 			ImGui.Text("This is a demo of ImGui.NET.");
 		}
-		ImGui.End();
+		ImGui.EndChild();
 	}
 
 	private static void OnMenu()
