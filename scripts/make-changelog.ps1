@@ -5,7 +5,7 @@ param (
     [string]$COMMIT_SHA
 )
 
-Set-PSDebug -Trace 1
+# Set-PSDebug -Trace 1
 
 function TranslateTagTo4ComponentVersion {
     param (
@@ -66,21 +66,23 @@ function MakeNotesForRange {
 
     $SEARCH_TAG = $FROM_TAG
     $VERSION_TYPE = "unknown"
-    if ($TO_VERSION_PRERELEASE -gt $FROM_VERSION_PRERELEASE) {
+    if ($TO_VERSION_PRERELEASE -ne 0) {
         $VERSION_TYPE = "prerelease"
         $SEARCH_TAG = "$TO_VERSION_MAJOR.$TO_VERSION_MINOR.$TO_VERSION_PATCH.$FROM_PRERELEASE_VERSION_NUMBER"
     }
-    if ($TO_VERSION_PATCH -gt $FROM_VERSION_PATCH) {
-        $VERSION_TYPE = "patch"
-        $SEARCH_TAG = "$TO_VERSION_MAJOR.$TO_VERSION_MINOR.$FROM_PATCH_VERSION_NUMBER.0"
-    }
-    if ($TO_VERSION_MINOR -gt $FROM_VERSION_MINOR) {
-        $VERSION_TYPE = "minor"
-        $SEARCH_TAG = "$TO_VERSION_MAJOR.$FROM_MINOR_VERSION_NUMBER.0.0"
-    }
-    if ($TO_VERSION_MAJOR -gt $FROM_VERSION_MAJOR) {
-        $VERSION_TYPE = "major"
-        $SEARCH_TAG = "$FROM_MAJOR_VERSION_NUMBER.0.0.0"
+    else {
+        if ($TO_VERSION_PATCH -gt $FROM_VERSION_PATCH) {
+            $VERSION_TYPE = "patch"
+            $SEARCH_TAG = "$TO_VERSION_MAJOR.$TO_VERSION_MINOR.$FROM_PATCH_VERSION_NUMBER.0"
+        }
+        if ($TO_VERSION_MINOR -gt $FROM_VERSION_MINOR) {
+            $VERSION_TYPE = "minor"
+            $SEARCH_TAG = "$TO_VERSION_MAJOR.$FROM_MINOR_VERSION_NUMBER.0.0"
+        }
+        if ($TO_VERSION_MAJOR -gt $FROM_VERSION_MAJOR) {
+            $VERSION_TYPE = "major"
+            $SEARCH_TAG = "$FROM_MAJOR_VERSION_NUMBER.0.0.0"
+        }
     }
 
     # Handle the case where the version is the same but the prerelease number has been dropped
