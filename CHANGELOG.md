@@ -30,12 +30,6 @@ Changes since v1.0.12-pre.11:
 - Fix version script to exclude merge commits and order logs correctly ([@matt-edmondson](https://github.com/matt-edmondson))
 - Review feedback ([@Damon3000s](https://github.com/Damon3000s))
 
-## v1.0.10-pre.1 (patch)
-
-Changes since v1.0.9:
-
-- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
-
 ## v1.0.8 (patch)
 
 Changes since v1.0.7:
