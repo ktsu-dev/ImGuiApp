@@ -3,7 +3,7 @@ param (
     [string]$github_sha = "" # SHA of the commit
 )
 
-Set-PSDebug -Trace 1
+# Set-PSDebug -Trace 1
 
 git config versionsort.suffix "-alpha"
 git config versionsort.suffix "-beta"
@@ -58,10 +58,12 @@ $LAST_COMMIT = $github_sha
 
 $COMMITS = "$FIRST_COMMIT...$LAST_COMMIT"
 
-$LAST_NON_MERGE_COMMIT = git log -n 1 --topo-order --perl-regexp --regexp-ignore-case --format=format:%H --grep="$EXCLUDE_PRS" --invert-grep $COMMITS
+# note: use date order for this one or else we will get the wrong commit when there are merges from main
+$LAST_NON_MERGE_COMMIT = git log -n 1 --date-order --perl-regexp --regexp-ignore-case --format=format:%H --grep="$EXCLUDE_PRS" --invert-grep $COMMITS
 
 $COMMITS = "$FIRST_COMMIT...$LAST_NON_MERGE_COMMIT"
 
+#note: use topo order for the rest so that branched commits are grouped together
 $LAST_PATCH_COMMIT = git log -n 1 --topo-order --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" --grep="$EXCLUDE_PRS" --invert-grep $COMMITS
 
 $LAST_MINOR_COMMIT = git log -n 1 --topo-order --perl-regexp --regexp-ignore-case --format=format:%H --committer="$EXCLUDE_BOTS" --author="$EXCLUDE_BOTS" --grep="$EXCLUDE_PRS" --invert-grep $COMMITS `
@@ -84,6 +86,18 @@ if ($LAST_NON_MERGE_COMMIT -eq $LAST_PATCH_COMMIT) {
 
 if ($LAST_NON_MERGE_COMMIT -eq $LAST_MINOR_COMMIT) {
     $VERSION_INCREMENT = 'minor'
+}
+
+$LAST_NON_MERGE_COMMIT_MESSAGE = git log -n 1 --format=format:%s $LAST_NON_MERGE_COMMIT
+
+if ($LAST_NON_MERGE_COMMIT_MESSAGE.Contains('[major]')) {
+    $VERSION_INCREMENT = 'major'
+} elseif ($LAST_NON_MERGE_COMMIT_MESSAGE.Contains('[minor]')) {
+    $VERSION_INCREMENT = 'minor'
+} elseif ($LAST_NON_MERGE_COMMIT_MESSAGE.Contains('[patch]')) {
+    $VERSION_INCREMENT = 'patch'
+} elseif ($LAST_NON_MERGE_COMMIT_MESSAGE.Contains('[pre]')) {
+    $VERSION_INCREMENT = 'prerelease'
 }
 
 if ($IS_PRERELEASE) {
@@ -118,6 +132,7 @@ Write-Host "IS_PRERELEASE: $IS_PRERELEASE"
 Write-Host "FIRST_COMMIT: $FIRST_COMMIT"
 Write-Host "LAST_COMMIT: $LAST_COMMIT"
 Write-Host "LAST_NON_MERGE_COMMIT: $LAST_NON_MERGE_COMMIT"
+Write-Host "LAST_NON_MERGE_COMMIT_MESSAGE: $LAST_NON_MERGE_COMMIT_MESSAGE"
 Write-Host "LAST_PATCH_COMMIT: $LAST_PATCH_COMMIT"
 Write-Host "LAST_MINOR_COMMIT: $LAST_MINOR_COMMIT"
 Write-Host "VERSION_INCREMENT: $VERSION_INCREMENT"
@@ -133,6 +148,7 @@ Write-Host "VERSION: $VERSION"
 "FIRST_COMMIT=$FIRST_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 "LAST_COMMIT=$LAST_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 "LAST_NON_MERGE_COMMIT=$LAST_NON_MERGE_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+"LAST_NON_MERGE_COMMIT_MESSAGE=$LAST_NON_MERGE_COMMIT_MESSAGE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 "LAST_PATCH_COMMIT=$LAST_PATCH_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 "LAST_MINOR_COMMIT=$LAST_MINOR_COMMIT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 "VERSION_INCREMENT=$VERSION_INCREMENT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
