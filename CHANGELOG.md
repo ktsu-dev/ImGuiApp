@@ -1,3 +1,9 @@
+## v1.3.0 (minor)
+
+Changes since v1.2.0:
+
+- Always call ImGui.End for ImGui.Begin ([@Damon3000s](https://github.com/Damon3000s))
+
 ## v1.2.0 (minor)
 
 Changes since v1.1.0:
