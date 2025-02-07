@@ -473,8 +473,8 @@ public static partial class ImGuiApp
 		{
 			colors[(int)ImGuiCol.Border] = borderColor;
 			tickDelegate?.Invoke(dt);
-			ImGui.End();
 		}
+		ImGui.End();
 
 		if (showImGuiDemo)
 		{
