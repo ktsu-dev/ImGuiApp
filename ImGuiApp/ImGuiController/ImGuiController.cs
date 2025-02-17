@@ -8,7 +8,9 @@ namespace ktsu.ImGuiApp.ImGuiController;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+
 using ImGuiNET;
+
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
@@ -108,6 +110,7 @@ internal class ImGuiController : IDisposable
 			Context = ImGui.CreateContext();
 			ImGui.SetCurrentContext(Context);
 		}
+
 		ImGui.StyleColorsDark();
 	}
 
@@ -121,12 +124,14 @@ internal class ImGuiController : IDisposable
 		{
 			_view.Resize += WindowResized;
 		}
+
 		if (_keyboard is not null)
 		{
 			_keyboard.KeyDown += OnKeyDown;
 			_keyboard.KeyUp += OnKeyUp;
 			_keyboard.KeyChar += OnKeyChar;
 		}
+
 		if (_mouse is not null)
 		{
 			_mouse.MouseDown += OnMouseDown;
@@ -314,6 +319,7 @@ internal class ImGuiController : IDisposable
 		{
 			io.AddInputCharacter(c);
 		}
+
 		_pressedChars.Clear();
 	}
 

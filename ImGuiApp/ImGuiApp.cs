@@ -5,15 +5,20 @@ using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using ImGuiNET;
+
 using ktsu.Extensions;
 using ktsu.StrongPaths;
+
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+
 using Color = System.Drawing.Color;
 
 /// <summary>
@@ -78,15 +83,6 @@ public static partial class ImGuiApp
 	/// Gets a value indicating whether the ImGui application window is visible.
 	/// </summary>
 	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
-
-	[LibraryImport("kernel32.dll")]
-	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-	private static partial nint GetConsoleWindow();
-
-	[LibraryImport("user32.dll")]
-	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-	[return: MarshalAs(UnmanagedType.Bool)]
-	private static partial bool ShowWindow(nint hWnd, int nCmdShow);
 
 	private const int SW_HIDE = 0;
 
@@ -285,7 +281,6 @@ public static partial class ImGuiApp
 				{
 					gl?.Viewport(s);
 
-
 					if (window.WindowState == Silk.NET.Windowing.WindowState.Normal)
 					{
 						LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
@@ -331,10 +326,12 @@ public static partial class ImGuiApp
 						window.VSync = false;
 						window.FramesPerSecond = requiredFps;
 					}
+
 					if (currentUps != requiredUps)
 					{
 						window.UpdatesPerSecond = requiredUps;
 					}
+
 					controller?.Update((float)delta);
 					config.OnUpdate?.Invoke((float)delta);
 				}
@@ -390,8 +387,8 @@ public static partial class ImGuiApp
 
 			window.FocusChanged += (focused) => IsFocused = focused;
 
-			nint handle = GetConsoleWindow();
-			_ = ShowWindow(handle, SW_HIDE);
+			nint handle = NativeMethods.GetConsoleWindow();
+			_ = NativeMethods.ShowWindow(handle, SW_HIDE);
 		}
 		// Now that everything's defined, let's run this bad boy!
 		window.Run();
@@ -474,6 +471,7 @@ public static partial class ImGuiApp
 			colors[(int)ImGuiCol.Border] = borderColor;
 			tickDelegate?.Invoke(dt);
 		}
+
 		ImGui.End();
 
 		if (showImGuiDemo)
@@ -560,6 +558,7 @@ public static partial class ImGuiApp
 			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 			gl.BindTexture(TextureTarget.Texture2D, 0);
 		}
+
 		return textureId;
 	}
 
@@ -618,6 +617,7 @@ public static partial class ImGuiApp
 
 			Textures[path] = textureInfo;
 		}
+
 		return textureInfo;
 	}
 

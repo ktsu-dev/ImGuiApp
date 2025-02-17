@@ -7,6 +7,7 @@ namespace ktsu.ImGuiApp.ImGuiController;
 
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
+
 using Silk.NET.OpenGL;
 
 static class Util

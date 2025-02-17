@@ -11,60 +11,6 @@ using System.Runtime.InteropServices;
 /// </summary>
 public static partial class ForceDpiAware
 {
-	/// <summary>
-	/// Sets the process as DPI-Aware on Windows.
-	/// </summary>
-	/// <returns>True if the operation was successful; otherwise, false.</returns>
-	[LibraryImport("user32.dll")]
-	[return: MarshalAs(UnmanagedType.Bool)]
-	private static partial bool SetProcessDPIAware();
-
-	private const string X11LibraryName = "libX11.so.6";
-
-	/// <summary>
-	/// Opens a connection to the X server that controls a display.
-	/// </summary>
-	/// <param name="display">The name of the display.</param>
-	/// <returns>A handle to the display structure.</returns>
-	[LibraryImport(X11LibraryName)]
-	private static partial IntPtr XOpenDisplay([MarshalAs(UnmanagedType.LPStr)] string display);
-
-	/// <summary>
-	/// Returns the value of a default setting.
-	/// </summary>
-	/// <param name="display">A handle to the display structure.</param>
-	/// <param name="program">The program name.</param>
-	/// <param name="option">The option name.</param>
-	/// <returns>The value of the default setting.</returns>
-	[LibraryImport(X11LibraryName)]
-	private static partial IntPtr XGetDefault(IntPtr display, [MarshalAs(UnmanagedType.LPStr)] string program, [MarshalAs(UnmanagedType.LPStr)] string option);
-
-	/// <summary>
-	/// Returns the width of the screen in pixels.
-	/// </summary>
-	/// <param name="display">A handle to the display structure.</param>
-	/// <param name="screenNumber">The screen number.</param>
-	/// <returns>The width of the screen in pixels.</returns>
-	[LibraryImport(X11LibraryName)]
-	private static partial int XDisplayWidth(IntPtr display, int screenNumber);
-
-	/// <summary>
-	/// Returns the width of the screen in millimeters.
-	/// </summary>
-	/// <param name="display">A handle to the display structure.</param>
-	/// <param name="screenNumber">The screen number.</param>
-	/// <returns>The width of the screen in millimeters.</returns>
-	[LibraryImport(X11LibraryName)]
-	private static partial int XDisplayWidthMM(IntPtr display, int screenNumber);
-
-	/// <summary>
-	/// Closes the connection to the X server.
-	/// </summary>
-	/// <param name="display">A handle to the display structure.</param>
-	/// <returns>Zero if the operation was successful; otherwise, a non-zero value.</returns>
-	[LibraryImport(X11LibraryName)]
-	private static partial int XCloseDisplay(IntPtr display);
-
 	private const double StandardDpiScale = 96.0;
 	private const double MaxScaleFactor = 10.25;
 
@@ -76,7 +22,7 @@ public static partial class ForceDpiAware
 		// Make process DPI aware for proper window sizing on high-res screens.
 		if (OperatingSystem.IsWindowsVersionAtLeast(6))
 		{
-			SetProcessDPIAware();
+			NativeMethods.SetProcessDPIAware();
 		}
 	}
 
@@ -100,13 +46,14 @@ public static partial class ForceDpiAware
 
 				if (xdgSessionType is null or "x11")
 				{
-					IntPtr display = XOpenDisplay(null!);
-					string? dpiString = Marshal.PtrToStringAnsi(XGetDefault(display, "Xft", "dpi"));
+					IntPtr display = NativeMethods.XOpenDisplay(null!);
+					string? dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
 					if (dpiString == null || !double.TryParse(dpiString, NumberStyles.Any, CultureInfo.InvariantCulture, out userDpiScale))
 					{
-						userDpiScale = XDisplayWidth(display, 0) * 25.4 / XDisplayWidthMM(display, 0);
+						userDpiScale = NativeMethods.XDisplayWidth(display, 0) * 25.4 / NativeMethods.XDisplayWidthMM(display, 0);
 					}
-					_ = XCloseDisplay(display);
+
+					_ = NativeMethods.XCloseDisplay(display);
 				}
 				else if (xdgSessionType == "wayland")
 				{

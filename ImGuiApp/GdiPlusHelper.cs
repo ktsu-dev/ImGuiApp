@@ -3,7 +3,6 @@
 
 namespace ktsu.ImGuiApp;
 
-using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 /// <summary>
@@ -13,12 +12,10 @@ using System.Runtime.Versioning;
 [SupportedOSPlatform("windows")]
 public static partial class GdiPlusHelper
 {
-	private const string LibraryName = "gdiplus.dll";
-
 	/// <summary>
 	/// Static constructor to initialize GDI+.
 	/// </summary>
-	static GdiPlusHelper() => CheckStatus(GdiplusStartup(out _, StartupInputEx.Default, out _));
+	static GdiPlusHelper() => CheckStatus(NativeMethods.GdiplusStartup(out _, NativeMethods.StartupInputEx.Default, out _));
 
 	/// <summary>
 	/// Checks the status of a GDI+ operation and throws an exception if it failed.
@@ -34,53 +31,6 @@ public static partial class GdiPlusHelper
 	}
 
 	/// <summary>
-	/// Structure containing startup input parameters for GDI+.
-	/// </summary>
-	private struct StartupInputEx
-	{
-		public int GdiplusVersion;
-
-		public IntPtr DebugEventCallback;
-		public int SuppressBackgroundThread;
-		public int SuppressExternalCodecs;
-		public int StartupParameters;
-
-		/// <summary>
-		/// Gets the default startup input parameters.
-		/// </summary>
-		public static StartupInputEx Default => new()
-		{
-			// We assume Windows 8 and upper
-			GdiplusVersion = 2,
-			DebugEventCallback = IntPtr.Zero,
-			SuppressBackgroundThread = 0,
-			SuppressExternalCodecs = 0,
-			StartupParameters = 0,
-		};
-	}
-
-	/// <summary>
-	/// Structure containing startup output parameters for GDI+.
-	/// </summary>
-	private struct StartupOutput
-	{
-		public IntPtr NotificationHook;
-		public IntPtr NotificationUnhook;
-	}
-
-	[LibraryImport(LibraryName)]
-	private static partial int GdiplusStartup(out IntPtr token, in StartupInputEx input, out StartupOutput output);
-
-	[LibraryImport(LibraryName)]
-	private static partial int GdipCreateFromHWND(IntPtr hwnd, out IntPtr graphics);
-
-	[LibraryImport(LibraryName)]
-	private static partial int GdipDeleteGraphics(IntPtr graphics);
-
-	[LibraryImport(LibraryName)]
-	private static partial int GdipGetDpiX(IntPtr graphics, out float dpi);
-
-	/// <summary>
 	/// Gets the DPI (dots per inch) along the X axis for a given window handle.
 	/// </summary>
 	/// <param name="hwnd">The handle to the window.</param>
@@ -88,9 +38,9 @@ public static partial class GdiPlusHelper
 	/// <exception cref="InvalidOperationException">Thrown when a GDI+ operation fails.</exception>
 	public static float GetDpiX(IntPtr hwnd)
 	{
-		CheckStatus(GdipCreateFromHWND(hwnd, out IntPtr graphicsHandle));
-		CheckStatus(GdipGetDpiX(graphicsHandle, out float result));
-		CheckStatus(GdipDeleteGraphics(graphicsHandle));
+		CheckStatus(NativeMethods.GdipCreateFromHWND(hwnd, out IntPtr graphicsHandle));
+		CheckStatus(NativeMethods.GdipGetDpiX(graphicsHandle, out float result));
+		CheckStatus(NativeMethods.GdipDeleteGraphics(graphicsHandle));
 
 		return result;
 	}
