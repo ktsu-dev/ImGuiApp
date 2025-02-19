@@ -8,7 +8,7 @@
   <ItemGroup>
     <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
     <PackageReference Include="ktsu.ScopedAction" Version="1.0.15" />
-    <PackageReference Include="ktsu.StrongPaths" Version="1.1.50" />
+    <PackageReference Include="ktsu.StrongPaths" Version="1.2.0" />
     <PackageReference Include="Silk.NET" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Assimp" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Direct3D12" Version="2.22.0" />
