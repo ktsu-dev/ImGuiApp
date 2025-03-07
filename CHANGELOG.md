@@ -1,3 +1,9 @@
+## v1.5.0 (minor)
+
+Changes since v1.4.0:
+
+- Refactor ImGuiApp and related classes for thread safety ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.4.0 (minor)
 
 Changes since v1.3.0:
