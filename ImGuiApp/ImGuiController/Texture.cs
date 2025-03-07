@@ -35,7 +35,7 @@ public enum TextureCoordinate
 	R = TextureParameterName.TextureWrapR
 }
 
-class Texture : IDisposable
+internal class Texture : IDisposable
 {
 	public const SizedInternalFormat Srgb8Alpha8 = (SizedInternalFormat)GLEnum.Srgb8Alpha8;
 	public const SizedInternalFormat Rgb32F = (SizedInternalFormat)GLEnum.Rgb32f;
@@ -57,18 +57,21 @@ class Texture : IDisposable
 		Width = (uint)width;
 		Height = (uint)height;
 		InternalFormat = srgb ? Srgb8Alpha8 : SizedInternalFormat.Rgba8;
-		MipmapLevels = (uint)(generateMipmaps == false ? 1 : (int)Math.Floor(Math.Log(Math.Max(Width, Height), 2)));
+		MipmapLevels = (uint)(!generateMipmaps ? 1 : (int)Math.Floor(Math.Log(Math.Max(Width, Height), 2)));
 
 		GlTexture = _gl.GenTexture();
 		Bind();
 
-		PixelFormat pxFormat = PixelFormat.Bgra;
+		var pxFormat = PixelFormat.Bgra;
 
 		_gl.TexStorage2D(GLEnum.Texture2D, MipmapLevels, InternalFormat, Width, Height);
 		_gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, Width, Height, pxFormat, PixelType.UnsignedByte, (void*)data);
 
 		if (generateMipmaps)
+		{
 			_gl.GenerateTextureMipmap(GlTexture);
+		}
+
 		SetWrap(TextureCoordinate.S, TextureWrapMode.Repeat);
 		SetWrap(TextureCoordinate.T, TextureWrapMode.Repeat);
 
@@ -76,10 +79,7 @@ class Texture : IDisposable
 		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLevel, ref mip);
 	}
 
-	public void Bind()
-	{
-		_gl.BindTexture(GLEnum.Texture2D, GlTexture);
-	}
+	public void Bind() => _gl.BindTexture(GLEnum.Texture2D, GlTexture);
 
 	public void SetMinFilter(TextureMinFilter filter)
 	{
@@ -112,8 +112,5 @@ class Texture : IDisposable
 		_gl.TexParameterI(GLEnum.Texture2D, (TextureParameterName)coord, ref intMode);
 	}
 
-	public void Dispose()
-	{
-		_gl.DeleteTexture(GlTexture);
-	}
+	public void Dispose() => _gl.DeleteTexture(GlTexture);
 }
