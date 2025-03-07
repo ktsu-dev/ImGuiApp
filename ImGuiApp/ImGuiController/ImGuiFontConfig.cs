@@ -24,8 +24,7 @@ public readonly struct ImGuiFontConfig : IEquatable<ImGuiFontConfig>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="fontPath"/> is null.</exception>
 	public ImGuiFontConfig(string fontPath, int fontSize, Func<ImGuiIOPtr, IntPtr>? getGlyphRange = null)
 	{
-		if (fontSize <= 0)
-			throw new ArgumentOutOfRangeException(nameof(fontSize));
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fontSize);
 		FontPath = fontPath ?? throw new ArgumentNullException(nameof(fontPath));
 		FontSize = fontSize;
 		GetGlyphRange = getGlyphRange;
@@ -51,19 +50,13 @@ public readonly struct ImGuiFontConfig : IEquatable<ImGuiFontConfig>
 	/// </summary>
 	/// <param name="obj">The object to compare with the current object.</param>
 	/// <returns>true if the specified object is equal to the current object; otherwise, false.</returns>
-	public override bool Equals(object? obj)
-	{
-		return obj is ImGuiFontConfig config && Equals(config);
-	}
+	public override bool Equals(object? obj) => obj is ImGuiFontConfig config && Equals(config);
 
 	/// <summary>
 	/// Serves as the default hash function.
 	/// </summary>
 	/// <returns>A hash code for the current object.</returns>
-	public override int GetHashCode()
-	{
-		return HashCode.Combine(FontPath, FontSize, GetGlyphRange);
-	}
+	public override int GetHashCode() => HashCode.Combine(FontPath, FontSize, GetGlyphRange);
 
 	/// <summary>
 	/// Determines whether two specified instances of <see cref="ImGuiFontConfig"/> are equal.

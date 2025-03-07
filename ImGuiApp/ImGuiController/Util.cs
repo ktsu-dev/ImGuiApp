@@ -10,13 +10,10 @@ using System.Diagnostics.Contracts;
 
 using Silk.NET.OpenGL;
 
-static class Util
+internal static class Util
 {
 	[Pure]
-	public static float Clamp(float value, float min, float max)
-	{
-		return value < min ? min : value > max ? max : value;
-	}
+	public static float Clamp(float value, float min, float max) => value < min ? min : value > max ? max : value;
 
 	[Conditional("DEBUG")]
 	public static void CheckGlError(this GL gl, string title)

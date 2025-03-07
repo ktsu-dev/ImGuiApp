@@ -42,7 +42,7 @@ public class UIScaler : ScopedAction
 		PushStyleAndCount(ImGuiStyleVar.WindowPadding, style.WindowPadding * scale, ref numStyles);
 		PushStyleAndCount(ImGuiStyleVar.WindowRounding, style.WindowRounding * scale, ref numStyles);
 
-		OnClose = () => ImGui.PopStyleVar(numStyles);
+		OnClose = () => ImGuiApp.InvokeOnWindowThread(() => ImGui.PopStyleVar(numStyles));
 	}
 
 	/// <summary>
@@ -53,7 +53,7 @@ public class UIScaler : ScopedAction
 	/// <param name="numStyles">The reference to the style count.</param>
 	private static void PushStyleAndCount(ImGuiStyleVar style, float value, ref int numStyles)
 	{
-		ImGui.PushStyleVar(style, value);
+		ImGuiApp.InvokeOnWindowThread(() => ImGui.PushStyleVar(style, value));
 		++numStyles;
 	}
 
@@ -65,7 +65,7 @@ public class UIScaler : ScopedAction
 	/// <param name="numStyles">The reference to the style count.</param>
 	private static void PushStyleAndCount(ImGuiStyleVar style, Vector2 value, ref int numStyles)
 	{
-		ImGui.PushStyleVar(style, value);
+		ImGuiApp.InvokeOnWindowThread(() => ImGui.PushStyleVar(style, value));
 		++numStyles;
 	}
 }

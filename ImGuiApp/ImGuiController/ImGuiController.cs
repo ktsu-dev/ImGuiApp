@@ -23,7 +23,7 @@ internal class ImGuiController : IDisposable
 	private IView? _view;
 	private IInputContext? _input;
 	private bool _frameBegun;
-	private readonly List<char> _pressedChars = new();
+	private readonly List<char> _pressedChars = [];
 	private IKeyboard? _keyboard;
 	private IMouse? _mouse;
 
@@ -81,7 +81,7 @@ internal class ImGuiController : IDisposable
 		var io = ImGui.GetIO();
 		if (imGuiFontConfig is not null)
 		{
-			var glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
+			nint glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
 
 			io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, null, glyphRange);
 		}
@@ -165,17 +165,11 @@ internal class ImGuiController : IDisposable
 		io.AddMouseWheelEvent(scroll.X, scroll.Y);
 	}
 
-	private static void OnMouseDown(IMouse mouse, MouseButton button)
-	{
-		OnMouseButton(mouse, button, down: true);
-	}
+	private static void OnMouseDown(IMouse mouse, MouseButton button) => OnMouseButton(mouse, button, down: true);
 
-	private static void OnMouseUp(IMouse mouse, MouseButton button)
-	{
-		OnMouseButton(mouse, button, down: false);
-	}
+	private static void OnMouseUp(IMouse mouse, MouseButton button) => OnMouseButton(mouse, button, down: false);
 
-	private static void OnMouseButton(IMouse mouse, MouseButton button, bool down)
+	private static void OnMouseButton(IMouse _, MouseButton button, bool down)
 	{
 		var imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
 		if (imguiMouseButton != ImGuiMouseButton.COUNT)
@@ -185,7 +179,7 @@ internal class ImGuiController : IDisposable
 		}
 	}
 
-	private void OnMouseMove(IMouse mouse, Vector2 position)
+	private void OnMouseMove(IMouse _, Vector2 position)
 	{
 		var io = ImGui.GetIO();
 		io.AddMousePosEvent(position.X, position.Y);
@@ -194,11 +188,11 @@ internal class ImGuiController : IDisposable
 	/// <summary>
 	/// Delegate to receive keyboard key events.
 	/// </summary>
-	/// <param name="keyboard">The keyboard context generating the event.</param>
+	/// <param name="_">The keyboard context generating the event.</param>
 	/// <param name="keycode">The native keycode of the key generating the event.</param>
 	/// <param name="scancode">The native scancode of the key generating the event.</param>
 	/// <param name="down">True if the event is a key down event, otherwise False</param>
-	private static void OnKeyEvent(IKeyboard keyboard, Key keycode, int scancode, bool down)
+	private static void OnKeyEvent(IKeyboard _, Key keycode, int scancode, bool down)
 	{
 		var io = ImGui.GetIO();
 		var imGuiKey = TranslateInputKeyToImGuiKey(keycode);
@@ -212,10 +206,7 @@ internal class ImGuiController : IDisposable
 		}
 	}
 
-	private void OnKeyChar(IKeyboard arg1, char arg2)
-	{
-		_pressedChars.Add(arg2);
-	}
+	private void OnKeyChar(IKeyboard arg1, char arg2) => _pressedChars.Add(arg2);
 
 	private void WindowResized(Vector2D<int> size)
 	{
@@ -315,7 +306,7 @@ internal class ImGuiController : IDisposable
 			return;
 		}
 
-		foreach (var c in _pressedChars)
+		foreach (char c in _pressedChars)
 		{
 			io.AddInputCharacter(c);
 		}
@@ -323,10 +314,7 @@ internal class ImGuiController : IDisposable
 		_pressedChars.Clear();
 	}
 
-	internal void PressChar(char keyChar)
-	{
-		_pressedChars.Add(keyChar);
-	}
+	internal void PressChar(char keyChar) => _pressedChars.Add(keyChar);
 
 	/// <summary>
 	/// Translates a Silk.NET.Input.Key to an ImGuiKey.
@@ -455,6 +443,10 @@ internal class ImGuiController : IDisposable
 			Key.F22 => ImGuiKey.F22,
 			Key.F23 => ImGuiKey.F23,
 			Key.F24 => ImGuiKey.F24,
+			Key.Unknown => throw new NotImplementedException(),
+			Key.World1 => throw new NotImplementedException(),
+			Key.World2 => throw new NotImplementedException(),
+			Key.F25 => throw new NotImplementedException(),
 			_ => throw new NotImplementedException($"Key '{key}' hasn't been implemented in TranslateInputKeyToImGuiKey"),
 		};
 	}
@@ -485,6 +477,7 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	/// <param name="key">The ImGuiKey to translate.</param>
 	/// <returns>The matching ImGuiKey.Mod*.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases", Justification = "<Pending>")]
 	private static ImGuiKey TranslateImGuiKeyToImGuiModKey(ImGuiKey key)
 	{
 		return key switch
@@ -526,12 +519,12 @@ internal class ImGuiController : IDisposable
 		float T = drawDataPtr.DisplayPos.Y;
 		float B = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
 
-		Span<float> orthoProjection = stackalloc float[] {
+		Span<float> orthoProjection = [
 				2.0f / (R - L), 0.0f, 0.0f, 0.0f,
 				0.0f, 2.0f / (T - B), 0.0f, 0.0f,
 				0.0f, 0.0f, -1.0f, 0.0f,
 				(R + L) / (L - R), (T + B) / (B - T), 0.0f, 1.0f,
-			};
+			];
 
 		_shader.UseShader();
 		_gl.Uniform1(_attribLocationTex, 0);
@@ -568,7 +561,9 @@ internal class ImGuiController : IDisposable
 		int framebufferWidth = (int)(drawDataPtr.DisplaySize.X * drawDataPtr.FramebufferScale.X);
 		int framebufferHeight = (int)(drawDataPtr.DisplaySize.Y * drawDataPtr.FramebufferScale.Y);
 		if (framebufferWidth <= 0 || framebufferHeight <= 0)
+		{
 			return;
+		}
 
 		// Backup GL state
 		_gl.GetInteger(GLEnum.ActiveTexture, out int lastActiveTexture);
@@ -812,7 +807,7 @@ internal class ImGuiController : IDisposable
 
 		// Build texture atlas
 		var io = ImGui.GetIO();
-		io.Fonts.GetTexDataAsRGBA32(out nint pixels, out int width, out int height, out int bytesPerPixel);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+		io.Fonts.GetTexDataAsRGBA32(out nint pixels, out int width, out int height, out int _);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
 		// Upload texture to graphics system
 		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
