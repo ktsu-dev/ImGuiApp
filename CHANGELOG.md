@@ -1,3 +1,9 @@
+## v1.6.0 (minor)
+
+Changes since v1.5.0:
+
+- Remove unnesscessary threading protections that were speculative fixes for the font ownership crash ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.5.0 (minor)
 
 Changes since v1.4.0:
