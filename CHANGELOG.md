@@ -1,3 +1,10 @@
+## v1.7.0 (minor)
+
+Changes since v1.6.0:
+
+- Add better font management to ImGuiApp and icon to demo project ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix crash on shutdown when imgui would try to free memory owned by dotnet ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.6.0 (minor)
 
 Changes since v1.5.0:
