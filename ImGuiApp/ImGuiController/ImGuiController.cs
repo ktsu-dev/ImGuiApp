@@ -1,9 +1,7 @@
+// Adapted from https://github.com/dotnet/Silk.NET/blob/main/src/OpenGL/Extensions/Silk.NET.OpenGL.Extensions.ImGui/ImGuiController.cs
+// License: MIT
+
 namespace ktsu.ImGuiApp.ImGuiController;
-
-//Adapted from https://github.com/dotnet/Silk.NET/blob/main/src/OpenGL/Extensions/Silk.NET.OpenGL.Extensions.ImGui/ImGuiController.cs
-
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using System.Collections.Generic;
@@ -41,14 +39,6 @@ internal class ImGuiController : IDisposable
 
 	private int _windowWidth;
 	private int _windowHeight;
-
-#if NET8_0
-	private readonly object contextLock = new();
-#else
-	private readonly Lock contextLock = new();
-#endif
-
-	private nint Context { get; set; }
 
 	/// <summary>
 	/// Constructs a new ImGuiController.
@@ -105,11 +95,7 @@ internal class ImGuiController : IDisposable
 		_windowWidth = view.Size.X;
 		_windowHeight = view.Size.Y;
 
-		lock (contextLock)
-		{
-			Context = ImGui.CreateContext();
-			ImGui.SetCurrentContext(Context);
-		}
+		ImGui.CreateContext();
 
 		ImGui.StyleColorsDark();
 	}
@@ -218,28 +204,9 @@ internal class ImGuiController : IDisposable
 	{
 		if (_frameBegun)
 		{
-			nint oldCtx;
-			lock (contextLock)
-			{
-				oldCtx = ImGui.GetCurrentContext();
-
-				if (oldCtx != Context)
-				{
-					ImGui.SetCurrentContext(Context);
-				}
-			}
-
 			_frameBegun = false;
 			ImGui.Render();
 			RenderImDrawData(ImGui.GetDrawData());
-
-			lock (contextLock)
-			{
-				if (oldCtx != Context)
-				{
-					ImGui.SetCurrentContext(oldCtx);
-				}
-			}
 		}
 	}
 
@@ -248,17 +215,6 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	public void Update(float deltaSeconds)
 	{
-		nint oldCtx;
-		lock (contextLock)
-		{
-			oldCtx = ImGui.GetCurrentContext();
-
-			if (oldCtx != Context)
-			{
-				ImGui.SetCurrentContext(Context);
-			}
-		}
-
 		if (_frameBegun)
 		{
 			ImGui.Render();
@@ -269,14 +225,6 @@ internal class ImGuiController : IDisposable
 
 		_frameBegun = true;
 		ImGui.NewFrame();
-
-		lock (contextLock)
-		{
-			if (oldCtx != Context)
-			{
-				ImGui.SetCurrentContext(oldCtx);
-			}
-		}
 	}
 
 	/// <summary>
@@ -850,9 +798,6 @@ internal class ImGuiController : IDisposable
 		_fontTexture.Dispose();
 		_shader.Dispose();
 
-		lock (contextLock)
-		{
-			ImGui.DestroyContext(Context);
-		}
+		ImGui.DestroyContext();
 	}
 }

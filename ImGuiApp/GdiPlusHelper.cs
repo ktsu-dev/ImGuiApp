@@ -8,7 +8,6 @@ using System.Runtime.Versioning;
 /// <summary>
 /// Helper class for GDI+ operations.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
 [SupportedOSPlatform("windows")]
 public static partial class GdiPlusHelper
 {
