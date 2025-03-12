@@ -1,3 +1,12 @@
+## v1.7.1 (patch)
+
+Changes since v1.7.0:
+
+- Add constructors and documentation to FontAppearance class ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance documentation ([@matt-edmondson](https://github.com/matt-edmondson))
+- Renamed several classes and moved them to their own source files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update license links in README.md ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.7.0 (minor)
 
 Changes since v1.6.0:
