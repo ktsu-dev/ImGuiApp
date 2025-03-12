@@ -42,14 +42,6 @@ internal class ImGuiController : IDisposable
 	private int _windowWidth;
 	private int _windowHeight;
 
-#if NET8_0
-	private readonly object contextLock = new();
-#else
-	private readonly Lock contextLock = new();
-#endif
-
-	private nint Context { get; set; }
-
 	/// <summary>
 	/// Constructs a new ImGuiController.
 	/// </summary>
@@ -93,8 +85,6 @@ internal class ImGuiController : IDisposable
 		CreateDeviceResources();
 
 		SetPerFrameImGuiData(1f / 60f);
-
-		BeginFrame();
 	}
 
 	private void Init(GL gl, IView view, IInputContext input)
@@ -105,16 +95,12 @@ internal class ImGuiController : IDisposable
 		_windowWidth = view.Size.X;
 		_windowHeight = view.Size.Y;
 
-		lock (contextLock)
-		{
-			Context = ImGui.CreateContext();
-			ImGui.SetCurrentContext(Context);
-		}
+		ImGui.CreateContext();
 
 		ImGui.StyleColorsDark();
 	}
 
-	private void BeginFrame()
+	internal void BeginFrame()
 	{
 		ImGui.NewFrame();
 		_frameBegun = true;
@@ -218,28 +204,9 @@ internal class ImGuiController : IDisposable
 	{
 		if (_frameBegun)
 		{
-			nint oldCtx;
-			lock (contextLock)
-			{
-				oldCtx = ImGui.GetCurrentContext();
-
-				if (oldCtx != Context)
-				{
-					ImGui.SetCurrentContext(Context);
-				}
-			}
-
 			_frameBegun = false;
 			ImGui.Render();
 			RenderImDrawData(ImGui.GetDrawData());
-
-			lock (contextLock)
-			{
-				if (oldCtx != Context)
-				{
-					ImGui.SetCurrentContext(oldCtx);
-				}
-			}
 		}
 	}
 
@@ -248,17 +215,6 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	public void Update(float deltaSeconds)
 	{
-		nint oldCtx;
-		lock (contextLock)
-		{
-			oldCtx = ImGui.GetCurrentContext();
-
-			if (oldCtx != Context)
-			{
-				ImGui.SetCurrentContext(Context);
-			}
-		}
-
 		if (_frameBegun)
 		{
 			ImGui.Render();
@@ -269,14 +225,6 @@ internal class ImGuiController : IDisposable
 
 		_frameBegun = true;
 		ImGui.NewFrame();
-
-		lock (contextLock)
-		{
-			if (oldCtx != Context)
-			{
-				ImGui.SetCurrentContext(oldCtx);
-			}
-		}
 	}
 
 	/// <summary>
@@ -784,8 +732,6 @@ internal class ImGuiController : IDisposable
 		_vboHandle = _gl.GenBuffer();
 		_elementsHandle = _gl.GenBuffer();
 
-		RecreateFontDeviceTexture();
-
 		// Restore modified GL state
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
 		_gl.BindBuffer(GLEnum.ArrayBuffer, (uint)lastArrayBuffer);
@@ -798,7 +744,7 @@ internal class ImGuiController : IDisposable
 	/// <summary>
 	/// Creates the texture used to render text.
 	/// </summary>
-	private unsafe void RecreateFontDeviceTexture()
+	internal unsafe void CreateFontTexture()
 	{
 		if (_gl is null)
 		{
@@ -843,16 +789,13 @@ internal class ImGuiController : IDisposable
 		_mouse.MouseMove -= OnMouseMove;
 		_mouse.Scroll -= OnMouseScroll;
 
-		_gl.DeleteBuffer(_vboHandle);
-		_gl.DeleteBuffer(_elementsHandle);
-		_gl.DeleteVertexArray(_vertexArrayObject);
+		ImGui.DestroyContext();
 
 		_fontTexture.Dispose();
 		_shader.Dispose();
 
-		lock (contextLock)
-		{
-			ImGui.DestroyContext(Context);
-		}
+		_gl.DeleteBuffer(_vboHandle);
+		_gl.DeleteBuffer(_elementsHandle);
+		_gl.DeleteVertexArray(_vertexArrayObject);
 	}
 }

@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 
 using ImGuiNET;
 
-using ktsu.Extensions;
 using ktsu.StrongPaths;
 
 using Silk.NET.Input;
@@ -72,8 +71,6 @@ public static partial class ImGuiApp
 	}
 
 	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
-	private static ConcurrentDictionary<int, ImFontPtr> Fonts { get; } = [];
-	private static Collection<nint> FontDataPtrs { get; } = [];
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -121,8 +118,6 @@ public static partial class ImGuiApp
 	}
 
 	internal static ConcurrentDictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
-
-	private static object WindowLock { get; } = new();
 
 	private static int WindowThreadId { get; set; }
 
@@ -224,203 +219,179 @@ public static partial class ImGuiApp
 	/// <param name="config">The configuration settings for the ImGui application.</param>
 	public static void Start(AppConfig config)
 	{
-		lock (WindowLock)
+		ArgumentNullException.ThrowIfNull(config);
+
+		Config = config;
+
+		ForceDpiAware.Windows();
+
+		var silkWindowOptions = WindowOptions.Default;
+		silkWindowOptions.Title = config.Title;
+		silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
+		silkWindowOptions.Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y);
+		silkWindowOptions.WindowState = Silk.NET.Windowing.WindowState.Normal;
+
+		LastNormalWindowState = config.InitialWindowState;
+		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+
+		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
+
+		// Create a Silk.NET window as usual
+		window = Window.Create(silkWindowOptions);
+		WindowThreadId = Environment.CurrentManagedThreadId;
+
+		// Our loading function
+		window.Load += () =>
 		{
-			ArgumentNullException.ThrowIfNull(config);
-
-			Config = config;
-
-			ForceDpiAware.Windows();
-
-			var silkWindowOptions = WindowOptions.Default;
-			silkWindowOptions.Title = config.Title;
-			silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
-			silkWindowOptions.Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y);
-			silkWindowOptions.WindowState = Silk.NET.Windowing.WindowState.Normal;
-
-			LastNormalWindowState = config.InitialWindowState;
-			LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
-
-			// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
-
-			// Create a Silk.NET window as usual
-			window = Window.Create(silkWindowOptions);
-			WindowThreadId = Environment.CurrentManagedThreadId;
-
-			// Our loading function
-			window.Load += () =>
+			if (!string.IsNullOrEmpty(config.IconPath))
 			{
-				lock (WindowLock)
+				SetWindowIcon(config.IconPath);
+			}
+
+			gl = window.CreateOpenGL(); // load OpenGL
+
+			inputContext = window.CreateInput(); // create an input context
+			controller = new ImGuiController.ImGuiController
+			(
+				gl,
+				view: window,
+				input: inputContext,
+				onConfigureIO: () =>
 				{
-					InvokeOnWindowThread(() =>
-					{
-						if (!string.IsNullOrEmpty(config.IconPath))
-						{
-							SetWindowIcon(config.IconPath);
-						}
-
-						gl = window.CreateOpenGL(); // load OpenGL
-
-						inputContext = window.CreateInput(); // create an input context
-						controller = new ImGuiController.ImGuiController
-						(
-							gl,
-							view: window,
-							input: inputContext,
-							onConfigureIO: () =>
-							{
-								InvokeOnWindowThread(() =>
-								{
-									UpdateDpiScale();
-									InitFonts();
-									config.OnStart?.Invoke();
-								});
-							}
-						);
-
-						ImGui.GetStyle().WindowRounding = 0;
-						window.WindowState = config.InitialWindowState.LayoutState;
-					});
+					UpdateDpiScale();
+					config.OnStart?.Invoke();
 				}
-			};
+			);
 
-			window.FramebufferResize += s =>
+			InitFonts();
+
+			controller.BeginFrame();
+
+			ImGui.GetStyle().WindowRounding = 0;
+			window.WindowState = config.InitialWindowState.LayoutState;
+		};
+
+		window.FramebufferResize += s =>
+		{
+			gl?.Viewport(s);
+
+			if (window.WindowState == Silk.NET.Windowing.WindowState.Normal)
 			{
-				lock (WindowLock)
-				{
-					InvokeOnWindowThread(() =>
-					{
-						gl?.Viewport(s);
+				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
+				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
+				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			}
 
-						if (window.WindowState == Silk.NET.Windowing.WindowState.Normal)
-						{
-							LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
-							LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
-							LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
-						}
+			UpdateDpiScale();
 
-						UpdateDpiScale();
+			config.OnMoveOrResize?.Invoke();
+		};
 
-						config.OnMoveOrResize?.Invoke();
-					});
-				}
-			};
-
-			window.Move += (p) =>
+		window.Move += (p) =>
+		{
+			if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
 			{
-				lock (WindowLock)
-				{
-					InvokeOnWindowThread(() =>
-					{
-						if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
-						{
-							LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
-							LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
-							LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
-						}
+				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
+				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
+				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			}
 
-						UpdateDpiScale();
+			UpdateDpiScale();
 
-						config.OnMoveOrResize?.Invoke();
-					});
-				}
-			};
+			config.OnMoveOrResize?.Invoke();
+		};
 
-			window.Update += (delta) =>
+		window.Update += (delta) =>
+		{
+			EnsureWindowPositionIsValid();
+
+			double currentFps = window.FramesPerSecond;
+			double currentUps = window.UpdatesPerSecond;
+			double requiredFps = IsFocused ? 30 : 5;
+			double requiredUps = IsFocused ? 30 : 5;
+			if (currentFps != requiredFps)
 			{
-				lock (WindowLock)
-				{
-					InvokeOnWindowThread(() =>
-					{
-						EnsureWindowPositionIsValid();
+				window.VSync = false;
+				window.FramesPerSecond = requiredFps;
+			}
 
-						double currentFps = window.FramesPerSecond;
-						double currentUps = window.UpdatesPerSecond;
-						double requiredFps = IsFocused ? 30 : 5;
-						double requiredUps = IsFocused ? 30 : 5;
-						if (currentFps != requiredFps)
-						{
-							window.VSync = false;
-							window.FramesPerSecond = requiredFps;
-						}
-
-						if (currentUps != requiredUps)
-						{
-							window.UpdatesPerSecond = requiredUps;
-						}
-
-						controller?.Update((float)delta);
-						config.OnUpdate?.Invoke((float)delta);
-					});
-				}
-			};
-
-			// The render function
-			window.Render += delta =>
+			if (currentUps != requiredUps)
 			{
-				lock (WindowLock)
+				window.UpdatesPerSecond = requiredUps;
+			}
+
+			controller?.Update((float)delta);
+			config.OnUpdate?.Invoke((float)delta);
+		};
+
+		// The render function
+		window.Render += delta =>
+		{
+			if (IsVisible)
+			{
+				gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+				gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
+
+				//get scaled font size
+				const float normalFontSize = 13;
+				float scaledFontSize = normalFontSize * ScaleFactor;
+
+				var io = ImGui.GetIO();
+				var fonts = io.Fonts.Fonts;
+				var bestFont = fonts[fonts.Size - 1];
+				float bestFontSize = bestFont.FontSize;
+
+				for (int i = 0; i < fonts.Size; i++)
 				{
-					if (IsVisible)
+					var font = fonts[i];
+					float fontSize = font.FontSize;
+					if (fontSize < bestFontSize && fontSize >= scaledFontSize)
 					{
-						InvokeOnWindowThread(() =>
-						{
-							gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
-							gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
-
-							//get scaled font size
-							const float normalFontSize = 13;
-							float scaledFontSize = normalFontSize * ScaleFactor;
-							var (bestFontSize, bestFont) = Fonts.Where(x => x.Key >= scaledFontSize).OrderBy(x => x.Key).FirstOrDefault();
-							float scaleRatio = bestFontSize / normalFontSize;
-							ImGui.PushFont(bestFont);
-
-							using (new UIScaler(scaleRatio))
-							{
-								RenderAppMenu(config.OnAppMenu);
-								RenderWindowContents(config.OnRender, (float)delta);
-							}
-
-							ImGui.PopFont();
-							controller?.Render();
-						});
+						bestFont = font;
+						bestFontSize = fontSize;
 					}
 				}
-			};
 
-			// The closing function
-			window.Closing += () =>
-			{
-				lock (WindowLock)
+				float scaleRatio = bestFontSize / normalFontSize;
+				ImGui.PushFont(bestFont);
+
+				using (new UIScaler(scaleRatio))
 				{
-					InvokeOnWindowThread(() =>
-					{
-						// Free the natively allocated font data
-						FontDataPtrs.ForEach(p => Marshal.FreeHGlobal(p));
-
-						// Dispose our controller first
-						controller?.Dispose();
-
-						// Dispose the input context
-						inputContext?.Dispose();
-
-						// Unload OpenGL
-						gl?.Dispose();
-					});
+					RenderAppMenu(config.OnAppMenu);
+					RenderWindowContents(config.OnRender, (float)delta);
 				}
-			};
 
-			window.FocusChanged += (focused) => IsFocused = focused;
+				ImGui.PopFont();
+				controller?.Render();
+			}
+		};
 
-			nint handle = NativeMethods.GetConsoleWindow();
-			_ = NativeMethods.ShowWindow(handle, SW_HIDE);
-		}
+		// The closing function
+		window.Closing += () =>
+		{
+			// Dispose our controller first
+			controller?.Dispose();
+			controller = null;
+
+			// Dispose the input context
+			inputContext?.Dispose();
+			inputContext = null;
+
+			// Unload OpenGL
+			gl?.Dispose();
+			gl = null;
+		};
+
+		window.FocusChanged += (focused) => IsFocused = focused;
+
+		nint handle = NativeMethods.GetConsoleWindow();
+		_ = NativeMethods.ShowWindow(handle, SW_HIDE);
+
 		// Now that everything's defined, let's run this bad boy!
 		window.Run();
 
-		lock (WindowLock)
-		{
-			window.Dispose();
-		}
+		// Dispose the window
+		window.Dispose();
 	}
 
 	private static void EnsureWindowPositionIsValid()
@@ -449,35 +420,32 @@ public static partial class ImGuiApp
 	/// Renders the application menu using the provided delegate.
 	/// </summary>
 	/// <param name="menuDelegate">The delegate to render the menu.</param>
-	public static void RenderAppMenu(Action? menuDelegate)
+	private static void RenderAppMenu(Action? menuDelegate)
 	{
-		InvokeOnWindowThread(() =>
+		if (menuDelegate is not null)
 		{
-			if (menuDelegate is not null)
+			if (ImGui.BeginMainMenuBar())
 			{
-				if (ImGui.BeginMainMenuBar())
+				menuDelegate();
+
+				if (ImGui.BeginMenu("Debug"))
 				{
-					menuDelegate();
-
-					if (ImGui.BeginMenu("Debug"))
+					if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
 					{
-						if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
-						{
-							showImGuiDemo = !showImGuiDemo;
-						}
-
-						if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
-						{
-							showImGuiMetrics = !showImGuiMetrics;
-						}
-
-						ImGui.EndMenu();
+						showImGuiDemo = !showImGuiDemo;
 					}
 
-					ImGui.EndMainMenuBar();
+					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
+					{
+						showImGuiMetrics = !showImGuiMetrics;
+					}
+
+					ImGui.EndMenu();
 				}
+
+				ImGui.EndMainMenuBar();
 			}
-		});
+		}
 	}
 
 	/// <summary>
@@ -485,34 +453,31 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="tickDelegate">The delegate to render the main window contents.</param>
 	/// <param name="dt">The delta time since the last frame.</param>
-	public static void RenderWindowContents(Action<float>? tickDelegate, float dt)
+	private static void RenderWindowContents(Action<float>? tickDelegate, float dt)
 	{
-		InvokeOnWindowThread(() =>
+		bool b = true;
+		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
+		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
+		var colors = ImGui.GetStyle().Colors;
+		var borderColor = colors[(int)ImGuiCol.Border];
+		colors[(int)ImGuiCol.Border] = new();
+		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 		{
-			bool b = true;
-			ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
-			ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-			var colors = ImGui.GetStyle().Colors;
-			var borderColor = colors[(int)ImGuiCol.Border];
-			colors[(int)ImGuiCol.Border] = new();
-			if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
-			{
-				colors[(int)ImGuiCol.Border] = borderColor;
-				tickDelegate?.Invoke(dt);
-			}
+			colors[(int)ImGuiCol.Border] = borderColor;
+			tickDelegate?.Invoke(dt);
+		}
 
-			ImGui.End();
+		ImGui.End();
 
-			if (showImGuiDemo)
-			{
-				ImGui.ShowDemoWindow(ref showImGuiDemo);
-			}
+		if (showImGuiDemo)
+		{
+			ImGui.ShowDemoWindow(ref showImGuiDemo);
+		}
 
-			if (showImGuiMetrics)
-			{
-				ImGui.ShowMetricsWindow(ref showImGuiMetrics);
-			}
-		});
+		if (showImGuiMetrics)
+		{
+			ImGui.ShowMetricsWindow(ref showImGuiMetrics);
+		}
 	}
 
 	/// <summary>
@@ -564,34 +529,30 @@ public static partial class ImGuiApp
 	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	public static uint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
-		uint textureId;
-		lock (WindowLock)
+		uint textureId = InvokeOnWindowThread(() =>
 		{
-			textureId = InvokeOnWindowThread(() =>
+			if (gl is null)
 			{
-				if (gl is null)
+				throw new InvalidOperationException("OpenGL context is not initialized.");
+			}
+
+			textureId = gl.GenTexture();
+			gl.ActiveTexture(TextureUnit.Texture0);
+			gl.BindTexture(TextureTarget.Texture2D, textureId);
+
+			unsafe
+			{
+				fixed (byte* ptr = bytes)
 				{
-					throw new InvalidOperationException("OpenGL context is not initialized.");
+					gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
 				}
+			}
 
-				textureId = gl.GenTexture();
-				gl.ActiveTexture(TextureUnit.Texture0);
-				gl.BindTexture(TextureTarget.Texture2D, textureId);
-
-				unsafe
-				{
-					fixed (byte* ptr = bytes)
-					{
-						gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
-					}
-				}
-
-				gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-				gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-				gl.BindTexture(TextureTarget.Texture2D, 0);
-				return textureId;
-			});
-		}
+			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+			gl.BindTexture(TextureTarget.Texture2D, 0);
+			return textureId;
+		});
 
 		return textureId;
 	}
@@ -603,19 +564,16 @@ public static partial class ImGuiApp
 	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	public static void DeleteTexture(uint textureId)
 	{
-		lock (WindowLock)
+		InvokeOnWindowThread(() =>
 		{
-			InvokeOnWindowThread(() =>
+			if (gl is null)
 			{
-				if (gl is null)
-				{
-					throw new InvalidOperationException("OpenGL context is not initialized.");
-				}
+				throw new InvalidOperationException("OpenGL context is not initialized.");
+			}
 
-				gl.DeleteTexture(textureId);
-				Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
-			});
-		}
+			gl.DeleteTexture(textureId);
+			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
+		});
 	}
 
 	/// <summary>
@@ -633,27 +591,23 @@ public static partial class ImGuiApp
 	/// <exception cref="Exception">Thrown if an error occurs while loading the image.</exception>
 	public static TextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
-		TextureInfo? textureInfo;
-		lock (WindowLock)
+		if (Textures.TryGetValue(path, out var textureInfo))
 		{
-			if (Textures.TryGetValue(path, out textureInfo))
-			{
-				return textureInfo;
-			}
-
-			var image = Image.Load<Rgba32>(path);
-			byte[] bytes = GetImageBytes(image);
-			uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
-			textureInfo = new TextureInfo
-			{
-				Path = path,
-				TextureId = textureId,
-				Width = image.Width,
-				Height = image.Height
-			};
-
-			Textures[path] = textureInfo;
+			return textureInfo;
 		}
+
+		var image = Image.Load<Rgba32>(path);
+		byte[] bytes = GetImageBytes(image);
+		uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+		textureInfo = new TextureInfo
+		{
+			Path = path,
+			TextureId = textureId,
+			Width = image.Width,
+			Height = image.Height
+		};
+
+		Textures[path] = textureInfo;
 
 		return textureInfo;
 	}
@@ -662,41 +616,32 @@ public static partial class ImGuiApp
 
 	internal static void InitFonts()
 	{
-		lock (WindowLock)
+		byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Medium;
+		var io = ImGui.GetIO();
+		var fontAtlasPtr = io.Fonts;
+		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
+		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
+		foreach (int size in FontSizes)
 		{
-			InvokeOnWindowThread(() =>
+			unsafe
 			{
-				byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Medium;
-				var io = ImGui.GetIO();
-				var fontAtlasPtr = io.Fonts;
-				nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
-				Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
-				foreach (int size in FontSizes)
+				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
+				var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
 				{
-					unsafe
-					{
-						var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-						var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
-						{
-							OversampleH = 2,
-							OversampleV = 2,
-							PixelSnapH = true,
-							FontDataOwnedByAtlas = false,
-						};
-						_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
-					}
-				}
-
-				_ = fontAtlasPtr.Build();
-
-				int numFonts = fontAtlasPtr.Fonts.Size;
-				for (int i = 0; i < numFonts; i++)
-				{
-					var font = fontAtlasPtr.Fonts[i];
-					Fonts[(int)font.ConfigData.SizePixels] = font;
-				}
-			});
+					OversampleH = 2,
+					OversampleV = 2,
+					PixelSnapH = true,
+					FontDataOwnedByAtlas = false,
+				};
+				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+			}
 		}
+
+		_ = fontAtlasPtr.Build();
+
+		controller?.CreateFontTexture();
+
+		Marshal.FreeHGlobal(fontBytesPtr);
 	}
 
 	/// <summary>
