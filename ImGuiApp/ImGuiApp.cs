@@ -70,7 +70,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48]; // This list is assumed to be sorted ascendingly elsewhere, you MUST sort it ascendingly
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -338,17 +338,19 @@ public static partial class ImGuiApp
 
 				var io = ImGui.GetIO();
 				var fonts = io.Fonts.Fonts;
-				var bestFont = fonts[fonts.Size - 1];
+				var bestFont = fonts[fonts.Size - 1]; // Assumes the last font in the list is the largest, ie. the list is sorted by size ascendingly
 				float bestFontSize = bestFont.FontSize;
 
 				for (int i = 0; i < fonts.Size; i++)
 				{
 					var font = fonts[i];
 					float fontSize = font.FontSize;
+					// get the smallest font size that is larger than the scaled font size
 					if (fontSize < bestFontSize && fontSize >= scaledFontSize)
 					{
 						bestFont = font;
 						bestFontSize = fontSize;
+						break; // Assumes the list is sorted by size ascendingly
 					}
 				}
 
