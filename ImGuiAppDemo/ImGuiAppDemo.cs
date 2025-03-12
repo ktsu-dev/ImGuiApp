@@ -27,12 +27,17 @@ internal static class ImGuiAppDemo
 		ImGui.ShowDemoWindow(ref showImGuiDemo);
 		if (ImGui.BeginChild("Demo"))
 		{
-			using (new FontAppearance(nameof(Resources.CARDCHAR), 24, out _))
+			using (new FontAppearance(nameof(Resources.CARDCHAR), 24))
 			{
 				ImGui.Text("Hello, ImGui.NET!");
 			}
 
 			ImGui.Text("This is a demo of ImGui.NET.");
+
+			using (new FontAppearance(nameof(Resources.CARDCHAR)))
+			{
+				ImGui.Text("Fancy!");
+			}
 		}
 
 		ImGui.EndChild();

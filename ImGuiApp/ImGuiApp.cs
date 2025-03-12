@@ -2,7 +2,6 @@ namespace ktsu.ImGuiApp;
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -19,27 +18,6 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 using Color = System.Drawing.Color;
-
-/// <summary>
-/// Represents the state of the ImGui application window, including size, position, and layout state.
-/// </summary>
-public class ImGuiAppWindowState
-{
-	/// <summary>
-	/// Gets or sets the size of the window.
-	/// </summary>
-	public Vector2 Size { get; set; } = new(1280, 720);
-
-	/// <summary>
-	/// Gets or sets the position of the window.
-	/// </summary>
-	public Vector2 Pos { get; set; } = new(-short.MinValue, -short.MinValue);
-
-	/// <summary>
-	/// Gets or sets the layout state of the window.
-	/// </summary>
-	public WindowState LayoutState { get; set; }
-}
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
@@ -92,33 +70,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static float ScaleFactor { get; private set; } = 1;
 
-	/// <summary>
-	/// Represents information about a texture, including its file path, texture ID, width, and height.
-	/// </summary>
-	public class TextureInfo
-	{
-		/// <summary>
-		/// Gets or sets the file path of the texture.
-		/// </summary>
-		public AbsoluteFilePath Path { get; set; } = new();
-
-		/// <summary>
-		/// Gets or sets the OpenGL texture ID.
-		/// </summary>
-		public uint TextureId { get; set; }
-
-		/// <summary>
-		/// Gets or sets the width of the texture.
-		/// </summary>
-		public int Width { get; set; }
-
-		/// <summary>
-		/// Gets or sets the height of the texture.
-		/// </summary>
-		public int Height { get; set; }
-	}
-
-	internal static ConcurrentDictionary<AbsoluteFilePath, TextureInfo> Textures { get; } = [];
+	internal static ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> Textures { get; } = [];
 
 	private static int WindowThreadId { get; set; }
 
@@ -127,66 +79,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static void Stop() => window?.Close();
 
-	/// <summary>
-	/// Represents the configuration settings for the ImGui application.
-	/// </summary>
-	public class AppConfig
-	{
-		/// <summary>
-		/// Gets or sets the title of the application window.
-		/// </summary>
-		public string Title { get; init; } = nameof(ImGuiApp);
-
-		/// <summary>
-		/// Gets or sets the file path to the application window icon.
-		/// </summary>
-		public string IconPath { get; init; } = string.Empty;
-
-		/// <summary>
-		/// Gets or sets the initial state of the application window.
-		/// </summary>
-		public ImGuiAppWindowState InitialWindowState { get; init; } = new();
-
-		/// <summary>
-		/// Gets or sets the action to be performed when the application starts.
-		/// </summary>
-		public Action OnStart { get; init; } = () => { };
-
-		/// <summary>
-		/// Gets or sets the action to be performed on each update tick.
-		/// </summary>
-		public Action<float> OnUpdate { get; init; } = (delta) => { };
-
-		/// <summary>
-		/// Gets or sets the action to be performed on each render tick.
-		/// </summary>
-		public Action<float> OnRender { get; init; } = (delta) => { };
-
-		/// <summary>
-		/// Gets or sets the action to be performed when rendering the application menu.
-		/// </summary>
-		public Action OnAppMenu { get; init; } = () => { };
-
-		/// <summary>
-		/// Gets or sets the action to be performed when the application window is moved or resized.
-		/// </summary>
-		public Action OnMoveOrResize { get; init; } = () => { };
-
-		/// <summary>
-		/// Gets or sets the fonts to be used in the application.
-		/// </summary>
-		/// <value>
-		/// A dictionary where the key is the font name and the value is the byte array representing the font data.
-		/// </value>
-		public Dictionary<string, byte[]> Fonts { get; init; } = [];
-
-		internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
-		{
-			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }
-		};
-	}
-
-	private static AppConfig Config { get; set; } = new();
+	private static ImGuiAppConfig Config { get; set; } = new();
 
 	/// <summary>
 	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
@@ -217,7 +110,7 @@ public static partial class ImGuiApp
 	/// <param name="onMenu">The action to be performed when rendering the application menu.</param>
 	/// <param name="onWindowResized">The action to be performed when the application window is moved or resized.</param>
 	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized) =>
-		Start(new AppConfig
+		Start(new ImGuiAppConfig
 		{
 			Title = windowTitle,
 			InitialWindowState = initialWindowState,
@@ -231,7 +124,7 @@ public static partial class ImGuiApp
 	/// Starts the ImGui application with the specified configuration.
 	/// </summary>
 	/// <param name="config">The configuration settings for the ImGui application.</param>
-	public static void Start(AppConfig config)
+	public static void Start(ImGuiAppConfig config)
 	{
 		ArgumentNullException.ThrowIfNull(config);
 
@@ -443,7 +336,7 @@ public static partial class ImGuiApp
 	/// Renders the application menu using the provided delegate.
 	/// </summary>
 	/// <param name="menuDelegate">The delegate to render the menu.</param>
-	public static void RenderAppMenu(Action? menuDelegate)
+	private static void RenderAppMenu(Action? menuDelegate)
 	{
 		InvokeOnWindowThread(() =>
 		{
@@ -479,7 +372,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="tickDelegate">The delegate to render the main window contents.</param>
 	/// <param name="dt">The delta time since the last frame.</param>
-	public static void RenderWindowContents(Action<float>? tickDelegate, float dt)
+	private static void RenderWindowContents(Action<float>? tickDelegate, float dt)
 	{
 		InvokeOnWindowThread(() =>
 		{
@@ -610,7 +503,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="path">The file path of the texture to load.</param>
 	/// <returns>
-	/// A <see cref="TextureInfo"/> object containing information about the loaded texture,
+	/// A <see cref="ImGuiAppTextureInfo"/> object containing information about the loaded texture,
 	/// including its file path, texture ID, width, and height.
 	/// </returns>
 	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
@@ -618,7 +511,7 @@ public static partial class ImGuiApp
 	/// <exception cref="FileNotFoundException">Thrown if the specified file does not exist.</exception>
 	/// <exception cref="NotSupportedException">Thrown if the image format is not supported.</exception>
 	/// <exception cref="Exception">Thrown if an error occurs while loading the image.</exception>
-	public static TextureInfo GetOrLoadTexture(AbsoluteFilePath path)
+	public static ImGuiAppTextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
 		if (Textures.TryGetValue(path, out var textureInfo))
 		{
@@ -628,7 +521,7 @@ public static partial class ImGuiApp
 		var image = Image.Load<Rgba32>(path);
 		byte[] bytes = GetImageBytes(image);
 		uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
-		textureInfo = new TextureInfo
+		textureInfo = new ImGuiAppTextureInfo
 		{
 			Path = path,
 			TextureId = textureId,
