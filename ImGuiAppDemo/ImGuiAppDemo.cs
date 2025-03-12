@@ -1,87 +1,49 @@
 namespace ktsu.ImGuiApp.Demo;
 
-using System.Runtime.InteropServices;
-
 using ImGuiNET;
 
+using ktsu.Extensions;
 using ktsu.ImGuiApp;
+using ktsu.StrongPaths;
 using ktsu.ImGuiAppDemo.Properties;
 
 internal static class ImGuiAppDemo
 {
 	private static bool showImGuiDemo;
-	private static void Main() =>
-		ImGuiApp.Start(nameof(ImGuiAppDemo), new ImGuiAppWindowState(), OnStart, OnTick, OnMenu, OnWindowResized);
-
-	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
-	private static Dictionary<int, ImFontPtr> Fonts { get; } = [];
-
-	// https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#loading-font-data-from-memory
-	// IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
-	// This was to avoid an unnecessary copy, and is perhaps not a good API (a future version will redesign it).
-	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
-	internal static void InitFonts()
+	private static void Main() => ImGuiApp.Start(new()
 	{
-		byte[] fontBytes = Resources.CARDCHAR;
-		var io = ImGui.GetIO();
-		var fontAtlasPtr = io.Fonts;
-		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
-		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
-		_ = fontAtlasPtr.AddFontDefault();
-		foreach (int size in FontSizes)
+		Title = "ImGuiApp Demo",
+		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
+		OnRender = OnRender,
+		OnAppMenu = OnAppMenu,
+		Fonts = new Dictionary<string, byte[]>
 		{
-			unsafe
-			{
-				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-				var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
-				{
-					OversampleH = 2,
-					OversampleV = 2,
-					PixelSnapH = true,
-					FontDataOwnedByAtlas = false,
-				};
-				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
-			}
-		}
+			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
+		},
+	});
 
-		_ = fontAtlasPtr.Build();
-
-		Marshal.FreeHGlobal(fontBytesPtr);
-
-		int numFonts = fontAtlasPtr.Fonts.Size;
-		for (int i = 0; i < numFonts; i++)
-		{
-			var font = fontAtlasPtr.Fonts[i];
-			Fonts[(int)font.ConfigData.SizePixels] = font;
-		}
-	}
-
-	private static void OnStart() => InitFonts();
-
-	private static void OnTick(float dt)
+	private static void OnRender(float dt)
 	{
 		ImGui.ShowDemoWindow(ref showImGuiDemo);
 		if (ImGui.BeginChild("Demo"))
 		{
-			ImGui.PushFont(Fonts[24]);
-			ImGui.Text("Hello, ImGui.NET!");
-			ImGui.PopFont();
+			using (new FontAppearance(nameof(Resources.CARDCHAR), 24, out _))
+			{
+				ImGui.Text("Hello, ImGui.NET!");
+			}
+
 			ImGui.Text("This is a demo of ImGui.NET.");
 		}
 
 		ImGui.EndChild();
 	}
 
-	private static void OnMenu()
+	private static void OnAppMenu()
 	{
 		if (ImGui.BeginMenu("View"))
 		{
 			_ = ImGui.MenuItem("ImGui Demo", string.Empty, ref showImGuiDemo);
 			ImGui.EndMenu();
 		}
-	}
-
-	private static void OnWindowResized()
-	{
 	}
 }
