@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 
 using ImGuiNET;
 
-using ktsu.Extensions;
 using ktsu.StrongPaths;
 
 using Silk.NET.Input;
@@ -71,9 +70,8 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
-	private static ConcurrentDictionary<int, ImFontPtr> Fonts { get; } = [];
-	private static Collection<nint> FontDataPtrs { get; } = [];
+	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -173,6 +171,19 @@ public static partial class ImGuiApp
 		/// Gets or sets the action to be performed when the application window is moved or resized.
 		/// </summary>
 		public Action OnMoveOrResize { get; init; } = () => { };
+
+		/// <summary>
+		/// Gets or sets the fonts to be used in the application.
+		/// </summary>
+		/// <value>
+		/// A dictionary where the key is the font name and the value is the byte array representing the font data.
+		/// </value>
+		public Dictionary<string, byte[]> Fonts { get; init; } = [];
+
+		internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
+		{
+			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }
+		};
 	}
 
 	private static AppConfig Config { get; set; } = new();
@@ -333,29 +344,22 @@ public static partial class ImGuiApp
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-			//get scaled font size
-			const float normalFontSize = 13;
-			float scaledFontSize = normalFontSize * ScaleFactor;
-			var (bestFontSize, bestFont) = Fonts.Where(x => x.Key >= scaledFontSize).OrderBy(x => x.Key).FirstOrDefault();
-			float scaleRatio = bestFontSize / normalFontSize;
-			ImGui.PushFont(bestFont);
-
-			using (new UIScaler(scaleRatio))
+			using (new FontAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out int bestFontSize))
 			{
-				RenderAppMenu(config.OnAppMenu);
-				RenderWindowContents(config.OnRender, (float)delta);
+				float scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
+				using (new UIScaler(scaleRatio))
+				{
+					RenderAppMenu(config.OnAppMenu);
+					RenderWindowContents(config.OnRender, (float)delta);
+				}
 			}
 
-			ImGui.PopFont();
 			controller?.Render();
 		};
 
 		// The closing function
 		window.Closing += () =>
 		{
-			// Free the natively allocated font data
-			FontDataPtrs.ForEach(p => Marshal.FreeHGlobal(p));
-
 			// Dispose our controller first
 			controller?.Dispose();
 			controller = null;
@@ -378,6 +382,39 @@ public static partial class ImGuiApp
 		window.Run();
 
 		window.Dispose();
+	}
+
+	internal static ImFontPtr FindBestFontForAppearance(string name, int sizePoints, out int sizePixels)
+	{
+		var io = ImGui.GetIO();
+		var fonts = io.Fonts.Fonts;
+		sizePixels = PtsToPx(sizePoints);
+		int sizePixelsLocal = sizePixels;
+
+		var candidatesByFace = FontIndices
+			.Where(f => f.Key == name)
+			.SelectMany(f => f.Value)
+			.OrderBy(f => f.Key)
+			.ToArray();
+
+		if (candidatesByFace.Length == 0)
+		{
+			throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
+		}
+
+		int[] candidatesBySize = [.. candidatesByFace
+			.Where(x => x.Key >= sizePixelsLocal)
+			.Select(x => x.Value)];
+
+		if (candidatesBySize.Length != 0)
+		{
+			int bestFontIndex = candidatesBySize.First();
+			return fonts[bestFontIndex];
+		}
+
+		// if there was no font size larger than our requested size, then fall back to the largest font size we have
+		int largestFontIndex = candidatesByFace.Last().Value;
+		return fonts[largestFontIndex];
 	}
 
 	private static void EnsureWindowPositionIsValid()
@@ -612,13 +649,33 @@ public static partial class ImGuiApp
 	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
 	internal static void InitFonts()
 	{
-		byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Medium;
+		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
+
 		var io = ImGui.GetIO();
 		var fontAtlasPtr = io.Fonts;
+		foreach (var font in fontsToLoad)
+		{
+			byte[] fontBytes = font.Value;
+			LoadFont(fontAtlasPtr, fontBytes, font.Key);
+		}
+
+		_ = fontAtlasPtr.Build();
+	}
+
+	private static void LoadFont(ImFontAtlasPtr fontAtlasPtr, byte[] fontBytes, string name)
+	{
+		if (!FontIndices.TryGetValue(name, out var fontSizes))
+		{
+			fontSizes = new();
+			FontIndices[name] = fontSizes;
+		}
+
 		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
 		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
-		foreach (int size in FontSizes)
+		foreach (int size in SupportedPixelFontSizes)
 		{
+			int fontIndex = fontAtlasPtr.Fonts.Size;
+
 			unsafe
 			{
 				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
@@ -631,16 +688,11 @@ public static partial class ImGuiApp
 				};
 				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
 			}
+
+			fontSizes[size] = fontIndex;
 		}
 
-		_ = fontAtlasPtr.Build();
-
-		int numFonts = fontAtlasPtr.Fonts.Size;
-		for (int i = 0; i < numFonts; i++)
-		{
-			var font = fontAtlasPtr.Fonts[i];
-			Fonts[(int)font.ConfigData.SizePixels] = font;
-		}
+		Marshal.FreeHGlobal(fontBytesPtr);
 	}
 
 	/// <summary>
@@ -649,6 +701,13 @@ public static partial class ImGuiApp
 	/// <param name="ems">The value in ems to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
 	public static int EmsToPx(float ems) => InvokeOnWindowThread(() => (int)(ems * ImGui.GetFontSize()));
+
+	/// <summary>
+	/// Converts a value in points to pixels based on the current scale factor.
+	/// </summary>
+	/// <param name="pts">The value in points to convert to pixels.</param>
+	/// <returns>The equivalent value in pixels.</returns>
+	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
 
 	/// <summary>
 	/// Invokes the specified function on the window thread and returns the result.
