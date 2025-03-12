@@ -1,1 +1,1 @@
-A bootstrap library to give you an environment to build an ImGUI.NET application with.
+A scaffolding library to create Dear ImGui applications in .NET
