@@ -3,7 +3,7 @@
 A .NET library that provides application scaffolding for [Dear ImGui](https://github.com/ocornut/imgui), using [Silk.NET](https://github.com/dotnet/Silk.NET) and [ImGui.NET](https://github.com/mellinoe/ImGui.NET).
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
 
-[![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE)
+[![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE.md)
 
 ## Features
 - Provides a simple-to-use API for creating ImGui applications.
@@ -153,4 +153,4 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 
 ## License
 
-ImGuiApp is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+ImGuiApp is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for more information.
