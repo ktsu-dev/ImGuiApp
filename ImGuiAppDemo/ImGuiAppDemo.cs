@@ -16,6 +16,10 @@ internal static class ImGuiAppDemo
 	private static int[] FontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 	private static Dictionary<int, ImFontPtr> Fonts { get; } = [];
 
+	// https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#loading-font-data-from-memory
+	// IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
+	// This was to avoid an unnecessary copy, and is perhaps not a good API (a future version will redesign it).
+	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
 	internal static void InitFonts()
 	{
 		byte[] fontBytes = Resources.CARDCHAR;
@@ -34,12 +38,15 @@ internal static class ImGuiAppDemo
 					OversampleH = 2,
 					OversampleV = 2,
 					PixelSnapH = true,
+					FontDataOwnedByAtlas = false,
 				};
 				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
 			}
 		}
 
 		_ = fontAtlasPtr.Build();
+
+		Marshal.FreeHGlobal(fontBytesPtr);
 
 		int numFonts = fontAtlasPtr.Fonts.Size;
 		for (int i = 0; i < numFonts; i++)
