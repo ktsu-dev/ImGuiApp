@@ -614,6 +614,9 @@ public static partial class ImGuiApp
 
 	private static void UpdateDpiScale() => ScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
+	// https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#loading-font-data-from-memory
+	// IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
+	// This was to avoid an unnecessary copy, and is perhaps not a good API (a future version will redesign it). If you want to keep
 	internal static void InitFonts()
 	{
 		byte[] fontBytes = Resources.Resources.RobotoMonoNerdFontMono_Medium;
