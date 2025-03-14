@@ -544,18 +544,28 @@ public static partial class ImGuiApp
 	{
 		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 
+		Collection<nint> fontHandles = [];
+
 		var io = ImGui.GetIO();
 		var fontAtlasPtr = io.Fonts;
 		foreach (var font in fontsToLoad)
 		{
 			byte[] fontBytes = font.Value;
-			LoadFont(fontAtlasPtr, fontBytes, font.Key);
+			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
+			fontHandles.Add(fontHandle);
+			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
+			LoadFont(fontAtlasPtr, fontHandle, fontBytes.Length, font.Key);
 		}
 
 		_ = fontAtlasPtr.Build();
+
+		foreach (nint fontHandle in fontHandles)
+		{
+			Marshal.FreeHGlobal(fontHandle);
+		}
 	}
 
-	private static void LoadFont(ImFontAtlasPtr fontAtlasPtr, byte[] fontBytes, string name)
+	private static void LoadFont(ImFontAtlasPtr fontAtlasPtr, nint fontHandle, int fontBytesLength, string name)
 	{
 		if (!FontIndices.TryGetValue(name, out var fontSizes))
 		{
@@ -563,8 +573,6 @@ public static partial class ImGuiApp
 			FontIndices[name] = fontSizes;
 		}
 
-		nint fontBytesPtr = Marshal.AllocHGlobal(fontBytes.Length);
-		Marshal.Copy(fontBytes, 0, fontBytesPtr, fontBytes.Length);
 		foreach (int size in SupportedPixelFontSizes)
 		{
 			int fontIndex = fontAtlasPtr.Fonts.Size;
@@ -579,13 +587,11 @@ public static partial class ImGuiApp
 					PixelSnapH = true,
 					FontDataOwnedByAtlas = false,
 				};
-				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontBytesPtr, fontBytes.Length, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontHandle, fontBytesLength, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
 			}
 
 			fontSizes[size] = fontIndex;
 		}
-
-		Marshal.FreeHGlobal(fontBytesPtr);
 	}
 
 	/// <summary>
