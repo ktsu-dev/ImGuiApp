@@ -48,7 +48,7 @@ internal class Texture : IDisposable
 	public readonly uint MipmapLevels;
 	public readonly SizedInternalFormat InternalFormat;
 
-	public unsafe Texture(GL gl, int width, int height, IntPtr data, bool generateMipmaps = false, bool srgb = false)
+	public unsafe Texture(GL gl, int width, int height, IntPtr data, bool generateMipmaps = false, bool srgb = false, PixelFormat pxFormat = PixelFormat.Bgra)
 	{
 		_gl = gl;
 		MaxAniso ??= gl.GetFloat(MaxTextureMaxAnisotropy);
@@ -59,8 +59,6 @@ internal class Texture : IDisposable
 
 		GlTexture = _gl.GenTexture();
 		Bind();
-
-		var pxFormat = PixelFormat.Bgra;
 
 		_gl.TexStorage2D(GLEnum.Texture2D, MipmapLevels, InternalFormat, Width, Height);
 		_gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, Width, Height, pxFormat, PixelType.UnsignedByte, (void*)data);
