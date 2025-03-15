@@ -1,3 +1,10 @@
+## v1.8.1 (patch)
+
+Changes since v1.8.0:
+
+- Re-add icon to fix LFS ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove icon to fix LFS ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.8.0 (minor)
 
 Changes since v1.7.0:
