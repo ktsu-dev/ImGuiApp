@@ -1,3 +1,13 @@
+## v1.9.0 (minor)
+
+Changes since v1.8.0:
+
+- Add an image to the demo app to test the texture upload ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add an overload to ImGuiController.Texture to allow specifying the pixel format ([@matt-edmondson](https://github.com/matt-edmondson))
+- Re-add icon to fix LFS ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove icon to fix LFS ([@matt-edmondson](https://github.com/matt-edmondson))
+- Reuse the texture upload from ImGuiController to remove code duplication ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.8.1 (patch)
 
 Changes since v1.8.0:
