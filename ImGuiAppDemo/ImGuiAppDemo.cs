@@ -6,6 +6,7 @@ using ktsu.Extensions;
 using ktsu.ImGuiApp;
 using ktsu.StrongPaths;
 using ktsu.ImGuiAppDemo.Properties;
+using System.Numerics;
 
 internal static class ImGuiAppDemo
 {
@@ -38,6 +39,10 @@ internal static class ImGuiAppDemo
 			{
 				ImGui.Text("Fancy!");
 			}
+
+			var iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
+			var iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
+			ImGui.Image((nint)iconTexture.TextureId, new Vector2(128, 128));
 		}
 
 		ImGui.EndChild();
