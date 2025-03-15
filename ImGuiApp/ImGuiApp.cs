@@ -18,6 +18,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 using Color = System.Drawing.Color;
+using Texture = ImGuiController.Texture;
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
@@ -458,22 +459,22 @@ public static partial class ImGuiApp
 				throw new InvalidOperationException("OpenGL context is not initialized.");
 			}
 
-			textureId = gl.GenTexture();
-			gl.ActiveTexture(TextureUnit.Texture0);
-			gl.BindTexture(TextureTarget.Texture2D, textureId);
+			// Upload texture to graphics system
+			gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
 
-			unsafe
-			{
-				fixed (byte* ptr = bytes)
-				{
-					gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
-				}
-			}
+			nint textureHandle = Marshal.AllocHGlobal(bytes.Length);
+			Marshal.Copy(bytes, 0, textureHandle, bytes.Length);
+			Texture texture = new(gl, width, height, textureHandle, pxFormat: PixelFormat.Rgba);
+			Marshal.FreeHGlobal(textureHandle);
 
-			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-			gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-			gl.BindTexture(TextureTarget.Texture2D, 0);
-			return textureId;
+			texture.Bind();
+			texture.SetMagFilter(TextureMagFilter.Linear);
+			texture.SetMinFilter(TextureMinFilter.Linear);
+
+			// Restore state
+			gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
+
+			return texture.GlTexture;
 		});
 
 		return textureId;
@@ -521,7 +522,7 @@ public static partial class ImGuiApp
 		var image = Image.Load<Rgba32>(path);
 		byte[] bytes = GetImageBytes(image);
 		uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
-		textureInfo = new ImGuiAppTextureInfo
+		textureInfo = new()
 		{
 			Path = path,
 			TextureId = textureId,
@@ -580,7 +581,7 @@ public static partial class ImGuiApp
 			unsafe
 			{
 				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-				var fontConfig = new ImFontConfigPtr(fontConfigNativePtr)
+				ImFontConfigPtr fontConfig = new(fontConfigNativePtr)
 				{
 					OversampleH = 2,
 					OversampleV = 2,
