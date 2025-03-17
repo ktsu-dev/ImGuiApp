@@ -1,3 +1,9 @@
+## v1.10.0 (minor)
+
+Changes since v1.9.0:
+
+- Font system cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.9.0 (minor)
 
 Changes since v1.8.0:
