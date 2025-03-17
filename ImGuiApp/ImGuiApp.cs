@@ -51,6 +51,7 @@ public static partial class ImGuiApp
 
 	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
+	private static Collection<nint> FontHandles { get; } = [];
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -159,19 +160,16 @@ public static partial class ImGuiApp
 			gl = window.CreateOpenGL(); // load OpenGL
 
 			inputContext = window.CreateInput(); // create an input context
-			controller = new ImGuiController.ImGuiController
+			controller = new
 			(
 				gl,
 				view: window,
 				input: inputContext,
 				onConfigureIO: () =>
 				{
-					InvokeOnWindowThread(() =>
-					{
-						UpdateDpiScale();
-						InitFonts();
-						config.OnStart?.Invoke();
-					});
+					UpdateDpiScale();
+					InitFonts();
+					config.OnStart?.Invoke();
 				}
 			);
 
@@ -183,12 +181,7 @@ public static partial class ImGuiApp
 		{
 			gl?.Viewport(s);
 
-			if (window.WindowState == Silk.NET.Windowing.WindowState.Normal)
-			{
-				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
-				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
-				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
-			}
+			CaptureWindowNormalState();
 
 			UpdateDpiScale();
 
@@ -197,12 +190,7 @@ public static partial class ImGuiApp
 
 		window.Move += (p) =>
 		{
-			if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
-			{
-				LastNormalWindowState.Size = new(window.Size.X, window.Size.Y);
-				LastNormalWindowState.Pos = new(window.Position.X, window.Position.Y);
-				LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
-			}
+			CaptureWindowNormalState();
 
 			UpdateDpiScale();
 
@@ -211,6 +199,11 @@ public static partial class ImGuiApp
 
 		window.Update += (delta) =>
 		{
+			if (!controller?.FontsConfigured ?? true)
+			{
+				throw new InvalidOperationException("Fonts are not configured before Update()");
+			}
+
 			EnsureWindowPositionIsValid();
 
 			double currentFps = window.FramesPerSecond;
@@ -235,6 +228,11 @@ public static partial class ImGuiApp
 		// The render function
 		window.Render += delta =>
 		{
+			if (!controller?.FontsConfigured ?? true)
+			{
+				throw new InvalidOperationException("Fonts are not configured before Render()");
+			}
+
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
@@ -265,6 +263,11 @@ public static partial class ImGuiApp
 			// Unload OpenGL
 			gl?.Dispose();
 			gl = null;
+
+			foreach (nint fontHandle in FontHandles)
+			{
+				Marshal.FreeHGlobal(fontHandle);
+			}
 		};
 
 		window.FocusChanged += (focused) => IsFocused = focused;
@@ -276,6 +279,19 @@ public static partial class ImGuiApp
 		window.Run();
 
 		window.Dispose();
+	}
+
+	private static void CaptureWindowNormalState()
+	{
+		if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
+		{
+			LastNormalWindowState = new()
+			{
+				Size = new(window.Size.X, window.Size.Y),
+				Pos = new(window.Position.X, window.Position.Y),
+				LayoutState = Silk.NET.Windowing.WindowState.Normal
+			};
+		}
 	}
 
 	internal static ImFontPtr FindBestFontForAppearance(string name, int sizePoints, out int sizePixels)
@@ -545,24 +561,17 @@ public static partial class ImGuiApp
 	{
 		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 
-		Collection<nint> fontHandles = [];
-
 		var io = ImGui.GetIO();
 		var fontAtlasPtr = io.Fonts;
+		fontAtlasPtr.Clear();
+
 		foreach (var font in fontsToLoad)
 		{
 			byte[] fontBytes = font.Value;
 			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
-			fontHandles.Add(fontHandle);
+			FontHandles.Add(fontHandle);
 			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
 			LoadFont(fontAtlasPtr, fontHandle, fontBytes.Length, font.Key);
-		}
-
-		_ = fontAtlasPtr.Build();
-
-		foreach (nint fontHandle in fontHandles)
-		{
-			Marshal.FreeHGlobal(fontHandle);
 		}
 	}
 
@@ -581,14 +590,13 @@ public static partial class ImGuiApp
 			unsafe
 			{
 				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-				ImFontConfigPtr fontConfig = new(fontConfigNativePtr)
-				{
-					OversampleH = 2,
-					OversampleV = 2,
-					PixelSnapH = true,
-					FontDataOwnedByAtlas = false,
-				};
-				_ = fontAtlasPtr.AddFontFromMemoryTTF(fontHandle, fontBytesLength, size, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
+				fontConfigNativePtr->PixelSnapH = 1;
+				fontConfigNativePtr->OversampleH = 1;
+				fontConfigNativePtr->OversampleV = 1;
+
+				fontAtlasPtr.AddFontFromMemoryTTF(fontHandle, fontBytesLength, size, fontConfigNativePtr);
+				ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
 			}
 
 			fontSizes[size] = fontIndex;

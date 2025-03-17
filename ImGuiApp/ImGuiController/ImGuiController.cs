@@ -40,6 +40,8 @@ internal class ImGuiController : IDisposable
 	private int _windowWidth;
 	private int _windowHeight;
 
+	internal bool FontsConfigured { get; private set; }
+
 	/// <summary>
 	/// Constructs a new ImGuiController.
 	/// </summary>
@@ -770,6 +772,10 @@ internal class ImGuiController : IDisposable
 
 		// Restore state
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
+
+		io.Fonts.ClearTexData();
+
+		FontsConfigured = true;
 	}
 
 	/// <summary>
