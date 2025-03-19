@@ -1,3 +1,9 @@
+## v1.11.0 (minor)
+
+Changes since v1.10.0:
+
+- Replace the Silk.NET window invoker with ktsu.Invoker ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.10.0 (minor)
 
 Changes since v1.9.0:
