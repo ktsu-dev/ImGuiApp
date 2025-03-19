@@ -31,7 +31,7 @@ public class FontAppearance : ScopedAction
 		var font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
 		ImGui.PushFont(font);
 
-		OnClose = () => ImGuiApp.InvokeOnWindowThread(() => ImGui.PopFont());
+		OnClose = () => ImGuiApp.Invoker.Invoke(() => ImGui.PopFont());
 	}
 
 	/// <summary>

@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+    <PackageReference Include="ktsu.Invoker" Version="1.0.0" />
     <PackageReference Include="ktsu.ScopedAction" Version="1.0.15" />
     <PackageReference Include="ktsu.StrongPaths" Version="1.2.0" />
     <PackageReference Include="Silk.NET" Version="2.22.0" />
