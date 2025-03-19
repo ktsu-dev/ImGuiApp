@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using ImGuiNET;
 
 using ktsu.StrongPaths;
+using ktsu.Invoker;
 
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
@@ -54,6 +55,11 @@ public static partial class ImGuiApp
 	private static Collection<nint> FontHandles { get; } = [];
 
 	/// <summary>
+	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
+	/// </summary>
+	public static Invoker Invoker { get; private set; } = null!;
+
+	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
 	/// </summary>
 	public static bool IsFocused { get; private set; } = true;
@@ -73,8 +79,6 @@ public static partial class ImGuiApp
 	public static float ScaleFactor { get; private set; } = 1;
 
 	internal static ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> Textures { get; } = [];
-
-	private static int WindowThreadId { get; set; }
 
 	/// <summary>
 	/// Stops the ImGui application by closing the window.
@@ -130,6 +134,8 @@ public static partial class ImGuiApp
 	{
 		ArgumentNullException.ThrowIfNull(config);
 
+		Invoker = new();
+
 		Config = config;
 
 		ForceDpiAware.Windows();
@@ -147,7 +153,6 @@ public static partial class ImGuiApp
 
 		// Create a Silk.NET window as usual
 		window = Window.Create(silkWindowOptions);
-		WindowThreadId = Environment.CurrentManagedThreadId;
 
 		// Our loading function
 		window.Load += () =>
@@ -223,6 +228,7 @@ public static partial class ImGuiApp
 
 			controller?.Update((float)delta);
 			config.OnUpdate?.Invoke((float)delta);
+			Invoker.DoInvokes();
 		};
 
 		// The render function
@@ -355,33 +361,30 @@ public static partial class ImGuiApp
 	/// <param name="menuDelegate">The delegate to render the menu.</param>
 	private static void RenderAppMenu(Action? menuDelegate)
 	{
-		InvokeOnWindowThread(() =>
+		if (menuDelegate is not null)
 		{
-			if (menuDelegate is not null)
+			if (ImGui.BeginMainMenuBar())
 			{
-				if (ImGui.BeginMainMenuBar())
+				menuDelegate();
+
+				if (ImGui.BeginMenu("Debug"))
 				{
-					menuDelegate();
-
-					if (ImGui.BeginMenu("Debug"))
+					if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
 					{
-						if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
-						{
-							showImGuiDemo = !showImGuiDemo;
-						}
-
-						if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
-						{
-							showImGuiMetrics = !showImGuiMetrics;
-						}
-
-						ImGui.EndMenu();
+						showImGuiDemo = !showImGuiDemo;
 					}
 
-					ImGui.EndMainMenuBar();
+					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
+					{
+						showImGuiMetrics = !showImGuiMetrics;
+					}
+
+					ImGui.EndMenu();
 				}
+
+				ImGui.EndMainMenuBar();
 			}
-		});
+		}
 	}
 
 	/// <summary>
@@ -391,32 +394,29 @@ public static partial class ImGuiApp
 	/// <param name="dt">The delta time since the last frame.</param>
 	private static void RenderWindowContents(Action<float>? tickDelegate, float dt)
 	{
-		InvokeOnWindowThread(() =>
+		bool b = true;
+		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
+		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
+		var colors = ImGui.GetStyle().Colors;
+		var borderColor = colors[(int)ImGuiCol.Border];
+		colors[(int)ImGuiCol.Border] = new();
+		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 		{
-			bool b = true;
-			ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
-			ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-			var colors = ImGui.GetStyle().Colors;
-			var borderColor = colors[(int)ImGuiCol.Border];
-			colors[(int)ImGuiCol.Border] = new();
-			if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
-			{
-				colors[(int)ImGuiCol.Border] = borderColor;
-				tickDelegate?.Invoke(dt);
-			}
+			colors[(int)ImGuiCol.Border] = borderColor;
+			tickDelegate?.Invoke(dt);
+		}
 
-			ImGui.End();
+		ImGui.End();
 
-			if (showImGuiDemo)
-			{
-				ImGui.ShowDemoWindow(ref showImGuiDemo);
-			}
+		if (showImGuiDemo)
+		{
+			ImGui.ShowDemoWindow(ref showImGuiDemo);
+		}
 
-			if (showImGuiMetrics)
-			{
-				ImGui.ShowMetricsWindow(ref showImGuiMetrics);
-			}
-		});
+		if (showImGuiMetrics)
+		{
+			ImGui.ShowMetricsWindow(ref showImGuiMetrics);
+		}
 	}
 
 	/// <summary>
@@ -455,7 +455,7 @@ public static partial class ImGuiApp
 			icons.Add(new(size, size, new Memory<byte>(iconData)));
 		}
 
-		InvokeOnWindowThread(() => window?.SetWindowIcon([.. icons]));
+		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
 	}
 
 	/// <summary>
@@ -468,7 +468,7 @@ public static partial class ImGuiApp
 	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	public static uint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
-		uint textureId = InvokeOnWindowThread(() =>
+		uint textureId = Invoker.Invoke(() =>
 		{
 			if (gl is null)
 			{
@@ -503,7 +503,7 @@ public static partial class ImGuiApp
 	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	public static void DeleteTexture(uint textureId)
 	{
-		InvokeOnWindowThread(() =>
+		Invoker.Invoke(() =>
 		{
 			if (gl is null)
 			{
@@ -608,7 +608,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="ems">The value in ems to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
-	public static int EmsToPx(float ems) => InvokeOnWindowThread(() => (int)(ems * ImGui.GetFontSize()));
+	public static int EmsToPx(float ems) => Invoker.Invoke(() => (int)(ems * ImGui.GetFontSize()));
 
 	/// <summary>
 	/// Converts a value in points to pixels based on the current scale factor.
@@ -616,48 +616,4 @@ public static partial class ImGuiApp
 	/// <param name="pts">The value in points to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
 	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
-
-	/// <summary>
-	/// Invokes the specified function on the window thread and returns the result.
-	/// </summary>
-	/// <typeparam name="TReturn">The type of the return value.</typeparam>
-	/// <param name="func">The function to invoke on the window thread.</param>
-	/// <returns>The result of the function invocation.</returns>
-	/// <exception cref="ArgumentNullException">Thrown if the specified function is null.</exception>
-	/// <exception cref="InvalidOperationException">Thrown if the window is not initialized.</exception>
-	public static TReturn InvokeOnWindowThread<TReturn>(Func<TReturn> func)
-	{
-		ArgumentNullException.ThrowIfNull(func);
-
-		return window is null
-			? throw new InvalidOperationException("Window is not initialized.")
-			: WindowThreadId != Environment.CurrentManagedThreadId
-			? (TReturn)window.Invoke(func)
-			: func();
-	}
-
-	/// <summary>
-	/// Invokes the specified action on the window thread.
-	/// </summary>
-	/// <param name="action">The action to invoke on the window thread.</param>
-	/// <exception cref="ArgumentNullException">Thrown if the specified action is null.</exception>
-	/// <exception cref="InvalidOperationException">Thrown if the window is not initialized.</exception>
-	public static void InvokeOnWindowThread(Action action)
-	{
-		ArgumentNullException.ThrowIfNull(action);
-
-		if (window is null)
-		{
-			throw new InvalidOperationException("Window is not initialized.");
-		}
-
-		if (WindowThreadId != Environment.CurrentManagedThreadId)
-		{
-			window.Invoke(action);
-		}
-		else
-		{
-			action();
-		}
-	}
 }
