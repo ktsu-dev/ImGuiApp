@@ -1,8 +1,8 @@
 # ktsu.ImGuiApp
 
 A .NET library that provides application scaffolding for [Dear ImGui](https://github.com/ocornut/imgui), using [Silk.NET](https://github.com/dotnet/Silk.NET) and [ImGui.NET](https://github.com/mellinoe/ImGui.NET).
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
 
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
 [![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE.md)
 
 ## Features
@@ -18,16 +18,10 @@ A .NET library that provides application scaffolding for [Dear ImGui](https://gi
 
 ## Installation
 
-Install the package from NuGet using the .NET CLI:
+To install ImGuiApp, you can use the .NET CLI:
 
 ```bash
 dotnet add package ktsu.ImGuiApp
-```
-
-Or using the Package Manager Console:
-
-```bash
-Install-Package ktsu.ImGuiApp
 ```
 
 Or by adding the package reference to your project file:
@@ -35,6 +29,8 @@ Or by adding the package reference to your project file:
 ```xml
 <PackageReference Include="ktsu.ImGuiApp" Version="X.X.X" />
 ```
+
+Or you can use the NuGet Package Manager in Visual Studio to search for and install the `ktsu.ImGuiApp` package.
 
 ## Quick Start
 
@@ -145,7 +141,6 @@ ImGui.Image(textureId, new Vector2(128, 128));
 ## Contributing
 
 Contributions are welcome! Please submit issues and pull requests to help improve the library.
-
 
 ## Versioning
 
