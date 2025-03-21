@@ -1,3 +1,10 @@
+## v1.12.0 (minor)
+
+Changes since v1.11.0:
+
+- Throw an exception if the font is not ready yet for some reason ([@matt-edmondson](https://github.com/matt-edmondson))
+- Try a different method of memory marshaling and reorder some thigns to try fix the font crash ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.11.0 (minor)
 
 Changes since v1.10.0:
