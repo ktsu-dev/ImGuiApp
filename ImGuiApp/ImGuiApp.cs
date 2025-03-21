@@ -7,8 +7,8 @@ using System.Runtime.InteropServices;
 
 using ImGuiNET;
 
-using ktsu.StrongPaths;
 using ktsu.Invoker;
+using ktsu.StrongPaths;
 
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
@@ -52,7 +52,6 @@ public static partial class ImGuiApp
 
 	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
-	private static Collection<nint> FontHandles { get; } = [];
 
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
@@ -242,14 +241,15 @@ public static partial class ImGuiApp
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-			using (new FontAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out int bestFontSize))
+			FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out int bestFontSize);
+			float scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
+			using (new UIScaler(scaleRatio))
 			{
-				float scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
-				using (new UIScaler(scaleRatio))
+				RenderWithDefaultFont(() =>
 				{
 					RenderAppMenu(config.OnAppMenu);
 					RenderWindowContents(config.OnRender, (float)delta);
-				}
+				});
 			}
 
 			controller?.Render();
@@ -269,11 +269,6 @@ public static partial class ImGuiApp
 			// Unload OpenGL
 			gl?.Dispose();
 			gl = null;
-
-			foreach (nint fontHandle in FontHandles)
-			{
-				Marshal.FreeHGlobal(fontHandle);
-			}
 		};
 
 		window.FocusChanged += (focused) => IsFocused = focused;
@@ -285,6 +280,14 @@ public static partial class ImGuiApp
 		window.Run();
 
 		window.Dispose();
+	}
+
+	private static void RenderWithDefaultFont(Action action)
+	{
+		using (new FontAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize))
+		{
+			action();
+		}
 	}
 
 	private static void CaptureWindowNormalState()
@@ -565,41 +568,36 @@ public static partial class ImGuiApp
 		var fontAtlasPtr = io.Fonts;
 		fontAtlasPtr.Clear();
 
-		foreach (var font in fontsToLoad)
+		unsafe
 		{
-			byte[] fontBytes = font.Value;
-			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
-			FontHandles.Add(fontHandle);
-			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
-			LoadFont(fontAtlasPtr, fontHandle, fontBytes.Length, font.Key);
-		}
-	}
+			var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
+			fontConfigNativePtr->FontDataOwnedByAtlas = 0;
+			fontConfigNativePtr->PixelSnapH = 1;
+			fontConfigNativePtr->OversampleH = 1;
+			fontConfigNativePtr->OversampleV = 1;
 
-	private static void LoadFont(ImFontAtlasPtr fontAtlasPtr, nint fontHandle, int fontBytesLength, string name)
-	{
-		if (!FontIndices.TryGetValue(name, out var fontSizes))
-		{
-			fontSizes = new();
-			FontIndices[name] = fontSizes;
-		}
-
-		foreach (int size in SupportedPixelFontSizes)
-		{
-			int fontIndex = fontAtlasPtr.Fonts.Size;
-
-			unsafe
+			foreach (var (name, fontBytes) in fontsToLoad)
 			{
-				var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
-				fontConfigNativePtr->PixelSnapH = 1;
-				fontConfigNativePtr->OversampleH = 1;
-				fontConfigNativePtr->OversampleV = 1;
+				if (!FontIndices.TryGetValue(name, out var fontSizes))
+				{
+					fontSizes = new();
+					FontIndices[name] = fontSizes;
+				}
 
-				fontAtlasPtr.AddFontFromMemoryTTF(fontHandle, fontBytesLength, size, fontConfigNativePtr);
-				ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
+				fixed (byte* fontBytesPtr = fontBytes)
+				{
+					foreach (int size in SupportedPixelFontSizes)
+					{
+						int fontIndex = fontAtlasPtr.Fonts.Size;
+						fontAtlasPtr.AddFontFromMemoryTTF((nint)fontBytesPtr, fontBytes.Length, size, fontConfigNativePtr);
+						fontSizes[size] = fontIndex;
+					}
+				}
 			}
 
-			fontSizes[size] = fontIndex;
+			fontAtlasPtr.Build();
+
+			ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
 		}
 	}
 

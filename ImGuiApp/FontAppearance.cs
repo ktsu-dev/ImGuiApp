@@ -28,6 +28,11 @@ public class FontAppearance : ScopedAction
 	/// <param name="sizePixels">The size of the font in pixels.</param>
 	public FontAppearance(string name, int sizePoints, out int sizePixels)
 	{
+		if (!ImGui.GetIO().Fonts.IsBuilt())
+		{
+			throw new InvalidOperationException("Fonts have not been built yet.");
+		}
+
 		var font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
 		ImGui.PushFont(font);
 
