@@ -121,7 +121,7 @@ function MakeNotesForRange {
 '@
 
     $RANGE_FROM = $SEARCH_TAG
-    if ($RANGE_FROM -eq "v0.0.0" -or $RANGE_FROM -eq "0.0.0.0") {
+    if ($RANGE_FROM -eq "v0.0.0" -or $RANGE_FROM -eq "0.0.0.0" -or $RANGE_FROM -eq "1.0.0.0") {
         $RANGE_FROM = ""
     }
 
@@ -183,11 +183,11 @@ $TAGS | ForEach-Object {
     if ($TAG -like "v*") {
         $PREVIOUS_TAG = "v0.0.0"
         if ($TAG_INDEX -lt $TAGS.Length - 1) {
-        $PREVIOUS_TAG = $TAGS[$TAG_INDEX + 1]
+            $PREVIOUS_TAG = $TAGS[$TAG_INDEX + 1]
         }
 
         if (-not ($PREVIOUS_TAG -like "v*")) {
-        $PREVIOUS_TAG = "v0.0.0"
+            $PREVIOUS_TAG = "v0.0.0"
         }
 
         $CHANGELOG += MakeNotesForRange $TAGS $PREVIOUS_TAG $TAG
