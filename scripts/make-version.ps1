@@ -3,7 +3,7 @@ param (
     [string]$github_sha = "" # SHA of the commit
 )
 
-# Set-PSDebug -Trace 1
+Set-PSDebug -Trace 1
 
 git config versionsort.suffix "-alpha"
 git config versionsort.suffix "-beta"
@@ -17,13 +17,21 @@ if ($null -eq $ALL_TAGS) {
 } else {
     $LAST_TAG = $ALL_TAGS[0]
 }
+
+Write-Host $LAST_TAG
+
 $LAST_VERSION = $LAST_TAG -replace 'v', ''
+
+Write-Host $LAST_VERSION
+
 $IS_PRERELEASE = $LAST_VERSION.Contains('-')
 
 $LAST_VERSION = $LAST_VERSION -replace '-alpha', ''
 $LAST_VERSION = $LAST_VERSION -replace '-beta', ''
 $LAST_VERSION = $LAST_VERSION -replace '-rc', ''
 $LAST_VERSION = $LAST_VERSION -replace '-pre', ''
+
+Write-Host $LAST_VERSION
 
 $LAST_VERSION_COMPONENTS = $LAST_VERSION -split '\.'
 $LAST_VERSION_MAJOR = [int]$LAST_VERSION_COMPONENTS[0]
