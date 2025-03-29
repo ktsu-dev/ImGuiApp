@@ -170,8 +170,10 @@ $TAGS = git tag --list --sort=-v:refname
 if ($null -eq $TAGS) {
     $PREVIOUS_TAG = 'v0.0.0'
     $TAGS = @()
-} else {
+} elseif ($TAGS -is [array]) {
     $PREVIOUS_TAG = $TAGS[0]
+} else {
+    $PREVIOUS_TAG = $TAGS
 }
 
 $TAG = "v$COMMIT_VERSION"
