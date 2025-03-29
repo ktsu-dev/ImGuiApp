@@ -14,8 +14,10 @@ git config versionsort.suffix "-pre"
 $ALL_TAGS = git tag --list --sort=-v:refname
 if ($null -eq $ALL_TAGS) {
     $LAST_TAG = 'v1.0.0-pre.0'
-} else {
+} elseif ($ALL_TAGS -is [array]) {
     $LAST_TAG = $ALL_TAGS[0]
+} else {
+    $LAST_TAG = $ALL_TAGS
 }
 
 Write-Host $LAST_TAG
