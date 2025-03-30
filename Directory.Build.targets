@@ -19,13 +19,14 @@
     <IsPublishable Condition="$(IsExecutable)">true</IsPublishable>
     <IsPackable Condition="$(IsLibrary)">true</IsPackable>
 
-    <NoWarn Condition="$(IsTestProject)">$(NoWarn);CS1591;CA2225;IDE0022;IDE0058;CA1305;CA5394;</NoWarn>
+    <NoWarn Condition="$(IsTestProject)">$(NoWarn);CS1591;CA2225;IDE0022;IDE0058;CA1305;CA5394;CA1707;</NoWarn>
     <!-- CS1591: Missing XML comment for publicly visible type or member -->
     <!-- CA2225: Operator overloads have named alternates -->
     <!-- IDE0022: Use expression body for methods -->
     <!-- IDE0058: Expression value is never used -->
     <!-- CA1305: Specify IFormatProvider -->
     <!-- CA5394: Do not use insecure randomness -->
+    <!-- CA1707: Identifiers should not contain underscores -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,7 +38,7 @@
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
     <ProjectReference Include="$(SolutionDir)\$(SolutionName)\$(SolutionName).csproj" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="MSTest" Version="3.7.3" />
+    <PackageReference Include="MSTest" Version="3.8.3" />
   </ItemGroup>
 
   <ItemGroup Condition="$(IsPrimaryProject)">
