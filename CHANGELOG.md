@@ -1,3 +1,10 @@
+## v1.12.2 (patch)
+
+Changes since v1.12.1:
+
+- Add LICENSE template ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.12.1 (patch)
 
 Changes since v1.12.0:
