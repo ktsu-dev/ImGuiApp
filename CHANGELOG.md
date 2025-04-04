@@ -1,3 +1,9 @@
+## v1.12.4 (patch)
+
+Changes since v1.12.3:
+
+- Update .gitignore to include additional IDE and OS-specific files ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.12.3 (patch)
 
 Changes since v1.12.2:
