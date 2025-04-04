@@ -293,11 +293,11 @@ dotnet_diagnostic.IDE0090.severity = error # IDE0090: Use 'new(...)' instead of 
 dotnet_diagnostic.IDE1006.severity = error # IDE1006: Naming rule violation: Use the correct casing
 
 # MSBuild files
-[*.{csproj,proj,projitems,shproj,fsproj,target,props}]
+[*.{csproj,proj,projitems,shproj,fsproj,target,props,vcxproj.filters,vbproj}]
 indent_size = 2
 
 # XML config files
-[*.{config,nuspec,resx,natvis}]
+[*.{xml,config,props,targets,nuspec,resx,ruleset,vsixmanifest,vsct}]
 indent_size = 2
 
 # Visual Studio files
@@ -322,6 +322,18 @@ indent_style = tab
 # C# files
 [*.cs]
 indent_style = tab
+
+# Bash Files
+[*.sh]
+end_of_line = lf
+
+# Markdown Files
+[*.{md,mdx}]
+trim_trailing_whitespace = false
+
+# JSON Files
+[*.{json,json5,webmanifest}]
+indent_size = 2
 
 # Naming rules
 
