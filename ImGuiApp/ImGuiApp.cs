@@ -88,59 +88,8 @@ public static partial class ImGuiApp
 
 	private static ImGuiAppConfig Config { get; set; } = new();
 
-	/// <summary>
-	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
-	/// </summary>
-	/// <param name="windowTitle">The title of the application window.</param>
-	/// <param name="initialWindowState">The initial state of the application window.</param>
-	/// <param name="onStart">The action to be performed when the application starts.</param>
-	/// <param name="onTick">The action to be performed on each update tick.</param>
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu: null, onWindowResized: null);
-
-	/// <summary>
-	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
-	/// </summary>
-	/// <param name="windowTitle">The title of the application window.</param>
-	/// <param name="initialWindowState">The initial state of the application window.</param>
-	/// <param name="onStart">The action to be performed when the application starts.</param>
-	/// <param name="onTick">The action to be performed on each update tick.</param>
-	/// <param name="onMenu">The action to be performed when rendering the application menu.</param>
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu) => Start(windowTitle, initialWindowState, onStart, onTick, onMenu, onWindowResized: null);
-
-	/// <summary>
-	/// Starts the ImGui application with the specified window title, initial window state, and optional actions.
-	/// </summary>
-	/// <param name="windowTitle">The title of the application window.</param>
-	/// <param name="initialWindowState">The initial state of the application window.</param>
-	/// <param name="onStart">The action to be performed when the application starts.</param>
-	/// <param name="onTick">The action to be performed on each update tick.</param>
-	/// <param name="onMenu">The action to be performed when rendering the application menu.</param>
-	/// <param name="onWindowResized">The action to be performed when the application window is moved or resized.</param>
-	public static void Start(string windowTitle, ImGuiAppWindowState initialWindowState, Action? onStart, Action<float>? onTick, Action? onMenu, Action? onWindowResized) =>
-		Start(new ImGuiAppConfig
-		{
-			Title = windowTitle,
-			InitialWindowState = initialWindowState,
-			OnStart = onStart ?? new(() => { }),
-			OnRender = onTick ?? new((delta) => { }),
-			OnAppMenu = onMenu ?? new(() => { }),
-			OnMoveOrResize = onWindowResized ?? new(() => { }),
-		});
-
-	/// <summary>
-	/// Starts the ImGui application with the specified configuration.
-	/// </summary>
-	/// <param name="config">The configuration settings for the ImGui application.</param>
-	public static void Start(ImGuiAppConfig config)
+	private static void InitializeWindow(ImGuiAppConfig config)
 	{
-		ArgumentNullException.ThrowIfNull(config);
-
-		Invoker = new();
-
-		Config = config;
-
-		ForceDpiAware.Windows();
-
 		var silkWindowOptions = WindowOptions.Default;
 		silkWindowOptions.Title = config.Title;
 		silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
@@ -150,24 +99,22 @@ public static partial class ImGuiApp
 		LastNormalWindowState = config.InitialWindowState;
 		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 
-		// Adapted from: https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Demos/ImGui/Program.cs
-
-		// Create a Silk.NET window as usual
 		window = Window.Create(silkWindowOptions);
+	}
 
-		// Our loading function
-		window.Load += () =>
+	private static void SetupWindowLoadHandler(ImGuiAppConfig config)
+	{
+		window!.Load += () =>
 		{
 			if (!string.IsNullOrEmpty(config.IconPath))
 			{
 				SetWindowIcon(config.IconPath);
 			}
 
-			gl = window.CreateOpenGL(); // load OpenGL
+			gl = window.CreateOpenGL();
+			inputContext = window.CreateInput();
 
-			inputContext = window.CreateInput(); // create an input context
-			controller = new
-			(
+			controller = new(
 				gl,
 				view: window,
 				input: inputContext,
@@ -182,28 +129,51 @@ public static partial class ImGuiApp
 			ImGui.GetStyle().WindowRounding = 0;
 			window.WindowState = config.InitialWindowState.LayoutState;
 		};
+	}
 
-		window.FramebufferResize += s =>
+	private static void SetupWindowResizeHandler(ImGuiAppConfig config)
+	{
+		window!.FramebufferResize += s =>
 		{
 			gl?.Viewport(s);
-
 			CaptureWindowNormalState();
-
 			UpdateDpiScale();
-
 			config.OnMoveOrResize?.Invoke();
 		};
+	}
 
-		window.Move += (p) =>
+	private static void SetupWindowMoveHandler(ImGuiAppConfig config)
+	{
+		window!.Move += (p) =>
 		{
 			CaptureWindowNormalState();
-
 			UpdateDpiScale();
-
 			config.OnMoveOrResize?.Invoke();
 		};
+	}
 
-		window.Update += (delta) =>
+	private static void UpdateWindowPerformance()
+	{
+		double currentFps = window!.FramesPerSecond;
+		double currentUps = window.UpdatesPerSecond;
+		double requiredFps = IsFocused ? 30 : 5;
+		double requiredUps = IsFocused ? 30 : 5;
+
+		if (currentFps != requiredFps)
+		{
+			window.VSync = false;
+			window.FramesPerSecond = requiredFps;
+		}
+
+		if (currentUps != requiredUps)
+		{
+			window.UpdatesPerSecond = requiredUps;
+		}
+	}
+
+	private static void SetupWindowUpdateHandler(ImGuiAppConfig config)
+	{
+		window!.Update += (delta) =>
 		{
 			if (!controller?.FontsConfigured ?? true)
 			{
@@ -211,29 +181,17 @@ public static partial class ImGuiApp
 			}
 
 			EnsureWindowPositionIsValid();
-
-			double currentFps = window.FramesPerSecond;
-			double currentUps = window.UpdatesPerSecond;
-			double requiredFps = IsFocused ? 30 : 5;
-			double requiredUps = IsFocused ? 30 : 5;
-			if (currentFps != requiredFps)
-			{
-				window.VSync = false;
-				window.FramesPerSecond = requiredFps;
-			}
-
-			if (currentUps != requiredUps)
-			{
-				window.UpdatesPerSecond = requiredUps;
-			}
+			UpdateWindowPerformance();
 
 			controller?.Update((float)delta);
 			config.OnUpdate?.Invoke((float)delta);
 			Invoker.DoInvokes();
 		};
+	}
 
-		// The render function
-		window.Render += delta =>
+	private static void SetupWindowRenderHandler(ImGuiAppConfig config)
+	{
+		window!.Render += delta =>
 		{
 			if (!controller?.FontsConfigured ?? true)
 			{
@@ -243,55 +201,95 @@ public static partial class ImGuiApp
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
 
-			FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out int bestFontSize);
-			float scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
-			using (new UIScaler(scaleRatio))
+			RenderWithScaling(() =>
 			{
-				RenderWithDefaultFont(() =>
-				{
-					RenderAppMenu(config.OnAppMenu);
-					RenderWindowContents(config.OnRender, (float)delta);
-				});
-			}
+				RenderAppMenu(config.OnAppMenu);
+				RenderWindowContents(config.OnRender, (float)delta);
+			});
 
 			controller?.Render();
 		};
+	}
 
-		// The closing function
-		window.Closing += () =>
+	private static void RenderWithScaling(Action renderAction)
+	{
+		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out int bestFontSize);
+		float scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
+		using (new UIScaler(scaleRatio))
 		{
-			// Free pinned font data
-			foreach (var handle in currentPinnedFontData)
-			{
-				if (handle.IsAllocated)
-				{
-					handle.Free();
-				}
-			}
+			RenderWithDefaultFont(renderAction);
+		}
+	}
 
-			currentPinnedFontData.Clear();
-
-			// Dispose our controller first
-			controller?.Dispose();
-			controller = null;
-
-			// Dispose the input context
-			inputContext?.Dispose();
-			inputContext = null;
-
-			// Unload OpenGL
-			gl?.Dispose();
-			gl = null;
+	private static void SetupWindowClosingHandler()
+	{
+		window!.Closing += () =>
+		{
+			CleanupPinnedFontData();
+			CleanupController();
+			CleanupInputContext();
+			CleanupOpenGL();
 		};
+	}
 
-		window.FocusChanged += (focused) => IsFocused = focused;
+	private static void CleanupPinnedFontData()
+	{
+		foreach (var handle in currentPinnedFontData)
+		{
+			if (handle.IsAllocated)
+			{
+				handle.Free();
+			}
+		}
 
+		currentPinnedFontData.Clear();
+	}
+
+	private static void CleanupController()
+	{
+		controller?.Dispose();
+		controller = null;
+	}
+
+	private static void CleanupInputContext()
+	{
+		inputContext?.Dispose();
+		inputContext = null;
+	}
+
+	private static void CleanupOpenGL()
+	{
+		gl?.Dispose();
+		gl = null;
+	}
+
+	/// <summary>
+	/// Starts the ImGui application with the specified configuration.
+	/// </summary>
+	/// <param name="config">The configuration settings for the ImGui application.</param>
+	public static void Start(ImGuiAppConfig config)
+	{
+		ArgumentNullException.ThrowIfNull(config);
+
+		Invoker = new();
+		Config = config;
+		ForceDpiAware.Windows();
+
+		InitializeWindow(config);
+		SetupWindowLoadHandler(config);
+		SetupWindowResizeHandler(config);
+		SetupWindowMoveHandler(config);
+		SetupWindowUpdateHandler(config);
+		SetupWindowRenderHandler(config);
+		SetupWindowClosingHandler();
+
+		window!.FocusChanged += (focused) => IsFocused = focused;
+
+		// Hide console window
 		nint handle = NativeMethods.GetConsoleWindow();
 		_ = NativeMethods.ShowWindow(handle, SW_HIDE);
 
-		// Now that everything's defined, let's run this bad boy!
 		window.Run();
-
 		window.Dispose();
 	}
 
