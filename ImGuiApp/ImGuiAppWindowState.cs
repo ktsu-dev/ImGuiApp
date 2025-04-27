@@ -1,4 +1,4 @@
-﻿namespace ktsu.ImGuiApp;
+namespace ktsu.ImGuiApp;
 using System.Numerics;
 
 using Silk.NET.Windowing;

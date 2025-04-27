@@ -1,12 +1,13 @@
 namespace ktsu.ImGuiApp.Demo;
 
+using System.Numerics;
+
 using ImGuiNET;
 
 using ktsu.Extensions;
 using ktsu.ImGuiApp;
-using ktsu.StrongPaths;
 using ktsu.ImGuiAppDemo.Properties;
-using System.Numerics;
+using ktsu.StrongPaths;
 
 internal static class ImGuiAppDemo
 {

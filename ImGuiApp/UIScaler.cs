@@ -1,8 +1,10 @@
 namespace ktsu.ImGuiApp;
 
-using ktsu.ScopedAction;
-using ImGuiNET;
 using System.Numerics;
+
+using ImGuiNET;
+
+using ktsu.ScopedAction;
 
 /// <summary>
 /// Class responsible for scaling UI elements in ImGui.
