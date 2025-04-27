@@ -52,6 +52,8 @@ public static partial class ImGuiApp
 
 	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
+	private static float lastFontScaleFactor;
+	private static List<GCHandle> currentPinnedFontData = [];
 
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
@@ -258,6 +260,17 @@ public static partial class ImGuiApp
 		// The closing function
 		window.Closing += () =>
 		{
+			// Free pinned font data
+			foreach (var handle in currentPinnedFontData)
+			{
+				if (handle.IsAllocated)
+				{
+					handle.Free();
+				}
+			}
+
+			currentPinnedFontData.Clear();
+
 			// Dispose our controller first
 			controller?.Dispose();
 			controller = null;
@@ -402,7 +415,6 @@ public static partial class ImGuiApp
 		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
 		var colors = ImGui.GetStyle().Colors;
 		var borderColor = colors[(int)ImGuiCol.Border];
-		colors[(int)ImGuiCol.Border] = new();
 		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 		{
 			colors[(int)ImGuiCol.Border] = borderColor;
@@ -554,7 +566,17 @@ public static partial class ImGuiApp
 		return textureInfo;
 	}
 
-	private static void UpdateDpiScale() => ScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
+	private static void UpdateDpiScale()
+	{
+		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
+
+		// Only update if the scale factor changed significantly
+		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.1f)
+		{
+			ScaleFactor = newScaleFactor;
+			// We'll let InitFonts decide whether to rebuild based on the scale change
+		}
+	}
 
 	// https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#loading-font-data-from-memory
 	// IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
@@ -562,43 +584,113 @@ public static partial class ImGuiApp
 	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
 	internal static void InitFonts()
 	{
+		// Only load fonts if they haven't been loaded or if scale factor has changed significantly
+		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.1f)
+		{
+			return; // Skip reloading fonts if they're already loaded and scale hasn't changed much
+		}
+
+		lastFontScaleFactor = ScaleFactor;
+
 		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 
 		var io = ImGui.GetIO();
 		var fontAtlasPtr = io.Fonts;
+
+		// Clear existing font data and indices
 		fontAtlasPtr.Clear();
+		FontIndices.Clear();
+
+		// Track fonts that need disposal after rebuilding the atlas
+		List<GCHandle> fontPinnedData = [];
 
 		unsafe
 		{
 			var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-			fontConfigNativePtr->FontDataOwnedByAtlas = 0;
-			fontConfigNativePtr->PixelSnapH = 1;
-			fontConfigNativePtr->OversampleH = 1;
-			fontConfigNativePtr->OversampleV = 1;
-
-			foreach (var (name, fontBytes) in fontsToLoad)
+			try
 			{
-				if (!FontIndices.TryGetValue(name, out var fontSizes))
-				{
-					fontSizes = new();
-					FontIndices[name] = fontSizes;
-				}
+				// We'll still tell ImGui not to own the data, but we'll track it ourselves
+				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
+				fontConfigNativePtr->PixelSnapH = 1;
+				fontConfigNativePtr->OversampleH = 2; // Improved oversampling for better quality
+				fontConfigNativePtr->OversampleV = 2;
+				fontConfigNativePtr->RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
 
-				fixed (byte* fontBytesPtr = fontBytes)
+				foreach (var (name, fontBytes) in fontsToLoad)
 				{
+					if (!FontIndices.TryGetValue(name, out var fontSizes))
+					{
+						fontSizes = new();
+						FontIndices[name] = fontSizes;
+					}
+
+					// Pin the font data so the GC doesn't move or collect it while ImGui is using it
+					var pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
+					fontPinnedData.Add(pinnedFontData);
+
+					IntPtr fontDataPtr = pinnedFontData.AddrOfPinnedObject();
+
 					foreach (int size in SupportedPixelFontSizes)
 					{
 						int fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF((nint)fontBytesPtr, fontBytes.Length, size, fontConfigNativePtr);
+						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, size, fontConfigNativePtr);
 						fontSizes[size] = fontIndex;
 					}
 				}
+
+				// Build the font atlas
+				bool success = fontAtlasPtr.Build();
+				if (!success)
+				{
+					throw new InvalidOperationException("Failed to build ImGui font atlas");
+				}
 			}
-
-			fontAtlasPtr.Build();
-
-			ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
+			finally
+			{
+				// Cleanup the font config
+				ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
+			}
 		}
+
+		// Store the pinned font data for later cleanup
+		StorePinnedFontData(fontPinnedData);
+	}
+
+	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
+	{
+		// Free any previously pinned font data
+		foreach (var handle in currentPinnedFontData)
+		{
+			if (handle.IsAllocated)
+			{
+				handle.Free();
+			}
+		}
+
+		// Store the new pinned data
+		currentPinnedFontData = newPinnedData;
+	}
+
+	/// <inheritdoc/>
+	public static void CleanupAllTextures()
+	{
+		if (gl == null)
+		{
+			return;
+		}
+
+		// Make a copy of the keys to avoid collection modification issues
+		var texturesToRemove = Textures.Keys.ToList();
+
+		foreach (var texturePath in texturesToRemove)
+		{
+			if (Textures.TryGetValue(texturePath, out var info))
+			{
+				DeleteTexture(info.TextureId);
+			}
+		}
+
+		Textures.Clear();
 	}
 
 	/// <summary>
