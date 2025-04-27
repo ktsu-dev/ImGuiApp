@@ -182,17 +182,16 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void DeleteTexture_WithNullGL_ThrowsInvalidOperationException()
 	{
-		// Mock the window and GL context
-		var mockWindow = new Mock<IWindow>();
-		var mockContext = new Mock<IGLContext>();
-		mockWindow.Setup(w => w.GLContext).Returns(mockContext.Object);
+		// Reset state to ensure clean test environment
+		ResetState();
 
 		// Create a test config that won't actually run the window
 		var config = new ImGuiAppConfig { OnStart = ImGuiApp.Stop };
 
-		// Start and immediately stop the app
+		// Start and immediately stop the app to initialize the Invoker
 		ImGuiApp.Start(config);
 
+		// Now test the DeleteTexture method
 		Assert.ThrowsException<InvalidOperationException>(() => ImGuiApp.DeleteTexture(1));
 	}
 
