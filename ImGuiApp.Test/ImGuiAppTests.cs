@@ -185,11 +185,9 @@ public sealed class ImGuiAppTests : IDisposable
 		// Reset state to ensure clean test environment
 		ResetState();
 
-		// Create a test config that won't actually run the window
-		var config = new ImGuiAppConfig { OnStart = ImGuiApp.Stop };
-
-		// Start and immediately stop the app to initialize the Invoker
-		ImGuiApp.Start(config);
+		// Set up a basic invoker that executes actions immediately
+		var invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+		invokerField?.SetValue(null, new Invoker.Invoker());
 
 		// Now test the DeleteTexture method
 		Assert.ThrowsException<InvalidOperationException>(() => ImGuiApp.DeleteTexture(1));
