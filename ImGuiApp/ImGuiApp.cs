@@ -312,8 +312,16 @@ public static partial class ImGuiApp
 	{
 		ArgumentNullException.ThrowIfNull(config);
 
+		if (window != null)
+		{
+			throw new InvalidOperationException("Application is already running.");
+		}
+
 		Invoker = new();
 		Config = config;
+
+		ValidateConfig(config);
+
 		ForceDpiAware.Windows();
 
 		InitializeWindow(config);
@@ -326,12 +334,64 @@ public static partial class ImGuiApp
 
 		window!.FocusChanged += (focused) => IsFocused = focused;
 
-		// Hide console window
-		var handle = NativeMethods.GetConsoleWindow();
-		NativeMethods.ShowWindow(handle, SW_HIDE);
+		if (!config.TestMode)
+		{
+			// Hide console window only in non-test mode
+			var handle = NativeMethods.GetConsoleWindow();
+			NativeMethods.ShowWindow(handle, SW_HIDE);
 
-		window.Run();
-		window.Dispose();
+			window.Run();
+			window.Dispose();
+		}
+	}
+
+	private static void ValidateConfig(ImGuiAppConfig config)
+	{
+		if (config.InitialWindowState.Size.X <= 0 || config.InitialWindowState.Size.Y <= 0)
+		{
+			throw new ArgumentException("Initial window size must be greater than zero.", nameof(config));
+		}
+
+		if (config.InitialWindowState.Pos.X < 0 || config.InitialWindowState.Pos.Y < 0)
+		{
+			throw new ArgumentException("Initial window position must be non-negative.", nameof(config));
+		}
+
+		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Minimized)
+		{
+			throw new ArgumentException("Initial window state cannot be minimized.", nameof(config));
+		}
+
+		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Fullscreen)
+		{
+			throw new ArgumentException("Initial window state cannot be fullscreen.", nameof(config));
+		}
+
+		if (!string.IsNullOrEmpty(config.IconPath) && !File.Exists(config.IconPath))
+		{
+			throw new FileNotFoundException("Icon file not found.", config.IconPath);
+		}
+
+		foreach (var font in config.Fonts)
+		{
+			if (string.IsNullOrEmpty(font.Key) || font.Value == null)
+			{
+				throw new ArgumentException("Font name and data must be specified.", nameof(config));
+			}
+		}
+
+		if (config.DefaultFonts.Count == 0)
+		{
+			throw new ArgumentException("At least one default font must be specified in the configuration.", nameof(config));
+		}
+
+		foreach (var font in config.DefaultFonts)
+		{
+			if (string.IsNullOrEmpty(font.Key) || font.Value == null)
+			{
+				throw new ArgumentException("Default font name and data must be specified.", nameof(config));
+			}
+		}
 	}
 
 	private static void RenderWithDefaultFont(Action action)

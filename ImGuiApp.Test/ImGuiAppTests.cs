@@ -128,6 +128,7 @@ public sealed class ImGuiAppTests : IDisposable
 	{
 		var config = TestHelpers.CreateTestConfig();
 		ImGuiApp.Start(config);
+		TestHelpers.SimulateWindowLifecycle(config.TestWindow!);
 		ImGuiApp.Start(config); // Should throw
 	}
 
