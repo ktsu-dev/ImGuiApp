@@ -4,11 +4,25 @@
 
 namespace ktsu.ImGuiApp;
 
+using Silk.NET.Windowing;
+
 /// <summary>
 /// Represents the configuration settings for the ImGui application.
 /// </summary>
 public class ImGuiAppConfig
 {
+	/// <summary>
+	/// Gets or sets a value indicating whether the application is running in test mode.
+	/// When true, the window will be invisible and optimized for testing.
+	/// </summary>
+	public bool TestMode { get; init; }
+
+	/// <summary>
+	/// Gets or sets the test window to use when TestMode is true.
+	/// This must be set when TestMode is true.
+	/// </summary>
+	internal IWindow? TestWindow { get; init; }
+
 	/// <summary>
 	/// Gets or sets the title of the application window.
 	/// </summary>

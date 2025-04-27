@@ -102,12 +102,27 @@ public static partial class ImGuiApp
 
 	private static void InitializeWindow(ImGuiAppConfig config)
 	{
-		var silkWindowOptions = new WindowOptions
+		if (config.TestMode)
+		{
+			// In test mode, use the test window from config
+			window = config.TestWindow ?? throw new InvalidOperationException("TestWindow must be set when TestMode is true");
+			return;
+		}
+
+		var silkWindowOptions = WindowOptions.Default with
 		{
 			Title = config.Title,
 			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
 			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
-			WindowState = Silk.NET.Windowing.WindowState.Normal
+			WindowState = Silk.NET.Windowing.WindowState.Normal,
+			API = new GraphicsAPI(
+				ContextAPI.OpenGL,
+				ContextProfile.Core,
+				ContextFlags.ForwardCompatible,
+				new APIVersion(3, 3)),
+			PreferredDepthBufferBits = 24,
+			PreferredStencilBufferBits = 8,
+			IsEventDriven = true
 		};
 
 		LastNormalWindowState = config.InitialWindowState;
@@ -758,18 +773,20 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="ems">The value in ems to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
-	public static int EmsToPx(float ems) =>
-		// Default font size is 16px if ImGui is not initialized
-		(int)(ems * (ImGui.GetCurrentContext() != IntPtr.Zero ? ImGui.GetFontSize() : 16.0f));
+	public static int EmsToPx(float ems)
+	{
+		// if imgui is not initialized, use default font size
+		return controller is null
+			? (int)(ems * FontAppearance.DefaultFontPointSize)
+			: Invoker.Invoke(() => (int)(ems * ImGui.GetFontSize()));
+	}
 
 	/// <summary>
 	/// Converts a value in points to pixels based on the current scale factor.
 	/// </summary>
 	/// <param name="pts">The value in points to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
-	public static int PtsToPx(int pts) =>
-		// Standard DPI is 72 points per inch, Windows uses 96 DPI as base
-		(int)(pts * (96.0f / 72.0f) * ScaleFactor);
+	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
 
 	/// <summary>
 	/// Resets all static state for testing purposes.

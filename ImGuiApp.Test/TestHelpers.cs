@@ -35,10 +35,21 @@ public static class TestHelpers
 	/// <returns>An ImGuiAppConfig instance.</returns>
 	public static ImGuiAppConfig CreateTestConfig(string title = "Test Window", string iconPath = "")
 	{
+		var mockWindow = CreateMockWindow();
+
+		// Set up additional mock behaviors needed for testing
+		mockWindow.Setup(w => w.Run()).Callback(() => mockWindow.Raise(w => w.Load += null));
+		mockWindow.Setup(w => w.DoEvents());
+		mockWindow.Setup(w => w.DoUpdate());
+		mockWindow.Setup(w => w.DoRender());
+		mockWindow.Setup(w => w.IsClosing).Returns(true); // Make window close immediately after Load
+
 		return new ImGuiAppConfig
 		{
 			Title = title,
 			IconPath = iconPath,
+			TestMode = true,
+			TestWindow = mockWindow.Object,
 			InitialWindowState = new ImGuiAppWindowState
 			{
 				Size = new Vector2(800, 600),

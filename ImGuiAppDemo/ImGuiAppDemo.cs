@@ -155,9 +155,9 @@ internal static class ImGuiAppDemo
 				{
 					ImGui.Text($"Scroll item {i + 1}");
 				}
-
-				ImGui.EndChild();
 			}
+
+			ImGui.EndChild();
 		}
 
 		ImGui.End();

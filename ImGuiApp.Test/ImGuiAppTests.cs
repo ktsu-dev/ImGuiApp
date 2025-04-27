@@ -69,8 +69,7 @@ public sealed class ImGuiAppTests : IDisposable
 	public void EmsToPx_WithValidInput_ReturnsCorrectPixels()
 	{
 		const float ems = 1.5f;
-		const float dpi = 96.0f;
-		var expected = ems * 16.0f * (dpi / 96.0f);
+		var expected = (int)(ems * FontAppearance.DefaultFontPointSize);
 		var actual = ImGuiApp.EmsToPx(ems);
 		Assert.AreEqual(expected, actual);
 	}
@@ -79,8 +78,7 @@ public sealed class ImGuiAppTests : IDisposable
 	public void PtsToPx_WithValidInput_ReturnsCorrectPixels()
 	{
 		const float pts = 12.0f;
-		const float dpi = 96.0f;
-		var expected = pts * (dpi / 72.0f);
+		var expected = pts;
 		var actual = ImGuiApp.PtsToPx((int)pts);
 		Assert.AreEqual(expected, actual);
 	}
