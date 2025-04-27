@@ -1,340 +1,244 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
 root = true
 
+# All files
 [*]
 charset = utf-8
 indent_style = space
 indent_size = 4
-insert_final_newline = true
-trim_trailing_whitespace = true
 tab_width = 4
 end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
 
+# .NET code files
+[*.{cs,csx,cake,fs,fsx,vb,vbx}]
+indent_style = tab
+
+file_header_template = Copyright (c) ktsu.dev\nAll rights reserved.\nLicensed under the MIT license.
+
+# Default severity for all .NET Code Style rules
 dotnet_analyzer_diagnostic.severity = error
 
-dotnet_code_quality_unused_parameters = non_public:error
-dotnet_remove_unnecessary_suppression_exclusions = all
-dotnet_separate_import_directive_groups = true
-dotnet_sort_system_directives_first = true
+# .NET Code Style Settings
+# "This." and "Me." qualifiers
+dotnet_style_qualification_for_field = false:error
+dotnet_style_qualification_for_property = false:error
+dotnet_style_qualification_for_method = false:error
+dotnet_style_qualification_for_event = false:error
 
+# Parameter preferences
+dotnet_code_quality_unused_parameters = all:error
+
+# Language keywords instead of framework type names for type references
+dotnet_style_predefined_type_for_locals_parameters_members = true:error
+dotnet_style_predefined_type_for_member_access = true:error
+
+# Modifier preferences
+dotnet_style_require_accessibility_modifiers = always:error
+dotnet_style_readonly_field = true:error
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:error
+
+# Parentheses preferences
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:error
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:error
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:error
+dotnet_style_parentheses_in_other_operators = always_for_clarity:error
+
+# Expression-level preferences
+dotnet_style_object_initializer = true:error
+dotnet_style_collection_initializer = true:error
+dotnet_style_explicit_tuple_names = true:error
+dotnet_style_prefer_inferred_tuple_names = true:error
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:error
+dotnet_style_prefer_auto_properties = true:error
+dotnet_style_prefer_conditional_expression_over_assignment = true:error
+dotnet_style_prefer_conditional_expression_over_return = true:error
+dotnet_style_prefer_compound_assignment = true:error
+dotnet_style_prefer_simplified_interpolation = true:error
+dotnet_style_prefer_simplified_boolean_expressions = true:error
+dotnet_style_prefer_collection_expression = when_types_loosely_match:error
+
+# Null-checking preferences
+dotnet_style_coalesce_expression = true:error
+dotnet_style_null_propagation = true:error
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:error
+
+# Namespace preferences
+csharp_style_namespace_declarations = file_scoped:error
 csharp_using_directive_placement = inside_namespace:error
-csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+dotnet_style_namespace_match_folder = false
 
-csharp_indent_block_contents = true
-csharp_indent_braces = false
-csharp_indent_case_contents = true
-csharp_indent_case_contents_when_block = false
-csharp_indent_labels = one_less_than_current
-csharp_indent_switch_labels = true
+# Code-block preferences
+csharp_prefer_braces = true:error
+csharp_prefer_simple_using_statement = true:silent
+csharp_style_prefer_method_group_conversion = true:error
+csharp_style_prefer_top_level_statements = false:error
+csharp_style_prefer_primary_constructors = true:error
+csharp_style_expression_bodied_methods = when_on_single_line:error
+csharp_style_expression_bodied_constructors = when_on_single_line:error
+csharp_style_expression_bodied_operators = when_on_single_line:error
+csharp_style_expression_bodied_properties = when_on_single_line:error
+csharp_style_expression_bodied_indexers = when_on_single_line:error
+csharp_style_expression_bodied_accessors = when_on_single_line:error
+csharp_style_expression_bodied_lambdas = when_on_single_line:error
+csharp_style_expression_bodied_local_functions = when_on_single_line:error
 
-csharp_new_line_before_catch = true
-csharp_new_line_before_else = true
-csharp_new_line_before_finally = true
-csharp_new_line_before_members_in_anonymous_types = true
-csharp_new_line_before_members_in_object_initializers = true
+# Pattern matching preferences
+csharp_style_pattern_matching_over_is_with_cast_check = true:error
+csharp_style_pattern_matching_over_as_with_null_check = true:error
+csharp_style_prefer_switch_expression = true:error
+csharp_style_prefer_pattern_matching = true:error
+csharp_style_prefer_not_pattern = true:error
+csharp_style_prefer_extended_property_pattern = true:error
+
+# Variable declaration preferences
+csharp_style_var_for_built_in_types = true:error
+csharp_style_var_when_type_is_apparent = true:error
+csharp_style_var_elsewhere = true:error
+csharp_style_inlined_variable_declaration = true:error
+csharp_style_deconstructed_variable_declaration = true:error
+csharp_style_implicit_object_creation_when_type_is_apparent = true:error
+
+# 'null' checking preferences
+csharp_style_throw_expression = true:error
+csharp_style_conditional_delegate_call = true:error
+csharp_style_prefer_null_check_over_type_check = true:error
+
+# Code-block preferences
+csharp_prefer_simple_default_expression = true:error
+
+# Index and range preferences
+csharp_style_prefer_index_operator = true:error
+csharp_style_prefer_range_operator = true:error
+
+# Miscellaneous preferences
+csharp_style_prefer_local_over_anonymous_function = true:error
+csharp_style_prefer_tuple_swap = true:error
+csharp_style_prefer_utf8_string_literals = true:error
+csharp_style_unused_value_assignment_preference = discard_variable:none
+csharp_style_unused_value_expression_statement_preference = discard_variable:none
+csharp_style_prefer_readonly_struct = true:error
+csharp_style_prefer_readonly_struct_member = true:error
+
+# New line preferences
 csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
 csharp_new_line_between_query_expression_clauses = true
 
-csharp_prefer_braces = true:error
-csharp_prefer_simple_default_expression = true:error
-csharp_prefer_simple_using_statement = true:silent
-csharp_prefer_static_local_function = true:error
-csharp_prefer_static_anonymous_function = true:error
-csharp_prefer_system_threading_lock = true:error
+# Indentation preferences
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+csharp_indent_case_contents_when_block = false
 
-csharp_space_around_binary_operators = before_and_after
-csharp_space_between_method_declaration_name_and_open_parenthesis = false
-csharp_space_between_method_declaration_parameter_list_parentheses = false
-csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
-csharp_space_between_method_call_name_and_opening_parenthesis = false
-csharp_space_between_method_call_parameter_list_parentheses = false
-csharp_space_between_method_call_empty_parameter_list_parentheses = false
+# Space preferences
+csharp_space_after_cast = false
 csharp_space_after_keywords_in_control_flow_statements = true
 csharp_space_between_parentheses = false
-csharp_space_after_cast = false
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_declaration_name_and_open_parenthesis = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_after_dot = false
+csharp_space_before_dot = false
+csharp_space_after_semicolon_in_for_statement = true
+csharp_space_before_semicolon_in_for_statement = false
 csharp_space_around_declaration_statements = false
 csharp_space_before_open_square_brackets = false
 csharp_space_between_empty_square_brackets = false
 csharp_space_between_square_brackets = false
-csharp_space_after_colon_in_inheritance_clause = true
-csharp_space_after_comma = true
-csharp_space_after_dot = false
-csharp_space_after_semicolon_in_for_statement = true
-csharp_space_before_colon_in_inheritance_clause = true
-csharp_space_before_comma = false
-csharp_space_before_dot = false
-csharp_space_before_semicolon_in_for_statement = false
 
-csharp_preserve_single_line_blocks = true
+# Wrap preferences
 csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
 
-csharp_style_conditional_delegate_call = true:error
-csharp_style_deconstructed_variable_declaration = true:error
-csharp_style_expression_bodied_accessors = when_on_single_line:error
-csharp_style_expression_bodied_constructors = when_on_single_line:error
-csharp_style_expression_bodied_indexers = when_on_single_line:error
-csharp_style_expression_bodied_lambdas = when_on_single_line:error
-csharp_style_expression_bodied_local_functions = when_on_single_line:error
-csharp_style_expression_bodied_methods = when_on_single_line:error
-csharp_style_expression_bodied_operators = when_on_single_line:error
-csharp_style_expression_bodied_properties = when_on_single_line:error
-csharp_style_implicit_object_creation_when_type_is_apparent = true:error
-csharp_style_inlined_variable_declaration = true:error
-csharp_style_namespace_declarations = file_scoped:error
-csharp_style_pattern_local_over_anonymous_function = true
-csharp_style_pattern_matching_over_as_with_null_check = true:error
-csharp_style_pattern_matching_over_is_with_cast_check = true:error
-csharp_style_prefer_index_operator = true:error
-csharp_style_prefer_method_group_conversion = true:error
-csharp_style_prefer_not_pattern = true:error
-csharp_style_prefer_pattern_matching = true:error
-csharp_style_prefer_primary_constructors = true:error
-csharp_style_prefer_switch_expression = true:error
-csharp_style_prefer_extended_property_pattern = true:error
-csharp_style_prefer_top_level_statements = false:error
-csharp_style_prefer_null_check_over_type_check = true:error
-csharp_style_prefer_local_over_anonymous_function = true:error
-csharp_style_prefer_range_operator = true:error
-csharp_style_prefer_tuple_swap = true:error
-csharp_style_prefer_utf8_string_literals = true:error
-csharp_style_unused_value_assignment_preference = discard_variable:error
-csharp_style_throw_expression = true:error
-csharp_style_unused_value_expression_statement_preference = discard_variable:error
-csharp_style_var_elsewhere = true:error
-csharp_style_var_for_built_in_types = true:error
-csharp_style_var_when_type_is_apparent = true:error
-csharp_style_prefer_readonly_struct = true:error
-csharp_style_prefer_readonly_struct_member = true:error
+# Experimental Features
 csharp_style_allow_embedded_statements_on_same_line_experimental = false:error
 csharp_style_allow_blank_lines_between_consecutive_braces_experimental = false:error
 csharp_style_allow_blank_line_after_colon_in_constructor_initializer_experimental = false:error
-csharp_style_allow_blank_line_after_token_in_conditional_expression_experimental = true:silent
-csharp_style_allow_blank_line_after_token_in_arrow_expression_clause_experimental = true:silent
-
-dotnet_style_coalesce_expression = true:error
-dotnet_style_collection_initializer = true:error
-dotnet_style_explicit_tuple_names = true:error
-dotnet_style_namespace_match_folder = false:silent
-dotnet_style_null_propagation = true:error
-dotnet_style_object_initializer = true:error
-dotnet_style_operator_placement_when_wrapping = beginning_of_line
-dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:error
-dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:error
-dotnet_style_parentheses_in_other_operators = always_for_clarity:error
-dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:error
-dotnet_style_predefined_type_for_locals_parameters_members = true:error
-dotnet_style_predefined_type_for_member_access = true:error
-dotnet_style_prefer_auto_properties = true:suggestion
-dotnet_style_prefer_compound_assignment = true:error
-dotnet_style_prefer_conditional_expression_over_assignment = true:error
-dotnet_style_prefer_conditional_expression_over_return = true:error
-dotnet_style_prefer_inferred_anonymous_type_member_names = true:error
-dotnet_style_prefer_inferred_tuple_names = true:error
-dotnet_style_prefer_is_null_check_over_reference_equality_method = true:error
-dotnet_style_prefer_simplified_boolean_expressions = true:error
-dotnet_style_prefer_simplified_interpolation = true:error
-dotnet_style_readonly_field = true:error
-dotnet_style_require_accessibility_modifiers = always:error
-dotnet_style_prefer_collection_expression = when_types_loosely_match:error
+csharp_style_allow_blank_line_after_token_in_conditional_expression_experimental = true:error
+csharp_style_allow_blank_line_after_token_in_arrow_expression_clause_experimental = true:error
 dotnet_style_allow_multiple_blank_lines_experimental = false:error
 dotnet_style_allow_statement_immediately_after_block_experimental = false:error
-dotnet_style_qualification_for_field = false:error
-dotnet_style_qualification_for_property = false:error
-dotnet_style_qualification_for_event = false:error
-dotnet_style_qualification_for_method = false:error
 
-dotnet_diagnostic.CA1002.severity = error # CA1002: Do not expose generic lists
-dotnet_diagnostic.CA1003.severity = error # CA1003: Use generic event handler instances
-dotnet_diagnostic.CA1005.severity = error # CA1005: Avoid excessive parameters on generic types
-dotnet_diagnostic.CA1008.severity = error # CA1008: Enums should have zero value
-dotnet_diagnostic.CA1012.severity = error # CA1012: Abstract types should not have constructors
-dotnet_diagnostic.CA1014.severity = error # CA1014: Mark assemblies with CLSCompliantAttribute
-dotnet_diagnostic.CA1017.severity = error # CA1017: Mark assemblies with ComVisibleAttribute
-dotnet_diagnostic.CA1019.severity = error # CA1019: Define accessors for attribute arguments
-dotnet_diagnostic.CA1021.severity = none # CA1021: Avoid out parameters
-dotnet_diagnostic.CA1024.severity = error # CA1024: Use properties where appropriate
-dotnet_diagnostic.CA1027.severity = error # CA1027: Mark enums with FlagsAttribute
-dotnet_diagnostic.CA1028.severity = error # CA1028: Enum storage should be Int32
-dotnet_diagnostic.CA1030.severity = error # CA1030: Use events where appropriate
-dotnet_diagnostic.CA1031.severity = error # CA1031: Do not catch general exception types
-dotnet_diagnostic.CA1032.severity = error # CA1032: Implement standard exception constructors
-dotnet_diagnostic.CA1033.severity = error # CA1033: Interface methods should be callable by child types
-dotnet_diagnostic.CA1034.severity = none # CA1034: Nested types should not be visible
-dotnet_diagnostic.CA1040.severity = none # CA1040: Avoid empty interfaces
-dotnet_diagnostic.CA1043.severity = error # CA1043: Use integral or string argument for indexers
-dotnet_diagnostic.CA1044.severity = error # CA1044: Properties should not be write-only
-dotnet_diagnostic.CA1045.severity = none # CA1045: Do not pass types by reference
-dotnet_diagnostic.CA1046.severity = none # CA1046: Do not overload operator equals on reference types
-dotnet_diagnostic.CA1052.severity = error # CA1052: Static holder types should be static or not inheritable
-dotnet_diagnostic.CA1054.severity = error # CA1054: URI parameters should not be strings
-dotnet_diagnostic.CA1055.severity = error # CA1055: URI return values should not be strings
-dotnet_diagnostic.CA1056.severity = error # CA1056: URI properties should not be strings
-dotnet_diagnostic.CA1058.severity = error # CA1058: Types should not extend certain base types
-dotnet_diagnostic.CA1060.severity = error # CA1060: Move P/Invokes to native methods class
-dotnet_diagnostic.CA1062.severity = error # CA1062: Validate arguments of public methods
-dotnet_diagnostic.CA1063.severity = error # CA1063: Implement IDisposable correctly
-dotnet_diagnostic.CA1064.severity = error # CA1064: Exceptions should be public
-dotnet_diagnostic.CA1065.severity = error # CA1065: Do not raise exceptions in unexpected locations
-dotnet_diagnostic.CA1066.severity = error # CA1066: Implement IEquatable<T> correctly
-dotnet_diagnostic.CA1303.severity = error # CA1303: Do not pass literals as localized parameters
-dotnet_diagnostic.CA1307.severity = error # CA1307: Specify StringComparison for clarity
-dotnet_diagnostic.CA1308.severity = error # CA1308: Normalize strings to uppercase
-dotnet_diagnostic.CA1501.severity = suggestion # CA1501: Avoid excessive inheritance
-dotnet_diagnostic.CA1502.severity = error # CA1502: Avoid excessive complexity
-dotnet_diagnostic.CA1505.severity = error # CA1505: Avoid excessive coupling
-dotnet_diagnostic.CA1506.severity = error # CA1506: Avoid excessive class coupling
-dotnet_diagnostic.CA1508.severity = error # CA1508: Avoid dead conditional code
-dotnet_diagnostic.CA1509.severity = error # CA1509: Avoid excessive method coupling
-dotnet_diagnostic.CA1515.severity = error # CA1515: Avoid unnecessary inheritance
-dotnet_diagnostic.CA1700.severity = error # CA1700: Do not name enum values reserved
-dotnet_diagnostic.CA1713.severity = error # CA1713: Events should not have before or after prefix
-dotnet_diagnostic.CA1721.severity = error # CA1721: Property names should not match get methods
-dotnet_diagnostic.CA1724.severity = suggestion # CA1724: Type names should not match namespaces
-dotnet_diagnostic.CA1802.severity = error # CA1802: Use literals where appropriate
-dotnet_diagnostic.CA1810.severity = error # CA1810: Initialize reference type static fields inline
-dotnet_diagnostic.CA1812.severity = error # CA1812: Avoid uninstantiated internal classes
-dotnet_diagnostic.CA1813.severity = error # CA1813: Avoid unsealed attributes
-dotnet_diagnostic.CA1814.severity = error # CA1814: Prefer jagged arrays over multidimensional
-dotnet_diagnostic.CA1815.severity = error # CA1815: Override equals and operator equals on value types
-dotnet_diagnostic.CA1819.severity = error # CA1819: Properties should not return arrays
-dotnet_diagnostic.CA1820.severity = error # CA1820: Test for empty strings using string length
-dotnet_diagnostic.CA1823.severity = error # CA1823: Avoid unused private fields
-dotnet_diagnostic.CA1849.severity = error # CA1849: Call async methods when in an async method
-dotnet_diagnostic.CA1851.severity = error # CA1851: Avoid unsealed attributes
-dotnet_diagnostic.CA1867.severity = error # CA1867: Prefer foreach over for
-dotnet_diagnostic.CA2000.severity = error # CA2000: Dispose objects before losing scope
-dotnet_diagnostic.CA2002.severity = error # CA2002: Do not lock on objects with weak identity
-dotnet_diagnostic.CA2007.severity = error # CA2007: Do not directly await a Task
-dotnet_diagnostic.CA2008.severity = error # CA2008: Do not create tasks without passing a TaskScheduler
-dotnet_diagnostic.CA2100.severity = error # CA2100: Review SQL queries for security vulnerabilities
-dotnet_diagnostic.CA2119.severity = error # CA2119: Seal methods that satisfy private interfaces
-dotnet_diagnostic.CA2153.severity = error # CA2153: Do not catch general exception types
-dotnet_diagnostic.CA2207.severity = error # CA2207: Initialize value type static fields inline
-dotnet_diagnostic.CA2213.severity = error # CA2213: Disposable fields should be disposed
-dotnet_diagnostic.CA2214.severity = error # CA2214: Do not call overridable methods in constructors
-dotnet_diagnostic.CA2216.severity = error # CA2216: Disposable types should declare finalizer
-dotnet_diagnostic.CA2217.severity = error # CA2217: Do not mark enums with FlagsAttribute
-dotnet_diagnostic.CA2225.severity = error # CA2225: Operator overloads have named alternates
-dotnet_diagnostic.CA2226.severity = error # CA2226: Operators should have symmetrical overloads
-dotnet_diagnostic.CA2227.severity = error # CA2227: Collection properties should be read only
-dotnet_diagnostic.CA2234.severity = error # CA2234: Pass system uri objects instead of strings
-dotnet_diagnostic.CA2235.severity = error # CA2235: Mark all non-serializable fields
-dotnet_diagnostic.CA2237.severity = error # CA2237: Mark ISerializable types with SerializableAttribute
-dotnet_diagnostic.CA2243.severity = error # CA2243: Attribute string literals should parse correctly
-dotnet_diagnostic.CA2300.severity = error # CA2300: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA2301.severity = error # CA2301: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA2302.severity = error # CA2302: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA2305.severity = error # CA2305: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA2310.severity = error # CA2310: Do not use insecure deserializer XmlSerializer
-dotnet_diagnostic.CA2311.severity = error # CA2311: Do not use insecure deserializer JavaScriptSerializer
-dotnet_diagnostic.CA2312.severity = error # CA2312: Do not use insecure deserializer DataContractJsonSerializer
-dotnet_diagnostic.CA2315.severity = error # CA2315: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA2321.severity = error # CA2321: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA2322.severity = error # CA2322: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA2326.severity = error # CA2326: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA2327.severity = error # CA2327: Do not use insecure deserializer XmlSerializer
-dotnet_diagnostic.CA2328.severity = error # CA2328: Do not use insecure deserializer JavaScriptSerializer
-dotnet_diagnostic.CA2329.severity = error # CA2329: Do not use insecure deserializer DataContractJsonSerializer
-dotnet_diagnostic.CA2330.severity = error # CA2330: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA2350.severity = error # CA2350: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA2351.severity = error # CA2351: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA2352.severity = error # CA2352: Use StringBuilder for concatenating strings in a loop
-dotnet_diagnostic.CA2353.severity = error # CA2353: Do not initialize unnecessarily
-dotnet_diagnostic.CA2354.severity = error # CA2354: Do not use generic exceptions
-dotnet_diagnostic.CA2355.severity = error # CA2355: Do not use invalid casts
-dotnet_diagnostic.CA2356.severity = error # CA2356: Do not use insecure comparers
-dotnet_diagnostic.CA2361.severity = error # CA2361: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA2362.severity = error # CA2362: Do not use disposables incorrectly
-dotnet_diagnostic.CA3001.severity = error # CA3001: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3002.severity = error # CA3002: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3003.severity = error # CA3003: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3004.severity = error # CA3004: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3005.severity = error # CA3005: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3006.severity = error # CA3006: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3007.severity = error # CA3007: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3008.severity = error # CA3008: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3009.severity = error # CA3009: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3010.severity = error # CA3010: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3011.severity = error # CA3011: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA3012.severity = error # CA3012: Review code for SQL injection vulnerabilities
-dotnet_diagnostic.CA5358.severity = error # CA5358: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA5361.severity = error # CA5361: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA5362.severity = error # CA5362: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA5367.severity = error # CA5367: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA5375.severity = error # CA5375: Do not use insecure deserializer XmlSerializer
-dotnet_diagnostic.CA5376.severity = error # CA5376: Do not use insecure deserializer JavaScriptSerializer
-dotnet_diagnostic.CA5377.severity = error # CA5377: Do not use insecure deserializer DataContractJsonSerializer
-dotnet_diagnostic.CA5378.severity = error # CA5378: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA5380.severity = error # CA5380: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA5381.severity = error # CA5381: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA5382.severity = error # CA5382: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA5383.severity = error # CA5383: Do not use insecure deserializer XmlSerializer
-dotnet_diagnostic.CA5386.severity = error # CA5386: Do not use insecure deserializer JavaScriptSerializer
-dotnet_diagnostic.CA5387.severity = error # CA5387: Do not use insecure deserializer DataContractJsonSerializer
-dotnet_diagnostic.CA5388.severity = error # CA5388: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA5389.severity = error # CA5389: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA5390.severity = error # CA5390: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA5391.severity = error # CA5391: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA5392.severity = error # CA5392: Do not use insecure deserializer XmlSerializer
-dotnet_diagnostic.CA5393.severity = error # CA5393: Do not use insecure deserializer JavaScriptSerializer
-dotnet_diagnostic.CA5394.severity = error # CA5394: Do not use insecure deserializer DataContractJsonSerializer
-dotnet_diagnostic.CA5395.severity = error # CA5395: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA5396.severity = error # CA5396: Do not use insecure deserializer DataContractSerializer
-dotnet_diagnostic.CA5398.severity = error # CA5398: Do not use insecure deserializer NetDataContractSerializer
-dotnet_diagnostic.CA5399.severity = error # CA5399: Do not use insecure deserializer SoapFormatter
-dotnet_diagnostic.CA5400.severity = error # CA5400: Do not use insecure deserializer XmlSerializer
-dotnet_diagnostic.CA5401.severity = error # CA5401: Do not use insecure deserializer JavaScriptSerializer
-dotnet_diagnostic.CA5402.severity = error # CA5402: Do not use insecure deserializer DataContractJsonSerializer
-dotnet_diagnostic.CA5403.severity = error # CA5403: Do not use insecure deserializer BinaryFormatter
-dotnet_diagnostic.CA5404.severity = error # CA5404: Use the nameof operator
-dotnet_diagnostic.CA5405.severity = error # CA5405: Use a literal suffix instead of casting
-dotnet_diagnostic.IDE0051.severity = error # IDE0051: Remove unused private members
-dotnet_diagnostic.IDE0058.severity = silent # IDE0058: Remove unnecessary expression value
-dotnet_diagnostic.IDE0090.severity = error # IDE0090: Use 'new(...)' instead of 'new ...'
-dotnet_diagnostic.IDE1006.severity = error # IDE1006: Naming rule violation: Use the correct casing
-
-# MSBuild files
-[*.{csproj,proj,projitems,shproj,fsproj,target,props,vcxproj.filters,vbproj}]
-indent_size = 2
-
-# XML config files
-[*.{xml,config,props,targets,nuspec,resx,ruleset,vsixmanifest,vsct}]
-indent_size = 2
-
-# Visual Studio files
-[*.{sln,vssettings,vssscc,vsmdi}]
-indent_style = tab
-
-# YAML files
-[*.{yaml,yml}]
-indent_size = 2
-
-# Windows batch files
-[*.{cmd,bat}]
-end_of_line = crlf
-
-[Makefile]
-indent_style = tab
-
-# C# scripting files
-[*.csx]
-indent_style = tab
+# Static code analysis rules
+dotnet_diagnostic.CA1002.severity = error # Do not expose generic lists
+dotnet_diagnostic.CA1003.severity = error # Use generic event handler instances
+dotnet_diagnostic.CA1005.severity = error # Avoid excessive parameters on generic types
+dotnet_diagnostic.CA1008.severity = error # Enums should have zero value
+dotnet_diagnostic.CA1012.severity = error # Abstract types should not have constructors
+dotnet_diagnostic.CA1014.severity = error # Mark assemblies with CLSCompliantAttribute
+dotnet_diagnostic.CA1017.severity = error # Mark assemblies with ComVisibleAttribute
+dotnet_diagnostic.CA1019.severity = error # Define accessors for attribute arguments
+dotnet_diagnostic.CA1021.severity = none   # Avoid out parameters
+dotnet_diagnostic.CA1024.severity = error # Use properties where appropriate
+dotnet_diagnostic.CA1027.severity = error # Mark enums with FlagsAttribute
+dotnet_diagnostic.CA1028.severity = error # Enum storage should be Int32
+dotnet_diagnostic.CA1030.severity = error # Use events where appropriate
+dotnet_diagnostic.CA1031.severity = error # Do not catch general exception types
+dotnet_diagnostic.CA1032.severity = error # Implement standard exception constructors
+dotnet_diagnostic.CA1033.severity = error # Interface methods should be callable by child types
+dotnet_diagnostic.CA1034.severity = none   # Nested types should not be visible
+dotnet_diagnostic.CA1040.severity = none   # Avoid empty interfaces
+dotnet_diagnostic.CA1043.severity = error # Use integral or string argument for indexers
+dotnet_diagnostic.CA1044.severity = error # Properties should not be write-only
+dotnet_diagnostic.CA1045.severity = none   # Do not pass types by reference
+dotnet_diagnostic.CA1046.severity = none   # Do not overload operator equals on reference types
+dotnet_diagnostic.CA1052.severity = error # Static holder types should be static or not inheritable
+dotnet_diagnostic.CA1054.severity = error # URI parameters should not be strings
+dotnet_diagnostic.CA1055.severity = error # URI return values should not be strings
+dotnet_diagnostic.CA1056.severity = error # URI properties should not be strings
+dotnet_diagnostic.CA1058.severity = error # Types should not extend certain base types
+dotnet_diagnostic.CA1060.severity = error # Move P/Invokes to native methods class
+dotnet_diagnostic.CA1062.severity = error # Validate arguments of public methods
+dotnet_diagnostic.CA1063.severity = error # Implement IDisposable correctly
+dotnet_diagnostic.CA1064.severity = error # Exceptions should be public
+dotnet_diagnostic.CA1065.severity = error # Do not raise exceptions in unexpected locations
+dotnet_diagnostic.CA1066.severity = error # Implement IEquatable<T> correctly
+dotnet_diagnostic.CA1303.severity = error # Do not pass literals as localized parameters
+dotnet_diagnostic.CA1307.severity = error # Specify StringComparison for clarity
+dotnet_diagnostic.CA1308.severity = error # Normalize strings to uppercase
+dotnet_diagnostic.CA1501.severity = suggestion # Avoid excessive inheritance
+dotnet_diagnostic.CA1502.severity = error # Avoid excessive complexity
+dotnet_diagnostic.CA1505.severity = error # Avoid excessive coupling
+dotnet_diagnostic.CA1506.severity = error # Avoid excessive class coupling
+dotnet_diagnostic.CA1508.severity = error # Avoid dead conditional code
+dotnet_diagnostic.CA1509.severity = error # Avoid excessive method coupling
+dotnet_diagnostic.CA1515.severity = error # Avoid unnecessary inheritance
+dotnet_diagnostic.CA1700.severity = error # Do not name enum values reserved
+dotnet_diagnostic.CA1713.severity = error # Events should not have before or after prefix
+dotnet_diagnostic.CA1721.severity = error # Property names should not match get methods
+dotnet_diagnostic.CA1724.severity = none # Type names should not match namespaces
+dotnet_diagnostic.CA1802.severity = error # Use literals where appropriate
+dotnet_diagnostic.CA1810.severity = error # Initialize reference type static fields inline
+dotnet_diagnostic.CA1812.severity = error # Avoid uninstantiated internal classes
+dotnet_diagnostic.CA1813.severity = error # Avoid unsealed attributes
+dotnet_diagnostic.CA1814.severity = error # Prefer jagged arrays over multidimensional
+dotnet_diagnostic.CA1815.severity = error # Override equals and operator equals on value types
+dotnet_diagnostic.CA1819.severity = error # Properties should not return arrays
+dotnet_diagnostic.CA1820.severity = error # Test for empty strings using string length
+dotnet_diagnostic.CA1823.severity = error # Avoid unused private fields
 
 # C# files
-[*.cs]
-indent_style = tab
-
-# Bash Files
-[*.sh]
-end_of_line = lf
-
-# Markdown Files
-[*.{md,mdx}]
-indent_size = 2
-
-# JSON Files
-[*.{json,json5,webmanifest}]
-indent_size = 2
-
+[*.{cs,csx,cake}]
 # Naming rules
 
 dotnet_naming_rule.interface_should_be_begins_with_i.severity = error
@@ -412,6 +316,54 @@ dotnet_naming_symbols.types.required_modifiers =
 dotnet_naming_symbols.non_field_members.applicable_kinds = property, event, method
 dotnet_naming_symbols.non_field_members.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
 dotnet_naming_symbols.non_field_members.required_modifiers =
+
+# Naming styles
+
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.required_suffix =
+dotnet_naming_style.begins_with_i.word_separator =
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+dotnet_naming_style.pascal_case.required_prefix =
+dotnet_naming_style.pascal_case.required_suffix =
+dotnet_naming_style.pascal_case.word_separator =
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# Naming rules
+
+dotnet_naming_rule.interface_should_be_begins_with_i.severity = error
+dotnet_naming_rule.interface_should_be_begins_with_i.symbols = interface
+dotnet_naming_rule.interface_should_be_begins_with_i.style = begins_with_i
+
+dotnet_naming_rule.types_should_be_pascal_case.severity = error
+dotnet_naming_rule.types_should_be_pascal_case.symbols = types
+dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_rule.non_field_members_should_be_pascal_case.severity = error
+dotnet_naming_rule.non_field_members_should_be_pascal_case.symbols = non_field_members
+dotnet_naming_rule.non_field_members_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_rule.property_should_be_pascal_case.severity = error
+dotnet_naming_rule.property_should_be_pascal_case.symbols = property
+dotnet_naming_rule.property_should_be_pascal_case.style = pascal_case
+
+# Symbol specifications
+
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.interface.required_modifiers =
+
+dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum
+dotnet_naming_symbols.types.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.types.required_modifiers =
+
+dotnet_naming_symbols.non_field_members.applicable_kinds = property, event, method
+dotnet_naming_symbols.non_field_members.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.non_field_members.required_modifiers =
+
+dotnet_naming_symbols.property.applicable_kinds = property
+dotnet_naming_symbols.property.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.property.required_modifiers =
 
 # Naming styles
 
@@ -520,3 +472,33 @@ cpp_naming_style.boolean_style.required_suffix             =
 cpp_naming_style.boolean_style.word_separator              =
 
 cpp_indent_lambda_braces_when_parameter                    = false
+
+# .NET project files
+[*.{csproj,fsproj,vbproj,vbxproj,vcproj,vcxproj,props,targets,ruleset,config,nuspec,resx,vsixmanifest,vsct}]
+indent_size = 2
+
+# XML files
+[*.{xml,xaml,axml,axaml}]
+indent_size = 2
+
+# JSON files
+[*.{json,json5}]
+indent_size = 2
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+
+# PowerShell files
+[*.{ps1,psm1,psd1}]
+indent_size = 4
+indent_style = tab
+
+# Shell scripts
+[*.sh]
+end_of_line = lf
+indent_size = 2

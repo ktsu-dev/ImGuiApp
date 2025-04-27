@@ -1,5 +1,6 @@
-// Adapted from https://github.com/dotnet/Silk.NET/blob/main/src/OpenGL/Extensions/Silk.NET.OpenGL.Extensions.ImGui/ImGuiFontConfig.cs
-// License: MIT
+// Copyright (c) ktsu.dev
+// All rights reserved.
+// Licensed under the MIT license.
 
 namespace ktsu.ImGuiApp.ImGuiController;
 

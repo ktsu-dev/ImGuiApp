@@ -1,5 +1,6 @@
-// Adapted From: https://github.com/Ryujinx/Ryujinx/blob/master/src/Ryujinx.Common/SystemInterop/ForceDpiAware.cs
-// License: MIT
+// Copyright (c) ktsu.dev
+// All rights reserved.
+// Licensed under the MIT license.
 
 namespace ktsu.ImGuiApp;
 
@@ -53,7 +54,10 @@ public static partial class ForceDpiAware
 						userDpiScale = NativeMethods.XDisplayWidth(display, 0) * 25.4 / NativeMethods.XDisplayWidthMM(display, 0);
 					}
 
-					_ = NativeMethods.XCloseDisplay(display);
+					if (NativeMethods.XCloseDisplay(display) == 0)
+					{
+						throw new InvalidOperationException("Failed to close X11 display connection");
+					}
 				}
 				else if (xdgSessionType == "wayland")
 				{

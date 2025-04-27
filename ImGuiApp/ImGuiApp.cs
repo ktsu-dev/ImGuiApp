@@ -1,3 +1,7 @@
+// Copyright (c) ktsu.dev
+// All rights reserved.
+// Licensed under the MIT license.
+
 namespace ktsu.ImGuiApp;
 
 using System.Buffers;
@@ -290,7 +294,7 @@ public static partial class ImGuiApp
 
 		// Hide console window
 		var handle = NativeMethods.GetConsoleWindow();
-		_ = NativeMethods.ShowWindow(handle, SW_HIDE);
+		NativeMethods.ShowWindow(handle, SW_HIDE);
 
 		window.Run();
 		window.Dispose();
