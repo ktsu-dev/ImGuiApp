@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Buffers;
 
 using ImGuiNET;
 
@@ -90,11 +91,13 @@ public static partial class ImGuiApp
 
 	private static void InitializeWindow(ImGuiAppConfig config)
 	{
-		var silkWindowOptions = WindowOptions.Default;
-		silkWindowOptions.Title = config.Title;
-		silkWindowOptions.Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y);
-		silkWindowOptions.Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y);
-		silkWindowOptions.WindowState = Silk.NET.Windowing.WindowState.Normal;
+		var silkWindowOptions = new WindowOptions
+		{
+			Title = config.Title,
+			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
+			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
+			WindowState = Silk.NET.Windowing.WindowState.Normal
+		};
 
 		LastNormalWindowState = config.InitialWindowState;
 		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
@@ -471,17 +474,60 @@ public static partial class ImGuiApp
 		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
 	}
 
+	private static readonly ConcurrentDictionary<AbsoluteFilePath, WeakReference<ImGuiAppTextureInfo>> _textureCache = new();
+	private static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
+
+	/// <summary>
+	/// Gets or loads a texture from the specified file path with optimized memory usage.
+	/// </summary>
+	public static ImGuiAppTextureInfo GetOrLoadTexture(AbsoluteFilePath path)
+	{
+		// Try to get from cache first
+		if (_textureCache.TryGetValue(path, out var weakRef) &&
+			weakRef.TryGetTarget(out var cachedTexture))
+		{
+			return cachedTexture;
+		}
+
+		using var image = Image.Load<Rgba32>(path);
+		int bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
+
+		// Rent buffer from pool
+		byte[] bytes = _bytePool.Rent(bufferSize);
+		try
+		{
+			image.CopyPixelDataTo(bytes.AsSpan(0, bufferSize));
+			uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+
+			var textureInfo = new ImGuiAppTextureInfo
+			{
+				Path = path,
+				TextureId = textureId,
+				Width = image.Width,
+				Height = image.Height
+			};
+
+			// Update cache with weak reference
+			_textureCache.AddOrUpdate(path,
+				new WeakReference<ImGuiAppTextureInfo>(textureInfo),
+				(_, old) => new WeakReference<ImGuiAppTextureInfo>(textureInfo));
+
+			Textures[path] = textureInfo;
+			return textureInfo;
+		}
+		finally
+		{
+			// Return buffer to pool
+			_bytePool.Return(bytes);
+		}
+	}
+
 	/// <summary>
 	/// Uploads a texture to the GPU using the specified RGBA byte array, width, and height.
 	/// </summary>
-	/// <param name="bytes">The byte array containing the texture data in RGBA format.</param>
-	/// <param name="width">The width of the texture.</param>
-	/// <param name="height">The height of the texture.</param>
-	/// <returns>The OpenGL texture ID.</returns>
-	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
-	public static uint UploadTextureRGBA(byte[] bytes, int width, int height)
+	private static uint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
-		uint textureId = Invoker.Invoke(() =>
+		return Invoker.Invoke(() =>
 		{
 			if (gl is null)
 			{
@@ -492,21 +538,50 @@ public static partial class ImGuiApp
 			gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
 
 			nint textureHandle = Marshal.AllocHGlobal(bytes.Length);
-			Marshal.Copy(bytes, 0, textureHandle, bytes.Length);
-			Texture texture = new(gl, width, height, textureHandle, pxFormat: PixelFormat.Rgba);
-			Marshal.FreeHGlobal(textureHandle);
+			try
+			{
+				Marshal.Copy(bytes, 0, textureHandle, bytes.Length);
+				Texture texture = new(gl, width, height, textureHandle, pxFormat: PixelFormat.Rgba);
+				texture.Bind();
+				texture.SetMagFilter(TextureMagFilter.Linear);
+				texture.SetMinFilter(TextureMinFilter.Linear);
 
-			texture.Bind();
-			texture.SetMagFilter(TextureMagFilter.Linear);
-			texture.SetMinFilter(TextureMinFilter.Linear);
+				// Restore state
+				gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
 
-			// Restore state
-			gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
-
-			return texture.GlTexture;
+				return texture.GlTexture;
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(textureHandle);
+			}
 		});
+	}
 
-		return textureId;
+	/// <summary>
+	/// Cleans up unused textures from the cache.
+	/// </summary>
+	public static void CleanupUnusedTextures()
+	{
+		var keysToRemove = new List<AbsoluteFilePath>();
+
+		foreach (var kvp in _textureCache)
+		{
+			if (!kvp.Value.TryGetTarget(out _))
+			{
+				keysToRemove.Add(kvp.Key);
+			}
+		}
+
+		foreach (var key in keysToRemove)
+		{
+			if (_textureCache.TryRemove(key, out _) &&
+				Textures.TryGetValue(key, out var info))
+			{
+				DeleteTexture(info.TextureId);
+				Textures.TryRemove(key, out _);
+			}
+		}
 	}
 
 	/// <summary>
@@ -526,42 +601,6 @@ public static partial class ImGuiApp
 			gl.DeleteTexture(textureId);
 			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
 		});
-	}
-
-	/// <summary>
-	/// Gets or loads a texture from the specified file path.
-	/// </summary>
-	/// <param name="path">The file path of the texture to load.</param>
-	/// <returns>
-	/// A <see cref="ImGuiAppTextureInfo"/> object containing information about the loaded texture,
-	/// including its file path, texture ID, width, and height.
-	/// </returns>
-	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
-	/// <exception cref="ArgumentNullException">Thrown if the specified path is null.</exception>
-	/// <exception cref="FileNotFoundException">Thrown if the specified file does not exist.</exception>
-	/// <exception cref="NotSupportedException">Thrown if the image format is not supported.</exception>
-	/// <exception cref="Exception">Thrown if an error occurs while loading the image.</exception>
-	public static ImGuiAppTextureInfo GetOrLoadTexture(AbsoluteFilePath path)
-	{
-		if (Textures.TryGetValue(path, out var textureInfo))
-		{
-			return textureInfo;
-		}
-
-		var image = Image.Load<Rgba32>(path);
-		byte[] bytes = GetImageBytes(image);
-		uint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
-		textureInfo = new()
-		{
-			Path = path,
-			TextureId = textureId,
-			Width = image.Width,
-			Height = image.Height
-		};
-
-		Textures[path] = textureInfo;
-
-		return textureInfo;
 	}
 
 	private static void UpdateDpiScale()
