@@ -9,27 +9,31 @@ using Moq;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-internal static class TestHelpers
+/// <summary>
+/// Provides helper methods for testing ImGuiApp components.
+/// </summary>
+public static class TestHelpers
 {
-	internal static Mock<IWindow> CreateMockWindow(
-		Vector2D<int>? size = null,
-		Vector2D<int>? position = null,
-		bool isVisible = true)
+	/// <summary>
+	/// Creates a mock window with default settings.
+	/// </summary>
+	/// <returns>A mock IWindow instance.</returns>
+	public static Mock<IWindow> CreateMockWindow()
 	{
-		var mock = new Mock<IWindow>();
-
-		mock.Setup(w => w.Size).Returns(size ?? new Vector2D<int>(1280, 720));
-		mock.Setup(w => w.Position).Returns(position ?? new Vector2D<int>(0, 0));
-		mock.Setup(w => w.IsVisible).Returns(isVisible);
-
-		return mock;
+		var mockWindow = new Mock<IWindow>();
+		mockWindow.Setup(w => w.Size).Returns(new Vector2D<int>(1280, 720));
+		mockWindow.Setup(w => w.Position).Returns(new Vector2D<int>(0, 0));
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+		return mockWindow;
 	}
 
-	internal static ImGuiAppConfig CreateTestConfig(
-		string title = "Test Window",
-		string iconPath = "",
-		Vector2? size = null,
-		Vector2? position = null)
+	/// <summary>
+	/// Creates a test configuration with optional customization.
+	/// </summary>
+	/// <param name="title">The window title.</param>
+	/// <param name="iconPath">The path to the window icon.</param>
+	/// <returns>An ImGuiAppConfig instance.</returns>
+	public static ImGuiAppConfig CreateTestConfig(string title = "Test Window", string iconPath = "")
 	{
 		return new ImGuiAppConfig
 		{
@@ -37,18 +41,31 @@ internal static class TestHelpers
 			IconPath = iconPath,
 			InitialWindowState = new ImGuiAppWindowState
 			{
-				Size = size ?? new Vector2(800, 600),
-				Pos = position ?? new Vector2(100, 100)
+				Size = new Vector2(800, 600),
+				Pos = new Vector2(100, 100),
+				LayoutState = WindowState.Normal
 			}
 		};
 	}
 
-	internal static void VerifyWindowProperties(
-		Mock<IWindow> mockWindow,
+	/// <summary>
+	/// Verifies that a window's properties match the expected values.
+	/// </summary>
+	/// <param name="window">The window to verify.</param>
+	/// <param name="expectedSize">The expected window size.</param>
+	/// <param name="expectedPosition">The expected window position.</param>
+	/// <param name="expectedState">The expected window state.</param>
+	/// <exception cref="ArgumentNullException">Thrown when window is null.</exception>
+	public static void VerifyWindowProperties(
+		IWindow window,
 		Vector2D<int> expectedSize,
-		Vector2D<int> expectedPosition)
+		Vector2D<int> expectedPosition,
+		WindowState expectedState)
 	{
-		mockWindow.VerifySet(w => w.Size = expectedSize, Times.Once);
-		mockWindow.VerifySet(w => w.Position = expectedPosition, Times.Once);
+		ArgumentNullException.ThrowIfNull(window);
+
+		Assert.AreEqual(expectedSize, window.Size);
+		Assert.AreEqual(expectedPosition, window.Position);
+		Assert.AreEqual(expectedState, window.WindowState);
 	}
 }

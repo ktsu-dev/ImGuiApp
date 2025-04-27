@@ -9,32 +9,30 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
 using ImGuiNET;
-
+using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
 using ktsu.StrongPaths;
-
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-
 using Color = System.Drawing.Color;
 using Texture = ImGuiController.Texture;
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
 public static partial class ImGuiApp
 {
 	private static IWindow? window;
 	private static GL? gl;
 	private static ImGuiController.ImGuiController? controller;
 	private static IInputContext? inputContext;
+	private static OpenGLProvider? glProvider;
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -89,7 +87,16 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Stops the ImGui application by closing the window.
 	/// </summary>
-	public static void Stop() => window?.Close();
+	/// <exception cref="InvalidOperationException">Thrown when the application is not running.</exception>
+	public static void Stop()
+	{
+		if (window == null)
+		{
+			throw new InvalidOperationException("Cannot stop the application because it is not running.");
+		}
+
+		window.Close();
+	}
 
 	private static ImGuiAppConfig Config { get; set; } = new();
 
@@ -118,7 +125,10 @@ public static partial class ImGuiApp
 				SetWindowIcon(config.IconPath);
 			}
 
-			gl = window.CreateOpenGL();
+			var glFactory = new WindowOpenGLFactory(window);
+			glProvider = new OpenGLProvider(glFactory);
+			var glWrapper = (GLWrapper)glProvider.GetGL();
+			gl = glWrapper.UnderlyingGL;
 			inputContext = window.CreateInput();
 
 			controller = new(
@@ -266,8 +276,17 @@ public static partial class ImGuiApp
 
 	private static void CleanupOpenGL()
 	{
-		gl?.Dispose();
-		gl = null;
+		if (gl != null)
+		{
+			gl.Dispose();
+			gl = null;
+		}
+
+		if (glProvider != null)
+		{
+			glProvider.Dispose();
+			glProvider = null;
+		}
 	}
 
 	/// <summary>
@@ -739,12 +758,16 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="ems">The value in ems to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
-	public static int EmsToPx(float ems) => Invoker.Invoke(() => (int)(ems * ImGui.GetFontSize()));
+	public static int EmsToPx(float ems) =>
+		// Default font size is 16px if ImGui is not initialized
+		(int)(ems * (ImGui.GetCurrentContext() != IntPtr.Zero ? ImGui.GetFontSize() : 16.0f));
 
 	/// <summary>
 	/// Converts a value in points to pixels based on the current scale factor.
 	/// </summary>
 	/// <param name="pts">The value in points to convert to pixels.</param>
 	/// <returns>The equivalent value in pixels.</returns>
-	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
+	public static int PtsToPx(int pts) =>
+		// Standard DPI is 72 points per inch, Windows uses 96 DPI as base
+		(int)(pts * (96.0f / 72.0f) * ScaleFactor);
 }
