@@ -25,6 +25,13 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Modern .NET**: Supports .NET 8 and newer
 - **Active Development**: Open-source and actively maintained
 
+## Getting Started
+
+### Prerequisites
+
+- .NET 8.0 or later
+- Windows OS (for DPI awareness features)
+
 ## Installation
 
 ### Package Manager Console
@@ -146,17 +153,17 @@ private static void OnRender(float deltaTime)
 {
     // Load texture from file
     var textureId = ImGuiApp.GetOrLoadTexture("path/to/texture.png");
-    
+
     // Use the texture in ImGui
     ImGui.Image(textureId, new Vector2(128, 128));
-    
+
     // Upload custom texture data
     byte[] rgbaData = GetTextureData(); // Your method to get RGBA pixel data
     int width = 256;
     int height = 256;
     var customTextureId = ImGuiApp.UploadTextureRGBA(rgbaData, width, height);
     ImGui.Image(customTextureId, new Vector2(width, height));
-    
+
     // Clean up when done
     ImGuiApp.DeleteTexture(customTextureId);
 }
@@ -173,7 +180,7 @@ class Program
 {
     private static bool _showDemoWindow = true;
     private static bool _showCustomWindow = true;
-    
+
     static void Main()
     {
         ImGuiApp.Start(new AppConfig
@@ -188,52 +195,52 @@ class Program
             OnShutdown = OnShutdown
         });
     }
-    
+
     private static void OnStart()
     {
         // Initialize your application state
         Console.WriteLine("Application started");
     }
-    
+
     private static void OnUpdate(float deltaTime)
     {
         // Update your application state
         // This runs before rendering each frame
     }
-    
+
     private static void OnRender(float deltaTime)
     {
         // ImGui demo window
         if (_showDemoWindow)
             ImGui.ShowDemoWindow(ref _showDemoWindow);
-        
+
         // Custom window
         if (_showCustomWindow)
         {
             ImGui.Begin("Custom Window", ref _showCustomWindow);
-            
+
             ImGui.Text($"Frame time: {deltaTime * 1000:F2} ms");
             ImGui.Text($"FPS: {1.0f / deltaTime:F1}");
-            
+
             if (ImGui.Button("Click Me"))
                 Console.WriteLine("Button clicked!");
-                
+
             ImGui.ColorEdit3("Background Color", ref _backgroundColor);
-            
+
             ImGui.End();
         }
     }
-    
+
     private static void OnAppMenu()
     {
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("Exit"))
                 ImGuiApp.Stop();
-                
+
             ImGui.EndMenu();
         }
-        
+
         if (ImGui.BeginMenu("Windows"))
         {
             ImGui.MenuItem("Demo Window", string.Empty, ref _showDemoWindow);
@@ -241,13 +248,13 @@ class Program
             ImGui.EndMenu();
         }
     }
-    
+
     private static void OnShutdown()
     {
         // Clean up resources
         Console.WriteLine("Application shutting down");
     }
-    
+
     private static Vector3 _backgroundColor = new Vector3(0.45f, 0.55f, 0.60f);
 }
 ```
@@ -335,3 +342,7 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 - [ImGui.NET](https://github.com/mellinoe/ImGui.NET) - .NET bindings for Dear ImGui
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
 - All contributors and the .NET community for their support
+
+## Support
+
+If you encounter any issues or have questions, please [open an issue](https://github.com/ktsu-dev/ImGuiApp/issues).
