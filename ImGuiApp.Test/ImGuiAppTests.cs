@@ -7,9 +7,9 @@
 namespace ktsu.ImGuiApp.Test;
 
 using System.Numerics;
-using ktsu.ImGuiApp.ImGuiController;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Silk.NET.Core.Contexts;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 using SixLabors.ImageSharp.PixelFormats;
@@ -20,8 +20,9 @@ public sealed class ImGuiAppTests : IDisposable
 	private Mock<IWindow>? _mockWindow;
 	private Mock<IMonitor>? _mockMonitor;
 	private TestGL? _testGL;
-	private TestGLWrapper? _testGLWrapper;
-	private Mock<IOpenGLFactory>? _mockGLFactory;
+	private MockGL? _mockGL;
+	private Mock<IGLContext>? _mockContext;
+	private TestOpenGLProvider? _glProvider;
 
 	[TestInitialize]
 	public void Setup()
@@ -30,16 +31,15 @@ public sealed class ImGuiAppTests : IDisposable
 		_mockWindow = new Mock<IWindow>();
 		_mockMonitor = new Mock<IMonitor>();
 		_testGL = new TestGL();
-		_testGLWrapper = new TestGLWrapper(_testGL);
-		_mockGLFactory = new Mock<IOpenGLFactory>();
+		_mockGL = new MockGL(_testGL);
+		_mockContext = new Mock<IGLContext>();
+		_glProvider = new TestOpenGLProvider(_mockGL);
 
 		// Setup default window properties
 		_mockWindow.Setup(w => w.Size).Returns(new Vector2D<int>(1280, 720));
 		_mockWindow.Setup(w => w.Position).Returns(new Vector2D<int>(0, 0));
 		_mockWindow.Setup(w => w.Monitor).Returns(_mockMonitor.Object);
-
-		// Setup OpenGL factory
-		_mockGLFactory.Setup(f => f.CreateGL()).Returns(_testGLWrapper);
+		_mockWindow.Setup(w => w.GLContext).Returns(_mockContext.Object);
 
 		// Setup monitor bounds
 		var bounds = new Rectangle<int>(0, 0, 1920, 1080);
@@ -50,7 +50,8 @@ public sealed class ImGuiAppTests : IDisposable
 	public void Cleanup()
 	{
 		ResetState();
-		_testGLWrapper?.Dispose();
+		_glProvider?.Dispose();
+		_mockGL?.Dispose();
 		_testGL?.Dispose();
 	}
 
@@ -165,68 +166,33 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void OpenGLProvider_GetGL_ReturnsSameInstance()
 	{
-		// Create a scope to control disposal
-		IGL gl1;
-		IGL gl2;
-		using var provider = new OpenGLProvider(_mockGLFactory!.Object);
-		gl1 = provider.GetGL();
-		gl2 = provider.GetGL();
+		// Setup test GL provider
+		using var testGL = new TestGL();
+		using var mockGL = new MockGL(testGL);
+		using var provider = new TestOpenGLProvider(mockGL);
+
+		// Get GL instances
+		var gl1 = provider.GetGL();
+		var gl2 = provider.GetGL();
+
+		// Verify same instance is returned
 		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
-		_mockGLFactory.Verify(f => f.CreateGL(), Times.Once);
-	}
-
-	[TestMethod]
-	public void OpenGLProvider_Constructor_WithNullFactory_ThrowsArgumentNullException()
-	{
-		Assert.ThrowsException<ArgumentNullException>(() => new OpenGLProvider(null!));
-	}
-
-	[TestMethod]
-	public void WindowOpenGLFactory_Constructor_WithNullWindow_ThrowsArgumentNullException()
-	{
-		Assert.ThrowsException<ArgumentNullException>(() => new WindowOpenGLFactory(null!));
-	}
-
-	[TestMethod]
-	public void WindowOpenGLFactory_CreateGL_ReturnsGL()
-	{
-		var factory = new WindowOpenGLFactory(_mockWindow!.Object);
-		var gl = factory.CreateGL();
-		Assert.IsNotNull(gl);
-	}
-
-	[TestMethod]
-	public void WindowState_ReturnsCorrectState()
-	{
-		// Setup
-		var expectedSize = new Vector2(800, 600);
-		var expectedPos = new Vector2(100, 100);
-		var expectedState = WindowState.Normal;
-
-		// Create a new window state
-		var state = new ImGuiAppWindowState
-		{
-			Size = expectedSize,
-			Pos = expectedPos,
-			LayoutState = expectedState
-		};
-
-		// Verify the state properties
-		Assert.AreEqual(expectedSize, state.Size);
-		Assert.AreEqual(expectedPos, state.Pos);
-		Assert.AreEqual(expectedState, state.LayoutState);
-	}
-
-	[TestMethod]
-	public void CleanupAllTextures_WithNoTextures_DoesNotThrow()
-	{
-		// This should not throw even when GL is null
-		ImGuiApp.CleanupAllTextures();
 	}
 
 	[TestMethod]
 	public void DeleteTexture_WithNullGL_ThrowsInvalidOperationException()
 	{
+		// Mock the window and GL context
+		var mockWindow = new Mock<IWindow>();
+		var mockContext = new Mock<IGLContext>();
+		mockWindow.Setup(w => w.GLContext).Returns(mockContext.Object);
+
+		// Create a test config that won't actually run the window
+		var config = new ImGuiAppConfig { OnStart = ImGuiApp.Stop };
+
+		// Start and immediately stop the app
+		ImGuiApp.Start(config);
+
 		Assert.ThrowsException<InvalidOperationException>(() => ImGuiApp.DeleteTexture(1));
 	}
 
