@@ -71,7 +71,7 @@ internal class Texture : IDisposable
 		SetWrap(TextureCoordinate.S, TextureWrapMode.Repeat);
 		SetWrap(TextureCoordinate.T, TextureWrapMode.Repeat);
 
-		uint mip = MipmapLevels - 1;
+		var mip = MipmapLevels - 1;
 		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLevel, ref mip);
 	}
 
@@ -79,13 +79,13 @@ internal class Texture : IDisposable
 
 	public void SetMinFilter(TextureMinFilter filter)
 	{
-		int intFilter = (int)filter;
+		var intFilter = (int)filter;
 		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, ref intFilter);
 	}
 
 	public void SetMagFilter(TextureMagFilter filter)
 	{
-		int intFilter = (int)filter;
+		var intFilter = (int)filter;
 		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, ref intFilter);
 	}
 
@@ -104,7 +104,7 @@ internal class Texture : IDisposable
 
 	public void SetWrap(TextureCoordinate coord, TextureWrapMode mode)
 	{
-		int intMode = (int)mode;
+		var intMode = (int)mode;
 		_gl.TexParameterI(GLEnum.Texture2D, (TextureParameterName)coord, ref intMode);
 	}
 

@@ -132,7 +132,7 @@ internal static class ImGuiAppDemo
 			ImGui.Text("Columns Example:");
 			ImGui.Columns(3, "##columns");
 
-			for (int i = 0; i < 6; i++)
+			for (var i = 0; i < 6; i++)
 			{
 				ImGui.Text($"Item {i + 1}");
 				ImGui.NextColumn();
@@ -147,7 +147,7 @@ internal static class ImGuiAppDemo
 			{
 				ImGui.Text("This is a child window");
 				ImGui.Text("with its own scroll area.");
-				for (int i = 0; i < 10; i++)
+				for (var i = 0; i < 10; i++)
 				{
 					ImGui.Text($"Scroll item {i + 1}");
 				}

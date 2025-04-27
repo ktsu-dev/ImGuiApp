@@ -32,7 +32,7 @@ public static partial class ForceDpiAware
 	/// <returns>The actual scale factor.</returns>
 	public static double GetActualScaleFactor()
 	{
-		double userDpiScale = 96.0;
+		var userDpiScale = 96.0;
 
 		try
 		{
@@ -42,12 +42,12 @@ public static partial class ForceDpiAware
 			}
 			else if (OperatingSystem.IsLinux())
 			{
-				string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
+				var xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
 
 				if (xdgSessionType is null or "x11")
 				{
-					IntPtr display = NativeMethods.XOpenDisplay(null!);
-					string? dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
+					var display = NativeMethods.XOpenDisplay(null!);
+					var dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
 					if (dpiString == null || !double.TryParse(dpiString, NumberStyles.Any, CultureInfo.InvariantCulture, out userDpiScale))
 					{
 						userDpiScale = NativeMethods.XDisplayWidth(display, 0) * 25.4 / NativeMethods.XDisplayWidthMM(display, 0);
@@ -81,7 +81,7 @@ public static partial class ForceDpiAware
 	/// <returns>The window scale factor.</returns>
 	public static double GetWindowScaleFactor()
 	{
-		double userDpiScale = GetActualScaleFactor();
+		var userDpiScale = GetActualScaleFactor();
 
 		return Math.Min(userDpiScale / StandardDpiScale, MaxScaleFactor);
 	}

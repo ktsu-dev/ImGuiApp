@@ -19,7 +19,7 @@ public class UIScaler : ScopedAction
 	public UIScaler(float scale)
 	{
 		var style = ImGui.GetStyle();
-		int numStyles = 0;
+		var numStyles = 0;
 		PushStyleAndCount(ImGuiStyleVar.CellPadding, style.CellPadding * scale, ref numStyles);
 		PushStyleAndCount(ImGuiStyleVar.ChildBorderSize, style.ChildBorderSize * scale, ref numStyles);
 		PushStyleAndCount(ImGuiStyleVar.ChildRounding, style.ChildRounding * scale, ref numStyles);
