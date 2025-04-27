@@ -1,1 +1,1 @@
-A scaffolding library to create Dear ImGui applications in .NET
+A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and ImGui.NET.
