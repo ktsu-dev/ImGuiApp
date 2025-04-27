@@ -141,10 +141,52 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	public void EnsureWindowPositionIsValid_WithInvalidPosition_NotTestable()
+	public void EnsureWindowPositionIsValid_WithInvalidPosition_MovesToValidPosition()
 	{
-		// Skip this test as it requires more complex mocking of the OpenGL context
-		Assert.Inconclusive("This test requires more complex mocking of the OpenGL context");
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		// Set up window field using reflection
+		var windowField = typeof(ImGuiApp).GetField("window", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+		var mockWindow = new Mock<IWindow>();
+		var mockMonitor = new Mock<IMonitor>();
+
+		// Set up monitor bounds
+		var monitorBounds = new Rectangle<int>(0, 0, 1920, 1080);
+		mockMonitor.Setup(m => m.Bounds).Returns(monitorBounds);
+
+		// Set up window in an invalid position (off screen)
+		var windowSize = new Vector2D<int>(800, 600);
+		var offScreenPosition = new Vector2D<int>(-1000, -1000);
+		mockWindow.Setup(w => w.Size).Returns(windowSize);
+		mockWindow.Setup(w => w.Position).Returns(offScreenPosition);
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+
+		// Allow position and size to be set
+		var finalPosition = offScreenPosition;
+		mockWindow.SetupSet(w => w.Position = It.IsAny<Vector2D<int>>())
+			.Callback<Vector2D<int>>(pos => finalPosition = pos);
+		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>());
+		mockWindow.SetupSet(w => w.WindowState = It.IsAny<WindowState>());
+
+		// Set the mock window
+		windowField?.SetValue(null, mockWindow.Object);
+
+		// Call EnsureWindowPositionIsValid through reflection
+		var method = typeof(ImGuiApp).GetMethod("EnsureWindowPositionIsValid",
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+		method?.Invoke(null, null);
+
+		// Verify the window was moved to a valid position
+		mockWindow.VerifySet(w => w.Position = It.Is<Vector2D<int>>(pos =>
+			monitorBounds.Contains(pos) ||
+			monitorBounds.Contains(pos + windowSize)));
+
+		// Additional verification that the window is now visible
+		Assert.IsTrue(monitorBounds.Contains(finalPosition) ||
+			monitorBounds.Contains(finalPosition + windowSize),
+			"Window should be moved to a visible position on the monitor");
 	}
 
 	[TestMethod]
