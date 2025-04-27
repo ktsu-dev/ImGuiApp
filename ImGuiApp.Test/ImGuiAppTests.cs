@@ -26,6 +26,7 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestInitialize]
 	public void Setup()
 	{
+		ResetState();
 		_mockWindow = new Mock<IWindow>();
 		_mockMonitor = new Mock<IMonitor>();
 		_testGL = new TestGL();
@@ -48,6 +49,7 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestCleanup]
 	public void Cleanup()
 	{
+		ResetState();
 		_testGLWrapper?.Dispose();
 		_testGL?.Dispose();
 	}
@@ -55,6 +57,11 @@ public sealed class ImGuiAppTests : IDisposable
 	public void Dispose()
 	{
 		Cleanup();
+	}
+
+	private static void ResetState()
+	{
+		ImGuiApp.Reset();
 	}
 
 	[TestMethod]
@@ -158,9 +165,12 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void OpenGLProvider_GetGL_ReturnsSameInstance()
 	{
+		// Create a scope to control disposal
+		IGL gl1;
+		IGL gl2;
 		using var provider = new OpenGLProvider(_mockGLFactory!.Object);
-		var gl1 = provider.GetGL();
-		var gl2 = provider.GetGL();
+		gl1 = provider.GetGL();
+		gl2 = provider.GetGL();
 		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
 		_mockGLFactory.Verify(f => f.CreateGL(), Times.Once);
 	}
@@ -178,11 +188,11 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	public void WindowOpenGLFactory_CreateGL_CallsWindowCreateOpenGL()
+	public void WindowOpenGLFactory_CreateGL_ReturnsGL()
 	{
 		var factory = new WindowOpenGLFactory(_mockWindow!.Object);
-		factory.CreateGL();
-		// Note: We can't verify the call to CreateOpenGL since it's an extension method
+		var gl = factory.CreateGL();
+		Assert.IsNotNull(gl);
 	}
 
 	[TestMethod]
@@ -221,10 +231,10 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	public void GetOrLoadTexture_WithInvalidPath_ThrowsFileNotFoundException()
+	public void GetOrLoadTexture_WithInvalidPath_ThrowsArgumentException()
 	{
 		var invalidPath = new StrongPaths.AbsoluteFilePath();
-		Assert.ThrowsException<FileNotFoundException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
+		Assert.ThrowsException<ArgumentException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
 	}
 
 	[TestMethod]

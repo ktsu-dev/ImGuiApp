@@ -17,5 +17,5 @@ public class WindowOpenGLFactory(IWindow window) : IOpenGLFactory
 	private readonly IWindow _window = window ?? throw new ArgumentNullException(nameof(window));
 
 	/// <inheritdoc/>
-	public GL CreateGL() => _window.CreateOpenGL();
+	public GL CreateGL() => GL.GetApi(_window);
 }

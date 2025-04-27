@@ -770,4 +770,27 @@ public static partial class ImGuiApp
 	public static int PtsToPx(int pts) =>
 		// Standard DPI is 72 points per inch, Windows uses 96 DPI as base
 		(int)(pts * (96.0f / 72.0f) * ScaleFactor);
+
+	/// <summary>
+	/// Resets all static state for testing purposes.
+	/// </summary>
+	internal static void Reset()
+	{
+		window = null;
+		gl = null;
+		controller = null;
+		inputContext = null;
+		glProvider = null;
+		LastNormalWindowState = new();
+		FontIndices.Clear();
+		lastFontScaleFactor = 0;
+		currentPinnedFontData.Clear();
+		Invoker = null!;
+		IsFocused = true;
+		showImGuiMetrics = false;
+		showImGuiDemo = false;
+		ScaleFactor = 1;
+		Textures.Clear();
+		Config = new();
+	}
 }
