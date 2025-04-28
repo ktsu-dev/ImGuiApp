@@ -123,8 +123,7 @@ public static partial class ImGuiApp
 				ContextFlags.ForwardCompatible,
 				new APIVersion(3, 3)),
 			PreferredDepthBufferBits = 24,
-			PreferredStencilBufferBits = 8,
-			IsEventDriven = true
+			PreferredStencilBufferBits = 8
 		};
 
 		LastNormalWindowState = config.InitialWindowState;
