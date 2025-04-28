@@ -535,20 +535,6 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Converts an ImageSharp image to a byte array.
-	/// </summary>
-	/// <param name="image">The ImageSharp image to convert.</param>
-	/// <returns>A byte array containing the image data.</returns>
-	public static byte[] GetImageBytes(Image<Rgba32> image)
-	{
-		ArgumentNullException.ThrowIfNull(image);
-
-		var pixelBytes = new byte[image.Width * image.Height * Unsafe.SizeOf<Rgba32>()];
-		image.CopyPixelDataTo(pixelBytes);
-		return pixelBytes;
-	}
-
-	/// <summary>
 	/// Sets the window icon using the specified icon file path.
 	/// </summary>
 	/// <param name="iconPath">The file path to the icon image.</param>
@@ -566,14 +552,19 @@ public static partial class ImGuiApp
 			var resizeImage = sourceImage.Clone();
 			var sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
 			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
-			var iconData = GetImageBytes(resizeImage);
-			icons.Add(new(size, size, new Memory<byte>(iconData)));
+
+			UseImageBytes(resizeImage, bytes =>
+			{
+				// Create a permanent copy since RawImage needs to keep the data
+				var iconData = new byte[bytes.Length];
+				Array.Copy(bytes, iconData, bytes.Length);
+				icons.Add(new(size, size, new Memory<byte>(iconData)));
+			});
 		}
 
 		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
 	}
 
-	private static readonly ConcurrentDictionary<AbsoluteFilePath, WeakReference<ImGuiAppTextureInfo>> _textureCache = new();
 	private static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
 
 	/// <summary>
@@ -581,43 +572,54 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static ImGuiAppTextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
-		// Try to get from cache first
-		if (_textureCache.TryGetValue(path, out var weakRef) &&
-			weakRef.TryGetTarget(out var cachedTexture))
+		// Check if the texture is already loaded
+		if (Textures.TryGetValue(path, out var existingTexture))
 		{
-			return cachedTexture;
+			return existingTexture;
 		}
 
 		using var image = Image.Load<Rgba32>(path);
+
+		var textureInfo = new ImGuiAppTextureInfo
+		{
+			Path = path,
+			Width = image.Width,
+			Height = image.Height
+		};
+
+		UseImageBytes(image, bytes => textureInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height));
+
+		Textures[path] = textureInfo;
+		return textureInfo;
+	}
+
+	/// <summary>
+	/// Executes an action with temporary access to image bytes using pooled memory for efficiency.
+	/// The bytes are returned to the pool after the action completes.
+	/// </summary>
+	/// <param name="image">The image to process.</param>
+	/// <param name="action">The action to perform with the image bytes.</param>
+	public static void UseImageBytes(Image<Rgba32> image, Action<byte[]> action)
+	{
+		ArgumentNullException.ThrowIfNull(image);
+		ArgumentNullException.ThrowIfNull(action);
+
 		var bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
 
 		// Rent buffer from pool
-		var bytes = _bytePool.Rent(bufferSize);
+		var pooledBuffer = _bytePool.Rent(bufferSize);
 		try
 		{
-			image.CopyPixelDataTo(bytes.AsSpan(0, bufferSize));
-			var textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+			// Copy the image data to the pooled buffer
+			image.CopyPixelDataTo(pooledBuffer.AsSpan(0, bufferSize));
 
-			var textureInfo = new ImGuiAppTextureInfo
-			{
-				Path = path,
-				TextureId = textureId,
-				Width = image.Width,
-				Height = image.Height
-			};
-
-			// Update cache with weak reference
-			_textureCache.AddOrUpdate(path,
-				new WeakReference<ImGuiAppTextureInfo>(textureInfo),
-				(_, old) => new WeakReference<ImGuiAppTextureInfo>(textureInfo));
-
-			Textures[path] = textureInfo;
-			return textureInfo;
+			// Execute the action with the pooled buffer
+			action(pooledBuffer);
 		}
 		finally
 		{
-			// Return buffer to pool
-			_bytePool.Return(bytes);
+			// Always return the buffer to the pool
+			_bytePool.Return(pooledBuffer);
 		}
 	}
 
@@ -671,32 +673,6 @@ public static partial class ImGuiApp
 				Marshal.FreeHGlobal(textureHandle);
 			}
 		});
-	}
-
-	/// <summary>
-	/// Cleans up unused textures from the cache.
-	/// </summary>
-	public static void CleanupUnusedTextures()
-	{
-		var keysToRemove = new List<AbsoluteFilePath>();
-
-		foreach (var kvp in _textureCache)
-		{
-			if (!kvp.Value.TryGetTarget(out _))
-			{
-				keysToRemove.Add(kvp.Key);
-			}
-		}
-
-		foreach (var key in keysToRemove)
-		{
-			if (_textureCache.TryRemove(key, out _) &&
-				Textures.TryGetValue(key, out var info))
-			{
-				DeleteTexture(info.TextureId);
-				Textures.TryRemove(key, out _);
-			}
-		}
 	}
 
 	/// <summary>

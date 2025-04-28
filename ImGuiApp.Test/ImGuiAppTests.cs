@@ -12,7 +12,6 @@ using Moq;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
-using SixLabors.ImageSharp.PixelFormats;
 
 [TestClass]
 public sealed class ImGuiAppTests : IDisposable
@@ -189,22 +188,6 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	public void GetImageBytes_WithValidImage_ReturnsCorrectByteArray()
-	{
-		using var image = new SixLabors.ImageSharp.Image<Rgba32>(100, 100);
-		var bytes = ImGuiApp.GetImageBytes(image);
-		Assert.IsNotNull(bytes);
-		Assert.AreEqual(100 * 100 * 4, bytes.Length); // 4 bytes per pixel (RGBA)
-	}
-
-	[TestMethod]
-	[ExpectedException(typeof(ArgumentNullException))]
-	public void GetImageBytes_WithNullImage_ThrowsArgumentNullException()
-	{
-		ImGuiApp.GetImageBytes(null!);
-	}
-
-	[TestMethod]
 	public void OpenGLProvider_GetGL_ReturnsSameInstance()
 	{
 		// Setup test GL provider
@@ -239,12 +222,5 @@ public sealed class ImGuiAppTests : IDisposable
 	{
 		var invalidPath = new StrongPaths.AbsoluteFilePath();
 		Assert.ThrowsException<ArgumentException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
-	}
-
-	[TestMethod]
-	public void CleanupUnusedTextures_DoesNotThrowException()
-	{
-		// This should not throw even when there are no textures
-		ImGuiApp.CleanupUnusedTextures();
 	}
 }
