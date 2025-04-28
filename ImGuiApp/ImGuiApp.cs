@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
+using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
 using ktsu.StrongPaths;
@@ -619,6 +620,22 @@ public static partial class ImGuiApp
 			_bytePool.Return(bytes);
 		}
 	}
+
+	/// <summary>
+	/// Tries to get a texture from the texture dictionary without loading it.
+	/// </summary>
+	/// <param name="path">The path to the texture file.</param>
+	/// <param name="textureInfo">When this method returns, contains the texture information if the texture is found; otherwise, null.</param>
+	/// <returns>true if the texture was found; otherwise, false.</returns>
+	public static bool TryGetTexture(AbsoluteFilePath path, out ImGuiAppTextureInfo? textureInfo) => Textures.TryGetValue(path, out textureInfo);
+
+	/// <summary>
+	/// Tries to get a texture from the texture dictionary without loading it.
+	/// </summary>
+	/// <param name="path">The path to the texture file as a string.</param>
+	/// <param name="textureInfo">When this method returns, contains the texture information if the texture is found; otherwise, null.</param>
+	/// <returns>true if the texture was found; otherwise, false.</returns>
+	public static bool TryGetTexture(string path, out ImGuiAppTextureInfo? textureInfo) => TryGetTexture(path.As<AbsoluteFilePath>(), out textureInfo);
 
 	/// <summary>
 	/// Uploads a texture to the GPU using the specified RGBA byte array, width, and height.
