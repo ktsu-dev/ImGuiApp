@@ -34,6 +34,7 @@ public static partial class ImGuiApp
 	private static ImGuiController.ImGuiController? controller;
 	private static IInputContext? inputContext;
 	private static OpenGLProvider? glProvider;
+	private static IntPtr currentGLContextHandle; // Track the current GL context handle
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -153,6 +154,7 @@ public static partial class ImGuiApp
 				input: inputContext,
 				onConfigureIO: () =>
 				{
+					currentGLContextHandle = ImGui.GetCurrentContext();
 					UpdateDpiScale();
 					InitFonts();
 					config.OnStart?.Invoke();
@@ -171,6 +173,7 @@ public static partial class ImGuiApp
 			gl?.Viewport(s);
 			CaptureWindowNormalState();
 			UpdateDpiScale();
+			CheckAndHandleContextChange();
 			config.OnMoveOrResize?.Invoke();
 		};
 	}
@@ -181,6 +184,7 @@ public static partial class ImGuiApp
 		{
 			CaptureWindowNormalState();
 			UpdateDpiScale();
+			CheckAndHandleContextChange();
 			config.OnMoveOrResize?.Invoke();
 		};
 	}
@@ -862,5 +866,64 @@ public static partial class ImGuiApp
 		ScaleFactor = 1;
 		Textures.Clear();
 		Config = new();
+	}
+
+	/// <summary>
+	/// Checks if the OpenGL context has changed and handles texture reloading if needed
+	/// </summary>
+	private static void CheckAndHandleContextChange()
+	{
+		if (gl == null)
+		{
+			return;
+		}
+
+		// Get the current context handle
+		var newContextHandle = ImGui.GetCurrentContext();
+
+		// If context has changed, reload all textures
+		if (newContextHandle != currentGLContextHandle && newContextHandle != nint.Zero)
+		{
+			currentGLContextHandle = newContextHandle;
+			ReloadAllTextures();
+		}
+	}
+
+	/// <summary>
+	/// Reloads all previously loaded textures in the new context
+	/// </summary>
+	private static void ReloadAllTextures()
+	{
+		if (gl == null)
+		{
+			return;
+		}
+
+		// Make a copy to avoid modification issues during iteration
+		var texturesToReload = Textures.ToList();
+
+		foreach (var texture in texturesToReload)
+		{
+			try
+			{
+				var path = texture.Key;
+				var oldInfo = texture.Value;
+
+				// Only reload from file if the path exists
+				if (File.Exists(path))
+				{
+					using var image = Image.Load<Rgba32>(path);
+					var oldTextureId = oldInfo.TextureId;
+
+					// Upload new texture
+					UseImageBytes(image, bytes => oldInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height));
+
+					// No need to delete old texture as the context is already gone
+				}
+			}
+			catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException)
+			{
+			}
+		}
 	}
 }
