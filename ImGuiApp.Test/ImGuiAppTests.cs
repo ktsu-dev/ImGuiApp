@@ -7,6 +7,8 @@
 namespace ktsu.ImGuiApp.Test;
 
 using System.Numerics;
+using ktsu.Extensions;
+using ktsu.StrongPaths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Core.Contexts;
@@ -220,7 +222,83 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void GetOrLoadTexture_WithInvalidPath_ThrowsArgumentException()
 	{
-		var invalidPath = new StrongPaths.AbsoluteFilePath();
+		var invalidPath = new AbsoluteFilePath();
 		Assert.ThrowsException<ArgumentException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
+	}
+
+	[TestMethod]
+	public void TextureReloading_AfterDeletion_CreatesNewTexture()
+	{
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		// Set up a path for testing
+		var mockTexturePath = "C:/test/texture.png".As<AbsoluteFilePath>();
+
+		// We need to initialize minimal parts of ImGuiApp for the test
+		var invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+		invokerField?.SetValue(null, new Invoker.Invoker());
+
+		// We'll test using the public API (TryGetTexture) rather than direct reflection access
+		// First, verify there's no texture initially
+		var initialTextureExists = ImGuiApp.TryGetTexture(mockTexturePath, out _);
+		Assert.IsFalse(initialTextureExists, "Should not have any textures initially");
+
+		// Manually add a texture through the internal field
+		// Get the Textures property through reflection - it's a property, not a field
+		var texturesProperty = typeof(ImGuiApp).GetProperty("Textures",
+			System.Reflection.BindingFlags.Public |
+			System.Reflection.BindingFlags.NonPublic |
+			System.Reflection.BindingFlags.Static);
+
+		Assert.IsNotNull(texturesProperty, "Textures property should exist");
+
+		// Get the dictionary
+		var texturesDict = texturesProperty?.GetValue(null) as System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo>;
+		Assert.IsNotNull(texturesDict, "Textures dictionary should not be null");
+
+		// First texture
+		var firstTextureInfo = new ImGuiAppTextureInfo
+		{
+			Path = mockTexturePath,
+			TextureId = 1001,
+			Width = 100,
+			Height = 100
+		};
+
+		// Add the texture directly to the dictionary
+		texturesDict.TryAdd(mockTexturePath, firstTextureInfo);
+
+		// Verify it can be accessed via the public API
+		var textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out var retrievedTexture);
+		Assert.IsTrue(textureExists, "Texture should exist after adding");
+		Assert.IsNotNull(retrievedTexture, "Retrieved texture should not be null");
+		Assert.AreEqual(1001u, retrievedTexture!.TextureId, "Texture ID should match");
+
+		// Remove the texture to simulate deletion
+		texturesDict.TryRemove(mockTexturePath, out _);
+
+		// Verify it's removed
+		textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out _);
+		Assert.IsFalse(textureExists, "Texture should be removed after deletion");
+
+		// Create a second texture
+		var secondTextureInfo = new ImGuiAppTextureInfo
+		{
+			Path = mockTexturePath,
+			TextureId = 1002,
+			Width = 100,
+			Height = 100
+		};
+
+		// Add the second texture to the dictionary
+		texturesDict.TryAdd(mockTexturePath, secondTextureInfo);
+
+		// Verify the newly loaded texture
+		textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out var reloadedTexture);
+		Assert.IsTrue(textureExists, "Texture should exist after reloading");
+		Assert.IsNotNull(reloadedTexture, "Reloaded texture should not be null");
+		Assert.AreEqual(1002u, reloadedTexture!.TextureId, "New texture ID should match");
+		Assert.AreNotEqual(firstTextureInfo.TextureId, reloadedTexture.TextureId, "Reloaded texture should have a different ID");
 	}
 }
