@@ -13,12 +13,21 @@ on:
       - reopened
       - labeled
 
+permissions:
+  contents: read
+  repository-projects: write
+  issues: write
+  pull-requests: write
+
 jobs:
   add-to-project:
     name: Add to project
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
-      - uses: actions/add-to-project@v1.0.2
+      - name: Add item to project
+        uses: actions/add-to-project@v1.0.2
         with:
           project-url: https://github.com/orgs/ktsu-dev/projects/2
           github-token: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
