@@ -2,170 +2,120 @@ name: .NET Workflow
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [main, develop]
+    paths-ignore: ['**.md', '.github/ISSUE_TEMPLATE/**', '.github/pull_request_template.md']
   pull_request:
+    paths-ignore: ['**.md', '.github/ISSUE_TEMPLATE/**', '.github/pull_request_template.md']
   schedule:
-    - cron: "0 23 * * *"
+    - cron: "0 23 * * *"  # Daily at 11 PM UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-permissions:
-  packages: write
-  contents: write
+# Default permissions
+permissions: read-all
 
 env:
-  OUTPUT_PATH: 'output'
-  STAGING_PATH: 'staging'
-  DOTNET_VERSION: '9.0'
+  DOTNET_VERSION: '9.0'  # Only needed for actions/setup-dotnet
 
 jobs:
-  dotnet:
-    name: .NET Workflow
+  build:
+    name: Build, Test & Release
     runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # For creating releases and committing metadata
+      packages: write  # For publishing packages
+
+    outputs:
+      version: ${{ steps.pipeline.outputs.version }}
+      release_hash: ${{ steps.pipeline.outputs.release_hash }}
+      should_release: ${{ steps.pipeline.outputs.should_release }}
+
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
       with:
+        fetch-depth: 0  # Full history for versioning
+        fetch-tags: true
+        lfs: true
         submodules: recursive
         persist-credentials: true
-        lfs: true
-        fetch-tags: true
 
-    - name: Fetch tags
-      shell: pwsh
-      run: |
-        git fetch --prune --unshallow --tags
+    - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}.x
+        cache: true
+        cache-dependency-path: '**/*.csproj'
 
-        $global:LASTEXITCODE = 0
-
-    - name: Configure Environment
+    - name: Run PSBuild Pipeline
+      id: pipeline
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        $IS_FORK = (gh repo view --json isFork | ConvertFrom-Json).isFork
-        $IS_MAIN = "${{ github.ref }}" -eq "refs/heads/main"
-        $IS_TAGGED = (git show-ref --tags -d | Out-String).Contains("${{ github.sha }}")
-        $SHOULD_RELEASE = ($IS_MAIN -AND -NOT $IS_TAGGED -AND -NOT $IS_FORK)
-        $USE_DOTNET_SCRIPT = (Get-ChildItem -Recurse -Filter *.csx).Count -gt 0
-        $PACKAGE_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.nupkg"
-        $SYMBOLS_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.snupkg"
-        $APPLICATION_PATTERN = Join-Path -Path "${{ github.workspace }}" -ChildPath "${{ env.STAGING_PATH }}" -AdditionalChildPath "*.zip"
+        # Import the PSBuild module
+        Import-Module ${{ github.workspace }}/scripts/PSBuild.psm1
 
-        $BUILD_ARGS = ""
-        $BUILD_ARGS += $USE_DOTNET_SCRIPT ? "-maxCpuCount:1" : ""
+        # Get build configuration
+        $buildConfig = Get-BuildConfiguration `
+          -ServerUrl "${{ github.server_url }}" `
+          -GitRef "${{ github.ref }}" `
+          -GitSha "${{ github.sha }}" `
+          -GitHubOwner "${{ github.repository_owner }}" `
+          -GitHubRepo "${{ github.repository }}" `
+          -GithubToken "${{ github.token }}" `
+          -NuGetApiKey "${{ secrets.NUGET_KEY }}" `
+          -WorkspacePath "${{ github.workspace }}" `
+          -ExpectedOwner "ktsu-dev" `
+          -ChangelogFile "CHANGELOG.md" `
+          -AssetPatterns @("staging/*.nupkg", "staging/*.zip")
 
-        "IS_FORK=$IS_FORK" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "IS_MAIN=$IS_MAIN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "IS_TAGGED=$IS_TAGGED" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "SHOULD_RELEASE=$SHOULD_RELEASE" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "USE_DOTNET_SCRIPT=$USE_DOTNET_SCRIPT" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "PACKAGE_PATTERN=$PACKAGE_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "SYMBOLS_PATTERN=$SYMBOLS_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "APPLICATION_PATTERN=$APPLICATION_PATTERN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-        "BUILD_ARGS=$BUILD_ARGS" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        if (-not $buildConfig.Success) {
+            throw $buildConfig.Error
+        }
 
-        Write-Host "IS_FORK: $IS_FORK"
-        Write-Host "IS_MAIN: $IS_MAIN"
-        Write-Host "IS_TAGGED: $IS_TAGGED"
-        Write-Host "SHOULD_RELEASE: $SHOULD_RELEASE"
-        Write-Host "USE_DOTNET_SCRIPT: $USE_DOTNET_SCRIPT"
-        Write-Host "PACKAGE_PATTERN: $PACKAGE_PATTERN"
-        Write-Host "SYMBOLS_PATTERN: $SYMBOLS_PATTERN"
-        Write-Host "APPLICATION_PATTERN: $APPLICATION_PATTERN"
-        Write-Host "BUILD_ARGS: $BUILD_ARGS"
+        # Run the complete CI/CD pipeline
+        $result = Invoke-CIPipeline `
+          -BuildConfiguration $buildConfig.Data
 
-        $global:LASTEXITCODE = 0
+        if (-not $result.Success) {
+            Write-Information "CI/CD pipeline failed: $($result.Error)" -Tags "Invoke-CIPipeline"
+            Write-Information "Stack Trace: $($result.StackTrace)" -Tags "Invoke-CIPipeline"
+            Write-Information "Build Configuration: $($buildConfig.Data | ConvertTo-Json -Depth 10)" -Tags "Invoke-CIPipeline"
+            throw $result.Error
+        }
 
-    - name: Make Version
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      shell: pwsh
-      run: scripts/make-version.ps1 "${{ github.sha }}"
+        # Set outputs for GitHub Actions from build configuration
+        "version=$($buildConfig.Data.Version)" >> $env:GITHUB_OUTPUT
+        "release_hash=$($buildConfig.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
+        "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
 
-    - name: Make License
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      shell: pwsh
-      run: scripts/make-license.ps1 "${{ github.server_url }}" "${{ github.repository_owner }}" "${{ github.repository }}"
-
-    - name: Make Changelog
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      shell: pwsh
-      run: scripts/make-changelog.ps1 "${{ env.VERSION }}" "${{ github.sha }}"
-
-    - name: Commit Metadata
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      shell: pwsh
-      run: scripts/commit-metadata.ps1
-
-    - name: Setup .NET Core SDK
-      uses: actions/setup-dotnet@v4
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
-        dotnet-version: |
-          ${{ env.DOTNET_VERSION }}.x
+        name: coverage-report
+        path: ./coverage
+        retention-days: 7
 
-    - name: Install dotnet-script
-      if: ${{ env.USE_DOTNET_SCRIPT == 'True' }}
-      shell: pwsh
-      run: dotnet tool install -g dotnet-script
+  security:
+    name: Security Scanning
+    needs: build
+    if: needs.build.outputs.should_release == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write # For dependency submission
+      contents: write # For dependency submission
 
-    - name: Build
-      shell: pwsh
-      run: dotnet build --configuration Release --verbosity normal --no-incremental ${{ env.BUILD_ARGS }}
-
-    - name: Test
-      shell: pwsh
-      run: dotnet test -m:1 --configuration Release --verbosity normal --no-build
+    steps:
+    - name: Checkout Release Commit
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ needs.build.outputs.release_hash }}
 
     - name: Detect Dependencies
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
       uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
-
-    - name: Package Libraries
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      shell: pwsh
-      run: dotnet pack --configuration Release --output ${{ github.workspace }}/${{ env.STAGING_PATH }}
-
-    - name: Package Applications
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      shell: pwsh
-      run: |
-        if (Test-Path ${{ github.workspace }}/${{ env.OUTPUT_PATH }}) {
-          Remove-Item -Recurse -Force ${{ github.workspace }}/${{ env.OUTPUT_PATH }}
-        }
-        Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
-          $csproj = $_
-          $projName = [System.IO.Path]::GetFileNameWithoutExtension($csproj)
-          $outDir = "${{ github.workspace }}/${{ env.OUTPUT_PATH }}/$projName"
-          $stageDir = "${{ github.workspace }}/${{ env.STAGING_PATH }}"
-          $stageFile = "$stageDir/$projName-${{ env.VERSION }}.zip"
-          New-Item -Path $outDir -ItemType Directory -Force
-          New-Item -Path $stageDir -ItemType Directory -Force
-          dotnet publish $csproj --no-build --configuration Release --framework net${{ env.DOTNET_VERSION }} --output $outDir
-          Compress-Archive -Path $outDir/* -DestinationPath $stageFile
-        }
-
-    - name: Publish Libraries to GitHub
-      if: ${{ env.SHOULD_RELEASE == 'True' && hashFiles(env.PACKAGE_PATTERN) != '' }}
-      shell: pwsh
-      run: dotnet nuget push ${{ env.PACKAGE_PATTERN }} --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
-
-    - name: Publish Libraries to NuGet
-      if: ${{ env.SHOULD_RELEASE == 'True' && hashFiles(env.PACKAGE_PATTERN) != '' }}
-      shell: pwsh
-      run: dotnet nuget push ${{ env.PACKAGE_PATTERN }} --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-
-    - name: Release
-      if: ${{ env.SHOULD_RELEASE == 'True' }}
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: "${{ env.PACKAGE_PATTERN }},${{ env.SYMBOLS_PATTERN }},${{ env.APPLICATION_PATTERN }}"
-        tag: v${{ env.VERSION }}
-        commit: ${{ env.RELEASE_HASH }}
-        allowUpdates: false
-        skipIfReleaseExists: true
-        generateReleaseNotes: true
-        bodyFile: CHANGELOG.md
-        replacesArtifacts: false
-        makeLatest: true
