@@ -55,6 +55,8 @@ function Get-BuildConfiguration {
         The expected owner/organization of the official repository.
     .PARAMETER ChangelogFile
         The path to the changelog file.
+    .PARAMETER LatestChangelogFile
+        The path to the file containing only the latest version's changelog. Defaults to "LATEST_CHANGELOG.md".
     .PARAMETER AssetPatterns
         Array of glob patterns for release assets.
     .OUTPUTS
@@ -83,6 +85,8 @@ function Get-BuildConfiguration {
         [string]$ExpectedOwner,
         [Parameter(Mandatory=$true)]
         [string]$ChangelogFile,
+        [Parameter(Mandatory=$false)]
+        [string]$LatestChangelogFile = "LATEST_CHANGELOG.md",
         [Parameter(Mandatory=$true)]
         [string[]]$AssetPatterns
     )
@@ -158,6 +162,7 @@ function Get-BuildConfiguration {
             Version = "1.0.0-pre.0"
             ReleaseHash = $GitSha
             ChangelogFile = $ChangelogFile
+            LatestChangelogFile = $LatestChangelogFile
             AssetPatterns = $AssetPatterns
         }
     }
@@ -871,6 +876,8 @@ function New-Changelog {
         Optional path to write the changelog file to. Defaults to workspace root.
     .PARAMETER IncludeAllVersions
         Whether to include all previous versions in the changelog. Defaults to $true.
+    .PARAMETER LatestChangelogPath
+        Optional path to write the latest version's changelog to. Defaults to "LATEST_CHANGELOG.md".
     #>
     [CmdletBinding()]
     param (
@@ -879,7 +886,8 @@ function New-Changelog {
         [Parameter(Mandatory=$true)]
         [string]$CommitHash,
         [string]$OutputPath = "",
-        [bool]$IncludeAllVersions = $true
+        [bool]$IncludeAllVersions = $true,
+        [string]$LatestChangelogPath = "LATEST_CHANGELOG.md"
     )
 
     # Configure git versionsort to correctly handle prereleases
@@ -914,13 +922,20 @@ function New-Changelog {
     Write-Information "Generating changelog from $previousTag to $currentTag (commit: $CommitHash)" -Tags "New-Changelog"
     $versionNotes = Get-VersionNotes -Tags $tags -FromTag $previousTag -ToTag $currentTag -ToSha $CommitHash
 
+    # Store the latest version's notes for later use in GitHub releases
+    $latestVersionNotes = ""
+
     # If we have changes, add them to the changelog
     if (-not [string]::IsNullOrWhiteSpace($versionNotes)) {
         $changelog += $versionNotes
+        $latestVersionNotes = $versionNotes
     } else {
         # Handle no changes detected case - add a minimal entry
-        $changelog += "## $currentTag$script:lineEnding$script:lineEnding"
-        $changelog += "Initial release or no significant changes since $previousTag.$script:lineEnding$script:lineEnding"
+        $minimalEntry = "## $currentTag$script:lineEnding$script:lineEnding"
+        $minimalEntry += "Initial release or no significant changes since $previousTag.$script:lineEnding$script:lineEnding"
+
+        $changelog += $minimalEntry
+        $latestVersionNotes = $minimalEntry
     }
 
     # Add entries for all previous versions if requested
@@ -952,6 +967,12 @@ function New-Changelog {
     $changelog = $changelog.ReplaceLineEndings($script:lineEnding)
 
     [System.IO.File]::WriteAllText($filePath, $changelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
+
+    # Write latest version's changelog to separate file for GitHub releases
+    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogPath } else { $LatestChangelogPath }
+    $latestVersionNotes = $latestVersionNotes.ReplaceLineEndings($script:lineEnding)
+    [System.IO.File]::WriteAllText($latestPath, $latestVersionNotes, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
+    Write-Information "Latest version changelog saved to: $latestPath" -Tags "New-Changelog"
 
     $versionCount = if ($hasTags) { @($tags).Count + 1 } else { 1 }
     Write-Information "Changelog generated with entries for $versionCount versions" -Tags "New-Changelog"
@@ -1005,8 +1026,8 @@ function Update-ProjectMetadata {
         New-License -ServerUrl $BuildConfiguration.ServerUrl -Owner $BuildConfiguration.GitHubOwner -Repository $BuildConfiguration.GitHubRepo | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         Write-Information "Generating changelog..." -Tags "Update-ProjectMetadata"
-        # Fixed: Now properly includes latest changes
-        New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash | Write-InformationStream -Tags "Update-ProjectMetadata"
+        # Generate both full changelog and latest version changelog
+        New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogPath $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         # Create AUTHORS.md if authors are provided
         if ($Authors.Count -gt 0) {
@@ -1445,9 +1466,16 @@ function New-GitHubRelease {
     # Add notes generation
     $releaseArgs += "--generate-notes"
 
-    # Handle changelog content if file exists
-    if (Test-Path $BuildConfiguration.ChangelogFile) {
-        Write-Information "Using changelog from $($BuildConfiguration.ChangelogFile)" -Tags "New-GitHubRelease"
+    # First check for latest changelog file (preferred for releases)
+    $latestChangelogPath = "LATEST_CHANGELOG.md"
+    if (Test-Path $latestChangelogPath) {
+        Write-Information "Using latest version changelog from $latestChangelogPath" -Tags "New-GitHubRelease"
+        $releaseArgs += "--notes-file"
+        $releaseArgs += $latestChangelogPath
+    }
+    # Fall back to full changelog if specified in config and latest not found
+    elseif (Test-Path $BuildConfiguration.ChangelogFile) {
+        Write-Information "Using full changelog from $($BuildConfiguration.ChangelogFile)" -Tags "New-GitHubRelease"
         $releaseArgs += "--notes-file"
         $releaseArgs += $BuildConfiguration.ChangelogFile
     }
