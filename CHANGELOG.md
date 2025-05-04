@@ -1,3 +1,22 @@
+## v1.12.5 (patch)
+
+Changes since v1.12.4:
+
+- Add additional demo features to ImGuiApp, including a Style Editor, Metrics window, and About section. Enhanced the main demo window with new widgets and improved layout options. Implemented real-time plotting functionality and updated menu items for better navigation. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add Moq package and enhance ImGuiAppTests with new unit tests ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add unit tests for ForceDpiAware and ImGuiApp functionality ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add VSCode configuration files for .NET Core development ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance README.md with a new "Getting Started" section detailing prerequisites for .NET 8.0 and Windows OS. Clean up code formatting in the Program class by removing unnecessary blank lines for improved readability. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance README.md with improved structure and content. Added new sections for Introduction, API Reference, and Acknowledgements. Updated features list for clarity and detail. Included usage examples for application setup and texture management. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Implement texture caching and memory optimization in ImGuiApp. Introduced a concurrent dictionary for texture management, added a method to load textures with pooled memory usage, and implemented a cleanup function for unused textures. Refactored the texture upload process for improved performance and reliability. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor font management in ImGuiApp to improve memory handling and performance. Added logic to prevent unnecessary font reloads based on scale factor changes. Implemented cleanup for pinned font data during window closing and enhanced font initialization process. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor ImGuiApp startup process by consolidating window initialization and event handler setup into dedicated methods. This improves code organization and readability while maintaining functionality. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor variable declarations in ImGuiApp and related files to use 'var' for improved readability and consistency. Update .editorconfig to change the suggestion level for 'dotnet_style_prefer_auto_properties' from silent to suggestion. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Style conformance ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update copyright headers in ImGuiApp files to reflect ownership and licensing. Ensure consistent formatting across multiple files, enhancing clarity and compliance with licensing requirements. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update DESCRIPTION.md to clarify the purpose of the library as a .NET application scaffolding tool for Dear ImGui, utilizing Silk.NET and ImGui.NET. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update project SDK references to ktsu.Sdk version 1.8.0 ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.12.4 (patch)
 
 Changes since v1.12.3:
