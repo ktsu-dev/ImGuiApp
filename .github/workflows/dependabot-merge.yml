@@ -4,20 +4,28 @@ on: pull_request
 permissions:
   contents: write
   pull-requests: write
+  packages: read
 
 jobs:
   dependabot:
+    name: Process Dependabot PR
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
+    timeout-minutes: 5
+
     steps:
-      - name: Dependabot metadata
+      - name: Fetch Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@v1
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
+
       - name: Enable auto-merge for Dependabot PRs
         if: steps.metadata.outputs.update-type == 'version-update:semver-major' || steps.metadata.outputs.update-type == 'version-update:semver-minor' || steps.metadata.outputs.update-type == 'version-update:semver-patch'
-        run: gh pr merge --auto --merge "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          set -e
+          echo "Processing PR: $PR_URL"
+          gh pr merge --auto --merge "$PR_URL"
