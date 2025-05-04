@@ -1,6 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="ktsu.Sdk.App/1.8.0">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
@@ -9,15 +8,13 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="9.0.4" />
-    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="9.0.3" />
     <PackageReference Include="System.Text.Json" Version="9.0.4" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\ImGuiApp\ImGuiApp.csproj" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -25,7 +22,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-  
+
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
