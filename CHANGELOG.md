@@ -1,6 +1,11 @@
+## v1.12.6-pre.3 (prerelease)
+
+Changes since v1.12.6-pre.2:
+
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.12.6-pre.2 (prerelease)
 
-Incremental prerelease update.
+Changes since v1.12.6-pre.1:
 ## v1.12.6-pre.1 (prerelease)
 
 Changes since v1.12.5:
