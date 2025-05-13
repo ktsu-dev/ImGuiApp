@@ -1,6 +1,11 @@
+## v1.12.6-pre.11 (prerelease)
+
+Changes since v1.12.6-pre.10:
+
+- Update System.Text.Json to 9.0.5 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.12.6-pre.10 (prerelease)
 
-Incremental prerelease update.
+Changes since v1.12.6-pre.9:
 ## v1.12.6-pre.9 (prerelease)
 
 Changes since v1.12.6-pre.8:
