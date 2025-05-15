@@ -736,15 +736,13 @@ public static partial class ImGuiApp
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
 
-		ImFontConfig fontConfig = new()
-		{
-			FontDataOwnedByAtlas = 0,
-			PixelSnapH = 1,
-			OversampleH = 2, // Improved oversampling for better quality
-			OversampleV = 2,
-			RasterizerMultiply = 1.0f, // Adjust if needed for better rendering
-			RasterizerDensity = 1.0f,
-		};
+		var fontConfig = ImGui.ImFontConfig();
+		fontConfig.FontDataOwnedByAtlas = false;
+		fontConfig.PixelSnapH = true;
+		fontConfig.OversampleH = 2; // Improved oversampling for better quality
+		fontConfig.OversampleV = 2;
+		fontConfig.RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
+		fontConfig.RasterizerDensity = 1.0f;
 
 		foreach (var (name, fontBytes) in fontsToLoad)
 		{
@@ -765,7 +763,7 @@ public static partial class ImGuiApp
 				var fontIndex = fontAtlasPtr.Fonts.Size;
 				unsafe
 				{
-					fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, size, &fontConfig);
+					fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, size, fontConfig);
 				}
 
 				fontSizes[size] = fontIndex;

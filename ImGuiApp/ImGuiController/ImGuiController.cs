@@ -77,8 +77,8 @@ internal class ImGuiController : IDisposable
 			var glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
 			unsafe
 			{
-				var fontCfg = new ImFontConfig { RasterizerDensity = 1.0f };
-				io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, &fontCfg, (uint*)glyphRange);
+				var imFontConfig = ImGui.ImFontConfig();
+				io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, imFontConfig, (uint*)glyphRange);
 			}
 		}
 
