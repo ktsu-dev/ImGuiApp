@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
@@ -34,7 +34,7 @@ public static partial class ImGuiApp
 	private static ImGuiController.ImGuiController? controller;
 	private static IInputContext? inputContext;
 	private static OpenGLProvider? glProvider;
-	private static IntPtr currentGLContextHandle; // Track the current GL context handle
+	private static ImGuiContextPtr currentGLContextHandle; // Track the current GL context handle
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -154,6 +154,7 @@ public static partial class ImGuiApp
 				onConfigureIO: () =>
 				{
 					currentGLContextHandle = ImGui.GetCurrentContext();
+
 					UpdateDpiScale();
 					InitFonts();
 					config.OnStart?.Invoke();
@@ -735,52 +736,45 @@ public static partial class ImGuiApp
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
 
-		unsafe
+		var fontConfig = ImGui.ImFontConfig();
+		fontConfig.FontDataOwnedByAtlas = false;
+		fontConfig.PixelSnapH = true;
+		fontConfig.OversampleH = 2; // Improved oversampling for better quality
+		fontConfig.OversampleV = 2;
+		fontConfig.RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
+		fontConfig.RasterizerDensity = 1.0f;
+
+		foreach (var (name, fontBytes) in fontsToLoad)
 		{
-			var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-			try
+			if (!FontIndices.TryGetValue(name, out var fontSizes))
 			{
-				// We'll still tell ImGui not to own the data, but we'll track it ourselves
-				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
-				fontConfigNativePtr->PixelSnapH = 1;
-				fontConfigNativePtr->OversampleH = 2; // Improved oversampling for better quality
-				fontConfigNativePtr->OversampleV = 2;
-				fontConfigNativePtr->RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
+				fontSizes = new();
+				FontIndices[name] = fontSizes;
+			}
 
-				foreach (var (name, fontBytes) in fontsToLoad)
+			// Pin the font data so the GC doesn't move or collect it while ImGui is using it
+			var pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
+			fontPinnedData.Add(pinnedFontData);
+
+			var fontDataPtr = pinnedFontData.AddrOfPinnedObject();
+
+			foreach (var size in SupportedPixelFontSizes)
+			{
+				var fontIndex = fontAtlasPtr.Fonts.Size;
+				unsafe
 				{
-					if (!FontIndices.TryGetValue(name, out var fontSizes))
-					{
-						fontSizes = new();
-						FontIndices[name] = fontSizes;
-					}
-
-					// Pin the font data so the GC doesn't move or collect it while ImGui is using it
-					var pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
-					fontPinnedData.Add(pinnedFontData);
-
-					var fontDataPtr = pinnedFontData.AddrOfPinnedObject();
-
-					foreach (var size in SupportedPixelFontSizes)
-					{
-						var fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, size, fontConfigNativePtr);
-						fontSizes[size] = fontIndex;
-					}
+					fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, size, fontConfig);
 				}
 
-				// Build the font atlas
-				var success = fontAtlasPtr.Build();
-				if (!success)
-				{
-					throw new InvalidOperationException("Failed to build ImGui font atlas");
-				}
+				fontSizes[size] = fontIndex;
 			}
-			finally
-			{
-				// Cleanup the font config
-				ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
-			}
+		}
+
+		// Build the font atlas
+		var success = fontAtlasPtr.Build();
+		if (!success)
+		{
+			throw new InvalidOperationException("Failed to build ImGui font atlas");
 		}
 
 		// Store the pinned font data for later cleanup
@@ -881,7 +875,7 @@ public static partial class ImGuiApp
 		var newContextHandle = ImGui.GetCurrentContext();
 
 		// If context has changed, reload all textures
-		if (newContextHandle != currentGLContextHandle && newContextHandle != nint.Zero)
+		if (newContextHandle != currentGLContextHandle && newContextHandle != ImGuiContextPtr.Null)
 		{
 			currentGLContextHandle = newContextHandle;
 			ReloadAllTextures();

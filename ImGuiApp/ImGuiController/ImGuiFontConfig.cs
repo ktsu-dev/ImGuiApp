@@ -6,7 +6,7 @@ namespace ktsu.ImGuiApp.ImGuiController;
 
 using System;
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 /// <summary>
 /// Represents the configuration for an ImGui font.

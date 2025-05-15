@@ -6,7 +6,7 @@ namespace ktsu.ImGuiApp;
 
 using System.Numerics;
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 using ktsu.ScopedAction;
 

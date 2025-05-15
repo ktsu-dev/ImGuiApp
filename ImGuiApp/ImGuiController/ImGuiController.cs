@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -75,8 +75,11 @@ internal class ImGuiController : IDisposable
 		if (imGuiFontConfig is not null)
 		{
 			var glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
-
-			io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, null, glyphRange);
+			unsafe
+			{
+				var imFontConfig = ImGui.ImFontConfig();
+				io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, imFontConfig, (uint*)glyphRange);
+			}
 		}
 
 		onConfigureIO?.Invoke();
@@ -161,7 +164,7 @@ internal class ImGuiController : IDisposable
 	private static void OnMouseButton(IMouse _, MouseButton button, bool down)
 	{
 		var imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
-		if (imguiMouseButton != ImGuiMouseButton.COUNT)
+		if (imguiMouseButton != ImGuiMouseButton.Count)
 		{
 			var io = ImGui.GetIO();
 			io.AddMouseButtonEvent((int)imguiMouseButton, down);
@@ -189,7 +192,7 @@ internal class ImGuiController : IDisposable
 		io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
 
 		var imguiModKey = TranslateImGuiKeyToImGuiModKey(imGuiKey);
-		if (imguiModKey != ImGuiKey.NamedKey_END)
+		if (imguiModKey != ImGuiKey.NamedKeyEnd)
 		{
 			io.AddKeyEvent(imguiModKey, down);
 		}
@@ -334,16 +337,16 @@ internal class ImGuiController : IDisposable
 			Key.AltRight => ImGuiKey.RightAlt,
 			Key.SuperRight => ImGuiKey.RightSuper,
 			Key.Menu => ImGuiKey.Menu,
-			Key.Number0 => ImGuiKey._0,
-			Key.Number1 => ImGuiKey._1,
-			Key.Number2 => ImGuiKey._2,
-			Key.Number3 => ImGuiKey._3,
-			Key.Number4 => ImGuiKey._4,
-			Key.Number5 => ImGuiKey._5,
-			Key.Number6 => ImGuiKey._6,
-			Key.Number7 => ImGuiKey._7,
-			Key.Number8 => ImGuiKey._8,
-			Key.Number9 => ImGuiKey._9,
+			Key.Number0 => ImGuiKey.Key0,
+			Key.Number1 => ImGuiKey.Key1,
+			Key.Number2 => ImGuiKey.Key2,
+			Key.Number3 => ImGuiKey.Key3,
+			Key.Number4 => ImGuiKey.Key4,
+			Key.Number5 => ImGuiKey.Key5,
+			Key.Number6 => ImGuiKey.Key6,
+			Key.Number7 => ImGuiKey.Key7,
+			Key.Number8 => ImGuiKey.Key8,
+			Key.Number9 => ImGuiKey.Key9,
 			Key.A => ImGuiKey.A,
 			Key.B => ImGuiKey.B,
 			Key.C => ImGuiKey.C,
@@ -409,16 +412,16 @@ internal class ImGuiController : IDisposable
 			MouseButton.Left => ImGuiMouseButton.Left,
 			MouseButton.Right => ImGuiMouseButton.Right,
 			MouseButton.Middle => ImGuiMouseButton.Middle,
-			MouseButton.Button4 => ImGuiMouseButton.COUNT,
-			MouseButton.Button5 => ImGuiMouseButton.COUNT,
-			MouseButton.Button6 => ImGuiMouseButton.COUNT,
-			MouseButton.Button7 => ImGuiMouseButton.COUNT,
-			MouseButton.Button8 => ImGuiMouseButton.COUNT,
-			MouseButton.Button9 => ImGuiMouseButton.COUNT,
-			MouseButton.Button10 => ImGuiMouseButton.COUNT,
-			MouseButton.Button11 => ImGuiMouseButton.COUNT,
-			MouseButton.Button12 => ImGuiMouseButton.COUNT,
-			MouseButton.Unknown => ImGuiMouseButton.COUNT,
+			MouseButton.Button4 => ImGuiMouseButton.Count,
+			MouseButton.Button5 => ImGuiMouseButton.Count,
+			MouseButton.Button6 => ImGuiMouseButton.Count,
+			MouseButton.Button7 => ImGuiMouseButton.Count,
+			MouseButton.Button8 => ImGuiMouseButton.Count,
+			MouseButton.Button9 => ImGuiMouseButton.Count,
+			MouseButton.Button10 => ImGuiMouseButton.Count,
+			MouseButton.Button11 => ImGuiMouseButton.Count,
+			MouseButton.Button12 => ImGuiMouseButton.Count,
+			MouseButton.Unknown => ImGuiMouseButton.Count,
 			_ => throw new NotImplementedException($"MouseButton {mouseButton} hasn't been implemented in TranslateMouseButtonToImGuiMouseButton")
 		};
 	}
@@ -441,7 +444,7 @@ internal class ImGuiController : IDisposable
 			ImGuiKey.RightAlt => ImGuiKey.ModAlt,
 			ImGuiKey.LeftSuper => ImGuiKey.ModSuper,
 			ImGuiKey.RightSuper => ImGuiKey.ModSuper,
-			_ => ImGuiKey.NamedKey_END
+			_ => ImGuiKey.NamedKeyEnd
 		};
 	}
 
@@ -568,16 +571,16 @@ internal class ImGuiController : IDisposable
 
 			// Upload vertex/index buffers
 
-			_gl.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), (void*)cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
+			_gl.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
 			_gl.CheckGlError($"Data Vert {n}");
-			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), (void*)cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
+			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
 			_gl.CheckGlError($"Data Idx {n}");
 
 			for (var cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
 			{
 				var cmdPtr = cmdListPtr.CmdBuffer[cmd_i];
 
-				if (cmdPtr.UserCallback != nint.Zero)
+				if (cmdPtr.UserCallback != null)
 				{
 					throw new NotImplementedException();
 				}
@@ -596,7 +599,7 @@ internal class ImGuiController : IDisposable
 						_gl.CheckGlError("Scissor");
 
 						// Bind texture, Draw
-						_gl.BindTexture(GLEnum.Texture2D, (uint)cmdPtr.TextureId);
+						_gl.BindTexture(GLEnum.Texture2D, (uint)cmdPtr.TextureId.Handle);
 						_gl.CheckGlError("Texture");
 
 						_gl.DrawElementsBaseVertex(GLEnum.Triangles, cmdPtr.ElemCount, GLEnum.UnsignedShort, (void*)(cmdPtr.IdxOffset * sizeof(ushort)), (int)cmdPtr.VtxOffset);
@@ -758,18 +761,20 @@ internal class ImGuiController : IDisposable
 
 		// Build texture atlas
 		var io = ImGui.GetIO();
-		io.Fonts.GetTexDataAsRGBA32(out nint pixels, out var width, out var height, out var _);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+		byte* pixels = null;
+		int width = 0, height = 0, bytesPerPixel = 0;
+		io.Fonts.GetTexDataAsRGBA32(&pixels, &width, &height, &bytesPerPixel);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
 		// Upload texture to graphics system
 		_gl.GetInteger(GLEnum.TextureBinding2D, out var lastTexture);
 
-		_fontTexture = new Texture(_gl, width, height, pixels);
+		_fontTexture = new Texture(_gl, width, height, (nint)pixels);
 		_fontTexture.Bind();
 		_fontTexture.SetMagFilter(TextureMagFilter.Linear);
 		_fontTexture.SetMinFilter(TextureMinFilter.Linear);
 
 		// Store our identifier
-		io.Fonts.SetTexID((nint)_fontTexture.GlTexture);
+		io.Fonts.SetTexID(_fontTexture.GlTexture);
 
 		// Restore state
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
