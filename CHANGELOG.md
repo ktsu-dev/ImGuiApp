@@ -1,8 +1,12 @@
-## v1.12.6-pre.11 (prerelease)
+## v1.12.6 (patch)
 
-Changes since v1.12.6-pre.10:
+Changes since v1.12.5:
 
-- Update System.Text.Json to 9.0.5 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Update ImGui.NET references to Hexa.NET.ImGui and bump project SDK versions ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor font configuration handling in ImGui classes ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix ImGuiController font loading and buffer data handling by updating glyph range and removing unnecessary casts ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance font configuration in ImGuiApp and ImGuiController by adding RasterizerDensity and improving texture data handling. Updated font loading to utilize ImFontConfig directly, ensuring better rendering quality and memory management. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor ImGuiApp and ImGuiController to improve font handling and context management. Updated font configuration to use ImFontConfig directly, removed unnecessary casts, and ensured proper context tracking. Adjusted image loading in demo to eliminate casting issues. ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.12.6-pre.10 (prerelease)
 
 Changes since v1.12.6-pre.9:
