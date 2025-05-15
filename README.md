@@ -1,6 +1,6 @@
 # ktsu.ImGuiApp
 
-> A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and ImGui.NET.
+> A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and Hexa.NET.ImGui.
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
 [![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE.md)
@@ -9,7 +9,7 @@
 
 ## Introduction
 
-ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui](https://github.com/ocornut/imgui), using [Silk.NET](https://github.com/dotnet/Silk.NET) for OpenGL and window management and [ImGui.NET](https://github.com/mellinoe/ImGui.NET) for the ImGui bindings. It simplifies the creation of ImGui-based applications by abstracting away the complexities of window management, rendering, and input handling.
+ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui](https://github.com/ocornut/imgui), using [Silk.NET](https://github.com/dotnet/Silk.NET) for OpenGL and window management and [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) for the ImGui bindings. It simplifies the creation of ImGui-based applications by abstracting away the complexities of window management, rendering, and input handling.
 
 ## Features
 
@@ -60,7 +60,7 @@ Create a new class and call `ImGuiApp.Start()` with your application config:
 
 ```csharp
 using ktsu.ImGuiApp;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 static class Program
 {
@@ -173,7 +173,7 @@ private static void OnRender(float deltaTime)
 
 ```csharp
 using ktsu.ImGuiApp;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using System.Numerics;
 
 class Program
@@ -339,7 +339,7 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 ## Acknowledgements
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
-- [ImGui.NET](https://github.com/mellinoe/ImGui.NET) - .NET bindings for Dear ImGui
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
 - All contributors and the .NET community for their support
 

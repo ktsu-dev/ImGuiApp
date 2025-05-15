@@ -6,7 +6,7 @@ namespace ktsu.ImGuiApp.Demo;
 
 using System.Numerics;
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 using ktsu.Extensions;
 using ktsu.ImGuiApp;
@@ -101,7 +101,7 @@ internal static class ImGuiAppDemo
 			ImGui.Text("Custom font examples:");
 			using (new FontAppearance(nameof(Resources.CARDCHAR), 24))
 			{
-				ImGui.Text("Hello, ImGui.NET!");
+				ImGui.Text("Hello, Hexa.NET.ImGui!");
 			}
 
 			using (new FontAppearance(nameof(Resources.CARDCHAR)))
@@ -168,11 +168,11 @@ internal static class ImGuiAppDemo
 		ImGui.Begin("About ImGuiApp Demo", ref showAbout);
 		ImGui.Text("ImGuiApp Demo Application");
 		ImGui.Separator();
-		ImGui.Text("This demo showcases various ImGui.NET features");
+		ImGui.Text("This demo showcases various Hexa.NET.ImGui features");
 		ImGui.Text("and demonstrates how to use the ImGuiApp framework.");
 		ImGui.Separator();
 		ImGui.Text("Built with:");
-		ImGui.BulletText("ImGui.NET");
+		ImGui.BulletText("Hexa.NET.ImGui");
 		ImGui.BulletText("Silk.NET");
 		ImGui.BulletText("ktsu.ImGuiApp");
 		ImGui.End();

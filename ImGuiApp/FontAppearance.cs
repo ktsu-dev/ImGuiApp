@@ -4,7 +4,7 @@
 
 namespace ktsu.ImGuiApp;
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 using ktsu.ScopedAction;
 

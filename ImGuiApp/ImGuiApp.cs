@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;

@@ -1,4 +1,4 @@
-<Project Sdk="ktsu.Sdk.App/1.8.0">
+<Project Sdk="ktsu.Sdk.App/1.9.0">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -8,7 +8,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="9.0.4" />
+    <PackageReference Include="System.Text.Json" Version="9.0.5" />
   </ItemGroup>
 
   <ItemGroup>
