@@ -77,7 +77,8 @@ internal class ImGuiController : IDisposable
 			var glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
 			unsafe
 			{
-				io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, null, (uint*)glyphRange);
+				var fontCfg = new ImFontConfig { RasterizerDensity = 1.0f };
+				io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, &fontCfg, (uint*)glyphRange);
 			}
 		}
 
@@ -760,12 +761,14 @@ internal class ImGuiController : IDisposable
 
 		// Build texture atlas
 		var io = ImGui.GetIO();
-		io.Fonts.GetTexDataAsRGBA32(out nint pixels, out var width, out var height, out var _);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+		byte* pixels = null;
+		int width = 0, height = 0, bytesPerPixel = 0;
+		io.Fonts.GetTexDataAsRGBA32(&pixels, &width, &height, &bytesPerPixel);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
 		// Upload texture to graphics system
 		_gl.GetInteger(GLEnum.TextureBinding2D, out var lastTexture);
 
-		_fontTexture = new Texture(_gl, width, height, pixels);
+		_fontTexture = new Texture(_gl, width, height, (nint)pixels);
 		_fontTexture.Bind();
 		_fontTexture.SetMagFilter(TextureMagFilter.Linear);
 		_fontTexture.SetMinFilter(TextureMinFilter.Linear);

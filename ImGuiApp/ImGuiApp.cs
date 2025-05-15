@@ -742,7 +742,8 @@ public static partial class ImGuiApp
 			PixelSnapH = 1,
 			OversampleH = 2, // Improved oversampling for better quality
 			OversampleV = 2,
-			RasterizerMultiply = 1.0f // Adjust if needed for better rendering
+			RasterizerMultiply = 1.0f, // Adjust if needed for better rendering
+			RasterizerDensity = 1.0f,
 		};
 
 		foreach (var (name, fontBytes) in fontsToLoad)
