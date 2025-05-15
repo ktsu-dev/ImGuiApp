@@ -76,7 +76,7 @@ internal class ImGuiController : IDisposable
 		{
 			var glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
 
-			io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, null, glyphRange);
+			io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, null, (uint*)glyphRange);
 		}
 
 		onConfigureIO?.Invoke();
@@ -568,9 +568,9 @@ internal class ImGuiController : IDisposable
 
 			// Upload vertex/index buffers
 
-			_gl.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), (void*)cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
+			_gl.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
 			_gl.CheckGlError($"Data Vert {n}");
-			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), (void*)cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
+			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
 			_gl.CheckGlError($"Data Idx {n}");
 
 			for (var cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
