@@ -4,25 +4,11 @@
 
 namespace ktsu.ImGuiApp;
 
-using Silk.NET.Windowing;
-
 /// <summary>
 /// Represents the configuration settings for the ImGui application.
 /// </summary>
 public class ImGuiAppConfig
 {
-	/// <summary>
-	/// Gets or sets a value indicating whether the application is running in test mode.
-	/// When true, the window will be invisible and optimized for testing.
-	/// </summary>
-	public bool TestMode { get; init; }
-
-	/// <summary>
-	/// Gets or sets the test window to use when TestMode is true.
-	/// This must be set when TestMode is true.
-	/// </summary>
-	internal IWindow? TestWindow { get; init; }
-
 	/// <summary>
 	/// Gets or sets the title of the application window.
 	/// </summary>
@@ -59,9 +45,14 @@ public class ImGuiAppConfig
 	public Action OnAppMenu { get; init; } = () => { };
 
 	/// <summary>
-	/// Gets or sets the action to be performed when the application window is moved or resized.
+	/// Gets or sets the action to be performed when the application window is moved.
 	/// </summary>
-	public Action OnMoveOrResize { get; init; } = () => { };
+	public Action OnMove { get; init; } = () => { };
+
+	/// <summary>
+	/// Gets or sets the action to be performed when the application window is resized.
+	/// </summary>
+	public Action OnResize { get; init; } = () => { };
 
 	/// <summary>
 	/// Gets or sets the fonts to be used in the application.
@@ -72,7 +63,7 @@ public class ImGuiAppConfig
 	public Dictionary<string, byte[]> Fonts { get; init; } = [];
 
 	internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
-		{
-			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }
-		};
+	{
+		{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }
+	};
 }

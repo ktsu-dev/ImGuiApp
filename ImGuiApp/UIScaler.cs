@@ -15,6 +15,35 @@ using ktsu.ScopedAction;
 /// </summary>
 public class UIScaler : ScopedAction
 {
+	private const float ScaleChangeThreshold = 0.1f;
+
+	internal static float ScaleFactor { get; private set; } = 1;
+
+	internal static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+
+	/// <summary>
+	/// Maps font names to a dictionary of pixel sizes and their corresponding font indices.
+	/// Each font name maps to a dictionary where the key is the pixel size and the value is the font index.
+	/// </summary>
+	internal static Dictionary<string, Dictionary<int, int>> FontIndices { get; } = [];
+
+	/// <summary>
+	/// Registers a font in the FontIndices dictionary.
+	/// </summary>
+	/// <param name="name">The name of the font.</param>
+	/// <param name="pixelSize">The pixel size of the font.</param>
+	/// <param name="index">The index of the font in the ImGui font collection.</param>
+	internal static void RegisterFont(string name, int pixelSize, int index)
+	{
+		if (!FontIndices.TryGetValue(name, out var sizes))
+		{
+			sizes = [];
+			FontIndices[name] = sizes;
+		}
+
+		sizes[pixelSize] = index;
+	}
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="UIScaler"/> class.
 	/// Scales various ImGui style variables by the specified scale factor.
@@ -74,4 +103,81 @@ public class UIScaler : ScopedAction
 		ImGuiApp.Invoker.Invoke(() => ImGui.PushStyleVar(style, value));
 		++numStyles;
 	}
+
+	internal static void Render(Action renderAction)
+	{
+		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out var bestFontSize);
+		var scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
+		using (new UIScaler(scaleRatio))
+		{
+			RenderWithDefaultFont(renderAction);
+		}
+	}
+
+	private static void RenderWithDefaultFont(Action action)
+	{
+		using (new FontAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize))
+		{
+			action();
+		}
+	}
+
+	internal static ImFontPtr FindBestFontForAppearance(string name, int sizePoints, out int sizePixels)
+	{
+		var io = ImGui.GetIO();
+		var fonts = io.Fonts.Fonts;
+		sizePixels = PtsToPx(sizePoints);
+		var sizePixelsLocal = sizePixels;
+
+		var candidatesByFace = FontIndices
+			.Where(f => f.Key == name)
+			.SelectMany(f => f.Value)
+			.OrderBy(f => f.Key)
+			.ToArray();
+
+		if (candidatesByFace.Length == 0)
+		{
+			throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
+		}
+
+		int[] candidatesBySize = [.. candidatesByFace
+			.Where(x => x.Key >= sizePixelsLocal)
+			.Select(x => x.Value)];
+
+		if (candidatesBySize.Length != 0)
+		{
+			var bestFontIndex = candidatesBySize.First();
+			return fonts[bestFontIndex];
+		}
+
+		// if there was no font size larger than our requested size, then fall back to the largest font size we have
+		var largestFontIndex = candidatesByFace.Last().Value;
+		return fonts[largestFontIndex];
+	}
+
+	/// <summary>
+	/// Converts a value in ems to pixels based on the current ImGui font size.
+	/// </summary>
+	/// <param name="ems">The value in ems to convert to pixels.</param>
+	/// <returns>The equivalent value in pixels.</returns>
+	public static int EmsToPx(float ems) => ImGuiApp.Invoker.Invoke(() => (int)(ems * ImGui.GetFontSize()));
+
+	/// <summary>
+	/// Converts a value in points to pixels based on the current scale factor.
+	/// </summary>
+	/// <param name="pts">The value in points to convert to pixels.</param>
+	/// <returns>The equivalent value in pixels.</returns>
+	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
+
+	internal static void UpdateDpiScale()
+	{
+		var newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
+
+		if (Math.Abs(ScaleFactor - newScaleFactor) > ScaleChangeThreshold)
+		{
+			ScaleFactor = newScaleFactor;
+		}
+	}
+
+	internal static void Init() => ForceDpiAware.Windows();
 }

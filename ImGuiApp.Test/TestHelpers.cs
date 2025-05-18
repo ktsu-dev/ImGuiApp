@@ -64,13 +64,10 @@ public static class TestHelpers
 		{
 			Title = title,
 			IconPath = iconPath,
-			TestMode = true,
-			TestWindow = mockWindow.Object,
 			InitialWindowState = new ImGuiAppWindowState
 			{
 				Size = new Vector2(800, 600),
-				Pos = new Vector2(100, 100),
-				LayoutState = WindowState.Normal
+				Position = new Vector2(100, 100),
 			}
 		};
 	}

@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hexa.NET.ImGui" Version="2.2.7" />
+    <PackageReference Include="Hexa.NET.KittyUI" Version="1.1.9" />
     <PackageReference Include="ktsu.Invoker" Version="1.1.0" />
     <PackageReference Include="ktsu.ScopedAction" Version="1.1.2" />
     <PackageReference Include="ktsu.StrongPaths" Version="1.3.1" />

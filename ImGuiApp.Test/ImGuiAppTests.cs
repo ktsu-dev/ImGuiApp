@@ -23,7 +23,6 @@ public sealed class ImGuiAppTests : IDisposable
 	private TestGL? _testGL;
 	private MockGL? _mockGL;
 	private Mock<IGLContext>? _mockContext;
-	private TestOpenGLProvider? _glProvider;
 
 	[TestInitialize]
 	public void Setup()
@@ -34,7 +33,6 @@ public sealed class ImGuiAppTests : IDisposable
 		_testGL = new TestGL();
 		_mockGL = new MockGL(_testGL);
 		_mockContext = new Mock<IGLContext>();
-		_glProvider = new TestOpenGLProvider(_mockGL);
 
 		// Setup default window properties
 		_mockWindow.Setup(w => w.Size).Returns(new Vector2D<int>(1280, 720));
@@ -51,7 +49,6 @@ public sealed class ImGuiAppTests : IDisposable
 	public void Cleanup()
 	{
 		ResetState();
-		_glProvider?.Dispose();
 		_mockGL?.Dispose();
 		_testGL?.Dispose();
 	}
@@ -71,7 +68,7 @@ public sealed class ImGuiAppTests : IDisposable
 	{
 		const float ems = 1.5f;
 		var expected = (int)(ems * FontAppearance.DefaultFontPointSize);
-		var actual = ImGuiApp.EmsToPx(ems);
+		var actual = UIScaler.EmsToPx(ems);
 		Assert.AreEqual(expected, actual);
 	}
 
@@ -80,7 +77,7 @@ public sealed class ImGuiAppTests : IDisposable
 	{
 		const float pts = 12.0f;
 		var expected = pts;
-		var actual = ImGuiApp.PtsToPx((int)pts);
+		var actual = UIScaler.PtsToPx((int)pts);
 		Assert.AreEqual(expected, actual);
 	}
 
@@ -89,8 +86,7 @@ public sealed class ImGuiAppTests : IDisposable
 	{
 		var state = new ImGuiAppWindowState();
 		Assert.AreEqual(new Vector2(1280, 720), state.Size);
-		Assert.AreEqual(new Vector2(-short.MinValue, -short.MinValue), state.Pos);
-		Assert.AreEqual(WindowState.Normal, state.LayoutState);
+		Assert.AreEqual(new Vector2(-short.MinValue, -short.MinValue), state.Position);
 	}
 
 	[TestMethod]
@@ -104,7 +100,8 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsNotNull(config.OnUpdate);
 		Assert.IsNotNull(config.OnRender);
 		Assert.IsNotNull(config.OnAppMenu);
-		Assert.IsNotNull(config.OnMoveOrResize);
+		Assert.IsNotNull(config.OnMove);
+		Assert.IsNotNull(config.OnResize);
 		Assert.IsNotNull(config.Fonts);
 	}
 
@@ -121,23 +118,6 @@ public sealed class ImGuiAppTests : IDisposable
 	{
 		var config = TestHelpers.CreateTestConfig(iconPath: "nonexistent.png");
 		ImGuiApp.Start(config);
-	}
-
-	[TestMethod]
-	[ExpectedException(typeof(InvalidOperationException))]
-	public void Start_WhenAlreadyRunning_ThrowsInvalidOperationException()
-	{
-		var config = TestHelpers.CreateTestConfig();
-		ImGuiApp.Start(config);
-		TestHelpers.SimulateWindowLifecycle(config.TestWindow!);
-		ImGuiApp.Start(config); // Should throw
-	}
-
-	[TestMethod]
-	[ExpectedException(typeof(InvalidOperationException))]
-	public void Stop_WhenNotRunning_ThrowsInvalidOperationException()
-	{
-		ImGuiApp.Stop();
 	}
 
 	[TestMethod]
@@ -187,22 +167,6 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsTrue(monitorBounds.Contains(finalPosition) ||
 			monitorBounds.Contains(finalPosition + windowSize),
 			"Window should be moved to a visible position on the monitor");
-	}
-
-	[TestMethod]
-	public void OpenGLProvider_GetGL_ReturnsSameInstance()
-	{
-		// Setup test GL provider
-		using var testGL = new TestGL();
-		using var mockGL = new MockGL(testGL);
-		using var provider = new TestOpenGLProvider(mockGL);
-
-		// Get GL instances
-		var gl1 = provider.GetGL();
-		var gl2 = provider.GetGL();
-
-		// Verify same instance is returned
-		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
 	}
 
 	[TestMethod]

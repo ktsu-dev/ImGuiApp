@@ -7,307 +7,113 @@ namespace ktsu.ImGuiApp;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
+using Hexa.NET.KittyUI;
+using Hexa.NET.KittyUI.ImGuiBackend;
+using Hexa.NET.KittyUI.UI;
 using ktsu.Extensions;
-using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
 using ktsu.StrongPaths;
-using Silk.NET.Input;
-using Silk.NET.OpenGL;
-using Silk.NET.Windowing;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using Color = System.Drawing.Color;
-using Texture = ImGuiController.Texture;
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
+/// <remarks>
+/// This class serves as the primary interface for working with ImGui applications.
+/// It handles window management, texture loading, font handling, and provides methods
+/// for interacting with the application's graphical resources and UI components.
+/// 
+/// Core functionalities include:
+/// <list type="bullet">
+/// <item><description>Application startup and configuration</description></item>
+/// <item><description>Window state management</description></item>
+/// <item><description>Texture loading and caching</description></item>
+/// <item><description>Font handling and management</description></item>
+/// <item><description>Event handling for window resizing and moving</description></item>
+/// </list>
+/// </remarks>
+/// <example>
+/// Start an ImGui application with a basic configuration:
+/// <code>
+/// var config = new ImGuiAppConfig {
+///     Title = "My ImGui Application",
+///     InitialWindowState = new ImGuiAppWindowState {
+///         Size = new Vector2(1280, 720)
+///     }
+/// };
+/// ImGuiApp.Start(config);
+/// </code>
+/// </example>
 public static partial class ImGuiApp
 {
-	private static IWindow? window;
-	private static GL? gl;
-	private static ImGuiController.ImGuiController? controller;
-	private static IInputContext? inputContext;
-	private static OpenGLProvider? glProvider;
-	private static ImGuiContextPtr currentGLContextHandle; // Track the current GL context handle
-
-	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
+	/// <summary>
+	/// Gets the main application window instance.
+	/// </summary>
+	/// <remarks>
+	/// This property provides access to the primary window of the ImGui application.
+	/// It is initialized during application startup and can be used to interact with
+	/// the main window, including accessing window properties, handling window events,
+	/// and managing window content.
+	/// </remarks>
+	/// <value>
+	/// An instance of <see cref="MainWindow"/> representing the application's main window.
+	/// </value>
+	public static MainWindow MainWindow { get; private set; } = null!;
 
 	/// <summary>
-	/// Gets the current state of the ImGui application window.
+	/// Gets the current state of the application window, including size and position.
 	/// </summary>
-	/// <value>
-	/// A new instance of <see cref="ImGuiAppWindowState"/> representing the current window state,
-	/// including size, position, and layout state.
-	/// </value>
+	/// <remarks>
+	/// Returns a new instance of <see cref="ImGuiAppWindowState"/> with the current size and position
+	/// of the main window. This can be used to save window state for future application sessions.
+	/// </remarks>
+	/// <returns>An <see cref="ImGuiAppWindowState"/> object containing the current window properties.</returns>
 	public static ImGuiAppWindowState WindowState
 	{
 		get => new()
 		{
-			Size = LastNormalWindowState.Size,
-			Pos = LastNormalWindowState.Pos,
-			LayoutState = window?.WindowState ?? Silk.NET.Windowing.WindowState.Normal
+			Size = MainWindow.Size,
+			Position = MainWindow.Position,
 		};
 	}
-
-	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
-	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
-	private static float lastFontScaleFactor;
-	private static List<GCHandle> currentPinnedFontData = [];
 
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
 	/// </summary>
 	public static Invoker Invoker { get; private set; } = null!;
 
-	/// <summary>
-	/// Gets a value indicating whether the ImGui application window is focused.
-	/// </summary>
-	public static bool IsFocused { get; private set; } = true;
-	/// <summary>
-	/// Gets a value indicating whether the ImGui application window is visible.
-	/// </summary>
-	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
-
-	private const int SW_HIDE = 0;
-
-	private static bool showImGuiMetrics;
-	private static bool showImGuiDemo;
-
-	/// <summary>
-	/// Gets the scale factor for the ImGui application.
-	/// </summary>
-	public static float ScaleFactor { get; private set; } = 1;
-
 	internal static ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> Textures { get; } = [];
 
-	/// <summary>
-	/// Stops the ImGui application by closing the window.
-	/// </summary>
-	/// <exception cref="InvalidOperationException">Thrown when the application is not running.</exception>
-	public static void Stop()
+	internal static ImGuiAppConfig Config { get; private set; } = new();
+
+	internal static void OnInit(MainWindow mainWindow)
 	{
-		if (window == null)
+		MainWindow = mainWindow;
+		MainWindow.SizeChanged += OnResize;
+		if (!string.IsNullOrEmpty(Config.IconPath))
 		{
-			throw new InvalidOperationException("Cannot stop the application because it is not running.");
-		}
-
-		window.Close();
-	}
-
-	private static ImGuiAppConfig Config { get; set; } = new();
-
-	private static void InitializeWindow(ImGuiAppConfig config)
-	{
-		if (config.TestMode)
-		{
-			// In test mode, use the test window from config
-			window = config.TestWindow ?? throw new InvalidOperationException("TestWindow must be set when TestMode is true");
-			return;
-		}
-
-		var silkWindowOptions = WindowOptions.Default with
-		{
-			Title = config.Title,
-			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
-			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
-			WindowState = Silk.NET.Windowing.WindowState.Normal,
-			API = new GraphicsAPI(
-				ContextAPI.OpenGL,
-				ContextProfile.Core,
-				ContextFlags.ForwardCompatible,
-				new APIVersion(3, 3)),
-			PreferredDepthBufferBits = 24,
-			PreferredStencilBufferBits = 8
-		};
-
-		LastNormalWindowState = config.InitialWindowState;
-		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
-
-		window = Window.Create(silkWindowOptions);
-	}
-
-	private static void SetupWindowLoadHandler(ImGuiAppConfig config)
-	{
-		window!.Load += () =>
-		{
-			if (!string.IsNullOrEmpty(config.IconPath))
-			{
-				SetWindowIcon(config.IconPath);
-			}
-
-			var glFactory = new WindowOpenGLFactory(window);
-			glProvider = new OpenGLProvider(glFactory);
-			var glWrapper = (GLWrapper)glProvider.GetGL();
-			gl = glWrapper.UnderlyingGL;
-			inputContext = window.CreateInput();
-
-			controller = new(
-				gl,
-				view: window,
-				input: inputContext,
-				onConfigureIO: () =>
-				{
-					currentGLContextHandle = ImGui.GetCurrentContext();
-
-					UpdateDpiScale();
-					InitFonts();
-					config.OnStart?.Invoke();
-				}
-			);
-
-			ImGui.GetStyle().WindowRounding = 0;
-			window.WindowState = config.InitialWindowState.LayoutState;
-		};
-	}
-
-	private static void SetupWindowResizeHandler(ImGuiAppConfig config)
-	{
-		window!.FramebufferResize += s =>
-		{
-			gl?.Viewport(s);
-			CaptureWindowNormalState();
-			UpdateDpiScale();
-			CheckAndHandleContextChange();
-			config.OnMoveOrResize?.Invoke();
-		};
-	}
-
-	private static void SetupWindowMoveHandler(ImGuiAppConfig config)
-	{
-		window!.Move += (p) =>
-		{
-			CaptureWindowNormalState();
-			UpdateDpiScale();
-			CheckAndHandleContextChange();
-			config.OnMoveOrResize?.Invoke();
-		};
-	}
-
-	private static void UpdateWindowPerformance()
-	{
-		var currentFps = window!.FramesPerSecond;
-		var currentUps = window.UpdatesPerSecond;
-		double requiredFps = IsFocused ? 30 : 5;
-		double requiredUps = IsFocused ? 30 : 5;
-
-		if (currentFps != requiredFps)
-		{
-			window.VSync = false;
-			window.FramesPerSecond = requiredFps;
-		}
-
-		if (currentUps != requiredUps)
-		{
-			window.UpdatesPerSecond = requiredUps;
+			SetWindowIcon(Config.IconPath);
 		}
 	}
 
-	private static void SetupWindowUpdateHandler(ImGuiAppConfig config)
+	internal static void OnConfigure(ImGuiContextPtr context, ImGuiIOPtr io)
 	{
-		window!.Update += (delta) =>
-		{
-			if (!controller?.FontsConfigured ?? true)
-			{
-				throw new InvalidOperationException("Fonts are not configured before Update()");
-			}
-
-			EnsureWindowPositionIsValid();
-			UpdateWindowPerformance();
-
-			controller?.Update((float)delta);
-			config.OnUpdate?.Invoke((float)delta);
-			Invoker.DoInvokes();
-		};
+		UIScaler.UpdateDpiScale();
+		Config.OnStart?.Invoke();
 	}
 
-	private static void SetupWindowRenderHandler(ImGuiAppConfig config)
+	internal static void OnResize(object? sender, Vector2 from, Vector2 to)
 	{
-		window!.Render += delta =>
-		{
-			if (!controller?.FontsConfigured ?? true)
-			{
-				throw new InvalidOperationException("Fonts are not configured before Render()");
-			}
-
-			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
-			gl?.Clear((uint)ClearBufferMask.ColorBufferBit);
-
-			RenderWithScaling(() =>
-			{
-				RenderAppMenu(config.OnAppMenu);
-				RenderWindowContents(config.OnRender, (float)delta);
-			});
-
-			controller?.Render();
-		};
+		UIScaler.UpdateDpiScale();
+		Config.OnResize?.Invoke();
 	}
 
-	private static void RenderWithScaling(Action renderAction)
-	{
-		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out var bestFontSize);
-		var scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
-		using (new UIScaler(scaleRatio))
-		{
-			RenderWithDefaultFont(renderAction);
-		}
-	}
-
-	private static void SetupWindowClosingHandler()
-	{
-		window!.Closing += () =>
-		{
-			CleanupPinnedFontData();
-			CleanupController();
-			CleanupInputContext();
-			CleanupOpenGL();
-		};
-	}
-
-	private static void CleanupPinnedFontData()
-	{
-		foreach (var handle in currentPinnedFontData)
-		{
-			if (handle.IsAllocated)
-			{
-				handle.Free();
-			}
-		}
-
-		currentPinnedFontData.Clear();
-	}
-
-	private static void CleanupController()
-	{
-		controller?.Dispose();
-		controller = null;
-	}
-
-	private static void CleanupInputContext()
-	{
-		inputContext?.Dispose();
-		inputContext = null;
-	}
-
-	private static void CleanupOpenGL()
-	{
-		if (gl != null)
-		{
-			gl.Dispose();
-			gl = null;
-		}
-
-		if (glProvider != null)
-		{
-			glProvider.Dispose();
-			glProvider = null;
-		}
-	}
+	internal static void OnMove() => Config.OnMove?.Invoke();
 
 	/// <summary>
 	/// Starts the ImGui application with the specified configuration.
@@ -317,36 +123,45 @@ public static partial class ImGuiApp
 	{
 		ArgumentNullException.ThrowIfNull(config);
 
-		if (window != null)
-		{
-			throw new InvalidOperationException("Application is already running.");
-		}
-
 		Invoker = new();
 		Config = config;
 
 		ValidateConfig(config);
 
-		ForceDpiAware.Windows();
+		UIScaler.Init();
 
-		InitializeWindow(config);
-		SetupWindowLoadHandler(config);
-		SetupWindowResizeHandler(config);
-		SetupWindowMoveHandler(config);
-		SetupWindowUpdateHandler(config);
-		SetupWindowRenderHandler(config);
-		SetupWindowClosingHandler();
+		AppBuilder.Create()
+			.AddWindow<MainWindow>()
+			.EnableDebugTools(true)
+			.EnableLogging(true)
+			.EnableImPlot()
+			.AddTitleBar<TitleBar>()
+			.SetTitle(config.Title)
+			.StyleColorsDark()
+			.ImGuiConfigure(OnConfigure)
+			.AddFont(BuildFonts)
+			.Run();
+	}
 
-		window!.FocusChanged += (focused) => IsFocused = focused;
+	private static void BuildFonts(ImGuiFontBuilder builder)
+	{
+		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
+		var fontIndex = 0;
 
-		if (!config.TestMode)
+		foreach (var (name, fontBytes) in fontsToLoad)
 		{
-			// Hide console window only in non-test mode
-			var handle = NativeMethods.GetConsoleWindow();
-			NativeMethods.ShowWindow(handle, SW_HIDE);
-
-			window.Run();
-			window.Dispose();
+			foreach (var size in UIScaler.SupportedPixelFontSizes)
+			{
+				unsafe
+				{
+					fixed (byte* fontPtr = &fontBytes[0])
+					{
+						builder.AddFontFromMemoryTTF(fontPtr, fontBytes.Length, size);
+						UIScaler.RegisterFont(name, size, fontIndex);
+						fontIndex++;
+					}
+				}
+			}
 		}
 	}
 
@@ -357,19 +172,9 @@ public static partial class ImGuiApp
 			throw new ArgumentException("Initial window size must be greater than zero.", nameof(config));
 		}
 
-		if (config.InitialWindowState.Pos.X < 0 || config.InitialWindowState.Pos.Y < 0)
+		if (config.InitialWindowState.Position.X < 0 || config.InitialWindowState.Position.Y < 0)
 		{
 			throw new ArgumentException("Initial window position must be non-negative.", nameof(config));
-		}
-
-		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Minimized)
-		{
-			throw new ArgumentException("Initial window state cannot be minimized.", nameof(config));
-		}
-
-		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Fullscreen)
-		{
-			throw new ArgumentException("Initial window state cannot be fullscreen.", nameof(config));
 		}
 
 		if (!string.IsNullOrEmpty(config.IconPath) && !File.Exists(config.IconPath))
@@ -399,145 +204,6 @@ public static partial class ImGuiApp
 		}
 	}
 
-	private static void RenderWithDefaultFont(Action action)
-	{
-		using (new FontAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize))
-		{
-			action();
-		}
-	}
-
-	private static void CaptureWindowNormalState()
-	{
-		if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
-		{
-			LastNormalWindowState = new()
-			{
-				Size = new(window.Size.X, window.Size.Y),
-				Pos = new(window.Position.X, window.Position.Y),
-				LayoutState = Silk.NET.Windowing.WindowState.Normal
-			};
-		}
-	}
-
-	internal static ImFontPtr FindBestFontForAppearance(string name, int sizePoints, out int sizePixels)
-	{
-		var io = ImGui.GetIO();
-		var fonts = io.Fonts.Fonts;
-		sizePixels = PtsToPx(sizePoints);
-		var sizePixelsLocal = sizePixels;
-
-		var candidatesByFace = FontIndices
-			.Where(f => f.Key == name)
-			.SelectMany(f => f.Value)
-			.OrderBy(f => f.Key)
-			.ToArray();
-
-		if (candidatesByFace.Length == 0)
-		{
-			throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
-		}
-
-		int[] candidatesBySize = [.. candidatesByFace
-			.Where(x => x.Key >= sizePixelsLocal)
-			.Select(x => x.Value)];
-
-		if (candidatesBySize.Length != 0)
-		{
-			var bestFontIndex = candidatesBySize.First();
-			return fonts[bestFontIndex];
-		}
-
-		// if there was no font size larger than our requested size, then fall back to the largest font size we have
-		var largestFontIndex = candidatesByFace.Last().Value;
-		return fonts[largestFontIndex];
-	}
-
-	private static void EnsureWindowPositionIsValid()
-	{
-		if (window?.Monitor is not null && window.WindowState is not Silk.NET.Windowing.WindowState.Minimized)
-		{
-			var bounds = window.Monitor.Bounds;
-			var onScreen = bounds.Contains(window.Position) ||
-				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, 0)) ||
-				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(0, window.Size.Y)) ||
-				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, window.Size.Y));
-
-			if (!onScreen)
-			{
-				// If the window is not on a monitor, move it to the primary monitor
-				var defaultWindowState = new ImGuiAppWindowState();
-				var halfSize = defaultWindowState.Size / 2;
-				window.Size = new((int)defaultWindowState.Size.X, (int)defaultWindowState.Size.Y);
-				window.Position = window.Monitor.Bounds.Center - new Silk.NET.Maths.Vector2D<int>((int)halfSize.X, (int)halfSize.Y);
-				window.WindowState = defaultWindowState.LayoutState;
-			}
-		}
-	}
-
-	/// <summary>
-	/// Renders the application menu using the provided delegate.
-	/// </summary>
-	/// <param name="menuDelegate">The delegate to render the menu.</param>
-	private static void RenderAppMenu(Action? menuDelegate)
-	{
-		if (menuDelegate is not null)
-		{
-			if (ImGui.BeginMainMenuBar())
-			{
-				menuDelegate();
-
-				if (ImGui.BeginMenu("Debug"))
-				{
-					if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
-					{
-						showImGuiDemo = !showImGuiDemo;
-					}
-
-					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
-					{
-						showImGuiMetrics = !showImGuiMetrics;
-					}
-
-					ImGui.EndMenu();
-				}
-
-				ImGui.EndMainMenuBar();
-			}
-		}
-	}
-
-	/// <summary>
-	/// Renders the main window contents and handles ImGui demo and metrics windows.
-	/// </summary>
-	/// <param name="tickDelegate">The delegate to render the main window contents.</param>
-	/// <param name="dt">The delta time since the last frame.</param>
-	private static void RenderWindowContents(Action<float>? tickDelegate, float dt)
-	{
-		var b = true;
-		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
-		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-		var colors = ImGui.GetStyle().Colors;
-		var borderColor = colors[(int)ImGuiCol.Border];
-		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
-		{
-			colors[(int)ImGuiCol.Border] = borderColor;
-			tickDelegate?.Invoke(dt);
-		}
-
-		ImGui.End();
-
-		if (showImGuiDemo)
-		{
-			ImGui.ShowDemoWindow(ref showImGuiDemo);
-		}
-
-		if (showImGuiMetrics)
-		{
-			ImGui.ShowMetricsWindow(ref showImGuiMetrics);
-		}
-	}
-
 	/// <summary>
 	/// Sets the window icon using the specified icon file path.
 	/// </summary>
@@ -554,7 +220,7 @@ public static partial class ImGuiApp
 		foreach (var size in iconSizes)
 		{
 			var resizeImage = sourceImage.Clone();
-			var sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
+			var sourceSize = Math.min(sourceImage.Width, sourceImage.Height);
 			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
 
 			UseImageBytes(resizeImage, bytes =>
@@ -566,7 +232,7 @@ public static partial class ImGuiApp
 			});
 		}
 
-		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
+		//Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
 	}
 
 	private static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
@@ -623,7 +289,7 @@ public static partial class ImGuiApp
 		finally
 		{
 			// Always return the buffer to the pool
-			_bytePool.Return(pooledBuffer);
+			_byte_pool.Return(pooledBuffer);
 		}
 	}
 
@@ -650,32 +316,6 @@ public static partial class ImGuiApp
 	{
 		return Invoker.Invoke(() =>
 		{
-			if (gl is null)
-			{
-				throw new InvalidOperationException("OpenGL context is not initialized.");
-			}
-
-			// Upload texture to graphics system
-			gl.GetInteger(GLEnum.TextureBinding2D, out var previousTextureId);
-
-			var textureHandle = Marshal.AllocHGlobal(bytes.Length);
-			try
-			{
-				Marshal.Copy(bytes, 0, textureHandle, bytes.Length);
-				Texture texture = new(gl, width, height, textureHandle, pxFormat: PixelFormat.Rgba);
-				texture.Bind();
-				texture.SetMagFilter(TextureMagFilter.Linear);
-				texture.SetMinFilter(TextureMinFilter.Linear);
-
-				// Restore state
-				gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
-
-				return texture.GlTexture;
-			}
-			finally
-			{
-				Marshal.FreeHGlobal(textureHandle);
-			}
 		});
 	}
 
@@ -688,235 +328,16 @@ public static partial class ImGuiApp
 	{
 		Invoker.Invoke(() =>
 		{
-			if (gl is null)
-			{
-				throw new InvalidOperationException("OpenGL context is not initialized.");
-			}
-
-			gl.DeleteTexture(textureId);
-			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
 		});
 	}
-
-	private static void UpdateDpiScale()
-	{
-		var newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
-
-		// Only update if the scale factor changed significantly
-		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.1f)
-		{
-			ScaleFactor = newScaleFactor;
-			// We'll let InitFonts decide whether to rebuild based on the scale change
-		}
-	}
-
-	// https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#loading-font-data-from-memory
-	// IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
-	// This was to avoid an unnecessary copy, and is perhaps not a good API (a future version will redesign it).
-	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
-	internal static void InitFonts()
-	{
-		// Only load fonts if they haven't been loaded or if scale factor has changed significantly
-		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.1f)
-		{
-			return; // Skip reloading fonts if they're already loaded and scale hasn't changed much
-		}
-
-		lastFontScaleFactor = ScaleFactor;
-
-		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
-
-		var io = ImGui.GetIO();
-		var fontAtlasPtr = io.Fonts;
-
-		// Clear existing font data and indices
-		fontAtlasPtr.Clear();
-		FontIndices.Clear();
-
-		// Track fonts that need disposal after rebuilding the atlas
-		List<GCHandle> fontPinnedData = [];
-
-		var fontConfig = ImGui.ImFontConfig();
-		fontConfig.FontDataOwnedByAtlas = false;
-		fontConfig.PixelSnapH = true;
-		fontConfig.OversampleH = 2; // Improved oversampling for better quality
-		fontConfig.OversampleV = 2;
-		fontConfig.RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
-		fontConfig.RasterizerDensity = 1.0f;
-
-		foreach (var (name, fontBytes) in fontsToLoad)
-		{
-			if (!FontIndices.TryGetValue(name, out var fontSizes))
-			{
-				fontSizes = new();
-				FontIndices[name] = fontSizes;
-			}
-
-			// Pin the font data so the GC doesn't move or collect it while ImGui is using it
-			var pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
-			fontPinnedData.Add(pinnedFontData);
-
-			var fontDataPtr = pinnedFontData.AddrOfPinnedObject();
-
-			foreach (var size in SupportedPixelFontSizes)
-			{
-				var fontIndex = fontAtlasPtr.Fonts.Size;
-				unsafe
-				{
-					fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, size, fontConfig);
-				}
-
-				fontSizes[size] = fontIndex;
-			}
-		}
-
-		// Build the font atlas
-		var success = fontAtlasPtr.Build();
-		if (!success)
-		{
-			throw new InvalidOperationException("Failed to build ImGui font atlas");
-		}
-
-		// Store the pinned font data for later cleanup
-		StorePinnedFontData(fontPinnedData);
-	}
-
-	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
-	{
-		// Free any previously pinned font data
-		foreach (var handle in currentPinnedFontData)
-		{
-			if (handle.IsAllocated)
-			{
-				handle.Free();
-			}
-		}
-
-		// Store the new pinned data
-		currentPinnedFontData = newPinnedData;
-	}
-
-	/// <inheritdoc/>
-	public static void CleanupAllTextures()
-	{
-		if (gl == null)
-		{
-			return;
-		}
-
-		// Make a copy of the keys to avoid collection modification issues
-		var texturesToRemove = Textures.Keys.ToList();
-
-		foreach (var texturePath in texturesToRemove)
-		{
-			if (Textures.TryGetValue(texturePath, out var info))
-			{
-				DeleteTexture(info.TextureId);
-			}
-		}
-
-		Textures.Clear();
-	}
-
-	/// <summary>
-	/// Converts a value in ems to pixels based on the current ImGui font size.
-	/// </summary>
-	/// <param name="ems">The value in ems to convert to pixels.</param>
-	/// <returns>The equivalent value in pixels.</returns>
-	public static int EmsToPx(float ems)
-	{
-		// if imgui is not initialized, use default font size
-		return controller is null
-			? (int)(ems * FontAppearance.DefaultFontPointSize)
-			: Invoker.Invoke(() => (int)(ems * ImGui.GetFontSize()));
-	}
-
-	/// <summary>
-	/// Converts a value in points to pixels based on the current scale factor.
-	/// </summary>
-	/// <param name="pts">The value in points to convert to pixels.</param>
-	/// <returns>The equivalent value in pixels.</returns>
-	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
 
 	/// <summary>
 	/// Resets all static state for testing purposes.
 	/// </summary>
 	internal static void Reset()
 	{
-		window = null;
-		gl = null;
-		controller = null;
-		inputContext = null;
-		glProvider = null;
-		LastNormalWindowState = new();
-		FontIndices.Clear();
-		lastFontScaleFactor = 0;
-		currentPinnedFontData.Clear();
 		Invoker = null!;
-		IsFocused = true;
-		showImGuiMetrics = false;
-		showImGuiDemo = false;
-		ScaleFactor = 1;
 		Textures.Clear();
 		Config = new();
-	}
-
-	/// <summary>
-	/// Checks if the OpenGL context has changed and handles texture reloading if needed
-	/// </summary>
-	private static void CheckAndHandleContextChange()
-	{
-		if (gl == null)
-		{
-			return;
-		}
-
-		// Get the current context handle
-		var newContextHandle = ImGui.GetCurrentContext();
-
-		// If context has changed, reload all textures
-		if (newContextHandle != currentGLContextHandle && newContextHandle != ImGuiContextPtr.Null)
-		{
-			currentGLContextHandle = newContextHandle;
-			ReloadAllTextures();
-		}
-	}
-
-	/// <summary>
-	/// Reloads all previously loaded textures in the new context
-	/// </summary>
-	private static void ReloadAllTextures()
-	{
-		if (gl == null)
-		{
-			return;
-		}
-
-		// Make a copy to avoid modification issues during iteration
-		var texturesToReload = Textures.ToList();
-
-		foreach (var texture in texturesToReload)
-		{
-			try
-			{
-				var path = texture.Key;
-				var oldInfo = texture.Value;
-
-				// Only reload from file if the path exists
-				if (File.Exists(path))
-				{
-					using var image = Image.Load<Rgba32>(path);
-					var oldTextureId = oldInfo.TextureId;
-
-					// Upload new texture
-					UseImageBytes(image, bytes => oldInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height));
-
-					// No need to delete old texture as the context is already gone
-				}
-			}
-			catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException)
-			{
-			}
-		}
 	}
 }
