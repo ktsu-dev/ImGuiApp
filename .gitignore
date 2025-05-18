@@ -631,3 +631,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+.obsidian/*
+!.obsidian/core-plugins.json
+!.obsidian/community-plugins.json
