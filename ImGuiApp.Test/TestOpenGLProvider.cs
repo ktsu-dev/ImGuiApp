@@ -4,7 +4,6 @@
 
 namespace ktsu.ImGuiApp.Test;
 
-using ktsu.ImGuiApp.ImGuiController;
 using Silk.NET.OpenGL;
 
 /// <summary>
