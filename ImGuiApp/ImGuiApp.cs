@@ -220,7 +220,7 @@ public static partial class ImGuiApp
 		foreach (var size in iconSizes)
 		{
 			var resizeImage = sourceImage.Clone();
-			var sourceSize = Math.min(sourceImage.Width, sourceImage.Height);
+			var sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
 			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
 
 			UseImageBytes(resizeImage, bytes =>
@@ -232,7 +232,8 @@ public static partial class ImGuiApp
 			});
 		}
 
-		//Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
+		// Use Invoker to set the window icon on the UI thread
+		Invoker.Invoke(() => MainWindow.SetWindowIcon(icons));
 	}
 
 	private static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
@@ -289,7 +290,7 @@ public static partial class ImGuiApp
 		finally
 		{
 			// Always return the buffer to the pool
-			_byte_pool.Return(pooledBuffer);
+			_bytePool.Return(pooledBuffer);
 		}
 	}
 
@@ -316,6 +317,12 @@ public static partial class ImGuiApp
 	{
 		return Invoker.Invoke(() =>
 		{
+			if (MainWindow == null)
+			{
+				throw new InvalidOperationException("Cannot upload texture - main window is not initialized.");
+			}
+			// Use the MainWindow's CreateTexture extension method
+			return MainWindow.CreateTexture(bytes, width, height);
 		});
 	}
 
@@ -328,6 +335,12 @@ public static partial class ImGuiApp
 	{
 		Invoker.Invoke(() =>
 		{
+			if (MainWindow == null)
+			{
+				throw new InvalidOperationException("Cannot delete texture - main window is not initialized.");
+			}
+			// Use the MainWindow's DeleteTexture extension method
+			MainWindow.DeleteTexture(textureId);
 		});
 	}
 

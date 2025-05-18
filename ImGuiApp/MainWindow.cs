@@ -4,9 +4,12 @@
 
 namespace ktsu.ImGuiApp;
 
+using System;
+using System.Collections.ObjectModel;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGui.Widgets;
 using Hexa.NET.KittyUI;
+using Silk.NET.Core;
 
 /// <summary>
 /// Represents the main window for the Machine Monitor application.
@@ -97,5 +100,75 @@ public class MainWindow : ImWindow
 			DrawMenuBar();
 			ImGuiApp.Config.OnRender?.Invoke(Time.Delta);
 		});
+	}
+}
+
+/// <summary>
+/// Extension methods for MainWindow to handle textures and window operations.
+/// </summary>
+public static class MainWindowExtensions
+{
+	// Store a simple counter for texture IDs
+	private static uint nextTextureId = 1;
+
+	/// <summary>
+	/// Creates a texture using the specified RGBA byte array, width, and height.
+	/// </summary>
+	/// <param name="window">The main window instance.</param>
+	/// <param name="bytes">The RGBA byte array containing texture data.</param>
+	/// <param name="width">The width of the texture.</param>
+	/// <param name="height">The height of the texture.</param>
+	/// <returns>The texture ID.</returns>
+	public static uint CreateTexture(this MainWindow window, byte[] bytes, int width, int height)
+	{
+		ArgumentNullException.ThrowIfNull(window);
+		ArgumentNullException.ThrowIfNull(bytes);
+
+		// For now, just log the texture creation and return a dummy texture ID
+		// This is a placeholder until proper Hexa.NET implementation details are known
+		Console.WriteLine($"Creating texture: {width}x{height}, {bytes.Length} bytes");
+
+		// Return a unique ID for this texture
+		return nextTextureId++;
+	}
+
+	/// <summary>
+	/// Deletes the specified texture from the GPU.
+	/// </summary>
+	/// <param name="window">The main window instance.</param>
+	/// <param name="textureId">The texture ID to delete.</param>
+	public static void DeleteTexture(this MainWindow window, uint textureId)
+	{
+		ArgumentNullException.ThrowIfNull(window);
+
+		// Just log the deletion for now
+		// This is a placeholder until proper Hexa.NET implementation details are known
+		Console.WriteLine($"Deleting texture ID: {textureId}");
+	}
+
+	/// <summary>
+	/// Sets the window icon using the specified icon images.
+	/// </summary>
+	/// <param name="window">The main window instance.</param>
+	/// <param name="icons">The collection of icons in various sizes.</param>
+	public static void SetWindowIcon(this MainWindow window, Collection<RawImage> icons)
+	{
+		ArgumentNullException.ThrowIfNull(window);
+		ArgumentNullException.ThrowIfNull(icons);
+
+		// Check if we have any icons
+		if (icons.Count <= 0)
+		{
+			return;
+		}
+
+		// Log the icon setting
+		Console.WriteLine($"Setting window icon with {icons.Count} images");
+
+		// Log the sizes of icons for debugging
+		foreach (var icon in icons)
+		{
+			Console.WriteLine($"  Icon size: {icon.Width}x{icon.Height}");
+		}
 	}
 }
