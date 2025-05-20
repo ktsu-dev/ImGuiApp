@@ -854,7 +854,7 @@ function Get-VersionNotes {
     if ($rangeFrom -ne "") {
         try {
             # Try to get the SHA for the from tag, but don't error if it doesn't exist
-            $fromSha = "git rev-list -n 1 $rangeFrom 2>$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+            $fromSha = "git rev-list -n 1 $rangeFrom 2>`$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
             if ($LASTEXITCODE -ne 0) {
                 Write-Information "Warning: Could not find SHA for tag $rangeFrom. Using fallback range." -Tags "Get-VersionNotes"
                 $gitSuccess = $false
@@ -866,7 +866,7 @@ function Get-VersionNotes {
                 $range = "$fromSha..$ToSha"
             } elseif ($gitSuccess) {
                 # For already tagged versions, get the SHA for the to tag
-                $toShaResolved = "git rev-list -n 1 $rangeTo 2>$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                $toShaResolved = "git rev-list -n 1 $rangeTo 2>`$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
                 if ($LASTEXITCODE -ne 0) {
                     Write-Information "Warning: Could not find SHA for tag $rangeTo. Using fallback range." -Tags "Get-VersionNotes"
                     $gitSuccess = $false
@@ -888,7 +888,7 @@ function Get-VersionNotes {
             $range = $ToSha
         } else {
             try {
-                $toShaResolved = "git rev-list -n 1 $rangeTo 2>$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                $toShaResolved = "git rev-list -n 1 $rangeTo 2>`$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
                 if ($LASTEXITCODE -eq 0) {
                     $range = $toShaResolved
                 } else {
@@ -925,24 +925,16 @@ function Get-VersionNotes {
         # First try with standard filters
         $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep --committer=`"$EXCLUDE_BOTS`" --author=`"$EXCLUDE_BOTS`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
         
-        # Convert to array if needed
-        if ($null -eq $rawCommits) {
-            $rawCommits = @()
-        } elseif ($rawCommits -isnot [array]) {
-            $rawCommits = @($rawCommits)
-        }
+        # Ensure $rawCommits is an array
+        $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommits
 
         # If no commits found, try with just PR exclusion but no author filtering
         if ($rawCommits.Count -eq 0) {
             Write-Information "No commits found with standard filters, trying with relaxed author/committer filters..." -Tags "Get-VersionNotes"
             $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
             
-            # Convert to array if needed
-            if ($null -eq $rawCommits) {
-                $rawCommits = @()
-            } elseif ($rawCommits -isnot [array]) {
-                $rawCommits = @($rawCommits)
-            }
+            # Ensure $rawCommits is an array
+            $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommits
         }
 
         # If still no commits, try with no filtering at all - show everything in the range
@@ -950,24 +942,16 @@ function Get-VersionNotes {
             Write-Information "Still no commits found, trying with no filters..." -Tags "Get-VersionNotes"
             $rawCommits = "git log --pretty=format:`"$format`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
             
-            # Convert to array if needed
-            if ($null -eq $rawCommits) {
-                $rawCommits = @()
-            } elseif ($rawCommits -isnot [array]) {
-                $rawCommits = @($rawCommits)
-            }
+            # Ensure $rawCommits is an array
+            $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommits
 
             # If it's a prerelease version, include also version update commits
             if ($versionType -eq "prerelease" -and $rawCommits.Count -eq 0) {
                 Write-Information "Looking for version update commits for prerelease..." -Tags "Get-VersionNotes"
                 $rawCommits = "git log --pretty=format:`"$format`" --grep=`"Update VERSION to`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
                 
-                # Convert to array if needed
-                if ($null -eq $rawCommits) {
-                    $rawCommits = @()
-                } elseif ($rawCommits -isnot [array]) {
-                    $rawCommits = @($rawCommits)
-                }
+                # Ensure $rawCommits is an array
+                $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommits
             }
         }
     }
@@ -1080,11 +1064,7 @@ function New-Changelog {
     $changelog = ""
 
     # Make sure tags is always an array
-    if ($null -eq $tags) {
-        $tags = @()
-    } elseif ($tags -isnot [array]) {
-        $tags = @($tags)
-    }
+    $tags = ConvertTo-ArraySafe -InputObject $tags
 
     # Check if we have any tags at all
     $hasTags = $tags.Count -gt 0
@@ -1921,6 +1901,49 @@ function Set-GitIdentity {
     Assert-LastExitCode "Failed to configure git user email"
 }
 
+function ConvertTo-ArraySafe {
+    <#
+    .SYNOPSIS
+        Safely converts an object to an array, even if it's already an array, a single item, or null.
+    .DESCRIPTION
+        Ensures that the returned object is always an array, handling PowerShell's behavior
+        where single item arrays are automatically unwrapped.
+    .PARAMETER InputObject
+        The object to convert to an array.
+    .OUTPUTS
+        Returns an array, even if the input is null or a single item.
+    #>
+    [CmdletBinding()]
+    [OutputType([object[]])]
+    param (
+        [Parameter(ValueFromPipeline=$true)]
+        [object]$InputObject
+    )
+
+    begin {
+        $outputArray = @()
+    }
+
+    process {
+        if ($null -eq $InputObject) {
+            return @()
+        }
+        
+        if ($InputObject -is [array]) {
+            # Force array context to handle single-item arrays
+            $outputArray = @($InputObject)
+        }
+        else {
+            # Single item, make it an array
+            $outputArray = @($InputObject)
+        }
+    }
+
+    end {
+        return $outputArray
+    }
+}
+
 #endregion
 
 #region High-Level Workflows
@@ -2229,7 +2252,8 @@ Export-ModuleMember -Function Assert-LastExitCode,
                              Get-GitLineEnding,
                              Set-GitIdentity,
                              Write-InformationStream,
-                             Invoke-ExpressionWithLogging
+                             Invoke-ExpressionWithLogging,
+                             ConvertTo-ArraySafe
 
 # High-level workflow functions
 Export-ModuleMember -Function Invoke-BuildWorkflow,
