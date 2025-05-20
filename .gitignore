@@ -635,3 +635,4 @@ Temporary Items
 .obsidian/*
 !.obsidian/core-plugins.json
 !.obsidian/community-plugins.json
+
