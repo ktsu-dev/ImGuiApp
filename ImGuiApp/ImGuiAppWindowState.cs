@@ -5,10 +5,8 @@
 namespace ktsu.ImGuiApp;
 using System.Numerics;
 
-using Silk.NET.Windowing;
-
 /// <summary>
-/// Represents the state of the ImGui application window, including size, position, and layout state.
+/// Represents the state of the ImGui application window, including size and position.
 /// </summary>
 public class ImGuiAppWindowState
 {
@@ -20,10 +18,5 @@ public class ImGuiAppWindowState
 	/// <summary>
 	/// Gets or sets the position of the window.
 	/// </summary>
-	public Vector2 Pos { get; set; } = new(-short.MinValue, -short.MinValue);
-
-	/// <summary>
-	/// Gets or sets the layout state of the window.
-	/// </summary>
-	public WindowState LayoutState { get; set; }
+	public Vector2 Position { get; set; } = new(-short.MinValue, -short.MinValue);
 }
