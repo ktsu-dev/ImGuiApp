@@ -4,7 +4,6 @@
 
 namespace ktsu.ImGuiApp.Test;
 
-using ktsu.ImGuiApp.ImGuiController;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Color = System.Drawing.Color;
