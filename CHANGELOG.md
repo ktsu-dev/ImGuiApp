@@ -4,6 +4,7 @@ Changes since v1.12.6:
 
 - Update ktsu.StrongPaths to 1.3.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.12.6 (patch)
 
 Changes since v1.12.5:
