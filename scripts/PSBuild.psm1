@@ -77,8 +77,9 @@ function Get-BuildConfiguration {
         [string]$GitHubRepo,
         [Parameter(Mandatory=$true)]
         [string]$GithubToken,
-        [Parameter(Mandatory=$true)]
-        [string]$NuGetApiKey,
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$NuGetApiKey = "",
         [Parameter(Mandatory=$true)]
         [string]$WorkspacePath,
         [Parameter(Mandatory=$true)]
@@ -1401,11 +1402,17 @@ function Invoke-NuGetPublish {
     "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.GithubToken)`" --source `"https://nuget.pkg.github.com/$($BuildConfiguration.GithubOwner)/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
     Assert-LastExitCode "GitHub package publish failed"
 
-    Write-StepHeader "Publishing to NuGet.org" -Tags "Invoke-NuGetPublish"
+    # Only publish to NuGet.org if API key is available
+    if (-not [string]::IsNullOrWhiteSpace($BuildConfiguration.NuGetApiKey)) {
+        Write-StepHeader "Publishing to NuGet.org" -Tags "Invoke-NuGetPublish"
 
-    # Execute the command and stream output
-    "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.NuGetApiKey)`" --source `"https://api.nuget.org/v3/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
-    Assert-LastExitCode "NuGet.org package publish failed"
+        # Execute the command and stream output
+        "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.NuGetApiKey)`" --source `"https://api.nuget.org/v3/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
+        Assert-LastExitCode "NuGet.org package publish failed"
+    }
+    else {
+        Write-Information "Skipping NuGet.org publishing - API key not available (likely running on a fork)" -Tags "Invoke-NuGetPublish"
+    }
 }
 
 function New-GitHubRelease {
