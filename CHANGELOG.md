@@ -1,11 +1,8 @@
-## v1.12.7-pre.1 (prerelease)
+## v1.12.7 (patch)
 
 Changes since v1.12.6:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Update ktsu.StrongPaths to 1.3.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Fix GitHub Actions build failures on forked repositories ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.12.6 (patch)
 
 Changes since v1.12.5:
