@@ -709,25 +709,15 @@ public static partial class ImGuiApp
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
-		// Debug output to understand what's happening
-		Console.WriteLine($"[DPI Debug] Platform: {(OperatingSystem.IsWindows() ? "Windows" : "Linux")}");
-		Console.WriteLine($"[DPI Debug] Detected Scale Factor: {newScaleFactor:F3}");
-		Console.WriteLine($"[DPI Debug] Raw DPI: {ForceDpiAware.GetActualScaleFactor():F1}");
-
 		// Only update if the scale factor changed
 		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.01f)
 		{
 			ScaleFactor = newScaleFactor;
-			Console.WriteLine($"[DPI Debug] Scale factor updated to: {ScaleFactor:F3}");
 			// Force font reloading when DPI scale changes to ensure proper font scaling
 			if (controller?.FontsConfigured == true)
 			{
 				InitFonts();
 			}
-		}
-		else
-		{
-			Console.WriteLine($"[DPI Debug] Scale factor unchanged: {ScaleFactor:F3}");
 		}
 	}
 
