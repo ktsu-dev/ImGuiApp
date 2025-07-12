@@ -765,8 +765,9 @@ internal class ImGuiController : IDisposable
 
 		_fontTexture = new Texture(_gl, width, height, pixels);
 		_fontTexture.Bind();
-		_fontTexture.SetMagFilter(TextureMagFilter.Linear);
-		_fontTexture.SetMinFilter(TextureMinFilter.Linear);
+		// Use Nearest filtering for crisp text rendering, especially important for WSL
+		_fontTexture.SetMagFilter(TextureMagFilter.Nearest);
+		_fontTexture.SetMinFilter(TextureMinFilter.Nearest);
 
 		// Store our identifier
 		io.Fonts.SetTexID((nint)_fontTexture.GlTexture);

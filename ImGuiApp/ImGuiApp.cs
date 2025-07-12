@@ -751,9 +751,21 @@ public static partial class ImGuiApp
 				// We'll still tell ImGui not to own the data, but we'll track it ourselves
 				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
 				fontConfigNativePtr->PixelSnapH = 1;
-				fontConfigNativePtr->OversampleH = 2; // Improved oversampling for better quality
-				fontConfigNativePtr->OversampleV = 2;
-				fontConfigNativePtr->RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
+				// WSL-optimized font rendering settings
+				if (OperatingSystem.IsLinux())
+				{
+					// For WSL/Linux, use more conservative settings to avoid blurriness
+					fontConfigNativePtr->OversampleH = 1;
+					fontConfigNativePtr->OversampleV = 1;
+					fontConfigNativePtr->RasterizerMultiply = 1.0f;
+				}
+				else
+				{
+					// For Windows, use higher quality settings
+					fontConfigNativePtr->OversampleH = 2;
+					fontConfigNativePtr->OversampleV = 2;
+					fontConfigNativePtr->RasterizerMultiply = 1.0f;
+				}
 
 				foreach ((string name, byte[] fontBytes) in fontsToLoad)
 				{
