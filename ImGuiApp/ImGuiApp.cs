@@ -709,11 +709,15 @@ public static partial class ImGuiApp
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
-		// Only update if the scale factor changed significantly
-		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.1f)
+		// Only update if the scale factor changed
+		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.01f)
 		{
 			ScaleFactor = newScaleFactor;
-			// We'll let InitFonts decide whether to rebuild based on the scale change
+			// Force font reloading when DPI scale changes to ensure proper font scaling
+			if (controller?.FontsConfigured == true)
+			{
+				InitFonts();
+			}
 		}
 	}
 
@@ -723,10 +727,10 @@ public static partial class ImGuiApp
 	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
 	internal static void InitFonts()
 	{
-		// Only load fonts if they haven't been loaded or if scale factor has changed significantly
-		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.1f)
+		// Only load fonts if they haven't been loaded or if scale factor has changed
+		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.01f)
 		{
-			return; // Skip reloading fonts if they're already loaded and scale hasn't changed much
+			return; // Skip reloading fonts if they're already loaded and scale hasn't changed
 		}
 
 		lastFontScaleFactor = ScaleFactor;
@@ -751,21 +755,9 @@ public static partial class ImGuiApp
 				// We'll still tell ImGui not to own the data, but we'll track it ourselves
 				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
 				fontConfigNativePtr->PixelSnapH = 1;
-				// WSL-optimized font rendering settings
-				if (OperatingSystem.IsLinux())
-				{
-					// For WSL/Linux, use more conservative settings to avoid blurriness
-					fontConfigNativePtr->OversampleH = 1;
-					fontConfigNativePtr->OversampleV = 1;
-					fontConfigNativePtr->RasterizerMultiply = 1.0f;
-				}
-				else
-				{
-					// For Windows, use higher quality settings
-					fontConfigNativePtr->OversampleH = 2;
-					fontConfigNativePtr->OversampleV = 2;
-					fontConfigNativePtr->RasterizerMultiply = 1.0f;
-				}
+				fontConfigNativePtr->OversampleH = 2;
+				fontConfigNativePtr->OversampleV = 2;
+				fontConfigNativePtr->RasterizerMultiply = 1.0f;
 
 				foreach ((string name, byte[] fontBytes) in fontsToLoad)
 				{
@@ -781,11 +773,16 @@ public static partial class ImGuiApp
 
 					nint fontDataPtr = pinnedFontData.AddrOfPinnedObject();
 
-					foreach (int size in SupportedPixelFontSizes)
+					foreach (int baseSize in SupportedPixelFontSizes)
 					{
+						// Scale font size by DPI only on Linux/WSL - Windows handles DPI scaling automatically
+						int actualSize = OperatingSystem.IsLinux()
+							? Math.Max(1, (int)Math.Round(baseSize * ScaleFactor))
+							: baseSize;
 						int fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, size, fontConfigNativePtr);
-						fontSizes[size] = fontIndex;
+						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, actualSize, fontConfigNativePtr);
+						// Store the mapping using the base size as the key for consistency
+						fontSizes[baseSize] = fontIndex;
 					}
 				}
 

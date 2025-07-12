@@ -241,8 +241,17 @@ internal class ImGuiController : IDisposable
 
 		if (_windowWidth > 0 && _windowHeight > 0 && _view is not null)
 		{
-			io.DisplayFramebufferScale = new Vector2(_view.FramebufferSize.X / _windowWidth,
-				_view.FramebufferSize.Y / _windowHeight);
+			// Force framebuffer scale to 1.0 on Linux to prevent blurry text rendering
+			// WSL and Linux often have framebuffer scaling issues that cause blur
+			if (OperatingSystem.IsLinux())
+			{
+				io.DisplayFramebufferScale = Vector2.One;
+			}
+			else
+			{
+				io.DisplayFramebufferScale = new Vector2(_view.FramebufferSize.X / _windowWidth,
+					_view.FramebufferSize.Y / _windowHeight);
+			}
 		}
 
 		io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
