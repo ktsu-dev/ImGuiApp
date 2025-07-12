@@ -71,10 +71,10 @@ internal class ImGuiController : IDisposable
 	{
 		Init(gl, view, input);
 
-		var io = ImGui.GetIO();
+		ImGuiIOPtr io = ImGui.GetIO();
 		if (imGuiFontConfig is not null)
 		{
-			var glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
+			nint glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
 
 			io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, imGuiFontConfig.Value.FontSize, null, glyphRange);
 		}
@@ -150,7 +150,7 @@ internal class ImGuiController : IDisposable
 
 	private static void OnMouseScroll(IMouse mouse, ScrollWheel scroll)
 	{
-		var io = ImGui.GetIO();
+		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMouseWheelEvent(scroll.X, scroll.Y);
 	}
 
@@ -160,17 +160,17 @@ internal class ImGuiController : IDisposable
 
 	private static void OnMouseButton(IMouse _, MouseButton button, bool down)
 	{
-		var imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
+		ImGuiMouseButton imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
 		if (imguiMouseButton != ImGuiMouseButton.COUNT)
 		{
-			var io = ImGui.GetIO();
+			ImGuiIOPtr io = ImGui.GetIO();
 			io.AddMouseButtonEvent((int)imguiMouseButton, down);
 		}
 	}
 
 	private void OnMouseMove(IMouse _, Vector2 position)
 	{
-		var io = ImGui.GetIO();
+		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMousePosEvent(position.X, position.Y);
 	}
 
@@ -183,12 +183,12 @@ internal class ImGuiController : IDisposable
 	/// <param name="down">True if the event is a key down event, otherwise False</param>
 	private static void OnKeyEvent(IKeyboard _, Key keycode, int scancode, bool down)
 	{
-		var io = ImGui.GetIO();
-		var imGuiKey = TranslateInputKeyToImGuiKey(keycode);
+		ImGuiIOPtr io = ImGui.GetIO();
+		ImGuiKey imGuiKey = TranslateInputKeyToImGuiKey(keycode);
 		io.AddKeyEvent(imGuiKey, down);
 		io.SetKeyEventNativeData(imGuiKey, (int)keycode, scancode);
 
-		var imguiModKey = TranslateImGuiKeyToImGuiModKey(imGuiKey);
+		ImGuiKey imguiModKey = TranslateImGuiKeyToImGuiModKey(imGuiKey);
 		if (imguiModKey != ImGuiKey.NamedKey_END)
 		{
 			io.AddKeyEvent(imguiModKey, down);
@@ -236,7 +236,7 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	private void SetPerFrameImGuiData(float deltaSeconds)
 	{
-		var io = ImGui.GetIO();
+		ImGuiIOPtr io = ImGui.GetIO();
 		io.DisplaySize = new Vector2(_windowWidth, _windowHeight);
 
 		if (_windowWidth > 0 && _windowHeight > 0 && _view is not null)
@@ -250,14 +250,14 @@ internal class ImGuiController : IDisposable
 
 	private void UpdateImGuiInput()
 	{
-		var io = ImGui.GetIO();
+		ImGuiIOPtr io = ImGui.GetIO();
 
 		if (_input is null || _keyboard is null)
 		{
 			return;
 		}
 
-		foreach (var c in _pressedChars)
+		foreach (char c in _pressedChars)
 		{
 			io.AddInputCharacter(c);
 		}
@@ -465,10 +465,10 @@ internal class ImGuiController : IDisposable
 		_gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
 #endif
 
-		var L = drawDataPtr.DisplayPos.X;
-		var R = drawDataPtr.DisplayPos.X + drawDataPtr.DisplaySize.X;
-		var T = drawDataPtr.DisplayPos.Y;
-		var B = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
+		float L = drawDataPtr.DisplayPos.X;
+		float R = drawDataPtr.DisplayPos.X + drawDataPtr.DisplaySize.X;
+		float T = drawDataPtr.DisplayPos.Y;
+		float B = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
 
 		Span<float> orthoProjection = [
 				2.0f / (R - L), 0.0f, 0.0f, 0.0f,
@@ -509,24 +509,24 @@ internal class ImGuiController : IDisposable
 			return;
 		}
 
-		var framebufferWidth = (int)(drawDataPtr.DisplaySize.X * drawDataPtr.FramebufferScale.X);
-		var framebufferHeight = (int)(drawDataPtr.DisplaySize.Y * drawDataPtr.FramebufferScale.Y);
+		int framebufferWidth = (int)(drawDataPtr.DisplaySize.X * drawDataPtr.FramebufferScale.X);
+		int framebufferHeight = (int)(drawDataPtr.DisplaySize.Y * drawDataPtr.FramebufferScale.Y);
 		if (framebufferWidth <= 0 || framebufferHeight <= 0)
 		{
 			return;
 		}
 
 		// Backup GL state
-		_gl.GetInteger(GLEnum.ActiveTexture, out var lastActiveTexture);
+		_gl.GetInteger(GLEnum.ActiveTexture, out int lastActiveTexture);
 		_gl.ActiveTexture(GLEnum.Texture0);
 
-		_gl.GetInteger(GLEnum.CurrentProgram, out var lastProgram);
-		_gl.GetInteger(GLEnum.TextureBinding2D, out var lastTexture);
+		_gl.GetInteger(GLEnum.CurrentProgram, out int lastProgram);
+		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
 
-		_gl.GetInteger(GLEnum.SamplerBinding, out var lastSampler);
+		_gl.GetInteger(GLEnum.SamplerBinding, out int lastSampler);
 
-		_gl.GetInteger(GLEnum.ArrayBufferBinding, out var lastArrayBuffer);
-		_gl.GetInteger(GLEnum.VertexArrayBinding, out var lastVertexArrayObject);
+		_gl.GetInteger(GLEnum.ArrayBufferBinding, out int lastArrayBuffer);
+		_gl.GetInteger(GLEnum.VertexArrayBinding, out int lastVertexArrayObject);
 
 #if !GLES
 		Span<int> lastPolygonMode = stackalloc int[2];
@@ -536,35 +536,35 @@ internal class ImGuiController : IDisposable
 		Span<int> lastScissorBox = stackalloc int[4];
 		_gl.GetInteger(GLEnum.ScissorBox, lastScissorBox);
 
-		_gl.GetInteger(GLEnum.BlendSrcRgb, out var lastBlendSrcRgb);
-		_gl.GetInteger(GLEnum.BlendDstRgb, out var lastBlendDstRgb);
+		_gl.GetInteger(GLEnum.BlendSrcRgb, out int lastBlendSrcRgb);
+		_gl.GetInteger(GLEnum.BlendDstRgb, out int lastBlendDstRgb);
 
-		_gl.GetInteger(GLEnum.BlendSrcAlpha, out var lastBlendSrcAlpha);
-		_gl.GetInteger(GLEnum.BlendDstAlpha, out var lastBlendDstAlpha);
+		_gl.GetInteger(GLEnum.BlendSrcAlpha, out int lastBlendSrcAlpha);
+		_gl.GetInteger(GLEnum.BlendDstAlpha, out int lastBlendDstAlpha);
 
-		_gl.GetInteger(GLEnum.BlendEquationRgb, out var lastBlendEquationRgb);
-		_gl.GetInteger(GLEnum.BlendEquationAlpha, out var lastBlendEquationAlpha);
+		_gl.GetInteger(GLEnum.BlendEquationRgb, out int lastBlendEquationRgb);
+		_gl.GetInteger(GLEnum.BlendEquationAlpha, out int lastBlendEquationAlpha);
 
-		var lastEnableBlend = _gl.IsEnabled(GLEnum.Blend);
-		var lastEnableCullFace = _gl.IsEnabled(GLEnum.CullFace);
-		var lastEnableDepthTest = _gl.IsEnabled(GLEnum.DepthTest);
-		var lastEnableStencilTest = _gl.IsEnabled(GLEnum.StencilTest);
-		var lastEnableScissorTest = _gl.IsEnabled(GLEnum.ScissorTest);
+		bool lastEnableBlend = _gl.IsEnabled(GLEnum.Blend);
+		bool lastEnableCullFace = _gl.IsEnabled(GLEnum.CullFace);
+		bool lastEnableDepthTest = _gl.IsEnabled(GLEnum.DepthTest);
+		bool lastEnableStencilTest = _gl.IsEnabled(GLEnum.StencilTest);
+		bool lastEnableScissorTest = _gl.IsEnabled(GLEnum.ScissorTest);
 
 #if !GLES && !LEGACY
-		var lastEnablePrimitiveRestart = _gl.IsEnabled(GLEnum.PrimitiveRestart);
+		bool lastEnablePrimitiveRestart = _gl.IsEnabled(GLEnum.PrimitiveRestart);
 #endif
 
 		SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
 
 		// Will project scissor/clipping rectangles into framebuffer space
-		var clipOff = drawDataPtr.DisplayPos;         // (0,0) unless using multi-viewports
-		var clipScale = drawDataPtr.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+		Vector2 clipOff = drawDataPtr.DisplayPos;         // (0,0) unless using multi-viewports
+		Vector2 clipScale = drawDataPtr.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
 		// Render command lists
-		for (var n = 0; n < drawDataPtr.CmdListsCount; n++)
+		for (int n = 0; n < drawDataPtr.CmdListsCount; n++)
 		{
-			var cmdListPtr = drawDataPtr.CmdLists[n];
+			ImDrawListPtr cmdListPtr = drawDataPtr.CmdLists[n];
 
 			// Upload vertex/index buffers
 
@@ -573,9 +573,9 @@ internal class ImGuiController : IDisposable
 			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), (void*)cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
 			_gl.CheckGlError($"Data Idx {n}");
 
-			for (var cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
+			for (int cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
 			{
-				var cmdPtr = cmdListPtr.CmdBuffer[cmd_i];
+				ImDrawCmdPtr cmdPtr = cmdListPtr.CmdBuffer[cmd_i];
 
 				if (cmdPtr.UserCallback != nint.Zero)
 				{
@@ -694,11 +694,11 @@ internal class ImGuiController : IDisposable
 
 		// Backup GL state
 
-		_gl.GetInteger(GLEnum.TextureBinding2D, out var lastTexture);
-		_gl.GetInteger(GLEnum.ArrayBufferBinding, out var lastArrayBuffer);
-		_gl.GetInteger(GLEnum.VertexArrayBinding, out var lastVertexArray);
+		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
+		_gl.GetInteger(GLEnum.ArrayBufferBinding, out int lastArrayBuffer);
+		_gl.GetInteger(GLEnum.VertexArrayBinding, out int lastVertexArray);
 
-		var vertexSource =
+		string vertexSource =
 			@"#version 330
 			layout (location = 0) in vec2 Position;
 			layout (location = 1) in vec2 UV;
@@ -713,7 +713,7 @@ internal class ImGuiController : IDisposable
 				gl_Position = ProjMtx * vec4(Position.xy,0,1);
 			}";
 
-		var fragmentSource =
+		string fragmentSource =
 			@"#version 330
 			in vec2 Frag_UV;
 			in vec4 Frag_Color;
@@ -757,11 +757,11 @@ internal class ImGuiController : IDisposable
 		}
 
 		// Build texture atlas
-		var io = ImGui.GetIO();
-		io.Fonts.GetTexDataAsRGBA32(out nint pixels, out var width, out var height, out var _);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+		ImGuiIOPtr io = ImGui.GetIO();
+		io.Fonts.GetTexDataAsRGBA32(out nint pixels, out int width, out int height, out int _);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
 		// Upload texture to graphics system
-		_gl.GetInteger(GLEnum.TextureBinding2D, out var lastTexture);
+		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
 
 		_fontTexture = new Texture(_gl, width, height, pixels);
 		_fontTexture.Bind();

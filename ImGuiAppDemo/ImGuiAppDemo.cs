@@ -117,8 +117,8 @@ internal static class ImGuiAppDemo
 		// Graphics and plotting section
 		if (ImGui.CollapsingHeader("Graphics & Plotting"))
 		{
-			var iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
-			var iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
+			AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
+			ImGuiAppTextureInfo iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
 			ImGui.Text("Image Example:");
 			ImGui.Image((nint)iconTexture.TextureId, new Vector2(64, 64));
 
@@ -136,7 +136,7 @@ internal static class ImGuiAppDemo
 			ImGui.Text("Columns Example:");
 			ImGui.Columns(3, "##columns");
 
-			for (var i = 0; i < 6; i++)
+			for (int i = 0; i < 6; i++)
 			{
 				ImGui.Text($"Item {i + 1}");
 				ImGui.NextColumn();
@@ -151,7 +151,7 @@ internal static class ImGuiAppDemo
 			{
 				ImGui.Text("This is a child window");
 				ImGui.Text("with its own scroll area.");
-				for (var i = 0; i < 10; i++)
+				for (int i = 0; i < 10; i++)
 				{
 					ImGui.Text($"Scroll item {i + 1}");
 				}

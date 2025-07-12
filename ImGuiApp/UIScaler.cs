@@ -22,8 +22,8 @@ public class UIScaler : ScopedAction
 	/// <param name="scale">The scale factor to apply to the UI elements.</param>
 	public UIScaler(float scale)
 	{
-		var style = ImGui.GetStyle();
-		var numStyles = 0;
+		ImGuiStylePtr style = ImGui.GetStyle();
+		int numStyles = 0;
 		PushStyleAndCount(ImGuiStyleVar.CellPadding, style.CellPadding * scale, ref numStyles);
 		PushStyleAndCount(ImGuiStyleVar.ChildBorderSize, style.ChildBorderSize * scale, ref numStyles);
 		PushStyleAndCount(ImGuiStyleVar.ChildRounding, style.ChildRounding * scale, ref numStyles);

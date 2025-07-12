@@ -37,7 +37,7 @@ public class FontAppearance : ScopedAction
 			throw new InvalidOperationException("Fonts have not been built yet.");
 		}
 
-		var font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
+		ImFontPtr font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
 		ImGui.PushFont(font);
 
 		OnClose = () => ImGuiApp.Invoker.Invoke(() => ImGui.PopFont());
