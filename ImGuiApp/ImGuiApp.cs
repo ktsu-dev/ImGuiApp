@@ -117,11 +117,17 @@ public static partial class ImGuiApp
 			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
 			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
 			WindowState = Silk.NET.Windowing.WindowState.Normal,
-			API = new GraphicsAPI(
-				ContextAPI.OpenGL,
-				ContextProfile.Core,
-				ContextFlags.ForwardCompatible,
-				new APIVersion(3, 3)),
+			API = OperatingSystem.IsLinux() ?
+				new GraphicsAPI(
+					ContextAPI.OpenGL,
+					ContextProfile.Core,
+					ContextFlags.Default,
+					new APIVersion(3, 0)) :
+				new GraphicsAPI(
+					ContextAPI.OpenGL,
+					ContextProfile.Core,
+					ContextFlags.ForwardCompatible,
+					new APIVersion(3, 3)),
 			PreferredDepthBufferBits = 24,
 			PreferredStencilBufferBits = 8
 		};
@@ -340,9 +346,12 @@ public static partial class ImGuiApp
 
 		if (!config.TestMode)
 		{
-			// Hide console window only in non-test mode
-			nint handle = NativeMethods.GetConsoleWindow();
-			NativeMethods.ShowWindow(handle, SW_HIDE);
+			// Hide console window only in non-test mode and on Windows
+			if (OperatingSystem.IsWindows())
+			{
+				nint handle = NativeMethods.GetConsoleWindow();
+				NativeMethods.ShowWindow(handle, SW_HIDE);
+			}
 
 			window.Run();
 			window.Dispose();
