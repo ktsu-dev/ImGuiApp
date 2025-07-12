@@ -709,15 +709,25 @@ public static partial class ImGuiApp
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
+		// Debug output to understand what's happening
+		Console.WriteLine($"[DPI Debug] Platform: {(OperatingSystem.IsWindows() ? "Windows" : "Linux")}");
+		Console.WriteLine($"[DPI Debug] Detected Scale Factor: {newScaleFactor:F3}");
+		Console.WriteLine($"[DPI Debug] Raw DPI: {ForceDpiAware.GetActualScaleFactor():F1}");
+
 		// Only update if the scale factor changed
 		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.01f)
 		{
 			ScaleFactor = newScaleFactor;
+			Console.WriteLine($"[DPI Debug] Scale factor updated to: {ScaleFactor:F3}");
 			// Force font reloading when DPI scale changes to ensure proper font scaling
 			if (controller?.FontsConfigured == true)
 			{
 				InitFonts();
 			}
+		}
+		else
+		{
+			Console.WriteLine($"[DPI Debug] Scale factor unchanged: {ScaleFactor:F3}");
 		}
 	}
 
@@ -775,10 +785,9 @@ public static partial class ImGuiApp
 
 					foreach (int baseSize in SupportedPixelFontSizes)
 					{
-						// Scale font size by DPI only on Linux/WSL - Windows handles DPI scaling automatically
-						int actualSize = OperatingSystem.IsLinux()
-							? Math.Max(1, (int)Math.Round(baseSize * ScaleFactor))
-							: baseSize;
+						// Apply consistent DPI scaling across all platforms for uniform appearance
+						// This ensures fonts look the same size on both Windows and WSL
+						int actualSize = Math.Max(1, (int)Math.Round(baseSize * ScaleFactor));
 						int fontIndex = fontAtlasPtr.Fonts.Size;
 						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, actualSize, fontConfigNativePtr);
 						// Store the mapping using the base size as the key for consistency
