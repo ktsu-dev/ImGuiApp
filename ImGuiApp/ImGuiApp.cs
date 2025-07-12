@@ -55,10 +55,13 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static int[] SupportedPointSizes { get; } = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
 	private static float lastFontScaleFactor;
 	private static List<GCHandle> currentPinnedFontData = [];
+
+	// Cache mapping from point size to actual pixel size used for that point size
+	private static ConcurrentDictionary<int, int> PointToPixelMapping { get; } = [];
 
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
@@ -432,8 +435,17 @@ public static partial class ImGuiApp
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
 		ImVector<ImFontPtr> fonts = io.Fonts.Fonts;
-		sizePixels = PtsToPx(sizePoints);
-		int sizePixelsLocal = sizePixels;
+
+		// Get the actual pixel size that was used for this point size
+		if (PointToPixelMapping.TryGetValue(sizePoints, out int mappedPixelSize))
+		{
+			sizePixels = mappedPixelSize;
+		}
+		else
+		{
+			// Fallback: calculate pixel size if not in mapping
+			sizePixels = PtsToPx(sizePoints);
+		}
 
 		KeyValuePair<int, int>[] candidatesByFace = [.. FontIndices
 			.Where(f => f.Key == name)
@@ -445,8 +457,16 @@ public static partial class ImGuiApp
 			throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
 		}
 
+		// Look for exact point size match first
+		KeyValuePair<int, int> exactMatch = candidatesByFace.FirstOrDefault(x => x.Key == sizePoints);
+		if (exactMatch.Key != 0) // Found exact match
+		{
+			return fonts[exactMatch.Value];
+		}
+
+		// If no exact match, find the closest larger point size
 		int[] candidatesBySize = [.. candidatesByFace
-			.Where(x => x.Key >= sizePixelsLocal)
+			.Where(x => x.Key >= sizePoints)
 			.Select(x => x.Value)];
 
 		if (candidatesBySize.Length != 0)
@@ -455,7 +475,7 @@ public static partial class ImGuiApp
 			return fonts[bestFontIndex];
 		}
 
-		// if there was no font size larger than our requested size, then fall back to the largest font size we have
+		// If there was no font size larger than our requested size, fall back to the largest font size we have
 		int largestFontIndex = candidatesByFace.Last().Value;
 		return fonts[largestFontIndex];
 	}
@@ -743,6 +763,7 @@ public static partial class ImGuiApp
 		// Clear existing font data and indices
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
+		PointToPixelMapping.Clear();
 
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
@@ -773,15 +794,20 @@ public static partial class ImGuiApp
 
 					nint fontDataPtr = pinnedFontData.AddrOfPinnedObject();
 
-					foreach (int baseSize in SupportedPixelFontSizes)
+					foreach (int pointSize in SupportedPointSizes)
 					{
-						// Apply consistent DPI scaling across all platforms for uniform appearance
-						// This ensures fonts look the same size on both Windows and WSL
-						int actualSize = Math.Max(1, (int)Math.Round(baseSize * ScaleFactor));
+						// Calculate optimal pixel size for this point size with current DPI
+						// Round to nearest whole pixel for crisp rendering
+						int pixelSize = Math.Max(1, (int)Math.Round(pointSize * ScaleFactor));
+
+						// Store the mapping from point size to actual pixel size used
+						PointToPixelMapping[pointSize] = pixelSize;
+
 						int fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, actualSize, fontConfigNativePtr);
-						// Store the mapping using the base size as the key for consistency
-						fontSizes[baseSize] = fontIndex;
+						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, pixelSize, fontConfigNativePtr);
+
+						// Store the mapping using the point size as the key
+						fontSizes[pointSize] = fontIndex;
 					}
 				}
 
@@ -872,6 +898,7 @@ public static partial class ImGuiApp
 		glProvider = null;
 		LastNormalWindowState = new();
 		FontIndices.Clear();
+		PointToPixelMapping.Clear();
 		lastFontScaleFactor = 0;
 		currentPinnedFontData.Clear();
 		Invoker = null!;

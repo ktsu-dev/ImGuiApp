@@ -21,7 +21,7 @@ public class FontAppearance : ScopedAction
 	/// <summary>
 	/// The default font point size.
 	/// </summary>
-	internal const int DefaultFontPointSize = 13;
+	internal const int DefaultFontPointSize = 12;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="FontAppearance"/> class.
