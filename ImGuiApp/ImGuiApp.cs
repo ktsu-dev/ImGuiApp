@@ -782,11 +782,14 @@ public static partial class ImGuiApp
 			{
 				// We'll still tell ImGui not to own the data, but we'll track it ourselves
 				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
-				fontConfigNativePtr->PixelSnapH = 1;
-				fontConfigNativePtr->OversampleH = 2;
-				fontConfigNativePtr->OversampleV = 2;
+				fontConfigNativePtr->PixelSnapH = 0; // Disable pixel snapping to see if this fixes advancement
+				fontConfigNativePtr->OversampleH = 1; // Reduce oversampling
+				fontConfigNativePtr->OversampleV = 1; // Reduce oversampling
 				fontConfigNativePtr->RasterizerMultiply = 1.0f;
 				fontConfigNativePtr->RasterizerDensity = 1.0f;
+
+				// Always add the default font first for proper fallback
+				ImGui.GetIO().Fonts.AddFontDefault();
 
 				foreach ((string name, byte[] fontBytes) in fontsToLoad)
 				{
@@ -812,7 +815,7 @@ public static partial class ImGuiApp
 						PointToPixelMapping[pointSize] = pixelSize;
 
 						int fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, fontConfigNativePtr);
+						fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, (ImFontConfig*)null);
 
 						// Store the mapping using the point size as the key
 						fontSizes[pointSize] = fontIndex;
