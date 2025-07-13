@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
@@ -162,7 +162,10 @@ public static partial class ImGuiApp
 				input: inputContext,
 				onConfigureIO: () =>
 				{
-					currentGLContextHandle = ImGui.GetCurrentContext();
+					unsafe
+					{
+						currentGLContextHandle = (nint)ImGui.GetCurrentContext().Handle;
+					}
 					UpdateDpiScale();
 					InitFonts();
 					config.OnStart?.Invoke();
@@ -544,11 +547,11 @@ public static partial class ImGuiApp
 		bool b = true;
 		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
 		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-		RangeAccessor<System.Numerics.Vector4> colors = ImGui.GetStyle().Colors;
-		System.Numerics.Vector4 borderColor = colors[(int)ImGuiCol.Border];
+		ImGuiStylePtr style = ImGui.GetStyle();
+		System.Numerics.Vector4 borderColor = style.Colors[(int)ImGuiCol.Border];
 		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 		{
-			colors[(int)ImGuiCol.Border] = borderColor;
+			style.Colors[(int)ImGuiCol.Border] = borderColor;
 			tickDelegate?.Invoke(dt);
 		}
 
@@ -770,7 +773,11 @@ public static partial class ImGuiApp
 
 		unsafe
 		{
-			ImFontConfig* fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
+			ImFontConfig fontConfigNative = new()
+			{
+				RasterizerDensity = 1.0f
+			};
+			ImFontConfig* fontConfigNativePtr = &fontConfigNative;
 			try
 			{
 				// We'll still tell ImGui not to own the data, but we'll track it ourselves
@@ -779,6 +786,7 @@ public static partial class ImGuiApp
 				fontConfigNativePtr->OversampleH = 2;
 				fontConfigNativePtr->OversampleV = 2;
 				fontConfigNativePtr->RasterizerMultiply = 1.0f;
+				fontConfigNativePtr->RasterizerDensity = 1.0f;
 
 				foreach ((string name, byte[] fontBytes) in fontsToLoad)
 				{
@@ -804,7 +812,7 @@ public static partial class ImGuiApp
 						PointToPixelMapping[pointSize] = pixelSize;
 
 						int fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, pixelSize, fontConfigNativePtr);
+						fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, fontConfigNativePtr);
 
 						// Store the mapping using the point size as the key
 						fontSizes[pointSize] = fontIndex;
@@ -821,7 +829,7 @@ public static partial class ImGuiApp
 			finally
 			{
 				// Cleanup the font config
-				ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
+				// Font config cleanup is handled automatically by stack allocation
 			}
 		}
 
@@ -921,7 +929,11 @@ public static partial class ImGuiApp
 		}
 
 		// Get the current context handle
-		nint newContextHandle = ImGui.GetCurrentContext();
+		nint newContextHandle;
+		unsafe
+		{
+			newContextHandle = (nint)ImGui.GetCurrentContext().Handle;
+		}
 
 		// If context has changed, reload all textures
 		if (newContextHandle != currentGLContextHandle && newContextHandle != nint.Zero)

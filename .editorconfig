@@ -9,9 +9,13 @@ charset = utf-8
 indent_style = space
 indent_size = 4
 tab_width = 4
-end_of_line = crlf
+end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+# Windows-specific files that need CRLF
+[*.{bat,cmd,ps1}]
+end_of_line = crlf
 
 # .NET code files
 [*.{cs,csx,cake,fs,fsx,vb,vbx}]
