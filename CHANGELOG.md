@@ -1,8 +1,24 @@
+## v1.12.8 (patch)
+
+Changes since v1.12.7:
+
+- Update .NET workflow to restrict push triggers and enhance NuGet API key handling ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.12.7 (patch)
 
 Changes since v1.12.6:
 
+- Enhance DPI scaling and font rendering for cross-platform compatibility ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor DPI detection logic in ForceDpiAware ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update .editorconfig, .gitignore, and .runsettings; refactor ImGuiApp code for type consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix font rendering issues with Hexa.NET.ImGui ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update font size handling and mapping in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor ImGuiApp to support Linux and Windows console behavior ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance font handling and error management in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance DPI detection and scaling for Linux and WSL ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add DPI scaling support for Wayland in ForceDpiAware ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix GitHub Actions build failures on forked repositories ([@matt-edmondson](https://github.com/matt-edmondson))
+- Migrate from ImGui.NET to Hexa.NET.ImGui and fix line endings ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance font rendering settings for cross-platform compatibility ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.12.6 (patch)
 
 Changes since v1.12.5:
