@@ -836,9 +836,27 @@ public static partial class ImGuiApp
 			// Store the point-to-pixel mapping
 			PointToPixelMapping[pointSize] = pixelSize;
 
-			// Add font to atlas with null config (ImGui defaults, no stacking)
+			// Create config to retain ownership of font data
+			ImFontConfig fontConfig = new()
+			{
+				FontDataOwnedByAtlas = 0, // We retain ownership of the data
+				RasterizerDensity = 1.0f, // Required for proper initialization
+				RasterizerMultiply = 1.0f, // Font rasterizer multiply
+				OversampleH = 3, // Horizontal oversampling
+				OversampleV = 1, // Vertical oversampling
+				PixelSnapH = 1, // Align every glyph to pixel boundary
+				GlyphExtraAdvanceX = 0.0f, // Extra advance X for glyphs
+				GlyphOffset = new(0.0f, 0.0f), // Offset all glyphs from this font input
+				GlyphRanges = null, // Use default glyph ranges
+				GlyphMinAdvanceX = 0.0f, // Minimum AdvanceX for glyphs
+				GlyphMaxAdvanceX = float.MaxValue, // Maximum AdvanceX for glyphs
+				MergeMode = 0, // Don't merge with previous font
+				FontBuilderFlags = 0 // Settings for custom font builder
+			};
+
+			// Add font to atlas with our config
 			int fontIndex = fontAtlas.Fonts.Size;
-			fontAtlas.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, (ImFontConfig*)null);
+			fontAtlas.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, &fontConfig);
 			fontSizes[pointSize] = fontIndex;
 		}
 	}
@@ -852,10 +870,28 @@ public static partial class ImGuiApp
 		// Round to nearest whole pixel for crisp rendering, ensure minimum size of 1 pixel
 		Math.Max(1, (int)Math.Round(pointSize * ScaleFactor));
 
-	private static void StorePinnedFontData(List<GCHandle> newPinnedData) =>
-		// With null config, ImGui owns the font data
-		// We accumulate handles and only free them at shutdown to avoid double-free
+	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
+	{
+		// Free old font data handles before storing new ones to prevent memory leak
+		foreach (GCHandle handle in currentPinnedFontData)
+		{
+			try
+			{
+				if (handle.IsAllocated)
+				{
+					handle.Free();
+				}
+			}
+			catch (InvalidOperationException)
+			{
+				// Handle was already freed, ignore
+			}
+		}
+
+		// Clear the old list and store the new handles
+		currentPinnedFontData.Clear();
 		currentPinnedFontData.AddRange(newPinnedData);
+	}
 
 	/// <inheritdoc/>
 	public static void CleanupAllTextures()
