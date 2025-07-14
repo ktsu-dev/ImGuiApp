@@ -631,3 +631,17 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+.obsidian/*
+!.obsidian/core-plugins.json
+!.obsidian/community-plugins.json
+
+# SpecStory explanation file
+.specstory/.what-is-this.md
+# SpecStory project identity file
+/.project.json
+# SpecStory explanation file
+/.what-is-this.md
+# SpecStory derived-cursor-rules.mdc backup files
+/ai_rules_backups/*
+.specstory/ai_rules_backups/*

@@ -13,7 +13,7 @@ public class ForceDpiAwareTests
 	public void GetWindowScaleFactor_ReturnsValidValue()
 	{
 		// Act
-		var scaleFactor = ForceDpiAware.GetWindowScaleFactor();
+		double scaleFactor = ForceDpiAware.GetWindowScaleFactor();
 
 		// Assert
 		Assert.IsTrue(scaleFactor > 0);
@@ -24,7 +24,7 @@ public class ForceDpiAwareTests
 	public void GetActualScaleFactor_ReturnsValidValue()
 	{
 		// Act
-		var actualScale = ForceDpiAware.GetActualScaleFactor();
+		double actualScale = ForceDpiAware.GetActualScaleFactor();
 
 		// Assert
 		Assert.IsTrue(actualScale > 0);
