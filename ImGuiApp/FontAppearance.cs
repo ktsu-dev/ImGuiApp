@@ -4,7 +4,7 @@
 
 namespace ktsu.ImGuiApp;
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 using ktsu.ScopedAction;
 
@@ -21,7 +21,7 @@ public class FontAppearance : ScopedAction
 	/// <summary>
 	/// The default font point size.
 	/// </summary>
-	internal const int DefaultFontPointSize = 13;
+	internal const int DefaultFontPointSize = 12;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="FontAppearance"/> class.
@@ -37,7 +37,7 @@ public class FontAppearance : ScopedAction
 			throw new InvalidOperationException("Fonts have not been built yet.");
 		}
 
-		var font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
+		ImFontPtr font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
 		ImGui.PushFont(font);
 
 		OnClose = () => ImGuiApp.Invoker.Invoke(() => ImGui.PopFont());
