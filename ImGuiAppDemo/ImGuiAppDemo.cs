@@ -36,6 +36,7 @@ internal static class ImGuiAppDemo
 		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
+		SaveIniSettings = false,
 		Fonts = new Dictionary<string, byte[]>
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }

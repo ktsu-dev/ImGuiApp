@@ -165,7 +165,15 @@ public static partial class ImGuiApp
 					unsafe
 					{
 						currentGLContextHandle = (nint)ImGui.GetCurrentContext().Handle;
+
+						// Configure imgui.ini file saving based on user preference
+						if (!config.SaveIniSettings)
+						{
+							ImGuiIOPtr io = ImGui.GetIO();
+							io.IniFilename = null;
+						}
 					}
+
 					UpdateDpiScale();
 					InitFonts();
 					config.OnStart?.Invoke();
