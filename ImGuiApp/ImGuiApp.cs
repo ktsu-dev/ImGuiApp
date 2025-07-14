@@ -55,10 +55,10 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static int[] SupportedPointSizes { get; } = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static int[] SupportedPointSizes { get; } = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48, 56, 64, 72];
 	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
 	private static float lastFontScaleFactor;
-	private static List<GCHandle> currentPinnedFontData = [];
+	private static readonly List<GCHandle> currentPinnedFontData = [];
 
 	// Cache mapping from point size to actual pixel size used for that point size
 	private static ConcurrentDictionary<int, int> PointToPixelMapping { get; } = [];
@@ -282,11 +282,19 @@ public static partial class ImGuiApp
 
 	private static void CleanupPinnedFontData()
 	{
+		// Free our font data handles since we own the data
 		foreach (GCHandle handle in currentPinnedFontData)
 		{
-			if (handle.IsAllocated)
+			try
 			{
-				handle.Free();
+				if (handle.IsAllocated)
+				{
+					handle.Free();
+				}
+			}
+			catch (InvalidOperationException)
+			{
+				// Handle was already freed, ignore
 			}
 		}
 
@@ -440,47 +448,41 @@ public static partial class ImGuiApp
 		ImVector<ImFontPtr> fonts = io.Fonts.Fonts;
 
 		// Get the actual pixel size that was used for this point size
-		if (PointToPixelMapping.TryGetValue(sizePoints, out int mappedPixelSize))
-		{
-			sizePixels = mappedPixelSize;
-		}
-		else
-		{
-			// Fallback: calculate pixel size if not in mapping
-			sizePixels = PtsToPx(sizePoints);
-		}
+		sizePixels = PointToPixelMapping.TryGetValue(sizePoints, out int mappedPixelSize)
+			? mappedPixelSize
+			: CalculateOptimalPixelSize(sizePoints);
 
-		KeyValuePair<int, int>[] candidatesByFace = [.. FontIndices
-			.Where(f => f.Key == name)
-			.SelectMany(f => f.Value)
-			.OrderBy(f => f.Key)];
-
-		if (candidatesByFace.Length == 0)
+		// Try to get font indices for the specified name
+		if (!FontIndices.TryGetValue(name, out ConcurrentDictionary<int, int>? fontSizes))
 		{
-			throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
+			throw new InvalidOperationException($"No fonts found for the specified font name: {name}");
 		}
 
 		// Look for exact point size match first
-		KeyValuePair<int, int> exactMatch = candidatesByFace.FirstOrDefault(x => x.Key == sizePoints);
-		if (exactMatch.Key != 0) // Found exact match
+		if (fontSizes.TryGetValue(sizePoints, out int exactIndex))
 		{
-			return fonts[exactMatch.Value];
+			return fonts[exactIndex];
 		}
 
-		// If no exact match, find the closest larger point size
-		int[] candidatesBySize = [.. candidatesByFace
-			.Where(x => x.Key >= sizePoints)
-			.Select(x => x.Value)];
+		// Find the closest larger size
+		int? bestLargerSize = fontSizes.Keys
+			.Where(size => size >= sizePoints)
+			.OrderBy(size => size)
+			.FirstOrDefault();
 
-		if (candidatesBySize.Length != 0)
+		if (bestLargerSize.HasValue && fontSizes.TryGetValue(bestLargerSize.Value, out int largerIndex))
 		{
-			int bestFontIndex = candidatesBySize.First();
-			return fonts[bestFontIndex];
+			return fonts[largerIndex];
 		}
 
-		// If there was no font size larger than our requested size, fall back to the largest font size we have
-		int largestFontIndex = candidatesByFace.Last().Value;
-		return fonts[largestFontIndex];
+		// Fall back to the largest available size for this font
+		int largestSize = fontSizes.Keys.Max();
+		if (fontSizes.TryGetValue(largestSize, out int largestIndex))
+		{
+			return fonts[largestIndex];
+		}
+
+		throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
 	}
 
 	private static void EnsureWindowPositionIsValid()
@@ -732,12 +734,15 @@ public static partial class ImGuiApp
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
-		// Only update if the scale factor changed
+		// Only update if the scale factor changed significantly (more than 1% difference)
 		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.01f)
 		{
+			float oldScaleFactor = ScaleFactor;
 			ScaleFactor = newScaleFactor;
-			// Force font reloading when DPI scale changes to ensure proper font scaling
-			if (controller?.FontsConfigured == true)
+
+			// Only reload fonts if scale factor changed significantly (more than 5% difference)
+			// This prevents unnecessary font reloading for minor DPI changes
+			if (controller?.FontsConfigured == true && Math.Abs(oldScaleFactor - newScaleFactor) > 0.05f)
 			{
 				InitFonts();
 			}
@@ -771,68 +776,20 @@ public static partial class ImGuiApp
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
 
+		// Add default font first for fallback
+		ImGui.GetIO().Fonts.AddFontDefault();
+
 		unsafe
 		{
-			ImFontConfig fontConfigNative = new()
+			foreach ((string name, byte[] fontBytes) in fontsToLoad)
 			{
-				RasterizerDensity = 1.0f
-			};
-			ImFontConfig* fontConfigNativePtr = &fontConfigNative;
-			try
-			{
-				// We'll still tell ImGui not to own the data, but we'll track it ourselves
-				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
-				fontConfigNativePtr->PixelSnapH = 0; // Disable pixel snapping to see if this fixes advancement
-				fontConfigNativePtr->OversampleH = 1; // Reduce oversampling
-				fontConfigNativePtr->OversampleV = 1; // Reduce oversampling
-				fontConfigNativePtr->RasterizerMultiply = 1.0f;
-				fontConfigNativePtr->RasterizerDensity = 1.0f;
-
-				// Always add the default font first for proper fallback
-				ImGui.GetIO().Fonts.AddFontDefault();
-
-				foreach ((string name, byte[] fontBytes) in fontsToLoad)
-				{
-					if (!FontIndices.TryGetValue(name, out ConcurrentDictionary<int, int>? fontSizes))
-					{
-						fontSizes = new();
-						FontIndices[name] = fontSizes;
-					}
-
-					// Pin the font data so the GC doesn't move or collect it while ImGui is using it
-					GCHandle pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
-					fontPinnedData.Add(pinnedFontData);
-
-					nint fontDataPtr = pinnedFontData.AddrOfPinnedObject();
-
-					foreach (int pointSize in SupportedPointSizes)
-					{
-						// Calculate optimal pixel size for this point size with current DPI
-						// Round to nearest whole pixel for crisp rendering
-						int pixelSize = Math.Max(1, (int)Math.Round(pointSize * ScaleFactor));
-
-						// Store the mapping from point size to actual pixel size used
-						PointToPixelMapping[pointSize] = pixelSize;
-
-						int fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, (ImFontConfig*)null);
-
-						// Store the mapping using the point size as the key
-						fontSizes[pointSize] = fontIndex;
-					}
-				}
-
-				// Build the font atlas
-				bool success = fontAtlasPtr.Build();
-				if (!success)
-				{
-					throw new InvalidOperationException("Failed to build ImGui font atlas");
-				}
+				LoadFontAtMultipleSizes(name, fontBytes, fontAtlasPtr, fontPinnedData);
 			}
-			finally
+
+			// Build the font atlas
+			if (!fontAtlasPtr.Build())
 			{
-				// Cleanup the font config
-				// Font config cleanup is handled automatically by stack allocation
+				throw new InvalidOperationException("Failed to build ImGui font atlas");
 			}
 		}
 
@@ -840,20 +797,57 @@ public static partial class ImGuiApp
 		StorePinnedFontData(fontPinnedData);
 	}
 
-	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
+	/// <summary>
+	/// Loads a single font at multiple sizes for DPI scaling support.
+	/// </summary>
+	/// <param name="fontName">The name of the font for identification.</param>
+	/// <param name="fontBytes">The font data bytes.</param>
+	/// <param name="fontAtlas">The ImGui font atlas to add fonts to.</param>
+	/// <param name="pinnedDataList">List to track GC handles for cleanup.</param>
+	private static unsafe void LoadFontAtMultipleSizes(string fontName, byte[] fontBytes,
+		ImFontAtlasPtr fontAtlas, List<GCHandle> pinnedDataList)
 	{
-		// Free any previously pinned font data
-		foreach (GCHandle handle in currentPinnedFontData)
+		// Get or create font size mapping for this font
+		if (!FontIndices.TryGetValue(fontName, out ConcurrentDictionary<int, int>? fontSizes))
 		{
-			if (handle.IsAllocated)
-			{
-				handle.Free();
-			}
+			fontSizes = new();
+			FontIndices[fontName] = fontSizes;
 		}
 
-		// Store the new pinned data
-		currentPinnedFontData = newPinnedData;
+		// Pin the font data for ImGui usage
+		GCHandle pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
+		pinnedDataList.Add(pinnedFontData);
+		nint fontDataPtr = pinnedFontData.AddrOfPinnedObject();
+
+		// Load font at each supported size
+		foreach (int pointSize in SupportedPointSizes)
+		{
+			// Calculate optimal pixel size with DPI scaling
+			int pixelSize = CalculateOptimalPixelSize(pointSize);
+
+			// Store the point-to-pixel mapping
+			PointToPixelMapping[pointSize] = pixelSize;
+
+			// Add font to atlas with null config (ImGui defaults, no stacking)
+			int fontIndex = fontAtlas.Fonts.Size;
+			fontAtlas.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, (ImFontConfig*)null);
+			fontSizes[pointSize] = fontIndex;
+		}
 	}
+
+	/// <summary>
+	/// Calculates the optimal pixel size for a given point size based on current scale factor.
+	/// </summary>
+	/// <param name="pointSize">The desired point size.</param>
+	/// <returns>The optimal pixel size for crisp rendering.</returns>
+	private static int CalculateOptimalPixelSize(int pointSize) =>
+		// Round to nearest whole pixel for crisp rendering, ensure minimum size of 1 pixel
+		Math.Max(1, (int)Math.Round(pointSize * ScaleFactor));
+
+	private static void StorePinnedFontData(List<GCHandle> newPinnedData) =>
+		// With null config, ImGui owns the font data
+		// We accumulate handles and only free them at shutdown to avoid double-free
+		currentPinnedFontData.AddRange(newPinnedData);
 
 	/// <inheritdoc/>
 	public static void CleanupAllTextures()

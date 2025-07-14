@@ -232,8 +232,8 @@ public sealed class ImGuiAppTests : IDisposable
 		// Reset state to ensure clean test environment
 		ResetState();
 
-		// Set up a path for testing
-		AbsoluteFilePath mockTexturePath = "C:/test/texture.png".As<AbsoluteFilePath>();
+		// Set up a path for testing - use a proper absolute path format
+		AbsoluteFilePath mockTexturePath = Path.GetFullPath("test_texture.png").As<AbsoluteFilePath>();
 
 		// We need to initialize minimal parts of ImGuiApp for the test
 		System.Reflection.PropertyInfo? invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
