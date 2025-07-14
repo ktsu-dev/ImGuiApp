@@ -2,7 +2,7 @@ name: .NET Workflow
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths-ignore: ['**.md', '.github/ISSUE_TEMPLATE/**', '.github/pull_request_template.md']
   pull_request:
     paths-ignore: ['**.md', '.github/ISSUE_TEMPLATE/**', '.github/pull_request_template.md']
@@ -60,6 +60,7 @@ jobs:
         Import-Module ${{ github.workspace }}/scripts/PSBuild.psm1
 
         # Get build configuration
+        $nugetKey = if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -eq "refs/heads/main") { "${{ secrets.NUGET_KEY }}" } else { "" }
         $buildConfig = Get-BuildConfiguration `
           -ServerUrl "${{ github.server_url }}" `
           -GitRef "${{ github.ref }}" `
@@ -67,7 +68,7 @@ jobs:
           -GitHubOwner "${{ github.repository_owner }}" `
           -GitHubRepo "${{ github.repository }}" `
           -GithubToken "${{ github.token }}" `
-          -NuGetApiKey "${{ secrets.NUGET_KEY }}" `
+          -NuGetApiKey $nugetKey `
           -WorkspacePath "${{ github.workspace }}" `
           -ExpectedOwner "ktsu-dev" `
           -ChangelogFile "CHANGELOG.md" `
@@ -104,7 +105,7 @@ jobs:
   security:
     name: Security Scanning
     needs: build
-    if: needs.build.outputs.should_release == 'true'
+    if: needs.build.outputs.should_release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
