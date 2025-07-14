@@ -38,8 +38,8 @@ public static partial class GdiPlusHelper
 	/// <exception cref="InvalidOperationException">Thrown when a GDI+ operation fails.</exception>
 	public static float GetDpiX(IntPtr hwnd)
 	{
-		CheckStatus(NativeMethods.GdipCreateFromHWND(hwnd, out var graphicsHandle));
-		CheckStatus(NativeMethods.GdipGetDpiX(graphicsHandle, out var result));
+		CheckStatus(NativeMethods.GdipCreateFromHWND(hwnd, out nint graphicsHandle));
+		CheckStatus(NativeMethods.GdipGetDpiX(graphicsHandle, out float result));
 		CheckStatus(NativeMethods.GdipDeleteGraphics(graphicsHandle));
 
 		return result;

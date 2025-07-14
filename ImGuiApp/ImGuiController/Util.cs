@@ -17,7 +17,7 @@ internal static class Util
 	[Conditional("DEBUG")]
 	public static void CheckGlError(this GL gl, string title)
 	{
-		var error = gl.GetError();
+		GLEnum error = gl.GetError();
 		if (error != GLEnum.NoError)
 		{
 			Debug.Print($"{title}: {error}");

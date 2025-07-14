@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
@@ -55,10 +55,13 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static int[] SupportedPixelFontSizes { get; } = [12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+	private static int[] SupportedPointSizes { get; } = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48, 56, 64, 72];
 	private static ConcurrentDictionary<string, ConcurrentDictionary<int, int>> FontIndices { get; } = [];
 	private static float lastFontScaleFactor;
-	private static List<GCHandle> currentPinnedFontData = [];
+	private static readonly List<GCHandle> currentPinnedFontData = [];
+
+	// Cache mapping from point size to actual pixel size used for that point size
+	private static ConcurrentDictionary<int, int> PointToPixelMapping { get; } = [];
 
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
@@ -111,17 +114,23 @@ public static partial class ImGuiApp
 			return;
 		}
 
-		var silkWindowOptions = WindowOptions.Default with
+		WindowOptions silkWindowOptions = WindowOptions.Default with
 		{
 			Title = config.Title,
 			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
 			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
 			WindowState = Silk.NET.Windowing.WindowState.Normal,
-			API = new GraphicsAPI(
-				ContextAPI.OpenGL,
-				ContextProfile.Core,
-				ContextFlags.ForwardCompatible,
-				new APIVersion(3, 3)),
+			API = OperatingSystem.IsLinux() ?
+				new GraphicsAPI(
+					ContextAPI.OpenGL,
+					ContextProfile.Core,
+					ContextFlags.Default,
+					new APIVersion(3, 0)) :
+				new GraphicsAPI(
+					ContextAPI.OpenGL,
+					ContextProfile.Core,
+					ContextFlags.ForwardCompatible,
+					new APIVersion(3, 3)),
 			PreferredDepthBufferBits = 24,
 			PreferredStencilBufferBits = 8
 		};
@@ -141,9 +150,9 @@ public static partial class ImGuiApp
 				SetWindowIcon(config.IconPath);
 			}
 
-			var glFactory = new WindowOpenGLFactory(window);
+			WindowOpenGLFactory glFactory = new(window);
 			glProvider = new OpenGLProvider(glFactory);
-			var glWrapper = (GLWrapper)glProvider.GetGL();
+			GLWrapper glWrapper = (GLWrapper)glProvider.GetGL();
 			gl = glWrapper.UnderlyingGL;
 			inputContext = window.CreateInput();
 
@@ -153,7 +162,10 @@ public static partial class ImGuiApp
 				input: inputContext,
 				onConfigureIO: () =>
 				{
-					currentGLContextHandle = ImGui.GetCurrentContext();
+					unsafe
+					{
+						currentGLContextHandle = (nint)ImGui.GetCurrentContext().Handle;
+					}
 					UpdateDpiScale();
 					InitFonts();
 					config.OnStart?.Invoke();
@@ -190,8 +202,8 @@ public static partial class ImGuiApp
 
 	private static void UpdateWindowPerformance()
 	{
-		var currentFps = window!.FramesPerSecond;
-		var currentUps = window.UpdatesPerSecond;
+		double currentFps = window!.FramesPerSecond;
+		double currentUps = window.UpdatesPerSecond;
 		double requiredFps = IsFocused ? 30 : 5;
 		double requiredUps = IsFocused ? 30 : 5;
 
@@ -249,8 +261,8 @@ public static partial class ImGuiApp
 
 	private static void RenderWithScaling(Action renderAction)
 	{
-		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out var bestFontSize);
-		var scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
+		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out int bestFontSize);
+		float scaleRatio = bestFontSize / (float)FontAppearance.DefaultFontPointSize;
 		using (new UIScaler(scaleRatio))
 		{
 			RenderWithDefaultFont(renderAction);
@@ -270,11 +282,19 @@ public static partial class ImGuiApp
 
 	private static void CleanupPinnedFontData()
 	{
-		foreach (var handle in currentPinnedFontData)
+		// Free our font data handles since we own the data
+		foreach (GCHandle handle in currentPinnedFontData)
 		{
-			if (handle.IsAllocated)
+			try
 			{
-				handle.Free();
+				if (handle.IsAllocated)
+				{
+					handle.Free();
+				}
+			}
+			catch (InvalidOperationException)
+			{
+				// Handle was already freed, ignore
 			}
 		}
 
@@ -340,9 +360,12 @@ public static partial class ImGuiApp
 
 		if (!config.TestMode)
 		{
-			// Hide console window only in non-test mode
-			var handle = NativeMethods.GetConsoleWindow();
-			NativeMethods.ShowWindow(handle, SW_HIDE);
+			// Hide console window only in non-test mode and on Windows
+			if (OperatingSystem.IsWindows())
+			{
+				nint handle = NativeMethods.GetConsoleWindow();
+				NativeMethods.ShowWindow(handle, SW_HIDE);
+			}
 
 			window.Run();
 			window.Dispose();
@@ -376,7 +399,7 @@ public static partial class ImGuiApp
 			throw new FileNotFoundException("Icon file not found.", config.IconPath);
 		}
 
-		foreach (var font in config.Fonts)
+		foreach (KeyValuePair<string, byte[]> font in config.Fonts)
 		{
 			if (string.IsNullOrEmpty(font.Key) || font.Value == null)
 			{
@@ -389,7 +412,7 @@ public static partial class ImGuiApp
 			throw new ArgumentException("At least one default font must be specified in the configuration.", nameof(config));
 		}
 
-		foreach (var font in config.DefaultFonts)
+		foreach (KeyValuePair<string, byte[]> font in config.DefaultFonts)
 		{
 			if (string.IsNullOrEmpty(font.Key) || font.Value == null)
 			{
@@ -421,43 +444,53 @@ public static partial class ImGuiApp
 
 	internal static ImFontPtr FindBestFontForAppearance(string name, int sizePoints, out int sizePixels)
 	{
-		var io = ImGui.GetIO();
-		var fonts = io.Fonts.Fonts;
-		sizePixels = PtsToPx(sizePoints);
-		var sizePixelsLocal = sizePixels;
+		ImGuiIOPtr io = ImGui.GetIO();
+		ImVector<ImFontPtr> fonts = io.Fonts.Fonts;
 
-		var candidatesByFace = FontIndices
-			.Where(f => f.Key == name)
-			.SelectMany(f => f.Value)
-			.OrderBy(f => f.Key)
-			.ToArray();
+		// Get the actual pixel size that was used for this point size
+		sizePixels = PointToPixelMapping.TryGetValue(sizePoints, out int mappedPixelSize)
+			? mappedPixelSize
+			: CalculateOptimalPixelSize(sizePoints);
 
-		if (candidatesByFace.Length == 0)
+		// Try to get font indices for the specified name
+		if (!FontIndices.TryGetValue(name, out ConcurrentDictionary<int, int>? fontSizes))
 		{
-			throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
+			throw new InvalidOperationException($"No fonts found for the specified font name: {name}");
 		}
 
-		int[] candidatesBySize = [.. candidatesByFace
-			.Where(x => x.Key >= sizePixelsLocal)
-			.Select(x => x.Value)];
-
-		if (candidatesBySize.Length != 0)
+		// Look for exact point size match first
+		if (fontSizes.TryGetValue(sizePoints, out int exactIndex))
 		{
-			var bestFontIndex = candidatesBySize.First();
-			return fonts[bestFontIndex];
+			return fonts[exactIndex];
 		}
 
-		// if there was no font size larger than our requested size, then fall back to the largest font size we have
-		var largestFontIndex = candidatesByFace.Last().Value;
-		return fonts[largestFontIndex];
+		// Find the closest larger size
+		int? bestLargerSize = fontSizes.Keys
+			.Where(size => size >= sizePoints)
+			.OrderBy(size => size)
+			.FirstOrDefault();
+
+		if (bestLargerSize.HasValue && fontSizes.TryGetValue(bestLargerSize.Value, out int largerIndex))
+		{
+			return fonts[largerIndex];
+		}
+
+		// Fall back to the largest available size for this font
+		int largestSize = fontSizes.Keys.Max();
+		if (fontSizes.TryGetValue(largestSize, out int largestIndex))
+		{
+			return fonts[largestIndex];
+		}
+
+		throw new InvalidOperationException($"No fonts found for the specified font appearance: {name} {sizePoints}pt");
 	}
 
 	private static void EnsureWindowPositionIsValid()
 	{
 		if (window?.Monitor is not null && window.WindowState is not Silk.NET.Windowing.WindowState.Minimized)
 		{
-			var bounds = window.Monitor.Bounds;
-			var onScreen = bounds.Contains(window.Position) ||
+			Silk.NET.Maths.Rectangle<int> bounds = window.Monitor.Bounds;
+			bool onScreen = bounds.Contains(window.Position) ||
 				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, 0)) ||
 				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(0, window.Size.Y)) ||
 				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, window.Size.Y));
@@ -465,8 +498,8 @@ public static partial class ImGuiApp
 			if (!onScreen)
 			{
 				// If the window is not on a monitor, move it to the primary monitor
-				var defaultWindowState = new ImGuiAppWindowState();
-				var halfSize = defaultWindowState.Size / 2;
+				ImGuiAppWindowState defaultWindowState = new();
+				System.Numerics.Vector2 halfSize = defaultWindowState.Size / 2;
 				window.Size = new((int)defaultWindowState.Size.X, (int)defaultWindowState.Size.Y);
 				window.Position = window.Monitor.Bounds.Center - new Silk.NET.Maths.Vector2D<int>((int)halfSize.X, (int)halfSize.Y);
 				window.WindowState = defaultWindowState.LayoutState;
@@ -513,14 +546,14 @@ public static partial class ImGuiApp
 	/// <param name="dt">The delta time since the last frame.</param>
 	private static void RenderWindowContents(Action<float>? tickDelegate, float dt)
 	{
-		var b = true;
+		bool b = true;
 		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
 		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
-		var colors = ImGui.GetStyle().Colors;
-		var borderColor = colors[(int)ImGuiCol.Border];
+		ImGuiStylePtr style = ImGui.GetStyle();
+		System.Numerics.Vector4 borderColor = style.Colors[(int)ImGuiCol.Border];
 		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
 		{
-			colors[(int)ImGuiCol.Border] = borderColor;
+			style.Colors[(int)ImGuiCol.Border] = borderColor;
 			tickDelegate?.Invoke(dt);
 		}
 
@@ -543,23 +576,23 @@ public static partial class ImGuiApp
 	/// <param name="iconPath">The file path to the icon image.</param>
 	public static void SetWindowIcon(string iconPath)
 	{
-		using var stream = File.OpenRead(iconPath);
-		using var sourceImage = Image.Load<Rgba32>(stream);
+		using FileStream stream = File.OpenRead(iconPath);
+		using Image<Rgba32> sourceImage = Image.Load<Rgba32>(stream);
 
 		int[] iconSizes = [128, 64, 48, 32, 28, 24, 22, 20, 18, 16];
 
-		var icons = new Collection<Silk.NET.Core.RawImage>();
+		Collection<Silk.NET.Core.RawImage> icons = [];
 
-		foreach (var size in iconSizes)
+		foreach (int size in iconSizes)
 		{
-			var resizeImage = sourceImage.Clone();
-			var sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
+			Image<Rgba32> resizeImage = sourceImage.Clone();
+			int sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
 			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
 
 			UseImageBytes(resizeImage, bytes =>
 			{
 				// Create a permanent copy since RawImage needs to keep the data
-				var iconData = new byte[bytes.Length];
+				byte[] iconData = new byte[bytes.Length];
 				Array.Copy(bytes, iconData, bytes.Length);
 				icons.Add(new(size, size, new Memory<byte>(iconData)));
 			});
@@ -576,14 +609,14 @@ public static partial class ImGuiApp
 	public static ImGuiAppTextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
 		// Check if the texture is already loaded
-		if (Textures.TryGetValue(path, out var existingTexture))
+		if (Textures.TryGetValue(path, out ImGuiAppTextureInfo? existingTexture))
 		{
 			return existingTexture;
 		}
 
-		using var image = Image.Load<Rgba32>(path);
+		using Image<Rgba32> image = Image.Load<Rgba32>(path);
 
-		var textureInfo = new ImGuiAppTextureInfo
+		ImGuiAppTextureInfo textureInfo = new()
 		{
 			Path = path,
 			Width = image.Width,
@@ -607,10 +640,10 @@ public static partial class ImGuiApp
 		ArgumentNullException.ThrowIfNull(image);
 		ArgumentNullException.ThrowIfNull(action);
 
-		var bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
+		int bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
 
 		// Rent buffer from pool
-		var pooledBuffer = _bytePool.Rent(bufferSize);
+		byte[] pooledBuffer = _bytePool.Rent(bufferSize);
 		try
 		{
 			// Copy the image data to the pooled buffer
@@ -655,9 +688,9 @@ public static partial class ImGuiApp
 			}
 
 			// Upload texture to graphics system
-			gl.GetInteger(GLEnum.TextureBinding2D, out var previousTextureId);
+			gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
 
-			var textureHandle = Marshal.AllocHGlobal(bytes.Length);
+			nint textureHandle = Marshal.AllocHGlobal(bytes.Length);
 			try
 			{
 				Marshal.Copy(bytes, 0, textureHandle, bytes.Length);
@@ -693,19 +726,26 @@ public static partial class ImGuiApp
 			}
 
 			gl.DeleteTexture(textureId);
-			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out var _));
+			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out ImGuiAppTextureInfo? _));
 		});
 	}
 
 	private static void UpdateDpiScale()
 	{
-		var newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
+		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
-		// Only update if the scale factor changed significantly
-		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.1f)
+		// Only update if the scale factor changed significantly (more than 1% difference)
+		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.01f)
 		{
+			float oldScaleFactor = ScaleFactor;
 			ScaleFactor = newScaleFactor;
-			// We'll let InitFonts decide whether to rebuild based on the scale change
+
+			// Only reload fonts if scale factor changed significantly (more than 5% difference)
+			// This prevents unnecessary font reloading for minor DPI changes
+			if (controller?.FontsConfigured == true && Math.Abs(oldScaleFactor - newScaleFactor) > 0.05f)
+			{
+				InitFonts();
+			}
 		}
 	}
 
@@ -715,71 +755,41 @@ public static partial class ImGuiApp
 	// If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
 	internal static void InitFonts()
 	{
-		// Only load fonts if they haven't been loaded or if scale factor has changed significantly
-		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.1f)
+		// Only load fonts if they haven't been loaded or if scale factor has changed
+		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.01f)
 		{
-			return; // Skip reloading fonts if they're already loaded and scale hasn't changed much
+			return; // Skip reloading fonts if they're already loaded and scale hasn't changed
 		}
 
 		lastFontScaleFactor = ScaleFactor;
 
-		var fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
+		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 
-		var io = ImGui.GetIO();
-		var fontAtlasPtr = io.Fonts;
+		ImGuiIOPtr io = ImGui.GetIO();
+		ImFontAtlasPtr fontAtlasPtr = io.Fonts;
 
 		// Clear existing font data and indices
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
+		PointToPixelMapping.Clear();
 
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
 
+		// Add default font first for fallback
+		ImGui.GetIO().Fonts.AddFontDefault();
+
 		unsafe
 		{
-			var fontConfigNativePtr = ImGuiNative.ImFontConfig_ImFontConfig();
-			try
+			foreach ((string name, byte[] fontBytes) in fontsToLoad)
 			{
-				// We'll still tell ImGui not to own the data, but we'll track it ourselves
-				fontConfigNativePtr->FontDataOwnedByAtlas = 0;
-				fontConfigNativePtr->PixelSnapH = 1;
-				fontConfigNativePtr->OversampleH = 2; // Improved oversampling for better quality
-				fontConfigNativePtr->OversampleV = 2;
-				fontConfigNativePtr->RasterizerMultiply = 1.0f; // Adjust if needed for better rendering
-
-				foreach (var (name, fontBytes) in fontsToLoad)
-				{
-					if (!FontIndices.TryGetValue(name, out var fontSizes))
-					{
-						fontSizes = new();
-						FontIndices[name] = fontSizes;
-					}
-
-					// Pin the font data so the GC doesn't move or collect it while ImGui is using it
-					var pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
-					fontPinnedData.Add(pinnedFontData);
-
-					var fontDataPtr = pinnedFontData.AddrOfPinnedObject();
-
-					foreach (var size in SupportedPixelFontSizes)
-					{
-						var fontIndex = fontAtlasPtr.Fonts.Size;
-						fontAtlasPtr.AddFontFromMemoryTTF(fontDataPtr, fontBytes.Length, size, fontConfigNativePtr);
-						fontSizes[size] = fontIndex;
-					}
-				}
-
-				// Build the font atlas
-				var success = fontAtlasPtr.Build();
-				if (!success)
-				{
-					throw new InvalidOperationException("Failed to build ImGui font atlas");
-				}
+				LoadFontAtMultipleSizes(name, fontBytes, fontAtlasPtr, fontPinnedData);
 			}
-			finally
+
+			// Build the font atlas
+			if (!fontAtlasPtr.Build())
 			{
-				// Cleanup the font config
-				ImGuiNative.ImFontConfig_destroy(fontConfigNativePtr);
+				throw new InvalidOperationException("Failed to build ImGui font atlas");
 			}
 		}
 
@@ -787,20 +797,57 @@ public static partial class ImGuiApp
 		StorePinnedFontData(fontPinnedData);
 	}
 
-	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
+	/// <summary>
+	/// Loads a single font at multiple sizes for DPI scaling support.
+	/// </summary>
+	/// <param name="fontName">The name of the font for identification.</param>
+	/// <param name="fontBytes">The font data bytes.</param>
+	/// <param name="fontAtlas">The ImGui font atlas to add fonts to.</param>
+	/// <param name="pinnedDataList">List to track GC handles for cleanup.</param>
+	private static unsafe void LoadFontAtMultipleSizes(string fontName, byte[] fontBytes,
+		ImFontAtlasPtr fontAtlas, List<GCHandle> pinnedDataList)
 	{
-		// Free any previously pinned font data
-		foreach (var handle in currentPinnedFontData)
+		// Get or create font size mapping for this font
+		if (!FontIndices.TryGetValue(fontName, out ConcurrentDictionary<int, int>? fontSizes))
 		{
-			if (handle.IsAllocated)
-			{
-				handle.Free();
-			}
+			fontSizes = new();
+			FontIndices[fontName] = fontSizes;
 		}
 
-		// Store the new pinned data
-		currentPinnedFontData = newPinnedData;
+		// Pin the font data for ImGui usage
+		GCHandle pinnedFontData = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
+		pinnedDataList.Add(pinnedFontData);
+		nint fontDataPtr = pinnedFontData.AddrOfPinnedObject();
+
+		// Load font at each supported size
+		foreach (int pointSize in SupportedPointSizes)
+		{
+			// Calculate optimal pixel size with DPI scaling
+			int pixelSize = CalculateOptimalPixelSize(pointSize);
+
+			// Store the point-to-pixel mapping
+			PointToPixelMapping[pointSize] = pixelSize;
+
+			// Add font to atlas with null config (ImGui defaults, no stacking)
+			int fontIndex = fontAtlas.Fonts.Size;
+			fontAtlas.AddFontFromMemoryTTF((void*)fontDataPtr, fontBytes.Length, pixelSize, (ImFontConfig*)null);
+			fontSizes[pointSize] = fontIndex;
+		}
 	}
+
+	/// <summary>
+	/// Calculates the optimal pixel size for a given point size based on current scale factor.
+	/// </summary>
+	/// <param name="pointSize">The desired point size.</param>
+	/// <returns>The optimal pixel size for crisp rendering.</returns>
+	private static int CalculateOptimalPixelSize(int pointSize) =>
+		// Round to nearest whole pixel for crisp rendering, ensure minimum size of 1 pixel
+		Math.Max(1, (int)Math.Round(pointSize * ScaleFactor));
+
+	private static void StorePinnedFontData(List<GCHandle> newPinnedData) =>
+		// With null config, ImGui owns the font data
+		// We accumulate handles and only free them at shutdown to avoid double-free
+		currentPinnedFontData.AddRange(newPinnedData);
 
 	/// <inheritdoc/>
 	public static void CleanupAllTextures()
@@ -811,11 +858,11 @@ public static partial class ImGuiApp
 		}
 
 		// Make a copy of the keys to avoid collection modification issues
-		var texturesToRemove = Textures.Keys.ToList();
+		List<AbsoluteFilePath> texturesToRemove = [.. Textures.Keys];
 
-		foreach (var texturePath in texturesToRemove)
+		foreach (AbsoluteFilePath? texturePath in texturesToRemove)
 		{
-			if (Textures.TryGetValue(texturePath, out var info))
+			if (Textures.TryGetValue(texturePath, out ImGuiAppTextureInfo? info))
 			{
 				DeleteTexture(info.TextureId);
 			}
@@ -856,6 +903,7 @@ public static partial class ImGuiApp
 		glProvider = null;
 		LastNormalWindowState = new();
 		FontIndices.Clear();
+		PointToPixelMapping.Clear();
 		lastFontScaleFactor = 0;
 		currentPinnedFontData.Clear();
 		Invoker = null!;
@@ -878,7 +926,11 @@ public static partial class ImGuiApp
 		}
 
 		// Get the current context handle
-		var newContextHandle = ImGui.GetCurrentContext();
+		nint newContextHandle;
+		unsafe
+		{
+			newContextHandle = (nint)ImGui.GetCurrentContext().Handle;
+		}
 
 		// If context has changed, reload all textures
 		if (newContextHandle != currentGLContextHandle && newContextHandle != nint.Zero)
@@ -899,20 +951,20 @@ public static partial class ImGuiApp
 		}
 
 		// Make a copy to avoid modification issues during iteration
-		var texturesToReload = Textures.ToList();
+		List<KeyValuePair<AbsoluteFilePath, ImGuiAppTextureInfo>> texturesToReload = [.. Textures];
 
-		foreach (var texture in texturesToReload)
+		foreach (KeyValuePair<AbsoluteFilePath, ImGuiAppTextureInfo> texture in texturesToReload)
 		{
 			try
 			{
-				var path = texture.Key;
-				var oldInfo = texture.Value;
+				AbsoluteFilePath path = texture.Key;
+				ImGuiAppTextureInfo oldInfo = texture.Value;
 
 				// Only reload from file if the path exists
 				if (File.Exists(path))
 				{
-					using var image = Image.Load<Rgba32>(path);
-					var oldTextureId = oldInfo.TextureId;
+					using Image<Rgba32> image = Image.Load<Rgba32>(path);
+					uint oldTextureId = oldInfo.TextureId;
 
 					// Upload new texture
 					UseImageBytes(image, bytes => oldInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height));

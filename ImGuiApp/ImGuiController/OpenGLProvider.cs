@@ -24,7 +24,7 @@ public sealed class OpenGLProvider(IOpenGLFactory factory) : IDisposable
 
 		if (_gl == null)
 		{
-			var gl = _factory.CreateGL();
+			Silk.NET.OpenGL.GL gl = _factory.CreateGL();
 			_gl = new GLWrapper(gl);
 		}
 
