@@ -166,12 +166,14 @@ internal class ImGuiController : IDisposable
 
 	private static void OnMouseButton(IMouse _, MouseButton button, bool down)
 	{
-		ImGuiMouseButton imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
-		if (imguiMouseButton is >= ImGuiMouseButton.Left and <= ImGuiMouseButton.Middle)
+		// Only process supported mouse buttons (Left, Right, Middle)
+		if (button is MouseButton.Left or MouseButton.Right or MouseButton.Middle)
 		{
+			ImGuiMouseButton imguiMouseButton = TranslateMouseButtonToImGuiMouseButton(button);
 			ImGuiIOPtr io = ImGui.GetIO();
 			io.AddMouseButtonEvent((int)imguiMouseButton, down);
 		}
+		// Auxiliary buttons (Button4-Button12, Unknown) are ignored
 	}
 
 	private void OnMouseMove(IMouse _, Vector2 position)
@@ -424,16 +426,6 @@ internal class ImGuiController : IDisposable
 			MouseButton.Left => ImGuiMouseButton.Left,
 			MouseButton.Right => ImGuiMouseButton.Right,
 			MouseButton.Middle => ImGuiMouseButton.Middle,
-			MouseButton.Button4 => ImGuiMouseButton.Left,
-			MouseButton.Button5 => ImGuiMouseButton.Left,
-			MouseButton.Button6 => ImGuiMouseButton.Left,
-			MouseButton.Button7 => ImGuiMouseButton.Left,
-			MouseButton.Button8 => ImGuiMouseButton.Left,
-			MouseButton.Button9 => ImGuiMouseButton.Left,
-			MouseButton.Button10 => ImGuiMouseButton.Left,
-			MouseButton.Button11 => ImGuiMouseButton.Left,
-			MouseButton.Button12 => ImGuiMouseButton.Left,
-			MouseButton.Unknown => ImGuiMouseButton.Left,
 			_ => throw new NotImplementedException($"MouseButton {mouseButton} hasn't been implemented in TranslateMouseButtonToImGuiMouseButton")
 		};
 	}
