@@ -1,6 +1,9 @@
 ## v1.12.12-pre.1 (prerelease)
 
-Incremental prerelease update.
+Changes since v1.12.11:
+
+- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Merge 0aa9505c62c546778ed2242018d32dbd8f19814b into 879630f8ad5f5c68c42945b69136d1663b963154 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.12.11 (patch)
 
 Changes since v1.12.10:
