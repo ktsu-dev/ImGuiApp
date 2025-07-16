@@ -1,8 +1,9 @@
+## v1.12.12-pre.3 (prerelease)
+
+Incremental prerelease update.
 ## v1.12.12-pre.2 (prerelease)
 
 Changes since v1.12.12-pre.1:
-
-- Merge pull request #119 from ktsu-dev/dependabot/nuget/ImGuiAppDemo/system-2833a81d03 ([@github-actions[bot]](https://github.com/github-actions[bot]))
 ## v1.12.12-pre.1 (prerelease)
 
 Changes since v1.12.11:
