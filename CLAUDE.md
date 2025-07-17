@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ImGuiApp is a .NET library that provides application scaffolding for Dear ImGui using Silk.NET and ImGui.NET. It simplifies creating ImGui applications by abstracting window management, rendering, input handling, DPI scaling, and font management.
+ImGuiApp is a .NET library that provides application scaffolding for Dear ImGui using Silk.NET and Hexa.NET.ImGui. It simplifies creating ImGui applications by abstracting window management, rendering, input handling, DPI scaling, and font management.
 
 ## Architecture
 
@@ -54,7 +54,7 @@ The project uses a comprehensive PowerShell build system located in `scripts/`:
 
 ### Main Library (`ImGuiApp/`)
 - Uses ktsu.Sdk.Lib SDK with .NET 8+ multi-targeting
-- Dependencies: ImGui.NET, Silk.NET, SixLabors.ImageSharp, ktsu utilities
+- Dependencies: Hexa.NET.ImGui, Silk.NET, SixLabors.ImageSharp, ktsu utilities
 - Allows unsafe blocks for OpenGL operations
 - Embedded resources for fonts in `Resources/`
 
