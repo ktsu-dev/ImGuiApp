@@ -102,6 +102,16 @@ public static partial class ImGuiApp
 	private static readonly List<GCHandle> currentPinnedFontData = [];
 
 	/// <summary>
+	/// Stores unmanaged memory handles for font data that needs to be freed with Marshal.FreeHGlobal.
+	/// </summary>
+	private static readonly List<nint> currentFontMemoryHandles = [];
+
+	/// <summary>
+	/// List of common font sizes to load for crisp rendering at multiple sizes
+	/// </summary>
+	private static readonly int[] CommonFontSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
+
+	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
 	/// </summary>
 	public static Invoker Invoker { get; private set; } = null!;
@@ -360,6 +370,21 @@ public static partial class ImGuiApp
 		}
 
 		currentPinnedFontData.Clear();
+
+		// Free unmanaged font memory handles
+		foreach (nint memoryHandle in currentFontMemoryHandles)
+		{
+			try
+			{
+				Marshal.FreeHGlobal(memoryHandle);
+			}
+			catch (ArgumentException)
+			{
+				// Handle was already freed or invalid, ignore
+			}
+		}
+
+		currentFontMemoryHandles.Clear();
 	}
 
 	private static void CleanupController()
@@ -520,24 +545,53 @@ public static partial class ImGuiApp
 		// Calculate the pixel size for this point size
 		sizePixels = CalculateOptimalPixelSize(sizePoints);
 
-		// Try to get font index for the specified name, fallback to Default
-		if (!FontIndices.TryGetValue(name, out int fontIndex))
+		// First, try to find the exact font with the requested size
+		string exactFontKey = $"{name}_{sizePoints}";
+		if (FontIndices.TryGetValue(exactFontKey, out int fontIndex))
 		{
-			if (!FontIndices.TryGetValue("Default", out fontIndex))
+			return fonts[fontIndex];
+		}
+
+		// If exact size not found, try to find the closest size for this font name
+		int closestSize = -1;
+		int smallestDifference = int.MaxValue;
+
+		foreach (int size in CommonFontSizes)
+		{
+			string fontKey = $"{name}_{size}";
+			if (FontIndices.ContainsKey(fontKey))
 			{
-				// If no default font, use the first font
-				fontIndex = 0;
+				int difference = Math.Abs(size - sizePoints);
+				if (difference < smallestDifference)
+				{
+					smallestDifference = difference;
+					closestSize = size;
+				}
 			}
 		}
 
-		// In ImGui 1.92.0+, we only load one instance of each font
-		// The dynamic system handles scaling when we call PushFont(font, size)
-		if (fontIndex < 0 || fontIndex >= fonts.Size)
+		// If we found a closest size, use it
+		if (closestSize != -1)
 		{
-			// Fallback to first font if index is out of range
-			fontIndex = 0;
+			string closestFontKey = $"{name}_{closestSize}";
+			fontIndex = FontIndices[closestFontKey];
+			return fonts[fontIndex];
 		}
 
+		// Try to get font index for the specified name directly (for backwards compatibility)
+		if (FontIndices.TryGetValue(name, out fontIndex))
+		{
+			return fonts[fontIndex];
+		}
+
+		// Fallback to Default font
+		if (FontIndices.TryGetValue("Default", out fontIndex))
+		{
+			return fonts[fontIndex];
+		}
+
+		// If no default font, use the first font
+		fontIndex = 0;
 		return fonts[fontIndex];
 	}
 
@@ -834,39 +888,109 @@ public static partial class ImGuiApp
 		}
 
 		lastFontScaleFactor = ScaleFactor;
-		DebugLogger.Log($"InitFonts: Scale factor = {ScaleFactor}");
 
 		ImGuiIOPtr io = ImGui.GetIO();
 		ImFontAtlasPtr fontAtlasPtr = io.Fonts;
-		DebugLogger.Log("InitFonts: Got font atlas");
 
 		// Clear existing font data and indices
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
-		DebugLogger.Log("InitFonts: Cleared font atlas and indices");
 
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
 
-		// Add default font first for fallback
-		int defaultFontIndex = fontAtlasPtr.Fonts.Size;
-		DebugLogger.Log($"InitFonts: Adding default font at index {defaultFontIndex}");
-		fontAtlasPtr.AddFontDefault();
-		FontIndices["Default"] = defaultFontIndex;
-		DebugLogger.Log("InitFonts: Default font added");
+		// Load fonts from configuration at multiple sizes
+		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
+		int defaultFontIndex = -1;
+		string? defaultFontName = null;
 
-		// Temporarily disable custom font loading to isolate crash
-		// TODO: Re-enable loading fonts from Config.Fonts and Config.DefaultFonts
-		_ = Config.Fonts; // Temporary access to suppress IDE0052 warning
-						  // IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
-						  // foreach ((string name, byte[] fontBytes) in fontsToLoad)
-						  // {
-						  //     LoadFontWithDynamicScaling(name, fontBytes, fontAtlasPtr, fontPinnedData);
-						  // }
+		foreach ((string name, byte[] fontBytes) in fontsToLoad)
+		{
+			foreach (int size in CommonFontSizes)
+			{
+				LoadFont($"{name}_{size}", fontBytes, fontAtlasPtr, size);
+
+				// Prioritize DefaultFonts over custom Fonts for setting the default font
+				if (size == 12)
+				{
+					// If this is from DefaultFonts, use it as the default font
+					if (Config.DefaultFonts.ContainsKey(name))
+					{
+						defaultFontIndex = FontIndices[$"{name}_{size}"];
+						defaultFontName = $"{name}_{size}";
+					}
+					// If no DefaultFonts font has been set yet, use the first custom font as fallback
+					else if (defaultFontIndex == -1)
+					{
+						defaultFontIndex = FontIndices[$"{name}_{size}"];
+						defaultFontName = $"{name}_{size}";
+					}
+				}
+			}
+		}
+
+		// Set the font indices for the default font
+		if (defaultFontIndex != -1)
+		{
+			FontIndices["default"] = defaultFontIndex; // Store with "default" key for FontAppearance.DefaultFontName
+			FontIndices["Default"] = defaultFontIndex; // Store with "Default" key for FindBestFontForAppearance fallback
+			FontIndices["Default_12"] = defaultFontIndex; // Store with "Default_12" key for compatibility
+		}
+
+		// Add ImGui default font as fallback if no custom fonts were loaded
+		if (defaultFontIndex == -1)
+		{
+			defaultFontIndex = fontAtlasPtr.Fonts.Size;
+			fontAtlasPtr.AddFontDefault();
+			FontIndices["Default_12"] = defaultFontIndex;
+			FontIndices["default"] = defaultFontIndex;
+			FontIndices["Default"] = defaultFontIndex;
+		}
+
+		// Build the font atlas to generate the texture
+		ImGuiP.ImFontAtlasBuildMain(fontAtlasPtr);
+
+		// Set the default font for ImGui rendering
+		if (defaultFontIndex != -1 && defaultFontIndex < fontAtlasPtr.Fonts.Size)
+		{
+			io.FontDefault = fontAtlasPtr.Fonts[defaultFontIndex];
+		}
 
 		// Store the pinned font data for later cleanup
 		StorePinnedFontData(fontPinnedData);
 		DebugLogger.Log("InitFonts: Font initialization completed");
+	}
+
+	/// <summary>
+	/// Loads a font from byte array data into the font atlas.
+	/// </summary>
+	/// <param name="name">The name of the font.</param>
+	/// <param name="fontBytes">The font data as byte array.</param>
+	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
+	/// <param name="pointSize">The point size for the font.</param>
+	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize)
+	{
+		// Allocate unmanaged memory for the font data
+		nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
+		currentFontMemoryHandles.Add(fontHandle);
+
+		// Copy font data to unmanaged memory
+		Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
+
+		// Calculate optimal pixel size for the font
+		float fontSize = CalculateOptimalPixelSize(pointSize);
+
+		// Create font configuration
+		ImFontConfigPtr fontConfig = ImGui.ImFontConfig();
+		fontConfig.FontDataOwnedByAtlas = false; // We manage the memory ourselves
+		fontConfig.PixelSnapH = true;
+
+		// Add font to atlas
+		int fontIndex = fontAtlasPtr.Fonts.Size;
+		fontAtlasPtr.AddFontFromMemoryTTF((void*)fontHandle, fontBytes.Length, fontSize, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+
+		// Store the font index for later retrieval
+		FontIndices[name] = fontIndex;
 	}
 
 	/// <summary>
@@ -875,8 +999,8 @@ public static partial class ImGuiApp
 	/// <param name="pointSize">The desired point size.</param>
 	/// <returns>The optimal pixel size for crisp rendering.</returns>
 	private static float CalculateOptimalPixelSize(int pointSize) =>
-		// With ImGui 1.92.0+, we can use fractional sizes for better scaling
-		Math.Max(1.0f, pointSize * ScaleFactor);
+		// Round to exact pixels for crisp rendering, avoiding fractional sizes that cause blurry text
+		Math.Max(1.0f, MathF.Round(pointSize * ScaleFactor));
 
 	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
 	{
@@ -899,6 +1023,9 @@ public static partial class ImGuiApp
 		// Clear the old list and store the new handles
 		currentPinnedFontData.Clear();
 		currentPinnedFontData.AddRange(newPinnedData);
+
+		// Note: currentFontMemoryHandles is managed separately in LoadFont method
+		// and will be cleaned up by CleanupPinnedFontData when needed
 	}
 
 	/// <inheritdoc/>
@@ -957,6 +1084,7 @@ public static partial class ImGuiApp
 		FontIndices.Clear();
 		lastFontScaleFactor = 0;
 		currentPinnedFontData.Clear();
+		currentFontMemoryHandles.Clear();
 		Invoker = null!;
 		IsFocused = true;
 		showImGuiMetrics = false;

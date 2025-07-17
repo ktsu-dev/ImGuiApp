@@ -792,7 +792,7 @@ internal class ImGuiController : IDisposable
 
 				// Build the font atlas using ImFontAtlasBuildMain
 				// This is required when the backend doesn't support ImGuiBackendFlags_RendererHasTextures
-				ImGui.ImFontAtlasBuildMain(io.Fonts);
+				ImGuiP.ImFontAtlasBuildMain(io.Fonts);
 
 				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas built successfully");
 			}
