@@ -33,7 +33,7 @@ $buildConfig = Get-BuildConfiguration `
     -GitHubOwner "myorg" `
     -GitHubRepo "myrepo" `
     -GithubToken $env:GITHUB_TOKEN `
-    -NuGetApiKey $env:NUGET_API_KEY `
+    -NuGetApiKey $env:NUGET_API_KEY `  # Optional - can be empty to skip NuGet.org publishing
     -WorkspacePath "." `
     -ExpectedOwner "myorg" `
     -ChangelogFile "CHANGELOG.md" `
