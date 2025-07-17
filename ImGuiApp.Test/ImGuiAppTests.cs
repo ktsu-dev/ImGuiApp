@@ -43,7 +43,7 @@ public sealed class ImGuiAppTests : IDisposable
 		_mockWindow.Setup(w => w.GLContext).Returns(_mockContext.Object);
 
 		// Setup monitor bounds
-		var bounds = new Rectangle<int>(0, 0, 1920, 1080);
+		Rectangle<int> bounds = new(0, 0, 1920, 1080);
 		_mockMonitor.Setup(m => m.Bounds).Returns(bounds);
 	}
 
@@ -70,8 +70,8 @@ public sealed class ImGuiAppTests : IDisposable
 	public void EmsToPx_WithValidInput_ReturnsCorrectPixels()
 	{
 		const float ems = 1.5f;
-		var expected = (int)(ems * FontAppearance.DefaultFontPointSize);
-		var actual = ImGuiApp.EmsToPx(ems);
+		int expected = (int)(ems * FontAppearance.DefaultFontPointSize);
+		int actual = ImGuiApp.EmsToPx(ems);
 		Assert.AreEqual(expected, actual);
 	}
 
@@ -79,15 +79,15 @@ public sealed class ImGuiAppTests : IDisposable
 	public void PtsToPx_WithValidInput_ReturnsCorrectPixels()
 	{
 		const float pts = 12.0f;
-		var expected = pts;
-		var actual = ImGuiApp.PtsToPx((int)pts);
+		float expected = pts;
+		int actual = ImGuiApp.PtsToPx((int)pts);
 		Assert.AreEqual(expected, actual);
 	}
 
 	[TestMethod]
 	public void ImGuiAppWindowState_DefaultValues_AreCorrect()
 	{
-		var state = new ImGuiAppWindowState();
+		ImGuiAppWindowState state = new();
 		Assert.AreEqual(new Vector2(1280, 720), state.Size);
 		Assert.AreEqual(new Vector2(-short.MinValue, -short.MinValue), state.Pos);
 		Assert.AreEqual(WindowState.Normal, state.LayoutState);
@@ -96,7 +96,7 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void ImGuiAppConfig_DefaultValues_AreCorrect()
 	{
-		var config = new ImGuiAppConfig();
+		ImGuiAppConfig config = new();
 		Assert.AreEqual("ImGuiApp", config.Title);
 		Assert.AreEqual(string.Empty, config.IconPath);
 		Assert.IsNotNull(config.InitialWindowState);
@@ -119,7 +119,7 @@ public sealed class ImGuiAppTests : IDisposable
 	[ExpectedException(typeof(FileNotFoundException))]
 	public void Start_WithInvalidIconPath_ThrowsFileNotFoundException()
 	{
-		var config = TestHelpers.CreateTestConfig(iconPath: "nonexistent.png");
+		ImGuiAppConfig config = TestHelpers.CreateTestConfig(iconPath: "nonexistent.png");
 		ImGuiApp.Start(config);
 	}
 
@@ -127,7 +127,7 @@ public sealed class ImGuiAppTests : IDisposable
 	[ExpectedException(typeof(InvalidOperationException))]
 	public void Start_WhenAlreadyRunning_ThrowsInvalidOperationException()
 	{
-		var config = TestHelpers.CreateTestConfig();
+		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
 		ImGuiApp.Start(config);
 		TestHelpers.SimulateWindowLifecycle(config.TestWindow!);
 		ImGuiApp.Start(config); // Should throw
@@ -147,24 +147,24 @@ public sealed class ImGuiAppTests : IDisposable
 		ResetState();
 
 		// Set up window field using reflection
-		var windowField = typeof(ImGuiApp).GetField("window", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		var mockWindow = new Mock<IWindow>();
-		var mockMonitor = new Mock<IMonitor>();
+		System.Reflection.FieldInfo? windowField = typeof(ImGuiApp).GetField("window", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+		Mock<IWindow> mockWindow = new();
+		Mock<IMonitor> mockMonitor = new();
 
 		// Set up monitor bounds
-		var monitorBounds = new Rectangle<int>(0, 0, 1920, 1080);
+		Rectangle<int> monitorBounds = new(0, 0, 1920, 1080);
 		mockMonitor.Setup(m => m.Bounds).Returns(monitorBounds);
 
 		// Set up window in an invalid position (off screen)
-		var windowSize = new Vector2D<int>(800, 600);
-		var offScreenPosition = new Vector2D<int>(-1000, -1000);
+		Vector2D<int> windowSize = new(800, 600);
+		Vector2D<int> offScreenPosition = new(-1000, -1000);
 		mockWindow.Setup(w => w.Size).Returns(windowSize);
 		mockWindow.Setup(w => w.Position).Returns(offScreenPosition);
 		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
 		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
 
 		// Allow position and size to be set
-		var finalPosition = offScreenPosition;
+		Vector2D<int> finalPosition = offScreenPosition;
 		mockWindow.SetupSet(w => w.Position = It.IsAny<Vector2D<int>>())
 			.Callback<Vector2D<int>>(pos => finalPosition = pos);
 		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>());
@@ -174,7 +174,7 @@ public sealed class ImGuiAppTests : IDisposable
 		windowField?.SetValue(null, mockWindow.Object);
 
 		// Call EnsureWindowPositionIsValid through reflection
-		var method = typeof(ImGuiApp).GetMethod("EnsureWindowPositionIsValid",
+		System.Reflection.MethodInfo? method = typeof(ImGuiApp).GetMethod("EnsureWindowPositionIsValid",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 		method?.Invoke(null, null);
 
@@ -193,13 +193,13 @@ public sealed class ImGuiAppTests : IDisposable
 	public void OpenGLProvider_GetGL_ReturnsSameInstance()
 	{
 		// Setup test GL provider
-		using var testGL = new TestGL();
-		using var mockGL = new MockGL(testGL);
-		using var provider = new TestOpenGLProvider(mockGL);
+		using TestGL testGL = new();
+		using MockGL mockGL = new(testGL);
+		using TestOpenGLProvider provider = new(mockGL);
 
 		// Get GL instances
-		var gl1 = provider.GetGL();
-		var gl2 = provider.GetGL();
+		ImGuiController.IGL gl1 = provider.GetGL();
+		ImGuiController.IGL gl2 = provider.GetGL();
 
 		// Verify same instance is returned
 		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
@@ -212,7 +212,7 @@ public sealed class ImGuiAppTests : IDisposable
 		ResetState();
 
 		// Set up a basic invoker that executes actions immediately
-		var invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+		System.Reflection.PropertyInfo? invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 		invokerField?.SetValue(null, new Invoker.Invoker());
 
 		// Now test the DeleteTexture method
@@ -222,7 +222,7 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void GetOrLoadTexture_WithInvalidPath_ThrowsArgumentException()
 	{
-		var invalidPath = new AbsoluteFilePath();
+		AbsoluteFilePath invalidPath = new();
 		Assert.ThrowsException<ArgumentException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
 	}
 
@@ -232,21 +232,21 @@ public sealed class ImGuiAppTests : IDisposable
 		// Reset state to ensure clean test environment
 		ResetState();
 
-		// Set up a path for testing
-		var mockTexturePath = "C:/test/texture.png".As<AbsoluteFilePath>();
+		// Set up a path for testing - use a proper absolute path format
+		AbsoluteFilePath mockTexturePath = Path.GetFullPath("test_texture.png").As<AbsoluteFilePath>();
 
 		// We need to initialize minimal parts of ImGuiApp for the test
-		var invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+		System.Reflection.PropertyInfo? invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 		invokerField?.SetValue(null, new Invoker.Invoker());
 
 		// We'll test using the public API (TryGetTexture) rather than direct reflection access
 		// First, verify there's no texture initially
-		var initialTextureExists = ImGuiApp.TryGetTexture(mockTexturePath, out _);
+		bool initialTextureExists = ImGuiApp.TryGetTexture(mockTexturePath, out _);
 		Assert.IsFalse(initialTextureExists, "Should not have any textures initially");
 
 		// Manually add a texture through the internal field
 		// Get the Textures property through reflection - it's a property, not a field
-		var texturesProperty = typeof(ImGuiApp).GetProperty("Textures",
+		System.Reflection.PropertyInfo? texturesProperty = typeof(ImGuiApp).GetProperty("Textures",
 			System.Reflection.BindingFlags.Public |
 			System.Reflection.BindingFlags.NonPublic |
 			System.Reflection.BindingFlags.Static);
@@ -254,11 +254,11 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsNotNull(texturesProperty, "Textures property should exist");
 
 		// Get the dictionary
-		var texturesDict = texturesProperty?.GetValue(null) as System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo>;
+		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo>? texturesDict = texturesProperty?.GetValue(null) as System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo>;
 		Assert.IsNotNull(texturesDict, "Textures dictionary should not be null");
 
 		// First texture
-		var firstTextureInfo = new ImGuiAppTextureInfo
+		ImGuiAppTextureInfo firstTextureInfo = new()
 		{
 			Path = mockTexturePath,
 			TextureId = 1001,
@@ -270,7 +270,7 @@ public sealed class ImGuiAppTests : IDisposable
 		texturesDict.TryAdd(mockTexturePath, firstTextureInfo);
 
 		// Verify it can be accessed via the public API
-		var textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out var retrievedTexture);
+		bool textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out ImGuiAppTextureInfo? retrievedTexture);
 		Assert.IsTrue(textureExists, "Texture should exist after adding");
 		Assert.IsNotNull(retrievedTexture, "Retrieved texture should not be null");
 		Assert.AreEqual(1001u, retrievedTexture!.TextureId, "Texture ID should match");
@@ -283,7 +283,7 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsFalse(textureExists, "Texture should be removed after deletion");
 
 		// Create a second texture
-		var secondTextureInfo = new ImGuiAppTextureInfo
+		ImGuiAppTextureInfo secondTextureInfo = new()
 		{
 			Path = mockTexturePath,
 			TextureId = 1002,
@@ -295,7 +295,7 @@ public sealed class ImGuiAppTests : IDisposable
 		texturesDict.TryAdd(mockTexturePath, secondTextureInfo);
 
 		// Verify the newly loaded texture
-		textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out var reloadedTexture);
+		textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out ImGuiAppTextureInfo? reloadedTexture);
 		Assert.IsTrue(textureExists, "Texture should exist after reloading");
 		Assert.IsNotNull(reloadedTexture, "Reloaded texture should not be null");
 		Assert.AreEqual(1002u, reloadedTexture!.TextureId, "New texture ID should match");

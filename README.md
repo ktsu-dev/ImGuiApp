@@ -152,20 +152,26 @@ Load and manage textures with the built-in texture management system:
 private static void OnRender(float deltaTime)
 {
     // Load texture from file
-    var textureId = ImGuiApp.GetOrLoadTexture("path/to/texture.png");
+    var textureInfo = ImGuiApp.GetOrLoadTexture("path/to/texture.png");
 
-    // Use the texture in ImGui
-    ImGui.Image(textureId, new Vector2(128, 128));
+    // Use the texture in ImGui (using the new TextureRef API for ImGui 1.92+)
+    ImGui.Image(textureInfo.TextureRef, new Vector2(128, 128));
 
     // Upload custom texture data
     byte[] rgbaData = GetTextureData(); // Your method to get RGBA pixel data
     int width = 256;
     int height = 256;
     var customTextureId = ImGuiApp.UploadTextureRGBA(rgbaData, width, height);
-    ImGui.Image(customTextureId, new Vector2(width, height));
+    
+    // Create TextureRef for custom texture
+    var customTextureRef = new ImTextureRef(default, customTextureId);
+    ImGui.Image(customTextureRef, new Vector2(width, height));
 
     // Clean up when done
     ImGuiApp.DeleteTexture(customTextureId);
+    
+    // Or delete using the texture info (for convenience)
+    // ImGuiApp.DeleteTexture(textureInfo);
 }
 ```
 
@@ -271,9 +277,10 @@ The main entry point for creating and managing ImGui applications.
 |------|------------|-------------|-------------|
 | `Start` | `AppConfig config` | `void` | Starts the ImGui application with the provided configuration |
 | `Stop` | | `void` | Stops the running application |
-| `GetOrLoadTexture` | `string path` | `IntPtr` | Loads a texture from file or returns cached handle if already loaded |
-| `UploadTextureRGBA` | `byte[] data, int width, int height` | `IntPtr` | Creates a texture from RGBA pixel data |
-| `DeleteTexture` | `IntPtr textureId` | `void` | Deletes a texture and frees its resources |
+| `GetOrLoadTexture` | `string path` | `ImGuiAppTextureInfo` | Loads a texture from file or returns cached texture info if already loaded |
+| `UploadTextureRGBA` | `byte[] data, int width, int height` | `uint` | Creates a texture from RGBA pixel data and returns the texture ID |
+| `DeleteTexture` | `uint textureId` | `void` | Deletes a texture and frees its resources |
+| `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
 | `GetWindowSize` | | `Vector2` | Returns the current window size |
 | `SetClipboardText` | `string text` | `void` | Sets the clipboard text |
 | `GetClipboardText` | | `string` | Gets the clipboard text |
