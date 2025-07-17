@@ -26,34 +26,6 @@ using Texture = ImGuiController.Texture;
 /// <summary>
 /// Simple file logger for debugging crashes
 /// </summary>
-internal static class DebugLogger
-{
-	private static readonly string LogFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ImGuiApp_Debug.log");
-
-	static DebugLogger()
-	{
-		// Clear previous log file
-		try
-		{
-			if (File.Exists(LogFilePath))
-			{
-				File.Delete(LogFilePath);
-			}
-		}
-		catch { }
-	}
-
-	public static void Log(string message)
-	{
-		try
-		{
-			string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}";
-			File.AppendAllText(LogFilePath, logEntry + Environment.NewLine);
-			Console.WriteLine(logEntry);
-		}
-		catch { }
-	}
-}
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
@@ -69,6 +41,44 @@ public static partial class ImGuiApp
 	private static IntPtr currentGLContextHandle; // Track the current GL context handle
 
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
+
+	/// <summary>
+	/// Simple file logger for debugging crashes
+	/// </summary>
+	internal static class DebugLogger
+	{
+		private static readonly string LogFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ImGuiApp_Debug.log");
+
+		static DebugLogger()
+		{
+			// Clear previous log file
+			try
+			{
+				if (File.Exists(LogFilePath))
+				{
+					File.Delete(LogFilePath);
+				}
+			}
+			catch (IOException) { }
+			catch (UnauthorizedAccessException) { }
+			catch (ArgumentException) { }
+			catch (NotSupportedException) { }
+		}
+
+		public static void Log(string message)
+		{
+			try
+			{
+				string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}";
+				File.AppendAllText(LogFilePath, logEntry + Environment.NewLine);
+				Console.WriteLine(logEntry);
+			}
+			catch (IOException) { }
+			catch (UnauthorizedAccessException) { }
+			catch (ArgumentException) { }
+			catch (NotSupportedException) { }
+		}
+	}
 
 	/// <summary>
 	/// Gets the current state of the ImGui application window.
@@ -669,7 +679,14 @@ public static partial class ImGuiApp
 			Height = image.Height
 		};
 
-		UseImageBytes(image, bytes => textureInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height));
+		UseImageBytes(image, bytes =>
+		{
+			textureInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+			unsafe
+			{
+				textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
+			}
+		});
 
 		Textures[path] = textureInfo;
 		return textureInfo;
@@ -775,6 +792,14 @@ public static partial class ImGuiApp
 			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out ImGuiAppTextureInfo? _));
 		});
 	}
+
+	/// <summary>
+	/// Deletes the specified texture from the GPU.
+	/// </summary>
+	/// <param name="textureInfo">The texture info containing the texture ID to delete.</param>
+	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
+	/// <exception cref="ArgumentNullException">Thrown if the textureInfo is null.</exception>
+	public static void DeleteTexture(ImGuiAppTextureInfo textureInfo) => DeleteTexture(textureInfo?.TextureId ?? throw new ArgumentNullException(nameof(textureInfo)));
 
 	private static void UpdateDpiScale()
 	{
@@ -993,7 +1018,14 @@ public static partial class ImGuiApp
 					uint oldTextureId = oldInfo.TextureId;
 
 					// Upload new texture
-					UseImageBytes(image, bytes => oldInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height));
+					UseImageBytes(image, bytes =>
+					{
+						oldInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+						unsafe
+						{
+							oldInfo.TextureRef = new ImTextureRef(default, oldInfo.TextureId);
+						}
+					});
 
 					// No need to delete old texture as the context is already gone
 				}
