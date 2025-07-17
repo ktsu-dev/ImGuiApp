@@ -262,6 +262,10 @@ function Get-MSBuildProperties {
 }
 
 function Get-GitRemoteInfo {
+    param (
+        [string]$RootDir
+    )
+
     try {
         # Get the GitHub URL from git remote
         $remoteUrl = git remote get-url origin 2>$null
@@ -280,11 +284,13 @@ function Get-GitRemoteInfo {
     }
 
     # Try to extract from PROJECT_URL.url file if available
-    $projectUrlFile = Join-Path -Path $rootDir -ChildPath "PROJECT_URL.url"
-    if (Test-Path $projectUrlFile) {
-        $content = Get-Content -Path $projectUrlFile -Raw
-        if ($content -match "URL=https://github.com/([^/]+)/([^/\r\n]+)") {
-            return "$($Matches[1])/$($Matches[2])"
+    if ($RootDir) {
+        $projectUrlFile = Join-Path -Path $RootDir -ChildPath "PROJECT_URL.url"
+        if (Test-Path $projectUrlFile) {
+            $content = Get-Content -Path $projectUrlFile -Raw
+            if ($content -match "URL=https://github.com/([^/]+)/([^/\r\n]+)") {
+                return "$($Matches[1])/$($Matches[2])"
+            }
         }
     }
 
@@ -701,7 +707,7 @@ if ($ConfigFile -and (Test-Path $ConfigFile)) {
 
 # Detect repository info if not provided
 if (-not $GitHubRepo) {
-    $detectedRepo = Get-GitRemoteInfo
+    $detectedRepo = Get-GitRemoteInfo -RootDir $rootDir
     if ($detectedRepo) {
         $GitHubRepo = $detectedRepo
         Write-Host "Detected GitHub repository: $GitHubRepo" -ForegroundColor Green
