@@ -1,6 +1,12 @@
+## v1.12.12 (patch)
+
+Changes since v1.12.11:
+
+- Refactor texture handling and enhance logging in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
+- Implement dynamic font scaling and introduce debug logging in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.12.12-pre.3 (prerelease)
 
-Incremental prerelease update.
+Changes since v1.12.12-pre.2:
 ## v1.12.12-pre.2 (prerelease)
 
 Changes since v1.12.12-pre.1:
