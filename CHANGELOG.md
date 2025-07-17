@@ -1,14 +1,40 @@
+## v1.12.16-pre.1 (prerelease)
+
+Changes since v1.12.15:
+
+- Merge pull request #118 from ktsu-dev/upgrades ([@matt-edmondson](https://github.com/matt-edmondson))
+## v1.12.15 (patch)
+
+Changes since v1.12.14:
+
+- Update ImGuiApp to use Hexa.NET.ImGui for Dear ImGui bindings ([@matt-edmondson](https://github.com/matt-edmondson))
+## v1.12.14 (patch)
+
+Changes since v1.12.13:
+
+- Refactor font loading logic in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
+## v1.12.13 (patch)
+
+Changes since v1.12.12:
+
+- Enhance font management and loading in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance font atlas handling and logging in ImGuiController ([@matt-edmondson](https://github.com/matt-edmondson))
+## v1.12.12 (patch)
+
+Changes since v1.12.11:
+
+- Refactor texture handling and enhance logging in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
+- Implement dynamic font scaling and introduce debug logging in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.12.12-pre.3 (prerelease)
 
-Incremental prerelease update.
+Changes since v1.12.12-pre.2:
 ## v1.12.12-pre.2 (prerelease)
 
 Changes since v1.12.12-pre.1:
 ## v1.12.12-pre.1 (prerelease)
 
-Changes since v1.12.11:
+Changes since v1.12.12:
 
-- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Merge 0aa9505c62c546778ed2242018d32dbd8f19814b into 879630f8ad5f5c68c42945b69136d1663b963154 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.12.11 (patch)
 
