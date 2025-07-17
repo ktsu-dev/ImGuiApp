@@ -121,7 +121,7 @@ internal static class ImGuiAppDemo
 			AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
 			ImGuiAppTextureInfo iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
 			ImGui.Text("Image Example:");
-			ImGui.Image(new ImTextureID((nint)iconTexture.TextureId), new Vector2(64, 64));
+			ImGui.Image(iconTexture.TextureRef, new Vector2(64, 64));
 
 			ImGui.Text("Real-time Plot:");
 			if (plotValues.Count > 0)

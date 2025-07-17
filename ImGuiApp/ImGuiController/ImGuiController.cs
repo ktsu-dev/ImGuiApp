@@ -69,11 +69,14 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	public ImGuiController(GL gl, IView view, IInputContext input, ImGuiFontConfig? imGuiFontConfig = null, Action? onConfigureIO = null)
 	{
+		ImGuiApp.DebugLogger.Log("ImGuiController: Starting initialization");
 		Init(gl, view, input);
+		ImGuiApp.DebugLogger.Log("ImGuiController: Init completed");
 
 		ImGuiIOPtr io = ImGui.GetIO();
 		if (imGuiFontConfig is not null)
 		{
+			ImGuiApp.DebugLogger.Log("ImGuiController: Adding font from config");
 			nint glyphRange = imGuiFontConfig.Value.GetGlyphRange?.Invoke(io) ?? default;
 
 			unsafe
@@ -85,15 +88,21 @@ internal class ImGuiController : IDisposable
 			}
 		}
 
+		ImGuiApp.DebugLogger.Log("ImGuiController: Calling onConfigureIO");
 		onConfigureIO?.Invoke();
+		ImGuiApp.DebugLogger.Log("ImGuiController: onConfigureIO completed");
 
 		io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
 
+		ImGuiApp.DebugLogger.Log("ImGuiController: Creating device resources");
 		CreateDeviceResources();
+		ImGuiApp.DebugLogger.Log("ImGuiController: Device resources created");
 
 		SetPerFrameImGuiData(1f / 60f);
 
+		ImGuiApp.DebugLogger.Log("ImGuiController: Beginning frame");
 		BeginFrame();
+		ImGuiApp.DebugLogger.Log("ImGuiController: Initialization completed");
 	}
 
 	private void Init(GL gl, IView view, IInputContext input)
@@ -605,7 +614,10 @@ internal class ImGuiController : IDisposable
 							_gl.CheckGlError("Scissor");
 
 							// Bind texture, Draw
-							_gl.BindTexture(GLEnum.Texture2D, (uint)cmdPtr.TextureId.Handle);
+							// In ImGui 1.92.0+, use GetTexID() method to get texture ID
+							// This method returns the texture ID compatible with OpenGL
+							uint textureId = (uint)cmdPtr.GetTexID();
+							_gl.BindTexture(GLEnum.Texture2D, textureId);
 							_gl.CheckGlError("Texture");
 
 							_gl.DrawElementsBaseVertex(GLEnum.Triangles, cmdPtr.ElemCount, GLEnum.UnsignedShort, (void*)(cmdPtr.IdxOffset * sizeof(ushort)), (int)cmdPtr.VtxOffset);
@@ -761,38 +773,79 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	private unsafe void RecreateFontDeviceTexture()
 	{
+		ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Starting");
 		if (_gl is null)
 		{
+			ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: OpenGL is null, returning");
 			return;
 		}
 
 		// Build texture atlas
 		ImGuiIOPtr io = ImGui.GetIO();
+		ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Got ImGui IO");
 		unsafe
 		{
-			byte* pixels;
-			int width, height;
-			io.Fonts.GetTexDataAsRGBA32(&pixels, &width, &height);
-			_fontTexture = new Texture(_gl, width, height, (nint)pixels);
-		}   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+			// Skip texture creation if font atlas is not ready yet
+			// This prevents crashes when texture data is not yet available
+			if (!io.Fonts.TexIsBuilt)
+			{
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, returning");
+				return;
+			}
 
-		// Upload texture to graphics system
-		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
+			ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas is built");
 
-		_fontTexture.Bind();
-		// Use Nearest filtering for crisp text rendering, especially important for WSL
-		_fontTexture.SetMagFilter(TextureMagFilter.Nearest);
-		_fontTexture.SetMinFilter(TextureMinFilter.Nearest);
+			// Get texture data using the correct API for Hexa.NET.ImGui 2.2.8
+			ImTextureDataPtr texData = io.Fonts.TexData;
+			ImGuiApp.DebugLogger.Log($"RecreateFontDeviceTexture: Got texture data - Width: {texData.Width}, Height: {texData.Height}");
 
-		// Store our identifier
-		io.Fonts.SetTexID(new ImTextureID((nint)_fontTexture.GlTexture));
+			// Only proceed if we have valid texture data
+			if (texData.Pixels != null && texData.Width > 0 && texData.Height > 0)
+			{
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Texture data is valid, creating OpenGL texture");
 
-		// Restore state
-		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
+				// Create OpenGL texture from font atlas data
+				_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Got last texture binding");
 
-		io.Fonts.ClearTexData();
+				// Create texture with the font atlas data
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Creating Texture object");
+				_fontTexture = new Texture(_gl, texData.Width, texData.Height,
+					(nint)texData.Pixels, false, false, PixelFormat.Rgba);
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Texture object created");
 
-		FontsConfigured = true;
+				// Store texture ID in ImGui's font atlas
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Setting texture ID");
+				texData.SetTexID((nint)_fontTexture.GlTexture);
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Texture ID set");
+
+				// Set texture filtering
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Setting texture filtering");
+				_fontTexture.Bind();
+				_fontTexture.SetMagFilter(TextureMagFilter.Nearest);
+				_fontTexture.SetMinFilter(TextureMinFilter.Nearest);
+				_fontTexture.SetWrap(TextureCoordinate.S, TextureWrapMode.ClampToEdge);
+				_fontTexture.SetWrap(TextureCoordinate.T, TextureWrapMode.ClampToEdge);
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Texture filtering set");
+
+				// Restore previous texture binding
+				_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Restored previous texture binding");
+
+				// Clear font atlas texture data to save memory
+				io.Fonts.ClearTexData();
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Cleared font atlas texture data");
+
+				// Mark fonts as configured
+				FontsConfigured = true;
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Marked fonts as configured");
+			}
+			else
+			{
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Invalid texture data - skipping");
+			}
+		}
+		ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Completed");
 	}
 
 	/// <summary>
