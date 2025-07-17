@@ -20,13 +20,13 @@ public static class TestHelpers
 	/// <returns>A mock IWindow instance.</returns>
 	public static Mock<IWindow> CreateMockWindow()
 	{
-		var mockWindow = new Mock<IWindow>();
+		Mock<IWindow> mockWindow = new();
 		mockWindow.Setup(w => w.Size).Returns(new Vector2D<int>(1280, 720));
 		mockWindow.Setup(w => w.Position).Returns(new Vector2D<int>(0, 0));
 		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
 
 		// Set up window lifecycle events
-		var handlers = new WindowEventHandlers();
+		WindowEventHandlers handlers = new();
 
 		// Setup event raising capabilities
 		mockWindow.SetupAdd(x => x.Load += It.IsAny<Action>())
@@ -58,7 +58,7 @@ public static class TestHelpers
 	/// <returns>An ImGuiAppConfig instance.</returns>
 	public static ImGuiAppConfig CreateTestConfig(string title = "Test Window", string iconPath = "")
 	{
-		var mockWindow = CreateMockWindow();
+		Mock<IWindow> mockWindow = CreateMockWindow();
 
 		return new ImGuiAppConfig
 		{
@@ -96,26 +96,26 @@ public static class TestHelpers
 	{
 		ArgumentNullException.ThrowIfNull(window);
 
-		if (!WindowHandlers.TryGetValue(window, out var handlers))
+		if (!WindowHandlers.TryGetValue(window, out WindowEventHandlers? handlers))
 		{
 			throw new ArgumentException("Window is not a mock window created by CreateMockWindow", nameof(window));
 		}
 
 		// Trigger Load
-		foreach (var handler in handlers.LoadHandlers)
+		foreach (Action handler in handlers.LoadHandlers)
 		{
 			handler();
 		}
 
 		// Simulate a few frames
-		for (var i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 		{
-			foreach (var handler in handlers.UpdateHandlers)
+			foreach (Action<double> handler in handlers.UpdateHandlers)
 			{
 				handler(0.016); // ~60 FPS
 			}
 
-			foreach (var handler in handlers.RenderHandlers)
+			foreach (Action<double> handler in handlers.RenderHandlers)
 			{
 				handler(0.016);
 			}
@@ -123,7 +123,7 @@ public static class TestHelpers
 
 		// Trigger Close
 		window.IsClosing = true;
-		foreach (var handler in handlers.CloseHandlers)
+		foreach (Action handler in handlers.CloseHandlers)
 		{
 			handler();
 		}
