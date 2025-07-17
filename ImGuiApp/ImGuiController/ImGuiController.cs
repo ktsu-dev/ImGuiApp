@@ -785,15 +785,21 @@ internal class ImGuiController : IDisposable
 		ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Got ImGui IO");
 		unsafe
 		{
-			// Skip texture creation if font atlas is not ready yet
-			// This prevents crashes when texture data is not yet available
+			// Build font atlas if it's not already built
 			if (!io.Fonts.TexIsBuilt)
 			{
-				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, returning");
-				return;
-			}
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, building now");
 
-			ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas is built");
+				// Build the font atlas using ImFontAtlasBuildMain
+				// This is required when the backend doesn't support ImGuiBackendFlags_RendererHasTextures
+				ImGui.ImFontAtlasBuildMain(io.Fonts);
+
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas built successfully");
+			}
+			else
+			{
+				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas already built");
+			}
 
 			// Get texture data using the correct API for Hexa.NET.ImGui 2.2.8
 			ImTextureDataPtr texData = io.Fonts.TexData;
