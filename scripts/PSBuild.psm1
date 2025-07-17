@@ -1647,20 +1647,6 @@ function Invoke-DotNetPublish {
     } else {
         Write-Information "No applications were published (projects may not be configured as executables)" -Tags "Invoke-DotNetPublish"
     }
-
-    # Note: NuGet package publishing is handled separately in Invoke-ReleaseWorkflow
-
-    Write-StepHeader "Release Process Completed" -Tags "Invoke-ReleaseWorkflow"
-    Write-Information "Release process completed successfully!" -Tags "Invoke-ReleaseWorkflow"
-    return [PSCustomObject]@{
-        Success = $true
-        Error = ""
-        Data = [PSCustomObject]@{
-            Version = $BuildConfiguration.Version
-            ReleaseHash = $BuildConfiguration.ReleaseHash
-            PackagePaths = @()
-        }
-    }
 }
 
 #endregion
