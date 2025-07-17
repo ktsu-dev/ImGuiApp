@@ -1,6 +1,6 @@
 MIT License
 
-https://github.com/ktsu-dev/ktsu-dev/ImGuiApp
+https://github.com/ktsu-dev/ImGuiApp
 
 Copyright (c) 2023-2025 ktsu-dev
 
