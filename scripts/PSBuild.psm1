@@ -77,9 +77,8 @@ function Get-BuildConfiguration {
         [string]$GitHubRepo,
         [Parameter(Mandatory=$true)]
         [string]$GithubToken,
-        [Parameter(Mandatory=$false)]
-        [AllowEmptyString()]
-        [string]$NuGetApiKey = "",
+        [Parameter(Mandatory=$true)]
+        [string]$NuGetApiKey,
         [Parameter(Mandatory=$true)]
         [string]$WorkspacePath,
         [Parameter(Mandatory=$true)]
@@ -132,7 +131,10 @@ function Get-BuildConfiguration {
     $APPLICATION_PATTERN = Join-Path $STAGING_PATH "*.zip"
 
     # Set build arguments
-    $BUILD_ARGS = $USE_DOTNET_SCRIPT ? "-maxCpuCount:1" : ""
+    $BUILD_ARGS = ""
+    if ($USE_DOTNET_SCRIPT) {
+        $BUILD_ARGS = "-maxCpuCount:1"
+    }
 
     # Create configuration object with standard format
     $config = [PSCustomObject]@{
@@ -194,19 +196,31 @@ function Get-GitTags {
     }
 
     Write-Information "Getting sorted tags..." -Tags "Get-GitTags"
-    # Get tags and ensure we return an array
+    # Get tags
     $output = "git tag --list --sort=-v:refname" | Invoke-ExpressionWithLogging -Tags "Get-GitTags"
 
-    $tags = @($output)
-
-    # Return default if no tags exist
-    if ($null -eq $tags -or $tags.Count -eq 0) {
-        Write-Information "No tags found, returning default v1.0.0-pre.0" -Tags "Get-GitTags"
-        return @('v1.0.0-pre.0')
+    # Ensure we always return an array
+    if ($null -eq $output) {
+        Write-Information "No tags found, returning empty array" -Tags "Get-GitTags"
+        return @()
     }
 
-    Write-Information "Found $($tags.Count) tags" -Tags "Get-GitTags"
-    return $tags
+    # Convert to array if it's not already
+    if ($output -isnot [array]) {
+        if ([string]::IsNullOrWhiteSpace($output)) {
+            Write-Information "No tags found, returning empty array" -Tags "Get-GitTags"
+            return @()
+        }
+        $output = @($output)
+    }
+
+    if ($output.Count -eq 0) {
+        Write-Information "No tags found, returning empty array" -Tags "Get-GitTags"
+        return @()
+    }
+
+    Write-Information "Found $($output.Count) tags" -Tags "Get-GitTags"
+    return $output
 }
 
 function Get-VersionType {
@@ -219,12 +233,14 @@ function Get-VersionType {
         - Minor (1.0.0 → 1.1.0): Non-breaking public API changes (additions, modifications, removals)
         - Patch (1.0.0 → 1.0.1): Bug fixes and changes that don't modify the public API
         - Prerelease (1.0.0 → 1.0.1-pre.1): Small changes or no significant changes
+        - Skip: Only [skip ci] commits or no significant changes requiring a version bump
 
         Version bump determination follows these rules in order:
         1. Explicit tags in commit messages: [major], [minor], [patch], [pre]
         2. Public API changes detection via regex patterns (triggers minor bump)
         3. Code changes that don't modify public API (triggers patch bump)
         4. Default to prerelease bump for minimal changes
+        5. If only [skip ci] commits are found, suggest skipping the release
     .PARAMETER Range
         The git commit range to analyze (e.g., "v1.0.0...HEAD" or a specific commit range)
     .OUTPUTS
@@ -247,6 +263,32 @@ function Get-VersionType {
 
     # First check for explicit version markers in commit messages
     $messages = "git log --format=format:%s `"$Range`"" | Invoke-ExpressionWithLogging -Tags "Get-VersionType"
+
+    # Ensure messages is always an array
+    if ($null -eq $messages) {
+        $messages = @()
+    } elseif ($messages -isnot [array]) {
+        $messages = @($messages)
+    }
+
+    # Check if we have any commits at all
+    if (@($messages).Count -eq 0) {
+        return [PSCustomObject]@{
+            Type = "skip"
+            Reason = "No commits found in the specified range"
+        }
+    }
+
+    # Check if all commits are skip ci commits
+    $skipCiPattern = '\[skip ci\]|\[ci skip\]'
+    $skipCiCommits = $messages | Where-Object { $_ -match $skipCiPattern }
+
+    if (@($skipCiCommits).Count -eq @($messages).Count -and @($messages).Count -gt 0) {
+        return [PSCustomObject]@{
+            Type = "skip"
+            Reason = "All commits contain [skip ci] tag, skipping release"
+        }
+    }
 
     foreach ($message in $messages) {
         if ($message.Contains('[major]')) {
@@ -343,24 +385,27 @@ function Get-VersionInfoFromGit {
 
     # Get all tags
     $tags = Get-GitTags
-    Write-Information "Found $($tags.Count) tag(s)" -Tags "Get-VersionInfoFromGit"
+
+    # Ensure tags is always an array
+    if ($null -eq $tags) {
+        $tags = @()
+    } elseif ($tags -isnot [array]) {
+        $tags = @($tags)
+    }
+
+    Write-Information "Found $(@($tags).Count) tag(s)" -Tags "Get-VersionInfoFromGit"
 
     # Get the last tag and its commit
     $usingFallbackTag = $false
     $lastTag = ""
 
-    if ($null -eq $tags -or
-        ($tags -is [array] -and $tags.Count -eq 0) -or
-        ($tags -is [string] -and $tags.Trim() -eq "")) {
+    if (@($tags).Count -eq 0) {
         $lastTag = "v$InitialVersion-pre.0"
         $usingFallbackTag = $true
         Write-Information "No tags found. Using fallback: $lastTag" -Tags "Get-VersionInfoFromGit"
-    } elseif ($tags -is [array]) {
+    } else {
         $lastTag = $tags[0]
         Write-Information "Using last tag: $lastTag" -Tags "Get-VersionInfoFromGit"
-    } else {
-        $lastTag = $tags
-        Write-Information "Using single tag: $lastTag" -Tags "Get-VersionInfoFromGit"
     }
 
     # Extract the version without 'v' prefix
@@ -387,7 +432,9 @@ function Get-VersionInfoFromGit {
 
     # Get the first commit in repo for fallback
     $firstCommit = "git rev-list HEAD" | Invoke-ExpressionWithLogging -Tags "Get-VersionInfoFromGit"
-    $firstCommit = $firstCommit[-1]
+    if ($firstCommit -is [array] -and @($firstCommit).Count -gt 0) {
+        $firstCommit = $firstCommit[-1]
+    }
     Write-Information "First commit: $firstCommit" -Tags "Get-VersionInfoFromGit"
 
     # Find the last tag's commit
@@ -408,6 +455,43 @@ function Get-VersionInfoFromGit {
     $incrementInfo = Get-VersionType -Range $commitRange
     $incrementType = $incrementInfo.Type
     $incrementReason = $incrementInfo.Reason
+
+    # If type is "skip", return the current version without bumping
+    if ($incrementType -eq "skip") {
+        Write-Information "Version increment type: $incrementType" -Tags "Get-VersionInfoFromGit"
+        Write-Information "Reason: $incrementReason" -Tags "Get-VersionInfoFromGit"
+
+        # Use the same version, don't increment
+        $newVersion = $lastVersion
+
+        return [PSCustomObject]@{
+            Success = $true
+            Error = ""
+            Data = [PSCustomObject]@{
+                Version = $newVersion
+                Major = $lastMajor
+                Minor = $lastMinor
+                Patch = $lastPatch
+                IsPrerelease = $wasPrerelease
+                PrereleaseNumber = $lastPrereleaseNum
+                PrereleaseLabel = if ($wasPrerelease) { ($lastVersion -split '-')[1].Split('.')[0] } else { "pre" }
+                LastTag = $lastTag
+                LastVersion = $lastVersion
+                LastVersionMajor = $lastMajor
+                LastVersionMinor = $lastMinor
+                LastVersionPatch = $lastPatch
+                WasPrerelease = $wasPrerelease
+                LastVersionPrereleaseNumber = $lastPrereleaseNum
+                VersionIncrement = $incrementType
+                IncrementReason = $incrementReason
+                FirstCommit = $firstCommit
+                LastCommit = $CommitHash
+                LastTagCommit = $lastTagCommit
+                UsingFallbackTag = $usingFallbackTag
+                CommitRange = $commitRange
+            }
+        }
+    }
 
     # Initialize new version with current values
     $newMajor = $lastMajor
@@ -581,7 +665,7 @@ function New-License {
     $content = Get-Content $script:LICENSE_TEMPLATE -Raw
 
     # Project URL
-    $projectUrl = "$ServerUrl/$Owner/$Repository"
+    $projectUrl = "$ServerUrl/$Repository"
     $content = $content.Replace('{PROJECT_URL}', $projectUrl)
 
     # Copyright line
@@ -766,56 +850,158 @@ function Get-VersionNotes {
     }
 
     # Get the actual commit SHA for the from tag if it exists
-    if ($rangeFrom -ne "") {
-        $fromSha = "git rev-list -n 1 $rangeFrom" | Invoke-ExpressionWithLogging
+    $range = ""
+    $fromSha = ""
+    $gitSuccess = $true
 
-        # For the newest version with SHA provided (not yet tagged):
-        if ($isNewestVersion -and $ToSha -ne "") {
-            $range = "$fromSha..$ToSha"
-        } else {
-            # For already tagged versions, get the SHA for the to tag
-            $toShaResolved = "git rev-list -n 1 $rangeTo" | Invoke-ExpressionWithLogging
-            $range = "$fromSha..$toShaResolved"
+    if ($rangeFrom -ne "") {
+        try {
+            # Try to get the SHA for the from tag, but don't error if it doesn't exist
+            $fromSha = "git rev-list -n 1 $rangeFrom 2>`$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+            if ($LASTEXITCODE -ne 0) {
+                Write-Information "Warning: Could not find SHA for tag $rangeFrom. Using fallback range." -Tags "Get-VersionNotes"
+                $gitSuccess = $false
+                $fromSha = ""
+            }
+
+            # For the newest version with SHA provided (not yet tagged):
+            if ($isNewestVersion -and $ToSha -ne "" -and $gitSuccess) {
+                $range = "$fromSha..$ToSha"
+            } elseif ($gitSuccess) {
+                # For already tagged versions, get the SHA for the to tag
+                $toShaResolved = "git rev-list -n 1 $rangeTo 2>`$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Information "Warning: Could not find SHA for tag $rangeTo. Using fallback range." -Tags "Get-VersionNotes"
+                    $gitSuccess = $false
+                }
+                else {
+                    $range = "$fromSha..$toShaResolved"
+                }
+            }
         }
-    } else {
-        # Handle case with no FROM tag (first version)
-        $range = $rangeTo
+        catch {
+            Write-Information "Error getting commit SHAs: $_" -Tags "Get-VersionNotes"
+            $gitSuccess = $false
+        }
+    }
+
+    # Handle case with no FROM tag (first version) or failed git commands
+    if ($rangeFrom -eq "" -or -not $gitSuccess) {
+        if ($ToSha -ne "") {
+            $range = $ToSha
+        } else {
+            try {
+                $toShaResolved = "git rev-list -n 1 $rangeTo 2>`$null" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+                if ($LASTEXITCODE -eq 0) {
+                    $range = $toShaResolved
+                } else {
+                    # If we can't resolve either tag, use HEAD as fallback
+                    $range = "HEAD"
+                }
+            }
+            catch {
+                Write-Information "Error resolving tag SHA: $_. Using HEAD instead." -Tags "Get-VersionNotes"
+                $range = "HEAD"
+            }
+        }
     }
 
     # Debug output
     Write-Information "Processing range: $range (From: $rangeFrom, To: $rangeTo)" -Tags "Get-VersionNotes"
 
-    # Try with progressively more relaxed filtering to ensure we show commits
-
-    # Get full commit info with hash to ensure uniqueness
-    $format = '%h|%s|%aN'
-
-    # First try with standard filters
-    $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep --committer=`"$EXCLUDE_BOTS`" --author=`"$EXCLUDE_BOTS`" `"$range`"" | Invoke-ExpressionWithLogging
-
-    # If no commits found, try with just PR exclusion but no author filtering
-    if (($rawCommits | Measure-Object).Count -eq 0) {
-        Write-Information "No commits found with standard filters, trying with relaxed author/committer filters..." -Tags "Get-VersionNotes"
-        $rawCommits = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep `"$range`"" | Invoke-ExpressionWithLogging
+    # For repositories with no valid tags or no commits between tags, handle gracefully
+    if ([string]::IsNullOrWhiteSpace($range) -or $range -eq ".." -or $range -match '^\s*$') {
+        Write-Information "No valid commit range found. Creating a placeholder entry." -Tags "Get-VersionNotes"
+        $versionType = "initial" # Mark as initial release
+        $versionChangelog = "## $ToTag (initial release)$script:lineEnding$script:lineEnding"
+        $versionChangelog += "Initial version.$script:lineEnding$script:lineEnding"
+        return ($versionChangelog.Trim() + $script:lineEnding)
     }
 
-    # If still no commits, try with no filtering at all - show everything in the range
-    if (($rawCommits | Measure-Object).Count -eq 0) {
-        Write-Information "Still no commits found, trying with no filters..." -Tags "Get-VersionNotes"
-        $rawCommits = "git log --pretty=format:`"$format`" `"$range`"" | Invoke-ExpressionWithLogging
+    # Try with progressively more relaxed filtering to ensure we show commits
+    $rawCommits = @()
 
-        # If it's a prerelease version, include also version update commits
-        if ($versionType -eq "prerelease" -and ($rawCommits | Measure-Object).Count -eq 0) {
-            Write-Information "Looking for version update commits for prerelease..." -Tags "Get-VersionNotes"
-            $rawCommits = "git log --pretty=format:`"$format`" --grep=`"Update VERSION to`" `"$range`"" | Invoke-ExpressionWithLogging
+    try {
+        # Get full commit info with hash to ensure uniqueness
+        $format = '%h|%s|%aN'
+
+        # First try with standard filters
+        $rawCommitsResult = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep --committer=`"$EXCLUDE_BOTS`" --author=`"$EXCLUDE_BOTS`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+
+        # Safely convert to array and handle any errors
+        $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommitsResult
+
+        # Additional safety check - ensure we have a valid array with Count property
+        if ($null -eq $rawCommits) {
+            Write-Information "rawCommits is null, creating empty array" -Tags "Get-VersionNotes"
+            $rawCommits = @()
         }
+
+        # Use @() subexpression to safely get count
+        $rawCommitsCount = @($rawCommits).Count
+
+        # If no commits found, try with just PR exclusion but no author filtering
+        if ($rawCommitsCount -eq 0) {
+            Write-Information "No commits found with standard filters, trying with relaxed author/committer filters..." -Tags "Get-VersionNotes"
+            $rawCommitsResult = "git log --pretty=format:`"$format`" --perl-regexp --regexp-ignore-case --grep=`"$EXCLUDE_PRS`" --invert-grep `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+
+            # Safely convert to array and handle any errors
+            $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommitsResult
+
+            # Additional safety check
+            if ($null -eq $rawCommits) {
+                Write-Information "rawCommits is null, creating empty array" -Tags "Get-VersionNotes"
+                $rawCommits = @()
+            }
+        }
+
+        # Use @() subexpression to safely get count
+        $rawCommitsCount = @($rawCommits).Count
+
+        # If still no commits, try with no filtering at all - show everything in the range
+        if ($rawCommitsCount -eq 0) {
+            Write-Information "Still no commits found, trying with no filters..." -Tags "Get-VersionNotes"
+            $rawCommitsResult = "git log --pretty=format:`"$format`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+
+            # Safely convert to array and handle any errors
+            $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommitsResult
+
+            # Additional safety check
+            if ($null -eq $rawCommits) {
+                Write-Information "rawCommits is null, creating empty array" -Tags "Get-VersionNotes"
+                $rawCommits = @()
+            }
+
+            # Use @() subexpression to safely get count
+            $rawCommitsCount = @($rawCommits).Count
+
+            # If it's a prerelease version, include also version update commits
+            if ($versionType -eq "prerelease" -and $rawCommitsCount -eq 0) {
+                Write-Information "Looking for version update commits for prerelease..." -Tags "Get-VersionNotes"
+                $rawCommitsResult = "git log --pretty=format:`"$format`" --grep=`"Update VERSION to`" `"$range`"" | Invoke-ExpressionWithLogging -ErrorAction SilentlyContinue
+
+                # Safely convert to array and handle any errors
+                $rawCommits = ConvertTo-ArraySafe -InputObject $rawCommitsResult
+
+                # Additional safety check
+                if ($null -eq $rawCommits) {
+                    Write-Information "rawCommits is null, creating empty array" -Tags "Get-VersionNotes"
+                    $rawCommits = @()
+                }
+            }
+        }
+    }
+    catch {
+        Write-Information "Error during git log operations: $_" -Tags "Get-VersionNotes"
+        $rawCommits = @()
     }
 
     # Process raw commits into structured format
     $structuredCommits = @()
     foreach ($commit in $rawCommits) {
         $parts = $commit -split '\|'
-        if ($parts.Count -ge 3) {
+        # Use @() subexpression to safely get count
+        if (@($parts).Count -ge 3) {
             $structuredCommits += [PSCustomObject]@{
                 Hash = $parts[0]
                 Subject = $parts[1]
@@ -826,13 +1012,15 @@ function Get-VersionNotes {
     }
 
     # Get unique commits based on hash (ensures unique commits)
-    $uniqueCommits = $structuredCommits | Sort-Object -Property Hash -Unique | ForEach-Object { $_.FormattedEntry }
+    $uniqueCommits = ConvertTo-ArraySafe -InputObject ($structuredCommits | Sort-Object -Property Hash -Unique | ForEach-Object { $_.FormattedEntry })
 
-    Write-Information "Found $(($uniqueCommits | Measure-Object).Count) commits for $ToTag" -Tags "Get-VersionNotes"
+    # Use @() subexpression to safely get count
+    $uniqueCommitsCount = @($uniqueCommits).Count
+    Write-Information "Found $uniqueCommitsCount commits for $ToTag" -Tags "Get-VersionNotes"
 
     # Format changelog entry
     $versionChangelog = ""
-    if (($uniqueCommits | Measure-Object).Count -gt 0) {
+    if ($uniqueCommitsCount -gt 0) {
         $versionChangelog = "## $ToTag"
         if ($versionType -ne "unknown") {
             $versionChangelog += " ($versionType)"
@@ -858,6 +1046,19 @@ function Get-VersionNotes {
         # For prerelease versions with no detected commits, include a placeholder entry
         $versionChangelog = "## $ToTag (prerelease)$script:lineEnding$script:lineEnding"
         $versionChangelog += "Incremental prerelease update.$script:lineEnding$script:lineEnding"
+    } else {
+        # For all other versions with no commits, create a placeholder message
+        $versionChangelog = "## $ToTag"
+        if ($versionType -ne "unknown") {
+            $versionChangelog += " ($versionType)"
+        }
+        $versionChangelog += "$script:lineEnding$script:lineEnding"
+
+        if ($FromTag -eq "v0.0.0") {
+            $versionChangelog += "Initial release.$script:lineEnding$script:lineEnding"
+        } else {
+            $versionChangelog += "No significant changes detected since $FromTag.$script:lineEnding$script:lineEnding"
+        }
     }
 
     return ($versionChangelog.Trim() + $script:lineEnding)
@@ -877,7 +1078,7 @@ function New-Changelog {
         Optional path to write the changelog file to. Defaults to workspace root.
     .PARAMETER IncludeAllVersions
         Whether to include all previous versions in the changelog. Defaults to $true.
-    .PARAMETER LatestChangelogPath
+    .PARAMETER LatestChangelogFile
         Optional path to write the latest version's changelog to. Defaults to "LATEST_CHANGELOG.md".
     #>
     [CmdletBinding()]
@@ -888,7 +1089,7 @@ function New-Changelog {
         [string]$CommitHash,
         [string]$OutputPath = "",
         [bool]$IncludeAllVersions = $true,
-        [string]$LatestChangelogPath = "LATEST_CHANGELOG.md"
+        [string]$LatestChangelogFile = "LATEST_CHANGELOG.md"
     )
 
     # Configure git versionsort to correctly handle prereleases
@@ -901,21 +1102,18 @@ function New-Changelog {
     $tags = Get-GitTags
     $changelog = ""
 
+    # Make sure tags is always an array
+    $tags = ConvertTo-ArraySafe -InputObject $tags
+
     # Check if we have any tags at all
-    $hasTags = $null -ne $tags -and
-              ($tags -is [array] -and $tags.Count -gt 0) -or
-              ($tags -is [string] -and $tags.Trim() -ne "")
+    $hasTags = $tags.Count -gt 0
 
     # For first release, there's no previous tag to compare against
     $previousTag = 'v0.0.0'
 
     # If we have tags, find the most recent one to compare against
     if ($hasTags) {
-        $previousTag = if ($tags -is [array]) {
-            $tags[0]  # Most recent tag
-        } else {
-            $tags  # Single tag
-        }
+        $previousTag = $tags[0]  # Most recent tag
     }
 
     # Always add entry for current/new version (comparing current commit to previous tag or initial state)
@@ -970,12 +1168,12 @@ function New-Changelog {
     [System.IO.File]::WriteAllText($filePath, $changelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
 
     # Write latest version's changelog to separate file for GitHub releases
-    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogPath } else { $LatestChangelogPath }
+    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogFile } else { $LatestChangelogFile }
     $latestVersionNotes = $latestVersionNotes.ReplaceLineEndings($script:lineEnding)
     [System.IO.File]::WriteAllText($latestPath, $latestVersionNotes, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
     Write-Information "Latest version changelog saved to: $latestPath" -Tags "New-Changelog"
 
-    $versionCount = if ($hasTags) { @($tags).Count + 1 } else { 1 }
+    $versionCount = if ($hasTags) { $tags.Count + 1 } else { 1 }
     Write-Information "Changelog generated with entries for $versionCount versions" -Tags "New-Changelog"
 }
 
@@ -1028,10 +1226,24 @@ function Update-ProjectMetadata {
 
         Write-Information "Generating changelog..." -Tags "Update-ProjectMetadata"
         # Generate both full changelog and latest version changelog
-        New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogPath $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
+        try {
+            New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogFile $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
+        }
+        catch {
+            $errorMessage = $_.ToString()
+            Write-Information "Failed to generate complete changelog: $errorMessage" -Tags "Update-ProjectMetadata"
+            Write-Information "Creating minimal changelog instead..." -Tags "Update-ProjectMetadata"
+
+            # Create a minimal changelog
+            $minimalChangelog = "## v$version$($script:lineEnding)$($script:lineEnding)"
+            $minimalChangelog += "Initial release or repository with no prior history.$($script:lineEnding)$($script:lineEnding)"
+
+            [System.IO.File]::WriteAllText("CHANGELOG.md", $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
+            [System.IO.File]::WriteAllText($BuildConfiguration.LatestChangelogFile, $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
+        }
 
         # Create AUTHORS.md if authors are provided
-        if ($Authors.Count -gt 0) {
+        if (@($Authors).Count -gt 0) {
             Write-Information "Generating authors file..." -Tags "Update-ProjectMetadata"
             $authorsContent = "# Project Authors$script:lineEnding$script:lineEnding"
             foreach ($author in $Authors) {
@@ -1045,7 +1257,7 @@ function Update-ProjectMetadata {
         [System.IO.File]::WriteAllText("AUTHORS.url", $authorsUrl, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         # Create PROJECT_URL.url
-        $projectUrl = "[InternetShortcut]$($script:lineEnding)URL=$($BuildConfiguration.ServerUrl)/$($BuildConfiguration.GitHubOwner)/$($BuildConfiguration.GitHubRepo)"
+        $projectUrl = "[InternetShortcut]$($script:lineEnding)URL=$($BuildConfiguration.ServerUrl)/$($BuildConfiguration.GitHubRepo)"
         [System.IO.File]::WriteAllText("PROJECT_URL.url", $projectUrl, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         Write-Information "Adding files to git..." -Tags "Update-ProjectMetadata"
@@ -1058,12 +1270,19 @@ function Update-ProjectMetadata {
             "PROJECT_URL.url",
             "AUTHORS.url"
         )
+        
+        # Add latest changelog if it exists
+        if (Test-Path $BuildConfiguration.LatestChangelogFile) {
+            $filesToAdd += $BuildConfiguration.LatestChangelogFile
+        }
         Write-Information "Files to add: $($filesToAdd -join ", ")" -Tags "Update-ProjectMetadata"
         "git add $filesToAdd" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
         Write-Information "Checking for changes to commit..." -Tags "Update-ProjectMetadata"
-        $postStatus = "git status --porcelain" | Invoke-ExpressionWithLogging
-        Write-Information "Git status: $($postStatus ? 'Changes detected' : 'No changes')" -Tags "Update-ProjectMetadata"
+        $postStatus = "git status --porcelain" | Invoke-ExpressionWithLogging -Tags "Update-ProjectMetadata" | Out-String
+        $hasChanges = -not [string]::IsNullOrWhiteSpace($postStatus)
+        $statusMessage = if ($hasChanges) { 'Changes detected' } else { 'No changes' }
+        Write-Information "Git status: $statusMessage" -Tags "Update-ProjectMetadata"
 
         # Get the current commit hash regardless of whether we make changes
         $currentHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
@@ -1204,11 +1423,11 @@ function Invoke-DotNetBuild {
 function Invoke-DotNetTest {
     <#
     .SYNOPSIS
-        Runs unit tests.
+        Runs dotnet test with code coverage collection.
     .DESCRIPTION
         Runs dotnet test with code coverage collection.
     .PARAMETER Configuration
-        The build configuration (Debug/Release).
+        The build configuration to use.
     .PARAMETER CoverageOutputPath
         The path to output code coverage results.
     #>
@@ -1218,11 +1437,26 @@ function Invoke-DotNetTest {
         [string]$CoverageOutputPath = "coverage"
     )
 
-    Write-StepHeader "Running Tests" -Tags "Invoke-DotNetTest"
+    Write-StepHeader "Running Tests with Coverage" -Tags "Invoke-DotNetTest"
 
-    # Execute command and stream output directly to console
-    "dotnet test -m:1 --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --collect:`"XPlat Code Coverage`" --results-directory $CoverageOutputPath" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
+    # Ensure the TestResults directory exists
+    $testResultsPath = Join-Path $CoverageOutputPath "TestResults"
+    New-Item -Path $testResultsPath -ItemType Directory -Force | Out-Null
+
+    # Run tests with both coverage collection and TRX logging for SonarQube
+    "dotnet test --configuration $Configuration /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=`"coverage.opencover.xml`" --results-directory `"$testResultsPath`" --logger `"trx;LogFileName=TestResults.trx`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
     Assert-LastExitCode "Tests failed"
+
+    # Find and copy coverage file to expected location for SonarQube
+    $coverageFiles = @(Get-ChildItem -Path . -Recurse -Filter "coverage.opencover.xml" -ErrorAction SilentlyContinue)
+    if ($coverageFiles.Count -gt 0) {
+        $latestCoverageFile = $coverageFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $targetCoverageFile = Join-Path $CoverageOutputPath "coverage.opencover.xml"
+        Copy-Item -Path $latestCoverageFile.FullName -Destination $targetCoverageFile -Force
+        Write-Information "Coverage file copied to: $targetCoverageFile" -Tags "Invoke-DotNetTest"
+    } else {
+        Write-Information "Warning: No coverage file found" -Tags "Invoke-DotNetTest"
+    }
 }
 
 function Invoke-DotNetPack {
@@ -1237,13 +1471,16 @@ function Invoke-DotNetPack {
         The path to output packages to.
     .PARAMETER Project
         Optional specific project to package. If not provided, all projects are packaged.
+    .PARAMETER LatestChangelogFile
+        Optional path to the latest changelog file to use for PackageReleaseNotes. Defaults to "LATEST_CHANGELOG.md".
     #>
     [CmdletBinding()]
     param (
         [string]$Configuration = "Release",
         [Parameter(Mandatory=$true)]
         [string]$OutputPath,
-        [string]$Project = ""
+        [string]$Project = "",
+        [string]$LatestChangelogFile = "LATEST_CHANGELOG.md"
     )
 
     Write-StepHeader "Packaging Libraries" -Tags "Invoke-DotNetPack"
@@ -1259,19 +1496,29 @@ function Invoke-DotNetPack {
     }
 
     try {
+        # Prepare PackageReleaseNotesFile property if latest changelog exists
+        $releaseNotesProperty = ""
+        if (Test-Path $LatestChangelogFile) {
+            # Use PackageReleaseNotesFile to reference the file path instead of inline content
+            # This avoids command-line parsing issues with special characters like semicolons
+            $absolutePath = (Resolve-Path $LatestChangelogFile).Path
+            $releaseNotesProperty = "-p:PackageReleaseNotesFile=`"$absolutePath`""
+            Write-Information "Using PackageReleaseNotesFile from $LatestChangelogFile" -Tags "Invoke-DotNetPack"
+        }
+
         # Build either a specific project or all projects
         if ([string]::IsNullOrWhiteSpace($Project)) {
             Write-Information "Packaging all projects in solution..." -Tags "Invoke-DotNetPack"
-            "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
+            "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
         } else {
             Write-Information "Packaging project: $Project" -Tags "Invoke-DotNetPack"
-            "dotnet pack $Project --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
+            "dotnet pack $Project --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
         }
 
         if ($LASTEXITCODE -ne 0) {
             # Get more details about what might have failed
             Write-Information "Packaging failed with exit code $LASTEXITCODE, trying again with detailed verbosity..." -Tags "Invoke-DotNetPack"
-            "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=detailed`" --no-build --output $OutputPath" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
+            "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=detailed`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
             throw "Library packaging failed with exit code $LASTEXITCODE"
         }
 
@@ -1296,9 +1543,10 @@ function Invoke-DotNetPack {
 function Invoke-DotNetPublish {
     <#
     .SYNOPSIS
-        Publishes .NET applications.
+        Publishes .NET applications and creates winget-compatible packages.
     .DESCRIPTION
         Runs dotnet publish and creates zip archives for applications.
+        Also creates winget-compatible packages for multiple architectures if console applications are found.
         Uses the build configuration to determine output paths and version information.
     .PARAMETER Configuration
         The build configuration (Debug/Release). Defaults to "Release".
@@ -1306,7 +1554,7 @@ function Invoke-DotNetPublish {
         The build configuration object containing output paths, version, and other settings.
         This object should be obtained from Get-BuildConfiguration.
     .OUTPUTS
-        None. Creates published applications and zip archives in the specified output paths.
+        None. Creates published applications, zip archives, and winget packages in the specified output paths.
     #>
     [CmdletBinding()]
     param (
@@ -1333,34 +1581,84 @@ function Invoke-DotNetPublish {
     New-Item -Path $BuildConfiguration.StagingPath -ItemType Directory -Force | Write-InformationStream -Tags "Invoke-DotNetPublish"
 
     $publishedCount = 0
+    $version = $BuildConfiguration.Version
+
+    # Define target architectures for comprehensive publishing across all platforms
+    $architectures = @(
+        # Windows
+        "win-x64", "win-x86", "win-arm64",
+        # Linux
+        "linux-x64", "linux-arm64",
+        # macOS
+        "osx-x64", "osx-arm64"
+    )
+
     foreach ($csproj in $projectFiles) {
         $projName = [System.IO.Path]::GetFileNameWithoutExtension($csproj)
-        $outDir = Join-Path $BuildConfiguration.OutputPath $projName
-        $stageFile = Join-Path $BuildConfiguration.StagingPath "$projName-$($BuildConfiguration.Version).zip"
-
         Write-Information "Publishing $projName..." -Tags "Invoke-DotNetPublish"
 
-        # Create output directory
-        New-Item -Path $outDir -ItemType Directory -Force | Write-InformationStream -Tags "Invoke-DotNetPublish"
+        foreach ($arch in $architectures) {
+            $outDir = Join-Path $BuildConfiguration.OutputPath "$projName-$arch"
 
-        # Publish application - stream output directly
-        "dotnet publish $csproj --no-build --configuration $Configuration --framework net$($BuildConfiguration.DotnetVersion) --output $outDir  -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPublish"
+            # Create output directory
+            New-Item -Path $outDir -ItemType Directory -Force | Write-InformationStream -Tags "Invoke-DotNetPublish"
 
-        if ($LASTEXITCODE -eq 0) {
-            # Create zip archive
-            Compress-Archive -Path "$outDir/*" -DestinationPath $stageFile -Force | Write-InformationStream -Tags "Invoke-DotNetPublish"
-            $publishedCount++
-            Write-Information "Successfully published and archived $projName" -Tags "Invoke-DotNetPublish"
-        } else {
-            Write-Information "Skipping $projName (not configured as an executable project)" -Tags "Invoke-DotNetPublish"
-            continue
+            # Publish application with optimized settings for both general use and winget compatibility
+            "dotnet publish `"$csproj`" --configuration $Configuration --runtime $arch --self-contained true --output `"$outDir`" -p:PublishSingleFile=true -p:PublishTrimmed=false -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -p:DebugSymbols=false -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPublish"
+
+            if ($LASTEXITCODE -eq 0) {
+                # Create general application zip archive for all platforms
+                $stageFile = Join-Path $BuildConfiguration.StagingPath "$projName-$version-$arch.zip"
+                Compress-Archive -Path "$outDir/*" -DestinationPath $stageFile -Force | Write-InformationStream -Tags "Invoke-DotNetPublish"
+
+                $publishedCount++
+                Write-Information "Successfully published $projName for $arch" -Tags "Invoke-DotNetPublish"
+            } else {
+                Write-Information "Failed to publish $projName for $arch" -Tags "Invoke-DotNetPublish"
+                continue
+            }
+        }
+    }
+
+    # Generate SHA256 hashes for all published packages
+    $allPackages = @(Get-ChildItem -Path $BuildConfiguration.StagingPath -Filter "*.zip" -ErrorAction SilentlyContinue)
+
+    if ($allPackages.Count -gt 0) {
+        Write-Information "Generating SHA256 hashes for all published packages..." -Tags "Invoke-DotNetPublish"
+
+        foreach ($package in $allPackages) {
+            # Calculate and store SHA256 hash
+            $hash = Get-FileHash -Path $package.FullName -Algorithm SHA256
+            Write-Information "SHA256 for $($package.Name): $($hash.Hash)" -Tags "Invoke-DotNetPublish"
+
+            # Store hash for integrity verification and distribution use
+            "$($package.Name)=$($hash.Hash)" | Out-File -FilePath (Join-Path $BuildConfiguration.StagingPath "hashes.txt") -Append -Encoding UTF8
         }
     }
 
     if ($publishedCount -gt 0) {
-        Write-Information "Published $publishedCount application(s)" -Tags "Invoke-DotNetPublish"
+        Write-Information "Published $publishedCount application packages across all platforms and architectures" -Tags "Invoke-DotNetPublish"
+
+        # Report hash generation results
+        if ($allPackages.Count -gt 0) {
+            Write-Information "Generated SHA256 hashes for $($allPackages.Count) published packages" -Tags "Invoke-DotNetPublish"
+        }
     } else {
         Write-Information "No applications were published (projects may not be configured as executables)" -Tags "Invoke-DotNetPublish"
+    }
+
+    # Note: NuGet package publishing is handled separately in Invoke-ReleaseWorkflow
+
+    Write-StepHeader "Release Process Completed" -Tags "Invoke-ReleaseWorkflow"
+    Write-Information "Release process completed successfully!" -Tags "Invoke-ReleaseWorkflow"
+    return [PSCustomObject]@{
+        Success = $true
+        Error = ""
+        Data = [PSCustomObject]@{
+            Version = $BuildConfiguration.Version
+            ReleaseHash = $BuildConfiguration.ReleaseHash
+            PackagePaths = @()
+        }
     }
 }
 
@@ -1402,17 +1700,11 @@ function Invoke-NuGetPublish {
     "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.GithubToken)`" --source `"https://nuget.pkg.github.com/$($BuildConfiguration.GithubOwner)/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
     Assert-LastExitCode "GitHub package publish failed"
 
-    # Only publish to NuGet.org if API key is available
-    if (-not [string]::IsNullOrWhiteSpace($BuildConfiguration.NuGetApiKey)) {
-        Write-StepHeader "Publishing to NuGet.org" -Tags "Invoke-NuGetPublish"
+    Write-StepHeader "Publishing to NuGet.org" -Tags "Invoke-NuGetPublish"
 
-        # Execute the command and stream output
-        "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.NuGetApiKey)`" --source `"https://api.nuget.org/v3/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
-        Assert-LastExitCode "NuGet.org package publish failed"
-    }
-    else {
-        Write-Information "Skipping NuGet.org publishing - API key not available (likely running on a fork)" -Tags "Invoke-NuGetPublish"
-    }
+    # Execute the command and stream output
+    "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.NuGetApiKey)`" --source `"https://api.nuget.org/v3/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
+    Assert-LastExitCode "NuGet.org package publish failed"
 }
 
 function New-GitHubRelease {
@@ -1734,6 +2026,64 @@ function Set-GitIdentity {
     Assert-LastExitCode "Failed to configure git user email"
 }
 
+function ConvertTo-ArraySafe {
+    <#
+    .SYNOPSIS
+        Safely converts an object to an array, even if it's already an array, a single item, or null.
+    .DESCRIPTION
+        Ensures that the returned object is always an array, handling PowerShell's behavior
+        where single item arrays are automatically unwrapped. Also handles error objects and other edge cases.
+    .PARAMETER InputObject
+        The object to convert to an array.
+    .OUTPUTS
+        Returns an array, even if the input is null or a single item.
+    #>
+    [CmdletBinding()]
+    [OutputType([object[]])]
+    param (
+        [Parameter(ValueFromPipeline=$true)]
+        [AllowNull()]
+        [object]$InputObject
+    )
+
+    # Handle null or empty input
+    if ($null -eq $InputObject -or [string]::IsNullOrEmpty($InputObject)) {
+        return ,[object[]]@()
+    }
+
+    # Handle error objects - return empty array for safety
+    if ($InputObject -is [System.Management.Automation.ErrorRecord]) {
+        Write-Information "ConvertTo-ArraySafe: Received error object, returning empty array" -Tags "ConvertTo-ArraySafe"
+        return ,[object[]]@()
+    }
+
+    # Handle empty strings
+    if ($InputObject -is [string] -and [string]::IsNullOrWhiteSpace($InputObject)) {
+        return ,[object[]]@()
+    }
+
+    try {
+        # Always force array context using the comma operator and explicit array subexpression
+        if ($InputObject -is [array]) {
+            # Ensure we return a proper array even if it's a single-item array
+            return ,[object[]]@($InputObject)
+        }
+        elseif ($InputObject -is [string] -and $InputObject.Contains("`n")) {
+            # Handle multi-line strings by splitting them
+            $lines = $InputObject -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            return ,[object[]]@($lines)
+        }
+        else {
+            # Single item, make it an array using explicit array operators
+            return ,[object[]]@($InputObject)
+        }
+    }
+    catch {
+        Write-Information "ConvertTo-ArraySafe: Error converting object to array: $_" -Tags "ConvertTo-ArraySafe"
+        return ,[object[]]@()
+    }
+}
+
 #endregion
 
 #region High-Level Workflows
@@ -1825,8 +2175,8 @@ function Invoke-ReleaseWorkflow {
 
         # Create NuGet packages
         try {
-            Write-StepHeader "Packaging Libraries" -Tags "Invoke-DotNetPack"
-            Invoke-DotNetPack -Configuration $Configuration -OutputPath $BuildConfiguration.StagingPath | Write-InformationStream -Tags "Invoke-DotNetPack"
+                    Write-StepHeader "Packaging Libraries" -Tags "Invoke-DotNetPack"
+        Invoke-DotNetPack -Configuration $Configuration -OutputPath $BuildConfiguration.StagingPath -LatestChangelogFile $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Invoke-DotNetPack"
 
             # Add package paths if they exist
             if (Test-Path $BuildConfiguration.PackagePattern) {
@@ -1849,15 +2199,17 @@ function Invoke-ReleaseWorkflow {
             if (Test-Path $BuildConfiguration.ApplicationPattern) {
                 $packagePaths += $BuildConfiguration.ApplicationPattern
             }
+
+            # Note: hashes.txt is now stored in staging directory alongside packages
         }
         catch {
             Write-Information "Application publishing failed: $_" -Tags "Invoke-DotNetPublish"
             Write-Information "Continuing with release process without application packages." -Tags "Invoke-DotNetPublish"
         }
 
-        # Publish packages if we have any and NuGet key is provided
+        # Publish packages if we have any and NuGet key is provided AND this is a release build
         $packages = @(Get-Item -Path $BuildConfiguration.PackagePattern -ErrorAction SilentlyContinue)
-        if ($packages.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($BuildConfiguration.NuGetApiKey)) {
+        if ($packages.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($BuildConfiguration.NuGetApiKey) -and $BuildConfiguration.ShouldRelease) {
             Write-StepHeader "Publishing NuGet Packages" -Tags "Invoke-NuGetPublish"
             try {
                 Invoke-NuGetPublish -BuildConfiguration $BuildConfiguration | Write-InformationStream -Tags "Invoke-NuGetPublish"
@@ -1866,12 +2218,18 @@ function Invoke-ReleaseWorkflow {
                 Write-Information "NuGet package publishing failed: $_" -Tags "Invoke-NuGetPublish"
                 Write-Information "Continuing with release process." -Tags "Invoke-NuGetPublish"
             }
+        } elseif ($packages.Count -gt 0 -and -not $BuildConfiguration.ShouldRelease) {
+            Write-Information "Packages found but skipping publication (not a release build: ShouldRelease=$($BuildConfiguration.ShouldRelease))" -Tags "Invoke-ReleaseWorkflow"
         }
 
-        # Create GitHub release
-        Write-StepHeader "Creating GitHub Release" -Tags "New-GitHubRelease"
-        Write-Information "Creating release for version $($BuildConfiguration.Version)..." -Tags "New-GitHubRelease"
-        New-GitHubRelease -BuildConfiguration $BuildConfiguration | Write-InformationStream -Tags "New-GitHubRelease"
+        # Create GitHub release only if this is a release build
+        if ($BuildConfiguration.ShouldRelease) {
+            Write-StepHeader "Creating GitHub Release" -Tags "New-GitHubRelease"
+            Write-Information "Creating release for version $($BuildConfiguration.Version)..." -Tags "New-GitHubRelease"
+            New-GitHubRelease -BuildConfiguration $BuildConfiguration | Write-InformationStream -Tags "New-GitHubRelease"
+        } else {
+            Write-Information "Skipping GitHub release creation (not a release build: ShouldRelease=$($BuildConfiguration.ShouldRelease))" -Tags "Invoke-ReleaseWorkflow"
+        }
 
         Write-StepHeader "Release Process Completed" -Tags "Invoke-ReleaseWorkflow"
         Write-Information "Release process completed successfully!" -Tags "Invoke-ReleaseWorkflow"
@@ -1942,6 +2300,24 @@ function Invoke-CIPipeline {
                 Success = $false
                 Error = "Failed to update metadata: $($metadata.Error)"
                 StackTrace = $_.ScriptStackTrace
+            }
+        }
+
+        # Get the version increment info to check if we should skip the release
+        Write-Information "Checking for significant changes..." -Tags "Invoke-CIPipeline"
+        $versionInfo = Get-VersionInfoFromGit -CommitHash $BuildConfiguration.ReleaseHash
+
+        if ($versionInfo.Data.VersionIncrement -eq "skip") {
+            Write-Information "Skipping release: $($versionInfo.Data.IncrementReason)" -Tags "Invoke-CIPipeline"
+            return [PSCustomObject]@{
+                Success = $true
+                Error = ""
+                Data = [PSCustomObject]@{
+                    Version = $metadata.Data.Version
+                    ReleaseHash = $metadata.Data.ReleaseHash
+                    SkippedRelease = $true
+                    SkipReason = $versionInfo.Data.IncrementReason
+                }
             }
         }
 
@@ -2024,7 +2400,8 @@ Export-ModuleMember -Function Assert-LastExitCode,
                              Get-GitLineEnding,
                              Set-GitIdentity,
                              Write-InformationStream,
-                             Invoke-ExpressionWithLogging
+                             Invoke-ExpressionWithLogging,
+                             ConvertTo-ArraySafe
 
 # High-level workflow functions
 Export-ModuleMember -Function Invoke-BuildWorkflow,
