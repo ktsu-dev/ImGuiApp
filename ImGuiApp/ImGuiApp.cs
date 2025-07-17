@@ -24,10 +24,6 @@ using Color = System.Drawing.Color;
 using Texture = ImGuiController.Texture;
 
 /// <summary>
-/// Simple file logger for debugging crashes
-/// </summary>
-
-/// <summary>
 /// Provides static methods and properties to manage the ImGui application.
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
