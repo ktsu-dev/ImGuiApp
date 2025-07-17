@@ -902,7 +902,6 @@ public static partial class ImGuiApp
 		// Load fonts from configuration at multiple sizes
 		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 		int defaultFontIndex = -1;
-		string? defaultFontName = null;
 
 		foreach ((string name, byte[] fontBytes) in fontsToLoad)
 		{
@@ -917,13 +916,11 @@ public static partial class ImGuiApp
 					if (Config.DefaultFonts.ContainsKey(name))
 					{
 						defaultFontIndex = FontIndices[$"{name}_{size}"];
-						defaultFontName = $"{name}_{size}";
 					}
 					// If no DefaultFonts font has been set yet, use the first custom font as fallback
 					else if (defaultFontIndex == -1)
 					{
 						defaultFontIndex = FontIndices[$"{name}_{size}"];
-						defaultFontName = $"{name}_{size}";
 					}
 				}
 			}
