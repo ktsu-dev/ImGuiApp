@@ -71,6 +71,12 @@ public class ImGuiAppConfig
 	/// </value>
 	public Dictionary<string, byte[]> Fonts { get; init; } = [];
 
+	/// <summary>
+	/// Gets or sets a value indicating whether ImGui should save window settings to imgui.ini.
+	/// When false, window positions and sizes will not be persisted between sessions.
+	/// </summary>
+	public bool SaveIniSettings { get; init; } = true;
+
 	internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
 		{
 			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }

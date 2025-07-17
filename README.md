@@ -1,6 +1,6 @@
 # ktsu.ImGuiApp
 
-> A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and ImGui.NET.
+> A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and Hexa.NET.ImGui.
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
 [![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE.md)
@@ -9,7 +9,7 @@
 
 ## Introduction
 
-ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui](https://github.com/ocornut/imgui), using [Silk.NET](https://github.com/dotnet/Silk.NET) for OpenGL and window management and [ImGui.NET](https://github.com/mellinoe/ImGui.NET) for the ImGui bindings. It simplifies the creation of ImGui-based applications by abstracting away the complexities of window management, rendering, and input handling.
+ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui](https://github.com/ocornut/imgui), using [Silk.NET](https://github.com/dotnet/Silk.NET) for OpenGL and window management and [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) for the ImGui bindings. It simplifies the creation of ImGui-based applications by abstracting away the complexities of window management, rendering, and input handling.
 
 ## Features
 
@@ -60,13 +60,13 @@ Create a new class and call `ImGuiApp.Start()` with your application config:
 
 ```csharp
 using ktsu.ImGuiApp;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 
 static class Program
 {
     static void Main()
     {
-        ImGuiApp.Start(new AppConfig()
+        ImGuiApp.Start(new ImGuiAppConfig()
         {
             Title = "ImGuiApp Demo",
             OnStart = () => { /* Initialization code */ },
@@ -151,21 +151,14 @@ Load and manage textures with the built-in texture management system:
 ```csharp
 private static void OnRender(float deltaTime)
 {
-    // Load texture from file
-    var textureId = ImGuiApp.GetOrLoadTexture("path/to/texture.png");
+    // Load texture from file path
+    var textureInfo = ImGuiApp.GetOrLoadTexture("path/to/texture.png");
 
-    // Use the texture in ImGui
-    ImGui.Image(textureId, new Vector2(128, 128));
+    // Use the texture in ImGui (using the new TextureRef API for Hexa.NET.ImGui)
+    ImGui.Image(textureInfo.TextureRef, new Vector2(128, 128));
 
-    // Upload custom texture data
-    byte[] rgbaData = GetTextureData(); // Your method to get RGBA pixel data
-    int width = 256;
-    int height = 256;
-    var customTextureId = ImGuiApp.UploadTextureRGBA(rgbaData, width, height);
-    ImGui.Image(customTextureId, new Vector2(width, height));
-
-    // Clean up when done
-    ImGuiApp.DeleteTexture(customTextureId);
+    // Clean up when done (optional - textures are cached and managed automatically)
+    ImGuiApp.DeleteTexture(textureInfo);
 }
 ```
 
@@ -173,7 +166,7 @@ private static void OnRender(float deltaTime)
 
 ```csharp
 using ktsu.ImGuiApp;
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using System.Numerics;
 
 class Program
@@ -183,7 +176,7 @@ class Program
 
     static void Main()
     {
-        ImGuiApp.Start(new AppConfig
+        ImGuiApp.Start(new ImGuiAppConfig
         {
             Title = "Advanced ImGuiApp Demo",
             Width = 1280,
@@ -269,16 +262,17 @@ The main entry point for creating and managing ImGui applications.
 
 | Name | Parameters | Return Type | Description |
 |------|------------|-------------|-------------|
-| `Start` | `AppConfig config` | `void` | Starts the ImGui application with the provided configuration |
+| `Start` | `ImGuiAppConfig config` | `void` | Starts the ImGui application with the provided configuration |
 | `Stop` | | `void` | Stops the running application |
-| `GetOrLoadTexture` | `string path` | `IntPtr` | Loads a texture from file or returns cached handle if already loaded |
-| `UploadTextureRGBA` | `byte[] data, int width, int height` | `IntPtr` | Creates a texture from RGBA pixel data |
-| `DeleteTexture` | `IntPtr textureId` | `void` | Deletes a texture and frees its resources |
+| `GetOrLoadTexture` | `string path` | `ImGuiAppTextureInfo` | Loads a texture from file or returns cached texture info if already loaded |
+| `TryGetTexture` | `string path, out ImGuiAppTextureInfo textureInfo` | `bool` | Attempts to get a cached texture by path |
+| `DeleteTexture` | `uint textureId` | `void` | Deletes a texture and frees its resources |
+| `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
 | `GetWindowSize` | | `Vector2` | Returns the current window size |
 | `SetClipboardText` | `string text` | `void` | Sets the clipboard text |
 | `GetClipboardText` | | `string` | Gets the clipboard text |
 
-### `AppConfig` Class
+### `ImGuiAppConfig` Class
 
 Configuration for the ImGui application.
 
@@ -287,14 +281,16 @@ Configuration for the ImGui application.
 | Name | Type | Description |
 |------|------|-------------|
 | `Title` | `string` | The window title |
-| `Width` | `int` | Initial window width (default: 800) |
-| `Height` | `int` | Initial window height (default: 600) |
+| `IconPath` | `string` | The file path to the application window icon |
+| `InitialWindowState` | `ImGuiAppWindowState` | The initial state of the application window |
+| `TestMode` | `bool` | Whether the application is running in test mode |
 | `Fonts` | `Dictionary<string, byte[]>` | Font name to font data mapping |
 | `OnStart` | `Action` | Called when the application starts |
 | `OnUpdate` | `Action<float>` | Called each frame before rendering (param: delta time) |
 | `OnRender` | `Action<float>` | Called each frame for rendering (param: delta time) |
 | `OnAppMenu` | `Action` | Called each frame for rendering the application menu |
-| `OnShutdown` | `Action` | Called when the application is shutting down |
+| `OnMoveOrResize` | `Action` | Called when the application window is moved or resized |
+| `SaveIniSettings` | `bool` | Whether ImGui should save window settings to imgui.ini |
 
 ### `FontAppearance` Class
 
@@ -339,7 +335,7 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 ## Acknowledgements
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
-- [ImGui.NET](https://github.com/mellinoe/ImGui.NET) - .NET bindings for Dear ImGui
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
 - All contributors and the .NET community for their support
 

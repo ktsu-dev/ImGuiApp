@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.ImGuiApp;
-
+using Hexa.NET.ImGui;
 using ktsu.StrongPaths;
 
 /// <summary>
@@ -20,6 +20,11 @@ public class ImGuiAppTextureInfo
 	/// Gets or sets the OpenGL texture ID.
 	/// </summary>
 	public uint TextureId { get; set; }
+
+	/// <summary>
+	/// Gets or sets the ImGui texture reference for ImGui 1.92+ texture system.
+	/// </summary>
+	public ImTextureRef TextureRef { get; set; }
 
 	/// <summary>
 	/// Gets or sets the width of the texture.
