@@ -1,5 +1,3 @@
-## v2.0.6 (patch)
+## v2.0.6
 
-Changes since v2.0.5:
-
-- Add GitHub Actions workflow for automatic SDK updates ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.0.6.
