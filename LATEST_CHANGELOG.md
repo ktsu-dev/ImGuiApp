@@ -1,5 +1,5 @@
-## v2.0.2 (patch)
+## v2.0.3 (patch)
 
-Changes since v2.0.1:
+Changes since v2.0.2:
 
-- Enhance Test-IsLibraryOnlyProject function in update-winget-manifests.ps1 ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance Invoke-DotNetPack function in PSBuild script to handle release notes exceeding NuGet's 35,000 character limit. Added logic to truncate long release notes and create a temporary file for compliance, with appropriate logging and cleanup of temporary files after packaging. ([@matt-edmondson](https://github.com/matt-edmondson))
