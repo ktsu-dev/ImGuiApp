@@ -1,0 +1,310 @@
+name: Update SDKs
+
+on:
+  schedule:
+    - cron: "0 8 * * MON" # Weekly on Monday at 8 AM UTC
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      force_update:
+        description: "Force update even if no new versions found"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default permissions
+permissions: read-all
+
+env:
+  DOTNET_VERSION: "9.0"
+
+jobs:
+  update-sdks:
+    name: Update ktsu SDKs
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # For committing changes
+      pull-requests: write # For creating PR if needed
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          lfs: true
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update SDK Versions
+        id: update_sdks
+        shell: pwsh
+        run: |
+          # Function to get latest version from NuGet
+          function Get-LatestNuGetVersion {
+              param([string]$PackageId)
+              
+              try {
+                  $response = Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$PackageId/index.json"
+                  $versions = $response.versions | ForEach-Object { [System.Version]::Parse($_) } | Sort-Object -Descending
+                  return $versions[0].ToString()
+              }
+              catch {
+                  Write-Warning "Failed to get latest version for $PackageId : $_"
+                  return $null
+              }
+          }
+
+          # Function to update SDK version in project file
+          function Update-ProjectSdkVersion {
+              param(
+                  [string]$FilePath,
+                  [string]$SdkName,
+                  [string]$NewVersion
+              )
+              
+              $content = Get-Content $FilePath -Raw
+              $pattern = "Sdk=`"$SdkName/[\d\.]+"
+              $replacement = "Sdk=`"$SdkName/$NewVersion"
+              
+              if ($content -match $pattern) {
+                  $newContent = $content -replace $pattern, $replacement
+                  if ($content -ne $newContent) {
+                      Set-Content -Path $FilePath -Value $newContent -NoNewline
+                      Write-Host "Updated $FilePath : $SdkName -> $NewVersion"
+                      return $true
+                  }
+              }
+              return $false
+          }
+
+          # Function to update SDK version in global.json
+          function Update-GlobalJsonSdkVersion {
+              param(
+                  [string]$FilePath,
+                  [string]$SdkName,
+                  [string]$NewVersion
+              )
+              
+              try {
+                  $json = Get-Content $FilePath -Raw | ConvertFrom-Json
+                  $updated = $false
+                  
+                  # Check if msbuild-sdks section exists
+                  if ($json.PSObject.Properties.Name -contains "msbuild-sdks") {
+                      if ($json."msbuild-sdks".PSObject.Properties.Name -contains $SdkName) {
+                          $currentVersion = $json."msbuild-sdks".$SdkName
+                          if ($currentVersion -ne $NewVersion) {
+                              $json."msbuild-sdks".$SdkName = $NewVersion
+                              $updated = $true
+                          }
+                      }
+                  }
+                  
+                  if ($updated) {
+                      $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FilePath -NoNewline
+                      Write-Host "Updated $FilePath : $SdkName -> $NewVersion"
+                      return $true
+                  }
+              }
+              catch {
+                  Write-Warning "Failed to update $FilePath : $_"
+              }
+              return $false
+          }
+
+          # Get current SDK versions from project files
+          $projectFiles = Get-ChildItem -Recurse -Filter "*.csproj"
+          $globalJsonFiles = Get-ChildItem -Recurse -Filter "global.json"
+          $sdkVersions = @{}
+          $hasUpdates = $false
+
+          # Scan project files for SDK references
+          foreach ($file in $projectFiles) {
+              $content = Get-Content $file.FullName -Raw
+              if ($content -match 'Sdk="(ktsu\.Sdk\.\w+)/([\d\.]+)"') {
+                  $sdkName = $matches[1]
+                  $currentVersion = $matches[2]
+                  
+                  if (-not $sdkVersions.ContainsKey($sdkName)) {
+                      $sdkVersions[$sdkName] = $currentVersion
+                  }
+              }
+          }
+
+          # Scan global.json files for SDK references
+          foreach ($file in $globalJsonFiles) {
+              try {
+                  $json = Get-Content $file.FullName -Raw | ConvertFrom-Json
+                  if ($json.PSObject.Properties.Name -contains "msbuild-sdks") {
+                      foreach ($property in $json."msbuild-sdks".PSObject.Properties) {
+                          $sdkName = $property.Name
+                          $currentVersion = $property.Value
+                          
+                          # Only track ktsu SDKs
+                          if ($sdkName -like "ktsu.Sdk.*") {
+                              if (-not $sdkVersions.ContainsKey($sdkName)) {
+                                  $sdkVersions[$sdkName] = $currentVersion
+                              }
+                          }
+                      }
+                  }
+              }
+              catch {
+                  Write-Warning "Failed to parse $($file.FullName) : $_"
+              }
+          }
+
+          Write-Host "Current SDK versions:"
+          $sdkVersions.GetEnumerator() | ForEach-Object { Write-Host "  $($_.Key): $($_.Value)" }
+
+          if ($sdkVersions.Count -eq 0) {
+              Write-Host "No ktsu SDKs found in project files or global.json files."
+              "has_updates=false" >> $env:GITHUB_OUTPUT
+              exit 0
+          }
+
+          # Check for updates
+          $updates = @{}
+          foreach ($sdk in $sdkVersions.Keys) {
+              Write-Host "Checking for updates to $sdk..."
+              $latestVersion = Get-LatestNuGetVersion -PackageId $sdk
+              
+              if ($latestVersion -and $latestVersion -ne $sdkVersions[$sdk]) {
+                  $updates[$sdk] = $latestVersion
+                  Write-Host "  Update available: $($sdkVersions[$sdk]) -> $latestVersion"
+              }
+              else {
+                  Write-Host "  No update available (current: $($sdkVersions[$sdk]))"
+              }
+          }
+
+          if ($updates.Count -eq 0 -and -not $env:FORCE_UPDATE) {
+              Write-Host "No SDK updates available."
+              "has_updates=false" >> $env:GITHUB_OUTPUT
+              exit 0
+          }
+
+          # Apply updates to project files
+          Write-Host "Applying SDK updates to project files..."
+          foreach ($file in $projectFiles) {
+              foreach ($sdk in $updates.Keys) {
+                  $updated = Update-ProjectSdkVersion -FilePath $file.FullName -SdkName $sdk -NewVersion $updates[$sdk]
+                  if ($updated) {
+                      $hasUpdates = $true
+                  }
+              }
+          }
+
+          # Apply updates to global.json files
+          Write-Host "Applying SDK updates to global.json files..."
+          foreach ($file in $globalJsonFiles) {
+              foreach ($sdk in $updates.Keys) {
+                  $updated = Update-GlobalJsonSdkVersion -FilePath $file.FullName -SdkName $sdk -NewVersion $updates[$sdk]
+                  if ($updated) {
+                      $hasUpdates = $true
+                  }
+              }
+          }
+
+          if ($hasUpdates) {
+              "has_updates=true" >> $env:GITHUB_OUTPUT
+              
+              # Create summary of changes
+              $summary = "SDK Updates:`n"
+              foreach ($sdk in $updates.Keys) {
+                  $summary += "- $sdk : $($sdkVersions[$sdk]) -> $($updates[$sdk])`n"
+              }
+              "update_summary<<EOF" >> $env:GITHUB_OUTPUT
+              $summary >> $env:GITHUB_OUTPUT
+              "EOF" >> $env:GITHUB_OUTPUT
+          }
+          else {
+              "has_updates=false" >> $env:GITHUB_OUTPUT
+          }
+        env:
+          FORCE_UPDATE: ${{ inputs.force_update }}
+
+      - name: Restore Dependencies
+        if: steps.update_sdks.outputs.has_updates == 'true'
+        run: dotnet restore
+
+      - name: Build Solution
+        if: steps.update_sdks.outputs.has_updates == 'true'
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Tests
+        if: steps.update_sdks.outputs.has_updates == 'true'
+        run: dotnet test --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage"
+
+      - name: Check for Changes
+        if: steps.update_sdks.outputs.has_updates == 'true'
+        id: check_changes
+        run: |
+          $changes = git status --porcelain
+          if ($changes) {
+              "has_changes=true" >> $env:GITHUB_OUTPUT
+              Write-Host "Changes detected:"
+              git status --short
+          }
+          else {
+              "has_changes=false" >> $env:GITHUB_OUTPUT
+              Write-Host "No changes detected"
+          }
+
+      - name: Commit Changes
+        if: steps.update_sdks.outputs.has_updates == 'true' && steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git add -A
+          git commit -m "Update ktsu SDKs to latest versions
+
+          ${{ steps.update_sdks.outputs.update_summary }}
+
+          🤖 Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
+      - name: Push Changes
+        if: steps.update_sdks.outputs.has_updates == 'true' && steps.check_changes.outputs.has_changes == 'true'
+        run: git push origin main
+
+      - name: Create Summary
+        if: always()
+        run: |
+          if ("${{ steps.update_sdks.outputs.has_updates }}" -eq "true") {
+              if ("${{ steps.check_changes.outputs.has_changes }}" -eq "true") {
+                  Write-Host "## ✅ SDK Updates Applied Successfully" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "${{ steps.update_sdks.outputs.update_summary }}" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "- ✅ Build successful" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "- ✅ Tests passed" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "- ✅ Changes committed and pushed" >> $env:GITHUB_STEP_SUMMARY
+              }
+              else {
+                  Write-Host "## ⚠️ SDK Updates Available but No Changes Made" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+                  Write-Host "Build and tests passed, but no file changes were detected." >> $env:GITHUB_STEP_SUMMARY
+              }
+          }
+          else {
+              Write-Host "## ℹ️ No SDK Updates Available" >> $env:GITHUB_STEP_SUMMARY
+              Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+              Write-Host "All ktsu SDKs are already up to date." >> $env:GITHUB_STEP_SUMMARY
+          }

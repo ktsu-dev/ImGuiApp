@@ -1516,42 +1516,21 @@ function Invoke-DotNetPack {
     }
 
     try {
-        # Prepare PackageReleaseNotes property if latest changelog exists
+        # Override PackageReleaseNotes to use LATEST_CHANGELOG.md instead of full CHANGELOG.md
+        # The updated SDK will automatically handle truncation if the content is too long
         $releaseNotesProperty = ""
-        $tempFile = $null
         
         if (Test-Path $LatestChangelogFile) {
-            # Validate that the file content is within NuGet's limits
-            $fileContent = Get-Content $LatestChangelogFile -Raw
-            $maxLength = 35000
+            # Read the latest changelog content
+            $fileContent = [System.IO.File]::ReadAllText($LatestChangelogFile)
+            Write-Information "Using release notes from $LatestChangelogFile ($($fileContent.Length) characters)" -Tags "Invoke-DotNetPack"
             
-            # Always truncate if content is too long, then create a temporary file for it
-            $actualContent = $fileContent
-            if ($fileContent.Length -gt $maxLength) {
-                Write-Information "Release notes file '$LatestChangelogFile' is too long ($($fileContent.Length) characters). Truncating to fit NuGet limit." -Tags "Invoke-DotNetPack"
-                $truncationMessage = "`n`n... (truncated due to NuGet length limits)"
-                $targetLength = $maxLength - $truncationMessage.Length - 10  # Extra buffer for safety
-                $actualContent = $fileContent.Substring(0, $targetLength)
-                $actualContent += $truncationMessage
-                Write-Information "Truncated release notes to $($actualContent.Length) characters" -Tags "Invoke-DotNetPack"
-                
-                # Final safety check - ensure we never exceed the limit
-                if ($actualContent.Length -gt $maxLength) {
-                    Write-Warning "Truncated release notes still exceed limit ($($actualContent.Length) > $maxLength). Further truncating..." -Tags "Invoke-DotNetPack"
-                    $actualContent = $actualContent.Substring(0, $maxLength - 50) + "... (truncated)"
-                }
-            } else {
-                Write-Information "Using release notes from $LatestChangelogFile ($($fileContent.Length) characters)" -Tags "Invoke-DotNetPack"
-            }
-            
-            # Create a temporary file with the content (truncated if needed)
-            $tempFile = [System.IO.Path]::GetTempFileName()
-            $tempFile = [System.IO.Path]::ChangeExtension($tempFile, ".txt")
-            [System.IO.File]::WriteAllText($tempFile, $actualContent, [System.Text.UTF8Encoding]::new($false))
-            
-            # Use the temporary file for PackageReleaseNotesFile
-            $releaseNotesProperty = "-p:PackageReleaseNotesFile=`"$tempFile`""
-            Write-Information "Using temporary release notes file: $tempFile" -Tags "Invoke-DotNetPack"
+            # Escape quotes for MSBuild property
+            $escapedContent = $fileContent.Replace('"', '\"')
+            $releaseNotesProperty = "-p:PackageReleaseNotes=`"$escapedContent`""
+            Write-Information "Overriding PackageReleaseNotes with latest changelog content" -Tags "Invoke-DotNetPack"
+        } else {
+            Write-Information "No latest changelog found, SDK will use full CHANGELOG.md (automatically truncated if needed)" -Tags "Invoke-DotNetPack"
         }
 
         # Build either a specific project or all projects
@@ -1568,18 +1547,7 @@ function Invoke-DotNetPack {
             Write-Information "Packaging failed with exit code $LASTEXITCODE, trying again with detailed verbosity..." -Tags "Invoke-DotNetPack"
             "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=detailed`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
             
-            # Clean up temporary file if it exists
-            if ($tempFile -and (Test-Path $tempFile)) {
-                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            }
-            
             throw "Library packaging failed with exit code $LASTEXITCODE"
-        }
-        
-        # Clean up temporary file if it exists
-        if ($tempFile -and (Test-Path $tempFile)) {
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            Write-Information "Cleaned up temporary release notes file: $tempFile" -Tags "Invoke-DotNetPack"
         }
 
         # Report on created packages
@@ -1596,12 +1564,6 @@ function Invoke-DotNetPack {
     catch {
         $originalException = $_.Exception
         Write-Information "Package creation failed: $originalException" -Tags "Invoke-DotNetPack"
-        
-        # Clean up temporary file if it exists
-        if ($tempFile -and (Test-Path $tempFile)) {
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-        }
-        
         throw "Library packaging failed: $originalException"
     }
 }
