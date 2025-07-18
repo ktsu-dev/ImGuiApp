@@ -2,6 +2,8 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 [assembly: DoNotParallelize]
 
 namespace ktsu.ImGuiApp.Test;

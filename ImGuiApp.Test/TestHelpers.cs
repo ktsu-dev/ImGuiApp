@@ -5,6 +5,7 @@
 namespace ktsu.ImGuiApp.Test;
 
 using System.Numerics;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;

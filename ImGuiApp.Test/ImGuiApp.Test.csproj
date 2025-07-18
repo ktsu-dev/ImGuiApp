@@ -1,25 +1,25 @@
-<Project Sdk="ktsu.Sdk.Test/1.8.0">
+<Project Sdk="ktsu.Sdk.Test">
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Silk.NET.OpenGL" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="17.14.2" />
-    <PackageReference Update="Microsoft.Testing.Extensions.CrashDump" Version="1.7.3" />
-    <PackageReference Update="Microsoft.Testing.Extensions.Fakes" Version="17.14.1" />
-    <PackageReference Update="Microsoft.Testing.Extensions.HangDump" Version="1.7.3" />
-    <PackageReference Update="Microsoft.Testing.Extensions.HotReload" Version="1.7.3" />
-    <PackageReference Update="Microsoft.Testing.Extensions.Retry" Version="1.7.3" />
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.7.3" />
-    <PackageReference Update="MSTest.TestAdapter" Version="3.9.3" />
-    <PackageReference Update="MSTest.TestFramework" Version="3.9.3" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CrashDump" />
+    <PackageReference Update="Microsoft.Testing.Extensions.Fakes" />
+    <PackageReference Update="Microsoft.Testing.Extensions.HangDump" />
+    <PackageReference Update="Microsoft.Testing.Extensions.HotReload" />
+    <PackageReference Update="Microsoft.Testing.Extensions.Retry" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" />
+    <PackageReference Update="MSTest.TestAdapter" />
+    <PackageReference Update="MSTest.TestFramework" />
   </ItemGroup>
 
 </Project>
