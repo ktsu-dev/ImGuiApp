@@ -1171,6 +1171,16 @@ function New-Changelog {
     # Write latest version's changelog to separate file for GitHub releases
     $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogFile } else { $LatestChangelogFile }
     $latestVersionNotes = $latestVersionNotes.ReplaceLineEndings($script:lineEnding)
+    
+    # Truncate release notes if they exceed NuGet's 35,000 character limit
+    $maxLength = 35000
+    if ($latestVersionNotes.Length -gt $maxLength) {
+        Write-Information "Release notes exceed $maxLength characters ($($latestVersionNotes.Length)). Truncating to fit NuGet limit." -Tags "New-Changelog"
+        $truncatedNotes = $latestVersionNotes.Substring(0, $maxLength - 50)  # Leave some buffer
+        $truncatedNotes += "$script:lineEnding$script:lineEnding... (truncated due to length limits)"
+        $latestVersionNotes = $truncatedNotes
+    }
+    
     [System.IO.File]::WriteAllText($latestPath, $latestVersionNotes, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
     Write-Information "Latest version changelog saved to: $latestPath" -Tags "New-Changelog"
 
