@@ -44,6 +44,16 @@ dotnet run --project ImGuiAppDemo/
 dotnet pack ImGuiApp/ -o staging/
 ```
 
+### Run Single Test
+```bash
+dotnet test ImGuiApp.Test/ --filter "TestMethodName"
+```
+
+### Build in Release Mode
+```bash
+dotnet build ImGuiApp.sln -c Release
+```
+
 ### PowerShell Build System
 The project uses a comprehensive PowerShell build system located in `scripts/`:
 - Use `Import-Module ./scripts/PSBuild.psm1` to access build functions
@@ -101,3 +111,27 @@ The project uses automated semantic versioning:
 - Public API changes automatically trigger minor version bumps
 - VERSION.md, CHANGELOG.md, and other metadata files are auto-generated
 - Uses git history analysis for version calculation
+
+## Key File Locations and Patterns
+
+### Main Components
+- `ImGuiApp/ImGuiApp.cs`: Main static API class (ImGuiApp:32)
+- `ImGuiApp/ImGuiController/IGL.cs`: OpenGL abstraction interface
+- `ImGuiApp/ImGuiController/ImGuiController.cs`: Core ImGui controller implementation
+- `ImGuiApp/FontAppearance.cs`: RAII font management (FontAppearance:14)
+- `ImGuiApp/UIScaler.cs`: DPI-aware scaling utility (UIScaler:16)
+- `ImGuiApp/ForceDpiAware.cs`: Cross-platform DPI detection (ForceDpiAware:17)
+
+### Configuration and Data
+- `ImGuiApp/ImGuiAppConfig.cs`: Application configuration object (ImGuiAppConfig:12)
+- `ImGuiApp/Resources/`: Embedded font resources (Roboto Mono Nerd Font variants)
+
+### Testing Infrastructure
+- `ImGuiApp.Test/MockGL.cs`: Mock OpenGL implementation for testing
+- `ImGuiApp.Test/TestOpenGLProvider.cs`: Test OpenGL provider
+- `ImGuiApp.Test/ImGuiAppTests.cs`: Main application lifecycle tests
+- `ImGuiApp.Test/ForceDpiAwareTests.cs`: DPI awareness tests
+
+### Build System
+- `scripts/PSBuild.psm1`: PowerShell build automation module
+- Uses ktsu.Sdk.Lib, ktsu.Sdk.Test, and ktsu.Sdk.App SDKs

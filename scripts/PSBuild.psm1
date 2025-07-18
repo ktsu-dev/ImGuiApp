@@ -1176,9 +1176,18 @@ function New-Changelog {
     $maxLength = 35000
     if ($latestVersionNotes.Length -gt $maxLength) {
         Write-Information "Release notes exceed $maxLength characters ($($latestVersionNotes.Length)). Truncating to fit NuGet limit." -Tags "New-Changelog"
-        $truncatedNotes = $latestVersionNotes.Substring(0, $maxLength - 50)  # Leave some buffer
-        $truncatedNotes += "$script:lineEnding$script:lineEnding... (truncated due to length limits)"
+        $truncationMessage = "$script:lineEnding$script:lineEnding... (truncated due to NuGet length limits)"
+        $targetLength = $maxLength - $truncationMessage.Length - 10  # Extra buffer for safety
+        $truncatedNotes = $latestVersionNotes.Substring(0, $targetLength)
+        $truncatedNotes += $truncationMessage
         $latestVersionNotes = $truncatedNotes
+        Write-Information "Truncated release notes to $($latestVersionNotes.Length) characters" -Tags "New-Changelog"
+        
+        # Final safety check - ensure we never exceed the limit
+        if ($latestVersionNotes.Length -gt $maxLength) {
+            Write-Warning "Truncated release notes still exceed limit ($($latestVersionNotes.Length) > $maxLength). Further truncating..." -Tags "New-Changelog"
+            $latestVersionNotes = $latestVersionNotes.Substring(0, $maxLength - 50) + "... (truncated)"
+        }
     }
     
     [System.IO.File]::WriteAllText($latestPath, $latestVersionNotes, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
@@ -1519,9 +1528,18 @@ function Invoke-DotNetPack {
             # Always truncate if content is too long, then create a temporary file for it
             $actualContent = $fileContent
             if ($fileContent.Length -gt $maxLength) {
-                Write-Information "Release notes file '$LatestChangelogFile' is too long ($($fileContent.Length) characters). Truncating to $maxLength characters." -Tags "Invoke-DotNetPack"
-                $actualContent = $fileContent.Substring(0, $maxLength - 50)  # Leave some buffer
-                $actualContent += "`n`n... (truncated due to NuGet length limits)"
+                Write-Information "Release notes file '$LatestChangelogFile' is too long ($($fileContent.Length) characters). Truncating to fit NuGet limit." -Tags "Invoke-DotNetPack"
+                $truncationMessage = "`n`n... (truncated due to NuGet length limits)"
+                $targetLength = $maxLength - $truncationMessage.Length - 10  # Extra buffer for safety
+                $actualContent = $fileContent.Substring(0, $targetLength)
+                $actualContent += $truncationMessage
+                Write-Information "Truncated release notes to $($actualContent.Length) characters" -Tags "Invoke-DotNetPack"
+                
+                # Final safety check - ensure we never exceed the limit
+                if ($actualContent.Length -gt $maxLength) {
+                    Write-Warning "Truncated release notes still exceed limit ($($actualContent.Length) > $maxLength). Further truncating..." -Tags "Invoke-DotNetPack"
+                    $actualContent = $actualContent.Substring(0, $maxLength - 50) + "... (truncated)"
+                }
             } else {
                 Write-Information "Using release notes from $LatestChangelogFile ($($fileContent.Length) characters)" -Tags "Invoke-DotNetPack"
             }
