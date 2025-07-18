@@ -1,5 +1,5 @@
-## v2.0.1 (patch)
+## v2.0.2 (patch)
 
-Changes since v2.0.0:
+Changes since v2.0.1:
 
-- Enhance New-Changelog function in PSBuild script to truncate release notes exceeding NuGet's 35,000 character limit. This addition ensures compliance with NuGet requirements while providing informative logging about truncation. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance Test-IsLibraryOnlyProject function in update-winget-manifests.ps1 ([@matt-edmondson](https://github.com/matt-edmondson))
