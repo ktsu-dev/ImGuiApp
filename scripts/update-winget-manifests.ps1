@@ -71,6 +71,10 @@ function Test-IsLibraryOnlyProject {
 
     $hasApplications = $false
     $hasLibraries = $false
+    $isMainProjectLibrary = $false
+
+    # Get the repository name to identify the main project
+    $repoName = (Get-Item -Path $RootDir).Name
 
     # Check for C# projects
     if ($ProjectInfo.type -eq "csharp") {
@@ -78,27 +82,42 @@ function Test-IsLibraryOnlyProject {
 
         foreach ($csprojFile in $csprojFiles) {
             $csprojContent = Get-Content -Path $csprojFile.FullName -Raw
+            $projectName = $csprojFile.BaseName
 
             # Check if this specific project is a library
             if ($csprojContent -match "<OutputType>\s*Library\s*</OutputType>" -or
                 $csprojContent -match "<PackageId>" -or
                 $csprojContent -match "<GeneratePackageOnBuild>\s*true\s*</GeneratePackageOnBuild>" -or
                 $csprojContent -match "<IsPackable>\s*true\s*</IsPackable>" -or
-                $csprojContent -match 'Sdk="[^"]*\.Lib"' -or
+                $csprojContent -match 'Sdk="[^"]*\.Lib["/]' -or
+                $csprojContent -match 'Sdk="[^"]*Sdk\.Lib["/]' -or
                 $csprojContent -match 'Sdk="[^"]*Library[^"]*"') {
                 $hasLibraries = $true
+                
+                # Check if this is the main project (matches repository name)
+                if ($projectName -eq $repoName) {
+                    $isMainProjectLibrary = $true
+                }
             }
-            # Check if this specific project is an application
+            # Check if this specific project is an application (but not test or demo)
             elseif (($csprojContent -match "<OutputType>\s*Exe\s*</OutputType>" -or
                     $csprojContent -match "<OutputType>\s*WinExe\s*</OutputType>" -or
+                    $csprojContent -match 'Sdk="[^"]*\.App["/]' -or
+                    $csprojContent -match 'Sdk="[^"]*Sdk\.App["/]' -or
                     ((-not ($csprojContent -match "<OutputType>")) -and
                     (-not ($csprojContent -match "<PackageId>")) -and
                     (-not ($csprojContent -match "<GeneratePackageOnBuild>\s*true\s*</GeneratePackageOnBuild>")))) -and
-                    (-not ($csprojContent -match 'Sdk="[^"]*\.Lib"')) -and
-                    (-not ($csprojContent -match 'Sdk="[^"]*\.Test"')) -and
+                    (-not ($csprojContent -match 'Sdk="[^"]*\.Lib["/]')) -and
+                    (-not ($csprojContent -match 'Sdk="[^"]*Sdk\.Lib["/]')) -and
+                    (-not ($csprojContent -match 'Sdk="[^"]*\.Test["/]')) -and
+                    (-not ($csprojContent -match 'Sdk="[^"]*Sdk\.Test["/]')) -and
                     (-not ($csprojContent -match 'Sdk="[^"]*Library[^"]*"')) -and
                     (-not ($csprojContent -match 'Sdk="[^"]*Test[^"]*"'))) {
-                $hasApplications = $true
+                
+                # Don't count demo/example applications as main applications
+                if (-not ($projectName -match "Demo|Example|Sample" -or $projectName.Contains("Demo") -or $projectName.Contains("Example") -or $projectName.Contains("Sample"))) {
+                    $hasApplications = $true
+                }
             }
         }
     }
@@ -123,8 +142,8 @@ function Test-IsLibraryOnlyProject {
         $hasLibraries = $true
     }
 
-    # Only return true if we have libraries AND no applications
-    return $hasLibraries -and -not $hasApplications
+    # Return true if the main project is a library and we have no main applications (demos don't count)
+    return $isMainProjectLibrary -and -not $hasApplications
 }
 
 function Exit-GracefullyForLibrary {
