@@ -1,5 +1,5 @@
-## v2.0.4 (patch)
+## v2.0.5 (patch)
 
-Changes since v2.0.3:
+Changes since v2.0.4:
 
-- Refactor Invoke-DotNetPack function in PSBuild script to improve handling of release notes. Updated logic to create a temporary file for truncated content exceeding NuGet's 35,000 character limit, ensuring compliance and enhancing logging for better traceability. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update CLAUDE.md with additional testing and build instructions; enhance PSBuild script to improve release notes truncation logic for compliance with NuGet character limits, including detailed logging for better traceability. ([@matt-edmondson](https://github.com/matt-edmondson))
