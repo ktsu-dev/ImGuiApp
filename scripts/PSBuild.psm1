@@ -1507,40 +1507,33 @@ function Invoke-DotNetPack {
     }
 
     try {
-        # Prepare PackageReleaseNotesFile property if latest changelog exists
+        # Prepare PackageReleaseNotes property if latest changelog exists
         $releaseNotesProperty = ""
-        $absolutePath = ""
-        $isTemporaryFile = $false
+        $tempFile = $null
         
         if (Test-Path $LatestChangelogFile) {
             # Validate that the file content is within NuGet's limits
             $fileContent = Get-Content $LatestChangelogFile -Raw
             $maxLength = 35000
             
+            # Always truncate if content is too long, then create a temporary file for it
+            $actualContent = $fileContent
             if ($fileContent.Length -gt $maxLength) {
                 Write-Information "Release notes file '$LatestChangelogFile' is too long ($($fileContent.Length) characters). Truncating to $maxLength characters." -Tags "Invoke-DotNetPack"
-                
-                # Create a temporary truncated version
-                $truncatedContent = $fileContent.Substring(0, $maxLength - 50)  # Leave some buffer
-                $truncatedContent += "`n`n... (truncated due to NuGet length limits)"
-                
-                # Create a temporary file with truncated content
-                $tempFile = [System.IO.Path]::GetTempFileName()
-                $tempFile = [System.IO.Path]::ChangeExtension($tempFile, ".md")
-                [System.IO.File]::WriteAllText($tempFile, $truncatedContent, [System.Text.UTF8Encoding]::new($false))
-                
-                $absolutePath = $tempFile
-                $isTemporaryFile = $true
-                Write-Information "Using temporary truncated file: $tempFile" -Tags "Invoke-DotNetPack"
+                $actualContent = $fileContent.Substring(0, $maxLength - 50)  # Leave some buffer
+                $actualContent += "`n`n... (truncated due to NuGet length limits)"
             } else {
-                # Use PackageReleaseNotesFile to reference the file path instead of inline content
-                # This avoids command-line parsing issues with special characters like semicolons
-                $absolutePath = (Resolve-Path $LatestChangelogFile).Path
-                $isTemporaryFile = $false
-                Write-Information "Using PackageReleaseNotesFile from $LatestChangelogFile ($($fileContent.Length) characters)" -Tags "Invoke-DotNetPack"
+                Write-Information "Using release notes from $LatestChangelogFile ($($fileContent.Length) characters)" -Tags "Invoke-DotNetPack"
             }
             
-            $releaseNotesProperty = "-p:PackageReleaseNotesFile=`"$absolutePath`""
+            # Create a temporary file with the content (truncated if needed)
+            $tempFile = [System.IO.Path]::GetTempFileName()
+            $tempFile = [System.IO.Path]::ChangeExtension($tempFile, ".txt")
+            [System.IO.File]::WriteAllText($tempFile, $actualContent, [System.Text.UTF8Encoding]::new($false))
+            
+            # Use the temporary file for PackageReleaseNotesFile
+            $releaseNotesProperty = "-p:PackageReleaseNotesFile=`"$tempFile`""
+            Write-Information "Using temporary release notes file: $tempFile" -Tags "Invoke-DotNetPack"
         }
 
         # Build either a specific project or all projects
@@ -1558,17 +1551,17 @@ function Invoke-DotNetPack {
             "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=detailed`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
             
             # Clean up temporary file if it exists
-            if ($isTemporaryFile -and (Test-Path $absolutePath)) {
-                Remove-Item $absolutePath -Force -ErrorAction SilentlyContinue
+            if ($tempFile -and (Test-Path $tempFile)) {
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
             }
             
             throw "Library packaging failed with exit code $LASTEXITCODE"
         }
         
         # Clean up temporary file if it exists
-        if ($isTemporaryFile -and (Test-Path $absolutePath)) {
-            Remove-Item $absolutePath -Force -ErrorAction SilentlyContinue
-            Write-Information "Cleaned up temporary release notes file: $absolutePath" -Tags "Invoke-DotNetPack"
+        if ($tempFile -and (Test-Path $tempFile)) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Write-Information "Cleaned up temporary release notes file: $tempFile" -Tags "Invoke-DotNetPack"
         }
 
         # Report on created packages
@@ -1587,8 +1580,8 @@ function Invoke-DotNetPack {
         Write-Information "Package creation failed: $originalException" -Tags "Invoke-DotNetPack"
         
         # Clean up temporary file if it exists
-        if ($isTemporaryFile -and (Test-Path $absolutePath)) {
-            Remove-Item $absolutePath -Force -ErrorAction SilentlyContinue
+        if ($tempFile -and (Test-Path $tempFile)) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
         }
         
         throw "Library packaging failed: $originalException"
