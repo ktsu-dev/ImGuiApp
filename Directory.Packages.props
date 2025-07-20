@@ -2,10 +2,9 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Main Application Dependencies -->
-    <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.8" />
+    <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.8.4" />
     <PackageVersion Include="ktsu.Invoker" Version="1.1.0" />
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.2" />
     <PackageVersion Include="ktsu.StrongPaths" Version="1.3.2" />
@@ -20,7 +19,6 @@
     <PackageVersion Include="Silk.NET.Windowing.Sdl" Version="2.22.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.10" />
     <PackageVersion Include="System.Text.Json" Version="9.0.7" />
-    
     <!-- Test Dependencies -->
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
@@ -33,8 +31,7 @@
     <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="1.7.3" />
     <PackageVersion Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.9.3" />
-    <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />
-    
+    <PackageVersion Include="coverlet.msbuild" Version="6.0.4" />
     <!-- SDK Dependencies -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="8.0.0" />

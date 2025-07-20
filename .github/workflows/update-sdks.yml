@@ -62,7 +62,9 @@ jobs:
               
               try {
                   Write-Host "Checking NuGet for package: $PackageId"
-                  $response = Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$PackageId/index.json"
+                  # NuGet API requires lowercase package names
+                  $lowercasePackageId = $PackageId.ToLower()
+                  $response = Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$lowercasePackageId/index.json"
                   $versions = $response.versions | ForEach-Object { [System.Version]::Parse($_) } | Sort-Object -Descending
                   Write-Host "  Found versions: $($versions -join ', ')"
                   return $versions[0].ToString()
@@ -70,20 +72,8 @@ jobs:
               catch {
                   Write-Host "  Package $PackageId not found on NuGet.org"
                   Write-Host "  Error: $($_.Exception.Message)"
-                  
-                  # Try using the search API to see if package exists under different name
-                  try {
-                      $searchUrl = "https://api.nuget.org/v3-flatcontainer/$($PackageId.ToLower())/index.json"
-                      Write-Host "  Trying lowercase: $searchUrl"
-                      $searchResponse = Invoke-RestMethod -Uri $searchUrl -ErrorAction Stop
-                      $versions = $searchResponse.versions | ForEach-Object { [System.Version]::Parse($_) } | Sort-Object -Descending
-                      Write-Host "  Found versions with lowercase: $($versions -join ', ')"
-                      return $versions[0].ToString()
-                  }
-                  catch {
-                      Write-Warning "Failed to get latest version for $PackageId : Package may not be published to NuGet.org"
-                      return $null
-                  }
+                  Write-Warning "Failed to get latest version for $PackageId : Package may not be published to NuGet.org"
+                  return $null
               }
           }
 
