@@ -479,6 +479,8 @@ internal class ImGuiController : IDisposable
 #if !GLES && !LEGACY
 		_gl.Disable(GLEnum.PrimitiveRestart);
 		_gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
+		// Disable multisampling for pixel-perfect rendering
+		_gl.Disable(GLEnum.Multisample);
 #endif
 
 		float L = drawDataPtr.DisplayPos.X;
@@ -486,11 +488,14 @@ internal class ImGuiController : IDisposable
 		float T = drawDataPtr.DisplayPos.Y;
 		float B = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
 
+		// Use double precision for more accurate orthographic projection
+		double dL = L, dR = R, dT = T, dB = B;
+		
 		Span<float> orthoProjection = [
-				2.0f / (R - L), 0.0f, 0.0f, 0.0f,
-				0.0f, 2.0f / (T - B), 0.0f, 0.0f,
+				(float)(2.0 / (dR - dL)), 0.0f, 0.0f, 0.0f,
+				0.0f, (float)(2.0 / (dT - dB)), 0.0f, 0.0f,
 				0.0f, 0.0f, -1.0f, 0.0f,
-				(R + L) / (L - R), (T + B) / (B - T), 0.0f, 1.0f,
+				(float)((dR + dL) / (dL - dR)), (float)((dT + dB) / (dB - dT)), 0.0f, 1.0f,
 			];
 
 		_shader.UseShader();
@@ -609,8 +614,14 @@ internal class ImGuiController : IDisposable
 
 						if (clipRect.X < framebufferWidth && clipRect.Y < framebufferHeight && clipRect.Z >= 0.0f && clipRect.W >= 0.0f)
 						{
+							// Round scissor rectangle to pixel boundaries to avoid sub-pixel rendering issues
+							int scissorX = (int)Math.Floor(clipRect.X);
+							int scissorY = (int)Math.Floor(framebufferHeight - clipRect.W);
+							uint scissorWidth = (uint)Math.Ceiling(clipRect.Z - clipRect.X);
+							uint scissorHeight = (uint)Math.Ceiling(clipRect.W - clipRect.Y);
+							
 							// Apply scissor/clipping rectangle
-							_gl.Scissor((int)clipRect.X, (int)(framebufferHeight - clipRect.W), (uint)(clipRect.Z - clipRect.X), (uint)(clipRect.W - clipRect.Y));
+							_gl.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
 							_gl.CheckGlError("Scissor");
 
 							// Bind texture, Draw
@@ -732,7 +743,9 @@ internal class ImGuiController : IDisposable
 			{
 				Frag_UV = UV;
 				Frag_Color = Color;
-				gl_Position = ProjMtx * vec4(Position.xy,0,1);
+				// Round position to nearest pixel to improve line alignment
+				vec2 roundedPos = floor(Position.xy + 0.5);
+				gl_Position = ProjMtx * vec4(roundedPos, 0, 1);
 			}";
 
 		string fragmentSource =
@@ -743,7 +756,10 @@ internal class ImGuiController : IDisposable
 			layout (location = 0) out vec4 Out_Color;
 			void main()
 			{
-				Out_Color = Frag_Color * texture(Texture, Frag_UV.st);
+				// Use precise texture sampling to avoid floating point errors
+				vec2 texelSize = 1.0 / textureSize(Texture, 0);
+				vec2 adjustedUV = clamp(Frag_UV, texelSize * 0.5, 1.0 - texelSize * 0.5);
+				Out_Color = Frag_Color * texture(Texture, adjustedUV);
 			}";
 
 		_shader = new Shader(_gl, vertexSource, fragmentSource);
