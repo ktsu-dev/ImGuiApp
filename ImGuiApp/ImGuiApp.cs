@@ -1018,7 +1018,7 @@ public static partial class ImGuiApp
 		{
 			FontIndices["default"] = defaultFontIndex; // Store with "default" key for FontAppearance.DefaultFontName
 			FontIndices["Default"] = defaultFontIndex; // Store with "Default" key for FindBestFontForAppearance fallback
-			FontIndices["Default_12"] = defaultFontIndex; // Store with "Default_12" key for compatibility
+			FontIndices[$"Default_{FontAppearance.DefaultFontPointSize}"] = defaultFontIndex; // Store with "Default_12" key for compatibility
 		}
 
 		// Add ImGui default font as fallback if no custom fonts were loaded
@@ -1026,7 +1026,7 @@ public static partial class ImGuiApp
 		{
 			defaultFontIndex = fontAtlasPtr.Fonts.Size;
 			fontAtlasPtr.AddFontDefault();
-			FontIndices["Default_12"] = defaultFontIndex;
+			FontIndices[$"Default_{FontAppearance.DefaultFontPointSize}"] = defaultFontIndex;
 			FontIndices["default"] = defaultFontIndex;
 			FontIndices["Default"] = defaultFontIndex;
 		}

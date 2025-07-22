@@ -270,10 +270,7 @@ public static class FontHelper
 		{
 			for (uint c = start; c <= end; c++)
 			{
-				if (c <= ushort.MaxValue)
-				{
-					builder.AddChar(c);
-				}
+				builder.AddChar(c);
 			}
 		}
 
@@ -281,10 +278,7 @@ public static class FontHelper
 		uint[] individualOcticons = [0x2665, 0x26A1];
 		foreach (uint c in individualOcticons)
 		{
-			if (c <= ushort.MaxValue)
-			{
-				builder.AddChar(c);
-			}
+			builder.AddChar(c);
 		}
 	}
 
