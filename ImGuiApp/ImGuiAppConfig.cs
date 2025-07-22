@@ -86,6 +86,11 @@ public class ImGuiAppConfig
 	/// </summary>
 	public bool SaveIniSettings { get; init; } = true;
 
+	/// <summary>
+	/// Gets or sets the performance settings for throttled rendering.
+	/// </summary>
+	public ImGuiAppPerformanceSettings PerformanceSettings { get; init; } = new();
+
 	internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
 		{
 			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }

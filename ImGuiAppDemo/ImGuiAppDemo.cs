@@ -42,6 +42,17 @@ internal static class ImGuiAppDemo
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
 		},
+		// Example of configuring performance settings for throttled rendering
+		PerformanceSettings = new()
+		{
+			EnableThrottledRendering = true,
+			FocusedFps = 60.0,      // Full frame rate when focused
+			UnfocusedFps = 15.0,    // Reduced frame rate when unfocused
+			IdleFps = 2.0,          // Very low frame rate when idle
+			EnableIdleDetection = true,
+			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds of no input
+			DisableVSyncWhenThrottling = true
+		},
 	});
 
 	private static void OnRender(float dt)
@@ -83,6 +94,24 @@ internal static class ImGuiAppDemo
 
 		if (ImGui.BeginTabBar("DemoTabs"))
 		{
+			// Performance & Throttling tab
+			if (ImGui.BeginTabItem("Performance & Throttling"))
+			{
+				ImGui.Text("This section shows the current performance state and throttling behavior.");
+				ImGui.Separator();
+
+				ImGui.Text($"Window Focused: {ImGuiApp.IsFocused}");
+				ImGui.Text($"Application Idle: {ImGuiApp.IsIdle}");
+				ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
+
+				ImGui.Separator();
+				ImGui.Text("Throttling helps save system resources when the window is unfocused or idle.");
+				ImGui.Text("Try unfocusing the window or leaving it idle for 5 seconds to see the effect.");
+				ImGui.Text("Current FPS will be reduced to save CPU and GPU resources.");
+				
+				ImGui.EndTabItem();
+			}
+
 			if (ImGui.BeginTabItem("Basic Widgets"))
 			{
 				RenderBasicWidgetsTab();
