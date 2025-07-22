@@ -69,8 +69,20 @@ internal class Texture : IDisposable
 			_gl.GenerateTextureMipmap(GlTexture);
 		}
 
-		SetWrap(TextureCoordinate.S, TextureWrapMode.Repeat);
-		SetWrap(TextureCoordinate.T, TextureWrapMode.Repeat);
+		SetWrap(TextureCoordinate.S, TextureWrapMode.ClampToEdge);
+		SetWrap(TextureCoordinate.T, TextureWrapMode.ClampToEdge);
+
+		// Set default filtering to prevent sampling artifacts
+		if (generateMipmaps)
+		{
+			SetMinFilter(TextureMinFilter.LinearMipmapLinear);
+			SetMagFilter(TextureMagFilter.Linear);
+		}
+		else
+		{
+			SetMinFilter(TextureMinFilter.Nearest);
+			SetMagFilter(TextureMagFilter.Nearest);
+		}
 
 		uint mip = MipmapLevels - 1;
 		_gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLevel, ref mip);
