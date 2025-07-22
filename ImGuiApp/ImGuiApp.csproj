@@ -1,7 +1,6 @@
 <Project Sdk="ktsu.Sdk.Lib">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);CA5392;</NoWarn>
   </PropertyGroup>
