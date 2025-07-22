@@ -91,24 +91,6 @@ internal static class ImGuiAppDemo
 
 		if (ImGui.BeginTabBar("DemoTabs"))
 		{
-			// Performance & Throttling tab
-			if (ImGui.BeginTabItem("Performance & Throttling"))
-			{
-				ImGui.Text("This section shows the current performance state and throttling behavior.");
-				ImGui.Separator();
-
-				ImGui.Text($"Window Focused: {ImGuiApp.IsFocused}");
-				ImGui.Text($"Application Idle: {ImGuiApp.IsIdle}");
-				ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
-
-				ImGui.Separator();
-				ImGui.Text("Throttling helps save system resources when the window is unfocused or idle.");
-				ImGui.Text("Default rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS");
-				ImGui.Text("Try unfocusing the window or leaving it idle for 5 seconds to see the effect.");
-				
-				ImGui.EndTabItem();
-			}
-
 			if (ImGui.BeginTabItem("Basic Widgets"))
 			{
 				RenderBasicWidgetsTab();
@@ -136,6 +118,12 @@ internal static class ImGuiAppDemo
 			if (ImGui.BeginTabItem("Unicode & Emojis"))
 			{
 				RenderUnicodeTab();
+				ImGui.EndTabItem();
+			}
+
+			if (ImGui.BeginTabItem("Performance & Throttling"))
+			{
+				RenderPerformanceTab();
 				ImGui.EndTabItem();
 			}
 
@@ -246,6 +234,21 @@ internal static class ImGuiAppDemo
 		ImGui.Separator();
 		ImGui.TextWrapped("Note: Character display depends on your configured font's Unicode support. " +
 		                 "If characters show as question marks, your font may not include those glyphs.");
+	}
+
+	private static void RenderPerformanceTab()
+	{
+		ImGui.Text("This section shows the current performance state and throttling behavior.");
+		ImGui.Separator();
+
+		ImGui.Text($"Window Focused: {ImGuiApp.IsFocused}");
+		ImGui.Text($"Application Idle: {ImGuiApp.IsIdle}");
+		ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
+
+		ImGui.Separator();
+		ImGui.Text("Throttling helps save system resources when the window is unfocused or idle.");
+		ImGui.Text("Default rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS");
+		ImGui.Text("Try unfocusing the window or leaving it idle for 5 seconds to see the effect.");
 	}
 
 	private static void RenderAboutWindow()
