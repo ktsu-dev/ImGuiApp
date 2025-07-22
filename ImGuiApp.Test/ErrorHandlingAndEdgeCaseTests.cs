@@ -26,9 +26,12 @@ public class ErrorHandlingAndEdgeCaseTests
 	#region ImGuiFontConfig Error Handling
 
 	[TestMethod]
-	public void ImGuiFontConfig_Constructor_EmptyPath_ThrowsArgumentException()
+	public void ImGuiFontConfig_Constructor_EmptyPath_DoesNotThrow()
 	{
-		Assert.ThrowsException<ArgumentNullException>(() => new ImGuiFontConfig("", 16));
+		// Empty string is a valid font path, should not throw
+		ImGuiFontConfig config = new("", 16);
+		Assert.AreEqual("", config.FontPath);
+		Assert.AreEqual(16, config.FontSize);
 	}
 
 	[TestMethod]
