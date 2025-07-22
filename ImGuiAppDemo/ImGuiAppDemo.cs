@@ -865,9 +865,9 @@ internal static class ImGuiAppDemo
 			ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
 
 			ImGui.Separator();
-			ImGui.TextWrapped("Throttling helps save system resources when the window is unfocused, idle, or not visible.");
-			ImGui.Text("Default rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=0.1 FPS");
-			ImGui.TextWrapped("Try unfocusing the window, leaving it idle for 5 seconds, or minimizing it to see the effect.");
+			ImGui.TextWrapped("Throttling evaluates all conditions and uses the lowest frame rate to save maximum resources.");
+			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=0.1 FPS");
+			ImGui.TextWrapped("The system automatically selects the lowest applicable rate. Try combining conditions (e.g., unfocused + idle, or minimized) to see the effect.");
 
 			ImGui.EndTabItem();
 		}

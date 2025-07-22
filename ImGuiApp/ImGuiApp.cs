@@ -310,29 +310,35 @@ public static partial class ImGuiApp
 		double currentFps = window!.FramesPerSecond;
 		double currentUps = window.UpdatesPerSecond;
 
-		// Determine required FPS and UPS based on visibility, focus and idle state
-		double requiredFps, requiredUps;
-		if (!IsVisible)
+		// Evaluate all throttling conditions and use the lowest frame rate
+		var candidateRates = new List<(double fps, double ups, string reason)>();
+
+		// Always include the base rate based on focus
+		if (IsFocused)
 		{
-			// Window is not visible (minimized, etc.) - drop to lowest possible frame rate to save maximum resources
-			requiredFps = 0.1; // 1 frame every 10 seconds
-			requiredUps = 0.1; // 1 update every 10 seconds
-		}
-		else if (IsIdle && settings.EnableIdleDetection)
-		{
-			requiredFps = settings.IdleFps;
-			requiredUps = settings.IdleUps;
-		}
-		else if (IsFocused)
-		{
-			requiredFps = settings.FocusedFps;
-			requiredUps = settings.FocusedUps;
+			candidateRates.Add((settings.FocusedFps, settings.FocusedUps, "focused"));
 		}
 		else
 		{
-			requiredFps = settings.UnfocusedFps;
-			requiredUps = settings.UnfocusedUps;
+			candidateRates.Add((settings.UnfocusedFps, settings.UnfocusedUps, "unfocused"));
 		}
+
+		// Add idle rate if applicable
+		if (IsIdle && settings.EnableIdleDetection)
+		{
+			candidateRates.Add((settings.IdleFps, settings.IdleUps, "idle"));
+		}
+
+		// Add not visible rate if applicable
+		if (!IsVisible)
+		{
+			candidateRates.Add((0.1, 0.1, "not visible")); // 1 frame every 10 seconds
+		}
+
+		// Select the lowest frame rate and update rate
+		var selectedRate = candidateRates.OrderBy(r => r.fps).ThenBy(r => r.ups).First();
+		double requiredFps = selectedRate.fps;
+		double requiredUps = selectedRate.ups;
 
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
