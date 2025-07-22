@@ -165,10 +165,6 @@ internal static class ImGuiAppDemo
 		// Create tabs for different demo sections
 		if (ImGui.BeginTabBar("DemoTabs", ImGuiTabBarFlags.None))
 		{
-<<<<<<< HEAD
-=======
-			RenderPerformanceTab();
->>>>>>> origin/main
 			RenderBasicWidgetsTab();
 			RenderAdvancedWidgetsTab();
 			RenderLayoutTab();
@@ -176,41 +172,13 @@ internal static class ImGuiAppDemo
 			RenderDataVisualizationTab();
 			RenderInputHandlingTab();
 			RenderAnimationTab();
-<<<<<<< HEAD
 			RenderUnicodeTab();
 			RenderUtilityTab();
 			RenderPerformanceTab();
-=======
-			RenderUtilityTab();
->>>>>>> origin/main
-
 			ImGui.EndTabBar();
 		}
 	}
 
-<<<<<<< HEAD
-=======
-	private static void RenderPerformanceTab()
-	{
-		if (ImGui.BeginTabItem("Performance & Throttling"))
-		{
-			ImGui.TextWrapped("This tab shows the current performance state and throttling behavior.");
-			ImGui.Separator();
-
-			ImGui.Text($"Window Focused: {ImGuiApp.IsFocused}");
-			ImGui.Text($"Application Idle: {ImGuiApp.IsIdle}");
-			ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
-
-			ImGui.Separator();
-			ImGui.TextWrapped("Throttling helps save system resources when the window is unfocused or idle.");
-			ImGui.TextWrapped("Default rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS");
-			ImGui.TextWrapped("Try unfocusing the window or leaving it idle for 5 seconds to see the effect.");
-
-			ImGui.EndTabItem();
-		}
-	}
-
->>>>>>> origin/main
 	private static void RenderBasicWidgetsTab()
 	{
 		if (ImGui.BeginTabItem("Basic Widgets"))
@@ -760,7 +728,6 @@ internal static class ImGuiAppDemo
 		}
 	}
 
-<<<<<<< HEAD
 	private static void RenderUnicodeTab()
 	{
 		if (ImGui.BeginTabItem("Unicode & Emojis"))
@@ -768,7 +735,7 @@ internal static class ImGuiAppDemo
 			ImGui.TextWrapped("Unicode and Emoji Support (Enabled by Default)");
 			ImGui.TextWrapped("ImGuiApp automatically includes support for Unicode characters and emojis. This feature works with your configured fonts.");
 			ImGui.Separator();
-			
+
 			ImGui.Text("Basic ASCII: Hello World!");
 			ImGui.Text("Accented characters: café, naïve, résumé");
 			ImGui.Text("Mathematical symbols: ∞ ≠ ≈ ≤ ≥ ± × ÷ ∂ ∑ ∏ √ ∫");
@@ -776,7 +743,7 @@ internal static class ImGuiAppDemo
 			ImGui.Text("Arrows: ← → ↑ ↓ ↔ ↕ ⇐ ⇒ ⇑ ⇓");
 			ImGui.Text("Geometric shapes: ■ □ ▲ △ ● ○ ◆ ◇ ★ ☆");
 			ImGui.Text("Miscellaneous symbols: ♠ ♣ ♥ ♦ ☀ ☁ ☂ ☃ ♪ ♫");
-			
+
 			ImGui.Separator();
 			ImGui.Text("Emojis (if font supports them):");
 			ImGui.Text("Faces: 😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇");
@@ -784,11 +751,11 @@ internal static class ImGuiAppDemo
 			ImGui.Text("Nature: 🌈 🌞 🌙 ⭐ 🌍 🌊 🌳 🌸 🦋 🐝");
 			ImGui.Text("Food: 🍎 🍌 🍕 🍔 🍟 🍦 🎂 ☕ 🍺 🍷");
 			ImGui.Text("Transport: 🚗 🚂 ✈️ 🚲 🚢 🚁 🚌 🏍️ 🛸");
-			
+
 			ImGui.Separator();
 			ImGui.TextWrapped("Note: Character display depends on your configured font's Unicode support. " +
-			                 "If characters show as question marks, your font may not include those glyphs.");
-			
+							 "If characters show as question marks, your font may not include those glyphs.");
+
 			ImGui.Separator();
 			ImGui.TextWrapped("To disable Unicode support (ASCII only), set EnableUnicodeSupport = false in your ImGuiAppConfig.");
 
@@ -816,8 +783,6 @@ internal static class ImGuiAppDemo
 		}
 	}
 
-=======
->>>>>>> origin/main
 	private static void RenderModalAndPopups()
 	{
 		// Modal dialog
