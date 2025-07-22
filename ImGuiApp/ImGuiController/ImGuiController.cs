@@ -510,7 +510,7 @@ internal class ImGuiController : IDisposable
 
 		// Use double precision for more accurate orthographic projection
 		double dL = L, dR = R, dT = T, dB = B;
-		
+
 		Span<float> orthoProjection = [
 				(float)(2.0 / (dR - dL)), 0.0f, 0.0f, 0.0f,
 				0.0f, (float)(2.0 / (dT - dB)), 0.0f, 0.0f,
@@ -639,7 +639,7 @@ internal class ImGuiController : IDisposable
 							int scissorY = (int)Math.Floor(framebufferHeight - clipRect.W);
 							uint scissorWidth = (uint)Math.Ceiling(clipRect.Z - clipRect.X);
 							uint scissorHeight = (uint)Math.Ceiling(clipRect.W - clipRect.Y);
-							
+
 							// Apply scissor/clipping rectangle
 							_gl.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
 							_gl.CheckGlError("Scissor");
