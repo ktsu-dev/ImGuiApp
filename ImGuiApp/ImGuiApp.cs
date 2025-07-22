@@ -310,9 +310,15 @@ public static partial class ImGuiApp
 		double currentFps = window!.FramesPerSecond;
 		double currentUps = window.UpdatesPerSecond;
 
-		// Determine required FPS and UPS based on focus and idle state
+		// Determine required FPS and UPS based on visibility, focus and idle state
 		double requiredFps, requiredUps;
-		if (IsIdle && settings.EnableIdleDetection)
+		if (!IsVisible)
+		{
+			// Window is not visible (minimized, etc.) - drop to 1 Hz to save maximum resources
+			requiredFps = 1.0;
+			requiredUps = 1.0;
+		}
+		else if (IsIdle && settings.EnableIdleDetection)
 		{
 			requiredFps = settings.IdleFps;
 			requiredUps = settings.IdleUps;
