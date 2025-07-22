@@ -20,7 +20,27 @@ public static class FontHelper
 	private static readonly List<GCHandle> customFontHandles = [];
 
 	/// <summary>
-	/// Cleans up all pinned memory handles for custom fonts.
+	/// Stores the extended Unicode glyph ranges to prevent memory deallocation.
+	/// </summary>
+	private static ImVector<uint> extendedUnicodeRanges;
+
+	/// <summary>
+	/// Stores the emoji glyph ranges to prevent memory deallocation.
+	/// </summary>
+	private static ImVector<uint> emojiRanges;
+
+	/// <summary>
+	/// Tracks whether the extended Unicode ranges have been initialized.
+	/// </summary>
+	private static bool extendedUnicodeRangesInitialized;
+
+	/// <summary>
+	/// Tracks whether the emoji ranges have been initialized.
+	/// </summary>
+	private static bool emojiRangesInitialized;
+
+	/// <summary>
+	/// Cleans up all pinned memory handles for custom fonts and glyph ranges.
 	/// This should be called when shutting down the application.
 	/// </summary>
 	public static void CleanupCustomFonts()
@@ -40,6 +60,21 @@ public static class FontHelper
 			}
 		}
 		customFontHandles.Clear();
+
+		// Reset glyph ranges
+		CleanupGlyphRanges();
+	}
+
+	/// <summary>
+	/// Cleans up the cached glyph ranges and resets initialization flags.
+	/// This allows the ranges to be rebuilt if needed after cleanup.
+	/// </summary>
+	public static void CleanupGlyphRanges()
+	{
+		extendedUnicodeRangesInitialized = false;
+		emojiRangesInitialized = false;
+		// Note: ImVector<uint> instances are value types managed by ImGui
+		// and will be properly cleaned up when reassigned
 	}
 
 	/// <summary>
@@ -51,24 +86,33 @@ public static class FontHelper
 	/// <returns>Pointer to the extended Unicode glyph ranges for main fonts.</returns>
 	public static unsafe uint* GetExtendedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
 	{
-		ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
+		// Only build ranges once and store them to prevent memory deallocation
+		if (!extendedUnicodeRangesInitialized)
+		{
+			ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
 
-		// Add default ranges (ASCII)
-		builder.AddRanges(fontAtlasPtr.GetGlyphRangesDefault());
+			// Add default ranges (ASCII)
+			builder.AddRanges(fontAtlasPtr.GetGlyphRangesDefault());
 
-		// Add Latin Extended ranges
-		AddLatinExtendedRanges(builder);
+			// Add Latin Extended ranges
+			AddLatinExtendedRanges(builder);
 
-		// Add common Unicode symbol blocks
-		AddSymbolRanges(builder);
+			// Add common Unicode symbol blocks
+			AddSymbolRanges(builder);
 
-		// Add Nerd Font icon ranges
-		AddNerdFontRanges(builder);
+			// Add Nerd Font icon ranges
+			AddNerdFontRanges(builder);
 
-		// Build the ranges
-		ImVector<uint> ranges = new();
-		builder.BuildRanges(&ranges);
-		return ranges.Data;
+			// Build the ranges and store them in the static field
+			extendedUnicodeRanges = new ImVector<uint>();
+			fixed (ImVector<uint>* rangesPtr = &extendedUnicodeRanges)
+			{
+				builder.BuildRanges(rangesPtr);
+			}
+			extendedUnicodeRangesInitialized = true;
+		}
+
+		return extendedUnicodeRanges.Data;
 	}
 
 	/// <summary>
@@ -115,15 +159,24 @@ public static class FontHelper
 	/// <returns>Pointer to the emoji glyph ranges.</returns>
 	public static unsafe uint* GetEmojiRanges()
 	{
-		ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
+		// Only build ranges once and store them to prevent memory deallocation
+		if (!emojiRangesInitialized)
+		{
+			ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
 
-		// Add emoji-specific ranges
-		AddEmojiRanges(builder);
+			// Add emoji-specific ranges
+			AddEmojiRanges(builder);
 
-		// Build the ranges
-		ImVector<uint> ranges = new();
-		builder.BuildRanges(&ranges);
-		return ranges.Data;
+			// Build the ranges and store them in the static field
+			emojiRanges = new ImVector<uint>();
+			fixed (ImVector<uint>* rangesPtr = &emojiRanges)
+			{
+				builder.BuildRanges(rangesPtr);
+			}
+			emojiRangesInitialized = true;
+		}
+
+		return emojiRanges.Data;
 	}
 
 	/// <summary>
