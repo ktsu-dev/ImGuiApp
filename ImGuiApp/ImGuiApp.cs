@@ -129,6 +129,7 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
+	private static DateTime lastPerformanceUpdate = DateTime.MinValue;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -328,16 +329,26 @@ public static partial class ImGuiApp
 			requiredUps = settings.UnfocusedUps;
 		}
 
-		// Update frame rate if needed
-		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
+		// Update frame rate and update rate together to prevent desynchronization
+		bool fpsNeedsUpdate = Math.Abs(currentFps - requiredFps) > 0.1;
+		bool upsNeedsUpdate = Math.Abs(currentUps - requiredUps) > 0.1;
+		
+		if (fpsNeedsUpdate || upsNeedsUpdate)
 		{
-			window.FramesPerSecond = requiredFps;
-		}
-
-		// Update update rate if needed
-		if (Math.Abs(currentUps - requiredUps) > 0.1) // Use small epsilon for comparison
-		{
-			window.UpdatesPerSecond = requiredUps;
+			try
+			{
+				// Always update both together to keep them synchronized
+				// Use a small delay to avoid changing rates during active rendering
+				window.FramesPerSecond = requiredFps;
+				window.UpdatesPerSecond = requiredUps;
+				
+				DebugLogger.Log($"Performance updated: FPS={requiredFps}, UPS={requiredUps}, Focused={IsFocused}, Idle={IsIdle}");
+			}
+			catch (Exception ex)
+			{
+				DebugLogger.Log($"Error updating performance: {ex.Message}");
+				// Don't rethrow - continue with current rates
+			}
 		}
 	}
 
@@ -351,7 +362,14 @@ public static partial class ImGuiApp
 			}
 
 			EnsureWindowPositionIsValid();
-			UpdateWindowPerformance();
+			
+			// Only update performance occasionally to avoid mid-cycle changes
+			var timeSinceLastUpdate = DateTime.UtcNow - lastPerformanceUpdate;
+			if (timeSinceLastUpdate.TotalSeconds > 0.5) // Update at most every 500ms
+			{
+				UpdateWindowPerformance();
+				lastPerformanceUpdate = DateTime.UtcNow;
+			}
 
 			controller?.Update((float)delta);
 			config.OnUpdate?.Invoke((float)delta);
@@ -500,7 +518,13 @@ public static partial class ImGuiApp
 		SetupWindowRenderHandler(config);
 		SetupWindowClosingHandler();
 
-		window!.FocusChanged += (focused) => IsFocused = focused;
+		window!.FocusChanged += (focused) => 
+		{
+			IsFocused = focused;
+			// Force immediate performance update when focus changes
+			lastPerformanceUpdate = DateTime.MinValue;
+			DebugLogger.Log($"Focus changed: {focused}");
+		};
 
 		if (!config.TestMode)
 		{
@@ -1187,6 +1211,7 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
+		lastPerformanceUpdate = DateTime.MinValue;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
