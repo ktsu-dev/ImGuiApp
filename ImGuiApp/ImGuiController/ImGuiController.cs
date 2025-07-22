@@ -637,8 +637,8 @@ internal class ImGuiController : IDisposable
 							// Round scissor rectangle to pixel boundaries to avoid sub-pixel rendering issues
 							int scissorX = (int)Math.Floor(clipRect.X);
 							int scissorY = (int)Math.Floor(framebufferHeight - clipRect.W);
-							uint scissorWidth = (uint)Math.Ceiling(clipRect.Z - clipRect.X);
-							uint scissorHeight = (uint)Math.Ceiling(clipRect.W - clipRect.Y);
+							uint scissorWidth = (uint)Math.Max(0, Math.Ceiling(clipRect.Z - clipRect.X));
+							uint scissorHeight = (uint)Math.Max(0, Math.Ceiling(clipRect.W - clipRect.Y));
 
 							// Apply scissor/clipping rectangle
 							_gl.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
