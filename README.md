@@ -365,7 +365,7 @@ This feature automatically:
 - Uses sleep-based timing to precisely control frame rate when unfocused or idle
 - Saves CPU and GPU resources without affecting user experience
 - Provides smooth transitions between different performance states
-- Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle
+- Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle, 0.2 FPS not visible
 
 ### `FontAppearance` Class
 

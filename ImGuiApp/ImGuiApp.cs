@@ -332,7 +332,7 @@ public static partial class ImGuiApp
 		// Add not visible rate if applicable
 		if (!IsVisible)
 		{
-			candidateRates.Add((0.1, "Not Visible"));
+			candidateRates.Add((0.2, "Not Visible"));
 		}
 
 		// Select the lowest frame rate
