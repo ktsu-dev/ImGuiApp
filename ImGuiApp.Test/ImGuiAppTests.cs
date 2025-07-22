@@ -323,4 +323,23 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
 		Assert.IsTrue(settings.DisableVSyncWhenThrottling);
 	}
+
+	[TestMethod]
+	public void PerformanceSettings_VsyncConfiguration_WorksCorrectly()
+	{
+		// Arrange & Act - Test VSync disable setting
+		ImGuiAppPerformanceSettings settingsWithVSyncDisabled = new()
+		{
+			DisableVSyncWhenThrottling = true
+		};
+
+		ImGuiAppPerformanceSettings settingsWithVSyncEnabled = new()
+		{
+			DisableVSyncWhenThrottling = false
+		};
+
+		// Assert
+		Assert.IsTrue(settingsWithVSyncDisabled.DisableVSyncWhenThrottling);
+		Assert.IsFalse(settingsWithVSyncEnabled.DisableVSyncWhenThrottling);
+	}
 }

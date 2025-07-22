@@ -324,10 +324,18 @@ public static partial class ImGuiApp
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
 		{
-			if (settings.DisableVSyncWhenThrottling && requiredFps < settings.FocusedFps)
+			// Manage VSync based on throttling settings
+			if (settings.DisableVSyncWhenThrottling)
 			{
+				// Disable VSync when setting a custom frame rate for throttling
 				window.VSync = false;
 			}
+			else
+			{
+				// Re-enable VSync if throttling VSync disable is turned off
+				window.VSync = true;
+			}
+
 			window.FramesPerSecond = requiredFps;
 		}
 
