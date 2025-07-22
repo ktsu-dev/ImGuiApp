@@ -997,7 +997,7 @@ public static partial class ImGuiApp
 				}
 
 				// Prioritize DefaultFonts over custom Fonts for setting the default font
-				if (size == 12)
+				if (size == FontAppearance.DefaultFontPointSize)
 				{
 					// If this is from DefaultFonts, use it as the default font
 					if (Config.DefaultFonts.ContainsKey(name))
