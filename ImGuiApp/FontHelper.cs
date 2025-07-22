@@ -17,6 +17,34 @@ using ktsu.ImGuiApp.ImGuiController;
 public static class FontHelper
 {
 	/// <summary>
+	/// Stores GCHandle instances for custom fonts to prevent memory leaks.
+	/// </summary>
+	private static readonly List<GCHandle> customFontHandles = [];
+
+	/// <summary>
+	/// Cleans up all pinned memory handles for custom fonts.
+	/// This should be called when shutting down the application.
+	/// </summary>
+	public static void CleanupCustomFonts()
+	{
+		foreach (GCHandle handle in customFontHandles)
+		{
+			try
+			{
+				if (handle.IsAllocated)
+				{
+					handle.Free();
+				}
+			}
+			catch (InvalidOperationException)
+			{
+				// Handle was already freed, ignore
+			}
+		}
+		customFontHandles.Clear();
+	}
+
+	/// <summary>
 	/// Enables extended Unicode support for the current ImGui font configuration.
 	/// This works with whatever fonts the user has already configured.
 	/// Note: The font must support the Unicode characters you want to display.
@@ -123,6 +151,8 @@ public static class FontHelper
 	/// <summary>
 	/// Adds a custom font with specific glyph ranges to the ImGui font atlas.
 	/// This allows you to load fonts with exactly the character ranges you need.
+	/// The font data is pinned in memory and tracked for proper cleanup.
+	/// Call <see cref="CleanupCustomFonts"/> when shutting down to prevent memory leaks.
 	/// </summary>
 	/// <param name="io">The ImGui IO pointer.</param>
 	/// <param name="fontData">The font data as a byte array.</param>
@@ -132,10 +162,11 @@ public static class FontHelper
 	/// <returns>The ImFont pointer for the added font, or null if failed.</returns>
 	public static unsafe ImFontPtr? AddCustomFont(ImGuiIOPtr io, byte[] fontData, float fontSize, uint* glyphRanges = null, bool mergeWithPrevious = false)
 	{
+		GCHandle fontHandle = default;
 		try
 		{
 			// Pin the font data in memory
-			var fontHandle = GCHandle.Alloc(fontData, GCHandleType.Pinned);
+			fontHandle = GCHandle.Alloc(fontData, GCHandleType.Pinned);
 			var fontPtr = fontHandle.AddrOfPinnedObject();
 
 			// Create font configuration
@@ -150,13 +181,26 @@ public static class FontHelper
 			// Add font to atlas
 			var font = io.Fonts.AddFontFromMemoryTTF((void*)fontPtr, fontData.Length, fontSize, fontConfig, ranges);
 			
-			// Store the handle for cleanup (you should implement proper cleanup in your app)
-			// fontHandle should be freed when the application shuts down
+			if (font.IsNull())
+			{
+				// Font addition failed, free the handle immediately
+				fontHandle.Free();
+				return null;
+			}
+			
+			// Store the handle for proper cleanup to prevent memory leaks
+			customFontHandles.Add(fontHandle);
 			
 			return font;
 		}
 		catch (Exception ex)
 		{
+			// Free the handle if it was allocated
+			if (fontHandle.IsAllocated)
+			{
+				fontHandle.Free();
+			}
+			
 			ImGuiApp.DebugLogger.Log($"FontHelper.AddCustomFont failed: {ex.Message}");
 			return null;
 		}

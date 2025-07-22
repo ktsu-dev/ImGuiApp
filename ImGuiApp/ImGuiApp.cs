@@ -408,6 +408,7 @@ public static partial class ImGuiApp
 		window!.Closing += () =>
 		{
 			CleanupPinnedFontData();
+			FontHelper.CleanupCustomFonts();
 			CleanupController();
 			CleanupInputContext();
 			CleanupOpenGL();
