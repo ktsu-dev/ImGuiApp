@@ -865,6 +865,19 @@ internal static class ImGuiAppDemo
 			ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
 
 			ImGui.Separator();
+			ImGui.TextColored(new(1.0f, 1.0f, 0.0f, 1.0f), "Focus Detection Debug:");
+			ImGui.Text($"Event Focus: {ImGuiApp.EventFocused}");
+			ImGui.Text($"Direct Focus: {ImGuiApp.DirectFocused}");
+			ImGui.Text($"Using Focus: {ImGuiApp.ActuallyFocused}");
+
+			ImGui.Separator();
+			ImGui.TextColored(new(1.0f, 1.0f, 0.0f, 1.0f), "Throttling Debug:");
+			ImGui.Text($"Actual FPS: {ImGuiApp.ActualFps:F1}");
+			ImGui.Text($"Required FPS: {ImGuiApp.RequiredFps:F1}");
+			ImGui.Text($"Selected Reason: {ImGuiApp.SelectedThrottlingReason}");
+			ImGui.Text($"Candidates: {ImGuiApp.ThrottlingCandidates}");
+
+			ImGui.Separator();
 			ImGui.TextWrapped("Throttling evaluates all conditions and uses the lowest frame rate to save maximum resources.");
 			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=0.1 FPS");
 			ImGui.TextWrapped("The system automatically selects the lowest applicable rate. Try combining conditions (e.g., unfocused + idle, or minimized) to see the effect.");
