@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
@@ -129,6 +130,8 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
+	private static DateTime lastFrameTime = DateTime.UtcNow;
+	private static double targetFrameTimeMs = 1000.0 / 30.0; // Default to 30 FPS (33.33ms per frame)
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -307,51 +310,39 @@ public static partial class ImGuiApp
 			IsIdle = false;
 		}
 
-		double currentFps = window!.FramesPerSecond;
-		double currentUps = window.UpdatesPerSecond;
-
-		// Evaluate all throttling conditions and select the lowest rates
-		List<(double fps, double ups, string reason)> candidateRates = [];
+		// Evaluate all throttling conditions and select the lowest frame rate
+		List<(double fps, string reason)> candidateRates = [];
 
 		// Add focused/unfocused rate
 		if (IsFocused)
 		{
-			candidateRates.Add((settings.FocusedFps, settings.FocusedUps, "Focused"));
+			candidateRates.Add((settings.FocusedFps, "Focused"));
 		}
 		else
 		{
-			candidateRates.Add((settings.UnfocusedFps, settings.UnfocusedUps, "Unfocused"));
+			candidateRates.Add((settings.UnfocusedFps, "Unfocused"));
 		}
 
 		// Add idle rate if applicable
 		if (IsIdle && settings.EnableIdleDetection)
 		{
-			candidateRates.Add((settings.IdleFps, settings.IdleUps, "Idle"));
+			candidateRates.Add((settings.IdleFps, "Idle"));
 		}
 
 		// Add not visible rate if applicable
 		if (!IsVisible)
 		{
-			candidateRates.Add((0.1, 0.1, "Not Visible"));
+			candidateRates.Add((0.1, "Not Visible"));
 		}
 
-		// Select the lowest rates
-		(double requiredFps, double requiredUps, string _) = candidateRates
+		// Select the lowest frame rate
+		(double targetFps, string _) = candidateRates
 			.OrderBy(rate => rate.fps)
-			.ThenBy(rate => rate.ups)
 			.First();
 
-		// Update frame rate if needed
-		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
-		{
-			window.FramesPerSecond = requiredFps;
-		}
-
-		// Update update rate if needed
-		if (Math.Abs(currentUps - requiredUps) > 0.1) // Use small epsilon for comparison
-		{
-			window.UpdatesPerSecond = requiredUps;
-		}
+		// Update target frame time (convert FPS to milliseconds per frame)
+		double newTargetFrameTimeMs = targetFps > 0 ? (1000.0 / targetFps) : 10000.0; // Cap at 10 seconds for very low FPS
+		targetFrameTimeMs = newTargetFrameTimeMs;
 	}
 
 	private static void SetupWindowUpdateHandler(ImGuiAppConfig config)
@@ -391,7 +382,27 @@ public static partial class ImGuiApp
 			});
 
 			controller?.Render();
+
+			// Apply sleep-based frame rate limiting
+			ApplyFrameRateLimit();
 		};
+	}
+
+	private static void ApplyFrameRateLimit()
+	{
+		DateTime currentTime = DateTime.UtcNow;
+		double elapsedMs = (currentTime - lastFrameTime).TotalMilliseconds;
+
+		if (elapsedMs < targetFrameTimeMs)
+		{
+			double sleepTimeMs = targetFrameTimeMs - elapsedMs;
+			if (sleepTimeMs > 0)
+			{
+				Thread.Sleep((int)Math.Ceiling(sleepTimeMs));
+			}
+		}
+
+		lastFrameTime = DateTime.UtcNow;
 	}
 
 	private static void RenderWithScaling(Action renderAction)
@@ -1200,6 +1211,8 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
+		lastFrameTime = DateTime.UtcNow;
+		targetFrameTimeMs = 1000.0 / 30.0;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;

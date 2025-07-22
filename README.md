@@ -16,7 +16,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Simple API**: Create ImGui applications with minimal boilerplate code
 - **Full Integration**: Seamless integration with Silk.NET for OpenGL and input handling
 - **Window Management**: Automatic window state, rendering, and input handling
-- **Performance Optimization**: Configurable throttled rendering when unfocused or idle to save system resources
+- **Performance Optimization**: Sleep-based throttled rendering when unfocused or idle to save system resources
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
 - **Font Management**: Flexible font loading system with customization options
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
@@ -327,7 +327,7 @@ Configuration for the ImGui application.
 
 ### `ImGuiAppPerformanceSettings` Class
 
-Configuration for performance optimization and throttled rendering to save system resources when the application is unfocused or idle.
+Configuration for performance optimization and throttled rendering using sleep-based timing to save system resources when the application is unfocused or idle.
 
 #### Properties
 
@@ -335,14 +335,10 @@ Configuration for performance optimization and throttled rendering to save syste
 |------|------|---------|-------------|
 | `EnableThrottledRendering` | `bool` | `true` | Enables/disables throttled rendering feature |
 | `FocusedFps` | `double` | `30.0` | Target frame rate when the window is focused and active |
-| `FocusedUps` | `double` | `30.0` | Target update rate when the window is focused and active |
 | `UnfocusedFps` | `double` | `5.0` | Target frame rate when the window is unfocused |
-| `UnfocusedUps` | `double` | `5.0` | Target update rate when the window is unfocused |
 | `IdleFps` | `double` | `10.0` | Target frame rate when the application is idle (no user input) |
-| `IdleUps` | `double` | `10.0` | Target update rate when the application is idle (no user input) |
 | `EnableIdleDetection` | `bool` | `true` | Enables/disables idle detection based on user input |
 | `IdleTimeoutSeconds` | `double` | `30.0` | Time in seconds without user input before considering the app idle |
-| `DisableVSyncWhenThrottling` | `bool` | `true` | Whether to disable VSync when setting custom frame rates for precise control. When false, VSync remains enabled. |
 
 #### Example Usage
 
@@ -358,8 +354,7 @@ ImGuiApp.Start(new ImGuiAppConfig
         UnfocusedFps = 15.0,         // Custom rate when unfocused
         IdleFps = 2.0,               // Custom very low rate when idle
         EnableIdleDetection = true,
-        IdleTimeoutSeconds = 10.0,   // Custom idle timeout
-        DisableVSyncWhenThrottling = true
+        IdleTimeoutSeconds = 10.0    // Custom idle timeout
     }
 });
 ```
@@ -367,7 +362,7 @@ ImGuiApp.Start(new ImGuiAppConfig
 This feature automatically:
 - Detects when the window loses/gains focus
 - Tracks user input (keyboard, mouse movement, clicks, scrolling)
-- Reduces frame rate and update rate when unfocused or idle
+- Uses sleep-based timing to precisely control frame rate when unfocused or idle
 - Saves CPU and GPU resources without affecting user experience
 - Provides smooth transitions between different performance states
 - Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle
