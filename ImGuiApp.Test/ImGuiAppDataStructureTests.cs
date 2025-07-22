@@ -9,17 +9,20 @@ using System.Numerics;
 using Silk.NET.Windowing;
 using ktsu.StrongPaths;
 using ktsu.Extensions;
-using System.Reflection;
-using ktsu.ImGuiApp.ImGuiController;
 
+/// <summary>
+/// Tests for ImGuiApp data structures including texture info, window state, configuration, and performance settings.
+/// </summary>
 [TestClass]
-public class AdditionalCoverageTests
+public class ImGuiAppDataStructureTests
 {
 	[TestInitialize]
 	public void Setup()
 	{
 		ImGuiApp.Reset();
 	}
+
+	#region ImGuiAppTextureInfo Tests
 
 	[TestMethod]
 	public void ImGuiAppTextureInfo_DefaultConstructor_InitializesCorrectly()
@@ -50,6 +53,18 @@ public class AdditionalCoverageTests
 	}
 
 	[TestMethod]
+	public void ImGuiAppTextureInfo_IsPublicClass()
+	{
+		Type textureInfoType = typeof(ImGuiAppTextureInfo);
+		Assert.IsTrue(textureInfoType.IsClass);
+		Assert.IsTrue(textureInfoType.IsPublic);
+	}
+
+	#endregion
+
+	#region ImGuiAppWindowState Tests
+
+	[TestMethod]
 	public void ImGuiAppWindowState_DefaultConstructor_HasCorrectDefaults()
 	{
 		ImGuiAppWindowState windowState = new();
@@ -74,6 +89,18 @@ public class AdditionalCoverageTests
 		Assert.AreEqual(testPos, windowState.Pos);
 		Assert.AreEqual(WindowState.Maximized, windowState.LayoutState);
 	}
+
+	[TestMethod]
+	public void ImGuiAppWindowState_IsPublicClass()
+	{
+		Type windowStateType = typeof(ImGuiAppWindowState);
+		Assert.IsTrue(windowStateType.IsClass);
+		Assert.IsTrue(windowStateType.IsPublic);
+	}
+
+	#endregion
+
+	#region ImGuiAppConfig Tests
 
 	[TestMethod]
 	public void ImGuiAppConfig_DefaultConstructor_InitializesAllProperties()
@@ -127,60 +154,23 @@ public class AdditionalCoverageTests
 	[TestMethod]
 	public void ImGuiAppConfig_EmojiFont_ReturnsValue()
 	{
-		// This tests the static EmojiFont property
 		byte[]? emojiFont = ImGuiAppConfig.EmojiFont;
 
 		// The font may or may not be available depending on the build configuration
-		// We just test that the property can be accessed without throwing
 		Assert.IsTrue(emojiFont is null || emojiFont.Length > 0);
 	}
 
 	[TestMethod]
-	public void FontAppearance_Constants_HaveExpectedValues()
+	public void ImGuiAppConfig_IsPublicClass()
 	{
-		// Test internal constants via reflection
-		FieldInfo? defaultFontName = typeof(FontAppearance)
-			.GetField("DefaultFontName", BindingFlags.NonPublic | BindingFlags.Static);
-		FieldInfo? defaultFontPointSize = typeof(FontAppearance)
-			.GetField("DefaultFontPointSize", BindingFlags.NonPublic | BindingFlags.Static);
-
-		Assert.IsNotNull(defaultFontName);
-		Assert.IsNotNull(defaultFontPointSize);
-		Assert.AreEqual("default", defaultFontName.GetValue(null));
-		Assert.AreEqual(14, defaultFontPointSize.GetValue(null));
+		Type configType = typeof(ImGuiAppConfig);
+		Assert.IsTrue(configType.IsClass);
+		Assert.IsTrue(configType.IsPublic);
 	}
 
-	[TestMethod]
-	public void GdiPlusHelper_IsStaticClass()
-	{
-		Type gdiPlusHelperType = typeof(GdiPlusHelper);
+	#endregion
 
-		// Verify it's a static class (abstract and sealed)
-		Assert.IsTrue(gdiPlusHelperType.IsAbstract && gdiPlusHelperType.IsSealed);
-	}
-
-	[TestMethod]
-	public void NativeMethods_IsStaticClass()
-	{
-		Type nativeMethodsType = typeof(NativeMethods);
-
-		// Verify it's a static class (abstract and sealed)
-		Assert.IsTrue(nativeMethodsType.IsAbstract && nativeMethodsType.IsSealed);
-	}
-
-	[TestMethod]
-	public void UIScaler_InheritsScopedAction()
-	{
-		// Verify UIScaler inherits from ScopedAction
-		Assert.IsTrue(typeof(UIScaler).IsSubclassOf(typeof(ktsu.ScopedAction.ScopedAction)));
-	}
-
-	[TestMethod]
-	public void FontAppearance_InheritsScopedAction()
-	{
-		// Verify FontAppearance inherits from ScopedAction
-		Assert.IsTrue(typeof(FontAppearance).IsSubclassOf(typeof(ktsu.ScopedAction.ScopedAction)));
-	}
+	#region ImGuiAppPerformanceSettings Tests
 
 	[TestMethod]
 	public void ImGuiAppPerformanceSettings_DefaultValues_AreCorrect()
@@ -223,50 +213,12 @@ public class AdditionalCoverageTests
 	}
 
 	[TestMethod]
-	public void ImGuiApp_OnUserInput_DoesNotThrow()
+	public void ImGuiAppPerformanceSettings_IsPublicClass()
 	{
-		// This method should be safe to call
-		ImGuiApp.OnUserInput();
-		Assert.IsTrue(true); // If we get here, it didn't throw
+		Type settingsType = typeof(ImGuiAppPerformanceSettings);
+		Assert.IsTrue(settingsType.IsClass);
+		Assert.IsTrue(settingsType.IsPublic);
 	}
 
-	[TestMethod]
-	public void ImGuiApp_IsIdleProperty_HasDefaultValue()
-	{
-		// After reset, IsIdle should be false
-		Assert.IsFalse(ImGuiApp.IsIdle);
-	}
-
-	[TestMethod]
-	public void ImGuiApp_IsFocusedProperty_HasDefaultValue()
-	{
-		// After reset, IsFocused should be true
-		Assert.IsTrue(ImGuiApp.IsFocused);
-	}
-
-	[TestMethod]
-	public void Util_Clamp_WorksCorrectly()
-	{
-		// Test clamping at minimum
-		Assert.AreEqual(5.0f, Util.Clamp(3.0f, 5.0f, 10.0f));
-
-		// Test clamping at maximum
-		Assert.AreEqual(10.0f, Util.Clamp(15.0f, 5.0f, 10.0f));
-
-		// Test value in range
-		Assert.AreEqual(7.0f, Util.Clamp(7.0f, 5.0f, 10.0f));
-
-		// Test edge cases
-		Assert.AreEqual(5.0f, Util.Clamp(5.0f, 5.0f, 10.0f));
-		Assert.AreEqual(10.0f, Util.Clamp(10.0f, 5.0f, 10.0f));
-	}
-
-	[TestMethod]
-	public void ImGuiApp_WindowState_ReturnsCorrectState()
-	{
-		// Test that WindowState property can be accessed
-		ImGuiAppWindowState state = ImGuiApp.WindowState;
-		Assert.IsNotNull(state);
-		Assert.IsInstanceOfType<ImGuiAppWindowState>(state);
-	}
+	#endregion
 }
