@@ -37,29 +37,13 @@ internal static class ImGuiAppDemo
 		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
-		OnConfigureIO = ConfigureIO,
 		SaveIniSettings = false,
+		EnableUnicodeSupport = true, // Enable Unicode support for the default font
 		Fonts = new Dictionary<string, byte[]>
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
 		},
 	});
-
-	private static void ConfigureIO()
-	{
-		// Configure Unicode and emoji support
-		var io = ImGui.GetIO();
-		bool configured = FontHelper.ConfigureUnicodeAndEmojiSupport(io, 16);
-		
-		if (configured)
-		{
-			ImGuiApp.DebugLogger.Log("Unicode and emoji fonts configured successfully");
-		}
-		else
-		{
-			ImGuiApp.DebugLogger.Log("Warning: Could not configure Unicode/emoji fonts - some characters may not display correctly");
-		}
-	}
 
 	private static void OnRender(float dt)
 	{

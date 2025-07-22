@@ -991,8 +991,8 @@ public static partial class ImGuiApp
 		fontConfig.FontDataOwnedByAtlas = false; // We manage the memory ourselves
 		fontConfig.PixelSnapH = true;
 
-		// Use custom glyph ranges if provided, otherwise use extended Unicode ranges
-		uint* ranges = glyphRanges ?? GetExtendedUnicodeRanges(fontAtlasPtr);
+		// Use custom glyph ranges if provided, otherwise use extended Unicode ranges if enabled
+		uint* ranges = glyphRanges ?? (Config.EnableUnicodeSupport ? GetExtendedUnicodeRanges(fontAtlasPtr) : fontAtlasPtr.GetGlyphRangesDefault());
 
 		// Add font to atlas
 		int fontIndex = fontAtlasPtr.Fonts.Size;

@@ -8,64 +8,70 @@ By default, ImGui only loads basic ASCII characters (0-127), which means that UT
 
 ## Solution
 
-The ImGuiApp library now provides built-in support for extended Unicode character ranges and emoji fonts through:
+The ImGuiApp library now provides built-in support for extended Unicode character ranges that works with your existing font configuration:
 
-1. **Extended `ImGuiFontConfig`** with helper methods for Unicode support
-2. **`FontHelper` class** for easy font configuration
-3. **Automatic system font detection** for cross-platform compatibility
+1. **Automatic Unicode support** - Just set `EnableUnicodeSupport = true` in your config
+2. **Works with your fonts** - Uses whatever fonts you've configured, no system font dependencies
+3. **Extended `ImGuiFontConfig`** with helper methods for advanced use cases
+4. **`FontHelper` class** for custom font loading and testing
 
 ## Quick Start
 
-### Method 1: Using FontHelper (Recommended)
+### Method 1: Enable Unicode for Your Existing Fonts (Recommended)
 
-The easiest way to add Unicode and emoji support:
+The simplest way - just add one line to your configuration:
 
 ```csharp
 private static void Main() => ImGuiApp.Start(new()
 {
     Title = "My Unicode App",
-    OnConfigureIO = ConfigureIO,
+    EnableUnicodeSupport = true, // This line enables Unicode support!
+    Fonts = new Dictionary<string, byte[]>
+    {
+        { "MyFont", File.ReadAllBytes("path/to/your/font.ttf") }
+    },
     // ... other settings
 });
-
-private static void ConfigureIO()
-{
-    var io = ImGui.GetIO();
-    
-    // This automatically finds and configures the best available fonts
-    bool success = FontHelper.ConfigureUnicodeAndEmojiSupport(io, 16);
-    
-    if (!success)
-    {
-        Console.WriteLine("Warning: Unicode/emoji fonts not available");
-    }
-}
 ```
 
-### Method 2: Using ImGuiFontConfig Directly
+That's it! Your existing fonts will now include extended Unicode character ranges.
 
-For more control over font configuration:
+### Method 2: Using ImGuiFontConfig for External Fonts
+
+If you want to load fonts from file paths instead of byte arrays:
 
 ```csharp
 private static void Main() => ImGuiApp.Start(new()
 {
     Title = "My Unicode App",
-    FontConfig = CreateUnicodeFontConfig(),
+    FontConfig = ImGuiFontConfig.WithUnicodeSupport("path/to/font.ttf", 16),
+    // ... other settings
+});
+```
+
+### Method 3: Custom Font Loading
+
+For advanced scenarios where you need precise control:
+
+```csharp
+private static void Main() => ImGuiApp.Start(new()
+{
+    Title = "My Unicode App",
+    OnConfigureIO = ConfigureCustomFonts,
     // ... other settings
 });
 
-private static ImGuiFontConfig CreateUnicodeFontConfig()
+private static void ConfigureCustomFonts()
 {
-    // Option 1: Extended Unicode support (recommended for most apps)
-    string fontPath = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
-    return ImGuiFontConfig.WithUnicodeSupport(fontPath, 16);
+    var io = ImGui.GetIO();
+    var fontData = File.ReadAllBytes("path/to/font.ttf");
     
-    // Option 2: Full Unicode support (includes CJK characters - larger memory usage)
-    // return ImGuiFontConfig.WithFullUnicodeSupport(fontPath, 16);
-    
-    // Option 3: Emoji-only font (for merging with existing fonts)
-    // string emojiFont = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf";
-    // return ImGuiFontConfig.WithEmojiSupport(emojiFont, 16);
+    // Load with extended Unicode ranges
+    unsafe
+    {
+        uint* unicodeRanges = FontHelper.GetExtendedUnicodeRanges(io.Fonts);
+        FontHelper.AddCustomFont(io, fontData, 16.0f, unicodeRanges);
+    }
 }
 ```
 
@@ -96,33 +102,16 @@ private static ImGuiFontConfig CreateUnicodeFontConfig()
 
 ## Font Requirements
 
-The library automatically detects and uses system fonts in this order:
+**No special font installation required!** The Unicode support works with whatever fonts you configure in your application. The system uses extended glyph ranges that include:
 
-### Linux (Ubuntu/Debian)
-1. **Noto Sans** - `/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf`
-2. **Noto Color Emoji** - `/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf`
-3. **DejaVu Sans** - `/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf` (fallback)
+- Your existing font files (TTF, OTF, etc.)
+- Embedded font resources in your application
+- Default fonts provided by ImGuiApp
 
-### Windows
-1. **Noto Sans** - `C:\Windows\Fonts\NotoSans-Regular.ttf`
-2. **Segoe UI Emoji** - `C:\Windows\Fonts\seguiemj.ttf`
-
-### macOS
-1. **Noto Sans** - `/System/Library/Fonts/NotoSans.ttf`
-2. **Apple Color Emoji** - `/System/Library/Fonts/Apple Color Emoji.ttc`
-
-## Installation
-
-If you're on Linux and don't have the required fonts, install them:
-
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji fonts-liberation fonts-dejavu-core
-
-# Refresh font cache
-fc-cache -fv
-```
+For best results, choose fonts that include the Unicode characters you need:
+- **For European languages**: Most modern fonts include Latin Extended characters
+- **For mathematical symbols**: Fonts like DejaVu Sans, Liberation Sans, or Noto Sans
+- **For emojis**: Specialized emoji fonts like Noto Color Emoji, Apple Color Emoji, or Segoe UI Emoji
 
 ## Testing
 
@@ -145,27 +134,40 @@ Or run the ImGuiAppDemo project and select "View → Unicode & Emoji Test" from 
 
 ### Characters Still Show as Question Marks
 
-1. **Check font availability**:
+1. **Check Unicode support is enabled**:
    ```csharp
-   string? fontPath = FontHelper.GetNotoSansFontPath();
-   if (fontPath == null)
+   private static void Main() => ImGuiApp.Start(new()
    {
-       Console.WriteLine("Noto Sans font not found!");
-   }
+       EnableUnicodeSupport = true, // Make sure this is set to true
+       // ... other settings
+   });
    ```
 
-2. **Verify font installation** (Linux):
-   ```bash
-   fc-list | grep -i noto
-   ```
+2. **Verify your font supports the characters**: Not all fonts include all Unicode characters. Try using a font known to have good Unicode coverage like:
+   - DejaVu Sans (included with most Linux distributions)
+   - Liberation Sans
+   - Noto Sans (if available)
 
-3. **Check glyph ranges**: Make sure you're using the appropriate `WithUnicodeSupport()` or `WithEmojiSupport()` method.
+3. **Check if the character is in the supported ranges**: The current implementation includes common Unicode blocks, but not all possible characters. You can add custom ranges using `FontHelper.AddCustomFont()`.
 
 ### Emojis Not Displaying
 
-1. **Color emoji fonts**: Some emoji fonts (like Noto Color Emoji) may not render properly in all contexts. Try using a different emoji font or fallback to monochrome emoji symbols.
+1. **Font limitation**: Most regular fonts don't include emoji characters. Emojis require specialized emoji fonts.
 
-2. **Font merging**: Emoji fonts need to be merged with regular text fonts. Use `FontHelper.ConfigureUnicodeAndEmojiSupport()` which handles this automatically.
+2. **Use emoji-capable fonts**: If you need emoji support, load an emoji font alongside your regular font:
+   ```csharp
+   private static void ConfigureEmojis()
+   {
+       var io = ImGui.GetIO();
+       var emojiFont = File.ReadAllBytes("path/to/emoji-font.ttf");
+       
+       unsafe
+       {
+           uint* emojiRanges = FontHelper.GetEmojiRanges(io.Fonts);
+           FontHelper.AddCustomFont(io, emojiFont, 16.0f, emojiRanges, mergeWithPrevious: true);
+       }
+   }
+   ```
 
 ### Performance Issues
 
