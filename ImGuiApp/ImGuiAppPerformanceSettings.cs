@@ -55,6 +55,4 @@ public class ImGuiAppPerformanceSettings
 	/// Gets or sets the time (in seconds) of no user input before the application is considered idle.
 	/// </summary>
 	public double IdleTimeoutSeconds { get; init; } = 30.0;
-
-
 }

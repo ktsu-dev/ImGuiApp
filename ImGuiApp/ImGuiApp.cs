@@ -310,23 +310,36 @@ public static partial class ImGuiApp
 		double currentFps = window!.FramesPerSecond;
 		double currentUps = window.UpdatesPerSecond;
 
-		// Determine required FPS and UPS based on focus and idle state
-		double requiredFps, requiredUps;
-		if (IsIdle && settings.EnableIdleDetection)
+		// Evaluate all throttling conditions and select the lowest rates
+		List<(double fps, double ups, string reason)> candidateRates = [];
+
+		// Add focused/unfocused rate
+		if (IsFocused)
 		{
-			requiredFps = settings.IdleFps;
-			requiredUps = settings.IdleUps;
-		}
-		else if (IsFocused)
-		{
-			requiredFps = settings.FocusedFps;
-			requiredUps = settings.FocusedUps;
+			candidateRates.Add((settings.FocusedFps, settings.FocusedUps, "Focused"));
 		}
 		else
 		{
-			requiredFps = settings.UnfocusedFps;
-			requiredUps = settings.UnfocusedUps;
+			candidateRates.Add((settings.UnfocusedFps, settings.UnfocusedUps, "Unfocused"));
 		}
+
+		// Add idle rate if applicable
+		if (IsIdle && settings.EnableIdleDetection)
+		{
+			candidateRates.Add((settings.IdleFps, settings.IdleUps, "Idle"));
+		}
+
+		// Add not visible rate if applicable
+		if (!IsVisible)
+		{
+			candidateRates.Add((0.1, 0.1, "Not Visible"));
+		}
+
+		// Select the lowest rates
+		(double requiredFps, double requiredUps, string _) = candidateRates
+			.OrderBy(rate => rate.fps)
+			.ThenBy(rate => rate.ups)
+			.First();
 
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
