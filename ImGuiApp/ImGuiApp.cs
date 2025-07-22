@@ -129,10 +129,6 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
-	private static DateTime lastPerformanceUpdate = DateTime.MinValue;
-	private static double? pendingFps;
-	private static double? pendingUps;
-	private static bool performanceUpdatePending;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -332,35 +328,16 @@ public static partial class ImGuiApp
 			requiredUps = settings.UnfocusedUps;
 		}
 
-		// Update frame rate and update rate together to prevent desynchronization
-		bool fpsNeedsUpdate = Math.Abs(currentFps - requiredFps) > 0.1;
-		bool upsNeedsUpdate = Math.Abs(currentUps - requiredUps) > 0.1;
-
-		if (fpsNeedsUpdate || upsNeedsUpdate)
+		// Update frame rate if needed
+		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
 		{
-			// Queue the changes to be applied after the render cycle completes
-			pendingFps = requiredFps;
-			pendingUps = requiredUps;
-			performanceUpdatePending = true;
-			DebugLogger.Log($"Performance update queued: FPS={requiredFps}, UPS={requiredUps}, Focused={IsFocused}, Idle={IsIdle}");
+			window.FramesPerSecond = requiredFps;
 		}
-	}
 
-	/// <summary>
-	/// Applies any pending performance changes that were queued during the update/render cycle
-	/// </summary>
-	private static void ApplyPendingPerformanceChanges()
-	{
-		if (performanceUpdatePending && pendingFps.HasValue && pendingUps.HasValue)
+		// Update update rate if needed
+		if (Math.Abs(currentUps - requiredUps) > 0.1) // Use small epsilon for comparison
 		{
-			window!.FramesPerSecond = pendingFps.Value;
-			window.UpdatesPerSecond = pendingUps.Value;
-			DebugLogger.Log($"Performance changes applied: FPS={pendingFps.Value}, UPS={pendingUps.Value}");
-
-			// Clear pending changes
-			pendingFps = null;
-			pendingUps = null;
-			performanceUpdatePending = false;
+			window.UpdatesPerSecond = requiredUps;
 		}
 	}
 
@@ -374,14 +351,7 @@ public static partial class ImGuiApp
 			}
 
 			EnsureWindowPositionIsValid();
-
-			// Only update performance occasionally to avoid mid-cycle changes
-			TimeSpan timeSinceLastUpdate = DateTime.UtcNow - lastPerformanceUpdate;
-			if (timeSinceLastUpdate.TotalSeconds > 0.5) // Update at most every 500ms
-			{
-				UpdateWindowPerformance();
-				lastPerformanceUpdate = DateTime.UtcNow;
-			}
+			UpdateWindowPerformance();
 
 			controller?.Update((float)delta);
 			config.OnUpdate?.Invoke((float)delta);
@@ -408,9 +378,6 @@ public static partial class ImGuiApp
 			});
 
 			controller?.Render();
-
-			// Apply any pending performance changes after the render cycle completes
-			ApplyPendingPerformanceChanges();
 		};
 	}
 
@@ -533,13 +500,7 @@ public static partial class ImGuiApp
 		SetupWindowRenderHandler(config);
 		SetupWindowClosingHandler();
 
-		window!.FocusChanged += (focused) =>
-		{
-			IsFocused = focused;
-			// Force immediate performance update when focus changes
-			lastPerformanceUpdate = DateTime.MinValue;
-			DebugLogger.Log($"Focus changed: {focused}");
-		};
+		window!.FocusChanged += (focused) => IsFocused = focused;
 
 		if (!config.TestMode)
 		{
@@ -1226,10 +1187,6 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
-		lastPerformanceUpdate = DateTime.MinValue;
-		pendingFps = null;
-		pendingUps = null;
-		performanceUpdatePending = false;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;

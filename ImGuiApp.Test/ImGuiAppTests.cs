@@ -323,6 +323,8 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
 	}
 
+
+
 	[TestMethod]
 	public void Reset_ResetsPerformanceFields_Correctly()
 	{
