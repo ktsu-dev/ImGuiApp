@@ -963,6 +963,19 @@ public static partial class ImGuiApp
 	/// <param name="pointSize">The point size for the font.</param>
 	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize)
 	{
+		LoadFont(name, fontBytes, fontAtlasPtr, pointSize, null);
+	}
+
+	/// <summary>
+	/// Loads a font from byte array data into the font atlas with custom glyph ranges.
+	/// </summary>
+	/// <param name="name">The name of the font.</param>
+	/// <param name="fontBytes">The font data as byte array.</param>
+	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
+	/// <param name="pointSize">The point size for the font.</param>
+	/// <param name="glyphRanges">Custom glyph ranges, or null for default ranges.</param>
+	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges)
+	{
 		// Allocate unmanaged memory for the font data
 		nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
 		currentFontMemoryHandles.Add(fontHandle);
@@ -978,12 +991,47 @@ public static partial class ImGuiApp
 		fontConfig.FontDataOwnedByAtlas = false; // We manage the memory ourselves
 		fontConfig.PixelSnapH = true;
 
+		// Use custom glyph ranges if provided, otherwise use extended Unicode ranges
+		uint* ranges = glyphRanges ?? GetExtendedUnicodeRanges(fontAtlasPtr);
+
 		// Add font to atlas
 		int fontIndex = fontAtlasPtr.Fonts.Size;
-		fontAtlasPtr.AddFontFromMemoryTTF((void*)fontHandle, fontBytes.Length, fontSize, fontConfig, fontAtlasPtr.GetGlyphRangesDefault());
+		fontAtlasPtr.AddFontFromMemoryTTF((void*)fontHandle, fontBytes.Length, fontSize, fontConfig, ranges);
 
 		// Store the font index for later retrieval
 		FontIndices[name] = fontIndex;
+	}
+
+	/// <summary>
+	/// Creates extended Unicode glyph ranges that include common symbols and accented characters.
+	/// </summary>
+	/// <param name="fontAtlasPtr">The font atlas to use for building ranges.</param>
+	/// <returns>Pointer to the glyph ranges.</returns>
+	private static unsafe uint* GetExtendedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
+	{
+		var builder = new ImFontGlyphRangesBuilderPtr(ImGui.ImFontGlyphRangesBuilder());
+		
+		// Add default ranges (ASCII)
+		builder.AddRanges(fontAtlasPtr.GetGlyphRangesDefault());
+		
+		// Add Latin Extended for accented characters
+		builder.AddRanges(fontAtlasPtr.GetGlyphRangesLatinExt());
+		
+		// Add common Unicode blocks for symbols
+		builder.AddChar(0x2000, 0x206F); // General Punctuation
+		builder.AddChar(0x20A0, 0x20CF); // Currency Symbols
+		builder.AddChar(0x2100, 0x214F); // Letterlike Symbols
+		builder.AddChar(0x2190, 0x21FF); // Arrows
+		builder.AddChar(0x2200, 0x22FF); // Mathematical Operators
+		builder.AddChar(0x2300, 0x23FF); // Miscellaneous Technical
+		builder.AddChar(0x2500, 0x257F); // Box Drawing
+		builder.AddChar(0x2580, 0x259F); // Block Elements
+		builder.AddChar(0x25A0, 0x25FF); // Geometric Shapes
+		builder.AddChar(0x2600, 0x26FF); // Miscellaneous Symbols
+		
+		// Build the ranges
+		builder.BuildRanges(out ImVectorPtr ranges);
+		return (uint*)ranges.Data;
 	}
 
 	/// <summary>

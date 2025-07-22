@@ -19,6 +19,7 @@ internal static class ImGuiAppDemo
 	private static bool showStyleEditor;
 	private static bool showMetrics;
 	private static bool showAbout;
+	private static bool showUnicodeTest;
 
 	// Demo state
 	private static float sliderValue = 0.5f;
@@ -36,12 +37,29 @@ internal static class ImGuiAppDemo
 		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
+		OnConfigureIO = ConfigureIO,
 		SaveIniSettings = false,
 		Fonts = new Dictionary<string, byte[]>
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
 		},
 	});
+
+	private static void ConfigureIO()
+	{
+		// Configure Unicode and emoji support
+		var io = ImGui.GetIO();
+		bool configured = FontHelper.ConfigureUnicodeAndEmojiSupport(io, 16);
+		
+		if (configured)
+		{
+			ImGuiApp.DebugLogger.Log("Unicode and emoji fonts configured successfully");
+		}
+		else
+		{
+			ImGuiApp.DebugLogger.Log("Warning: Could not configure Unicode/emoji fonts - some characters may not display correctly");
+		}
+	}
 
 	private static void OnRender(float dt)
 	{
@@ -57,6 +75,19 @@ internal static class ImGuiAppDemo
 		{
 			ImGui.Begin("Style Editor", ref showStyleEditor);
 			ImGui.ShowStyleEditor();
+			ImGui.End();
+		}
+
+		if (showUnicodeTest)
+		{
+			FontHelper.ShowUnicodeTestWindow("Unicode & Emoji Test");
+			if (ImGui.Begin("Unicode & Emoji Test"))
+			{
+				if (ImGui.Button("Close"))
+				{
+					showUnicodeTest = false;
+				}
+			}
 			ImGui.End();
 		}
 
@@ -201,6 +232,7 @@ internal static class ImGuiAppDemo
 			ImGui.MenuItem("ImGui Demo", string.Empty, ref showImGuiDemo);
 			ImGui.MenuItem("Style Editor", string.Empty, ref showStyleEditor);
 			ImGui.MenuItem("Metrics", string.Empty, ref showMetrics);
+			ImGui.MenuItem("Unicode & Emoji Test", string.Empty, ref showUnicodeTest);
 			ImGui.EndMenu();
 		}
 
