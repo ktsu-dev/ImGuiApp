@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGuiApp;
 
+using System.Resources;
 using Silk.NET.Windowing;
 
 /// <summary>
@@ -72,6 +73,15 @@ public class ImGuiAppConfig
 	public Dictionary<string, byte[]> Fonts { get; init; } = [];
 
 	/// <summary>
+	/// Gets or sets a value indicating whether to enable extended Unicode support for fonts.
+	/// When true, fonts will include extended character ranges for accented characters,
+	/// mathematical symbols, currency symbols, emojis, and other Unicode blocks.
+	/// When false, only basic ASCII characters (0-127) will be available.
+	/// Default is true.
+	/// </summary>
+	public bool EnableUnicodeSupport { get; init; } = true;
+
+	/// <summary>
 	/// Gets or sets a value indicating whether ImGui should save window settings to imgui.ini.
 	/// When false, window positions and sizes will not be persisted between sessions.
 	/// </summary>
@@ -84,6 +94,30 @@ public class ImGuiAppConfig
 
 	internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
 		{
-			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }
+			{ "default", Resources.Resources.NerdFont}
 		};
+
+	/// <summary>
+	/// Gets the emoji font data if available, null otherwise.
+	/// </summary>
+	internal static byte[]? EmojiFont
+	{
+		get
+		{
+			try
+			{
+				return Resources.Resources.NotoEmoji;
+			}
+			catch (MissingManifestResourceException)
+			{
+				// NotoEmoji.ttf not available in resources
+				return null;
+			}
+			catch (InvalidOperationException)
+			{
+				// Resource manager not available
+				return null;
+			}
+		}
+	}
 }
