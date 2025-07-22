@@ -1029,10 +1029,7 @@ public static partial class ImGuiApp
 	/// <param name="fontBytes">The font data as byte array.</param>
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="pointSize">The point size for the font.</param>
-	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize)
-	{
-		LoadFont(name, fontBytes, fontAtlasPtr, pointSize, null);
-	}
+	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize) => LoadFont(name, fontBytes, fontAtlasPtr, pointSize, null);
 
 	/// <summary>
 	/// Loads a font from byte array data into the font atlas with custom glyph ranges.
@@ -1060,7 +1057,7 @@ public static partial class ImGuiApp
 		fontConfig.PixelSnapH = true;
 
 		// Use custom glyph ranges if provided, otherwise use extended Unicode ranges if enabled
-		uint* ranges = glyphRanges ?? (Config.EnableUnicodeSupport ? GetExtendedUnicodeRanges(fontAtlasPtr) : fontAtlasPtr.GetGlyphRangesDefault());
+		uint* ranges = glyphRanges ?? (Config.EnableUnicodeSupport ? FontHelper.GetExtendedUnicodeRanges(fontAtlasPtr) : fontAtlasPtr.GetGlyphRangesDefault());
 
 		// Add font to atlas
 		int fontIndex = fontAtlasPtr.Fonts.Size;
@@ -1068,49 +1065,6 @@ public static partial class ImGuiApp
 
 		// Store the font index for later retrieval
 		FontIndices[name] = fontIndex;
-	}
-
-	/// <summary>
-	/// Creates extended Unicode glyph ranges that include common symbols, accented characters, and emojis.
-	/// </summary>
-	/// <param name="fontAtlasPtr">The font atlas to use for building ranges.</param>
-	/// <returns>Pointer to the glyph ranges.</returns>
-	private static unsafe uint* GetExtendedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
-	{
-		var builder = new ImFontGlyphRangesBuilderPtr(ImGui.ImFontGlyphRangesBuilder());
-		
-		// Add default ranges (ASCII)
-		builder.AddRanges(fontAtlasPtr.GetGlyphRangesDefault());
-		
-		// Add Latin Extended for accented characters
-		builder.AddRanges(fontAtlasPtr.GetGlyphRangesLatinExt());
-		
-		// Add common Unicode blocks for symbols
-		builder.AddChar(0x2000, 0x206F); // General Punctuation
-		builder.AddChar(0x20A0, 0x20CF); // Currency Symbols
-		builder.AddChar(0x2100, 0x214F); // Letterlike Symbols
-		builder.AddChar(0x2190, 0x21FF); // Arrows
-		builder.AddChar(0x2200, 0x22FF); // Mathematical Operators
-		builder.AddChar(0x2300, 0x23FF); // Miscellaneous Technical
-		builder.AddChar(0x2500, 0x257F); // Box Drawing
-		builder.AddChar(0x2580, 0x259F); // Block Elements
-		builder.AddChar(0x25A0, 0x25FF); // Geometric Shapes
-		builder.AddChar(0x2600, 0x26FF); // Miscellaneous Symbols
-		
-		// Add emoji ranges (will only work if the font supports them)
-		builder.AddChar(0x1F600, 0x1F64F); // Emoticons
-		builder.AddChar(0x1F300, 0x1F5FF); // Miscellaneous Symbols and Pictographs
-		builder.AddChar(0x1F680, 0x1F6FF); // Transport and Map Symbols
-		builder.AddChar(0x1F700, 0x1F77F); // Alchemical Symbols
-		builder.AddChar(0x1F780, 0x1F7FF); // Geometric Shapes Extended
-		builder.AddChar(0x1F800, 0x1F8FF); // Supplemental Arrows-C
-		builder.AddChar(0x1F900, 0x1F9FF); // Supplemental Symbols and Pictographs
-		builder.AddChar(0x1FA00, 0x1FA6F); // Chess Symbols
-		builder.AddChar(0x1FA70, 0x1FAFF); // Symbols and Pictographs Extended-A
-		
-		// Build the ranges
-		builder.BuildRanges(out ImVectorPtr ranges);
-		return (uint*)ranges.Data;
 	}
 
 	/// <summary>
