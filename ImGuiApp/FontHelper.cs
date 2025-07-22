@@ -78,16 +78,10 @@ public static class FontHelper
 	/// <param name="builder">The glyph ranges builder to add emoji ranges to.</param>
 	private static void AddEmojiRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
-		// Add basic ASCII for emoji font compatibility (0x0020-0x007F printable ASCII)
-		for (uint c = 0x0020; c <= 0x007F; c++)
-		{
-			builder.AddChar((ushort)c);
-		}
-
 		// Variation Selectors (important for emoji presentation vs text presentation)
 		for (uint c = 0xFE00; c <= 0xFE0F; c++) // Variation Selectors 1-16
 		{
-			builder.AddChar((ushort)c);
+			builder.AddChar(c);
 		}
 
 		// Emoji-specific Unicode ranges (1F*** blocks only to avoid main font conflicts)
@@ -109,10 +103,7 @@ public static class FontHelper
 		{
 			for (uint c = start; c <= end; c++)
 			{
-				if (c <= ushort.MaxValue)
-				{
-					builder.AddChar((ushort)c);
-				}
+				builder.AddChar(c);
 			}
 		}
 	}
@@ -145,12 +136,12 @@ public static class FontHelper
 		// Latin Extended-A (U+0100–U+017F)
 		for (uint c = 0x0100; c <= 0x017F; c++)
 		{
-			builder.AddChar((ushort)c);
+			builder.AddChar(c);
 		}
 		// Latin Extended-B (U+0180–U+024F)
 		for (uint c = 0x0180; c <= 0x024F; c++)
 		{
-			builder.AddChar((ushort)c);
+			builder.AddChar(c);
 		}
 	}
 
@@ -181,7 +172,7 @@ public static class FontHelper
 		{
 			for (uint c = start; c <= end; c++)
 			{
-				builder.AddChar((ushort)c);
+				builder.AddChar(c);
 			}
 		}
 	}
@@ -228,7 +219,7 @@ public static class FontHelper
 			{
 				if (c <= ushort.MaxValue)
 				{
-					builder.AddChar((ushort)c);
+					builder.AddChar(c);
 				}
 			}
 		}
@@ -239,7 +230,7 @@ public static class FontHelper
 		{
 			if (c <= ushort.MaxValue)
 			{
-				builder.AddChar((ushort)c);
+				builder.AddChar(c);
 			}
 		}
 	}
