@@ -64,6 +64,9 @@ public static class FontHelper
 		// Add emoji ranges (will only work if the font supports them)
 		AddEmojiRanges(builder);
 
+		// Add Nerd Font icon ranges
+		AddNerdFontRanges(builder);
+
 		// Build the ranges
 		ImVector<uint> ranges = new();
 		builder.BuildRanges(&ranges);
@@ -145,6 +148,64 @@ public static class FontHelper
 		foreach ((uint start, uint end, string _) in symbolRanges)
 		{
 			for (uint c = start; c <= end; c++)
+			{
+				builder.AddChar((ushort)c);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Adds Nerd Font icon ranges to the glyph ranges builder.
+	/// Includes Font Awesome, Material Design Icons, Octicons, Weather Icons, and other common icon sets.
+	/// </summary>
+	/// <param name="builder">The glyph ranges builder to add Nerd Font ranges to.</param>
+	private static void AddNerdFontRanges(ImFontGlyphRangesBuilderPtr builder)
+	{
+		// Define Nerd Font ranges to add
+		(uint start, uint end, string description)[] nerdFontRanges = [
+			// Powerline symbols
+			(0xE0A0, 0xE0A2, "Powerline symbols"),
+			(0xE0B0, 0xE0B3, "Powerline symbols"),
+			// Pomicons
+			(0xE000, 0xE00D, "Pomicons"),
+			// Powerline Extra Symbols
+			(0xE0A3, 0xE0A3, "Powerline Extra"),
+			(0xE0B4, 0xE0C8, "Powerline Extra"),
+			(0xE0CA, 0xE0CA, "Powerline Extra"),
+			(0xE0CC, 0xE0D2, "Powerline Extra"),
+			(0xE0D4, 0xE0D4, "Powerline Extra"),
+			// Weather Icons
+			(0xE300, 0xE3EB, "Weather Icons"),
+			// Font Awesome Extension
+			(0xE200, 0xE2A9, "Font Awesome Extension"),
+			// Font Logos
+			(0xF300, 0xF313, "Font Logos"),
+			// Octicons (main range)
+			(0xF400, 0xF4A8, "Octicons"),
+			// Font Awesome
+			(0xF000, 0xF2E0, "Font Awesome"),
+			// Material Design Icons
+			(0xF500, 0xFD46, "Material Design Icons"),
+			// Devicons
+			(0xE700, 0xE7C5, "Devicons"),
+		];
+
+		foreach ((uint start, uint end, string _) in nerdFontRanges)
+		{
+			for (uint c = start; c <= end; c++)
+			{
+				if (c <= ushort.MaxValue)
+				{
+					builder.AddChar((ushort)c);
+				}
+			}
+		}
+
+		// Add individual Octicon symbols that are outside the main range
+		uint[] individualOcticons = [0x2665, 0x26A1];
+		foreach (uint c in individualOcticons)
+		{
+			if (c <= ushort.MaxValue)
 			{
 				builder.AddChar((ushort)c);
 			}
