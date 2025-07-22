@@ -27,9 +27,14 @@ public class ImGuiControllerComponentTests
 
 		ImGuiFontConfig config = new(testPath, testSize);
 
-		Assert.AreEqual(testPath, config.FontPath);
-		Assert.AreEqual(testSize, config.FontSize);
-		Assert.IsNull(config.GetGlyphRange);
+		// These calls should hit the property getters
+		string actualPath = config.FontPath;
+		int actualSize = config.FontSize;
+		Func<ImGuiIOPtr, IntPtr>? actualGlyphRange = config.GetGlyphRange;
+
+		Assert.AreEqual(testPath, actualPath);
+		Assert.AreEqual(testSize, actualSize);
+		Assert.IsNull(actualGlyphRange);
 	}
 
 	[TestMethod]
