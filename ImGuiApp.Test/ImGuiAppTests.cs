@@ -125,6 +125,19 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
+	public void Start_WhenAlreadyRunning_ThrowsInvalidOperationException()
+	{
+		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
+		ImGuiApp.Start(config);
+
+		// Should throw InvalidOperationException when trying to start again
+		Assert.ThrowsException<InvalidOperationException>(() => ImGuiApp.Start(config));
+
+		// Clean up - Reset to avoid affecting other tests
+		ImGuiApp.Reset();
+	}
+
+	[TestMethod]
 	public void Stop_WhenNotRunning_ThrowsInvalidOperationException()
 	{
 		Assert.ThrowsException<InvalidOperationException>(ImGuiApp.Stop);
