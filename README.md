@@ -16,7 +16,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Simple API**: Create ImGui applications with minimal boilerplate code
 - **Full Integration**: Seamless integration with Silk.NET for OpenGL and input handling
 - **Window Management**: Automatic window state, rendering, and input handling
-- **Performance Optimization**: Sleep-based throttled rendering when unfocused or idle to save system resources
+- **Performance Optimization**: Sleep-based throttled rendering with lowest-selection logic when unfocused, idle, or not visible to maximize resource savings
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
 - **Font Management**: Flexible font loading system with customization options
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
@@ -327,7 +327,7 @@ Configuration for the ImGui application.
 
 ### `ImGuiAppPerformanceSettings` Class
 
-Configuration for performance optimization and throttled rendering using sleep-based timing to save system resources when the application is unfocused or idle.
+Configuration for performance optimization and throttled rendering. Uses precise sleep-based timing control with Thread.Sleep to maintain target frame rates and save system resources when the application is unfocused, idle, or not visible.
 
 #### Properties
 
@@ -354,7 +354,7 @@ ImGuiApp.Start(new ImGuiAppConfig
         FocusedFps = 60.0,           // Custom higher rate when focused
         UnfocusedFps = 15.0,         // Custom rate when unfocused
         IdleFps = 2.0,               // Custom very low rate when idle
-        NotVisibleFps = 0.1,         // Custom ultra-low rate when minimized
+        NotVisibleFps = 1.0,         // Custom ultra-low rate when minimized
         EnableIdleDetection = true,
         IdleTimeoutSeconds = 10.0    // Custom idle timeout
     }
@@ -362,12 +362,15 @@ ImGuiApp.Start(new ImGuiAppConfig
 ```
 
 This feature automatically:
-- Detects when the window loses/gains focus
-- Tracks user input (keyboard, mouse movement, clicks, scrolling)
-- Uses sleep-based timing to precisely control frame rate when unfocused or idle
-- Saves CPU and GPU resources without affecting user experience
-- Provides smooth transitions between different performance states
+- Detects when the window loses/gains focus and visibility state (minimized/hidden)
+- Tracks user input (keyboard, mouse movement, clicks, scrolling) for idle detection
+- Uses sleep-based timing with Thread.Sleep for precise frame rate control
+- Evaluates all applicable throttling conditions and selects the lowest frame rate
+- Saves significant CPU and GPU resources without affecting user experience
+- Provides instant transitions between different performance states
 - Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle, 2 FPS not visible
+
+The throttling system uses a "lowest wins" approach - if multiple conditions apply (e.g., unfocused + idle), the lowest frame rate is automatically selected for maximum resource savings.
 
 ### `FontAppearance` Class
 
@@ -383,12 +386,18 @@ A utility class for applying font styles using a using statement.
 
 ## Demo Application
 
-Check out the included demo project to see a working example with Unicode and emoji support:
+Check out the included demo project to see a comprehensive working example:
 
 1. Clone or download the repository
 2. Open the solution in Visual Studio (or run dotnet build)
-3. Start the ImGuiAppDemo project to see a basic ImGui application
-4. Click the "Unicode & Emojis" tab to test character rendering
+3. Start the ImGuiAppDemo project to see a feature-rich ImGui application
+4. Explore the different tabs:
+   - **Performance & Throttling**: Real-time FPS graph showing sleep-based throttling in action
+   - **Unicode & Emojis**: Test character rendering with extended Unicode support
+   - **Widgets & Layout**: Comprehensive ImGui widget demonstrations
+   - **Graphics & Plotting**: Custom drawing and data visualization examples
+
+The **Performance & Throttling** tab includes a live graph that visualizes frame rate changes as you focus/unfocus the window, let it go idle, or minimize it - perfect for seeing the throttling system work in real-time!
 
 ## Contributing
 
