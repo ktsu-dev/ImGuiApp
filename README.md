@@ -342,7 +342,7 @@ Configuration for performance optimization and throttled rendering to save syste
 | `IdleUps` | `double` | `10.0` | Target update rate when the application is idle (no user input) |
 | `EnableIdleDetection` | `bool` | `true` | Enables/disables idle detection based on user input |
 | `IdleTimeoutSeconds` | `double` | `30.0` | Time in seconds without user input before considering the app idle |
-| `DisableVSyncWhenThrottling` | `bool` | `true` | Whether to disable VSync during throttled rendering for precise frame rate control |
+| `DisableVSyncWhenThrottling` | `bool` | `true` | Whether to disable VSync when setting custom frame rates for precise control. When false, VSync remains enabled. |
 
 #### Example Usage
 
