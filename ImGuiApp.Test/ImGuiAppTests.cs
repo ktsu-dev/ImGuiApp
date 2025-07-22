@@ -108,6 +108,7 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsNotNull(config.OnAppMenu);
 		Assert.IsNotNull(config.OnMoveOrResize);
 		Assert.IsNotNull(config.Fonts);
+		Assert.IsNotNull(config.PerformanceSettings);
 	}
 
 	[TestMethod]
@@ -302,5 +303,24 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsNotNull(reloadedTexture, "Reloaded texture should not be null");
 		Assert.AreEqual(1002u, reloadedTexture!.TextureId, "New texture ID should match");
 		Assert.AreNotEqual(firstTextureInfo.TextureId, reloadedTexture.TextureId, "Reloaded texture should have a different ID");
+	}
+
+	[TestMethod]
+	public void PerformanceSettings_DefaultValues_AreCorrect()
+	{
+		// Arrange & Act
+		ImGuiAppPerformanceSettings settings = new();
+
+		// Assert
+		Assert.IsTrue(settings.EnableThrottledRendering);
+		Assert.AreEqual(60.0, settings.FocusedFps);
+		Assert.AreEqual(60.0, settings.FocusedUps);
+		Assert.AreEqual(30.0, settings.UnfocusedFps);
+		Assert.AreEqual(30.0, settings.UnfocusedUps);
+		Assert.AreEqual(5.0, settings.IdleFps);
+		Assert.AreEqual(5.0, settings.IdleUps);
+		Assert.IsTrue(settings.EnableIdleDetection);
+		Assert.AreEqual(10.0, settings.IdleTimeoutSeconds);
+		Assert.IsTrue(settings.DisableVSyncWhenThrottling);
 	}
 }
