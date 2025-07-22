@@ -340,6 +340,8 @@ public static partial class ImGuiApp
 		double requiredFps = selectedRate.fps;
 		double requiredUps = selectedRate.ups;
 
+
+
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
 		{
@@ -512,7 +514,15 @@ public static partial class ImGuiApp
 		SetupWindowRenderHandler(config);
 		SetupWindowClosingHandler();
 
-		window!.FocusChanged += (focused) => IsFocused = focused;
+		window!.FocusChanged += (focused) => 
+		{
+			IsFocused = focused;
+			// Reset idle state when gaining focus, as user interaction caused the focus change
+			if (focused)
+			{
+				lastInputTime = DateTime.UtcNow;
+			}
+		};
 
 		if (!config.TestMode)
 		{
