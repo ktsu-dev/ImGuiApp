@@ -130,6 +130,9 @@ public static partial class ImGuiApp
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
 	private static DateTime lastPerformanceUpdate = DateTime.MinValue;
+	private static double? pendingFps = null;
+	private static double? pendingUps = null;
+	private static bool performanceUpdatePending = false;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -335,12 +338,40 @@ public static partial class ImGuiApp
 
 		if (fpsNeedsUpdate || upsNeedsUpdate)
 		{
-			// Always update both together to keep them synchronized
-			// Use a small delay to avoid changing rates during active rendering
-			window.FramesPerSecond = requiredFps;
-			window.UpdatesPerSecond = requiredUps;
+			// Queue the changes to be applied after the render cycle completes
+			pendingFps = requiredFps;
+			pendingUps = requiredUps;
+			performanceUpdatePending = true;
+			DebugLogger.Log($"Performance update queued: FPS={requiredFps}, UPS={requiredUps}, Focused={IsFocused}, Idle={IsIdle}");
+		}
+	}
 
-			DebugLogger.Log($"Performance updated: FPS={requiredFps}, UPS={requiredUps}, Focused={IsFocused}, Idle={IsIdle}");
+	/// <summary>
+	/// Applies any pending performance changes that were queued during the update/render cycle
+	/// </summary>
+	private static void ApplyPendingPerformanceChanges()
+	{
+		if (performanceUpdatePending && pendingFps.HasValue && pendingUps.HasValue)
+		{
+			try
+			{
+				window!.FramesPerSecond = pendingFps.Value;
+				window.UpdatesPerSecond = pendingUps.Value;
+				DebugLogger.Log($"Performance changes applied: FPS={pendingFps.Value}, UPS={pendingUps.Value}");
+				
+				// Clear pending changes
+				pendingFps = null;
+				pendingUps = null;
+				performanceUpdatePending = false;
+			}
+			catch (Exception ex)
+			{
+				DebugLogger.Log($"Error applying performance changes: {ex.Message}");
+				// Clear pending changes even on error to prevent infinite retry
+				pendingFps = null;
+				pendingUps = null;
+				performanceUpdatePending = false;
+			}
 		}
 	}
 
@@ -388,6 +419,9 @@ public static partial class ImGuiApp
 			});
 
 			controller?.Render();
+			
+			// Apply any pending performance changes after the render cycle completes
+			ApplyPendingPerformanceChanges();
 		};
 	}
 
@@ -1204,6 +1238,9 @@ public static partial class ImGuiApp
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
 		lastPerformanceUpdate = DateTime.MinValue;
+		pendingFps = null;
+		pendingUps = null;
+		performanceUpdatePending = false;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
