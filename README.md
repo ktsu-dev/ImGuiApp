@@ -334,14 +334,14 @@ Configuration for performance optimization and throttled rendering to save syste
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `EnableThrottledRendering` | `bool` | `true` | Enables/disables throttled rendering feature |
-| `FocusedFps` | `double` | `60.0` | Target frame rate when the window is focused and active |
-| `FocusedUps` | `double` | `60.0` | Target update rate when the window is focused and active |
-| `UnfocusedFps` | `double` | `30.0` | Target frame rate when the window is unfocused |
-| `UnfocusedUps` | `double` | `30.0` | Target update rate when the window is unfocused |
-| `IdleFps` | `double` | `5.0` | Target frame rate when the application is idle (no user input) |
-| `IdleUps` | `double` | `5.0` | Target update rate when the application is idle (no user input) |
+| `FocusedFps` | `double` | `30.0` | Target frame rate when the window is focused and active |
+| `FocusedUps` | `double` | `30.0` | Target update rate when the window is focused and active |
+| `UnfocusedFps` | `double` | `5.0` | Target frame rate when the window is unfocused |
+| `UnfocusedUps` | `double` | `5.0` | Target update rate when the window is unfocused |
+| `IdleFps` | `double` | `10.0` | Target frame rate when the application is idle (no user input) |
+| `IdleUps` | `double` | `10.0` | Target update rate when the application is idle (no user input) |
 | `EnableIdleDetection` | `bool` | `true` | Enables/disables idle detection based on user input |
-| `IdleTimeoutSeconds` | `double` | `10.0` | Time in seconds without user input before considering the app idle |
+| `IdleTimeoutSeconds` | `double` | `30.0` | Time in seconds without user input before considering the app idle |
 | `DisableVSyncWhenThrottling` | `bool` | `true` | Whether to disable VSync during throttled rendering for precise frame rate control |
 
 #### Example Usage
@@ -354,11 +354,11 @@ ImGuiApp.Start(new ImGuiAppConfig
     PerformanceSettings = new ImGuiAppPerformanceSettings
     {
         EnableThrottledRendering = true,
-        FocusedFps = 60.0,           // Full speed when focused
-        UnfocusedFps = 15.0,         // Reduced when unfocused
-        IdleFps = 2.0,               // Very low when idle
+        FocusedFps = 60.0,           // Custom higher rate when focused
+        UnfocusedFps = 15.0,         // Custom rate when unfocused
+        IdleFps = 2.0,               // Custom very low rate when idle
         EnableIdleDetection = true,
-        IdleTimeoutSeconds = 5.0,    // Consider idle after 5 seconds
+        IdleTimeoutSeconds = 10.0,   // Custom idle timeout
         DisableVSyncWhenThrottling = true
     }
 });
@@ -370,6 +370,7 @@ This feature automatically:
 - Reduces frame rate and update rate when unfocused or idle
 - Saves CPU and GPU resources without affecting user experience
 - Provides smooth transitions between different performance states
+- Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle
 
 ### `FontAppearance` Class
 
