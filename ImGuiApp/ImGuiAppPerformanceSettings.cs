@@ -59,6 +59,7 @@ public class ImGuiAppPerformanceSettings
 	/// <summary>
 	/// Gets or sets a value indicating whether VSync should be disabled when throttling.
 	/// When true, VSync will be turned off during throttled rendering for more precise frame rate control.
+	/// Set to false if experiencing crashes or context issues.
 	/// </summary>
-	public bool DisableVSyncWhenThrottling { get; init; } = true;
+	public bool DisableVSyncWhenThrottling { get; init; } = false; // Changed default to false for stability
 }

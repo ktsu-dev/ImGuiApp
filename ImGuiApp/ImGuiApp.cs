@@ -130,6 +130,7 @@ public static partial class ImGuiApp
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
 	private static bool? lastVSyncState = null; // Track last VSync state to prevent rapid toggling
+	private static DateTime lastVSyncChange = DateTime.MinValue; // Track when VSync was last changed
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -329,30 +330,40 @@ public static partial class ImGuiApp
 			requiredUps = settings.UnfocusedUps;
 		}
 
-		// Determine the desired VSync state based on throttling settings and focus state
-		bool desiredVSyncState;
-		if (settings.DisableVSyncWhenThrottling && (!IsFocused || IsIdle))
-		{
-			// Only disable VSync when actually throttling (unfocused or idle)
-			// and when the target FPS is significantly lower than display refresh rate
-			desiredVSyncState = requiredFps >= 30; // Keep VSync for higher frame rates to prevent resource spikes
-		}
-		else
-		{
-			// Enable VSync when focused or when throttling VSync disable is turned off
-			desiredVSyncState = true;
-		}
-
-		// Update VSync state only if it has changed to prevent rapid toggling
-		if (lastVSyncState != desiredVSyncState)
-		{
-			window.VSync = desiredVSyncState;
-			lastVSyncState = desiredVSyncState;
-		}
-
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
 		{
+			// More conservative VSync management to prevent context issues
+			// Add a cooldown period to prevent rapid VSync changes
+			var timeSinceLastVSyncChange = DateTime.UtcNow - lastVSyncChange;
+			
+			if (settings.DisableVSyncWhenThrottling && timeSinceLastVSyncChange.TotalSeconds > 1.0)
+			{
+				// Only disable VSync for very low frame rates when unfocused/idle to prevent resource spikes
+				// Keep VSync enabled for higher frame rates and when focused
+				bool shouldDisableVSync = (!IsFocused || IsIdle) && requiredFps < 15;
+				
+				// Only change VSync if it's different from current state to prevent rapid toggling
+				if (lastVSyncState != shouldDisableVSync)
+				{
+					window.VSync = !shouldDisableVSync;
+					lastVSyncState = !shouldDisableVSync;
+					lastVSyncChange = DateTime.UtcNow;
+					DebugLogger.Log($"VSync changed to: {!shouldDisableVSync} (FPS: {requiredFps}, Focused: {IsFocused}, Idle: {IsIdle})");
+				}
+			}
+			else if (!settings.DisableVSyncWhenThrottling && timeSinceLastVSyncChange.TotalSeconds > 1.0)
+			{
+				// Always keep VSync enabled when throttling is disabled
+				if (lastVSyncState != true)
+				{
+					window.VSync = true;
+					lastVSyncState = true;
+					lastVSyncChange = DateTime.UtcNow;
+					DebugLogger.Log("VSync enabled (throttling disabled)");
+				}
+			}
+
 			window.FramesPerSecond = requiredFps;
 		}
 
@@ -390,16 +401,34 @@ public static partial class ImGuiApp
 				throw new InvalidOperationException("Fonts are not configured before Render()");
 			}
 
+			// Additional safety check for ImGui context
+			unsafe
+			{
+				if (ImGui.GetCurrentContext().Handle == null)
+				{
+					DebugLogger.Log("Warning: ImGui context is null, skipping render");
+					return;
+				}
+			}
+
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear(ClearBufferMask.ColorBufferBit);
 
-			RenderWithScaling(() =>
+			try
 			{
-				RenderAppMenu(config.OnAppMenu);
-				RenderWindowContents(config.OnRender, (float)delta);
-			});
+				RenderWithScaling(() =>
+				{
+					RenderAppMenu(config.OnAppMenu);
+					RenderWindowContents(config.OnRender, (float)delta);
+				});
 
-			controller?.Render();
+				controller?.Render();
+			}
+			catch (Exception ex)
+			{
+				DebugLogger.Log($"Render error: {ex.Message}");
+				throw;
+			}
 		};
 	}
 
@@ -1210,6 +1239,7 @@ public static partial class ImGuiApp
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
 		lastVSyncState = null;
+		lastVSyncChange = DateTime.MinValue;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
