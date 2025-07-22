@@ -151,8 +151,11 @@ internal class ImGuiController : IDisposable
 	/// <param name="keyboard">The keyboard context generating the event.</param>
 	/// <param name="keycode">The native keycode of the pressed key.</param>
 	/// <param name="scancode">The native scancode of the pressed key.</param>
-	private static void OnKeyDown(IKeyboard keyboard, Key keycode, int scancode) =>
+	private static void OnKeyDown(IKeyboard keyboard, Key keycode, int scancode)
+	{
+		ImGuiApp.OnUserInput();
 		OnKeyEvent(keyboard, keycode, scancode, down: true);
+	}
 
 	/// <summary>
 	/// Delegate to receive keyboard key up events.
@@ -160,18 +163,30 @@ internal class ImGuiController : IDisposable
 	/// <param name="keyboard">The keyboard context generating the event.</param>
 	/// <param name="keycode">The native keycode of the released key.</param>
 	/// <param name="scancode">The native scancode of the released key.</param>
-	private static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode) =>
+	private static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode)
+	{
+		ImGuiApp.OnUserInput();
 		OnKeyEvent(keyboard, keycode, scancode, down: false);
+	}
 
 	private static void OnMouseScroll(IMouse mouse, ScrollWheel scroll)
 	{
+		ImGuiApp.OnUserInput();
 		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMouseWheelEvent(scroll.X, scroll.Y);
 	}
 
-	private static void OnMouseDown(IMouse mouse, MouseButton button) => OnMouseButton(mouse, button, down: true);
+	private static void OnMouseDown(IMouse mouse, MouseButton button)
+	{
+		ImGuiApp.OnUserInput();
+		OnMouseButton(mouse, button, down: true);
+	}
 
-	private static void OnMouseUp(IMouse mouse, MouseButton button) => OnMouseButton(mouse, button, down: false);
+	private static void OnMouseUp(IMouse mouse, MouseButton button)
+	{
+		ImGuiApp.OnUserInput();
+		OnMouseButton(mouse, button, down: false);
+	}
 
 	private static void OnMouseButton(IMouse _, MouseButton button, bool down)
 	{
@@ -187,6 +202,7 @@ internal class ImGuiController : IDisposable
 
 	private void OnMouseMove(IMouse _, Vector2 position)
 	{
+		ImGuiApp.OnUserInput();
 		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMousePosEvent(position.X, position.Y);
 	}
@@ -212,7 +228,11 @@ internal class ImGuiController : IDisposable
 		}
 	}
 
-	private void OnKeyChar(IKeyboard arg1, char arg2) => _pressedChars.Add(arg2);
+	private void OnKeyChar(IKeyboard arg1, char arg2)
+	{
+		ImGuiApp.OnUserInput();
+		_pressedChars.Add(arg2);
+	}
 
 	private void WindowResized(Vector2D<int> size)
 	{

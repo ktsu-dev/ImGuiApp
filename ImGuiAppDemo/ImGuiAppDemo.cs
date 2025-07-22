@@ -113,6 +113,14 @@ internal static class ImGuiAppDemo
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
 		},
+		// Example of configuring performance settings for throttled rendering
+		PerformanceSettings = new()
+		{
+			EnableThrottledRendering = true,
+			// Using default values: Focused=30, Unfocused=5, Idle=10 FPS
+			// But with a shorter idle timeout for demo purposes
+			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds (default is 30)
+		},
 	});
 
 	private static void OnRender(float dt)
@@ -156,6 +164,7 @@ internal static class ImGuiAppDemo
 		// Create tabs for different demo sections
 		if (ImGui.BeginTabBar("DemoTabs", ImGuiTabBarFlags.None))
 		{
+			RenderPerformanceTab();
 			RenderBasicWidgetsTab();
 			RenderAdvancedWidgetsTab();
 			RenderLayoutTab();
@@ -166,6 +175,26 @@ internal static class ImGuiAppDemo
 			RenderUtilityTab();
 
 			ImGui.EndTabBar();
+		}
+	}
+
+	private static void RenderPerformanceTab()
+	{
+		if (ImGui.BeginTabItem("Performance & Throttling"))
+		{
+			ImGui.TextWrapped("This tab shows the current performance state and throttling behavior.");
+			ImGui.Separator();
+
+			ImGui.Text($"Window Focused: {ImGuiApp.IsFocused}");
+			ImGui.Text($"Application Idle: {ImGuiApp.IsIdle}");
+			ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
+
+			ImGui.Separator();
+			ImGui.TextWrapped("Throttling helps save system resources when the window is unfocused or idle.");
+			ImGui.TextWrapped("Default rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS");
+			ImGui.TextWrapped("Try unfocusing the window or leaving it idle for 5 seconds to see the effect.");
+
+			ImGui.EndTabItem();
 		}
 	}
 

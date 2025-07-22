@@ -108,6 +108,7 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsNotNull(config.OnAppMenu);
 		Assert.IsNotNull(config.OnMoveOrResize);
 		Assert.IsNotNull(config.Fonts);
+		Assert.IsNotNull(config.PerformanceSettings);
 	}
 
 	[TestMethod]
@@ -302,5 +303,86 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.IsNotNull(reloadedTexture, "Reloaded texture should not be null");
 		Assert.AreEqual(1002u, reloadedTexture!.TextureId, "New texture ID should match");
 		Assert.AreNotEqual(firstTextureInfo.TextureId, reloadedTexture.TextureId, "Reloaded texture should have a different ID");
+	}
+
+	[TestMethod]
+	public void PerformanceSettings_DefaultValues_AreCorrect()
+	{
+		// Arrange & Act
+		ImGuiAppPerformanceSettings settings = new();
+
+		// Assert
+		Assert.IsTrue(settings.EnableThrottledRendering);
+		Assert.AreEqual(30.0, settings.FocusedFps);
+		Assert.AreEqual(30.0, settings.FocusedUps);
+		Assert.AreEqual(5.0, settings.UnfocusedFps);
+		Assert.AreEqual(5.0, settings.UnfocusedUps);
+		Assert.AreEqual(10.0, settings.IdleFps);
+		Assert.AreEqual(10.0, settings.IdleUps);
+		Assert.IsTrue(settings.EnableIdleDetection);
+		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
+		Assert.IsTrue(settings.DisableVSyncWhenThrottling);
+	}
+
+	[TestMethod]
+	public void PerformanceSettings_VsyncConfiguration_WorksCorrectly()
+	{
+		// Arrange & Act - Test VSync disable setting
+		ImGuiAppPerformanceSettings settingsWithVSyncDisabled = new()
+		{
+			DisableVSyncWhenThrottling = true
+		};
+
+		ImGuiAppPerformanceSettings settingsWithVSyncEnabled = new()
+		{
+			DisableVSyncWhenThrottling = false
+		};
+
+		// Assert
+		Assert.IsTrue(settingsWithVSyncDisabled.DisableVSyncWhenThrottling);
+		Assert.IsFalse(settingsWithVSyncEnabled.DisableVSyncWhenThrottling);
+	}
+
+	[TestMethod]
+	public void Reset_ResetsPerformanceFields_Correctly()
+	{
+		// Arrange - Simulate some state changes that would occur during normal operation
+		// Note: We can't directly set IsIdle since it has a private setter, but we can verify it's reset
+		// We also can't directly access lastInputTime, but we can verify the Reset behavior
+
+		// Act - Reset the application state
+		ImGuiApp.Reset();
+
+		// Assert - Verify that performance-related fields are reset to their default values
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be reset to false");
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be reset to true");
+
+		// Note: lastInputTime is private so we can't directly test it, but the Reset() method
+		// should set it to DateTime.UtcNow, which will be tested implicitly through the idle detection logic
+	}
+
+	[TestMethod]
+	public void Reset_PreventesStatePollutionBetweenTests()
+	{
+		// Arrange - First call Reset to ensure clean state
+		ImGuiApp.Reset();
+
+		// Verify initial clean state
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should start as true");
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should start as false");
+
+		// Act - Simulate some state changes that could happen during a test
+		// We can call OnUserInput to update lastInputTime
+		ImGuiApp.OnUserInput();
+
+		// Call Reset again to simulate what happens between test runs
+		ImGuiApp.Reset();
+
+		// Assert - Verify that Reset properly restored the default state
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be reset to true");
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be reset to false");
+
+		// The lastInputTime should be reset to DateTime.UtcNow (current time)
+		// We can't test this directly, but the behavior should be consistent
 	}
 }

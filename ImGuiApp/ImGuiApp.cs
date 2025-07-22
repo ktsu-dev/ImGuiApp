@@ -117,10 +117,23 @@ public static partial class ImGuiApp
 	/// Gets a value indicating whether the ImGui application window is focused.
 	/// </summary>
 	public static bool IsFocused { get; private set; } = true;
+
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is visible.
 	/// </summary>
 	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
+
+	/// <summary>
+	/// Gets a value indicating whether the application is currently idle (no user input for a specified time).
+	/// </summary>
+	public static bool IsIdle { get; private set; }
+
+	private static DateTime lastInputTime = DateTime.UtcNow;
+
+	/// <summary>
+	/// Updates the last input time to the current time. Called by the input system when user input is detected.
+	/// </summary>
+	internal static void OnUserInput() => lastInputTime = DateTime.UtcNow;
 
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
@@ -276,18 +289,65 @@ public static partial class ImGuiApp
 
 	private static void UpdateWindowPerformance()
 	{
+		ImGuiAppPerformanceSettings settings = Config.PerformanceSettings;
+
+		if (!settings.EnableThrottledRendering)
+		{
+			return;
+		}
+
+		// Update idle state if idle detection is enabled
+		if (settings.EnableIdleDetection)
+		{
+			double timeSinceLastInput = (DateTime.UtcNow - lastInputTime).TotalSeconds;
+			IsIdle = timeSinceLastInput >= settings.IdleTimeoutSeconds;
+		}
+		else
+		{
+			IsIdle = false;
+		}
+
 		double currentFps = window!.FramesPerSecond;
 		double currentUps = window.UpdatesPerSecond;
-		double requiredFps = IsFocused ? 30 : 5;
-		double requiredUps = IsFocused ? 30 : 5;
 
-		if (currentFps != requiredFps)
+		// Determine required FPS and UPS based on focus and idle state
+		double requiredFps, requiredUps;
+		if (IsIdle && settings.EnableIdleDetection)
 		{
-			window.VSync = false;
+			requiredFps = settings.IdleFps;
+			requiredUps = settings.IdleUps;
+		}
+		else if (IsFocused)
+		{
+			requiredFps = settings.FocusedFps;
+			requiredUps = settings.FocusedUps;
+		}
+		else
+		{
+			requiredFps = settings.UnfocusedFps;
+			requiredUps = settings.UnfocusedUps;
+		}
+
+		// Update frame rate if needed
+		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
+		{
+			// Manage VSync based on throttling settings
+			if (settings.DisableVSyncWhenThrottling)
+			{
+				// Disable VSync when setting a custom frame rate for throttling
+				window.VSync = false;
+			}
+			else
+			{
+				// Re-enable VSync if throttling VSync disable is turned off
+				window.VSync = true;
+			}
+
 			window.FramesPerSecond = requiredFps;
 		}
 
-		if (currentUps != requiredUps)
+		// Update update rate if needed
+		if (Math.Abs(currentUps - requiredUps) > 0.1) // Use small epsilon for comparison
 		{
 			window.UpdatesPerSecond = requiredUps;
 		}
@@ -1087,6 +1147,8 @@ public static partial class ImGuiApp
 		currentFontMemoryHandles.Clear();
 		Invoker = null!;
 		IsFocused = true;
+		IsIdle = false;
+		lastInputTime = DateTime.UtcNow;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
