@@ -21,19 +21,9 @@ public class ImGuiAppPerformanceSettings
 	public double FocusedFps { get; init; } = 30.0;
 
 	/// <summary>
-	/// Gets or sets the target update rate (UPS) when the application window is focused and active.
-	/// </summary>
-	public double FocusedUps { get; init; } = 30.0;
-
-	/// <summary>
 	/// Gets or sets the target frame rate (FPS) when the application window is unfocused.
 	/// </summary>
 	public double UnfocusedFps { get; init; } = 5.0;
-
-	/// <summary>
-	/// Gets or sets the target update rate (UPS) when the application window is unfocused.
-	/// </summary>
-	public double UnfocusedUps { get; init; } = 5.0;
 
 	/// <summary>
 	/// Gets or sets the target frame rate (FPS) when the application is idle (no user input).
@@ -41,9 +31,9 @@ public class ImGuiAppPerformanceSettings
 	public double IdleFps { get; init; } = 10.0;
 
 	/// <summary>
-	/// Gets or sets the target update rate (UPS) when the application is idle (no user input).
+	/// Gets or sets the target frame rate (FPS) when the application window is not visible (minimized or hidden).
 	/// </summary>
-	public double IdleUps { get; init; } = 10.0;
+	public double NotVisibleFps { get; init; } = 2.0;
 
 	/// <summary>
 	/// Gets or sets a value indicating whether idle detection is enabled.
@@ -55,10 +45,4 @@ public class ImGuiAppPerformanceSettings
 	/// Gets or sets the time (in seconds) of no user input before the application is considered idle.
 	/// </summary>
 	public double IdleTimeoutSeconds { get; init; } = 30.0;
-
-	/// <summary>
-	/// Gets or sets a value indicating whether VSync should be disabled when throttling.
-	/// When true, VSync will be turned off during throttled rendering for more precise frame rate control.
-	/// </summary>
-	public bool DisableVSyncWhenThrottling { get; init; } = true;
 }

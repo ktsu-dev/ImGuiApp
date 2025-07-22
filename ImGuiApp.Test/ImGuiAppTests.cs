@@ -314,33 +314,11 @@ public sealed class ImGuiAppTests : IDisposable
 		// Assert
 		Assert.IsTrue(settings.EnableThrottledRendering);
 		Assert.AreEqual(30.0, settings.FocusedFps);
-		Assert.AreEqual(30.0, settings.FocusedUps);
 		Assert.AreEqual(5.0, settings.UnfocusedFps);
-		Assert.AreEqual(5.0, settings.UnfocusedUps);
 		Assert.AreEqual(10.0, settings.IdleFps);
-		Assert.AreEqual(10.0, settings.IdleUps);
+		Assert.AreEqual(2.0, settings.NotVisibleFps);
 		Assert.IsTrue(settings.EnableIdleDetection);
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
-		Assert.IsTrue(settings.DisableVSyncWhenThrottling);
-	}
-
-	[TestMethod]
-	public void PerformanceSettings_VsyncConfiguration_WorksCorrectly()
-	{
-		// Arrange & Act - Test VSync disable setting
-		ImGuiAppPerformanceSettings settingsWithVSyncDisabled = new()
-		{
-			DisableVSyncWhenThrottling = true
-		};
-
-		ImGuiAppPerformanceSettings settingsWithVSyncEnabled = new()
-		{
-			DisableVSyncWhenThrottling = false
-		};
-
-		// Assert
-		Assert.IsTrue(settingsWithVSyncDisabled.DisableVSyncWhenThrottling);
-		Assert.IsFalse(settingsWithVSyncEnabled.DisableVSyncWhenThrottling);
 	}
 
 	[TestMethod]
