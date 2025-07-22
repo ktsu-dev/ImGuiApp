@@ -56,9 +56,5 @@ public class ImGuiAppPerformanceSettings
 	/// </summary>
 	public double IdleTimeoutSeconds { get; init; } = 30.0;
 
-	/// <summary>
-	/// Gets or sets a value indicating whether VSync should be disabled when throttling.
-	/// When true, VSync will be turned off during throttled rendering for more precise frame rate control.
-	/// </summary>
-	public bool DisableVSyncWhenThrottling { get; init; } = true;
+
 }
