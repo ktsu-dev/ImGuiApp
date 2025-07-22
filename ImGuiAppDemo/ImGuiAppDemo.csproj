@@ -1,5 +1,6 @@
 <Project Sdk="ktsu.Sdk.ImGuiApp">
   <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>

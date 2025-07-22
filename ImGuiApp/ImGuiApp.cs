@@ -129,6 +129,7 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
+	private static bool? lastVSyncState = null; // Track last VSync state to prevent rapid toggling
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -328,21 +329,30 @@ public static partial class ImGuiApp
 			requiredUps = settings.UnfocusedUps;
 		}
 
+		// Determine the desired VSync state based on throttling settings and focus state
+		bool desiredVSyncState;
+		if (settings.DisableVSyncWhenThrottling && (!IsFocused || IsIdle))
+		{
+			// Only disable VSync when actually throttling (unfocused or idle)
+			// and when the target FPS is significantly lower than display refresh rate
+			desiredVSyncState = requiredFps >= 30; // Keep VSync for higher frame rates to prevent resource spikes
+		}
+		else
+		{
+			// Enable VSync when focused or when throttling VSync disable is turned off
+			desiredVSyncState = true;
+		}
+
+		// Update VSync state only if it has changed to prevent rapid toggling
+		if (lastVSyncState != desiredVSyncState)
+		{
+			window.VSync = desiredVSyncState;
+			lastVSyncState = desiredVSyncState;
+		}
+
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
 		{
-			// Manage VSync based on throttling settings
-			if (settings.DisableVSyncWhenThrottling)
-			{
-				// Disable VSync when setting a custom frame rate for throttling
-				window.VSync = false;
-			}
-			else
-			{
-				// Re-enable VSync if throttling VSync disable is turned off
-				window.VSync = true;
-			}
-
 			window.FramesPerSecond = requiredFps;
 		}
 
@@ -1199,6 +1209,7 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
+		lastVSyncState = null;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
