@@ -74,7 +74,7 @@ public class ImGuiAppConfig
 	/// <summary>
 	/// Gets or sets a value indicating whether to enable extended Unicode support for fonts.
 	/// When true, fonts will include extended character ranges for accented characters,
-	/// mathematical symbols, currency symbols, and other Unicode blocks.
+	/// mathematical symbols, currency symbols, emojis, and other Unicode blocks.
 	/// When false, only basic ASCII characters (0-127) will be available.
 	/// Default is true.
 	/// </summary>

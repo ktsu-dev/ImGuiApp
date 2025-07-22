@@ -1003,7 +1003,7 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Creates extended Unicode glyph ranges that include common symbols and accented characters.
+	/// Creates extended Unicode glyph ranges that include common symbols, accented characters, and emojis.
 	/// </summary>
 	/// <param name="fontAtlasPtr">The font atlas to use for building ranges.</param>
 	/// <returns>Pointer to the glyph ranges.</returns>
@@ -1028,6 +1028,17 @@ public static partial class ImGuiApp
 		builder.AddChar(0x2580, 0x259F); // Block Elements
 		builder.AddChar(0x25A0, 0x25FF); // Geometric Shapes
 		builder.AddChar(0x2600, 0x26FF); // Miscellaneous Symbols
+		
+		// Add emoji ranges (will only work if the font supports them)
+		builder.AddChar(0x1F600, 0x1F64F); // Emoticons
+		builder.AddChar(0x1F300, 0x1F5FF); // Miscellaneous Symbols and Pictographs
+		builder.AddChar(0x1F680, 0x1F6FF); // Transport and Map Symbols
+		builder.AddChar(0x1F700, 0x1F77F); // Alchemical Symbols
+		builder.AddChar(0x1F780, 0x1F7FF); // Geometric Shapes Extended
+		builder.AddChar(0x1F800, 0x1F8FF); // Supplemental Arrows-C
+		builder.AddChar(0x1F900, 0x1F9FF); // Supplemental Symbols and Pictographs
+		builder.AddChar(0x1FA00, 0x1FA6F); // Chess Symbols
+		builder.AddChar(0x1FA70, 0x1FAFF); // Symbols and Pictographs Extended-A
 		
 		// Build the ranges
 		builder.BuildRanges(out ImVectorPtr ranges);

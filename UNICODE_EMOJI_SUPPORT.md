@@ -34,7 +34,7 @@ private static void Main() => ImGuiApp.Start(new()
 });
 ```
 
-That's it! Your existing fonts will now include extended Unicode character ranges.
+That's it! Your existing fonts will now include extended Unicode character ranges, including emojis (if your font supports them).
 
 ### Method 2: Using ImGuiFontConfig for External Fonts
 
@@ -77,7 +77,7 @@ private static void ConfigureCustomFonts()
 
 ## Supported Character Ranges
 
-### WithUnicodeSupport()
+### EnableUnicodeSupport = true (Default)
 - ASCII (U+0000-U+007F) - Basic Latin
 - Latin Extended-A (U+0100-U+017F) - Accented characters
 - Latin Extended-B (U+0180-U+024F) - Additional accented characters
@@ -86,6 +86,7 @@ private static void ConfigureCustomFonts()
 - Mathematical Operators (U+2200-U+22FF) - ∞, ≠, ≈, ∑, ∏, etc.
 - Geometric Shapes (U+25A0-U+25FF) - ■, ●, ▲, etc.
 - Miscellaneous Symbols (U+2600-U+26FF) - ☀, ♠, ♪, etc.
+- **Emoji Ranges** (U+1F300-U+1FAFF) - 😀🚀🌟💻🎨🌈⚡🔥 (if font supports them)
 
 ### WithFullUnicodeSupport()
 - All of the above, plus:
@@ -126,9 +127,9 @@ Or run the ImGuiAppDemo project and select "View → Unicode & Emoji Test" from 
 
 ## Memory Considerations
 
-- **WithUnicodeSupport()**: ~2-5 MB additional memory (recommended for most apps)
-- **WithFullUnicodeSupport()**: ~10-20 MB additional memory
-- **WithEmojiSupport()**: ~5-10 MB additional memory (varies by emoji font)
+- **EnableUnicodeSupport = true** (default): ~3-8 MB additional memory (includes Unicode symbols + emoji ranges)
+- **EnableUnicodeSupport = false**: Minimal memory usage (ASCII only)
+- **Custom font with full CJK support**: ~20-50 MB additional memory (if using Asian character sets)
 
 ## Troubleshooting
 
@@ -152,22 +153,26 @@ Or run the ImGuiAppDemo project and select "View → Unicode & Emoji Test" from 
 
 ### Emojis Not Displaying
 
-1. **Font limitation**: Most regular fonts don't include emoji characters. Emojis require specialized emoji fonts.
+**Note**: Emoji ranges are automatically included when `EnableUnicodeSupport = true` (which is the default).
 
-2. **Use emoji-capable fonts**: If you need emoji support, load an emoji font alongside your regular font:
-   ```csharp
-   private static void ConfigureEmojis()
-   {
-       var io = ImGui.GetIO();
-       var emojiFont = File.ReadAllBytes("path/to/emoji-font.ttf");
-       
-       unsafe
-       {
-           uint* emojiRanges = FontHelper.GetEmojiRanges(io.Fonts);
-           FontHelper.AddCustomFont(io, emojiFont, 16.0f, emojiRanges, mergeWithPrevious: true);
-       }
-   }
-   ```
+1. **Font limitation**: Most regular fonts don't include emoji characters. If emojis show as question marks, your font doesn't support them.
+
+2. **Solutions**:
+   - **Option A**: Use a font that includes emoji support (like Noto Sans with Noto Color Emoji)
+   - **Option B**: Load an emoji font alongside your regular font:
+     ```csharp
+     private static void ConfigureEmojis()
+     {
+         var io = ImGui.GetIO();
+         var emojiFont = File.ReadAllBytes("path/to/emoji-font.ttf");
+         
+         unsafe
+         {
+             uint* emojiRanges = FontHelper.GetEmojiRanges(io.Fonts);
+             FontHelper.AddCustomFont(io, emojiFont, 16.0f, emojiRanges, mergeWithPrevious: true);
+         }
+     }
+     ```
 
 ### Performance Issues
 
