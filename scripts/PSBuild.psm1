@@ -1492,7 +1492,7 @@ function Invoke-DotNetPack {
     .PARAMETER Project
         Optional specific project to package. If not provided, all projects are packaged.
     .PARAMETER LatestChangelogFile
-        Optional path to the latest changelog file to use for PackageReleaseNotes. Defaults to "LATEST_CHANGELOG.md".
+        Optional path to the latest changelog file to use for PackageReleaseNotesFile. Defaults to "LATEST_CHANGELOG.md".
     #>
     [CmdletBinding()]
     param (
@@ -1517,18 +1517,17 @@ function Invoke-DotNetPack {
 
     try {
         # Override PackageReleaseNotes to use LATEST_CHANGELOG.md instead of full CHANGELOG.md
-        # The updated SDK will automatically handle truncation if the content is too long
+        # Use PackageReleaseNotesFile property to avoid command line length limits and escaping issues
         $releaseNotesProperty = ""
         
         if (Test-Path $LatestChangelogFile) {
-            # Read the latest changelog content
-            $fileContent = [System.IO.File]::ReadAllText($LatestChangelogFile)
-            Write-Information "Using release notes from $LatestChangelogFile ($($fileContent.Length) characters)" -Tags "Invoke-DotNetPack"
+            # Get absolute path to the changelog file for MSBuild
+            $absoluteChangelogPath = (Resolve-Path $LatestChangelogFile).Path
+            Write-Information "Using release notes from file: $absoluteChangelogPath" -Tags "Invoke-DotNetPack"
             
-            # Escape quotes for MSBuild property
-            $escapedContent = $fileContent.Replace('"', '\"')
-            $releaseNotesProperty = "-p:PackageReleaseNotes=`"$escapedContent`""
-            Write-Information "Overriding PackageReleaseNotes with latest changelog content" -Tags "Invoke-DotNetPack"
+            # Use PackageReleaseNotesFile property instead of PackageReleaseNotes to avoid command line issues
+            $releaseNotesProperty = "-p:PackageReleaseNotesFile=`"$absoluteChangelogPath`""
+            Write-Information "Overriding PackageReleaseNotesFile with latest changelog file path" -Tags "Invoke-DotNetPack"
         } else {
             Write-Information "No latest changelog found, SDK will use full CHANGELOG.md (automatically truncated if needed)" -Tags "Invoke-DotNetPack"
         }
