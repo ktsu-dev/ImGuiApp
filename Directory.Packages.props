@@ -4,6 +4,10 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Main Application Dependencies -->
+    <PackageVersion Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.8.4" />
     <PackageVersion Include="ktsu.Invoker" Version="1.1.0" />
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.2" />

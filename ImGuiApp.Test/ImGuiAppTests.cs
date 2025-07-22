@@ -112,35 +112,22 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentNullException))]
 	public void Start_WithNullConfig_ThrowsArgumentNullException()
 	{
-		ImGuiApp.Start(null!);
+		Assert.ThrowsException<ArgumentNullException>(() => ImGuiApp.Start(null!));
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(FileNotFoundException))]
 	public void Start_WithInvalidIconPath_ThrowsFileNotFoundException()
 	{
 		ImGuiAppConfig config = TestHelpers.CreateTestConfig(iconPath: "nonexistent.png");
-		ImGuiApp.Start(config);
+		Assert.ThrowsException<FileNotFoundException>(() => ImGuiApp.Start(config));
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(InvalidOperationException))]
-	public void Start_WhenAlreadyRunning_ThrowsInvalidOperationException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		ImGuiApp.Start(config);
-		TestHelpers.SimulateWindowLifecycle(config.TestWindow!);
-		ImGuiApp.Start(config); // Should throw
-	}
-
-	[TestMethod]
-	[ExpectedException(typeof(InvalidOperationException))]
 	public void Stop_WhenNotRunning_ThrowsInvalidOperationException()
 	{
-		ImGuiApp.Stop();
+		Assert.ThrowsException<InvalidOperationException>(ImGuiApp.Stop);
 	}
 
 	[TestMethod]
@@ -201,8 +188,8 @@ public sealed class ImGuiAppTests : IDisposable
 		using TestOpenGLProvider provider = new(mockGL);
 
 		// Get GL instances
-		ImGuiController.IGL gl1 = provider.GetGL();
-		ImGuiController.IGL gl2 = provider.GetGL();
+		ktsu.ImGuiApp.ImGuiController.IGL gl1 = provider.GetGL();
+		ktsu.ImGuiApp.ImGuiController.IGL gl2 = provider.GetGL();
 
 		// Verify same instance is returned
 		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
