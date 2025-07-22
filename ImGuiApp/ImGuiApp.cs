@@ -314,9 +314,9 @@ public static partial class ImGuiApp
 		double requiredFps, requiredUps;
 		if (!IsVisible)
 		{
-			// Window is not visible (minimized, etc.) - drop to 1 Hz to save maximum resources
-			requiredFps = 1.0;
-			requiredUps = 1.0;
+			// Window is not visible (minimized, etc.) - drop to lowest possible frame rate to save maximum resources
+			requiredFps = 0.1; // 1 frame every 10 seconds
+			requiredUps = 0.1; // 1 update every 10 seconds
 		}
 		else if (IsIdle && settings.EnableIdleDetection)
 		{
