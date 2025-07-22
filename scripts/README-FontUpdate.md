@@ -1,6 +1,6 @@
-# Font Update Script with Interactive TUI
+# Font Update Script with Interactive TUI + Emoji Support
 
-This PowerShell script automates downloading and installing Nerd Fonts for the ImGuiApp project, featuring a beautiful **Text User Interface (TUI)** for easy font selection. The script simplifies font management by selecting **one font variant** and installing it as `NerdFont.ttf` for automatic build detection.
+This PowerShell script automates downloading and installing Nerd Fonts for the ImGuiApp project, featuring a beautiful **Text User Interface (TUI)** for easy font selection. The script simplifies font management by selecting **one font variant** and installing it as `NerdFont.ttf` for automatic build detection. **Bonus:** Preserves manually placed emoji fonts like `NotoEmoji.ttf` for full emoji support! 😀🚀
 
 ## 🎨 Interactive Mode (TUI)
 
@@ -68,21 +68,27 @@ After choosing a font family, you'll see all available variants (Regular, Medium
 1. **📥 Downloads** the latest Nerd Font release from GitHub
 2. **📦 Extracts** the font archive and presents filtered, useful variants
 3. **🎯 Lets you select** one font variant (Regular, Medium, Bold, etc.)
-4. **💾 Backs up** your current font to a timestamped folder
-5. **📁 Installs** the selected font as `NerdFont.ttf` for automatic detection
-6. **🧪 Tests** that the project still builds correctly
-7. **🧹 Cleans up** temporary files
+4. **💾 Backs up** your current fonts to a timestamped folder
+5. **📁 Installs** the selected font as `NerdFont.ttf` 
+6. **😀 Preserves** any manually placed `NotoEmoji.ttf` for emoji support
+7. **🧪 Tests** that the project still builds correctly
+8. **🧹 Cleans up** temporary files
 
-**Note:** The build system and application configuration automatically handle `NerdFont.ttf`!
+**Note:** The build system automatically handles both font files! Place monochrome emoji fonts manually.
 
 ## 🏗️ Standardized Build System
 
-The script now uses a **standardized naming convention** where the selected font is always saved as `NerdFont.ttf`. This means:
+The script uses a **standardized naming convention** for fonts:
 
-- ✅ **Automatic Detection** - The build system looks for `NerdFont.ttf`
-- ✅ **Simplified Resource Management** - One resource entry instead of multiple
-- ✅ **Easy Font Switching** - Just replace the one TTF file
-- ✅ **Consistent References** - All code references `Resources.NerdFont`
+**Main Font:** `NerdFont.ttf` - Your selected programming font (auto-installed)
+**Emoji Font:** `NotoEmoji.ttf` - Monochrome emoji font (manually placed)
+
+This means:
+- ✅ **Automatic Detection** - The build system looks for both standardized files
+- ✅ **Simplified Resource Management** - Consistent resource entries
+- ✅ **Easy Font Switching** - Replace main font, preserve emoji font
+- ✅ **Complete Typography** - Programming symbols + emoji support
+- ✅ **Consistent References** - `Resources.NerdFont` + `Resources.NotoEmoji`
 
 ## 🎯 Available Fonts
 
@@ -110,13 +116,16 @@ The script now uses a **standardized naming convention** where the selected font
 
 ## 📁 Files Updated
 
-The script only replaces this file:
-- `ImGuiApp/Resources/NerdFont.ttf` - The standardized font file
+The script replaces this file:
+- `ImGuiApp/Resources/NerdFont.ttf` - Your selected programming font
+
+**Preserves:** Manually placed fonts:
+- `ImGuiApp/Resources/NotoEmoji.ttf` - Your monochrome emoji font (if present)
 
 **Automatic:** The build system automatically handles everything else:
-- `ImGuiApp/Resources/Resources.resx` - Resource reference for NerdFont.ttf
+- `ImGuiApp/Resources/Resources.resx` - Resource references for both fonts
 - `ImGuiApp/Resources/Resources.Designer.cs` - Generated resource code
-- Application configuration already references the standardized font name
+- Application configuration already references the standardized font names
 
 ## 💾 Backup & Recovery
 
@@ -145,11 +154,13 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 4. Check that `NerdFont.ttf` exists in `Resources/` folder
 
 ### Manual Font Installation
-If the script fails, you can manually install a font:
+If the script fails, you can manually install fonts:
 1. Download any Nerd Font TTF file
 2. Rename it to `NerdFont.ttf`
 3. Copy it to `ImGuiApp/Resources/`
-4. Run `dotnet build` (automatically handles everything else!)
+4. **Optional:** Download a monochrome emoji font (like Noto Emoji monochrome)
+5. **Optional:** Rename emoji font to `NotoEmoji.ttf` and place in `ImGuiApp/Resources/`
+6. Run `dotnet build` (automatically handles everything else!)
 
 ## 🎮 TUI Navigation
 
@@ -203,8 +214,8 @@ Get-Help .\scripts\Update-NerdFont.ps1 -Examples
 
 1. **Build the project**: `dotnet build`
 2. **Run the demo**: `dotnet run --project ImGuiAppDemo`  
-3. **Check the "Nerd Fonts" tab** to see your new icons!
-4. **Enjoy beautiful programming fonts** with full Nerd Font icon support!
+3. **Check the "Nerd Fonts" tab** to see your new icons and emojis! 😀🚀
+4. **Enjoy beautiful programming fonts** with full Nerd Font icon support + emojis!
 
 ## 🌟 TUI Experience
 
@@ -228,12 +239,13 @@ Then after selecting a font family:
 
 Available font variants:
 
-   1. JetBrainsMonoNerdFont-Medium.ttf (142.3 KB) [default]
+   1. JetBrainsMonoNerdFont-Medium.ttf (142.3 KB) [recommended]
    2. JetBrainsMonoNerdFont-Regular.ttf (139.8 KB)
    3. JetBrainsMonoNerdFont-Bold.ttf (145.1 KB)
    4. JetBrainsMonoNerdFont-Light.ttf (137.2 KB)
 
 💡 The selected font will be installed as 'NerdFont.ttf' for automatic build detection
+😀 Any existing 'NotoEmoji.ttf' will be preserved for emoji support
 ```
 
-Your new Nerd Font will be installed as a single `NerdFont.ttf` file, making font management simple and consistent! 🚀✨ 
+Your new setup includes a beautiful programming font (`NerdFont.ttf`) and preserves any manually placed emoji fonts (`NotoEmoji.ttf`) - the perfect combination for modern development! 🚀✨😀 

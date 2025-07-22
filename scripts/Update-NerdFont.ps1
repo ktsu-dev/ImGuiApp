@@ -7,8 +7,9 @@
 .DESCRIPTION
     This script automates the process of downloading Nerd Fonts from the official
     Nerd Fonts repository, extracting the required font file, and replacing the current font
-    file in the ImGuiApp/Resources directory. Features an interactive TUI for font selection.
-    The selected font will be installed as "NerdFont.ttf" for automatic build detection.
+    file in the ImGuiApp/Resources directory. Preserves any manually placed emoji fonts.
+    Features an interactive TUI for font selection. The selected font will be installed as
+    "NerdFont.ttf" with automatic build detection. Place "NotoEmoji.ttf" manually for emoji support.
 
 .PARAMETER FontName
     The name of the Nerd Font to download. If not specified, launches interactive TUI.
@@ -53,6 +54,7 @@ $TempPath = Join-Path $env:TEMP "NerdFont_Download"
 
 # Standardized font filename - this is what the build system will look for
 $StandardFontFilename = "NerdFont.ttf"
+$EmojiFilename = "NotoEmoji.ttf"  # Preserve manually placed emoji fonts
 
 # Enhanced font mappings with descriptions and popularity (sorted alphabetically)
 $FontMappings = @{
@@ -272,6 +274,7 @@ function Show-SingleVariantSelectionTUI {
 
 	Write-Host ""
 	Write-Host "💡 The selected font will be installed as '$StandardFontFilename' for automatic build detection" -ForegroundColor Yellow
+	Write-Host "😀 Any existing '$EmojiFilename' will be preserved for emoji support" -ForegroundColor Yellow
 	if ($ttfFiles.Count -lt $allTtfFiles.Count) {
 		Write-Host "🔧 Type 'all' to see all $($allTtfFiles.Count) variants, or 'filter' to change filtering" -ForegroundColor Cyan
 	}
@@ -601,6 +604,8 @@ function Download-NerdFont {
 	}
 }
 
+# Emoji download removed - use manually placed emoji fonts in Resources/
+
 function Extract-FontFiles {
 	param(
 		[string]$ZipPath,
@@ -672,23 +677,47 @@ function Install-FontFiles {
 	Write-Status "Installing font file to ImGuiApp Resources..."
 
 	try {
-		# Remove old font files (any TTF files that look like fonts)
-		$oldFonts = Get-ChildItem -Path $ResourcesPath -Filter "*.ttf"
+		# Check if emoji font exists before cleanup
+		$emojiPath = Join-Path $ResourcesPath $EmojiFilename
+		$hasExistingEmoji = Test-Path $emojiPath
+		$emojiBackup = $null
+
+		if ($hasExistingEmoji) {
+			# Temporarily backup emoji font to preserve it
+			$emojiBackup = Join-Path $env:TEMP "temp_emoji_backup.ttf"
+			Copy-Item $emojiPath -Destination $emojiBackup -Force
+			Write-Status "Preserving existing emoji font: $EmojiFilename"
+		}
+
+		# Remove old font files (excluding the emoji font we want to preserve)
+		$oldFonts = Get-ChildItem -Path $ResourcesPath -Filter "*.ttf" | Where-Object { $_.Name -ne $EmojiFilename }
 		foreach ($oldFont in $oldFonts) {
 			Remove-Item $oldFont.FullName -Force
 			Write-Success "Removed old font: $($oldFont.Name)"
 		}
 
-		# Copy selected font file with standardized name
-		$targetPath = Join-Path $ResourcesPath $StandardFontFilename
-
-		Copy-Item $SelectedFile.FullName -Destination $targetPath -Force
+		# Copy selected main font file with standardized name
+		$mainTargetPath = Join-Path $ResourcesPath $StandardFontFilename
+		Copy-Item $SelectedFile.FullName -Destination $mainTargetPath -Force
 		Write-Success "Installed: $($SelectedFile.Name) → $StandardFontFilename"
 
-		Write-Host ""
-		Write-Success "Successfully installed font file as $StandardFontFilename"
+		# Restore emoji font if it existed
+		if ($emojiBackup -and (Test-Path $emojiBackup)) {
+			Copy-Item $emojiBackup -Destination $emojiPath -Force
+			Remove-Item $emojiBackup -Force
+			$emojiSize = Get-Item $emojiPath | ForEach-Object { '{0:N1} MB' -f ($_.Length / 1MB) }
+			Write-Success "Preserved emoji font: $EmojiFilename ($emojiSize)"
+		}
 
-		# Note: Application configuration uses the standardized NerdFont.ttf automatically
+		Write-Host ""
+		$installedStatus = if (Test-Path $emojiPath) { "main font + emoji support" } else { "main font only" }
+		Write-Success "Successfully installed $installedStatus"
+
+		if (-not (Test-Path $emojiPath)) {
+			Write-Host "💡 To add emoji support, manually place a monochrome emoji font as '$EmojiFilename'" -ForegroundColor Cyan
+		}
+
+		# Note: Application configuration uses the standardized font files automatically
 	}
 	catch {
 		Write-Error "Installation failed: $($_.Exception.Message)"
@@ -747,8 +776,8 @@ try {
 	Write-Host @"
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                            ImGuiApp Font Updater                             ║
-║                    Downloading and Installing Single Nerd Font               ║
-║                      Selected font will be saved as NerdFont.ttf             ║
+║                        Downloading and Installing Nerd Font                  ║
+║              Preserving manually placed emoji fonts (NotoEmoji.ttf)          ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
 
@@ -802,7 +831,7 @@ try {
 	$zipPath = Join-Path $TempPath "$($fontConfig.DownloadName).zip"
 	Download-NerdFont -FontName $fontConfig.DisplayName -DownloadUrl $downloadUrl -OutputPath $zipPath
 
-	# Extract font - this now returns a single file
+	# Extract font - this returns a single file
 	$fontFile = Extract-FontFiles -ZipPath $zipPath -FontConfig $fontConfig
 
 	if (-not $fontFile) {
@@ -814,7 +843,7 @@ try {
 	$backupPath = Backup-CurrentFonts
 	Write-Success "Backup created: $backupPath"
 
-	# Install new font
+	# Install new font (preserving any manually placed emoji fonts)
 	Install-FontFiles -SelectedFile $fontFile -FontConfig $fontConfig
 
 	# Test build
@@ -823,6 +852,9 @@ try {
 	# Cleanup
 	Cleanup-TempFiles
 
+		$emojiPath = Join-Path $ResourcesPath $EmojiFilename
+	$emojiStatus = if (Test-Path $emojiPath) { "✅ With emoji support!" } else { "💡 Add monochrome emoji font manually" }
+
 	Write-Host @"
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -830,11 +862,12 @@ try {
 ║                                                                              ║
 ║  $($fontConfig.DisplayName) Nerd Font has been successfully installed!       ║
 ║  Installed as: $StandardFontFilename                                         ║
+║  Emoji support: $EmojiFilename $emojiStatus                                  ║
 ║                                                                              ║
 ║  Next steps:                                                                 ║
 ║  1. Run: dotnet build                                                        ║
 ║  2. Run: dotnet run --project ImGuiAppDemo                                   ║
-║  3. Check the "Nerd Fonts" tab to see your new icons!                        ║
+║  3. Check the "Nerd Fonts" tab to see your new icons and emojis! 😀🚀       ║
 ║                                                                              ║
 ║  Backup location: $($backupPath.Split('\')[-1])                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝

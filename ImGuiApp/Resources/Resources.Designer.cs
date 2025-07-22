@@ -80,5 +80,17 @@ namespace ktsu.ImGuiApp.Resources
 				return ((byte[])(obj));
 			}
 		}
+
+		/// <summary>
+		///   Looks up a localized resource of type System.Byte[].
+		/// </summary>
+		internal static byte[] NotoEmoji
+		{
+			get
+			{
+				object obj = ResourceManager.GetObject("NotoEmoji", resourceCulture);
+				return ((byte[])(obj));
+			}
+		}
 	}
 }
