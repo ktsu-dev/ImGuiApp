@@ -967,14 +967,34 @@ public static partial class ImGuiApp
 		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 		int defaultFontIndex = -1;
 
+		// Pre-allocate emoji font memory outside the loops for reuse
+		nint emojiHandle = IntPtr.Zero;
+		int emojiLength = 0;
+		byte[]? emojiBytes = ImGuiAppConfig.EmojiFont;
+		if (emojiBytes != null)
+		{
+			emojiHandle = Marshal.AllocHGlobal(emojiBytes.Length);
+			currentFontMemoryHandles.Add(emojiHandle);
+			Marshal.Copy(emojiBytes, 0, emojiHandle, emojiBytes.Length);
+			emojiLength = emojiBytes.Length;
+		}
+
 		foreach ((string name, byte[] fontBytes) in fontsToLoad)
 		{
+			// Pre-allocate main font memory outside the size loop for reuse
+			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
+			currentFontMemoryHandles.Add(fontHandle);
+			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
+
 			foreach (int size in CommonFontSizes)
 			{
-				LoadFont($"{name}_{size}", fontBytes, fontAtlasPtr, size);
+				LoadFontFromMemory($"{name}_{size}", fontHandle, fontBytes.Length, fontAtlasPtr, size);
 
 				// Load and merge emoji font immediately after main font for proper merging
-				LoadEmojiFont(fontAtlasPtr, size);
+				if (emojiHandle != IntPtr.Zero)
+				{
+					LoadEmojiFontFromMemory(emojiHandle, emojiLength, fontAtlasPtr, size);
+				}
 
 				// Prioritize DefaultFonts over custom Fonts for setting the default font
 				if (size == 12)
@@ -1026,31 +1046,17 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Loads a font from byte array data into the font atlas.
+	/// Loads a font from pre-allocated memory into the font atlas with custom glyph ranges.
+	/// This method reuses already allocated memory to avoid duplicate allocations for multiple font sizes.
 	/// </summary>
 	/// <param name="name">The name of the font.</param>
-	/// <param name="fontBytes">The font data as byte array.</param>
-	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
-	/// <param name="pointSize">The point size for the font.</param>
-	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize) => LoadFont(name, fontBytes, fontAtlasPtr, pointSize, null);
-
-	/// <summary>
-	/// Loads a font from byte array data into the font atlas with custom glyph ranges.
-	/// </summary>
-	/// <param name="name">The name of the font.</param>
-	/// <param name="fontBytes">The font data as byte array.</param>
+	/// <param name="fontHandle">The handle to pre-allocated font data.</param>
+	/// <param name="fontLength">The length of the font data in bytes.</param>
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="pointSize">The point size for the font.</param>
 	/// <param name="glyphRanges">Custom glyph ranges, or null for default ranges.</param>
-	private static unsafe void LoadFont(string name, byte[] fontBytes, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges)
+	private static unsafe void LoadFontFromMemory(string name, nint fontHandle, int fontLength, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges = null)
 	{
-		// Allocate unmanaged memory for the font data
-		nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
-		currentFontMemoryHandles.Add(fontHandle);
-
-		// Copy font data to unmanaged memory
-		Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
-
 		// Calculate optimal pixel size for the font
 		float fontSize = CalculateOptimalPixelSize(pointSize);
 
@@ -1062,37 +1068,26 @@ public static partial class ImGuiApp
 		// Use custom glyph ranges if provided, otherwise use extended Unicode ranges if enabled
 		uint* ranges = glyphRanges != null ? glyphRanges : (Config.EnableUnicodeSupport ? FontHelper.GetExtendedUnicodeRanges(fontAtlasPtr) : fontAtlasPtr.GetGlyphRangesDefault());
 
-		// Add font to atlas
+		// Add font to atlas using pre-allocated memory
 		int fontIndex = fontAtlasPtr.Fonts.Size;
-		fontAtlasPtr.AddFontFromMemoryTTF((void*)fontHandle, fontBytes.Length, fontSize, fontConfig, ranges);
+		fontAtlasPtr.AddFontFromMemoryTTF((void*)fontHandle, fontLength, fontSize, fontConfig, ranges);
 
 		// Store the font index for later retrieval
 		FontIndices[name] = fontIndex;
 	}
 
 	/// <summary>
-	/// Loads emoji font if available and merges it with the previously loaded font for emoji support.
+	/// Loads emoji font from pre-allocated memory and merges it with the previously loaded font for emoji support.
+	/// This method reuses already allocated emoji font memory to avoid duplicate allocations for multiple font sizes.
 	/// </summary>
+	/// <param name="emojiHandle">The handle to pre-allocated emoji font data.</param>
+	/// <param name="emojiLength">The length of the emoji font data in bytes.</param>
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="size">The font size to load emoji font for.</param>
-	private static unsafe void LoadEmojiFont(ImFontAtlasPtr fontAtlasPtr, int size)
+	private static unsafe void LoadEmojiFontFromMemory(nint emojiHandle, int emojiLength, ImFontAtlasPtr fontAtlasPtr, int size)
 	{
-		// Check if emoji font is available
-		byte[]? emojiBytes = ImGuiAppConfig.EmojiFont;
-		if (emojiBytes == null)
-		{
-			return; // Skip silently if no emoji font available
-		}
-
 		// Get emoji-specific ranges (separate from main font to avoid conflicts)
 		uint* emojiRanges = FontHelper.GetEmojiRanges();
-
-		// Allocate unmanaged memory for the emoji font data
-		nint emojiHandle = Marshal.AllocHGlobal(emojiBytes.Length);
-		currentFontMemoryHandles.Add(emojiHandle);
-
-		// Copy emoji font data to unmanaged memory
-		Marshal.Copy(emojiBytes, 0, emojiHandle, emojiBytes.Length);
 
 		// Calculate optimal pixel size for the emoji font
 		float fontSize = CalculateOptimalPixelSize(size);
@@ -1104,8 +1099,8 @@ public static partial class ImGuiApp
 		emojiConfig.MergeMode = true; // This is the key - merge with previous font
 		emojiConfig.GlyphMinAdvanceX = fontSize; // Ensure emoji have consistent width
 
-		// Merge emoji font with the previously added font (should be our main font at this size)
-		fontAtlasPtr.AddFontFromMemoryTTF((void*)emojiHandle, emojiBytes.Length, fontSize, emojiConfig, emojiRanges);
+		// Merge emoji font with the previously added font using pre-allocated memory
+		fontAtlasPtr.AddFontFromMemoryTTF((void*)emojiHandle, emojiLength, fontSize, emojiConfig, emojiRanges);
 	}
 
 	/// <summary>
