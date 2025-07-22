@@ -195,21 +195,21 @@ public class ErrorHandlingAndEdgeCaseTests
 		ImGuiAppPerformanceSettings settings = new()
 		{
 			FocusedFps = double.MaxValue,
-			FocusedUps = double.MaxValue,
 			UnfocusedFps = double.MinValue,
-			UnfocusedUps = double.MinValue,
 			IdleFps = double.PositiveInfinity,
-			IdleUps = double.NegativeInfinity,
-			IdleTimeoutSeconds = double.NaN
+			NotVisibleFps = double.NegativeInfinity,
+			IdleTimeoutSeconds = double.NaN,
+			EnableThrottledRendering = true,
+			EnableIdleDetection = false
 		};
 
 		Assert.AreEqual(double.MaxValue, settings.FocusedFps);
-		Assert.AreEqual(double.MaxValue, settings.FocusedUps);
 		Assert.AreEqual(double.MinValue, settings.UnfocusedFps);
-		Assert.AreEqual(double.MinValue, settings.UnfocusedUps);
 		Assert.AreEqual(double.PositiveInfinity, settings.IdleFps);
-		Assert.AreEqual(double.NegativeInfinity, settings.IdleUps);
+		Assert.AreEqual(double.NegativeInfinity, settings.NotVisibleFps);
 		Assert.IsTrue(double.IsNaN(settings.IdleTimeoutSeconds));
+		Assert.IsTrue(settings.EnableThrottledRendering);
+		Assert.IsFalse(settings.EnableIdleDetection);
 	}
 
 	#endregion

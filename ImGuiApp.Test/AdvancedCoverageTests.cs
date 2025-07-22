@@ -196,21 +196,21 @@ public class AdvancedCoverageTests
 		ImGuiAppPerformanceSettings settings = new()
 		{
 			FocusedFps = 0.0,
-			FocusedUps = 0.0,
 			UnfocusedFps = 0.0,
-			UnfocusedUps = 0.0,
 			IdleFps = 0.0,
-			IdleUps = 0.0,
-			IdleTimeoutSeconds = 0.0
+			NotVisibleFps = 0.0,
+			IdleTimeoutSeconds = 0.0,
+			EnableThrottledRendering = false,
+			EnableIdleDetection = false
 		};
 
 		Assert.AreEqual(0.0, settings.FocusedFps);
-		Assert.AreEqual(0.0, settings.FocusedUps);
 		Assert.AreEqual(0.0, settings.UnfocusedFps);
-		Assert.AreEqual(0.0, settings.UnfocusedUps);
 		Assert.AreEqual(0.0, settings.IdleFps);
-		Assert.AreEqual(0.0, settings.IdleUps);
+		Assert.AreEqual(0.0, settings.NotVisibleFps);
 		Assert.AreEqual(0.0, settings.IdleTimeoutSeconds);
+		Assert.IsFalse(settings.EnableThrottledRendering);
+		Assert.IsFalse(settings.EnableIdleDetection);
 	}
 
 	[TestMethod]
@@ -219,21 +219,21 @@ public class AdvancedCoverageTests
 		ImGuiAppPerformanceSettings settings = new()
 		{
 			FocusedFps = -1.0,
-			FocusedUps = -2.0,
-			UnfocusedFps = -3.0,
-			UnfocusedUps = -4.0,
-			IdleFps = -5.0,
-			IdleUps = -6.0,
-			IdleTimeoutSeconds = -7.0
+			UnfocusedFps = -2.0,
+			IdleFps = -3.0,
+			NotVisibleFps = -4.0,
+			IdleTimeoutSeconds = -5.0,
+			EnableThrottledRendering = true,
+			EnableIdleDetection = true
 		};
 
 		Assert.AreEqual(-1.0, settings.FocusedFps);
-		Assert.AreEqual(-2.0, settings.FocusedUps);
-		Assert.AreEqual(-3.0, settings.UnfocusedFps);
-		Assert.AreEqual(-4.0, settings.UnfocusedUps);
-		Assert.AreEqual(-5.0, settings.IdleFps);
-		Assert.AreEqual(-6.0, settings.IdleUps);
-		Assert.AreEqual(-7.0, settings.IdleTimeoutSeconds);
+		Assert.AreEqual(-2.0, settings.UnfocusedFps);
+		Assert.AreEqual(-3.0, settings.IdleFps);
+		Assert.AreEqual(-4.0, settings.NotVisibleFps);
+		Assert.AreEqual(-5.0, settings.IdleTimeoutSeconds);
+		Assert.IsTrue(settings.EnableThrottledRendering);
+		Assert.IsTrue(settings.EnableIdleDetection);
 	}
 
 	#endregion

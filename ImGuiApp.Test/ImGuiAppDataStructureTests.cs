@@ -179,14 +179,11 @@ public class ImGuiAppDataStructureTests
 
 		Assert.IsTrue(settings.EnableThrottledRendering);
 		Assert.AreEqual(30.0, settings.FocusedFps);
-		Assert.AreEqual(30.0, settings.FocusedUps);
 		Assert.AreEqual(5.0, settings.UnfocusedFps);
-		Assert.AreEqual(5.0, settings.UnfocusedUps);
 		Assert.AreEqual(10.0, settings.IdleFps);
-		Assert.AreEqual(10.0, settings.IdleUps);
+		Assert.AreEqual(2.0, settings.NotVisibleFps);
 		Assert.IsTrue(settings.EnableIdleDetection);
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
-		Assert.IsTrue(settings.DisableVSyncWhenThrottling);
 	}
 
 	[TestMethod]
@@ -198,18 +195,18 @@ public class ImGuiAppDataStructureTests
 			FocusedFps = 60.0,
 			UnfocusedFps = 15.0,
 			IdleFps = 5.0,
+			NotVisibleFps = 1.0,
 			EnableIdleDetection = false,
-			IdleTimeoutSeconds = 60.0,
-			DisableVSyncWhenThrottling = false
+			IdleTimeoutSeconds = 60.0
 		};
 
 		Assert.IsFalse(settings.EnableThrottledRendering);
 		Assert.AreEqual(60.0, settings.FocusedFps);
 		Assert.AreEqual(15.0, settings.UnfocusedFps);
 		Assert.AreEqual(5.0, settings.IdleFps);
+		Assert.AreEqual(1.0, settings.NotVisibleFps);
 		Assert.IsFalse(settings.EnableIdleDetection);
 		Assert.AreEqual(60.0, settings.IdleTimeoutSeconds);
-		Assert.IsFalse(settings.DisableVSyncWhenThrottling);
 	}
 
 	[TestMethod]
