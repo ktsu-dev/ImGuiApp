@@ -1,31 +1,32 @@
 # Unicode and Emoji Support in ImGuiApp
 
-This document explains how to enable and use Unicode characters and emoji support in your ImGuiApp applications.
+This document explains the Unicode characters and emoji support that's now **enabled by default** in your ImGuiApp applications.
 
-## Problem
+## Problem Solved
 
-By default, ImGui only loads basic ASCII characters (0-127), which means that UTF-8 characters like accented letters (café, naïve), mathematical symbols (∞, ≠, ≈), and emojis (😀, 🚀, 🌟) render as question mark glyphs (�).
+Previously, ImGui only loaded basic ASCII characters (0-127), which meant that UTF-8 characters like accented letters (café, naïve), mathematical symbols (∞, ≠, ≈), and emojis (😀, 🚀, 🌟) would render as question mark glyphs (�).
 
-## Solution
+## Solution (Now Default!)
 
-The ImGuiApp library now provides built-in support for extended Unicode character ranges that works with your existing font configuration:
+The ImGuiApp library now provides built-in support for extended Unicode character ranges that works with your existing font configuration **and is enabled by default**:
 
-1. **Automatic Unicode support** - Just set `EnableUnicodeSupport = true` in your config
+1. **Automatic Unicode support** - Enabled by default (`EnableUnicodeSupport = true`)
 2. **Works with your fonts** - Uses whatever fonts you've configured, no system font dependencies
-3. **Extended `ImGuiFontConfig`** with helper methods for advanced use cases
-4. **`FontHelper` class** for custom font loading and testing
+3. **Includes emojis** - Emoji ranges are automatically included
+4. **Extended `ImGuiFontConfig`** with helper methods for advanced use cases
+5. **`FontHelper` class** for custom font loading and testing
 
 ## Quick Start
 
-### Method 1: Enable Unicode for Your Existing Fonts (Recommended)
+### Method 1: Use Default Configuration (Recommended)
 
-The simplest way - just add one line to your configuration:
+**Unicode and emoji support is enabled by default!** Just create your app normally:
 
 ```csharp
 private static void Main() => ImGuiApp.Start(new()
 {
     Title = "My Unicode App",
-    EnableUnicodeSupport = true, // This line enables Unicode support!
+    // EnableUnicodeSupport = true by default - no configuration needed!
     Fonts = new Dictionary<string, byte[]>
     {
         { "MyFont", File.ReadAllBytes("path/to/your/font.ttf") }
@@ -34,7 +35,9 @@ private static void Main() => ImGuiApp.Start(new()
 });
 ```
 
-That's it! Your existing fonts will now include extended Unicode character ranges, including emojis (if your font supports them).
+That's it! Your fonts automatically include extended Unicode character ranges and emojis (if your font supports them).
+
+**To disable Unicode support** (ASCII only), set `EnableUnicodeSupport = false`.
 
 ### Method 2: Using ImGuiFontConfig for External Fonts
 
@@ -180,6 +183,25 @@ Or run the ImGuiAppDemo project and select "View → Unicode & Emoji Test" from 
 2. **Smaller font sizes**: Larger fonts require more texture memory
 3. **Font atlas optimization**: ImGui automatically optimizes the font atlas, but very large character sets may impact performance
 
+## Summary
+
+🎉 **Unicode and emoji support is now enabled by default in ImGuiApp!**
+
+**Key Benefits:**
+- ✅ **Zero configuration required** - Works out of the box
+- ✅ **Uses your existing fonts** - No system font dependencies
+- ✅ **Backward compatible** - Existing apps automatically get Unicode support
+- ✅ **Includes emojis** - Emoji ranges included automatically
+- ✅ **Memory efficient** - Only loads glyphs your font actually contains
+- ✅ **Easy to disable** - Set `EnableUnicodeSupport = false` if you need ASCII-only
+
+**What you get automatically:**
+- Accented characters: café, naïve, résumé
+- Mathematical symbols: ∞ ≠ ≈ ≤ ≥ ± × ÷ ∂ ∑ ∏ √ ∫
+- Currency symbols: € £ ¥ ₹ ₿
+- Arrows and shapes: ← → ↑ ↓ ■ ● ▲ ★
+- Emojis (if your font supports them): 😀 🚀 🌟 💻 🎨 🌈 ⚡ 🔥
+
 ## Examples
 
-See the `ImGuiAppDemo` project for a complete working example with Unicode and emoji support enabled.
+See the `ImGuiAppDemo` project for a complete working example with Unicode and emoji support enabled by default.

@@ -38,6 +38,7 @@ internal static class ImGuiAppDemo
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
 		SaveIniSettings = false,
+		// Note: EnableUnicodeSupport = true by default, so Unicode and emojis are automatically enabled!
 		Fonts = new Dictionary<string, byte[]>
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
