@@ -153,7 +153,11 @@ internal class ImGuiController : IDisposable
 	/// <param name="scancode">The native scancode of the pressed key.</param>
 	private static void OnKeyDown(IKeyboard keyboard, Key keycode, int scancode)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		OnKeyEvent(keyboard, keycode, scancode, down: true);
 	}
 
@@ -165,26 +169,42 @@ internal class ImGuiController : IDisposable
 	/// <param name="scancode">The native scancode of the released key.</param>
 	private static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		OnKeyEvent(keyboard, keycode, scancode, down: false);
 	}
 
 	private static void OnMouseScroll(IMouse mouse, ScrollWheel scroll)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMouseWheelEvent(scroll.X, scroll.Y);
 	}
 
 	private static void OnMouseDown(IMouse mouse, MouseButton button)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		OnMouseButton(mouse, button, down: true);
 	}
 
 	private static void OnMouseUp(IMouse mouse, MouseButton button)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		OnMouseButton(mouse, button, down: false);
 	}
 
@@ -202,7 +222,11 @@ internal class ImGuiController : IDisposable
 
 	private void OnMouseMove(IMouse _, Vector2 position)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMousePosEvent(position.X, position.Y);
 	}
@@ -230,7 +254,11 @@ internal class ImGuiController : IDisposable
 
 	private void OnKeyChar(IKeyboard arg1, char arg2)
 	{
-		ImGuiApp.OnUserInput();
+		// Only count as user input if the window is actually focused
+		if (ImGuiApp.IsFocused)
+		{
+			ImGuiApp.OnUserInput();
+		}
 		_pressedChars.Add(arg2);
 	}
 
