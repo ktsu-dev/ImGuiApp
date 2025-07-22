@@ -19,7 +19,6 @@ internal static class ImGuiAppDemo
 	private static bool showStyleEditor;
 	private static bool showMetrics;
 	private static bool showAbout;
-	private static bool showUnicodeTest;
 
 	// Demo state
 	private static float sliderValue = 0.5f;
@@ -62,18 +61,7 @@ internal static class ImGuiAppDemo
 			ImGui.End();
 		}
 
-		if (showUnicodeTest)
-		{
-			FontHelper.ShowUnicodeTestWindow("Unicode & Emoji Test");
-			if (ImGui.Begin("Unicode & Emoji Test"))
-			{
-				if (ImGui.Button("Close"))
-				{
-					showUnicodeTest = false;
-				}
-			}
-			ImGui.End();
-		}
+
 
 		if (showMetrics)
 		{
@@ -93,90 +81,145 @@ internal static class ImGuiAppDemo
 	{
 		ImGui.Begin("ImGuiApp Demo Features");
 
-		// Basic widgets section
-		if (ImGui.CollapsingHeader("Basic Widgets"))
+		if (ImGui.BeginTabBar("DemoTabs"))
 		{
-			ImGui.Text("This section demonstrates basic ImGui widgets.");
-
-			if (ImGui.Button("Click Me!"))
+			if (ImGui.BeginTabItem("Basic Widgets"))
 			{
-				counter++;
+				RenderBasicWidgetsTab();
+				ImGui.EndTabItem();
 			}
 
-			ImGui.SameLine();
-			ImGui.Text($"Counter: {counter}");
-
-			ImGui.Checkbox("Toggle Me", ref checkboxState);
-			ImGui.SliderFloat("Slide Me", ref sliderValue, 0.0f, 1.0f);
-			ImGui.InputText("Type Here", ref inputText, 100);
-		}
-
-		// Styling and colors section
-		if (ImGui.CollapsingHeader("Styling & Colors"))
-		{
-			ImGui.Text("Custom font examples:");
-			using (new FontAppearance(nameof(Resources.CARDCHAR), 24))
+			if (ImGui.BeginTabItem("Styling & Colors"))
 			{
-				ImGui.Text("Hello, ImGui.NET!");
+				RenderStylingTab();
+				ImGui.EndTabItem();
 			}
 
-			using (new FontAppearance(nameof(Resources.CARDCHAR)))
+			if (ImGui.BeginTabItem("Graphics & Plotting"))
 			{
-				ImGui.Text("Fancy Text with Custom Font!");
+				RenderGraphicsTab();
+				ImGui.EndTabItem();
 			}
 
-			ImGui.ColorEdit3("Color Picker", ref colorPickerValue);
-			ImGui.TextColored(new Vector4(colorPickerValue.X, colorPickerValue.Y, colorPickerValue.Z, 1.0f),
-				"This text is colored by the picker above!");
-		}
-
-		// Graphics and plotting section
-		if (ImGui.CollapsingHeader("Graphics & Plotting"))
-		{
-			AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
-			ImGuiAppTextureInfo iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
-			ImGui.Text("Image Example:");
-			ImGui.Image(iconTexture.TextureRef, new Vector2(64, 64));
-
-			ImGui.Text("Real-time Plot:");
-			if (plotValues.Count > 0)
+			if (ImGui.BeginTabItem("Layout & Positioning"))
 			{
-				ImGui.PlotLines("##plot", ref plotValues.ToArray()[0], plotValues.Count, 0,
-					"Random Values", float.MinValue, float.MaxValue, new Vector2(ImGui.GetContentRegionAvail().X, 80));
-			}
-		}
-
-		// Layout and positioning section
-		if (ImGui.CollapsingHeader("Layout & Positioning"))
-		{
-			ImGui.Text("Columns Example:");
-			ImGui.Columns(3, "##columns");
-
-			for (int i = 0; i < 6; i++)
-			{
-				ImGui.Text($"Item {i + 1}");
-				ImGui.NextColumn();
+				RenderLayoutTab();
+				ImGui.EndTabItem();
 			}
 
-			ImGui.Columns(1);
-
-			ImGui.Separator();
-
-			ImGui.Text("Child Windows Example:");
-			if (ImGui.BeginChild("##child1", new Vector2(200, 100), ImGuiChildFlags.Borders))
+			if (ImGui.BeginTabItem("Unicode & Emojis"))
 			{
-				ImGui.Text("This is a child window");
-				ImGui.Text("with its own scroll area.");
-				for (int i = 0; i < 10; i++)
-				{
-					ImGui.Text($"Scroll item {i + 1}");
-				}
+				RenderUnicodeTab();
+				ImGui.EndTabItem();
 			}
 
-			ImGui.EndChild();
+			ImGui.EndTabBar();
 		}
 
 		ImGui.End();
+	}
+
+	private static void RenderBasicWidgetsTab()
+	{
+		ImGui.Text("This section demonstrates basic ImGui widgets.");
+
+		if (ImGui.Button("Click Me!"))
+		{
+			counter++;
+		}
+
+		ImGui.SameLine();
+		ImGui.Text($"Counter: {counter}");
+
+		ImGui.Checkbox("Toggle Me", ref checkboxState);
+		ImGui.SliderFloat("Slide Me", ref sliderValue, 0.0f, 1.0f);
+		ImGui.InputText("Type Here", ref inputText, 100);
+	}
+
+	private static void RenderStylingTab()
+	{
+		ImGui.Text("Custom font examples:");
+		using (new FontAppearance(nameof(Resources.CARDCHAR), 24))
+		{
+			ImGui.Text("Hello, ImGui.NET!");
+		}
+
+		using (new FontAppearance(nameof(Resources.CARDCHAR)))
+		{
+			ImGui.Text("Fancy Text with Custom Font!");
+		}
+
+		ImGui.ColorEdit3("Color Picker", ref colorPickerValue);
+		ImGui.TextColored(new Vector4(colorPickerValue.X, colorPickerValue.Y, colorPickerValue.Z, 1.0f),
+			"This text is colored by the picker above!");
+	}
+
+	private static void RenderGraphicsTab()
+	{
+		AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
+		ImGuiAppTextureInfo iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
+		ImGui.Text("Image Example:");
+		ImGui.Image(iconTexture.TextureRef, new Vector2(64, 64));
+
+		ImGui.Text("Real-time Plot:");
+		if (plotValues.Count > 0)
+		{
+			ImGui.PlotLines("##plot", ref plotValues.ToArray()[0], plotValues.Count, 0,
+				"Random Values", float.MinValue, float.MaxValue, new Vector2(ImGui.GetContentRegionAvail().X, 80));
+		}
+	}
+
+	private static void RenderLayoutTab()
+	{
+		ImGui.Text("Columns Example:");
+		ImGui.Columns(3, "##columns");
+
+		for (int i = 0; i < 6; i++)
+		{
+			ImGui.Text($"Item {i + 1}");
+			ImGui.NextColumn();
+		}
+
+		ImGui.Columns(1);
+
+		ImGui.Separator();
+
+		ImGui.Text("Child Windows Example:");
+		if (ImGui.BeginChild("##child1", new Vector2(200, 100), ImGuiChildFlags.Borders))
+		{
+			ImGui.Text("This is a child window");
+			ImGui.Text("with its own scroll area.");
+			for (int i = 0; i < 10; i++)
+			{
+				ImGui.Text($"Scroll item {i + 1}");
+			}
+		}
+
+		ImGui.EndChild();
+	}
+
+	private static void RenderUnicodeTab()
+	{
+		ImGui.Text("Unicode and Emoji Support (Enabled by Default)");
+		ImGui.Separator();
+		
+		ImGui.Text("Basic ASCII: Hello World!");
+		ImGui.Text("Accented characters: café, naïve, résumé");
+		ImGui.Text("Mathematical symbols: ∞ ≠ ≈ ≤ ≥ ± × ÷ ∂ ∑ ∏ √ ∫");
+		ImGui.Text("Currency symbols: $ € £ ¥ ₹ ₿");
+		ImGui.Text("Arrows: ← → ↑ ↓ ↔ ↕ ⇐ ⇒ ⇑ ⇓");
+		ImGui.Text("Geometric shapes: ■ □ ▲ △ ● ○ ◆ ◇ ★ ☆");
+		ImGui.Text("Miscellaneous symbols: ♠ ♣ ♥ ♦ ☀ ☁ ☂ ☃ ♪ ♫");
+		ImGui.Separator();
+		ImGui.Text("Emojis (if font supports them):");
+		ImGui.Text("Faces: 😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇");
+		ImGui.Text("Objects: 🚀 💻 📱 🎸 🎨 🏆 🌟 💎 ⚡ 🔥");
+		ImGui.Text("Nature: 🌈 🌞 🌙 ⭐ 🌍 🌊 🌳 🌸 🦋 🐝");
+		ImGui.Text("Food: 🍎 🍌 🍕 🍔 🍟 🍦 🎂 ☕ 🍺 🍷");
+		
+		ImGui.Separator();
+		ImGui.TextWrapped("Note: Character display depends on your configured font's Unicode support. " +
+		                 "If characters show as question marks, your font may not include those glyphs.");
 	}
 
 	private static void RenderAboutWindow()
@@ -216,7 +259,6 @@ internal static class ImGuiAppDemo
 			ImGui.MenuItem("ImGui Demo", string.Empty, ref showImGuiDemo);
 			ImGui.MenuItem("Style Editor", string.Empty, ref showStyleEditor);
 			ImGui.MenuItem("Metrics", string.Empty, ref showMetrics);
-			ImGui.MenuItem("Unicode & Emoji Test", string.Empty, ref showUnicodeTest);
 			ImGui.EndMenu();
 		}
 

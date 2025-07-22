@@ -342,7 +342,7 @@ Check out the included demo project to see a working example with Unicode and em
 1. Clone or download the repository
 2. Open the solution in Visual Studio (or run dotnet build)
 3. Start the ImGuiAppDemo project to see a basic ImGui application
-4. Select "View → Unicode & Emoji Test" from the menu to test character rendering
+4. Click the "Unicode & Emojis" tab to test character rendering
 
 ## Contributing
 
