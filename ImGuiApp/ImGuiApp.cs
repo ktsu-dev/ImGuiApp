@@ -130,9 +130,9 @@ public static partial class ImGuiApp
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
 	private static DateTime lastPerformanceUpdate = DateTime.MinValue;
-	private static double? pendingFps = null;
-	private static double? pendingUps = null;
-	private static bool performanceUpdatePending = false;
+	private static double? pendingFps;
+	private static double? pendingUps;
+	private static bool performanceUpdatePending;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -353,25 +353,14 @@ public static partial class ImGuiApp
 	{
 		if (performanceUpdatePending && pendingFps.HasValue && pendingUps.HasValue)
 		{
-			try
-			{
-				window!.FramesPerSecond = pendingFps.Value;
-				window.UpdatesPerSecond = pendingUps.Value;
-				DebugLogger.Log($"Performance changes applied: FPS={pendingFps.Value}, UPS={pendingUps.Value}");
-				
-				// Clear pending changes
-				pendingFps = null;
-				pendingUps = null;
-				performanceUpdatePending = false;
-			}
-			catch (Exception ex)
-			{
-				DebugLogger.Log($"Error applying performance changes: {ex.Message}");
-				// Clear pending changes even on error to prevent infinite retry
-				pendingFps = null;
-				pendingUps = null;
-				performanceUpdatePending = false;
-			}
+			window!.FramesPerSecond = pendingFps.Value;
+			window.UpdatesPerSecond = pendingUps.Value;
+			DebugLogger.Log($"Performance changes applied: FPS={pendingFps.Value}, UPS={pendingUps.Value}");
+
+			// Clear pending changes
+			pendingFps = null;
+			pendingUps = null;
+			performanceUpdatePending = false;
 		}
 	}
 
@@ -419,7 +408,7 @@ public static partial class ImGuiApp
 			});
 
 			controller?.Render();
-			
+
 			// Apply any pending performance changes after the render cycle completes
 			ApplyPendingPerformanceChanges();
 		};
