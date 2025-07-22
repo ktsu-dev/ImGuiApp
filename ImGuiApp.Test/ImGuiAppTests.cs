@@ -201,8 +201,8 @@ public sealed class ImGuiAppTests : IDisposable
 		using TestOpenGLProvider provider = new(mockGL);
 
 		// Get GL instances
-		ImGuiController.IGL gl1 = provider.GetGL();
-		ImGuiController.IGL gl2 = provider.GetGL();
+		ktsu.ImGuiApp.ImGuiController.IGL gl1 = provider.GetGL();
+		ktsu.ImGuiApp.ImGuiController.IGL gl2 = provider.GetGL();
 
 		// Verify same instance is returned
 		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
