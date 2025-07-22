@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
@@ -129,6 +130,8 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
+	private static DateTime lastFrameTime = DateTime.UtcNow;
+	private static double targetFrameTimeMs = 1000.0 / 30.0; // Default to 30 FPS (33.33ms per frame)
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -307,50 +310,39 @@ public static partial class ImGuiApp
 			IsIdle = false;
 		}
 
-		double currentFps = window!.FramesPerSecond;
-		double currentUps = window.UpdatesPerSecond;
+		// Evaluate all throttling conditions and select the lowest frame rate
+		List<(double fps, string reason)> candidateRates = [];
 
-		// Determine required FPS and UPS based on focus and idle state
-		double requiredFps, requiredUps;
-		if (IsIdle && settings.EnableIdleDetection)
+		// Add focused/unfocused rate
+		if (IsFocused)
 		{
-			requiredFps = settings.IdleFps;
-			requiredUps = settings.IdleUps;
-		}
-		else if (IsFocused)
-		{
-			requiredFps = settings.FocusedFps;
-			requiredUps = settings.FocusedUps;
+			candidateRates.Add((settings.FocusedFps, "Focused"));
 		}
 		else
 		{
-			requiredFps = settings.UnfocusedFps;
-			requiredUps = settings.UnfocusedUps;
+			candidateRates.Add((settings.UnfocusedFps, "Unfocused"));
 		}
 
-		// Update frame rate if needed
-		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
+		// Add idle rate if applicable
+		if (IsIdle && settings.EnableIdleDetection)
 		{
-			// Manage VSync based on throttling settings
-			if (settings.DisableVSyncWhenThrottling)
-			{
-				// Disable VSync when setting a custom frame rate for throttling
-				window.VSync = false;
-			}
-			else
-			{
-				// Re-enable VSync if throttling VSync disable is turned off
-				window.VSync = true;
-			}
-
-			window.FramesPerSecond = requiredFps;
+			candidateRates.Add((settings.IdleFps, "Idle"));
 		}
 
-		// Update update rate if needed
-		if (Math.Abs(currentUps - requiredUps) > 0.1) // Use small epsilon for comparison
+		// Add not visible rate if applicable
+		if (!IsVisible)
 		{
-			window.UpdatesPerSecond = requiredUps;
+			candidateRates.Add((settings.NotVisibleFps, "Not Visible"));
 		}
+
+		// Select the lowest frame rate
+		(double targetFps, string _) = candidateRates
+			.OrderBy(rate => rate.fps)
+			.First();
+
+		// Update target frame time (convert FPS to milliseconds per frame)
+		double newTargetFrameTimeMs = targetFps > 0 ? (1000.0 / targetFps) : 10000.0; // Cap at 10 seconds for very low FPS
+		targetFrameTimeMs = newTargetFrameTimeMs;
 	}
 
 	private static void SetupWindowUpdateHandler(ImGuiAppConfig config)
@@ -390,7 +382,27 @@ public static partial class ImGuiApp
 			});
 
 			controller?.Render();
+
+			// Apply sleep-based frame rate limiting
+			ApplyFrameRateLimit();
 		};
+	}
+
+	private static void ApplyFrameRateLimit()
+	{
+		DateTime currentTime = DateTime.UtcNow;
+		double elapsedMs = (currentTime - lastFrameTime).TotalMilliseconds;
+
+		if (elapsedMs < targetFrameTimeMs)
+		{
+			double sleepTimeMs = targetFrameTimeMs - elapsedMs;
+			if (sleepTimeMs > 0)
+			{
+				Thread.Sleep((int)Math.Ceiling(sleepTimeMs));
+			}
+		}
+
+		lastFrameTime = DateTime.UtcNow;
 	}
 
 	private static void RenderWithScaling(Action renderAction)
@@ -1199,6 +1211,8 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
+		lastFrameTime = DateTime.UtcNow;
+		targetFrameTimeMs = 1000.0 / 30.0;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
