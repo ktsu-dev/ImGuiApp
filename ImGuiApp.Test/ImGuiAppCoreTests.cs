@@ -127,7 +127,7 @@ public class ImGuiAppCoreTests
 	[TestMethod]
 	public void TryGetTexture_WithAbsolutePath_NonExistentTexture_ReturnsFalse()
 	{
-		AbsoluteFilePath testPath = "/test/texture.png".As<AbsoluteFilePath>();
+		AbsoluteFilePath testPath = Path.GetFullPath("nonexistent_texture.png").As<AbsoluteFilePath>();
 		bool result = ImGuiApp.TryGetTexture(testPath, out ImGuiAppTextureInfo? textureInfo);
 
 		Assert.IsFalse(result);
@@ -137,7 +137,7 @@ public class ImGuiAppCoreTests
 	[TestMethod]
 	public void TryGetTexture_WithStringPath_NonExistentTexture_ReturnsFalse()
 	{
-		const string testPath = "/test/texture.png";
+		string testPath = Path.GetFullPath("nonexistent_texture.png");
 		bool result = ImGuiApp.TryGetTexture(testPath, out ImGuiAppTextureInfo? textureInfo);
 
 		Assert.IsFalse(result);

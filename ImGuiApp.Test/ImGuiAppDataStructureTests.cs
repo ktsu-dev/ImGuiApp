@@ -39,7 +39,7 @@ public class ImGuiAppDataStructureTests
 	public void ImGuiAppTextureInfo_Properties_CanBeSet()
 	{
 		ImGuiAppTextureInfo textureInfo = new();
-		AbsoluteFilePath testPath = "/test/path.png".As<AbsoluteFilePath>();
+		AbsoluteFilePath testPath = Path.GetFullPath("test_texture.png").As<AbsoluteFilePath>();
 
 		textureInfo.Path = testPath;
 		textureInfo.TextureId = 123u;
