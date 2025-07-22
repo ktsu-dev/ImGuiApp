@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ImGuiAppDemo": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
