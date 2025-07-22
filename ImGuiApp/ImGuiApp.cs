@@ -1206,6 +1206,8 @@ public static partial class ImGuiApp
 		currentFontMemoryHandles.Clear();
 		Invoker = null!;
 		IsFocused = true;
+		IsIdle = false;
+		lastInputTime = DateTime.UtcNow;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
