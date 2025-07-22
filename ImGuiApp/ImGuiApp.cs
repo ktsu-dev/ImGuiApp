@@ -332,23 +332,15 @@ public static partial class ImGuiApp
 		// Update frame rate and update rate together to prevent desynchronization
 		bool fpsNeedsUpdate = Math.Abs(currentFps - requiredFps) > 0.1;
 		bool upsNeedsUpdate = Math.Abs(currentUps - requiredUps) > 0.1;
-		
+
 		if (fpsNeedsUpdate || upsNeedsUpdate)
 		{
-			try
-			{
-				// Always update both together to keep them synchronized
-				// Use a small delay to avoid changing rates during active rendering
-				window.FramesPerSecond = requiredFps;
-				window.UpdatesPerSecond = requiredUps;
-				
-				DebugLogger.Log($"Performance updated: FPS={requiredFps}, UPS={requiredUps}, Focused={IsFocused}, Idle={IsIdle}");
-			}
-			catch (Exception ex)
-			{
-				DebugLogger.Log($"Error updating performance: {ex.Message}");
-				// Don't rethrow - continue with current rates
-			}
+			// Always update both together to keep them synchronized
+			// Use a small delay to avoid changing rates during active rendering
+			window.FramesPerSecond = requiredFps;
+			window.UpdatesPerSecond = requiredUps;
+
+			DebugLogger.Log($"Performance updated: FPS={requiredFps}, UPS={requiredUps}, Focused={IsFocused}, Idle={IsIdle}");
 		}
 	}
 
@@ -362,9 +354,9 @@ public static partial class ImGuiApp
 			}
 
 			EnsureWindowPositionIsValid();
-			
+
 			// Only update performance occasionally to avoid mid-cycle changes
-			var timeSinceLastUpdate = DateTime.UtcNow - lastPerformanceUpdate;
+			TimeSpan timeSinceLastUpdate = DateTime.UtcNow - lastPerformanceUpdate;
 			if (timeSinceLastUpdate.TotalSeconds > 0.5) // Update at most every 500ms
 			{
 				UpdateWindowPerformance();
@@ -518,7 +510,7 @@ public static partial class ImGuiApp
 		SetupWindowRenderHandler(config);
 		SetupWindowClosingHandler();
 
-		window!.FocusChanged += (focused) => 
+		window!.FocusChanged += (focused) =>
 		{
 			IsFocused = focused;
 			// Force immediate performance update when focus changes
