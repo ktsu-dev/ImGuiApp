@@ -24,15 +24,14 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
 - **Positioning Guards**: Offscreen positioning checks to keep windows visible
-- **Modern .NET**: Supports .NET 8 and newer
+- **Modern .NET**: Supports .NET 9 and newer
 - **Active Development**: Open-source and actively maintained
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET 8.0 or later
-- Windows OS (for DPI awareness features)
+- .NET 9.0 or later
 
 ## Installation
 
