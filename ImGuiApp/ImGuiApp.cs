@@ -128,51 +128,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static bool IsIdle { get; private set; }
 
-	/// <summary>
-	/// Gets the current throttling candidates for debugging purposes.
-	/// </summary>
-	public static string ThrottlingCandidates => lastThrottlingCandidates;
-
-	/// <summary>
-	/// Gets the reason for the selected throttling rate.
-	/// </summary>
-	public static string SelectedThrottlingReason => lastSelectedReason;
-
-	/// <summary>
-	/// Gets the required/target FPS from throttling logic.
-	/// </summary>
-	public static double RequiredFps => lastRequiredFps;
-
-	/// <summary>
-	/// Gets the actual current FPS.
-	/// </summary>
-	public static double ActualFps => lastActualFps;
-
-	/// <summary>
-	/// Gets the event-based focus state for debugging.
-	/// </summary>
-	public static bool EventFocused => lastEventFocused;
-
-	/// <summary>
-	/// Gets the direct window focus state for debugging.
-	/// </summary>
-	public static bool DirectFocused => lastDirectFocused;
-
-	/// <summary>
-	/// Gets the actually used focus state for debugging.
-	/// </summary>
-	public static bool ActuallyFocused => lastActuallyFocused;
-
 	private static DateTime lastInputTime = DateTime.UtcNow;
-	
-	// Debug information for the demo app
-	private static string lastThrottlingCandidates = "";
-	private static string lastSelectedReason = "";
-	private static double lastRequiredFps = 0;
-	private static double lastActualFps = 0;
-	private static bool lastEventFocused = true;
-	private static bool lastDirectFocused = true;
-	private static bool lastActuallyFocused = true;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -354,50 +310,23 @@ public static partial class ImGuiApp
 		double currentFps = window!.FramesPerSecond;
 		double currentUps = window.UpdatesPerSecond;
 
-		// Evaluate all throttling conditions and use the lowest frame rate
-		var candidateRates = new List<(double fps, double ups, string reason)>();
-
-		// Always include the base rate based on focus
-		// Use direct window focus check as primary method in case events are unreliable
-		bool directFocused = window?.IsFocused ?? false;
-		bool actuallyFocused = directFocused;
-		
-		// Update focus debug information
-		lastEventFocused = IsFocused;
-		lastDirectFocused = directFocused;
-		lastActuallyFocused = actuallyFocused;
-		
-		if (actuallyFocused)
+		// Determine required FPS and UPS based on focus and idle state
+		double requiredFps, requiredUps;
+		if (IsIdle && settings.EnableIdleDetection)
 		{
-			candidateRates.Add((settings.FocusedFps, settings.FocusedUps, "focused"));
+			requiredFps = settings.IdleFps;
+			requiredUps = settings.IdleUps;
+		}
+		else if (IsFocused)
+		{
+			requiredFps = settings.FocusedFps;
+			requiredUps = settings.FocusedUps;
 		}
 		else
 		{
-			candidateRates.Add((settings.UnfocusedFps, settings.UnfocusedUps, "unfocused"));
+			requiredFps = settings.UnfocusedFps;
+			requiredUps = settings.UnfocusedUps;
 		}
-
-		// Add idle rate if applicable
-		if (IsIdle && settings.EnableIdleDetection)
-		{
-			candidateRates.Add((settings.IdleFps, settings.IdleUps, "idle"));
-		}
-
-		// Add not visible rate if applicable
-		if (!IsVisible)
-		{
-			candidateRates.Add((0.1, 0.1, "not visible")); // 1 frame every 10 seconds
-		}
-
-		// Select the lowest frame rate and update rate
-		var selectedRate = candidateRates.OrderBy(r => r.fps).ThenBy(r => r.ups).First();
-		double requiredFps = selectedRate.fps;
-		double requiredUps = selectedRate.ups;
-
-		// Update debug information for the demo app
-		lastThrottlingCandidates = string.Join(", ", candidateRates.Select(r => $"{r.fps}fps({r.reason})"));
-		lastSelectedReason = selectedRate.reason;
-		lastRequiredFps = requiredFps;
-		lastActualFps = currentFps;
 
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
@@ -571,17 +500,7 @@ public static partial class ImGuiApp
 		SetupWindowRenderHandler(config);
 		SetupWindowClosingHandler();
 
-		window!.FocusChanged += (focused) => 
-		{
-			DebugLogger.Log($"Focus changed: {IsFocused} -> {focused}");
-			IsFocused = window.IsFocused;
-			// Reset idle state when gaining focus, as user interaction caused the focus change
-			if (focused)
-			{
-				lastInputTime = DateTime.UtcNow;
-				DebugLogger.Log("Reset idle timer due to focus gain");
-			}
-		};
+		window!.FocusChanged += (focused) => IsFocused = focused;
 
 		if (!config.TestMode)
 		{
@@ -1268,13 +1187,6 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
-		lastThrottlingCandidates = "";
-		lastSelectedReason = "";
-		lastRequiredFps = 0;
-		lastActualFps = 0;
-		lastEventFocused = true;
-		lastDirectFocused = true;
-		lastActuallyFocused = true;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
 		ScaleFactor = 1;
