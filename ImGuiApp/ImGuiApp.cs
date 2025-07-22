@@ -314,7 +314,9 @@ public static partial class ImGuiApp
 		var candidateRates = new List<(double fps, double ups, string reason)>();
 
 		// Always include the base rate based on focus
-		if (IsFocused)
+		// Use direct window focus check as primary method in case events are unreliable
+		bool actuallyFocused = window?.IsFocused ?? false;
+		if (actuallyFocused)
 		{
 			candidateRates.Add((settings.FocusedFps, settings.FocusedUps, "focused"));
 		}
@@ -339,6 +341,16 @@ public static partial class ImGuiApp
 		var selectedRate = candidateRates.OrderBy(r => r.fps).ThenBy(r => r.ups).First();
 		double requiredFps = selectedRate.fps;
 		double requiredUps = selectedRate.ups;
+
+		// Temporary debug logging to diagnose the issue
+		if (Math.Abs(currentFps - requiredFps) > 0.1)
+		{
+			var candidateList = string.Join(", ", candidateRates.Select(r => $"{r.fps}fps({r.reason})"));
+			// Check if the window has a focus property we can verify against
+			var windowFocused = window?.IsFocused ?? false;
+			DebugLogger.Log($"Throttling: IsFocused(event)={IsFocused}, IsFocused(direct)={windowFocused}, actuallyFocused={actuallyFocused}, Visible={IsVisible}, Idle={IsIdle}");
+			DebugLogger.Log($"Candidates: [{candidateList}] -> Selected: {requiredFps}fps ({selectedRate.reason})");
+		}
 
 
 
@@ -516,11 +528,13 @@ public static partial class ImGuiApp
 
 		window!.FocusChanged += (focused) => 
 		{
+			DebugLogger.Log($"Focus changed: {IsFocused} -> {focused}");
 			IsFocused = focused;
 			// Reset idle state when gaining focus, as user interaction caused the focus change
 			if (focused)
 			{
 				lastInputTime = DateTime.UtcNow;
+				DebugLogger.Log("Reset idle timer due to focus gain");
 			}
 		};
 
