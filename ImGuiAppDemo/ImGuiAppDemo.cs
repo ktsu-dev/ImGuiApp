@@ -45,12 +45,9 @@ internal static class ImGuiAppDemo
 		PerformanceSettings = new()
 		{
 			EnableThrottledRendering = true,
-			FocusedFps = 60.0,      // Full frame rate when focused
-			UnfocusedFps = 15.0,    // Reduced frame rate when unfocused
-			IdleFps = 2.0,          // Very low frame rate when idle
-			EnableIdleDetection = true,
-			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds of no input
-			DisableVSyncWhenThrottling = true
+			// Using default values: Focused=30, Unfocused=5, Idle=10 FPS
+			// But with a shorter idle timeout for demo purposes
+			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds (default is 30)
 		},
 	});
 
@@ -101,8 +98,8 @@ internal static class ImGuiAppDemo
 
 			ImGui.Separator();
 			ImGui.Text("Throttling helps save system resources when the window is unfocused or idle.");
+			ImGui.Text("Default rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS");
 			ImGui.Text("Try unfocusing the window or leaving it idle for 5 seconds to see the effect.");
-			ImGui.Text("Current FPS will be reduced to save CPU and GPU resources.");
 		}
 
 		// Basic widgets section
