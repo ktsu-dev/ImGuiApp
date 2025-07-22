@@ -350,8 +350,6 @@ public static partial class ImGuiApp
 			DebugLogger.Log($"Candidates: [{candidateList}] -> Selected: {requiredFps}fps ({selectedRate.reason})");
 		}
 
-
-
 		// Update frame rate if needed
 		if (Math.Abs(currentFps - requiredFps) > 0.1) // Use small epsilon for comparison
 		{
@@ -527,7 +525,7 @@ public static partial class ImGuiApp
 		window!.FocusChanged += (focused) => 
 		{
 			DebugLogger.Log($"Focus changed: {IsFocused} -> {focused}");
-			IsFocused = focused;
+			IsFocused = window.IsFocused;
 			// Reset idle state when gaining focus, as user interaction caused the focus change
 			if (focused)
 			{
