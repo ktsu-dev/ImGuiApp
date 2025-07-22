@@ -973,6 +973,9 @@ public static partial class ImGuiApp
 			{
 				LoadFont($"{name}_{size}", fontBytes, fontAtlasPtr, size);
 
+				// Load and merge emoji font immediately after main font for proper merging
+				LoadEmojiFont(fontAtlasPtr, size);
+
 				// Prioritize DefaultFonts over custom Fonts for setting the default font
 				if (size == 12)
 				{
@@ -1065,6 +1068,44 @@ public static partial class ImGuiApp
 
 		// Store the font index for later retrieval
 		FontIndices[name] = fontIndex;
+	}
+
+	/// <summary>
+	/// Loads emoji font if available and merges it with the previously loaded font for emoji support.
+	/// </summary>
+	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
+	/// <param name="size">The font size to load emoji font for.</param>
+	private static unsafe void LoadEmojiFont(ImFontAtlasPtr fontAtlasPtr, int size)
+	{
+		// Check if emoji font is available
+		byte[]? emojiBytes = ImGuiAppConfig.EmojiFont;
+		if (emojiBytes == null)
+		{
+			return; // Skip silently if no emoji font available
+		}
+
+		// Get emoji-specific ranges (separate from main font to avoid conflicts)
+		uint* emojiRanges = FontHelper.GetEmojiRanges();
+
+		// Allocate unmanaged memory for the emoji font data
+		nint emojiHandle = Marshal.AllocHGlobal(emojiBytes.Length);
+		currentFontMemoryHandles.Add(emojiHandle);
+
+		// Copy emoji font data to unmanaged memory
+		Marshal.Copy(emojiBytes, 0, emojiHandle, emojiBytes.Length);
+
+		// Calculate optimal pixel size for the emoji font
+		float fontSize = CalculateOptimalPixelSize(size);
+
+		// Create font configuration for merging
+		ImFontConfigPtr emojiConfig = ImGui.ImFontConfig();
+		emojiConfig.FontDataOwnedByAtlas = false; // We manage the memory ourselves
+		emojiConfig.PixelSnapH = true;
+		emojiConfig.MergeMode = true; // This is the key - merge with previous font
+		emojiConfig.GlyphMinAdvanceX = fontSize; // Ensure emoji have consistent width
+
+		// Merge emoji font with the previously added font (should be our main font at this size)
+		fontAtlasPtr.AddFontFromMemoryTTF((void*)emojiHandle, emojiBytes.Length, fontSize, emojiConfig, emojiRanges);
 	}
 
 	/// <summary>

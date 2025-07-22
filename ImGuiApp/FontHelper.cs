@@ -43,11 +43,12 @@ public static class FontHelper
 	}
 
 	/// <summary>
-	/// Gets the extended Unicode glyph ranges that ImGuiApp uses by default.
-	/// This includes ASCII, Latin Extended, common Unicode symbol blocks, and emoji ranges.
+	/// Gets the extended Unicode glyph ranges that ImGuiApp uses for main fonts.
+	/// Includes ASCII, Latin Extended, symbols, arrows, math, shapes, and Nerd Font icons.
+	/// Note: Emoji ranges (1F*** blocks) are handled separately to avoid conflicts.
 	/// </summary>
 	/// <param name="fontAtlasPtr">The font atlas to use for building ranges.</param>
-	/// <returns>Pointer to the extended Unicode glyph ranges.</returns>
+	/// <returns>Pointer to the extended Unicode glyph ranges for main fonts.</returns>
 	public static unsafe uint* GetExtendedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
 	{
 		ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
@@ -61,9 +62,6 @@ public static class FontHelper
 		// Add common Unicode symbol blocks
 		AddSymbolRanges(builder);
 
-		// Add emoji ranges (will only work if the font supports them)
-		AddEmojiRanges(builder);
-
 		// Add Nerd Font icon ranges
 		AddNerdFontRanges(builder);
 
@@ -74,23 +72,37 @@ public static class FontHelper
 	}
 
 	/// <summary>
-	/// Adds emoji ranges to the glyph ranges builder.
-	/// Note: Most emoji ranges are outside BMP, so they won't fit in ushort but we'll try anyway.
+	/// Adds emoji-specific ranges to the glyph ranges builder.
+	/// Only includes true emoji ranges (1F*** blocks) to avoid conflicts with main font symbol ranges.
 	/// </summary>
 	/// <param name="builder">The glyph ranges builder to add emoji ranges to.</param>
 	private static void AddEmojiRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
-		// Define emoji ranges to add
+		// Add basic ASCII for emoji font compatibility (0x0020-0x007F printable ASCII)
+		for (uint c = 0x0020; c <= 0x007F; c++)
+		{
+			builder.AddChar((ushort)c);
+		}
+
+		// Variation Selectors (important for emoji presentation vs text presentation)
+		for (uint c = 0xFE00; c <= 0xFE0F; c++) // Variation Selectors 1-16
+		{
+			builder.AddChar((ushort)c);
+		}
+
+		// Emoji-specific Unicode ranges (1F*** blocks only to avoid main font conflicts)
 		(uint start, uint end, string description)[] emojiRanges = [
-			(0x1F600, 0x1F64F, "Emoticons"),
 			(0x1F300, 0x1F5FF, "Miscellaneous Symbols and Pictographs"),
+			(0x1F600, 0x1F64F, "Emoticons"),
+			(0x1F650, 0x1F67F, "Ornamental Dingbats"),
 			(0x1F680, 0x1F6FF, "Transport and Map Symbols"),
 			(0x1F700, 0x1F77F, "Alchemical Symbols"),
 			(0x1F780, 0x1F7FF, "Geometric Shapes Extended"),
 			(0x1F800, 0x1F8FF, "Supplemental Arrows-C"),
 			(0x1F900, 0x1F9FF, "Supplemental Symbols and Pictographs"),
 			(0x1FA00, 0x1FA6F, "Chess Symbols"),
-			(0x1FA70, 0x1FAFF, "Symbols and Pictographs Extended-A")
+			(0x1FA70, 0x1FAFF, "Symbols and Pictographs Extended-A"),
+			(0x1FB00, 0x1FBFF, "Symbols for Legacy Computing"),
 		];
 
 		foreach ((uint start, uint end, string _) in emojiRanges)
@@ -103,6 +115,24 @@ public static class FontHelper
 				}
 			}
 		}
+	}
+
+	/// <summary>
+	/// Gets emoji-specific glyph ranges for loading emoji fonts.
+	/// Includes only true emoji ranges (1F*** blocks) plus ASCII and variation selectors.
+	/// </summary>
+	/// <returns>Pointer to the emoji glyph ranges.</returns>
+	public static unsafe uint* GetEmojiRanges()
+	{
+		ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
+
+		// Add emoji-specific ranges
+		AddEmojiRanges(builder);
+
+		// Build the ranges
+		ImVector<uint> ranges = new();
+		builder.BuildRanges(&ranges);
+		return ranges.Data;
 	}
 
 	/// <summary>
@@ -131,7 +161,7 @@ public static class FontHelper
 	/// <param name="builder">The glyph ranges builder to add symbol ranges to.</param>
 	private static void AddSymbolRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
-		// Define symbol ranges to add
+		// Define symbol ranges to add (avoiding emoji ranges which are handled separately)
 		(uint start, uint end, string description)[] symbolRanges = [
 			(0x2000, 0x206F, "General Punctuation"),
 			(0x20A0, 0x20CF, "Currency Symbols"),
@@ -139,10 +169,12 @@ public static class FontHelper
 			(0x2190, 0x21FF, "Arrows"),
 			(0x2200, 0x22FF, "Mathematical Operators"),
 			(0x2300, 0x23FF, "Miscellaneous Technical"),
+			(0x2460, 0x24FF, "Enclosed Alphanumerics"),
 			(0x2500, 0x257F, "Box Drawing"),
 			(0x2580, 0x259F, "Block Elements"),
 			(0x25A0, 0x25FF, "Geometric Shapes"),
-			(0x2600, 0x26FF, "Miscellaneous Symbols")
+			(0x2600, 0x26FF, "Miscellaneous Symbols"), // Includes ☀️ ⭐ ❤️ etc. (non-emoji variants)
+			(0x2700, 0x27BF, "Dingbats") // Includes ✂️ ✈️ ☎️ etc. (non-emoji variants)
 		];
 
 		foreach ((uint start, uint end, string _) in symbolRanges)

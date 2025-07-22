@@ -746,12 +746,22 @@ internal static class ImGuiAppDemo
 			ImGui.Text("Miscellaneous symbols: ♠ ♣ ♥ ♦ ☀ ☁ ☂ ☃ ♪ ♫");
 
 			ImGui.Separator();
-			ImGui.Text("Emojis (if font supports them):");
-			ImGui.Text("Faces: 😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇");
-			ImGui.Text("Objects: 🚀 💻 📱 🎸 🎨 🏆 🌟 💎 ⚡ 🔥");
-			ImGui.Text("Nature: 🌈 🌞 🌙 ⭐ 🌍 🌊 🌳 🌸 🦋 🐝");
-			ImGui.Text("Food: 🍎 🍌 🍕 🍔 🍟 🍦 🎂 ☕ 🍺 🍷");
-			ImGui.Text("Transport: 🚗 🚂 ✈️ 🚲 🚢 🚁 🚌 🏍️ 🛸");
+			ImGui.Text("Full Emoji Range Support (if font supports them):");
+			ImGui.Text("Faces: 😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 😍 😎 🤓 🧐 🤔 😴");
+			ImGui.Text("Gestures: 👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐");
+			ImGui.Text("Objects: 🚀 💻 📱 🎸 🎨 🏆 🌟 💎 ⚡ 🔥 💡 🔧 ⚙️ 🔑 💰");
+			ImGui.Text("Nature: 🌈 🌞 🌙 ⭐ 🌍 🌊 🌳 🌸 🦋 🐝 🐶 🐱 🦊 🐻 🐼");
+			ImGui.Text("Food: 🍎 🍌 🍕 🍔 🍟 🍦 🎂 ☕ 🍺 🍷 🍓 🥑 🥨 🧀 🍯");
+			ImGui.Text("Transport: 🚗 🚂 ✈️ 🚲 🚢 🚁 🚌 🏍️ 🛸 🚜 🏎️ 🚙 🚕 🚐");
+			ImGui.Text("Activities: ⚽ 🏀 🏈 ⚾ 🎾 🏐 🏉 🎱 🏓 🏸 🥊 ⛳ 🎯 🎪");
+			ImGui.Text("Weather: ☀️ ⛅ ☁️ 🌤️ ⛈️ 🌧️ ❄️ ☃️ ⛄ 🌬️ 💨 🌊 💧");
+			ImGui.Text("Symbols: ❤️ 💚 💙 💜 🖤 💛 💔 ❣️ 💕 💖 💗 💘 💝 ✨");
+			ImGui.Text("Arrows: ← → ↑ ↓ ↔ ↕ ↖ ↗ ↘ ↙ ⤴️ ⤵️ 🔀 🔁 🔂 🔄 🔃");
+			ImGui.Text("Math: ± × ÷ = ≠ ≈ ≤ ≥ ∞ √ ∑ ∏ ∂ ∫ Ω π α β γ δ");
+			ImGui.Text("Geometric: ■ □ ▲ △ ● ○ ◆ ◇ ★ ☆ ♠ ♣ ♥ ♦ ▪ ▫ ◾ ◽");
+			ImGui.Text("Currency: $ € £ ¥ ₹ ₿ ¢ ₽ ₩ ₡ ₪ ₫ ₱ ₴ ₦ ₨ ₵");
+			ImGui.Text("Dingbats: ✂ ✈ ☎ ⌚ ⏰ ⏳ ⌛ ⚡ ☔ ☂ ☀ ⭐ ☁ ⛅ ❄");
+			ImGui.Text("Enclosed: ① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ ⓐ ⓑ ⓒ ⓓ ⓔ ⓕ");
 
 			ImGui.Separator();
 			ImGui.TextWrapped("Note: Character display depends on your configured font's Unicode support. " +

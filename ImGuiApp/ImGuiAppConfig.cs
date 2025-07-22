@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGuiApp;
 
+using System.Resources;
 using Silk.NET.Windowing;
 
 /// <summary>
@@ -95,4 +96,28 @@ public class ImGuiAppConfig
 		{
 			{ "default", Resources.Resources.NerdFont}
 		};
+
+	/// <summary>
+	/// Gets the emoji font data if available, null otherwise.
+	/// </summary>
+	internal static byte[]? EmojiFont
+	{
+		get
+		{
+			try
+			{
+				return Resources.Resources.NotoEmoji;
+			}
+			catch (MissingManifestResourceException)
+			{
+				// NotoEmoji.ttf not available in resources
+				return null;
+			}
+			catch (InvalidOperationException)
+			{
+				// Resource manager not available
+				return null;
+			}
+		}
+	}
 }
