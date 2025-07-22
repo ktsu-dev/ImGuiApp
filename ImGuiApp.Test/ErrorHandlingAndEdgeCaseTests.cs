@@ -9,7 +9,6 @@ using ktsu.ImGuiApp.ImGuiController;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Moq;
 
 /// <summary>
 /// Tests for error handling, edge cases, and boundary conditions to maximize code coverage.
@@ -57,8 +56,6 @@ public class ErrorHandlingAndEdgeCaseTests
 	}
 
 	#endregion
-
-
 
 	#region Texture Coordinate Edge Cases
 
@@ -118,7 +115,7 @@ public class ErrorHandlingAndEdgeCaseTests
 		ImGuiApp.Reset();
 		ImGuiApp.Reset();
 		ImGuiApp.Reset();
-		Assert.IsTrue(true);
+		// If we reach here without exception, the test passes
 	}
 
 	[TestMethod]

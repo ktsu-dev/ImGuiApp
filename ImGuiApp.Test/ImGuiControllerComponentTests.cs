@@ -53,24 +53,21 @@ public class ImGuiControllerComponentTests
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentOutOfRangeException))]
 	public void ImGuiFontConfig_Constructor_ZeroFontSize_ThrowsException()
 	{
-		_ = new ImGuiFontConfig("test.ttf", 0);
+		Assert.ThrowsException<ArgumentOutOfRangeException>(() => new ImGuiFontConfig("test.ttf", 0));
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentOutOfRangeException))]
 	public void ImGuiFontConfig_Constructor_NegativeFontSize_ThrowsException()
 	{
-		_ = new ImGuiFontConfig("test.ttf", -1);
+		Assert.ThrowsException<ArgumentOutOfRangeException>(() => new ImGuiFontConfig("test.ttf", -1));
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentNullException))]
 	public void ImGuiFontConfig_Constructor_NullFontPath_ThrowsException()
 	{
-		_ = new ImGuiFontConfig(null!, 16);
+		Assert.ThrowsException<ArgumentNullException>(() => new ImGuiFontConfig(null!, 16));
 	}
 
 	[TestMethod]
@@ -148,10 +145,9 @@ public class ImGuiControllerComponentTests
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentNullException))]
 	public void WindowOpenGLFactory_Constructor_NullWindow_ThrowsException()
 	{
-		_ = new WindowOpenGLFactory(null!);
+		Assert.ThrowsException<ArgumentNullException>(() => new WindowOpenGLFactory(null!));
 	}
 
 	[TestMethod]
@@ -175,17 +171,9 @@ public class ImGuiControllerComponentTests
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentNullException))]
 	public void OpenGLProvider_Constructor_NullFactory_ThrowsException()
 	{
-		try
-		{
-			using OpenGLProvider provider = new(null!);
-		}
-		catch (ArgumentNullException)
-		{
-			throw; // Re-throw expected exception
-		}
+		Assert.ThrowsException<ArgumentNullException>(() => new OpenGLProvider(null!));
 	}
 
 	[TestMethod]
@@ -196,18 +184,17 @@ public class ImGuiControllerComponentTests
 
 		provider.Dispose();
 		provider.Dispose();
-		Assert.IsTrue(true); // If we get here, no exception was thrown
+		// If we reach here without exception, the test passes
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ObjectDisposedException))]
 	public void OpenGLProvider_GetGL_AfterDispose_ThrowsException()
 	{
 		Mock<IOpenGLFactory> mockFactory = new();
 		using OpenGLProvider provider = new(mockFactory.Object);
 
 		provider.Dispose();
-		_ = provider.GetGL(); // Should throw ObjectDisposedException
+		Assert.ThrowsException<ObjectDisposedException>(provider.GetGL);
 	}
 
 	[TestMethod]

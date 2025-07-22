@@ -32,14 +32,14 @@ public class FontAndUITests
 	public void FontHelper_CleanupCustomFonts_DoesNotThrow()
 	{
 		FontHelper.CleanupCustomFonts();
-		Assert.IsTrue(true); // If we get here, it didn't throw
+		// If we reach here without exception, the test passes
 	}
 
 	[TestMethod]
 	public void FontHelper_CleanupGlyphRanges_DoesNotThrow()
 	{
 		FontHelper.CleanupGlyphRanges();
-		Assert.IsTrue(true); // If we get here, it didn't throw
+		// If we reach here without exception, the test passes
 	}
 
 	[TestMethod]
@@ -49,7 +49,7 @@ public class FontAndUITests
 		FontHelper.CleanupGlyphRanges();
 		FontHelper.CleanupCustomFonts();
 		FontHelper.CleanupGlyphRanges();
-		Assert.IsTrue(true);
+		// If we reach here without exception, the test passes
 	}
 
 	#endregion

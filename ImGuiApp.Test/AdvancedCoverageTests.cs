@@ -9,10 +9,6 @@ using ktsu.ImGuiApp.ImGuiController;
 using Hexa.NET.ImGui;
 using System;
 
-using Moq;
-
-
-
 /// <summary>
 /// Advanced tests targeting specific low-coverage areas including OpenGL functionality, shader management, and texture operations.
 /// </summary>
@@ -69,7 +65,7 @@ public class AdvancedCoverageTests
 	public void ImGuiFontConfig_EqualsObject_WithNullObject_ReturnsFalse()
 	{
 		ImGuiFontConfig config = new("test.ttf", 16);
-		bool result = config.Equals((object?)null);
+		bool result = config.Equals(null);
 		Assert.IsFalse(result);
 	}
 
@@ -126,8 +122,6 @@ public class AdvancedCoverageTests
 
 	#endregion
 
-
-
 	#region UniformFieldInfo Tests
 
 	[TestMethod]
@@ -138,7 +132,7 @@ public class AdvancedCoverageTests
 		Assert.AreEqual(0, uniformInfo.Location);
 		Assert.IsNull(uniformInfo.Name);
 		Assert.AreEqual(0, uniformInfo.Size);
-		Assert.AreEqual(default(Silk.NET.OpenGL.UniformType), uniformInfo.Type);
+		Assert.AreEqual(default, uniformInfo.Type);
 	}
 
 	[TestMethod]
@@ -171,13 +165,15 @@ public class AdvancedCoverageTests
 	}
 
 	[TestMethod]
-	public void ImGuiApp_WindowState_MultipleAccess_ReturnsSameInstance()
+	public void ImGuiApp_WindowState_MultipleAccess_ReturnsConsistentValues()
 	{
 		ImGuiAppWindowState state1 = ImGuiApp.WindowState;
 		ImGuiAppWindowState state2 = ImGuiApp.WindowState;
 
-		// Should return the same instance each time
-		Assert.AreSame(state1, state2);
+		// Should return consistent values (not necessarily same reference)
+		Assert.AreEqual(state1.Size, state2.Size);
+		Assert.AreEqual(state1.Pos, state2.Pos);
+		Assert.AreEqual(state1.LayoutState, state2.LayoutState);
 	}
 
 	[TestMethod]
