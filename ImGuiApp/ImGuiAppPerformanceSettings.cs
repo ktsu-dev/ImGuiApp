@@ -56,5 +56,4 @@ public class ImGuiAppPerformanceSettings
 	/// </summary>
 	public double IdleTimeoutSeconds { get; init; } = 30.0;
 
-
 }
