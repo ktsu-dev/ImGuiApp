@@ -18,6 +18,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Window Management**: Automatic window state, rendering, and input handling
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
 - **Font Management**: Flexible font loading system with customization options
+- **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
 - **Texture Support**: Built-in texture management for ImGui
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
@@ -142,6 +143,35 @@ private static void OnRender(float deltaTime)
         ImGui.Text("Hello, I am somewhat fancy!");
     }
 }
+```
+
+### Unicode and Emoji Support
+
+ImGuiApp automatically includes support for Unicode characters and emojis. This feature is **enabled by default**, so you can use extended characters without any configuration:
+
+```csharp
+private static void OnRender(float deltaTime)
+{
+    ImGui.Text("Basic ASCII: Hello World!");
+    ImGui.Text("Accented characters: café, naïve, résumé");
+    ImGui.Text("Mathematical symbols: ∞ ≠ ≈ ≤ ≥ ± × ÷ ∂ ∑");
+    ImGui.Text("Currency symbols: $ € £ ¥ ₹ ₿");
+    ImGui.Text("Arrows: ← → ↑ ↓ ↔ ↕");
+    ImGui.Text("Emojis (if font supports): 😀 🚀 🌟 💻 🎨 🌈");
+}
+```
+
+**Note**: Character display depends on your font's Unicode support. Most modern fonts include extended Latin characters and symbols, but emojis require specialized fonts.
+
+To disable Unicode support (ASCII only), set `EnableUnicodeSupport = false`:
+
+```csharp
+ImGuiApp.Start(new()
+{
+    Title = "ASCII Only App",
+    EnableUnicodeSupport = false, // Disables Unicode support
+    // ... other settings
+});
 ```
 
 ### Texture Management
@@ -285,6 +315,7 @@ Configuration for the ImGui application.
 | `InitialWindowState` | `ImGuiAppWindowState` | The initial state of the application window |
 | `TestMode` | `bool` | Whether the application is running in test mode |
 | `Fonts` | `Dictionary<string, byte[]>` | Font name to font data mapping |
+| `EnableUnicodeSupport` | `bool` | Whether to enable Unicode and emoji support (default: `true`) |
 | `OnStart` | `Action` | Called when the application starts |
 | `OnUpdate` | `Action<float>` | Called each frame before rendering (param: delta time) |
 | `OnRender` | `Action<float>` | Called each frame for rendering (param: delta time) |
@@ -306,11 +337,12 @@ A utility class for applying font styles using a using statement.
 
 ## Demo Application
 
-Check out the included demo project to see a working example:
+Check out the included demo project to see a working example with Unicode and emoji support:
 
 1. Clone or download the repository
 2. Open the solution in Visual Studio (or run dotnet build)
 3. Start the ImGuiAppDemo project to see a basic ImGui application
+4. Select "View → Unicode & Emoji Test" from the menu to test character rendering
 
 ## Contributing
 
