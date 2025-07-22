@@ -869,7 +869,7 @@ internal static class ImGuiAppDemo
 
 			ImGui.Separator();
 			ImGui.TextWrapped("Throttling uses sleep-based timing to control frame rate and save resources. It evaluates all conditions and uses the lowest frame rate.");
-			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=0.2 FPS (5s per frame)");
+			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=2 FPS (0.5s per frame)");
 			ImGui.TextWrapped("The system automatically selects the lowest applicable rate using Thread.Sleep for precise timing control. Try combining conditions (e.g., unfocused + idle, or minimized) to see the effect.");
 
 			// Real-time FPS graph
@@ -888,7 +888,7 @@ internal static class ImGuiAppDemo
 				string currentState = "Unknown";
 				if (!ImGuiApp.IsVisible)
 				{
-					currentState = "Not Visible (0.2 FPS target)";
+					currentState = "Not Visible (2 FPS target)";
 				}
 				else if (!ImGuiApp.IsFocused && ImGuiApp.IsIdle)
 				{
@@ -919,7 +919,7 @@ internal static class ImGuiAppDemo
 				ImGui.TextColored(new System.Numerics.Vector4(0.7f, 0.9f, 0.7f, 1.0f), "💡 Testing Tips:");
 				ImGui.BulletText("Click on another window to see unfocused throttling (5 FPS)");
 				ImGui.BulletText("Stop moving the mouse for 5+ seconds to see idle throttling (10 FPS)");
-				ImGui.BulletText("Minimize this window to see not visible throttling (0.2 FPS)");
+				ImGui.BulletText("Minimize this window to see not visible throttling (2 FPS)");
 				ImGui.BulletText("The lowest applicable rate always wins!");
 			}
 			else

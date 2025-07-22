@@ -337,7 +337,7 @@ Configuration for performance optimization and throttled rendering using sleep-b
 | `FocusedFps` | `double` | `30.0` | Target frame rate when the window is focused and active |
 | `UnfocusedFps` | `double` | `5.0` | Target frame rate when the window is unfocused |
 | `IdleFps` | `double` | `10.0` | Target frame rate when the application is idle (no user input) |
-| `NotVisibleFps` | `double` | `0.2` | Target frame rate when the window is not visible (minimized or hidden) |
+| `NotVisibleFps` | `double` | `2.0` | Target frame rate when the window is not visible (minimized or hidden) |
 | `EnableIdleDetection` | `bool` | `true` | Enables/disables idle detection based on user input |
 | `IdleTimeoutSeconds` | `double` | `30.0` | Time in seconds without user input before considering the app idle |
 
@@ -367,7 +367,7 @@ This feature automatically:
 - Uses sleep-based timing to precisely control frame rate when unfocused or idle
 - Saves CPU and GPU resources without affecting user experience
 - Provides smooth transitions between different performance states
-- Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle, 0.2 FPS not visible
+- Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle, 2 FPS not visible
 
 ### `FontAppearance` Class
 

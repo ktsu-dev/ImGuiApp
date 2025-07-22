@@ -33,7 +33,7 @@ public class ImGuiAppPerformanceSettings
 	/// <summary>
 	/// Gets or sets the target frame rate (FPS) when the application window is not visible (minimized or hidden).
 	/// </summary>
-	public double NotVisibleFps { get; init; } = 0.2;
+	public double NotVisibleFps { get; init; } = 2.0;
 
 	/// <summary>
 	/// Gets or sets a value indicating whether idle detection is enabled.
