@@ -342,13 +342,11 @@ public static partial class ImGuiApp
 		double requiredFps = selectedRate.fps;
 		double requiredUps = selectedRate.ups;
 
-		// Temporary debug logging to diagnose the issue
+		// Debug logging to see what's happening with focus detection
 		if (Math.Abs(currentFps - requiredFps) > 0.1)
 		{
 			var candidateList = string.Join(", ", candidateRates.Select(r => $"{r.fps}fps({r.reason})"));
-			// Check if the window has a focus property we can verify against
-			var windowFocused = window?.IsFocused ?? false;
-			DebugLogger.Log($"Throttling: IsFocused(event)={IsFocused}, IsFocused(direct)={windowFocused}, actuallyFocused={actuallyFocused}, Visible={IsVisible}, Idle={IsIdle}");
+			DebugLogger.Log($"Focus: event={IsFocused}, direct={window?.IsFocused ?? false}, using={actuallyFocused} | Visible={IsVisible} | Idle={IsIdle}");
 			DebugLogger.Log($"Candidates: [{candidateList}] -> Selected: {requiredFps}fps ({selectedRate.reason})");
 		}
 
