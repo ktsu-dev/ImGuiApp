@@ -337,6 +337,7 @@ Configuration for performance optimization and throttled rendering using sleep-b
 | `FocusedFps` | `double` | `30.0` | Target frame rate when the window is focused and active |
 | `UnfocusedFps` | `double` | `5.0` | Target frame rate when the window is unfocused |
 | `IdleFps` | `double` | `10.0` | Target frame rate when the application is idle (no user input) |
+| `NotVisibleFps` | `double` | `0.2` | Target frame rate when the window is not visible (minimized or hidden) |
 | `EnableIdleDetection` | `bool` | `true` | Enables/disables idle detection based on user input |
 | `IdleTimeoutSeconds` | `double` | `30.0` | Time in seconds without user input before considering the app idle |
 
@@ -353,6 +354,7 @@ ImGuiApp.Start(new ImGuiAppConfig
         FocusedFps = 60.0,           // Custom higher rate when focused
         UnfocusedFps = 15.0,         // Custom rate when unfocused
         IdleFps = 2.0,               // Custom very low rate when idle
+        NotVisibleFps = 0.1,         // Custom ultra-low rate when minimized
         EnableIdleDetection = true,
         IdleTimeoutSeconds = 10.0    // Custom idle timeout
     }

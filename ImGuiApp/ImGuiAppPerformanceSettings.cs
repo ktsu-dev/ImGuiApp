@@ -31,6 +31,11 @@ public class ImGuiAppPerformanceSettings
 	public double IdleFps { get; init; } = 10.0;
 
 	/// <summary>
+	/// Gets or sets the target frame rate (FPS) when the application window is not visible (minimized or hidden).
+	/// </summary>
+	public double NotVisibleFps { get; init; } = 0.2;
+
+	/// <summary>
 	/// Gets or sets a value indicating whether idle detection is enabled.
 	/// When true, the application will detect when there's no user input and reduce frame rate further.
 	/// </summary>

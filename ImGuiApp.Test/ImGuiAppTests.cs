@@ -316,6 +316,7 @@ public sealed class ImGuiAppTests : IDisposable
 		Assert.AreEqual(30.0, settings.FocusedFps);
 		Assert.AreEqual(5.0, settings.UnfocusedFps);
 		Assert.AreEqual(10.0, settings.IdleFps);
+		Assert.AreEqual(0.2, settings.NotVisibleFps);
 		Assert.IsTrue(settings.EnableIdleDetection);
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
 	}
