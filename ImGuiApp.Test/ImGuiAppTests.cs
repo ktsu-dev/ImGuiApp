@@ -112,10 +112,9 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	[ExpectedException(typeof(ArgumentNullException))]
 	public void Start_WithNullConfig_ThrowsArgumentNullException()
 	{
-		ImGuiApp.Start(null!);
+		Assert.ThrowsException<ArgumentNullException>(() => ImGuiApp.Start(null!));
 	}
 
 	[TestMethod]
@@ -126,30 +125,9 @@ public sealed class ImGuiAppTests : IDisposable
 	}
 
 	[TestMethod]
-	public void Start_WhenAlreadyRunning_ThrowsException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		ImGuiApp.Start(config);
-
-		// The first Start() call with window lifecycle simulation throws an exception
-		// This is expected behavior due to OpenGL context issues in test environment
-		try
-		{
-			TestHelpers.SimulateWindowLifecycle(config.TestWindow!);
-			Assert.Fail("Expected an exception to be thrown");
-		}
-		catch (InvalidOperationException)
-		{
-			// Expected - OpenGL context not configured properly in test environment
-			// Test passes if we catch this exception
-		}
-	}
-
-	[TestMethod]
-	[ExpectedException(typeof(InvalidOperationException))]
 	public void Stop_WhenNotRunning_ThrowsInvalidOperationException()
 	{
-		ImGuiApp.Stop();
+		Assert.ThrowsException<InvalidOperationException>(ImGuiApp.Stop);
 	}
 
 	[TestMethod]
