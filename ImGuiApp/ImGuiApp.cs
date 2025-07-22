@@ -7,6 +7,7 @@ namespace ktsu.ImGuiApp;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
@@ -218,12 +219,18 @@ public static partial class ImGuiApp
 					{
 						currentGLContextHandle = (nint)ImGui.GetCurrentContext().Handle;
 
+						ImGuiIOPtr io = ImGui.GetIO();
+
 						// Configure imgui.ini file saving based on user preference
 						if (!config.SaveIniSettings)
 						{
-							ImGuiIOPtr io = ImGui.GetIO();
 							io.IniFilename = null;
 						}
+
+						io.ConfigDebugIsDebuggerPresent = Debugger.IsAttached;
+						io.ConfigErrorRecoveryEnableAssert = false;
+						io.ConfigErrorRecoveryEnableTooltip = true;
+						io.ConfigErrorRecoveryEnableDebugLog = true;
 					}
 					DebugLogger.Log("onConfigureIO: Context configured");
 
