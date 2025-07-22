@@ -38,7 +38,6 @@ internal static class ImGuiAppDemo
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
 		SaveIniSettings = false,
-		EnableUnicodeSupport = true, // Enable Unicode support for the default font
 		Fonts = new Dictionary<string, byte[]>
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
