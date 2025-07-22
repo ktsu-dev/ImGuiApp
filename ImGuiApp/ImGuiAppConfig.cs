@@ -93,6 +93,6 @@ public class ImGuiAppConfig
 
 	internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
 		{
-			{ "default", Resources.Resources.RobotoMonoNerdFontMono_Medium }
+			{ "default", Resources.Resources.NerdFont}
 		};
 }
