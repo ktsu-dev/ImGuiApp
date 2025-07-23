@@ -10,7 +10,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
@@ -131,8 +130,9 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	private static DateTime lastInputTime = DateTime.UtcNow;
-	private static DateTime lastFrameTime = DateTime.UtcNow;
 	private static double targetFrameTimeMs = 1000.0 / 30.0; // Default to 30 FPS (33.33ms per frame)
+	private static readonly PidFrameLimiter frameLimiter = new();
+	private static double previousTargetFrameTimeMs = 1000.0 / 30.0;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
@@ -188,6 +188,7 @@ public static partial class ImGuiApp
 			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
 			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
 			WindowState = Silk.NET.Windowing.WindowState.Normal,
+			VSync = false, // Disable VSync to allow PID frame limiter to control frame rate
 			API = OperatingSystem.IsLinux() ?
 				new GraphicsAPI(
 					ContextAPI.OpenGL,
@@ -308,6 +309,13 @@ public static partial class ImGuiApp
 			return;
 		}
 
+		// Skip throttling during PID auto-tuning to maintain consistent target frame rate
+		(bool isTuningActive, _, _, _, _) = frameLimiter.GetTuningStatus();
+		if (isTuningActive)
+		{
+			return;
+		}
+
 		// Update idle state if idle detection is enabled
 		if (settings.EnableIdleDetection)
 		{
@@ -402,19 +410,15 @@ public static partial class ImGuiApp
 
 	private static void ApplyFrameRateLimit()
 	{
-		DateTime currentTime = DateTime.UtcNow;
-		double elapsedMs = (currentTime - lastFrameTime).TotalMilliseconds;
-
-		if (elapsedMs < targetFrameTimeMs)
+		// Reset PID controller if target frame rate has changed
+		if (Math.Abs(targetFrameTimeMs - previousTargetFrameTimeMs) > 0.1)
 		{
-			double sleepTimeMs = targetFrameTimeMs - elapsedMs;
-			if (sleepTimeMs > 0)
-			{
-				Thread.Sleep((int)Math.Ceiling(sleepTimeMs));
-			}
+			frameLimiter.Reset();
+			previousTargetFrameTimeMs = targetFrameTimeMs;
 		}
 
-		lastFrameTime = DateTime.UtcNow;
+		// Use PID controller for accurate frame rate limiting
+		frameLimiter.LimitFrameRate(targetFrameTimeMs);
 	}
 
 	private static void RenderWithScaling(Action renderAction)
@@ -1228,7 +1232,6 @@ public static partial class ImGuiApp
 		IsFocused = true;
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
-		lastFrameTime = DateTime.UtcNow;
 		targetFrameTimeMs = 1000.0 / 30.0;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
@@ -1366,7 +1369,7 @@ public static partial class ImGuiApp
 			ImGui.Text($"Window Visible: {IsVisible}");
 
 			ImGui.Separator();
-			ImGui.TextWrapped("Throttling uses sleep-based timing to control frame rate and save resources. It evaluates all conditions and uses the lowest frame rate.");
+			ImGui.TextWrapped("Throttling uses sleep-based timing to control frame rate and save resources. It evaluates all conditions and uses the lowest frame rate. VSync is disabled to allow proper frame rate control below monitor refresh rate.");
 			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=2 FPS (0.5s per frame)");
 			ImGui.TextWrapped("The system automatically selects the lowest applicable rate using Thread.Sleep for precise timing control. Try combining conditions (e.g., unfocused + idle, or minimized) to see the effect.");
 
@@ -1382,9 +1385,63 @@ public static partial class ImGuiApp
 
 				ImGui.Text($"Current FPS: {currentFps:F1} | Average FPS: {avgFps:F1}");
 
+				// Show PID controller diagnostics
+				ImGui.Separator();
+				ImGui.Text("PID Frame Limiter Diagnostics:");
+				double currentTargetFps = 1000.0 / targetFrameTimeMs;
+				ImGui.Text($"Target: {currentTargetFps:F1} FPS ({targetFrameTimeMs:F1}ms)");
+				ImGui.Text(frameLimiter.GetDiagnosticInfo());
+				(double currentKp, double currentKi, double currentKd) = frameLimiter.GetCurrentParameters();
+				ImGui.Text($"PID Gains: Kp={currentKp:F3}, Ki={currentKi:F3}, Kd={currentKd:F3}");
+				ImGui.TextWrapped("The PID controller uses high-precision timing (Thread.Sleep + Stopwatch spin-wait) for accurate frame rate control, replacing simple Thread.Sleep limitations for better precision at higher frame rates. VSync is disabled to prevent interference with frame limiting.");
+
+				// PID Auto-Tuning Section
+				ImGui.Separator();
+				ImGui.Text("PID Auto-Tuning:");
+
+				(bool isTuningActive, int currentStep, int totalSteps, double progressPercent, PidFrameLimiter.TuningResult? bestResult, string phase) = frameLimiter.GetTuningStatusDetailed();
+
+				if (isTuningActive)
+				{
+					ImGui.Text($"Phase: {phase}");
+					ImGui.Text($"Progress: Step {currentStep}/{totalSteps} ({progressPercent:F1}%)");
+					ImGui.ProgressBar((float)(progressPercent / 100.0), new System.Numerics.Vector2(300, 0));
+					ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.8f, 0.4f, 1.0f), "⚠️ Throttling disabled during tuning for consistent results");
+					ImGui.TextWrapped("Comprehensive tuning: Coarse (8s/test) → Fine (12s/test) → Precision (15s/test)");
+
+					if (ImGui.Button("Stop Auto-Tuning"))
+					{
+						frameLimiter.StopAutoTuning();
+					}
+				}
+				else
+				{
+					ImGui.TextWrapped("Comprehensive auto-tuning tests different PID parameter combinations across multiple phases to find optimal settings for maximum accuracy. Throttling is automatically disabled during tuning for consistent results.");
+					ImGui.TextWrapped("• Phase 1: Coarse tuning (8s per test, 24 parameters)");
+					ImGui.TextWrapped("• Phase 2: Fine tuning (12s per test, 25 parameters around best result)");
+					ImGui.TextWrapped("• Phase 3: Precision tuning (15s per test, 9 parameters for final optimization)");
+					ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.6f, 0.6f, 1.0f), "⏱️ Total time: ~12-15 minutes for maximum accuracy");
+
+					if (ImGui.Button("Start Comprehensive Auto-Tuning"))
+					{
+						frameLimiter.StartAutoTuning();
+					}
+
+					if (bestResult.HasValue)
+					{
+						ImGui.Text("Best tuned parameters:");
+						ImGui.Text($"  Kp: {bestResult.Value.Kp:F3}, Ki: {bestResult.Value.Ki:F3}, Kd: {bestResult.Value.Kd:F3}");
+						ImGui.Text($"  Score: {bestResult.Value.Score:F3} (Avg Error: {bestResult.Value.AverageError:F2}ms)");
+					}
+				}
+
 				// Show current throttling state
 				string currentState = "Unknown";
-				if (!IsVisible)
+				if (isTuningActive)
+				{
+					currentState = "Throttling Disabled (PID Tuning Active)";
+				}
+				else if (!IsVisible)
 				{
 					currentState = "Not Visible (2 FPS target)";
 				}

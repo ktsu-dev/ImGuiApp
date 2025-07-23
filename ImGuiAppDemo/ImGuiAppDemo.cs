@@ -111,6 +111,9 @@ internal static class ImGuiAppDemo
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
 		},
 		// Example of configuring performance settings for throttled rendering
+		// Uses PID controller for accurate frame rate limiting instead of simple sleep-based approach
+		// VSync is disabled to allow frame limiting below monitor refresh rate
+		// Defaults: Kp=1.8, Ki=0.048, Kd=0.237 (from comprehensive auto-tuning)
 		PerformanceSettings = new()
 		{
 			EnableThrottledRendering = true,

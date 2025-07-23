@@ -17,6 +17,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Full Integration**: Seamless integration with Silk.NET for OpenGL and input handling
 - **Window Management**: Automatic window state, rendering, and input handling
 - **Performance Optimization**: Sleep-based throttled rendering with lowest-selection logic when unfocused, idle, or not visible to maximize resource savings
+- **PID Frame Limiting**: Precision frame rate control using a PID controller with comprehensive auto-tuning capabilities for highly accurate target FPS achievement
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
 - **Font Management**: Flexible font loading system with customization options and dynamic scaling
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
@@ -194,6 +195,80 @@ private static void OnRender(float deltaTime)
 }
 ```
 
+### PID Frame Limiting
+
+ImGuiApp features a sophisticated **PID (Proportional-Integral-Derivative) controller** for precise frame rate limiting. This system provides highly accurate target FPS control that learns and adapts to your system's characteristics.
+
+#### Key Features
+
+- **High-Precision Timing**: Hybrid sleep system combining `Thread.Sleep()` for coarse delays with spin-waiting for sub-millisecond accuracy
+- **PID Controller**: Advanced control algorithm that learns from frame timing errors and dynamically adjusts sleep times
+- **Comprehensive Auto-Tuning**: Multi-phase tuning procedure that automatically finds optimal PID parameters for your system
+- **VSync Independence**: Works independently of monitor refresh rates for any target FPS
+- **Real-Time Diagnostics**: Built-in performance monitoring and tuning visualization
+
+#### Optimized Defaults
+
+ImGuiApp comes pre-configured with optimal PID parameters derived from comprehensive auto-tuning:
+
+- **Kp: 1.800** - Proportional gain for current error response
+- **Ki: 0.048** - Integral gain for accumulated error correction  
+- **Kd: 0.237** - Derivative gain for predictive adjustment
+
+These defaults provide excellent frame timing accuracy out-of-the-box for most systems.
+
+#### Configuration
+
+Configure frame limiting through `ImGuiAppPerformanceSettings`:
+
+```csharp
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    Title = "PID Frame Limited App",
+    OnRender = OnRender,
+    PerformanceSettings = new ImGuiAppPerformanceSettings
+    {
+        EnableThrottledRendering = true,
+        FocusedFps = 30.0,           // Target 30 FPS when focused
+        UnfocusedFps = 5.0,          // Target 5 FPS when unfocused
+        IdleFps = 10.0,              // Target 10 FPS when idle
+        NotVisibleFps = 2.0,         // Target 2 FPS when minimized
+        EnableIdleDetection = true,
+        IdleTimeoutSeconds = 30.0    // Idle after 30 seconds
+    }
+});
+```
+
+#### Auto-Tuning Procedure
+
+For maximum accuracy, ImGuiApp includes a comprehensive **3-phase auto-tuning system**:
+
+1. **Coarse Phase** (8s per test): Tests 24 parameter combinations to find the general optimal range
+2. **Fine Phase** (12s per test): Tests 25 refined parameters around the best coarse result  
+3. **Precision Phase** (15s per test): Final optimization with 9 precision-focused parameters
+
+**Total tuning time**: ~12-15 minutes for maximum accuracy
+
+Access auto-tuning through the **Debug > Show Performance Monitor** menu, which provides:
+- Real-time tuning progress visualization
+- Performance metrics (Average Error, Max Error, Stability, Score)
+- Interactive tuning controls and results display
+- Live FPS graphs showing PID controller performance
+
+#### Technical Details
+
+The PID controller works by:
+- **Measuring** actual frame times vs. target frame times
+- **Calculating** error using smoothed measurements to reduce noise
+- **Adjusting** sleep duration using PID mathematics: `output = Kp×error + Ki×∫error + Kd×Δerror`
+- **Learning** from past performance to minimize future timing errors
+
+The system automatically:
+- Disables VSync to prevent interference with custom frame limiting
+- Pauses throttling during auto-tuning for accurate measurements  
+- Uses integral windup prevention to maintain stability
+- Applies high-precision sleep for sub-millisecond timing accuracy
+
 ### Full Application with Multiple Windows
 
 ```csharp
@@ -338,7 +413,7 @@ Configuration for the ImGui application.
 
 ### `ImGuiAppPerformanceSettings` Class
 
-Configuration for performance optimization and throttled rendering. Uses precise sleep-based timing control with Thread.Sleep to maintain target frame rates and save system resources when the application is unfocused, idle, or not visible.
+Configuration for performance optimization and throttled rendering. Uses a sophisticated **PID controller with high-precision timing** to achieve accurate target frame rates while maintaining system resource efficiency. The system combines Thread.Sleep for coarse delays with spin-waiting for sub-millisecond precision, and automatically disables VSync to prevent interference with custom frame limiting.
 
 #### Properties
 
@@ -369,19 +444,23 @@ ImGuiApp.Start(new ImGuiAppConfig
         EnableIdleDetection = true,
         IdleTimeoutSeconds = 10.0    // Custom idle timeout
     }
+    // PID controller uses optimized defaults: Kp=1.8, Ki=0.048, Kd=0.237
+    // For fine-tuning, use Debug > Show Performance Monitor > Start Auto-Tuning
 });
 ```
 
 This feature automatically:
+- Uses a **PID controller** with optimized defaults for highly accurate frame rate targeting
+- Combines **Thread.Sleep** with **spin-waiting** for sub-millisecond timing precision
+- Disables **VSync** automatically to prevent interference with custom frame limiting
 - Detects when the window loses/gains focus and visibility state (minimized/hidden)
 - Tracks user input (keyboard, mouse movement, clicks, scrolling) for idle detection
-- Uses sleep-based timing with Thread.Sleep for precise frame rate control
 - Evaluates all applicable throttling conditions and selects the lowest frame rate
 - Saves significant CPU and GPU resources without affecting user experience
 - Provides instant transitions between different performance states
 - Uses conservative defaults: 30 FPS focused, 5 FPS unfocused, 10 FPS idle, 2 FPS not visible
 
-The throttling system uses a "lowest wins" approach - if multiple conditions apply (e.g., unfocused + idle), the lowest frame rate is automatically selected for maximum resource savings.
+The **PID controller** learns from timing errors and adapts to your system's characteristics, providing much more accurate frame rate control than simple sleep-based methods. The throttling system uses a "lowest wins" approach - if multiple conditions apply (e.g., unfocused + idle), the lowest frame rate is automatically selected for maximum resource savings.
 
 ### `FontAppearance` Class
 
@@ -449,11 +528,18 @@ Check out the included demo project to see a comprehensive working example:
    - **Graphics & Plotting**: Custom drawing and data visualization examples
    - **Nerd Font Icons**: Browse and test various icon sets and glyphs
 5. Use the debug menu to access additional features:
-   - **Debug > Show Performance Monitor**: Real-time FPS graph showing sleep-based throttling in action
+   - **Debug > Show Performance Monitor**: Real-time FPS graph showing PID controller performance with comprehensive auto-tuning capabilities
    - **Debug > Show ImGui Demo**: Official ImGui demo window
    - **Debug > Show ImGui Metrics**: ImGui internal metrics and debugging info
 
-The **Performance Monitor** includes a live graph that visualizes frame rate changes as you focus/unfocus the window, let it go idle, or minimize it - perfect for seeing the throttling system work in real-time!
+The **Performance Monitor** includes:
+- **Live FPS graphs** that visualize frame rate changes as you focus/unfocus the window, let it go idle, or minimize it
+- **PID Controller diagnostics** showing real-time proportional, integral, and derivative values
+- **Comprehensive Auto-Tuning** with 3-phase optimization (Coarse, Fine, Precision phases)
+- **Performance metrics** including Average Error, Max Error, Stability, and composite Score
+- **Interactive tuning controls** to start/stop optimization and view detailed results
+
+Perfect for seeing both the throttling system and PID controller work in real-time!
 
 ## Contributing
 
