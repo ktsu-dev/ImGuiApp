@@ -18,9 +18,11 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Window Management**: Automatic window state, rendering, and input handling
 - **Performance Optimization**: Sleep-based throttled rendering with lowest-selection logic when unfocused, idle, or not visible to maximize resource savings
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
-- **Font Management**: Flexible font loading system with customization options
+- **Font Management**: Flexible font loading system with customization options and dynamic scaling
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
-- **Texture Support**: Built-in texture management for ImGui
+- **Texture Support**: Built-in texture management with caching and automatic cleanup for ImGui
+- **Debug Logging**: Comprehensive debug logging system for troubleshooting crashes and performance issues
+- **Context Handling**: Automatic OpenGL context change detection and texture reloading
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
 - **Positioning Guards**: Offscreen positioning checks to keep windows visible
@@ -209,13 +211,15 @@ class Program
         ImGuiApp.Start(new ImGuiAppConfig
         {
             Title = "Advanced ImGuiApp Demo",
-            Width = 1280,
-            Height = 720,
+            InitialWindowState = new ImGuiAppWindowState
+            {
+                Size = new Vector2(1280, 720),
+                Pos = new Vector2(100, 100)
+            },
             OnStart = OnStart,
             OnUpdate = OnUpdate,
             OnRender = OnRender,
             OnAppMenu = OnAppMenu,
-            OnShutdown = OnShutdown
         });
     }
 
@@ -272,12 +276,6 @@ class Program
         }
     }
 
-    private static void OnShutdown()
-    {
-        // Clean up resources
-        Console.WriteLine("Application shutting down");
-    }
-
     private static Vector3 _backgroundColor = new Vector3(0.45f, 0.55f, 0.60f);
 }
 ```
@@ -288,19 +286,32 @@ class Program
 
 The main entry point for creating and managing ImGui applications.
 
+#### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| `WindowState` | `ImGuiAppWindowState` | Gets the current state of the application window |
+| `Invoker` | `Invoker` | Gets an instance to delegate tasks to the window thread |
+| `IsFocused` | `bool` | Gets whether the application window is focused |
+| `IsVisible` | `bool` | Gets whether the application window is visible |
+| `IsIdle` | `bool` | Gets whether the application is currently idle |
+| `ScaleFactor` | `float` | Gets the current DPI scale factor |
+
 #### Methods
 
 | Name | Parameters | Return Type | Description |
 |------|------------|-------------|-------------|
 | `Start` | `ImGuiAppConfig config` | `void` | Starts the ImGui application with the provided configuration |
 | `Stop` | | `void` | Stops the running application |
-| `GetOrLoadTexture` | `string path` | `ImGuiAppTextureInfo` | Loads a texture from file or returns cached texture info if already loaded |
-| `TryGetTexture` | `string path, out ImGuiAppTextureInfo textureInfo` | `bool` | Attempts to get a cached texture by path |
+| `GetOrLoadTexture` | `AbsoluteFilePath path` | `ImGuiAppTextureInfo` | Loads a texture from file or returns cached texture info if already loaded |
+| `TryGetTexture` | `AbsoluteFilePath path, out ImGuiAppTextureInfo textureInfo` | `bool` | Attempts to get a cached texture by path |
 | `DeleteTexture` | `uint textureId` | `void` | Deletes a texture and frees its resources |
 | `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
-| `GetWindowSize` | | `Vector2` | Returns the current window size |
-| `SetClipboardText` | `string text` | `void` | Sets the clipboard text |
-| `GetClipboardText` | | `string` | Gets the clipboard text |
+| `CleanupAllTextures` | | `void` | Cleans up all loaded textures |
+| `SetWindowIcon` | `string iconPath` | `void` | Sets the window icon using the specified icon file path |
+| `EmsToPx` | `float ems` | `int` | Converts a value in ems to pixels based on current font size |
+| `PtsToPx` | `int pts` | `int` | Converts a value in points to pixels based on current scale factor |
+| `UseImageBytes` | `Image<Rgba32> image, Action<byte[]> action` | `void` | Executes an action with temporary access to image bytes using pooled memory |
 
 ### `ImGuiAppConfig` Class
 
@@ -308,21 +319,22 @@ Configuration for the ImGui application.
 
 #### Properties
 
-| Name | Type | Description |
-|------|------|-------------|
-| `Title` | `string` | The window title |
-| `IconPath` | `string` | The file path to the application window icon |
-| `InitialWindowState` | `ImGuiAppWindowState` | The initial state of the application window |
-| `TestMode` | `bool` | Whether the application is running in test mode |
-| `Fonts` | `Dictionary<string, byte[]>` | Font name to font data mapping |
-| `EnableUnicodeSupport` | `bool` | Whether to enable Unicode and emoji support (default: `true`) |
-| `OnStart` | `Action` | Called when the application starts |
-| `OnUpdate` | `Action<float>` | Called each frame before rendering (param: delta time) |
-| `OnRender` | `Action<float>` | Called each frame for rendering (param: delta time) |
-| `OnAppMenu` | `Action` | Called each frame for rendering the application menu |
-| `OnMoveOrResize` | `Action` | Called when the application window is moved or resized |
-| `SaveIniSettings` | `bool` | Whether ImGui should save window settings to imgui.ini |
-| `PerformanceSettings` | `ImGuiAppPerformanceSettings` | Performance settings for throttled rendering |
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `TestMode` | `bool` | `false` | Whether the application is running in test mode |
+| `Title` | `string` | `"ImGuiApp"` | The window title |
+| `IconPath` | `string` | `""` | The file path to the application window icon |
+| `InitialWindowState` | `ImGuiAppWindowState` | `new()` | The initial state of the application window |
+| `Fonts` | `Dictionary<string, byte[]>` | `[]` | Font name to font data mapping |
+| `EnableUnicodeSupport` | `bool` | `true` | Whether to enable Unicode and emoji support |
+| `SaveIniSettings` | `bool` | `true` | Whether ImGui should save window settings to imgui.ini |
+| `PerformanceSettings` | `ImGuiAppPerformanceSettings` | `new()` | Performance settings for throttled rendering |
+| `OnStart` | `Action` | `() => { }` | Called when the application starts |
+| `FrameWrapperFactory` | `Func<ScopedAction?>` | `() => null` | Factory for creating frame wrappers |
+| `OnUpdate` | `Action<float>` | `(delta) => { }` | Called each frame before rendering (param: delta time) |
+| `OnRender` | `Action<float>` | `(delta) => { }` | Called each frame for rendering (param: delta time) |
+| `OnAppMenu` | `Action` | `() => { }` | Called each frame for rendering the application menu |
+| `OnMoveOrResize` | `Action` | `() => { }` | Called when the application window is moved or resized |
 
 ### `ImGuiAppPerformanceSettings` Class
 
@@ -383,6 +395,47 @@ A utility class for applying font styles using a using statement.
 | `FontAppearance` | `float fontSize` | Creates a font appearance with the default font at the specified size |
 | `FontAppearance` | `string fontName, float fontSize` | Creates a font appearance with the named font at the specified size |
 
+### `ImGuiAppWindowState` Class
+
+Represents the state of the application window.
+
+#### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| `Size` | `Vector2` | The size of the window |
+| `Pos` | `Vector2` | The position of the window |
+| `LayoutState` | `WindowState` | The layout state of the window (Normal, Maximized, etc.) |
+
+## Debug Features
+
+ImGuiApp includes comprehensive debug logging capabilities to help troubleshoot crashes and performance issues:
+
+### Debug Logging
+
+The application automatically creates debug logs on the desktop (`ImGuiApp_Debug.log`) when issues occur. These logs include:
+- Window initialization steps
+- OpenGL context creation
+- Font loading progress  
+- Error conditions and exceptions
+
+### Debug Menu
+
+When using the `OnAppMenu` callback, ImGuiApp automatically adds a Debug menu with options to:
+- Show ImGui Demo Window
+- Show ImGui Metrics Window
+- Show Performance Monitor (real-time FPS graphs and throttling visualization)
+
+### Performance Monitoring
+
+The core library includes a built-in performance monitor accessible via the debug menu. It provides:
+- Real-time FPS tracking and visualization
+- Throttling state monitoring (focused/unfocused/idle/not visible)
+- Performance testing tips and interactive guidance
+- Historical performance data graphing
+
+Access it through: **Debug > Show Performance Monitor**
+
 ## Demo Application
 
 Check out the included demo project to see a comprehensive working example:
@@ -391,12 +444,16 @@ Check out the included demo project to see a comprehensive working example:
 2. Open the solution in Visual Studio (or run dotnet build)
 3. Start the ImGuiAppDemo project to see a feature-rich ImGui application
 4. Explore the different tabs:
-   - **Performance & Throttling**: Real-time FPS graph showing sleep-based throttling in action
    - **Unicode & Emojis**: Test character rendering with extended Unicode support
    - **Widgets & Layout**: Comprehensive ImGui widget demonstrations
    - **Graphics & Plotting**: Custom drawing and data visualization examples
+   - **Nerd Font Icons**: Browse and test various icon sets and glyphs
+5. Use the debug menu to access additional features:
+   - **Debug > Show Performance Monitor**: Real-time FPS graph showing sleep-based throttling in action
+   - **Debug > Show ImGui Demo**: Official ImGui demo window
+   - **Debug > Show ImGui Metrics**: ImGui internal metrics and debugging info
 
-The **Performance & Throttling** tab includes a live graph that visualizes frame rate changes as you focus/unfocus the window, let it go idle, or minimize it - perfect for seeing the throttling system work in real-time!
+The **Performance Monitor** includes a live graph that visualizes frame rate changes as you focus/unfocus the window, let it go idle, or minimize it - perfect for seeing the throttling system work in real-time!
 
 ## Contributing
 

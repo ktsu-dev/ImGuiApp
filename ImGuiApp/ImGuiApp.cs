@@ -16,6 +16,7 @@ using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
 using ktsu.StrongPaths;
+using ktsu.ScopedAction;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -140,6 +141,14 @@ public static partial class ImGuiApp
 
 	private static bool showImGuiMetrics;
 	private static bool showImGuiDemo;
+	private static bool showPerformanceMonitor;
+
+	// Performance monitoring data structures
+	private static readonly Queue<float> performanceFrameTimes = new();
+	private static float performanceFrameTimeSum;
+	private static readonly Queue<float> performanceFpsHistory = new();
+	private static float performanceLastFpsUpdateTime;
+	private static int performanceFrameCount;
 
 	/// <summary>
 	/// Gets the scale factor for the ImGui application.
@@ -356,6 +365,7 @@ public static partial class ImGuiApp
 
 			EnsureWindowPositionIsValid();
 			UpdateWindowPerformance();
+			UpdatePerformanceMonitoring((float)delta);
 
 			controller?.Update((float)delta);
 			config.OnUpdate?.Invoke((float)delta);
@@ -377,8 +387,10 @@ public static partial class ImGuiApp
 
 			RenderWithScaling(() =>
 			{
+				using ScopedAction? frameWrapper = config.FrameWrapperFactory.Invoke();
 				RenderAppMenu(config.OnAppMenu);
 				RenderWindowContents(config.OnRender, (float)delta);
+				RenderPerformanceMonitor();
 			});
 
 			controller?.Render();
@@ -715,6 +727,11 @@ public static partial class ImGuiApp
 					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
 					{
 						showImGuiMetrics = !showImGuiMetrics;
+					}
+
+					if (ImGui.MenuItem("Show Performance Monitor", "", showPerformanceMonitor))
+					{
+						showPerformanceMonitor = !showPerformanceMonitor;
 					}
 
 					ImGui.EndMenu();
@@ -1215,6 +1232,12 @@ public static partial class ImGuiApp
 		targetFrameTimeMs = 1000.0 / 30.0;
 		showImGuiMetrics = false;
 		showImGuiDemo = false;
+		showPerformanceMonitor = false;
+		performanceFrameTimes.Clear();
+		performanceFrameTimeSum = 0;
+		performanceFpsHistory.Clear();
+		performanceLastFpsUpdateTime = 0;
+		performanceFrameCount = 0;
 		ScaleFactor = 1;
 		Textures.Clear();
 		Config = new();
@@ -1288,5 +1311,121 @@ public static partial class ImGuiApp
 			{
 			}
 		}
+	}
+
+	/// <summary>
+	/// Updates performance monitoring metrics.
+	/// </summary>
+	/// <param name="dt">The delta time since the last frame.</param>
+	private static void UpdatePerformanceMonitoring(float dt)
+	{
+		performanceFrameTimes.Enqueue(dt);
+		performanceFrameTimeSum += dt;
+
+		while (performanceFrameTimes.Count > 60) // Keep last 60 frames
+		{
+			performanceFrameTimeSum -= performanceFrameTimes.Dequeue();
+		}
+
+		// Track FPS over time (update every 0.5 seconds for smoother graph)
+		performanceFrameCount++;
+		performanceLastFpsUpdateTime += dt;
+
+		if (performanceLastFpsUpdateTime >= 0.5f)
+		{
+			float currentFps = performanceFrameCount / performanceLastFpsUpdateTime;
+			performanceFpsHistory.Enqueue(currentFps);
+
+			while (performanceFpsHistory.Count > 120) // Keep last 2 minutes of data (120 * 0.5s = 60s)
+			{
+				performanceFpsHistory.Dequeue();
+			}
+
+			performanceFrameCount = 0;
+			performanceLastFpsUpdateTime = 0;
+		}
+	}
+
+	/// <summary>
+	/// Renders the performance monitor window.
+	/// </summary>
+	private static void RenderPerformanceMonitor()
+	{
+		if (!showPerformanceMonitor)
+		{
+			return;
+		}
+
+		if (ImGui.Begin("Performance Monitor", ref showPerformanceMonitor))
+		{
+			ImGui.TextWrapped("This window shows the current performance state and throttling behavior.");
+			ImGui.Separator();
+
+			ImGui.Text($"Window Focused: {IsFocused}");
+			ImGui.Text($"Application Idle: {IsIdle}");
+			ImGui.Text($"Window Visible: {IsVisible}");
+
+			ImGui.Separator();
+			ImGui.TextWrapped("Throttling uses sleep-based timing to control frame rate and save resources. It evaluates all conditions and uses the lowest frame rate.");
+			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=2 FPS (0.5s per frame)");
+			ImGui.TextWrapped("The system automatically selects the lowest applicable rate using Thread.Sleep for precise timing control. Try combining conditions (e.g., unfocused + idle, or minimized) to see the effect.");
+
+			// Real-time FPS graph
+			ImGui.Separator();
+			ImGui.Text("Real-Time Frame Rate Graph:");
+
+			if (performanceFpsHistory.Count > 1)
+			{
+				float[] fpsArray = [.. performanceFpsHistory];
+				float currentFps = fpsArray.Length > 0 ? fpsArray[^1] : 0;
+				float avgFps = performanceFrameTimes.Count > 0 ? performanceFrameTimes.Count / performanceFrameTimeSum : 0;
+
+				ImGui.Text($"Current FPS: {currentFps:F1} | Average FPS: {avgFps:F1}");
+
+				// Show current throttling state
+				string currentState = "Unknown";
+				if (!IsVisible)
+				{
+					currentState = "Not Visible (2 FPS target)";
+				}
+				else if (!IsFocused && IsIdle)
+				{
+					currentState = "Unfocused + Idle (5 FPS target)";
+				}
+				else if (!IsFocused)
+				{
+					currentState = "Unfocused (5 FPS target)";
+				}
+				else if (IsIdle)
+				{
+					currentState = "Idle (10 FPS target)";
+				}
+				else
+				{
+					currentState = "Focused (30 FPS target)";
+				}
+
+				ImGui.Text($"Current State: {currentState}");
+
+				// Create the plot
+				ImGui.PlotLines("##FPS", ref fpsArray[0], fpsArray.Length, 0,
+					$"FPS Over Time (Last {performanceFpsHistory.Count * 0.5f:F0}s)", 0.0f, 35.0f,
+					new System.Numerics.Vector2(400, 100));
+
+				ImGui.TextWrapped("Graph shows FPS over the last 60 seconds. Watch it change as you focus/unfocus the window or minimize it!");
+				ImGui.Separator();
+				ImGui.TextColored(new System.Numerics.Vector4(0.7f, 0.9f, 0.7f, 1.0f), "💡 Testing Tips:");
+				ImGui.BulletText("Click on another window to see unfocused throttling (5 FPS)");
+				ImGui.BulletText("Stop moving the mouse for 5+ seconds to see idle throttling (10 FPS)");
+				ImGui.BulletText("Minimize this window to see not visible throttling (2 FPS)");
+				ImGui.BulletText("The lowest applicable rate always wins!");
+			}
+			else
+			{
+				ImGui.Text("Collecting data for graph...");
+			}
+		}
+
+		ImGui.End();
 	}
 }

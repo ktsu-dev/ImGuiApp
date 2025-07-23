@@ -63,13 +63,6 @@ internal static class ImGuiAppDemo
 	private static bool showPopup;
 	private static string modalResult = "";
 
-	// Performance monitoring
-	private static readonly Queue<float> frameTimes = new();
-	private static float frameTimeSum;
-	private static readonly Queue<float> fpsHistory = new();
-	private static float lastFpsUpdateTime;
-	private static int frameCount;
-
 	// File operations
 	private static string filePath = "";
 	private static string fileContent = "";
@@ -130,7 +123,6 @@ internal static class ImGuiAppDemo
 	private static void OnRender(float dt)
 	{
 		UpdateAnimations(dt);
-		UpdatePerformanceMetrics(dt);
 		RenderMainDemoWindow();
 
 		// Show additional windows based on menu toggles
@@ -178,7 +170,6 @@ internal static class ImGuiAppDemo
 			RenderUnicodeTab();
 			RenderNerdFontTab();
 			RenderUtilityTab();
-			RenderPerformanceTab();
 			ImGui.EndTabBar();
 		}
 	}
@@ -512,20 +503,9 @@ internal static class ImGuiAppDemo
 
 			ImGui.Separator();
 
-			// Performance metrics
+			// Performance note
 			ImGui.Text("Performance Metrics:");
-			float avgFrameTime = frameTimes.Count > 0 ? frameTimeSum / frameTimes.Count : 0;
-			float fps = avgFrameTime > 0 ? 1.0f / avgFrameTime : 0;
-
-			ImGui.Text($"FPS: {fps:F1}");
-			ImGui.Text($"Frame Time: {avgFrameTime * 1000:F2}ms");
-
-			if (frameTimes.Count > 0)
-			{
-				float[] frameTimeArray = [.. frameTimes];
-				ImGui.PlotLines("Frame Times", ref frameTimeArray[0], frameTimeArray.Length, 0,
-					$"{avgFrameTime * 1000:F2}ms", 0, 0, new Vector2(ImGui.GetContentRegionAvail().X, 80));
-			}
+			ImGui.TextWrapped("Performance monitoring is now available in the Debug menu! Use 'Debug > Show Performance Monitor' to see real-time FPS graphs and throttling state.");
 
 			ImGui.Separator();
 
@@ -856,81 +836,6 @@ internal static class ImGuiAppDemo
 		}
 	}
 
-	private static void RenderPerformanceTab()
-	{
-		if (ImGui.BeginTabItem("Performance & Throttling"))
-		{
-			ImGui.TextWrapped("This section shows the current performance state and throttling behavior.");
-			ImGui.Separator();
-
-			ImGui.Text($"Window Focused: {ImGuiApp.IsFocused}");
-			ImGui.Text($"Application Idle: {ImGuiApp.IsIdle}");
-			ImGui.Text($"Window Visible: {ImGuiApp.IsVisible}");
-
-			ImGui.Separator();
-			ImGui.TextWrapped("Throttling uses sleep-based timing to control frame rate and save resources. It evaluates all conditions and uses the lowest frame rate.");
-			ImGui.Text("Rates: Focused=30 FPS, Unfocused=5 FPS, Idle=10 FPS, Not Visible=2 FPS (0.5s per frame)");
-			ImGui.TextWrapped("The system automatically selects the lowest applicable rate using Thread.Sleep for precise timing control. Try combining conditions (e.g., unfocused + idle, or minimized) to see the effect.");
-
-			// Real-time FPS graph
-			ImGui.Separator();
-			ImGui.Text("Real-Time Frame Rate Graph:");
-
-			if (fpsHistory.Count > 1)
-			{
-				float[] fpsArray = [.. fpsHistory];
-				float currentFps = fpsArray.Length > 0 ? fpsArray[^1] : 0;
-				float avgFps = frameTimes.Count > 0 ? frameTimes.Count / frameTimeSum : 0;
-
-				ImGui.Text($"Current FPS: {currentFps:F1} | Average FPS: {avgFps:F1}");
-
-				// Show current throttling state
-				string currentState = "Unknown";
-				if (!ImGuiApp.IsVisible)
-				{
-					currentState = "Not Visible (2 FPS target)";
-				}
-				else if (!ImGuiApp.IsFocused && ImGuiApp.IsIdle)
-				{
-					currentState = "Unfocused + Idle (5 FPS target)";
-				}
-				else if (!ImGuiApp.IsFocused)
-				{
-					currentState = "Unfocused (5 FPS target)";
-				}
-				else if (ImGuiApp.IsIdle)
-				{
-					currentState = "Idle (10 FPS target)";
-				}
-				else
-				{
-					currentState = "Focused (30 FPS target)";
-				}
-
-				ImGui.Text($"Current State: {currentState}");
-
-				// Create the plot
-				ImGui.PlotLines("##FPS", ref fpsArray[0], fpsArray.Length, 0,
-					$"FPS Over Time (Last {fpsHistory.Count * 0.5f:F0}s)", 0.0f, 35.0f,
-					new System.Numerics.Vector2(400, 100));
-
-				ImGui.TextWrapped("Graph shows FPS over the last 60 seconds. Watch it change as you focus/unfocus the window or minimize it!");
-				ImGui.Separator();
-				ImGui.TextColored(new System.Numerics.Vector4(0.7f, 0.9f, 0.7f, 1.0f), "💡 Testing Tips:");
-				ImGui.BulletText("Click on another window to see unfocused throttling (5 FPS)");
-				ImGui.BulletText("Stop moving the mouse for 5+ seconds to see idle throttling (10 FPS)");
-				ImGui.BulletText("Minimize this window to see not visible throttling (2 FPS)");
-				ImGui.BulletText("The lowest applicable rate always wins!");
-			}
-			else
-			{
-				ImGui.Text("Collecting data for graph...");
-			}
-
-			ImGui.EndTabItem();
-		}
-	}
-
 	private static void RenderModalAndPopups()
 	{
 		// Modal dialog
@@ -999,35 +904,6 @@ internal static class ImGuiAppDemo
 
 		// Pulse animation
 		pulseScale = 0.8f + (0.4f * MathF.Sin(animationTime * 4));
-	}
-
-	private static void UpdatePerformanceMetrics(float dt)
-	{
-		frameTimes.Enqueue(dt);
-		frameTimeSum += dt;
-
-		while (frameTimes.Count > 60) // Keep last 60 frames
-		{
-			frameTimeSum -= frameTimes.Dequeue();
-		}
-
-		// Track FPS over time (update every 0.5 seconds for smoother graph)
-		frameCount++;
-		lastFpsUpdateTime += dt;
-
-		if (lastFpsUpdateTime >= 0.5f)
-		{
-			float currentFps = frameCount / lastFpsUpdateTime;
-			fpsHistory.Enqueue(currentFps);
-
-			while (fpsHistory.Count > 120) // Keep last 2 minutes of data (120 * 0.5s = 60s)
-			{
-				fpsHistory.Dequeue();
-			}
-
-			frameCount = 0;
-			lastFpsUpdateTime = 0;
-		}
 	}
 
 	private static void RenderAboutWindow()

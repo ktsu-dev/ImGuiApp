@@ -6,6 +6,7 @@ namespace ktsu.ImGuiApp;
 
 using System.Resources;
 using Silk.NET.Windowing;
+using ktsu.ScopedAction;
 
 /// <summary>
 /// Represents the configuration settings for the ImGui application.
@@ -43,6 +44,11 @@ public class ImGuiAppConfig
 	/// Gets or sets the action to be performed when the application starts.
 	/// </summary>
 	public Action OnStart { get; init; } = () => { };
+
+	/// <summary>
+	/// Gets or sets a scoped action to enclose the frame rendering.
+	/// </summary>
+	public Func<ScopedAction?> FrameWrapperFactory { get; init; } = () => null;
 
 	/// <summary>
 	/// Gets or sets the action to be performed on each update tick.

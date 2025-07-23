@@ -1,1 +1,1 @@
-A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and Hexa.NET.ImGui.
+A comprehensive .NET library that provides complete application scaffolding for Dear ImGui applications, featuring window management, DPI-aware rendering, performance optimization, advanced font handling with Unicode/emoji support, texture management, and debug tooling. Built on Silk.NET for cross-platform OpenGL support and Hexa.NET.ImGui for modern Dear ImGui bindings.
