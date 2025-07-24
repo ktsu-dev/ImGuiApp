@@ -59,7 +59,7 @@ jobs:
           cache-dependency-path: "**/*.csproj"
 
       - name: Cache SonarQube Cloud packages
-        if: secrets.SONAR_TOKEN != ''
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         uses: actions/cache@v4
         with:
           path: ~\sonar\cache
@@ -67,7 +67,7 @@ jobs:
           restore-keys: ${{ runner.os }}-sonar
 
       - name: Cache SonarQube Cloud scanner
-        if: secrets.SONAR_TOKEN != ''
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         id: cache-sonar-scanner
         uses: actions/cache@v4
         with:
@@ -76,14 +76,14 @@ jobs:
           restore-keys: ${{ runner.os }}-sonar-scanner
 
       - name: Install SonarQube Cloud scanner
-        if: secrets.SONAR_TOKEN != '' && steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        if: ${{ secrets.SONAR_TOKEN != '' }} && steps.cache-sonar-scanner.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           New-Item -Path .\.sonar\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
 
       - name: Begin SonarQube
-        if: secrets.SONAR_TOKEN != ''
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
@@ -134,7 +134,7 @@ jobs:
           "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
 
       - name: End SonarQube
-        if: secrets.SONAR_TOKEN != ''
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
