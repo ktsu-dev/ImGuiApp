@@ -1,6 +1,10 @@
-## v2.1.0
+## v2.1.1 (patch)
 
-No significant changes detected since v2.1.0.
+Changes since v2.1.0:
+
+- Additional tests ([@matt-edmondson](https://github.com/matt-edmondson))
+- Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
+- Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v2.1.0 (minor)
 
 Changes since v2.0.0:
