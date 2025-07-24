@@ -824,17 +824,17 @@ internal class ImGuiController : IDisposable
 			// Build font atlas if it's not already built
 			if (!io.Fonts.TexIsBuilt)
 			{
-				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, building now");
+				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, building now");
 
 				// Build the font atlas using ImFontAtlasBuildMain
 				// This is required when the backend doesn't support ImGuiBackendFlags_RendererHasTextures
 				ImGuiP.ImFontAtlasBuildMain(io.Fonts);
 
-				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas built successfully");
+				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas built successfully");
 			}
 			else
 			{
-				ImGuiApp.DebugLogger.Log("RecreateFontDeviceTexture: Font atlas already built");
+				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas already built");
 			}
 
 			// Get texture data using the correct API for Hexa.NET.ImGui 2.2.8

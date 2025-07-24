@@ -337,7 +337,7 @@ public static class FontHelper
 				fontHandle.Free();
 			}
 
-			ImGuiApp.DebugLogger.Log($"FontHelper.AddCustomFont failed with ArgumentException: {ex.Message}");
+			DebugLogger.Log($"FontHelper.AddCustomFont failed with ArgumentException: {ex.Message}");
 			return null;
 		}
 		catch (OutOfMemoryException ex)
@@ -348,7 +348,7 @@ public static class FontHelper
 				fontHandle.Free();
 			}
 
-			ImGuiApp.DebugLogger.Log($"FontHelper.AddCustomFont failed with OutOfMemoryException: {ex.Message}");
+			DebugLogger.Log($"FontHelper.AddCustomFont failed with OutOfMemoryException: {ex.Message}");
 			return null;
 		}
 	}

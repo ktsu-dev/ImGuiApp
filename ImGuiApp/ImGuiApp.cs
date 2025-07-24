@@ -41,44 +41,6 @@ public static partial class ImGuiApp
 	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
 	/// <summary>
-	/// Simple file logger for debugging crashes
-	/// </summary>
-	internal static class DebugLogger
-	{
-		private static readonly string LogFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ImGuiApp_Debug.log");
-
-		static DebugLogger()
-		{
-			// Clear previous log file
-			try
-			{
-				if (File.Exists(LogFilePath))
-				{
-					File.Delete(LogFilePath);
-				}
-			}
-			catch (IOException) { }
-			catch (UnauthorizedAccessException) { }
-			catch (ArgumentException) { }
-			catch (NotSupportedException) { }
-		}
-
-		public static void Log(string message)
-		{
-			try
-			{
-				string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}";
-				File.AppendAllText(LogFilePath, logEntry + Environment.NewLine);
-				Console.WriteLine(logEntry);
-			}
-			catch (IOException) { }
-			catch (UnauthorizedAccessException) { }
-			catch (ArgumentException) { }
-			catch (NotSupportedException) { }
-		}
-	}
-
-	/// <summary>
 	/// Gets the current state of the ImGui application window.
 	/// </summary>
 	/// <value>
