@@ -19,14 +19,15 @@ internal struct UniformFieldInfo
 	public UniformType Type;
 }
 
-internal class Shader
+internal class Shader : IDisposable
 {
 	public uint Program { get; private set; }
-	private readonly Dictionary<string, int> _uniformToLocation = [];
-	private readonly Dictionary<string, int> _attribLocation = [];
-	private bool _initialized;
-	private readonly GL _gl;
-	private readonly (ShaderType Type, string Path)[] _files;
+	internal readonly Dictionary<string, int> _uniformToLocation = [];
+	internal readonly Dictionary<string, int> _attribLocation = [];
+	internal bool _initialized;
+	internal readonly GL _gl;
+	internal readonly (ShaderType Type, string Path)[] _files;
+	internal bool _disposed;
 
 	public Shader(GL gl, string vertexShader, string fragmentShader)
 	{
@@ -42,11 +43,33 @@ internal class Shader
 
 	public void Dispose()
 	{
-		if (_initialized)
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	/// <summary>
+	/// Protected implementation of Dispose pattern.
+	/// </summary>
+	/// <param name="disposing">true if disposing managed resources, false if called from finalizer</param>
+	protected virtual void Dispose(bool disposing)
+	{
+		if (_disposed)
 		{
-			_gl.DeleteProgram(Program);
-			_initialized = false;
+			return;
 		}
+
+		if (disposing)
+		{
+			// Dispose managed resources
+			if (_initialized)
+			{
+				_gl.DeleteProgram(Program);
+				_initialized = false;
+			}
+		}
+
+		// Mark as disposed
+		_disposed = true;
 	}
 
 	public UniformFieldInfo[] GetUniforms()
@@ -105,7 +128,7 @@ internal class Shader
 		return location;
 	}
 
-	private uint CreateProgram(params (ShaderType Type, string source)[] shaderPaths)
+	internal uint CreateProgram(params (ShaderType Type, string source)[] shaderPaths)
 	{
 		uint program = _gl.CreateProgram();
 
@@ -140,7 +163,7 @@ internal class Shader
 		return program;
 	}
 
-	private uint CompileShader(ShaderType type, string source)
+	internal uint CompileShader(ShaderType type, string source)
 	{
 		uint shader = _gl.CreateShader(type);
 		_gl.ShaderSource(shader, source);

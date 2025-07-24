@@ -4,18 +4,18 @@
 
 namespace ktsu.ImGuiApp;
 
-using ktsu.StrongPaths;
 using ktsu.Extensions;
+using ktsu.StrongPaths;
 
 /// <summary>
 /// Simple file logger for debugging crashes
 /// </summary>
 internal static class DebugLogger
 {
-	private static AbsoluteDirectoryPath AppDataPath => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create).As<AbsoluteDirectoryPath>();
-	private static RelativeDirectoryPath AppDomain => System.AppDomain.CurrentDomain.FriendlyName.As<RelativeDirectoryPath>();
-	private static AbsoluteDirectoryPath DomainAppDataPath => AppDataPath / AppDomain;
-	private static AbsoluteFilePath LogFilePath => DomainAppDataPath / "ImGuiApp_Debug.log".As<FileName>();
+	internal static AbsoluteDirectoryPath AppDataPath => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create).As<AbsoluteDirectoryPath>();
+	internal static RelativeDirectoryPath AppDomain => System.AppDomain.CurrentDomain.FriendlyName.As<RelativeDirectoryPath>();
+	internal static AbsoluteDirectoryPath DomainAppDataPath => AppDataPath / AppDomain;
+	internal static AbsoluteFilePath LogFilePath => DomainAppDataPath / "ImGuiApp_Debug.log".As<FileName>();
 
 	static DebugLogger()
 	{

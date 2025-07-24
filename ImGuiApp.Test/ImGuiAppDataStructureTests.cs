@@ -4,11 +4,11 @@
 
 namespace ktsu.ImGuiApp.Test;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Numerics;
-using Silk.NET.Windowing;
-using ktsu.StrongPaths;
 using ktsu.Extensions;
+using ktsu.StrongPaths;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Silk.NET.Windowing;
 
 /// <summary>
 /// Tests for ImGuiApp data structures including texture info, window state, configuration, and performance settings.

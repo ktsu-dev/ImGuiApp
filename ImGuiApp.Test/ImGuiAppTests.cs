@@ -114,20 +114,20 @@ public sealed class ImGuiAppTests : IDisposable
 	[TestMethod]
 	public void Start_WithNullConfig_ThrowsArgumentNullException()
 	{
-		Assert.ThrowsException<ArgumentNullException>(() => ImGuiApp.Start(null!));
+		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.Start(null!));
 	}
 
 	[TestMethod]
 	public void Start_WithInvalidIconPath_ThrowsFileNotFoundException()
 	{
 		ImGuiAppConfig config = TestHelpers.CreateTestConfig(iconPath: "nonexistent.png");
-		Assert.ThrowsException<FileNotFoundException>(() => ImGuiApp.Start(config));
+		Assert.ThrowsExactly<FileNotFoundException>(() => ImGuiApp.Start(config));
 	}
 
 	[TestMethod]
 	public void Stop_WhenNotRunning_ThrowsInvalidOperationException()
 	{
-		Assert.ThrowsException<InvalidOperationException>(ImGuiApp.Stop);
+		Assert.ThrowsExactly<InvalidOperationException>(ImGuiApp.Stop);
 	}
 
 	[TestMethod]
@@ -136,8 +136,7 @@ public sealed class ImGuiAppTests : IDisposable
 		// Reset state to ensure clean test environment
 		ResetState();
 
-		// Set up window field using reflection
-		System.Reflection.FieldInfo? windowField = typeof(ImGuiApp).GetField("window", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+		// Set up window field using direct access to internal member
 		Mock<IWindow> mockWindow = new();
 		Mock<IMonitor> mockMonitor = new();
 
@@ -160,13 +159,11 @@ public sealed class ImGuiAppTests : IDisposable
 		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>());
 		mockWindow.SetupSet(w => w.WindowState = It.IsAny<WindowState>());
 
-		// Set the mock window
-		windowField?.SetValue(null, mockWindow.Object);
+		// Set the mock window directly using internal field
+		ImGuiApp.window = mockWindow.Object;
 
-		// Call EnsureWindowPositionIsValid through reflection
-		System.Reflection.MethodInfo? method = typeof(ImGuiApp).GetMethod("EnsureWindowPositionIsValid",
-			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		method?.Invoke(null, null);
+		// Call EnsureWindowPositionIsValid directly using internal method
+		ImGuiApp.EnsureWindowPositionIsValid();
 
 		// Verify the window was moved to a valid position
 		mockWindow.VerifySet(w => w.Position = It.Is<Vector2D<int>>(pos =>
@@ -188,8 +185,8 @@ public sealed class ImGuiAppTests : IDisposable
 		using TestOpenGLProvider provider = new(mockGL);
 
 		// Get GL instances
-		ktsu.ImGuiApp.ImGuiController.IGL gl1 = provider.GetGL();
-		ktsu.ImGuiApp.ImGuiController.IGL gl2 = provider.GetGL();
+		ImGuiController.IGL gl1 = provider.GetGL();
+		ImGuiController.IGL gl2 = provider.GetGL();
 
 		// Verify same instance is returned
 		Assert.AreSame(gl1, gl2, "OpenGLProvider should return the same GL instance on subsequent calls");
@@ -201,19 +198,18 @@ public sealed class ImGuiAppTests : IDisposable
 		// Reset state to ensure clean test environment
 		ResetState();
 
-		// Set up a basic invoker that executes actions immediately
-		System.Reflection.PropertyInfo? invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-		invokerField?.SetValue(null, new Invoker.Invoker());
+		// Set up a basic invoker that executes actions immediately using direct access
+		ImGuiApp.Invoker = new Invoker.Invoker();
 
 		// Now test the DeleteTexture method
-		Assert.ThrowsException<InvalidOperationException>(() => ImGuiApp.DeleteTexture(1));
+		Assert.ThrowsExactly<InvalidOperationException>(() => ImGuiApp.DeleteTexture(1));
 	}
 
 	[TestMethod]
 	public void GetOrLoadTexture_WithInvalidPath_ThrowsArgumentException()
 	{
 		AbsoluteFilePath invalidPath = new();
-		Assert.ThrowsException<ArgumentException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
+		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.GetOrLoadTexture(invalidPath));
 	}
 
 	[TestMethod]
@@ -226,25 +222,15 @@ public sealed class ImGuiAppTests : IDisposable
 		AbsoluteFilePath mockTexturePath = Path.GetFullPath("test_texture.png").As<AbsoluteFilePath>();
 
 		// We need to initialize minimal parts of ImGuiApp for the test
-		System.Reflection.PropertyInfo? invokerField = typeof(ImGuiApp).GetProperty("Invoker", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-		invokerField?.SetValue(null, new Invoker.Invoker());
+		ImGuiApp.Invoker = new Invoker.Invoker();
 
-		// We'll test using the public API (TryGetTexture) rather than direct reflection access
+		// We'll test using the public API (TryGetTexture) rather than direct access
 		// First, verify there's no texture initially
 		bool initialTextureExists = ImGuiApp.TryGetTexture(mockTexturePath, out _);
 		Assert.IsFalse(initialTextureExists, "Should not have any textures initially");
 
-		// Manually add a texture through the internal field
-		// Get the Textures property through reflection - it's a property, not a field
-		System.Reflection.PropertyInfo? texturesProperty = typeof(ImGuiApp).GetProperty("Textures",
-			System.Reflection.BindingFlags.Public |
-			System.Reflection.BindingFlags.NonPublic |
-			System.Reflection.BindingFlags.Static);
-
-		Assert.IsNotNull(texturesProperty, "Textures property should exist");
-
-		// Get the dictionary
-		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo>? texturesDict = texturesProperty?.GetValue(null) as System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo>;
+		// Manually add a texture through direct access to internal property
+		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> texturesDict = ImGuiApp.Textures;
 		Assert.IsNotNull(texturesDict, "Textures dictionary should not be null");
 
 		// First texture

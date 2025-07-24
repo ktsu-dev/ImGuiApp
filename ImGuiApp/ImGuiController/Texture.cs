@@ -42,12 +42,13 @@ internal class Texture : IDisposable
 	public const GLEnum MaxTextureMaxAnisotropy = (GLEnum)0x84FF;
 
 	public static float? MaxAniso;
-	private readonly GL _gl;
+	internal readonly GL _gl;
 	public readonly string? Name;
 	public readonly uint GlTexture;
 	public readonly uint Width, Height;
 	public readonly uint MipmapLevels;
 	public readonly SizedInternalFormat InternalFormat;
+	internal bool _disposed;
 
 	public unsafe Texture(GL gl, int width, int height, IntPtr data, bool generateMipmaps = false, bool srgb = false, PixelFormat pxFormat = PixelFormat.Bgra)
 	{
@@ -121,5 +122,30 @@ internal class Texture : IDisposable
 		_gl.TexParameterI(GLEnum.Texture2D, (TextureParameterName)coord, ref intMode);
 	}
 
-	public void Dispose() => _gl.DeleteTexture(GlTexture);
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	/// <summary>
+	/// Protected implementation of Dispose pattern.
+	/// </summary>
+	/// <param name="disposing">true if disposing managed resources, false if called from finalizer</param>
+	protected virtual void Dispose(bool disposing)
+	{
+		if (_disposed)
+		{
+			return;
+		}
+
+		if (disposing)
+		{
+			// Dispose managed resources
+			_gl.DeleteTexture(GlTexture);
+		}
+
+		// Mark as disposed
+		_disposed = true;
+	}
 }

@@ -13,7 +13,7 @@ using Color = System.Drawing.Color;
 /// </summary>
 public sealed class GLWrapper(GL gl) : IGL
 {
-	private bool _disposed;
+	internal bool _disposed;
 
 	/// <summary>
 	/// Gets the underlying GL instance.

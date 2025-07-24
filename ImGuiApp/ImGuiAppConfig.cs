@@ -5,8 +5,8 @@
 namespace ktsu.ImGuiApp;
 
 using System.Resources;
-using Silk.NET.Windowing;
 using ktsu.ScopedAction;
+using Silk.NET.Windowing;
 
 /// <summary>
 /// Represents the configuration settings for the ImGui application.

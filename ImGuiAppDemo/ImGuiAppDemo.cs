@@ -75,7 +75,7 @@ internal static class ImGuiAppDemo
 	private static int radioSelection;
 	private static string modalInputBuffer = "";
 
-	private record DemoItem(int Id, string Name, string Category, float Value, bool Active);
+	private sealed record DemoItem(int Id, string Name, string Category, float Value, bool Active);
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "<Pending>")]
 	static ImGuiAppDemo()

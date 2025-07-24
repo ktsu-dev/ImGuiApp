@@ -16,8 +16,8 @@ using System.Runtime.InteropServices;
 /// </summary>
 public static partial class ForceDpiAware
 {
-	private const double StandardDpiScale = 96.0;
-	private const double MaxScaleFactor = 10.25;
+	internal const double StandardDpiScale = 96.0;
+	internal const double MaxScaleFactor = 10.25;
 
 	/// <summary>
 	/// Marks the application as DPI-Aware when running on the Windows operating system.
@@ -37,7 +37,7 @@ public static partial class ForceDpiAware
 	/// <returns>The actual scale factor.</returns>
 	public static double GetActualScaleFactor()
 	{
-		double userDpiScale = 96.0;
+		double userDpiScale;
 
 		try
 		{
@@ -117,7 +117,7 @@ public static partial class ForceDpiAware
 	/// Gets the DPI scale factor for Wayland sessions.
 	/// </summary>
 	/// <returns>The DPI scale factor in dots per inch.</returns>
-	private static double GetWaylandDpiScale()
+	internal static double GetWaylandDpiScale()
 	{
 		// Method 1: Check environment variables (most reliable for WSL)
 		if (TryGetEnvironmentScale(out double envScale))
@@ -152,7 +152,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The scale factor if found.</param>
 	/// <returns>True if a scale factor was found, false otherwise.</returns>
-	private static bool TryGetEnvironmentScale(out double scale)
+	internal static bool TryGetEnvironmentScale(out double scale)
 	{
 		scale = 1.0;
 
@@ -197,7 +197,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The scale factor if found.</param>
 	/// <returns>True if a scale factor was found, false otherwise.</returns>
-	private static bool TryGetGnomeScale(out double scale)
+	internal static bool TryGetGnomeScale(out double scale)
 	{
 		scale = 1.0;
 
@@ -256,7 +256,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The scale factor if found.</param>
 	/// <returns>True if a scale factor was found, false otherwise.</returns>
-	private static bool TryGetWslgScale(out double scale)
+	internal static bool TryGetWslgScale(out double scale)
 	{
 		scale = 1.0;
 
@@ -325,7 +325,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The scale factor if detected.</param>
 	/// <returns>True if a scale factor was detected.</returns>
-	private static bool TryGetWslHostDpiScale(out double scale)
+	internal static bool TryGetWslHostDpiScale(out double scale)
 	{
 		scale = 1.0;
 
@@ -377,7 +377,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
-	private static bool TryGetWindowsRegistryDpi(out double scale)
+	internal static bool TryGetWindowsRegistryDpi(out double scale)
 	{
 		scale = 1.0;
 
@@ -405,7 +405,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
-	private static bool TryGetSystemDpiFromPowerShell(out double scale)
+	internal static bool TryGetSystemDpiFromPowerShell(out double scale)
 	{
 		scale = 1.0;
 
@@ -461,7 +461,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if LogPixels was found.</returns>
-	private static bool TryGetLogPixelsFromRegistry(out double scale)
+	internal static bool TryGetLogPixelsFromRegistry(out double scale)
 	{
 		scale = 1.0;
 
@@ -516,7 +516,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
-	private static bool TryGetDpiFromSystemMetrics(out double scale)
+	internal static bool TryGetDpiFromSystemMetrics(out double scale)
 	{
 		scale = 1.0;
 
@@ -564,7 +564,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
-	private static bool TryGetWslgWindowsDpi(out double scale)
+	internal static bool TryGetWslgWindowsDpi(out double scale)
 	{
 		scale = 1.0;
 
@@ -654,7 +654,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if a high-DPI display was detected.</returns>
-	private static bool TryDetectHighDpiDisplay(out double scale)
+	internal static bool TryDetectHighDpiDisplay(out double scale)
 	{
 		scale = 1.0;
 

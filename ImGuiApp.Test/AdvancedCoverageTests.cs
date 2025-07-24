@@ -4,10 +4,10 @@
 
 namespace ktsu.ImGuiApp.Test;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ktsu.ImGuiApp.ImGuiController;
-using Hexa.NET.ImGui;
 using System;
+using Hexa.NET.ImGui;
+using ktsu.ImGuiApp.ImGuiController;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Advanced tests targeting specific low-coverage areas including OpenGL functionality, shader management, and texture operations.
@@ -159,7 +159,7 @@ public class AdvancedCoverageTests
 	[TestMethod]
 	public void ImGuiApp_DeleteTexture_WithNullTextureInfo_ThrowsArgumentNullException()
 	{
-		Exception exception = Assert.ThrowsException<ArgumentNullException>(() => ImGuiApp.DeleteTexture(null!));
+		Exception exception = Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.DeleteTexture(null!));
 
 		Assert.IsInstanceOfType<ArgumentNullException>(exception);
 	}
@@ -179,8 +179,8 @@ public class AdvancedCoverageTests
 	[TestMethod]
 	public void ImGuiApp_Textures_MultipleAccess_ReturnsSameInstance()
 	{
-		System.Collections.Concurrent.ConcurrentDictionary<ktsu.StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures1 = ImGuiApp.Textures;
-		System.Collections.Concurrent.ConcurrentDictionary<ktsu.StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures2 = ImGuiApp.Textures;
+		System.Collections.Concurrent.ConcurrentDictionary<StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures1 = ImGuiApp.Textures;
+		System.Collections.Concurrent.ConcurrentDictionary<StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures2 = ImGuiApp.Textures;
 
 		// Should return the same collection instance
 		Assert.AreSame(textures1, textures2);

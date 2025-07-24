@@ -4,10 +4,10 @@
 
 namespace ktsu.ImGuiApp.Test;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ktsu.ImGuiApp.ImGuiController;
-using Hexa.NET.ImGui;
 using System;
+using Hexa.NET.ImGui;
+using ktsu.ImGuiApp.ImGuiController;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Windowing;
 
@@ -55,19 +55,19 @@ public class ImGuiControllerComponentTests
 	[TestMethod]
 	public void ImGuiFontConfig_Constructor_ZeroFontSize_ThrowsException()
 	{
-		Assert.ThrowsException<ArgumentOutOfRangeException>(() => new ImGuiFontConfig("test.ttf", 0));
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ImGuiFontConfig("test.ttf", 0));
 	}
 
 	[TestMethod]
 	public void ImGuiFontConfig_Constructor_NegativeFontSize_ThrowsException()
 	{
-		Assert.ThrowsException<ArgumentOutOfRangeException>(() => new ImGuiFontConfig("test.ttf", -1));
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ImGuiFontConfig("test.ttf", -1));
 	}
 
 	[TestMethod]
 	public void ImGuiFontConfig_Constructor_NullFontPath_ThrowsException()
 	{
-		Assert.ThrowsException<ArgumentNullException>(() => new ImGuiFontConfig(null!, 16));
+		Assert.ThrowsExactly<ArgumentNullException>(() => new ImGuiFontConfig(null!, 16));
 	}
 
 	[TestMethod]
@@ -147,7 +147,7 @@ public class ImGuiControllerComponentTests
 	[TestMethod]
 	public void WindowOpenGLFactory_Constructor_NullWindow_ThrowsException()
 	{
-		Assert.ThrowsException<ArgumentNullException>(() => new WindowOpenGLFactory(null!));
+		Assert.ThrowsExactly<ArgumentNullException>(() => new WindowOpenGLFactory(null!));
 	}
 
 	[TestMethod]
@@ -173,18 +173,26 @@ public class ImGuiControllerComponentTests
 	[TestMethod]
 	public void OpenGLProvider_Constructor_NullFactory_ThrowsException()
 	{
-		Assert.ThrowsException<ArgumentNullException>(() => new OpenGLProvider(null!));
+		Assert.ThrowsExactly<ArgumentNullException>(() => new OpenGLProvider(null!));
 	}
 
 	[TestMethod]
 	public void OpenGLProvider_Dispose_CanBeCalledMultipleTimes()
 	{
-		Mock<IOpenGLFactory> mockFactory = new();
-		OpenGLProvider provider = new(mockFactory.Object);
+		try
+		{
+			Mock<IOpenGLFactory> mockFactory = new();
+			OpenGLProvider provider = new(mockFactory.Object);
 
-		provider.Dispose();
-		provider.Dispose();
-		// If we reach here without exception, the test passes
+			provider.Dispose();
+			provider.Dispose();
+		}
+#pragma warning disable CA1031 // Do not catch general exception types
+		catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+		{
+			Assert.Fail($"Expected no exception, but got: {ex.Message}");
+		}
 	}
 
 	[TestMethod]
@@ -194,7 +202,7 @@ public class ImGuiControllerComponentTests
 		using OpenGLProvider provider = new(mockFactory.Object);
 
 		provider.Dispose();
-		Assert.ThrowsException<ObjectDisposedException>(provider.GetGL);
+		Assert.ThrowsExactly<ObjectDisposedException>(provider.GetGL);
 	}
 
 	[TestMethod]

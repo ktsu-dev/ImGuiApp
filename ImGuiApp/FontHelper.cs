@@ -17,27 +17,27 @@ public static class FontHelper
 	/// <summary>
 	/// Stores GCHandle instances for custom fonts to prevent memory leaks.
 	/// </summary>
-	private static readonly List<GCHandle> customFontHandles = [];
+	internal static readonly List<GCHandle> customFontHandles = [];
 
 	/// <summary>
 	/// Stores the extended Unicode glyph ranges to prevent memory deallocation.
 	/// </summary>
-	private static ImVector<uint> extendedUnicodeRanges;
+	internal static ImVector<uint> extendedUnicodeRanges;
 
 	/// <summary>
 	/// Stores the emoji glyph ranges to prevent memory deallocation.
 	/// </summary>
-	private static ImVector<uint> emojiRanges;
+	internal static ImVector<uint> emojiRanges;
 
 	/// <summary>
 	/// Tracks whether the extended Unicode ranges have been initialized.
 	/// </summary>
-	private static bool extendedUnicodeRangesInitialized;
+	internal static bool extendedUnicodeRangesInitialized;
 
 	/// <summary>
 	/// Tracks whether the emoji ranges have been initialized.
 	/// </summary>
-	private static bool emojiRangesInitialized;
+	internal static bool emojiRangesInitialized;
 
 	/// <summary>
 	/// Cleans up all pinned memory handles for custom fonts and glyph ranges.
@@ -120,7 +120,7 @@ public static class FontHelper
 	/// Only includes true emoji ranges (1F*** blocks) to avoid conflicts with main font symbol ranges.
 	/// </summary>
 	/// <param name="builder">The glyph ranges builder to add emoji ranges to.</param>
-	private static void AddEmojiRanges(ImFontGlyphRangesBuilderPtr builder)
+	internal static void AddEmojiRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
 		// Variation Selectors (important for emoji presentation vs text presentation)
 		for (uint c = 0xFE00; c <= 0xFE0F; c++) // Variation Selectors 1-16
@@ -129,7 +129,7 @@ public static class FontHelper
 		}
 
 		// Emoji-specific Unicode ranges (1F*** blocks only to avoid main font conflicts)
-		(uint start, uint end, string description)[] emojiRanges = [
+		(uint start, uint end, string description)[] emojiRangeDefinitions = [
 			(0x1F300, 0x1F5FF, "Miscellaneous Symbols and Pictographs"),
 			(0x1F600, 0x1F64F, "Emoticons"),
 			(0x1F650, 0x1F67F, "Ornamental Dingbats"),
@@ -143,7 +143,7 @@ public static class FontHelper
 			(0x1FB00, 0x1FBFF, "Symbols for Legacy Computing"),
 		];
 
-		foreach ((uint start, uint end, string _) in emojiRanges)
+		foreach ((uint start, uint end, string _) in emojiRangeDefinitions)
 		{
 			for (uint c = start; c <= end; c++)
 			{
@@ -184,7 +184,7 @@ public static class FontHelper
 	/// Includes Latin Extended-A and Latin Extended-B character blocks.
 	/// </summary>
 	/// <param name="builder">The glyph ranges builder to add Latin Extended ranges to.</param>
-	private static void AddLatinExtendedRanges(ImFontGlyphRangesBuilderPtr builder)
+	internal static void AddLatinExtendedRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
 		// Latin Extended-A (U+0100–U+017F)
 		for (uint c = 0x0100; c <= 0x017F; c++)
@@ -203,7 +203,7 @@ public static class FontHelper
 	/// Includes punctuation, currency, mathematical symbols, arrows, and various technical symbols.
 	/// </summary>
 	/// <param name="builder">The glyph ranges builder to add symbol ranges to.</param>
-	private static void AddSymbolRanges(ImFontGlyphRangesBuilderPtr builder)
+	internal static void AddSymbolRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
 		// Define symbol ranges to add (avoiding emoji ranges which are handled separately)
 		(uint start, uint end, string description)[] symbolRanges = [
@@ -235,7 +235,7 @@ public static class FontHelper
 	/// Includes Font Awesome, Material Design Icons, Octicons, Weather Icons, and other common icon sets.
 	/// </summary>
 	/// <param name="builder">The glyph ranges builder to add Nerd Font ranges to.</param>
-	private static void AddNerdFontRanges(ImFontGlyphRangesBuilderPtr builder)
+	internal static void AddNerdFontRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
 		// Define Nerd Font ranges to add
 		(uint start, uint end, string description)[] nerdFontRanges = [

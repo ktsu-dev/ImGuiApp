@@ -13,27 +13,27 @@ using System.Threading;
 /// </summary>
 internal class PidFrameLimiter
 {
-	private readonly double kp; // Proportional gain
-	private readonly double ki; // Integral gain
-	private readonly double kd; // Derivative gain
+	internal readonly double kp; // Proportional gain
+	internal readonly double ki; // Integral gain
+	internal readonly double kd; // Derivative gain
 
-	private double previousError;
-	private double integral;
-	private DateTime lastFrameTime;
-	private double baseSleepMs;
-	private bool isInitialized;
+	internal double previousError;
+	internal double integral;
+	internal DateTime lastFrameTime;
+	internal double baseSleepMs;
+	internal bool isInitialized;
 
 	// Smoothing for frame time measurements
-	private readonly Queue<double> recentFrameTimes = new();
-	private double frameTimeSum;
-	private const int FrameHistorySize = 10;
+	internal readonly Queue<double> recentFrameTimes = new();
+	internal double frameTimeSum;
+	internal const int FrameHistorySize = 10;
 
 	// Auto-tuning state
-	private bool isTuning;
-	private int currentTuningStep;
-	private DateTime tuningStartTime;
-	private readonly List<TuningResult> tuningResults = [];
-	private TuningResult? bestTuningResult;
+	internal bool isTuning;
+	internal int currentTuningStep;
+	internal DateTime tuningStartTime;
+	internal readonly List<TuningResult> tuningResults = [];
+	internal TuningResult? bestTuningResult;
 
 	internal readonly struct TuningResult
 	{
@@ -47,7 +47,7 @@ internal class PidFrameLimiter
 	}
 
 	// Predefined parameter sets to test during auto-tuning
-	private static readonly (double kp, double ki, double kd)[] CoarseTuningParameterSets =
+	internal static readonly (double kp, double ki, double kd)[] CoarseTuningParameterSets =
 	[
 		// Phase 1: Coarse tuning - wider range, longer tests
 		// Conservative settings
@@ -85,10 +85,10 @@ internal class PidFrameLimiter
 	];
 
 	// Fine tuning around best coarse result
-	private (double kp, double ki, double kd)[] currentFineTuningParameters = [];
-	private (double kp, double ki, double kd)[] currentPrecisionTuningParameters = [];
+	internal (double kp, double ki, double kd)[] currentFineTuningParameters = [];
+	internal (double kp, double ki, double kd)[] currentPrecisionTuningParameters = [];
 
-	private enum TuningPhase
+	internal enum TuningPhase
 	{
 		Coarse,
 		Fine,
@@ -96,10 +96,10 @@ internal class PidFrameLimiter
 		Complete
 	}
 
-	private TuningPhase currentTuningPhase = TuningPhase.Coarse;
-	private const double CoarseTuningDurationSeconds = 8.0; // Longer tests for coarse tuning
-	private const double FineTuningDurationSeconds = 12.0;   // Even longer for fine tuning
-	private const double PrecisionTuningDurationSeconds = 15.0; // Longest for precision tuning
+	internal TuningPhase currentTuningPhase = TuningPhase.Coarse;
+	internal const double CoarseTuningDurationSeconds = 8.0; // Longer tests for coarse tuning
+	internal const double FineTuningDurationSeconds = 12.0;   // Even longer for fine tuning
+	internal const double PrecisionTuningDurationSeconds = 15.0; // Longest for precision tuning
 
 	/// <summary>
 	/// Initializes a new instance of the PidFrameLimiter class.
@@ -190,7 +190,7 @@ internal class PidFrameLimiter
 		return (isActive, currentStep, totalSteps, progressPercent, bestResult);
 	}
 
-	private double GetCurrentTuningDuration() => currentTuningPhase switch
+	internal double GetCurrentTuningDuration() => currentTuningPhase switch
 	{
 		TuningPhase.Coarse => CoarseTuningDurationSeconds,
 		TuningPhase.Fine => FineTuningDurationSeconds,
@@ -198,7 +198,7 @@ internal class PidFrameLimiter
 		_ => CoarseTuningDurationSeconds
 	};
 
-	private void GenerateFineTuningParameters(TuningResult bestResult)
+	internal void GenerateFineTuningParameters(TuningResult bestResult)
 	{
 		// Generate 25 parameter combinations around the best coarse result
 		List<(double kp, double ki, double kd)> fineParams = [];
@@ -225,7 +225,7 @@ internal class PidFrameLimiter
 		currentFineTuningParameters = [.. fineParams];
 	}
 
-	private void GeneratePrecisionTuningParameters(TuningResult bestResult)
+	internal void GeneratePrecisionTuningParameters(TuningResult bestResult)
 	{
 		// Generate 9 parameter combinations for final precision tuning
 		List<(double kp, double ki, double kd)> precisionParams = [];
@@ -251,7 +251,7 @@ internal class PidFrameLimiter
 		currentPrecisionTuningParameters = [.. precisionParams];
 	}
 
-	private void HandleAutoTuningProgression(double error)
+	internal void HandleAutoTuningProgression(double error)
 	{
 		tuningErrors.Add(Math.Abs(error));
 
@@ -274,7 +274,7 @@ internal class PidFrameLimiter
 		}
 	}
 
-	private bool ValidateCurrentTuningState()
+	internal bool ValidateCurrentTuningState()
 	{
 		return currentTuningPhase switch
 		{
@@ -285,7 +285,7 @@ internal class PidFrameLimiter
 		};
 	}
 
-	private void ProcessCurrentTuningResults()
+	internal void ProcessCurrentTuningResults()
 	{
 		// Calculate performance metrics for current parameter set
 		double avgError = tuningErrors.Average();
@@ -316,7 +316,7 @@ internal class PidFrameLimiter
 		}
 	}
 
-	private (double kp, double ki, double kd) GetCurrentTuningParameters()
+	internal (double kp, double ki, double kd) GetCurrentTuningParameters()
 	{
 		return currentTuningPhase switch
 		{
@@ -327,7 +327,7 @@ internal class PidFrameLimiter
 		};
 	}
 
-	private void AdvanceToNextTuningStep()
+	internal void AdvanceToNextTuningStep()
 	{
 		currentTuningStep++;
 		bool advanceToNextPhase = CheckAndHandlePhaseTransition();
@@ -340,7 +340,7 @@ internal class PidFrameLimiter
 		tuningErrors.Clear();
 	}
 
-	private bool CheckAndHandlePhaseTransition()
+	internal bool CheckAndHandlePhaseTransition()
 	{
 		switch (currentTuningPhase)
 		{
@@ -391,7 +391,7 @@ internal class PidFrameLimiter
 		return false;
 	}
 
-	private (double kp, double ki, double kd) GetNextTuningParameters(bool isNewPhase)
+	internal (double kp, double ki, double kd) GetNextTuningParameters(bool isNewPhase)
 	{
 		if (isNewPhase)
 		{
@@ -421,7 +421,7 @@ internal class PidFrameLimiter
 		}
 	}
 
-	private void SetTuningParameters(double newKp, double newKi, double newKd)
+	internal void SetTuningParameters(double newKp, double newKi, double newKd)
 	{
 		// Use reflection or create new fields to temporarily override the readonly kp, ki, kd
 		// For now, we'll store them in temporary fields and use them during tuning
@@ -432,15 +432,15 @@ internal class PidFrameLimiter
 	}
 
 	// Temporary fields for tuning (will override readonly values during tuning)
-	private double tuningKp;
-	private double tuningKi;
-	private double tuningKd;
-	private readonly List<double> tuningErrors = [];
+	internal double tuningKp;
+	internal double tuningKi;
+	internal double tuningKd;
+	internal readonly List<double> tuningErrors = [];
 
 	// Get current PID gains (accounting for tuning mode)
-	private double CurrentKp => isTuning ? tuningKp : kp;
-	private double CurrentKi => isTuning ? tuningKi : ki;
-	private double CurrentKd => isTuning ? tuningKd : kd;
+	internal double CurrentKp => isTuning ? tuningKp : kp;
+	internal double CurrentKi => isTuning ? tuningKi : ki;
+	internal double CurrentKd => isTuning ? tuningKd : kd;
 
 	/// <summary>
 	/// Manually sets PID parameters for custom tuning.
@@ -551,7 +551,7 @@ internal class PidFrameLimiter
 #endif
 	}
 
-	private static double CalculateStability(List<double> errors)
+	internal static double CalculateStability(List<double> errors)
 	{
 		if (errors.Count < 2)
 		{
@@ -563,7 +563,7 @@ internal class PidFrameLimiter
 		return Math.Sqrt(variance); // Standard deviation - lower is more stable
 	}
 
-	private static double CalculateScore(double avgError, double maxError, double stability)
+	internal static double CalculateScore(double avgError, double maxError, double stability)
 	{
 		// Higher score is better
 		// Prioritize low average error, penalize high max error and instability
@@ -579,7 +579,7 @@ internal class PidFrameLimiter
 	/// Thread.Sleep for coarse timing + Stopwatch spin-waiting for fine precision.
 	/// </summary>
 	/// <param name="sleepTimeMs">Target sleep time in milliseconds</param>
-	private static void ApplyHighPrecisionSleep(double sleepTimeMs)
+	internal static void ApplyHighPrecisionSleep(double sleepTimeMs)
 	{
 		if (sleepTimeMs <= 0)
 		{
@@ -618,7 +618,7 @@ internal class PidFrameLimiter
 		sw.Stop();
 	}
 
-	private void UpdateFrameTimeHistory(double frameTimeMs)
+	internal void UpdateFrameTimeHistory(double frameTimeMs)
 	{
 		recentFrameTimes.Enqueue(frameTimeMs);
 		frameTimeSum += frameTimeMs;
@@ -629,7 +629,7 @@ internal class PidFrameLimiter
 		}
 	}
 
-	private double GetSmoothedFrameTime() =>
+	internal double GetSmoothedFrameTime() =>
 		recentFrameTimes.Count > 0 ? frameTimeSum / recentFrameTimes.Count : 0;
 
 	/// <summary>

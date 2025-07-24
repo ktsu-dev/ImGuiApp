@@ -5,7 +5,6 @@
 namespace ktsu.ImGuiApp.Test;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Reflection;
 
 /// <summary>
 /// Tests for platform-specific functionality including DPI awareness, native methods, and GDI+ helpers.
@@ -69,7 +68,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void UniformFieldInfo_IsStruct()
 	{
-		Type type = typeof(ktsu.ImGuiApp.ImGuiController.UniformFieldInfo);
+		Type type = typeof(ImGuiController.UniformFieldInfo);
 		Assert.IsTrue(type.IsValueType);
 		Assert.IsFalse(type.IsClass);
 	}
@@ -77,28 +76,32 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void UniformFieldInfo_HasExpectedFields()
 	{
-		Type type = typeof(ktsu.ImGuiApp.ImGuiController.UniformFieldInfo);
+		// Test UniformFieldInfo through direct access using internal visibility
+		ImGuiController.UniformFieldInfo uniformInfo = new()
+		{
+			Location = 1,
+			Name = "test",
+			Size = 10,
+			Type = Silk.NET.OpenGL.UniformType.Float
+		};
 
-		FieldInfo? locationField = type.GetField("Location");
-		FieldInfo? nameField = type.GetField("Name");
-		FieldInfo? sizeField = type.GetField("Size");
-		FieldInfo? typeField = type.GetField("Type");
+		// Verify field types by accessing them directly
+		Assert.AreEqual(1, uniformInfo.Location);
+		Assert.AreEqual("test", uniformInfo.Name);
+		Assert.AreEqual(10, uniformInfo.Size);
+		Assert.AreEqual(Silk.NET.OpenGL.UniformType.Float, uniformInfo.Type);
 
-		Assert.IsNotNull(locationField);
-		Assert.IsNotNull(nameField);
-		Assert.IsNotNull(sizeField);
-		Assert.IsNotNull(typeField);
-
-		Assert.AreEqual(typeof(int), locationField.FieldType);
-		Assert.AreEqual(typeof(string), nameField.FieldType);
-		Assert.AreEqual(typeof(int), sizeField.FieldType);
-		Assert.AreEqual(typeof(Silk.NET.OpenGL.UniformType), typeField.FieldType);
+		// Verify field types match expected types
+		Assert.IsInstanceOfType<int>(uniformInfo.Location);
+		Assert.IsInstanceOfType<string>(uniformInfo.Name);
+		Assert.IsInstanceOfType<int>(uniformInfo.Size);
+		Assert.IsInstanceOfType<Silk.NET.OpenGL.UniformType>(uniformInfo.Type);
 	}
 
 	[TestMethod]
 	public void Shader_IsInternalClass()
 	{
-		Type shaderType = typeof(ktsu.ImGuiApp.ImGuiController.Shader);
+		Type shaderType = typeof(ImGuiController.Shader);
 		Assert.IsTrue(shaderType.IsClass);
 		Assert.IsFalse(shaderType.IsPublic);
 	}
@@ -106,7 +109,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void Texture_IsInternalClass()
 	{
-		Type textureType = typeof(ktsu.ImGuiApp.ImGuiController.Texture);
+		Type textureType = typeof(ImGuiController.Texture);
 		Assert.IsTrue(textureType.IsClass);
 		Assert.IsFalse(textureType.IsPublic);
 	}
@@ -118,7 +121,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void IGL_IsInterface()
 	{
-		Type iglType = typeof(ktsu.ImGuiApp.ImGuiController.IGL);
+		Type iglType = typeof(ImGuiController.IGL);
 		Assert.IsTrue(iglType.IsInterface);
 		Assert.IsTrue(iglType.IsPublic);
 	}
@@ -126,7 +129,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void IGL_InheritsFromIDisposable()
 	{
-		Type iglType = typeof(ktsu.ImGuiApp.ImGuiController.IGL);
+		Type iglType = typeof(ImGuiController.IGL);
 		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(iglType));
 	}
 
@@ -156,8 +159,8 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void GLWrapper_ImplementsIGL()
 	{
-		Type wrapperType = typeof(ktsu.ImGuiApp.ImGuiController.GLWrapper);
-		Assert.IsTrue(typeof(ktsu.ImGuiApp.ImGuiController.IGL).IsAssignableFrom(wrapperType));
+		Type wrapperType = typeof(ImGuiController.GLWrapper);
+		Assert.IsTrue(typeof(ImGuiController.IGL).IsAssignableFrom(wrapperType));
 	}
 
 	#endregion

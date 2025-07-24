@@ -4,11 +4,10 @@
 
 namespace ktsu.ImGuiApp.Test;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ktsu.ImGuiApp.ImGuiController;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using ktsu.ImGuiApp.ImGuiController;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Tests for error handling, edge cases, and boundary conditions to maximize code coverage.
@@ -93,17 +92,15 @@ public class ErrorHandlingAndEdgeCaseTests
 	[TestMethod]
 	public void ImGuiApp_OnUserInput_CalledRapidly_UpdatesTime()
 	{
-		DateTime startTime = DateTime.Now;
+		DateTime startTime = DateTime.UtcNow;
 
 		for (int i = 0; i < 100; i++)
 		{
 			ImGuiApp.OnUserInput();
 		}
 
-		// Verify that the internal time was updated
-		FieldInfo? field = typeof(ImGuiApp).GetField("lastInputTime", BindingFlags.NonPublic | BindingFlags.Static);
-		Assert.IsNotNull(field);
-		DateTime lastTime = (DateTime)field.GetValue(null)!;
+		// Verify that the internal time was updated using direct access
+		DateTime lastTime = ImGuiApp.lastInputTime;
 
 		Assert.IsTrue(lastTime >= startTime);
 	}
@@ -111,11 +108,19 @@ public class ErrorHandlingAndEdgeCaseTests
 	[TestMethod]
 	public void ImGuiApp_Reset_CalledMultipleTimes_DoesNotThrow()
 	{
-		// Should be safe to call Reset multiple times
-		ImGuiApp.Reset();
-		ImGuiApp.Reset();
-		ImGuiApp.Reset();
-		// If we reach here without exception, the test passes
+		try
+		{
+			// Should be safe to call Reset multiple times
+			ImGuiApp.Reset();
+			ImGuiApp.Reset();
+			ImGuiApp.Reset();
+		}
+#pragma warning disable CA1031 // Do not catch general exception types
+		catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+		{
+			Assert.Fail($"Expected no exception, but got: {ex.Message}");
+		}
 	}
 
 	[TestMethod]
@@ -291,55 +296,34 @@ public class ErrorHandlingAndEdgeCaseTests
 	[TestMethod]
 	public void NativeMethods_HasOnlyStaticMembers()
 	{
-		Type nativeMethodsType = typeof(NativeMethods);
-		MethodInfo[] methods = nativeMethodsType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
-		foreach (MethodInfo method in methods)
-		{
-			// Skip inherited methods from Object
-			if (method.DeclaringType == typeof(object))
-			{
-				continue;
-			}
-
-			Assert.IsTrue(method.IsStatic, $"Method {method.Name} should be static");
-		}
+		// Test NativeMethods through direct access instead of reflection
+		// Since NativeMethods is an internal static partial class,
+		// the fact that this compiles means it's accessible and static
+		Assert.IsNotNull(typeof(NativeMethods));
+		Assert.IsTrue(typeof(NativeMethods).IsClass);
+		Assert.IsTrue(typeof(NativeMethods).IsAbstract && typeof(NativeMethods).IsSealed);
 	}
 
 	[TestMethod]
 	public void GdiPlusHelper_HasOnlyStaticMembers()
 	{
-		Type gdiPlusHelperType = typeof(GdiPlusHelper);
-		MethodInfo[] methods = gdiPlusHelperType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
-		foreach (MethodInfo method in methods)
-		{
-			// Skip inherited methods from Object
-			if (method.DeclaringType == typeof(object))
-			{
-				continue;
-			}
-
-			Assert.IsTrue(method.IsStatic, $"Method {method.Name} should be static");
-		}
+		// Test GdiPlusHelper through direct access instead of reflection
+		// Since GdiPlusHelper is an internal static class,
+		// the fact that this compiles means it's accessible and static
+		Assert.IsNotNull(typeof(GdiPlusHelper));
+		Assert.IsTrue(typeof(GdiPlusHelper).IsClass);
+		Assert.IsTrue(typeof(GdiPlusHelper).IsAbstract && typeof(GdiPlusHelper).IsSealed);
 	}
 
 	[TestMethod]
 	public void FontHelper_HasOnlyStaticMembers()
 	{
-		Type fontHelperType = typeof(FontHelper);
-		MethodInfo[] methods = fontHelperType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
-		foreach (MethodInfo method in methods)
-		{
-			// Skip inherited methods from Object
-			if (method.DeclaringType == typeof(object))
-			{
-				continue;
-			}
-
-			Assert.IsTrue(method.IsStatic, $"Method {method.Name} should be static");
-		}
+		// Test FontHelper through direct access instead of reflection
+		// Since FontHelper is a public static class,
+		// the fact that this compiles means it's accessible and static
+		Assert.IsNotNull(typeof(FontHelper));
+		Assert.IsTrue(typeof(FontHelper).IsClass);
+		Assert.IsTrue(typeof(FontHelper).IsAbstract && typeof(FontHelper).IsSealed);
 	}
 
 	#endregion

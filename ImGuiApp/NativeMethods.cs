@@ -24,7 +24,7 @@ internal static partial class NativeMethods
 	[return: MarshalAs(UnmanagedType.Bool)]
 	internal static partial bool SetProcessDPIAware();
 
-	private const string X11LibraryName = "libX11.so.6";
+	internal const string X11LibraryName = "libX11.so.6";
 
 	/// <summary>
 	/// Opens a connection to the X server that controls a display.

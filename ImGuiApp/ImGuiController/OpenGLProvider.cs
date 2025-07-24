@@ -9,9 +9,9 @@ namespace ktsu.ImGuiApp.ImGuiController;
 /// </summary>
 public sealed class OpenGLProvider(IOpenGLFactory factory) : IDisposable
 {
-	private readonly IOpenGLFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-	private GLWrapper? _gl;
-	private bool _disposed;
+	internal readonly IOpenGLFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+	internal GLWrapper? _gl;
+	internal bool _disposed;
 
 	/// <summary>
 	/// Gets the OpenGL instance, creating it if necessary.

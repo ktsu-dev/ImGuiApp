@@ -22,7 +22,7 @@ public static partial class GdiPlusHelper
 	/// </summary>
 	/// <param name="gdiStatus">The status code returned by a GDI+ operation.</param>
 	/// <exception cref="InvalidOperationException">Thrown when the GDI+ operation fails.</exception>
-	private static void CheckStatus(int gdiStatus)
+	internal static void CheckStatus(int gdiStatus)
 	{
 		if (gdiStatus != 0)
 		{

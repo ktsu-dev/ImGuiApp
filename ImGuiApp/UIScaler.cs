@@ -57,7 +57,7 @@ public class UIScaler : ScopedAction
 	/// <param name="style">The style variable to push.</param>
 	/// <param name="value">The value to set for the style variable.</param>
 	/// <param name="numStyles">The reference to the style count.</param>
-	private static void PushStyleAndCount(ImGuiStyleVar style, float value, ref int numStyles)
+	internal static void PushStyleAndCount(ImGuiStyleVar style, float value, ref int numStyles)
 	{
 		ImGuiApp.Invoker.Invoke(() => ImGui.PushStyleVar(style, value));
 		++numStyles;
@@ -69,7 +69,7 @@ public class UIScaler : ScopedAction
 	/// <param name="style">The style variable to push.</param>
 	/// <param name="value">The value to set for the style variable.</param>
 	/// <param name="numStyles">The reference to the style count.</param>
-	private static void PushStyleAndCount(ImGuiStyleVar style, Vector2 value, ref int numStyles)
+	internal static void PushStyleAndCount(ImGuiStyleVar style, Vector2 value, ref int numStyles)
 	{
 		ImGuiApp.Invoker.Invoke(() => ImGui.PushStyleVar(style, value));
 		++numStyles;

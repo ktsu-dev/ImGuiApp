@@ -18,30 +18,32 @@ using Silk.NET.Windowing;
 internal class ImGuiController : IDisposable
 {
 
-	private GL? _gl;
-	private IView? _view;
-	private IInputContext? _input;
-	private bool _frameBegun;
-	private readonly List<char> _pressedChars = [];
-	private IKeyboard? _keyboard;
-	private IMouse? _mouse;
+	internal GL? _gl;
+	internal IView? _view;
+	internal IInputContext? _input;
+	internal bool _frameBegun;
+	internal readonly List<char> _pressedChars = [];
+	internal IKeyboard? _keyboard;
+	internal IMouse? _mouse;
 
-	private int _attribLocationTex;
-	private int _attribLocationProjMtx;
-	private int _attribLocationVtxPos;
-	private int _attribLocationVtxUV;
-	private int _attribLocationVtxColor;
-	private uint _vboHandle;
-	private uint _elementsHandle;
-	private uint _vertexArrayObject;
+	internal int _attribLocationTex;
+	internal int _attribLocationProjMtx;
+	internal int _attribLocationVtxPos;
+	internal int _attribLocationVtxUV;
+	internal int _attribLocationVtxColor;
+	internal uint _vboHandle;
+	internal uint _elementsHandle;
+	internal uint _vertexArrayObject;
 
-	private Texture? _fontTexture;
-	private Shader? _shader;
+	internal Texture? _fontTexture;
+	internal Shader? _shader;
 
-	private int _windowWidth;
-	private int _windowHeight;
+	internal int _windowWidth;
+	internal int _windowHeight;
 
 	internal bool FontsConfigured { get; private set; }
+
+	internal bool _disposed;
 
 	/// <summary>
 	/// Constructs a new ImGuiController.
@@ -105,7 +107,7 @@ internal class ImGuiController : IDisposable
 		DebugLogger.Log("ImGuiController: Initialization completed");
 	}
 
-	private void Init(GL gl, IView view, IInputContext input)
+	internal void Init(GL gl, IView view, IInputContext input)
 	{
 		_gl = gl;
 		_view = view;
@@ -118,7 +120,7 @@ internal class ImGuiController : IDisposable
 		ImGui.StyleColorsDark();
 	}
 
-	private void BeginFrame()
+	internal void BeginFrame()
 	{
 		ImGui.NewFrame();
 		_frameBegun = true;
@@ -151,7 +153,7 @@ internal class ImGuiController : IDisposable
 	/// <param name="keyboard">The keyboard context generating the event.</param>
 	/// <param name="keycode">The native keycode of the pressed key.</param>
 	/// <param name="scancode">The native scancode of the pressed key.</param>
-	private static void OnKeyDown(IKeyboard keyboard, Key keycode, int scancode)
+	internal static void OnKeyDown(IKeyboard keyboard, Key keycode, int scancode)
 	{
 		ImGuiApp.OnUserInput();
 		OnKeyEvent(keyboard, keycode, scancode, down: true);
@@ -163,32 +165,32 @@ internal class ImGuiController : IDisposable
 	/// <param name="keyboard">The keyboard context generating the event.</param>
 	/// <param name="keycode">The native keycode of the released key.</param>
 	/// <param name="scancode">The native scancode of the released key.</param>
-	private static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode)
+	internal static void OnKeyUp(IKeyboard keyboard, Key keycode, int scancode)
 	{
 		ImGuiApp.OnUserInput();
 		OnKeyEvent(keyboard, keycode, scancode, down: false);
 	}
 
-	private static void OnMouseScroll(IMouse mouse, ScrollWheel scroll)
+	internal static void OnMouseScroll(IMouse mouse, ScrollWheel scroll)
 	{
 		ImGuiApp.OnUserInput();
 		ImGuiIOPtr io = ImGui.GetIO();
 		io.AddMouseWheelEvent(scroll.X, scroll.Y);
 	}
 
-	private static void OnMouseDown(IMouse mouse, MouseButton button)
+	internal static void OnMouseDown(IMouse mouse, MouseButton button)
 	{
 		ImGuiApp.OnUserInput();
 		OnMouseButton(mouse, button, down: true);
 	}
 
-	private static void OnMouseUp(IMouse mouse, MouseButton button)
+	internal static void OnMouseUp(IMouse mouse, MouseButton button)
 	{
 		ImGuiApp.OnUserInput();
 		OnMouseButton(mouse, button, down: false);
 	}
 
-	private static void OnMouseButton(IMouse _, MouseButton button, bool down)
+	internal static void OnMouseButton(IMouse _, MouseButton button, bool down)
 	{
 		// Only process supported mouse buttons (Left, Right, Middle)
 		if (button is MouseButton.Left or MouseButton.Right or MouseButton.Middle)
@@ -200,7 +202,7 @@ internal class ImGuiController : IDisposable
 		// Auxiliary buttons (Button4-Button12, Unknown) are ignored
 	}
 
-	private void OnMouseMove(IMouse _, Vector2 position)
+	internal void OnMouseMove(IMouse _, Vector2 position)
 	{
 		ImGuiApp.OnUserInput();
 		ImGuiIOPtr io = ImGui.GetIO();
@@ -214,7 +216,7 @@ internal class ImGuiController : IDisposable
 	/// <param name="keycode">The native keycode of the key generating the event.</param>
 	/// <param name="scancode">The native scancode of the key generating the event.</param>
 	/// <param name="down">True if the event is a key down event, otherwise False</param>
-	private static void OnKeyEvent(IKeyboard _, Key keycode, int scancode, bool down)
+	internal static void OnKeyEvent(IKeyboard _, Key keycode, int scancode, bool down)
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
 		ImGuiKey imGuiKey = TranslateInputKeyToImGuiKey(keycode);
@@ -228,19 +230,19 @@ internal class ImGuiController : IDisposable
 		}
 	}
 
-	private void OnKeyChar(IKeyboard arg1, char arg2)
+	internal void OnKeyChar(IKeyboard arg1, char arg2)
 	{
 		ImGuiApp.OnUserInput();
 		_pressedChars.Add(arg2);
 	}
 
-	private void WindowResized(Vector2D<int> size)
+	internal void WindowResized(Vector2D<int> size)
 	{
 		_windowWidth = size.X;
 		_windowHeight = size.Y;
 	}
 
-	public void Render()
+	internal void Render()
 	{
 		if (_frameBegun)
 		{
@@ -253,7 +255,7 @@ internal class ImGuiController : IDisposable
 	/// <summary>
 	/// Updates ImGui input and IO configuration state.
 	/// </summary>
-	public void Update(float deltaSeconds)
+	internal void Update(float deltaSeconds)
 	{
 		if (_frameBegun)
 		{
@@ -271,7 +273,7 @@ internal class ImGuiController : IDisposable
 	/// Sets per-frame data based on the associated window.
 	/// This is called by Update(float).
 	/// </summary>
-	private void SetPerFrameImGuiData(float deltaSeconds)
+	internal void SetPerFrameImGuiData(float deltaSeconds)
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
 		io.DisplaySize = new Vector2(_windowWidth, _windowHeight);
@@ -294,7 +296,7 @@ internal class ImGuiController : IDisposable
 		io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
 	}
 
-	private void UpdateImGuiInput()
+	internal void UpdateImGuiInput()
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
 
@@ -319,7 +321,7 @@ internal class ImGuiController : IDisposable
 	/// <param name="key">The Silk.NET.Input.Key to translate.</param>
 	/// <returns>The corresponding ImGuiKey.</returns>
 	/// <exception cref="NotImplementedException">When the key has not been implemented yet.</exception>
-	private static ImGuiKey TranslateInputKeyToImGuiKey(Key key)
+	internal static ImGuiKey TranslateInputKeyToImGuiKey(Key key)
 	{
 		return key switch
 		{
@@ -440,22 +442,22 @@ internal class ImGuiController : IDisposable
 			Key.F22 => ImGuiKey.F22,
 			Key.F23 => ImGuiKey.F23,
 			Key.F24 => ImGuiKey.F24,
-			Key.Unknown => throw new NotImplementedException(),
-			Key.World1 => throw new NotImplementedException(),
-			Key.World2 => throw new NotImplementedException(),
-			Key.F25 => throw new NotImplementedException(),
-			_ => throw new NotImplementedException($"Key '{key}' hasn't been implemented in TranslateInputKeyToImGuiKey"),
+			Key.F25 => ImGuiKey.None,
+			Key.Unknown => ImGuiKey.None,
+			Key.World1 => ImGuiKey.None,
+			Key.World2 => ImGuiKey.None,
+			_ => ImGuiKey.None,
 		};
 	}
 
-	private static ImGuiMouseButton TranslateMouseButtonToImGuiMouseButton(MouseButton mouseButton)
+	internal static ImGuiMouseButton TranslateMouseButtonToImGuiMouseButton(MouseButton mouseButton)
 	{
 		return mouseButton switch
 		{
 			MouseButton.Left => ImGuiMouseButton.Left,
 			MouseButton.Right => ImGuiMouseButton.Right,
 			MouseButton.Middle => ImGuiMouseButton.Middle,
-			_ => throw new NotImplementedException($"MouseButton {mouseButton} hasn't been implemented in TranslateMouseButtonToImGuiMouseButton")
+			_ => ImGuiMouseButton.Middle,
 		};
 	}
 
@@ -464,8 +466,8 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	/// <param name="key">The ImGuiKey to translate.</param>
 	/// <returns>The matching ImGuiKey.Mod*.</returns>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases", Justification = "<Pending>")]
-	private static ImGuiKey TranslateImGuiKeyToImGuiModKey(ImGuiKey key)
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases", Justification = "We're only translating mod keys here.")]
+	internal static ImGuiKey TranslateImGuiKeyToImGuiModKey(ImGuiKey key)
 	{
 		return key switch
 		{
@@ -481,7 +483,7 @@ internal class ImGuiController : IDisposable
 		};
 	}
 
-	private unsafe void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
+	internal unsafe void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
 	{
 		if (_gl is null || _shader is null)
 		{
@@ -543,7 +545,7 @@ internal class ImGuiController : IDisposable
 		_gl.VertexAttribPointer((uint)_attribLocationVtxColor, 4, GLEnum.UnsignedByte, true, (uint)sizeof(ImDrawVert), (void*)16);
 	}
 
-	private unsafe void RenderImDrawData(ImDrawDataPtr drawDataPtr)
+	internal unsafe void RenderImDrawData(ImDrawDataPtr drawDataPtr)
 	{
 		if (_gl is null)
 		{
@@ -738,7 +740,7 @@ internal class ImGuiController : IDisposable
 		_gl.Scissor(lastScissorBox[0], lastScissorBox[1], (uint)lastScissorBox[2], (uint)lastScissorBox[3]);
 	}
 
-	private void CreateDeviceResources()
+	internal void CreateDeviceResources()
 	{
 		if (_gl is null)
 		{
@@ -807,7 +809,7 @@ internal class ImGuiController : IDisposable
 	/// <summary>
 	/// Creates the texture used to render text.
 	/// </summary>
-	private unsafe void RecreateFontDeviceTexture()
+	internal unsafe void RecreateFontDeviceTexture()
 	{
 		DebugLogger.Log("RecreateFontDeviceTexture: Starting");
 		if (_gl is null)
@@ -895,27 +897,47 @@ internal class ImGuiController : IDisposable
 	/// </summary>
 	public void Dispose()
 	{
-		if (_gl is null || _view is null || _keyboard is null || _mouse is null || _fontTexture is null || _shader is null)
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	/// <summary>
+	/// Protected implementation of Dispose pattern.
+	/// </summary>
+	/// <param name="disposing">true if disposing managed resources, false if called from finalizer</param>
+	protected virtual void Dispose(bool disposing)
+	{
+		if (_disposed)
 		{
 			return;
 		}
 
-		_view.Resize -= WindowResized;
-		_keyboard.KeyDown -= OnKeyDown;
-		_keyboard.KeyUp -= OnKeyUp;
-		_keyboard.KeyChar -= OnKeyChar;
-		_mouse.MouseDown -= OnMouseDown;
-		_mouse.MouseUp -= OnMouseUp;
-		_mouse.MouseMove -= OnMouseMove;
-		_mouse.Scroll -= OnMouseScroll;
+		if (disposing)
+		{
+			// Dispose managed resources
+			if (_gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _fontTexture is not null && _shader is not null)
+			{
+				_view.Resize -= WindowResized;
+				_keyboard.KeyDown -= OnKeyDown;
+				_keyboard.KeyUp -= OnKeyUp;
+				_keyboard.KeyChar -= OnKeyChar;
+				_mouse.MouseDown -= OnMouseDown;
+				_mouse.MouseUp -= OnMouseUp;
+				_mouse.MouseMove -= OnMouseMove;
+				_mouse.Scroll -= OnMouseScroll;
 
-		_gl.DeleteBuffer(_vboHandle);
-		_gl.DeleteBuffer(_elementsHandle);
-		_gl.DeleteVertexArray(_vertexArrayObject);
+				_gl.DeleteBuffer(_vboHandle);
+				_gl.DeleteBuffer(_elementsHandle);
+				_gl.DeleteVertexArray(_vertexArrayObject);
 
-		_fontTexture.Dispose();
-		_shader.Dispose();
+				_fontTexture.Dispose();
+				_shader.Dispose();
 
-		ImGui.DestroyContext();
+				ImGui.DestroyContext();
+			}
+		}
+
+		// Mark as disposed
+		_disposed = true;
 	}
 }

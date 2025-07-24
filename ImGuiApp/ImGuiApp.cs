@@ -14,8 +14,8 @@ using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
-using ktsu.StrongPaths;
 using ktsu.ScopedAction;
+using ktsu.StrongPaths;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -31,14 +31,14 @@ using Texture = ImGuiController.Texture;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
 public static partial class ImGuiApp
 {
-	private static IWindow? window;
-	private static GL? gl;
-	private static ImGuiController.ImGuiController? controller;
-	private static IInputContext? inputContext;
-	private static OpenGLProvider? glProvider;
-	private static IntPtr currentGLContextHandle; // Track the current GL context handle
+	internal static IWindow? window;
+	internal static GL? gl;
+	internal static ImGuiController.ImGuiController? controller;
+	internal static IInputContext? inputContext;
+	internal static OpenGLProvider? glProvider;
+	internal static IntPtr currentGLContextHandle; // Track the current GL context handle
 
-	private static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
+	internal static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
 	/// <summary>
 	/// Gets the current state of the ImGui application window.
@@ -57,24 +57,24 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static ConcurrentDictionary<string, int> FontIndices { get; } = [];
-	private static float lastFontScaleFactor;
-	private static readonly List<GCHandle> currentPinnedFontData = [];
+	internal static ConcurrentDictionary<string, int> FontIndices { get; } = [];
+	internal static float lastFontScaleFactor;
+	internal static readonly List<GCHandle> currentPinnedFontData = [];
 
 	/// <summary>
 	/// Stores unmanaged memory handles for font data that needs to be freed with Marshal.FreeHGlobal.
 	/// </summary>
-	private static readonly List<nint> currentFontMemoryHandles = [];
+	internal static readonly List<nint> currentFontMemoryHandles = [];
 
 	/// <summary>
 	/// List of common font sizes to load for crisp rendering at multiple sizes
 	/// </summary>
-	private static readonly int[] CommonFontSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
+	internal static readonly int[] CommonFontSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
 
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
 	/// </summary>
-	public static Invoker Invoker { get; private set; } = null!;
+	public static Invoker Invoker { get; internal set; } = null!;
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -91,26 +91,26 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static bool IsIdle { get; private set; }
 
-	private static DateTime lastInputTime = DateTime.UtcNow;
-	private static double targetFrameTimeMs = 1000.0 / 30.0; // Default to 30 FPS (33.33ms per frame)
-	private static readonly PidFrameLimiter frameLimiter = new();
-	private static double previousTargetFrameTimeMs = 1000.0 / 30.0;
+	internal static DateTime lastInputTime = DateTime.UtcNow;
+	internal static double targetFrameTimeMs = 1000.0 / 30.0; // Default to 30 FPS (33.33ms per frame)
+	internal static readonly PidFrameLimiter frameLimiter = new();
+	internal static double previousTargetFrameTimeMs = 1000.0 / 30.0;
 
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
 	/// </summary>
 	internal static void OnUserInput() => lastInputTime = DateTime.UtcNow;
 
-	private static bool showImGuiMetrics;
-	private static bool showImGuiDemo;
-	private static bool showPerformanceMonitor;
+	internal static bool showImGuiMetrics;
+	internal static bool showImGuiDemo;
+	internal static bool showPerformanceMonitor;
 
 	// Performance monitoring data structures
-	private static readonly Queue<float> performanceFrameTimes = new();
-	private static float performanceFrameTimeSum;
-	private static readonly Queue<float> performanceFpsHistory = new();
-	private static float performanceLastFpsUpdateTime;
-	private static int performanceFrameCount;
+	internal static readonly Queue<float> performanceFrameTimes = new();
+	internal static float performanceFrameTimeSum;
+	internal static readonly Queue<float> performanceFpsHistory = new();
+	internal static float performanceLastFpsUpdateTime;
+	internal static int performanceFrameCount;
 
 	/// <summary>
 	/// Gets the scale factor for the ImGui application.
@@ -133,9 +133,9 @@ public static partial class ImGuiApp
 		window.Close();
 	}
 
-	private static ImGuiAppConfig Config { get; set; } = new();
+	internal static ImGuiAppConfig Config { get; set; } = new();
 
-	private static void InitializeWindow(ImGuiAppConfig config)
+	internal static void InitializeWindow(ImGuiAppConfig config)
 	{
 		if (config.TestMode)
 		{
@@ -172,7 +172,7 @@ public static partial class ImGuiApp
 		window = Window.Create(silkWindowOptions);
 	}
 
-	private static void SetupWindowLoadHandler(ImGuiAppConfig config)
+	internal static void SetupWindowLoadHandler(ImGuiAppConfig config)
 	{
 		window!.Load += () =>
 		{
@@ -239,7 +239,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static void SetupWindowResizeHandler(ImGuiAppConfig config)
+	internal static void SetupWindowResizeHandler(ImGuiAppConfig config)
 	{
 		window!.FramebufferResize += s =>
 		{
@@ -251,7 +251,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static void SetupWindowMoveHandler(ImGuiAppConfig config)
+	internal static void SetupWindowMoveHandler(ImGuiAppConfig config)
 	{
 		window!.Move += (p) =>
 		{
@@ -262,7 +262,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static void UpdateWindowPerformance()
+	internal static void UpdateWindowPerformance()
 	{
 		ImGuiAppPerformanceSettings settings = Config.PerformanceSettings;
 
@@ -324,7 +324,7 @@ public static partial class ImGuiApp
 		targetFrameTimeMs = newTargetFrameTimeMs;
 	}
 
-	private static void SetupWindowUpdateHandler(ImGuiAppConfig config)
+	internal static void SetupWindowUpdateHandler(ImGuiAppConfig config)
 	{
 		window!.Update += (delta) =>
 		{
@@ -343,7 +343,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static void SetupWindowRenderHandler(ImGuiAppConfig config)
+	internal static void SetupWindowRenderHandler(ImGuiAppConfig config)
 	{
 		window!.Render += delta =>
 		{
@@ -370,7 +370,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static void ApplyFrameRateLimit()
+	internal static void ApplyFrameRateLimit()
 	{
 		// Reset PID controller if target frame rate has changed
 		if (Math.Abs(targetFrameTimeMs - previousTargetFrameTimeMs) > 0.1)
@@ -383,7 +383,7 @@ public static partial class ImGuiApp
 		frameLimiter.LimitFrameRate(targetFrameTimeMs);
 	}
 
-	private static void RenderWithScaling(Action renderAction)
+	internal static void RenderWithScaling(Action renderAction)
 	{
 		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out float bestFontSize);
 		float scaleRatio = bestFontSize / FontAppearance.DefaultFontPointSize;
@@ -393,7 +393,7 @@ public static partial class ImGuiApp
 		}
 	}
 
-	private static void SetupWindowClosingHandler()
+	internal static void SetupWindowClosingHandler()
 	{
 		window!.Closing += () =>
 		{
@@ -405,7 +405,7 @@ public static partial class ImGuiApp
 		};
 	}
 
-	private static void CleanupPinnedFontData()
+	internal static void CleanupPinnedFontData()
 	{
 		// Free our font data handles since we own the data
 		foreach (GCHandle handle in currentPinnedFontData)
@@ -441,19 +441,19 @@ public static partial class ImGuiApp
 		currentFontMemoryHandles.Clear();
 	}
 
-	private static void CleanupController()
+	internal static void CleanupController()
 	{
 		controller?.Dispose();
 		controller = null;
 	}
 
-	private static void CleanupInputContext()
+	internal static void CleanupInputContext()
 	{
 		inputContext?.Dispose();
 		inputContext = null;
 	}
 
-	private static void CleanupOpenGL()
+	internal static void CleanupOpenGL()
 	{
 		if (gl != null)
 		{
@@ -521,7 +521,7 @@ public static partial class ImGuiApp
 		}
 	}
 
-	private static void ValidateConfig(ImGuiAppConfig config)
+	internal static void ValidateConfig(ImGuiAppConfig config)
 	{
 		if (config.InitialWindowState.Size.X <= 0 || config.InitialWindowState.Size.Y <= 0)
 		{
@@ -570,7 +570,7 @@ public static partial class ImGuiApp
 		}
 	}
 
-	private static void RenderWithDefaultFont(Action action)
+	internal static void RenderWithDefaultFont(Action action)
 	{
 		using (new FontAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize))
 		{
@@ -578,7 +578,7 @@ public static partial class ImGuiApp
 		}
 	}
 
-	private static void CaptureWindowNormalState()
+	internal static void CaptureWindowNormalState()
 	{
 		if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
 		{
@@ -649,7 +649,7 @@ public static partial class ImGuiApp
 		return fonts[fontIndex];
 	}
 
-	private static void EnsureWindowPositionIsValid()
+	internal static void EnsureWindowPositionIsValid()
 	{
 		if (window?.Monitor is not null && window.WindowState is not Silk.NET.Windowing.WindowState.Minimized)
 		{
@@ -675,7 +675,7 @@ public static partial class ImGuiApp
 	/// Renders the application menu using the provided delegate.
 	/// </summary>
 	/// <param name="menuDelegate">The delegate to render the menu.</param>
-	private static void RenderAppMenu(Action? menuDelegate)
+	internal static void RenderAppMenu(Action? menuDelegate)
 	{
 		if (menuDelegate is not null)
 		{
@@ -713,7 +713,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="tickDelegate">The delegate to render the main window contents.</param>
 	/// <param name="dt">The delta time since the last frame.</param>
-	private static void RenderWindowContents(Action<float>? tickDelegate, float dt)
+	internal static void RenderWindowContents(Action<float>? tickDelegate, float dt)
 	{
 		bool b = true;
 		ImGui.SetNextWindowSize(ImGui.GetMainViewport().WorkSize, ImGuiCond.Always);
@@ -770,7 +770,7 @@ public static partial class ImGuiApp
 		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
 	}
 
-	private static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
+	internal static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
 
 	/// <summary>
 	/// Gets or loads a texture from the specified file path with optimized memory usage.
@@ -854,7 +854,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Uploads a texture to the GPU using the specified RGBA byte array, width, and height.
 	/// </summary>
-	private static uint UploadTextureRGBA(byte[] bytes, int width, int height)
+	internal static uint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
 		return Invoker.Invoke(() =>
 		{
@@ -914,7 +914,7 @@ public static partial class ImGuiApp
 	/// <exception cref="ArgumentNullException">Thrown if the textureInfo is null.</exception>
 	public static void DeleteTexture(ImGuiAppTextureInfo textureInfo) => DeleteTexture(textureInfo?.TextureId ?? throw new ArgumentNullException(nameof(textureInfo)));
 
-	private static void UpdateDpiScale()
+	internal static void UpdateDpiScale()
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
@@ -1050,7 +1050,7 @@ public static partial class ImGuiApp
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="pointSize">The point size for the font.</param>
 	/// <param name="glyphRanges">Custom glyph ranges, or null for default ranges.</param>
-	private static unsafe void LoadFontFromMemory(string name, nint fontHandle, int fontLength, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges = null)
+	internal static unsafe void LoadFontFromMemory(string name, nint fontHandle, int fontLength, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges = null)
 	{
 		// Calculate optimal pixel size for the font
 		float fontSize = CalculateOptimalPixelSize(pointSize);
@@ -1079,7 +1079,7 @@ public static partial class ImGuiApp
 	/// <param name="emojiLength">The length of the emoji font data in bytes.</param>
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="size">The font size to load emoji font for.</param>
-	private static unsafe void LoadEmojiFontFromMemory(nint emojiHandle, int emojiLength, ImFontAtlasPtr fontAtlasPtr, int size)
+	internal static unsafe void LoadEmojiFontFromMemory(nint emojiHandle, int emojiLength, ImFontAtlasPtr fontAtlasPtr, int size)
 	{
 		// Get emoji-specific ranges (separate from main font to avoid conflicts)
 		uint* emojiRanges = FontHelper.GetEmojiRanges();
@@ -1103,11 +1103,11 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="pointSize">The desired point size.</param>
 	/// <returns>The optimal pixel size for crisp rendering.</returns>
-	private static float CalculateOptimalPixelSize(int pointSize) =>
+	internal static float CalculateOptimalPixelSize(int pointSize) =>
 		// Round to exact pixels for crisp rendering, avoiding fractional sizes that cause blurry text
 		Math.Max(1.0f, MathF.Round(pointSize * ScaleFactor));
 
-	private static void StorePinnedFontData(List<GCHandle> newPinnedData)
+	internal static void StorePinnedFontData(List<GCHandle> newPinnedData)
 	{
 		// Free old font data handles before storing new ones to prevent memory leak
 		foreach (GCHandle handle in currentPinnedFontData)
@@ -1211,7 +1211,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Checks if the OpenGL context has changed and handles texture reloading if needed
 	/// </summary>
-	private static void CheckAndHandleContextChange()
+	internal static void CheckAndHandleContextChange()
 	{
 		if (gl == null)
 		{
@@ -1236,7 +1236,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Reloads all previously loaded textures in the new context
 	/// </summary>
-	private static void ReloadAllTextures()
+	internal static void ReloadAllTextures()
 	{
 		if (gl == null)
 		{
@@ -1282,7 +1282,7 @@ public static partial class ImGuiApp
 	/// Updates performance monitoring metrics.
 	/// </summary>
 	/// <param name="dt">The delta time since the last frame.</param>
-	private static void UpdatePerformanceMonitoring(float dt)
+	internal static void UpdatePerformanceMonitoring(float dt)
 	{
 		performanceFrameTimes.Enqueue(dt);
 		performanceFrameTimeSum += dt;
@@ -1314,7 +1314,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Renders the performance monitor window.
 	/// </summary>
-	private static void RenderPerformanceMonitor()
+	internal static void RenderPerformanceMonitor()
 	{
 		if (!showPerformanceMonitor)
 		{
@@ -1342,7 +1342,7 @@ public static partial class ImGuiApp
 			if (performanceFpsHistory.Count > 1)
 			{
 				float[] fpsArray = [.. performanceFpsHistory];
-				float currentFps = fpsArray.Length > 0 ? fpsArray[^1] : 0;
+				float currentFps = fpsArray[^1];
 				float avgFps = performanceFrameTimes.Count > 0 ? performanceFrameTimes.Count / performanceFrameTimeSum : 0;
 
 				ImGui.Text($"Current FPS: {currentFps:F1} | Average FPS: {avgFps:F1}");

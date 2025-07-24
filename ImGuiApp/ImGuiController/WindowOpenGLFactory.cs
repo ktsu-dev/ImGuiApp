@@ -14,7 +14,7 @@ using Silk.NET.Windowing;
 /// <exception cref="ArgumentNullException">Thrown when window is null.</exception>
 public class WindowOpenGLFactory(IWindow window) : IOpenGLFactory
 {
-	private readonly IWindow _window = window ?? throw new ArgumentNullException(nameof(window));
+	internal readonly IWindow _window = window ?? throw new ArgumentNullException(nameof(window));
 
 	/// <inheritdoc/>
 	public GL CreateGL() => GL.GetApi(_window);
