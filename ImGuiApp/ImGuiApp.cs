@@ -482,6 +482,8 @@ public static partial class ImGuiApp
 			throw new InvalidOperationException("Application is already running.");
 		}
 
+		AdjustConfigForStartup(config);
+
 		DebugLogger.Log("ImGuiApp.Start: Creating invoker and setting config");
 		Invoker = new();
 		Config = config;
@@ -521,6 +523,17 @@ public static partial class ImGuiApp
 		}
 	}
 
+	internal static void AdjustConfigForStartup(ImGuiAppConfig config)
+	{
+		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Minimized)
+		{
+			// Automatically convert minimized state to normal to prevent startup issues
+			// This commonly happens when restoring persisted window state
+			config.InitialWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			DebugLogger.Log("ImGuiApp.Start: Initial window state was minimized, automatically converted to normal for proper startup.");
+		}
+	}
+
 	internal static void ValidateConfig(ImGuiAppConfig config)
 	{
 		if (config.InitialWindowState.Size.X <= 0 || config.InitialWindowState.Size.Y <= 0)
@@ -531,16 +544,6 @@ public static partial class ImGuiApp
 		if (config.InitialWindowState.Pos.X < 0 || config.InitialWindowState.Pos.Y < 0)
 		{
 			throw new ArgumentException("Initial window position must be non-negative.", nameof(config));
-		}
-
-		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Minimized)
-		{
-			throw new ArgumentException("Initial window state cannot be minimized.", nameof(config));
-		}
-
-		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Fullscreen)
-		{
-			throw new ArgumentException("Initial window state cannot be fullscreen.", nameof(config));
 		}
 
 		if (!string.IsNullOrEmpty(config.IconPath) && !File.Exists(config.IconPath))

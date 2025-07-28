@@ -103,21 +103,14 @@ public sealed class ImGuiAppWindowManagementTests
 	}
 
 	[TestMethod]
-	public void ValidateConfig_WithMinimizedState_ThrowsArgumentException()
+	public void AdjustConfigForStartup_WithMinimizedState_ConvertsToNormal()
 	{
 		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
 		config.InitialWindowState.LayoutState = WindowState.Minimized;
 
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
+		ImGuiApp.AdjustConfigForStartup(config);
 
-	[TestMethod]
-	public void ValidateConfig_WithFullscreenState_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.LayoutState = WindowState.Fullscreen;
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
+		Assert.AreEqual(WindowState.Normal, config.InitialWindowState.LayoutState);
 	}
 
 	[TestMethod]
