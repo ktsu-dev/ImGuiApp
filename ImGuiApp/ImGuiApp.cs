@@ -535,12 +535,18 @@ public static partial class ImGuiApp
 
 		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Minimized)
 		{
-			throw new ArgumentException("Initial window state cannot be minimized.", nameof(config));
+			// Automatically convert minimized state to normal to prevent startup issues
+			// This commonly happens when restoring persisted window state
+			config.InitialWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			Console.WriteLine("Warning: Initial window state was minimized, automatically converted to normal for proper startup.");
 		}
 
 		if (config.InitialWindowState.LayoutState == Silk.NET.Windowing.WindowState.Fullscreen)
 		{
-			throw new ArgumentException("Initial window state cannot be fullscreen.", nameof(config));
+			// Automatically convert fullscreen state to normal to prevent startup issues
+			// This commonly happens when restoring persisted window state
+			config.InitialWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
+			Console.WriteLine("Warning: Initial window state was fullscreen, automatically converted to normal for proper startup.");
 		}
 
 		if (!string.IsNullOrEmpty(config.IconPath) && !File.Exists(config.IconPath))
