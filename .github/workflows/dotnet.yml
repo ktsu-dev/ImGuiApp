@@ -10,6 +10,7 @@ on:
       ["**.md", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
   schedule:
     - cron: "0 23 * * *" # Daily at 11 PM UTC
+  workflow_dispatch: # Allow manual triggers
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
