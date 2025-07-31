@@ -12,6 +12,7 @@ using ktsu.ImGuiAppDemo.Properties;
 /// <summary>
 /// Demo for data visualization features
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
 internal sealed class DataVisualizationDemo : IDemoTab
 {
 	private readonly List<float> plotValues = [];

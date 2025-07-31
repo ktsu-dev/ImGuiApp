@@ -18,10 +18,7 @@ internal sealed class AdvancedWidgetsDemo : IDemoTab
 
 	public string TabName => "Advanced Widgets";
 
-	public void Update(float deltaTime)
-	{
-		animationTime += deltaTime;
-	}
+	public void Update(float deltaTime) => animationTime += deltaTime;
 
 	public void Render()
 	{

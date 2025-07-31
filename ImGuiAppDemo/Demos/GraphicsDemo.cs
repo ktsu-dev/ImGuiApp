@@ -6,6 +6,7 @@ namespace ktsu.ImGuiApp.Demo.Demos;
 
 using System.Numerics;
 using Hexa.NET.ImGui;
+using ktsu.Extensions;
 using ktsu.ImGuiApp;
 using ktsu.StrongPaths;
 
@@ -21,10 +22,7 @@ internal sealed class GraphicsDemo : IDemoTab
 
 	public string TabName => "Graphics & Drawing";
 
-	public void Update(float deltaTime)
-	{
-		animationTime += deltaTime;
-	}
+	public void Update(float deltaTime) => animationTime += deltaTime;
 
 	public void Render()
 	{

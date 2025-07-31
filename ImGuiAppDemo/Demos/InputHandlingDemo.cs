@@ -15,7 +15,6 @@ internal sealed class InputHandlingDemo : IDemoTab
 {
 	private readonly StringBuilder textBuffer = new(1024);
 	private bool wrapText = true;
-	private float textSpeed = 50.0f;
 	private bool showModal;
 	private bool showPopup;
 	private string modalResult = "";
@@ -30,11 +29,9 @@ internal sealed class InputHandlingDemo : IDemoTab
 		textBuffer.Append("ImGui supports multi-line text editing with syntax highlighting possibilities.");
 	}
 
-	public void Update(float deltaTime)
-	{
+	public void Update(float deltaTime) =>
 		// Handle modals and popups
 		HandleModalAndPopups();
-	}
 
 	public void Render()
 	{

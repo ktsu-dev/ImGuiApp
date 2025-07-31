@@ -29,7 +29,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 
 		// Update gizmo view matrix for rotation demo
 		float cameraAngle = animationTime * 0.2f;
-		Vector3 cameraPos = new Vector3(MathF.Sin(cameraAngle) * 5f, 3f, MathF.Cos(cameraAngle) * 5f);
+		Vector3 cameraPos = new(MathF.Sin(cameraAngle) * 5f, 3f, MathF.Cos(cameraAngle) * 5f);
 		gizmoView = Matrix4x4.CreateLookAt(cameraPos, Vector3.Zero, Vector3.UnitY);
 	}
 
@@ -68,14 +68,10 @@ internal sealed class ImGuizmoDemo : IDemoTab
 
 			// Display transform matrix values
 			ImGui.Text("Transform Matrix:");
-			unsafe
-			{
-				float* matrixPtr = (float*)&gizmoTransform;
-				for (int row = 0; row < 4; row++)
-				{
-					ImGui.Text($"[{matrixPtr[row * 4]:F2}, {matrixPtr[row * 4 + 1]:F2}, {matrixPtr[row * 4 + 2]:F2}, {matrixPtr[row * 4 + 3]:F2}]");
-				}
-			}
+			ImGui.Text($"[{gizmoTransform.M11:F2}, {gizmoTransform.M12:F2}, {gizmoTransform.M13:F2}, {gizmoTransform.M14:F2}]");
+			ImGui.Text($"[{gizmoTransform.M21:F2}, {gizmoTransform.M22:F2}, {gizmoTransform.M23:F2}, {gizmoTransform.M24:F2}]");
+			ImGui.Text($"[{gizmoTransform.M31:F2}, {gizmoTransform.M32:F2}, {gizmoTransform.M33:F2}, {gizmoTransform.M34:F2}]");
+			ImGui.Text($"[{gizmoTransform.M41:F2}, {gizmoTransform.M42:F2}, {gizmoTransform.M43:F2}, {gizmoTransform.M44:F2}]");
 
 			if (ImGui.Button("Reset Transform"))
 			{
@@ -95,15 +91,15 @@ internal sealed class ImGuizmoDemo : IDemoTab
 				ImGuizmo.SetRect(gizmoPos.X, gizmoPos.Y, gizmoSize.X, gizmoSize.Y);
 
 				// Create view and projection matrices for the gizmo
-				var view = gizmoView;
-				var proj = gizmoProjection;
+				Matrix4x4 view = gizmoView;
+				Matrix4x4 proj = gizmoProjection;
 
 				// Draw grid
 				Matrix4x4 identity = Matrix4x4.Identity;
 				ImGuizmo.DrawGrid(ref view, ref proj, ref identity, 10.0f);
 
 				// Draw the gizmo
-				var transform = gizmoTransform;
+				Matrix4x4 transform = gizmoTransform;
 				if (ImGuizmo.Manipulate(ref view, ref proj, gizmoOperation, gizmoMode, ref transform))
 				{
 					gizmoTransform = transform;

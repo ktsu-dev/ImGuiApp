@@ -11,6 +11,7 @@ using Hexa.NET.ImPlot;
 /// <summary>
 /// Demo for ImPlot advanced plotting
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
 internal sealed class ImPlotDemo : IDemoTab
 {
 	private readonly List<float> sinData = [];
@@ -31,7 +32,7 @@ internal sealed class ImPlotDemo : IDemoTab
 			float x = i * 0.1f;
 			sinData.Add(MathF.Sin(x));
 			cosData.Add(MathF.Cos(x));
-			noiseData.Add((float)(plotRandom.NextDouble() * 2.0 - 1.0));
+			noiseData.Add((float)((plotRandom.NextDouble() * 2.0) - 1.0));
 		}
 	}
 
@@ -71,7 +72,7 @@ internal sealed class ImPlotDemo : IDemoTab
 					float x = i * 0.1f;
 					sinData.Add(MathF.Sin(x + plotTime));
 					cosData.Add(MathF.Cos(x + plotTime));
-					noiseData.Add((float)(plotRandom.NextDouble() * 2.0 - 1.0));
+					noiseData.Add((float)((plotRandom.NextDouble() * 2.0) - 1.0));
 				}
 			}
 

@@ -5,6 +5,7 @@
 namespace ktsu.ImGuiApp.Demo;
 
 using Hexa.NET.ImGui;
+using ktsu.Extensions;
 using ktsu.ImGuiApp;
 using ktsu.ImGuiApp.Demo.Demos;
 using ktsu.StrongPaths;
@@ -60,7 +61,7 @@ internal static class ImGuiAppDemo
 	private static void OnRender(float dt)
 	{
 		// Update all demo tabs
-		foreach (var demo in demoTabs)
+		foreach (IDemoTab demo in demoTabs)
 		{
 			demo.Update(dt);
 		}
@@ -81,7 +82,7 @@ internal static class ImGuiAppDemo
 		if (ImGui.BeginTabBar("DemoTabs", ImGuiTabBarFlags.None))
 		{
 			// Render all demo tabs
-			foreach (var demo in demoTabs)
+			foreach (IDemoTab demo in demoTabs)
 			{
 				demo.Render();
 			}

@@ -16,8 +16,6 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 	private int counter;
 	private bool checkboxState;
 	private string inputText = "Type here...";
-	private Vector3 colorPickerValue = new(0.4f, 0.7f, 0.2f);
-	private Vector4 color4Value = new(1.0f, 0.5f, 0.2f, 1.0f);
 	private int comboSelection;
 	private readonly string[] comboItems = ["Item 1", "Item 2", "Item 3", "Item 4"];
 	private int listboxSelection;

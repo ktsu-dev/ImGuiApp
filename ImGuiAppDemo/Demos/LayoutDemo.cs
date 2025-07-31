@@ -10,6 +10,7 @@ using Hexa.NET.ImGui;
 /// <summary>
 /// Demo for layout systems and tables
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
 internal sealed class LayoutDemo : IDemoTab
 {
 	private readonly List<DemoItem> tableData = [];

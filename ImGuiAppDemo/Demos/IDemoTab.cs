@@ -12,16 +12,16 @@ internal interface IDemoTab
 	/// <summary>
 	/// Gets the name of the tab to display in the UI
 	/// </summary>
-	string TabName { get; }
+	public string TabName { get; }
 
 	/// <summary>
 	/// Renders the demo tab content
 	/// </summary>
-	void Render();
+	public void Render();
 
 	/// <summary>
 	/// Updates the demo state (called each frame)
 	/// </summary>
 	/// <param name="deltaTime">Time elapsed since last frame</param>
-	void Update(float deltaTime);
+	public void Update(float deltaTime);
 }

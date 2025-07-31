@@ -84,7 +84,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			// Render nodes
 			for (int i = 0; i < nodes.Count; i++)
 			{
-				var node = nodes[i];
+				SimpleNode node = nodes[i];
 				ImNodes.BeginNode(node.Id);
 
 				// Node title
@@ -118,7 +118,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 
 			// Render links
-			foreach (var link in links)
+			foreach (SimpleLink link in links)
 			{
 				ImNodes.Link(link.Id, link.InputPinId, link.OutputPinId);
 			}
@@ -126,17 +126,34 @@ internal sealed class ImNodesDemo : IDemoTab
 			ImNodes.EndNodeEditor();
 
 			// Handle new links
-			int startPin, endPin;
-			if (ImNodes.IsLinkCreated(out startPin, out endPin))
+			bool isLinkCreated;
+			int startPin = 0;
+			int endPin = 0;
+
+			unsafe
+			{
+				isLinkCreated = ImNodes.IsLinkCreated(&startPin, &endPin);
+			}
+
+			if (isLinkCreated)
 			{
 				links.Add(new SimpleLink(nextLinkId++, startPin, endPin));
 			}
 
-			// Handle link deletion
-			int linkId;
-			if (ImNodes.IsLinkDestroyed(out linkId))
+			// Handle link destruction
+			bool isLinkDestroyed;
+			int linkId = 0;
+			int safeLinkId = 0;
+
+			unsafe
 			{
-				links.RemoveAll(link => link.Id == linkId);
+				isLinkDestroyed = ImNodes.IsLinkDestroyed(&linkId);
+				safeLinkId = linkId; // Store the link ID safely
+			}
+
+			if (isLinkDestroyed)
+			{
+				links.RemoveAll(link => link.Id == safeLinkId);
 			}
 
 			// Display node count
