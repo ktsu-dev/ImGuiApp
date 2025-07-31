@@ -8,7 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp;
-using ktsu.StrongPaths;
+using ktsu.Semantics;
 
 /// <summary>
 /// Demo for graphics and drawing capabilities

@@ -7,6 +7,7 @@ namespace ktsu.ImGuiApp.Test;
 using System;
 using Hexa.NET.ImGui;
 using ktsu.ImGuiApp.ImGuiController;
+using ktsu.Semantics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
@@ -179,8 +180,8 @@ public class AdvancedCoverageTests
 	[TestMethod]
 	public void ImGuiApp_Textures_MultipleAccess_ReturnsSameInstance()
 	{
-		System.Collections.Concurrent.ConcurrentDictionary<StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures1 = ImGuiApp.Textures;
-		System.Collections.Concurrent.ConcurrentDictionary<StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures2 = ImGuiApp.Textures;
+		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> textures1 = ImGuiApp.Textures;
+		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> textures2 = ImGuiApp.Textures;
 
 		// Should return the same collection instance
 		Assert.AreSame(textures1, textures2);

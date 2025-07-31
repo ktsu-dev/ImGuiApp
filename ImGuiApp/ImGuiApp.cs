@@ -15,7 +15,7 @@ using ktsu.Extensions;
 using ktsu.ImGuiApp.ImGuiController;
 using ktsu.Invoker;
 using ktsu.ScopedAction;
-using ktsu.StrongPaths;
+using ktsu.Semantics;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;

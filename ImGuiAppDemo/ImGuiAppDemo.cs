@@ -8,7 +8,7 @@ using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.ImGuiApp;
 using ktsu.ImGuiApp.Demo.Demos;
-using ktsu.StrongPaths;
+using ktsu.Semantics;
 
 internal static class ImGuiAppDemo
 {

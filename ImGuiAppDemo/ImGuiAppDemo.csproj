@@ -12,6 +12,7 @@
     <PackageReference Include="Hexa.NET.ImGuizmo" />
     <PackageReference Include="Hexa.NET.ImNodes" />
     <PackageReference Include="Hexa.NET.ImPlot" />
+    <PackageReference Include="ktsu.Semantics" />
   </ItemGroup>
 
   <ItemGroup>

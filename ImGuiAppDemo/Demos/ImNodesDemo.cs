@@ -25,9 +25,6 @@ internal sealed class ImNodesDemo : IDemoTab
 
 	public ImNodesDemo()
 	{
-		// Initialize ImNodes context
-		ImNodes.CreateContext();
-
 		// Initialize demo data for ImNodes
 		nodes.Add(new SimpleNode(nextNodeId++, new Vector2(50, 50), "Input Node", [], [1, 2]));
 		nodes.Add(new SimpleNode(nextNodeId++, new Vector2(250, 100), "Process Node", [3], [4]));

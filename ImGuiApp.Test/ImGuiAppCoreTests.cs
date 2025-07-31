@@ -6,7 +6,7 @@ namespace ktsu.ImGuiApp.Test;
 
 using System.Collections.Concurrent;
 using ktsu.Extensions;
-using ktsu.StrongPaths;
+using ktsu.Semantics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

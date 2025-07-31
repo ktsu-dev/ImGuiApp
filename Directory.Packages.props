@@ -14,7 +14,8 @@
     <PackageVersion Include="Hexa.NET.ImPlot" Version="2.2.8.4" />
     <PackageVersion Include="ktsu.Invoker" Version="1.1.0" />
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.2" />
-    <PackageVersion Include="ktsu.StrongPaths" Version="1.3.2" />
+    <PackageVersion Include="ktsu.Extensions" Version="1.5.6" />
+    <PackageVersion Include="ktsu.Semantics" Version="1.0.19" />
     <PackageVersion Include="Silk.NET" Version="2.22.0" />
     <PackageVersion Include="Silk.NET.Assimp" Version="2.22.0" />
     <PackageVersion Include="Silk.NET.Direct3D12" Version="2.22.0" />

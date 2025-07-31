@@ -7,9 +7,10 @@
 
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.Invoker" />
     <PackageReference Include="ktsu.ScopedAction" />
-    <PackageReference Include="ktsu.StrongPaths" />
+    <PackageReference Include="ktsu.Semantics" />
     <PackageReference Include="Silk.NET" />
     <PackageReference Include="Silk.NET.Assimp" />
     <PackageReference Include="Silk.NET.Direct3D12" />

@@ -115,7 +115,16 @@ internal class ImGuiController : IDisposable
 		_windowWidth = view.Size.X;
 		_windowHeight = view.Size.Y;
 
-		ImGui.CreateContext();
+		ImGuiContextPtr imguiContext = ImGui.CreateContext();
+
+		// Initialize ImGui extensions (ImGuizmo, ImNodes, ImPlot) if available
+		ImGuiExtensionManager.Initialize();
+
+		// Set the ImGui context for all extensions after context creation
+		ImGuiExtensionManager.SetImGuiContext(imguiContext);
+
+		// Create extension contexts and apply dark styles
+		ImGuiExtensionManager.CreateExtensionContexts();
 
 		ImGui.StyleColorsDark();
 	}
@@ -124,6 +133,9 @@ internal class ImGuiController : IDisposable
 	{
 		ImGui.NewFrame();
 		_frameBegun = true;
+
+		// Call BeginFrame for all detected ImGui extensions
+		ImGuiExtensionManager.BeginFrame();
 		_keyboard = _input?.Keyboards[0];
 		_mouse = _input?.Mice[0];
 		if (_view is not null)
@@ -932,6 +944,9 @@ internal class ImGuiController : IDisposable
 
 				_fontTexture.Dispose();
 				_shader.Dispose();
+
+				// Cleanup extension contexts before destroying ImGui context
+				ImGuiExtensionManager.Cleanup();
 
 				ImGui.DestroyContext();
 			}

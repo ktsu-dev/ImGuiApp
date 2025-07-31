@@ -87,7 +87,9 @@ internal sealed class ImGuizmoDemo : IDemoTab
 			// Set up ImGuizmo for this viewport
 			if (gizmoEnabled)
 			{
-				ImGuizmo.SetDrawlist(ImGui.GetWindowDrawList());
+				// IMPORTANT: Set the drawlist and enable ImGuizmo and set the rect, before using any ImGuizmo functions
+				ImGuizmo.SetDrawlist();
+				ImGuizmo.Enable(true);
 				ImGuizmo.SetRect(gizmoPos.X, gizmoPos.Y, gizmoSize.X, gizmoSize.Y);
 
 				// Create view and projection matrices for the gizmo
@@ -98,12 +100,17 @@ internal sealed class ImGuizmoDemo : IDemoTab
 				Matrix4x4 identity = Matrix4x4.Identity;
 				ImGuizmo.DrawGrid(ref view, ref proj, ref identity, 10.0f);
 
+				// IMPORTANT: Use ID management for proper gizmo isolation
+				ImGuizmo.PushID(0);
+
 				// Draw the gizmo
 				Matrix4x4 transform = gizmoTransform;
 				if (ImGuizmo.Manipulate(ref view, ref proj, gizmoOperation, gizmoMode, ref transform))
 				{
 					gizmoTransform = transform;
 				}
+
+				ImGuizmo.PopID();
 
 				// Display gizmo state
 				ImGui.SetCursorScreenPos(gizmoPos + new Vector2(10, gizmoSize.Y - 60));
