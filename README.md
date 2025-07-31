@@ -15,7 +15,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 
 - **Simple API**: Create ImGui applications with minimal boilerplate code
 - **Full Integration**: Seamless integration with Silk.NET for OpenGL and input handling
-- **Window Management**: Automatic window state, rendering, and input handling
+- **Window Management**: Automatic window state, rendering, and input handling with startup state validation
 - **Performance Optimization**: Sleep-based throttled rendering with lowest-selection logic when unfocused, idle, or not visible to maximize resource savings
 - **PID Frame Limiting**: Precision frame rate control using a PID controller with comprehensive auto-tuning capabilities for highly accurate target FPS achievement
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
@@ -27,6 +27,8 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
 - **Positioning Guards**: Offscreen positioning checks to keep windows visible
+- **Rendering Precision**: Enhanced ImGui rendering with pixel-perfect alignment and sub-pixel precision controls
+- **Error Recovery**: Built-in error recovery features with configurable debugging options
 - **Modern .NET**: Supports .NET 9 and newer
 - **Active Development**: Open-source and actively maintained
 
@@ -34,7 +36,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 
 ### Prerequisites
 
-- .NET 9.0 or later
+- .NET 9.0 or later (currently using .NET 9.0.301)
 
 ## Installation
 
@@ -522,11 +524,20 @@ Check out the included demo project to see a comprehensive working example:
 1. Clone or download the repository
 2. Open the solution in Visual Studio (or run dotnet build)
 3. Start the ImGuiAppDemo project to see a feature-rich ImGui application
-4. Explore the different tabs:
-   - **Unicode & Emojis**: Test character rendering with extended Unicode support
-   - **Widgets & Layout**: Comprehensive ImGui widget demonstrations
-   - **Graphics & Plotting**: Custom drawing and data visualization examples
-   - **Nerd Font Icons**: Browse and test various icon sets and glyphs
+4. Explore the comprehensive demo tabs:
+   - **Basic Widgets**: Essential UI elements like buttons, inputs, sliders
+   - **Advanced Widgets**: Complex controls, combo boxes, list boxes, color pickers
+   - **Layout & Tables**: Column layouts, advanced tables with sorting and resizing
+   - **Graphics & Drawing**: Custom drawing using ImDrawList for canvas-like functionality
+   - **Data Visualization**: Real-time plotting with performance metrics and graphs
+   - **Input Handling**: Mouse input information and drag-and-drop demonstrations
+   - **Animation**: Dynamic content and animated elements
+   - **Unicode & Emojis**: Extended character support with comprehensive symbol sets
+   - **Nerd Font Icons**: Icon sets and specialized glyph demonstrations
+   - **ImGuizmo**: 3D gizmo controls for object manipulation
+   - **ImNodes**: Node-based editor demonstrations
+   - **ImPlot**: Advanced plotting and charting capabilities
+   - **Utilities & Tools**: Modal dialogs, popups, file operations, and system information
 5. Use the debug menu to access additional features:
    - **Debug > Show Performance Monitor**: Real-time FPS graph showing PID controller performance with comprehensive auto-tuning capabilities
    - **Debug > Show ImGui Demo**: Official ImGui demo window
@@ -540,6 +551,8 @@ The **Performance Monitor** includes:
 - **Interactive tuning controls** to start/stop optimization and view detailed results
 
 Perfect for seeing both the throttling system and PID controller work in real-time!
+
+The demo application has been recently enhanced with comprehensive ImGui feature demonstrations, including advanced rendering precision improvements with pixel-perfect alignment, error recovery features, and extensive widget showcases across 13 different demo tabs.
 
 ## Contributing
 
@@ -565,7 +578,8 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui
-- [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
+- [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing (includes OpenGL, Input, SDL2, and additional extensions)
+- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Cross-platform image processing library
 - All contributors and the .NET community for their support
 
 ## Support
