@@ -8,6 +8,9 @@ using System.Numerics;
 using System.Text;
 
 using Hexa.NET.ImGui;
+using Hexa.NET.ImGuizmo;
+using Hexa.NET.ImNodes;
+using Hexa.NET.ImPlot;
 
 using ktsu.Extensions;
 using ktsu.ImGuiApp;
@@ -75,6 +78,31 @@ internal static class ImGuiAppDemo
 	private static int radioSelection;
 	private static string modalInputBuffer = "";
 
+	// ImGuizmo demo state
+	private static Matrix4x4 gizmoTransform = Matrix4x4.Identity;
+	private static Matrix4x4 gizmoView = Matrix4x4.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.UnitY);
+	private static Matrix4x4 gizmoProjection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 4f, 16f / 9f, 0.1f, 100f);
+	private static ImGuizmoOperation gizmoOperation = ImGuizmoOperation.Translate;
+	private static ImGuizmoMode gizmoMode = ImGuizmoMode.Local;
+	private static bool gizmoEnabled = true;
+
+	// ImNodes demo state
+	private static int nextNodeId = 1;
+	private static int nextLinkId = 1;
+	private static readonly List<SimpleNode> nodes = [];
+	private static readonly List<SimpleLink> links = [];
+
+	// ImPlot demo state
+	private static readonly List<float> sinData = [];
+	private static readonly List<float> cosData = [];
+	private static readonly List<float> noiseData = [];
+	private static float plotTime;
+	private static readonly Random plotRandom = new();
+
+	private sealed record SimpleNode(int Id, Vector2 Position, string Name, List<int> InputPins, List<int> OutputPins);
+	private sealed record SimpleLink(int Id, int InputPinId, int OutputPinId);
+	private sealed record SimplePin(int Id, int NodeId, string Name, bool IsOutput);
+
 	private sealed record DemoItem(int Id, string Name, string Category, float Value, bool Active);
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "<Pending>")]
@@ -96,6 +124,27 @@ internal static class ImGuiAppDemo
 		textBuffer.Append("This is a demonstration of ImGui text editing capabilities.\n");
 		textBuffer.Append("You can edit this text, and it will update in real-time.\n");
 		textBuffer.Append("ImGui supports multi-line text editing with syntax highlighting possibilities.");
+
+		// Initialize ImNodes context
+		ImNodes.CreateContext();
+
+		// Initialize demo data for ImNodes
+		nodes.Add(new SimpleNode(nextNodeId++, new Vector2(50, 50), "Input Node", [], [1, 2]));
+		nodes.Add(new SimpleNode(nextNodeId++, new Vector2(250, 100), "Process Node", [3], [4]));
+		nodes.Add(new SimpleNode(nextNodeId++, new Vector2(450, 50), "Output Node", [5, 6], []));
+
+		// Create some demo links
+		links.Add(new SimpleLink(nextLinkId++, 1, 3)); // Connect Input to Process
+		links.Add(new SimpleLink(nextLinkId++, 4, 5)); // Connect Process to Output
+
+		// Initialize plot data
+		for (int i = 0; i < 100; i++)
+		{
+			float x = i * 0.1f;
+			sinData.Add(MathF.Sin(x));
+			cosData.Add(MathF.Cos(x));
+			noiseData.Add((float)(plotRandom.NextDouble() * 2.0 - 1.0));
+		}
 	}
 
 	private static void Main() => ImGuiApp.Start(new()
@@ -172,6 +221,9 @@ internal static class ImGuiAppDemo
 			RenderAnimationTab();
 			RenderUnicodeTab();
 			RenderNerdFontTab();
+			RenderImGuizmoTab();
+			RenderImNodesTab();
+			RenderImPlotTab();
 			RenderUtilityTab();
 			ImGui.EndTabBar();
 		}
@@ -839,6 +891,290 @@ internal static class ImGuiAppDemo
 		}
 	}
 
+	private static void RenderImGuizmoTab()
+	{
+		if (ImGui.BeginTabItem("ImGuizmo 3D Gizmos"))
+		{
+			ImGui.TextWrapped("ImGuizmo provides 3D manipulation gizmos for translate, rotate, and scale operations.");
+			ImGui.Separator();
+
+			// Gizmo controls
+			ImGui.Text("Gizmo Controls:");
+			ImGui.Checkbox("Enable Gizmo", ref gizmoEnabled);
+
+			// Operation selection
+			ImGui.Text("Operation:");
+			string[] operationNames = Enum.GetNames<ImGuizmoOperation>();
+			ImGuizmoOperation[] operations = Enum.GetValues<ImGuizmoOperation>();
+			int opIndex = Array.IndexOf(operations, gizmoOperation);
+			if (ImGui.Combo("##Operation", ref opIndex, operationNames, operationNames.Length))
+			{
+				gizmoOperation = operations[opIndex];
+			}
+
+			// Mode selection
+			ImGui.Text("Mode:");
+			string[] modeNames = Enum.GetNames<ImGuizmoMode>();
+			ImGuizmoMode[] modes = Enum.GetValues<ImGuizmoMode>();
+			int modeIndex = Array.IndexOf(modes, gizmoMode);
+			if (ImGui.Combo("##Mode", ref modeIndex, modeNames, modeNames.Length))
+			{
+				gizmoMode = modes[modeIndex];
+			}
+
+			ImGui.Separator();
+
+			// Display transform matrix values
+			ImGui.Text("Transform Matrix:");
+			unsafe
+			{
+				float* matrixPtr = (float*)&gizmoTransform;
+				for (int row = 0; row < 4; row++)
+				{
+					ImGui.Text($"[{matrixPtr[row * 4]:F2}, {matrixPtr[row * 4 + 1]:F2}, {matrixPtr[row * 4 + 2]:F2}, {matrixPtr[row * 4 + 3]:F2}]");
+				}
+			}
+
+			if (ImGui.Button("Reset Transform"))
+			{
+				gizmoTransform = Matrix4x4.Identity;
+			}
+
+			ImGui.Separator();
+
+			// Gizmo viewport
+			Vector2 gizmoSize = new(400, 300);
+			Vector2 gizmoPos = ImGui.GetCursorScreenPos();
+
+			// Set up ImGuizmo for this viewport
+			if (gizmoEnabled)
+			{
+				ImGuizmo.SetDrawlist(ImGui.GetWindowDrawList());
+				ImGuizmo.SetRect(gizmoPos.X, gizmoPos.Y, gizmoSize.X, gizmoSize.Y);
+
+				// Create view and projection matrices for the gizmo
+				var view = gizmoView;
+				var proj = gizmoProjection;
+
+				// Draw grid
+				Matrix4x4 identity = Matrix4x4.Identity;
+				ImGuizmo.DrawGrid(ref view, ref proj, ref identity, 10.0f);
+
+				// Draw the gizmo
+				var transform = gizmoTransform;
+				if (ImGuizmo.Manipulate(ref view, ref proj, gizmoOperation, gizmoMode, ref transform))
+				{
+					gizmoTransform = transform;
+				}
+
+				// Display gizmo state
+				ImGui.SetCursorScreenPos(gizmoPos + new Vector2(10, gizmoSize.Y - 60));
+				ImGui.Text($"Gizmo Over: {ImGuizmo.IsOver()}");
+				ImGui.Text($"Gizmo Using: {ImGuizmo.IsUsing()}");
+			}
+
+			// Reserve space for the gizmo viewport
+			ImGui.SetCursorScreenPos(gizmoPos + new Vector2(0, gizmoSize.Y));
+			ImGui.Dummy(gizmoSize);
+
+			ImGui.EndTabItem();
+		}
+	}
+
+	private static void RenderImNodesTab()
+	{
+		if (ImGui.BeginTabItem("ImNodes Editor"))
+		{
+			ImGui.TextWrapped("ImNodes provides a node editor with support for nodes, pins, and connections.");
+			ImGui.Separator();
+
+			// Node editor controls
+			if (ImGui.Button("Add Node"))
+			{
+				Vector2 mousePos = ImGui.GetMousePos();
+				Vector2 canvasPos = ImGui.GetCursorScreenPos();
+				Vector2 nodePos = mousePos - canvasPos + new Vector2(0, 50); // Offset for controls
+
+				nodes.Add(new SimpleNode(
+					nextNodeId++,
+					nodePos,
+					$"Node {nodes.Count + 1}",
+					[nextNodeId, nextNodeId + 1], // Input pins
+					[nextNodeId + 2, nextNodeId + 3] // Output pins
+				));
+				nextNodeId += 4; // Reserve IDs for pins
+			}
+
+			ImGui.SameLine();
+			if (ImGui.Button("Clear All"))
+			{
+				nodes.Clear();
+				links.Clear();
+				nextNodeId = 1;
+				nextLinkId = 1;
+			}
+
+			ImGui.Separator();
+
+			// Node editor
+			ImNodes.BeginNodeEditor();
+
+			// Render nodes
+			for (int i = 0; i < nodes.Count; i++)
+			{
+				var node = nodes[i];
+				ImNodes.BeginNode(node.Id);
+
+				// Node title
+				ImNodes.BeginNodeTitleBar();
+				ImGui.TextUnformatted(node.Name);
+				ImNodes.EndNodeTitleBar();
+
+				// Input pins
+				for (int j = 0; j < node.InputPins.Count; j++)
+				{
+					int pinId = node.InputPins[j];
+					ImNodes.BeginInputAttribute(pinId);
+					ImGui.Text($"In {j + 1}");
+					ImNodes.EndInputAttribute();
+				}
+
+				// Node content
+				ImGui.Text($"Node ID: {node.Id}");
+
+				// Output pins
+				for (int j = 0; j < node.OutputPins.Count; j++)
+				{
+					int pinId = node.OutputPins[j];
+					ImNodes.BeginOutputAttribute(pinId);
+					ImGui.Indent(40);
+					ImGui.Text($"Out {j + 1}");
+					ImNodes.EndOutputAttribute();
+				}
+
+				ImNodes.EndNode();
+			}
+
+			// Render links
+			foreach (var link in links)
+			{
+				ImNodes.Link(link.Id, link.InputPinId, link.OutputPinId);
+			}
+
+			ImNodes.EndNodeEditor();
+
+			// Handle new links
+			int startPin, endPin;
+			if (ImNodes.IsLinkCreated(out startPin, out endPin))
+			{
+				links.Add(new SimpleLink(nextLinkId++, startPin, endPin));
+			}
+
+			// Handle link deletion
+			int linkId;
+			if (ImNodes.IsLinkDestroyed(out linkId))
+			{
+				links.RemoveAll(link => link.Id == linkId);
+			}
+
+			// Display node count
+			ImGui.Text($"Nodes: {nodes.Count}, Links: {links.Count}");
+
+			ImGui.EndTabItem();
+		}
+	}
+
+	private static void RenderImPlotTab()
+	{
+		if (ImGui.BeginTabItem("ImPlot Charts"))
+		{
+			ImGui.TextWrapped("ImPlot provides advanced plotting capabilities with various chart types.");
+			ImGui.Separator();
+
+			// Plot controls
+			if (ImGui.Button("Generate New Data"))
+			{
+				sinData.Clear();
+				cosData.Clear();
+				noiseData.Clear();
+
+				for (int i = 0; i < 100; i++)
+				{
+					float x = i * 0.1f;
+					sinData.Add(MathF.Sin(x + plotTime));
+					cosData.Add(MathF.Cos(x + plotTime));
+					noiseData.Add((float)(plotRandom.NextDouble() * 2.0 - 1.0));
+				}
+			}
+
+			ImGui.Separator();
+
+			// Line plot
+			if (ImPlot.BeginPlot("Trigonometric Functions", new Vector2(-1, 200)))
+			{
+				unsafe
+				{
+					fixed (float* sinPtr = sinData.ToArray())
+					fixed (float* cosPtr = cosData.ToArray())
+					{
+						ImPlot.PlotLine("sin(x)", sinPtr, sinData.Count);
+						ImPlot.PlotLine("cos(x)", cosPtr, cosData.Count);
+					}
+				}
+				ImPlot.EndPlot();
+			}
+
+			// Scatter plot
+			if (ImPlot.BeginPlot("Noise Data (Scatter)", new Vector2(-1, 200)))
+			{
+				unsafe
+				{
+					fixed (float* noisePtr = noiseData.ToArray())
+					{
+						ImPlot.PlotScatter("Random Noise", noisePtr, noiseData.Count);
+					}
+				}
+				ImPlot.EndPlot();
+			}
+
+			// Bar chart
+			if (ImPlot.BeginPlot("Sample Bar Chart", new Vector2(-1, 200)))
+			{
+				float[] barData = [1.0f, 2.5f, 3.2f, 1.8f, 4.1f, 2.9f, 3.6f];
+				unsafe
+				{
+					fixed (float* barPtr = barData)
+					{
+						ImPlot.PlotBars("Values", barPtr, barData.Length);
+					}
+				}
+				ImPlot.EndPlot();
+			}
+
+			// Real-time plot
+			if (ImPlot.BeginPlot("Real-time Data", new Vector2(-1, 200)))
+			{
+				// Update real-time data
+				if (plotValues.Count > 0)
+				{
+					unsafe
+					{
+						fixed (float* plotPtr = plotValues.ToArray())
+						{
+							ImPlot.PlotLine("Live Data", plotPtr, plotValues.Count);
+						}
+					}
+				}
+				ImPlot.EndPlot();
+			}
+
+			ImGui.Text($"Plot Time: {plotTime:F2}");
+			ImGui.Text($"Data Points: Sin({sinData.Count}), Cos({cosData.Count}), Noise({noiseData.Count})");
+
+			ImGui.EndTabItem();
+		}
+	}
+
 	private static void RenderModalAndPopups()
 	{
 		// Modal dialog
@@ -901,12 +1237,18 @@ internal static class ImGuiAppDemo
 	private static void UpdateAnimations(float dt)
 	{
 		animationTime += dt;
+		plotTime += dt;
 
 		// Bouncing animation
 		bounceOffset = MathF.Abs(MathF.Sin(animationTime * 3)) * 50;
 
 		// Pulse animation
 		pulseScale = 0.8f + (0.4f * MathF.Sin(animationTime * 4));
+
+		// Update gizmo view matrix for rotation demo
+		float cameraAngle = animationTime * 0.2f;
+		Vector3 cameraPos = new Vector3(MathF.Sin(cameraAngle) * 5f, 3f, MathF.Cos(cameraAngle) * 5f);
+		gizmoView = Matrix4x4.CreateLookAt(cameraPos, Vector3.Zero, Vector3.UnitY);
 	}
 
 	private static void RenderAboutWindow()
@@ -925,6 +1267,9 @@ internal static class ImGuiAppDemo
 		ImGui.Separator();
 		ImGui.Text("Built with:");
 		ImGui.BulletText("Hexa.NET.ImGui");
+		ImGui.BulletText("Hexa.NET.ImGuizmo - 3D manipulation gizmos");
+		ImGui.BulletText("Hexa.NET.ImNodes - Node editor system");
+		ImGui.BulletText("Hexa.NET.ImPlot - Advanced plotting library");
 		ImGui.BulletText("Silk.NET");
 		ImGui.BulletText("ktsu.ImGuiApp Framework");
 		ImGui.End();

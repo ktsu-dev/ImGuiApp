@@ -9,6 +9,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Hexa.NET.ImGuizmo" />
+    <PackageReference Include="Hexa.NET.ImNodes" />
+    <PackageReference Include="Hexa.NET.ImPlot" />
   </ItemGroup>
 
   <ItemGroup>
