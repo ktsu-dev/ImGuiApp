@@ -337,6 +337,8 @@ public static partial class ImGuiApp
 			UpdateWindowPerformance();
 			UpdatePerformanceMonitoring((float)delta);
 
+			// SetupContext prepares ImGui context for this frame
+			controller?.SetupContext();
 			controller?.Update((float)delta);
 			config.OnUpdate?.Invoke((float)delta);
 			Invoker.DoInvokes();
