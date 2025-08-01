@@ -4,7 +4,7 @@
 
 namespace ktsu.ImGuiApp;
 using Hexa.NET.ImGui;
-using ktsu.StrongPaths;
+using ktsu.Semantics;
 
 /// <summary>
 /// Represents information about a texture, including its file path, texture ID, width, and height.

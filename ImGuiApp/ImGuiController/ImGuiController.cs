@@ -45,6 +45,8 @@ internal class ImGuiController : IDisposable
 
 	internal bool _disposed;
 
+	internal ImGuiContextPtr imGuiContextPtr;
+
 	/// <summary>
 	/// Constructs a new ImGuiController.
 	/// </summary>
@@ -102,8 +104,8 @@ internal class ImGuiController : IDisposable
 
 		SetPerFrameImGuiData(1f / 60f);
 
-		DebugLogger.Log("ImGuiController: Beginning frame");
-		BeginFrame();
+		DebugLogger.Log("ImGuiController: Setting up input handlers");
+		SetupInputHandlers();
 		DebugLogger.Log("ImGuiController: Initialization completed");
 	}
 
@@ -115,15 +117,24 @@ internal class ImGuiController : IDisposable
 		_windowWidth = view.Size.X;
 		_windowHeight = view.Size.Y;
 
-		ImGui.CreateContext();
+		imGuiContextPtr = ImGui.CreateContext();
+
+		// Initialize ImGui extensions (ImGuizmo, ImNodes, ImPlot) if available
+		ImGuiExtensionManager.Initialize();
+
+		// Create extension contexts and apply dark styles
+		ImGuiExtensionManager.CreateExtensionContexts();
+
+		SetupContext();
 
 		ImGui.StyleColorsDark();
 	}
 
-	internal void BeginFrame()
+	/// <summary>
+	/// Sets up input event handlers. Should only be called once during initialization.
+	/// </summary>
+	internal void SetupInputHandlers()
 	{
-		ImGui.NewFrame();
-		_frameBegun = true;
 		_keyboard = _input?.Keyboards[0];
 		_mouse = _input?.Mice[0];
 		if (_view is not null)
@@ -145,6 +156,16 @@ internal class ImGuiController : IDisposable
 			_mouse.MouseMove += OnMouseMove;
 			_mouse.Scroll += OnMouseScroll;
 		}
+	}
+
+	/// <summary>
+	/// Sets up ImGui context for the current frame. Should be called every frame before Update().
+	/// </summary>
+	internal void SetupContext()
+	{
+		// Set context for ImGui and extensions
+		ImGui.SetCurrentContext(imGuiContextPtr);
+		ImGuiExtensionManager.SetImGuiContext(imGuiContextPtr);
 	}
 
 	/// <summary>
@@ -265,8 +286,13 @@ internal class ImGuiController : IDisposable
 		SetPerFrameImGuiData(deltaSeconds);
 		UpdateImGuiInput();
 
-		_frameBegun = true;
+		// Start ImGui frame first
 		ImGui.NewFrame();
+		_frameBegun = true;
+
+		// IMPORTANT: Call extension BeginFrame methods AFTER ImGui.NewFrame()
+		// ImGuizmo, ImNodes, and ImPlot require ImGui to have started the frame first
+		ImGuiExtensionManager.BeginFrame();
 	}
 
 	/// <summary>
@@ -932,6 +958,9 @@ internal class ImGuiController : IDisposable
 
 				_fontTexture.Dispose();
 				_shader.Dispose();
+
+				// Cleanup extension contexts before destroying ImGui context
+				ImGuiExtensionManager.Cleanup();
 
 				ImGui.DestroyContext();
 			}
