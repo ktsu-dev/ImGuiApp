@@ -25,16 +25,14 @@ internal sealed class AdvancedWidgetsDemo : IDemoTab
 		if (ImGui.BeginTabItem(TabName))
 		{
 			// Color controls
-			ImGui.Text("Color Controls:");
+			ImGui.SeparatorText("Color Controls:");
 			ImGui.ColorEdit3("Color RGB", ref colorPickerValue);
 			ImGui.ColorEdit4("Color RGBA", ref color4Value);
 			ImGui.SetNextItemWidth(200.0f);
 			ImGui.ColorPicker3("Color Picker", ref colorPickerValue);
 
-			ImGui.Separator();
-
 			// Tree view
-			ImGui.Text("Tree View:");
+			ImGui.SeparatorText("Tree View:");
 			if (ImGui.TreeNode("Root Node"))
 			{
 				for (int i = 0; i < 5; i++)
@@ -66,10 +64,8 @@ internal sealed class AdvancedWidgetsDemo : IDemoTab
 				ImGui.TreePop();
 			}
 
-			ImGui.Separator();
-
 			// Progress bars and loading indicators
-			ImGui.Text("Progress Indicators:");
+			ImGui.SeparatorText("Progress Indicators:");
 			float progress = ((float)Math.Sin(animationTime * 2.0) * 0.5f) + 0.5f;
 			ImGui.ProgressBar(progress, new Vector2(-1, 0), $"{progress * 100:F1}%");
 

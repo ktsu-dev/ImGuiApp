@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGuiApp.Demo.Demos;
 
+using System;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGuizmo;
@@ -15,7 +16,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 {
 	private Matrix4x4 gizmoTransform = Matrix4x4.Identity;
 	private Matrix4x4 gizmoView = Matrix4x4.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.UnitY);
-	private Matrix4x4 gizmoProjection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 4f, 16f / 9f, 0.1f, 100f);
+	private Matrix4x4 gizmoProjection;
 	private ImGuizmoOperation gizmoOperation = ImGuizmoOperation.Translate;
 	private ImGuizmoMode gizmoMode = ImGuizmoMode.Local;
 	private bool gizmoEnabled = true;
@@ -38,36 +39,31 @@ internal sealed class ImGuizmoDemo : IDemoTab
 		if (ImGui.BeginTabItem(TabName))
 		{
 			ImGui.TextWrapped("ImGuizmo provides 3D manipulation gizmos for translate, rotate, and scale operations.");
-			ImGui.Separator();
 
 			// Gizmo controls
-			ImGui.Text("Gizmo Controls:");
+			ImGui.SeparatorText("Gizmo Controls:.");
 			ImGui.Checkbox("Enable Gizmo", ref gizmoEnabled);
 
 			// Operation selection
-			ImGui.Text("Operation:");
 			string[] operationNames = Enum.GetNames<ImGuizmoOperation>();
 			ImGuizmoOperation[] operations = Enum.GetValues<ImGuizmoOperation>();
 			int opIndex = Array.IndexOf(operations, gizmoOperation);
-			if (ImGui.Combo("##Operation", ref opIndex, operationNames, operationNames.Length))
+			if (ImGui.Combo("Operation", ref opIndex, operationNames, operationNames.Length))
 			{
 				gizmoOperation = operations[opIndex];
 			}
 
 			// Mode selection
-			ImGui.Text("Mode:");
 			string[] modeNames = Enum.GetNames<ImGuizmoMode>();
 			ImGuizmoMode[] modes = Enum.GetValues<ImGuizmoMode>();
 			int modeIndex = Array.IndexOf(modes, gizmoMode);
-			if (ImGui.Combo("##Mode", ref modeIndex, modeNames, modeNames.Length))
+			if (ImGui.Combo("Mode", ref modeIndex, modeNames, modeNames.Length))
 			{
 				gizmoMode = modes[modeIndex];
 			}
 
-			ImGui.Separator();
-
 			// Display transform matrix values
-			ImGui.Text("Transform Matrix:");
+			ImGui.SeparatorText("Transform Matrix:");
 			ImGui.Text($"[{gizmoTransform.M11:F2}, {gizmoTransform.M12:F2}, {gizmoTransform.M13:F2}, {gizmoTransform.M14:F2}]");
 			ImGui.Text($"[{gizmoTransform.M21:F2}, {gizmoTransform.M22:F2}, {gizmoTransform.M23:F2}, {gizmoTransform.M24:F2}]");
 			ImGui.Text($"[{gizmoTransform.M31:F2}, {gizmoTransform.M32:F2}, {gizmoTransform.M33:F2}, {gizmoTransform.M34:F2}]");
@@ -78,11 +74,16 @@ internal sealed class ImGuizmoDemo : IDemoTab
 				gizmoTransform = Matrix4x4.Identity;
 			}
 
-			ImGui.Separator();
+			// Gizmo viewport - use a reasonable size instead of all available space
+			Vector2 availableSize = ImGui.GetContentRegionAvail();
+			Vector2 gizmoSize = new(availableSize.X, Math.Min(availableSize.Y, availableSize.X * 0.6f)); // Use width-based aspect ratio
 
-			// Gizmo viewport
-			Vector2 gizmoSize = new(400, 300);
+			// Get position for gizmo (NO space reservation - see what happens!)
 			Vector2 gizmoPos = ImGui.GetCursorScreenPos();
+
+			// Update projection matrix based on gizmo size
+			float aspectRatio = gizmoSize.Y > 0 ? gizmoSize.X / gizmoSize.Y : 1.0f;
+			gizmoProjection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 4f, aspectRatio, 0.1f, 100f);
 
 			// Set up ImGuizmo for this viewport
 			if (gizmoEnabled)
@@ -111,16 +112,14 @@ internal sealed class ImGuizmoDemo : IDemoTab
 				}
 
 				ImGuizmo.PopID();
+			}
 
-				// Display gizmo state
-				ImGui.SetCursorScreenPos(gizmoPos + new Vector2(10, gizmoSize.Y - 60));
+			// Display gizmo state below the gizmo area
+			if (gizmoEnabled)
+			{
 				ImGui.Text($"Gizmo Over: {ImGuizmo.IsOver()}");
 				ImGui.Text($"Gizmo Using: {ImGuizmo.IsUsing()}");
 			}
-
-			// Reserve space for the gizmo viewport
-			ImGui.SetCursorScreenPos(gizmoPos + new Vector2(0, gizmoSize.Y));
-			ImGui.Dummy(gizmoSize);
 
 			ImGui.EndTabItem();
 		}

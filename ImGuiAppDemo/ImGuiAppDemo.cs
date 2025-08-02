@@ -93,8 +93,7 @@ internal static class ImGuiAppDemo
 	private static void RenderAboutWindow()
 	{
 		ImGui.Begin("About ImGuiApp Demo", ref showAbout);
-		ImGui.Text("ImGuiApp Demo Application");
-		ImGui.Separator();
+		ImGui.SeparatorText("ImGuiApp Demo Application");
 		ImGui.Text("This demo showcases extensive ImGui.NET features including:");
 		ImGui.BulletText("Basic and advanced widgets");
 		ImGui.BulletText("Layout systems (columns, tables, tabs)");
@@ -106,8 +105,7 @@ internal static class ImGuiAppDemo
 		ImGui.BulletText("3D manipulation gizmos (ImGuizmo)");
 		ImGui.BulletText("Node-based editing (ImNodes)");
 		ImGui.BulletText("Advanced plotting (ImPlot)");
-		ImGui.Separator();
-		ImGui.Text("Built with:");
+		ImGui.SeparatorText("Built with");
 		ImGui.BulletText("Hexa.NET.ImGui");
 		ImGui.BulletText("Hexa.NET.ImGuizmo - 3D manipulation gizmos");
 		ImGui.BulletText("Hexa.NET.ImNodes - Node editor system");

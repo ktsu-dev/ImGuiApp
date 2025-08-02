@@ -34,7 +34,7 @@ internal sealed class AnimationDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.Text("Animation Examples:");
+			ImGui.SeparatorText("Animation Examples:");
 
 			// Simple animations
 			ImGui.Text("Bouncing Animation:");
@@ -52,14 +52,9 @@ internal sealed class AnimationDemo : IDemoTab
 				ImGui.ColorConvertFloat4ToU32(new Vector4(0.5f, 0, 1, 0.7f)));
 			ImGui.Dummy(new Vector2(100, 100));
 
-			ImGui.Separator();
-
-			// Animation controls
-			ImGui.Text("Animation Controls:");
+			ImGui.SeparatorText("Animated Text:");
 			ImGui.SliderFloat("Text Speed", ref textSpeed, 10.0f, 200.0f);
 
-			// Animated text (simplified)
-			ImGui.Text("Animated text effects:");
 			for (int i = 0; i < 20; i++)
 			{
 				float wave = (MathF.Sin((animationTime * 3.0f) + (i * 0.5f)) * 0.5f) + 0.5f;

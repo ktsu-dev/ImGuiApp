@@ -32,17 +32,15 @@ internal sealed class GraphicsDemo : IDemoTab
 			AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
 			ImGuiAppTextureInfo iconTexture = ImGuiApp.GetOrLoadTexture(iconPath);
 
-			ImGui.Text("Image Display:");
+			ImGui.SeparatorText("Image Display:");
 			ImGui.Image(iconTexture.TextureRef, new Vector2(64, 64));
 			ImGui.SameLine();
 			ImGui.Image(iconTexture.TextureRef, new Vector2(32, 32));
 			ImGui.SameLine();
 			ImGui.Image(iconTexture.TextureRef, new Vector2(16, 16));
 
-			ImGui.Separator();
-
 			// Custom drawing with ImDrawList
-			ImGui.Text("Custom Drawing Canvas:");
+			ImGui.SeparatorText("Custom Drawing Canvas:");
 			ImGui.ColorEdit4("Draw Color", ref drawColor);
 			ImGui.SliderFloat("Brush Size", ref brushSize, 1.0f, 20.0f);
 
@@ -78,8 +76,7 @@ internal sealed class GraphicsDemo : IDemoTab
 			}
 
 			// Draw some simple shapes for demonstration
-			ImGui.Separator();
-			ImGui.Text("Shape Examples:");
+			ImGui.SeparatorText("Shape Examples:");
 			Vector2 shapeStart = ImGui.GetCursorScreenPos();
 
 			// Simple animated circle

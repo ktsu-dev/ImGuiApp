@@ -38,10 +38,9 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 		if (ImGui.BeginTabItem(TabName))
 		{
 			ImGui.TextWrapped("This tab demonstrates basic ImGui widgets and controls.");
-			ImGui.Separator();
 
 			// Buttons
-			ImGui.Text("Buttons:");
+			ImGui.SeparatorText("Buttons:");
 			if (ImGui.Button("Regular Button"))
 			{
 				counter++;
@@ -69,8 +68,7 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 			ImGui.Text($"Counter: {counter}");
 
 			// Checkboxes and Radio buttons
-			ImGui.Separator();
-			ImGui.Text("Selection Controls:");
+			ImGui.SeparatorText("Selection Controls");
 			ImGui.Checkbox("Checkbox", ref checkboxState);
 
 			ImGui.RadioButton("Option 1", ref radioSelection, 0);
@@ -80,22 +78,19 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 			ImGui.RadioButton("Option 3", ref radioSelection, 2);
 
 			// Sliders
-			ImGui.Separator();
-			ImGui.Text("Sliders:");
+			ImGui.SeparatorText("Sliders");
 			ImGui.SliderFloat("Float Slider", ref sliderValue, 0.0f, 1.0f);
 			ImGui.SliderFloat("Angle", ref angle, 0.0f, 360.0f, "%.1f deg");
 			ImGui.SliderInt("Int Slider", ref dragInt, 0, 100);
 
 			// Input fields
-			ImGui.Separator();
-			ImGui.Text("Input Fields:");
+			ImGui.SeparatorText("Input Fields");
 			ImGui.InputText("Text Input", ref inputText, 100);
 			ImGui.InputFloat("Float Input", ref dragFloat);
 			ImGui.InputFloat3("Vector3 Input", ref dragVector);
 
 			// Combo boxes
-			ImGui.Separator();
-			ImGui.Text("Dropdowns:");
+			ImGui.SeparatorText("Dropdowns");
 			ImGui.Combo("Combo Box", ref comboSelection, comboItems, comboItems.Length);
 			ImGui.ListBox("List Box", ref listboxSelection, listboxItems, listboxItems.Length, 4);
 

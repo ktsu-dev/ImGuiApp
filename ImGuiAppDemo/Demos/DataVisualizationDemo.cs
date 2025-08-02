@@ -40,7 +40,7 @@ internal sealed class DataVisualizationDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.Text("Real-time Data Plots:");
+			ImGui.SeparatorText("Real-time Data Plots:");
 
 			// Line plot
 			if (plotValues.Count > 0)
@@ -53,16 +53,12 @@ internal sealed class DataVisualizationDemo : IDemoTab
 					"Histogram", 0.0f, 1.0f, new Vector2(ImGui.GetContentRegionAvail().X, 100));
 			}
 
-			ImGui.Separator();
-
 			// Performance note
-			ImGui.Text("Performance Metrics:");
+			ImGui.SeparatorText("Performance Metrics:");
 			ImGui.TextWrapped("Performance monitoring is now available in the Debug menu! Use 'Debug > Show Performance Monitor' to see real-time FPS graphs and throttling state.");
 
-			ImGui.Separator();
-
 			// Font demonstrations
-			ImGui.Text("Custom Font Rendering:");
+			ImGui.SeparatorText("Custom Font Rendering:");
 			using (new FontAppearance(nameof(Resources.CARDCHAR), 16))
 			{
 				ImGui.Text("Small custom font text");
@@ -79,8 +75,7 @@ internal sealed class DataVisualizationDemo : IDemoTab
 			}
 
 			// Text formatting examples
-			ImGui.Separator();
-			ImGui.Text("Text Formatting:");
+			ImGui.SeparatorText("Text Formatting:");
 			ImGui.TextColored(new Vector4(1, 0, 0, 1), "Red text");
 			ImGui.TextColored(new Vector4(0, 1, 0, 1), "Green text");
 			ImGui.TextColored(new Vector4(0, 0, 1, 1), "Blue text");

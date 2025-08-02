@@ -37,7 +37,7 @@ internal sealed class InputHandlingDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.Text("Mouse Information:");
+			ImGui.SeparatorText("Mouse Information:");
 			Vector2 mousePos = ImGui.GetMousePos();
 			Vector2 mouseDelta = ImGui.GetMouseDragDelta(ImGuiMouseButton.Left);
 			ImGui.Text($"Mouse Position: ({mousePos.X:F1}, {mousePos.Y:F1})");
@@ -45,19 +45,15 @@ internal sealed class InputHandlingDemo : IDemoTab
 			ImGui.Text($"Left Button: {(ImGui.IsMouseDown(ImGuiMouseButton.Left) ? "DOWN" : "UP")}");
 			ImGui.Text($"Right Button: {(ImGui.IsMouseDown(ImGuiMouseButton.Right) ? "DOWN" : "UP")}");
 
-			ImGui.Separator();
-
 			// Simple drag demonstration
-			ImGui.Text("Drag & Drop:");
+			ImGui.SeparatorText("Drag & Drop:");
 			ImGui.Button("Drag Source", new Vector2(100, 50));
 			ImGui.SameLine();
 			ImGui.Button("Drop Target", new Vector2(100, 50));
 			ImGui.Text("(Drag and drop functionality would require more complex implementation)");
 
-			ImGui.Separator();
-
 			// Text editing
-			ImGui.Text("Multi-line Text Editor:");
+			ImGui.SeparatorText("Multi-line Text Editor:");
 			ImGui.Checkbox("Word Wrap", ref wrapText);
 			ImGuiInputTextFlags textFlags = ImGuiInputTextFlags.AllowTabInput;
 			if (!wrapText)
@@ -72,10 +68,8 @@ internal sealed class InputHandlingDemo : IDemoTab
 				textBuffer.Append(textContent);
 			}
 
-			ImGui.Separator();
-
 			// Popup and modal buttons
-			ImGui.Text("Popups and Modals:");
+			ImGui.SeparatorText("Popups and Modals:");
 			if (ImGui.Button("Show Modal"))
 			{
 				showModal = true;

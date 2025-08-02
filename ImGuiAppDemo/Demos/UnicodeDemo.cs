@@ -24,9 +24,9 @@ internal sealed class UnicodeDemo : IDemoTab
 		{
 			ImGui.TextWrapped("Unicode and Emoji Support (Enabled by Default)");
 			ImGui.TextWrapped("ImGuiApp automatically includes support for Unicode characters and emojis. This feature works with your configured fonts.");
-			ImGui.Separator();
 
-			ImGui.Text("Basic ASCII: Hello World!");
+			ImGui.SeparatorText("Basic ASCII:");
+			ImGui.Text("Hello World!");
 			ImGui.Text("Accented characters: café, naïve, résumé");
 			ImGui.Text("Mathematical symbols: ∞ ≠ ≈ ≤ ≥ ± × ÷ ∂ ∑ ∏ √ ∫");
 			ImGui.Text("Currency symbols: $ € £ ¥ ₹ ₿");
@@ -34,8 +34,7 @@ internal sealed class UnicodeDemo : IDemoTab
 			ImGui.Text("Geometric shapes: ■ □ ▲ △ ● ○ ◆ ◇ ★ ☆");
 			ImGui.Text("Miscellaneous symbols: ♠ ♣ ♥ ♦ ☀ ☁ ☂ ☃ ♪ ♫");
 
-			ImGui.Separator();
-			ImGui.Text("Full Emoji Range Support (if font supports them):");
+			ImGui.SeparatorText("Full Emoji Range Support (if font supports them)");
 			ImGui.Text("Faces: 😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 😍 😎 🤓 🧐 🤔 😴");
 			ImGui.Text("Gestures: 👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐");
 			ImGui.Text("Objects: 🚀 💻 📱 🎸 🎨 🏆 🌟 💎 ⚡ 🔥 💡 🔧 ⚙️ 🔑 💰");

@@ -48,10 +48,8 @@ internal sealed class LayoutDemo : IDemoTab
 		if (ImGui.BeginTabItem(TabName))
 		{
 			// Columns
-			ImGui.Text("Columns Layout:");
+			ImGui.SeparatorText("Columns Layout:");
 			ImGui.Columns(3, "DemoColumns");
-			ImGui.Separator();
-
 			ImGui.Text("Column 1");
 			ImGui.NextColumn();
 			ImGui.Text("Column 2");
@@ -66,10 +64,9 @@ internal sealed class LayoutDemo : IDemoTab
 			}
 
 			ImGui.Columns(1);
-			ImGui.Separator();
 
 			// Tables
-			ImGui.Text("Advanced Tables:");
+			ImGui.SeparatorText("Advanced Tables:");
 			ImGui.Checkbox("Show Headers", ref showTableHeaders);
 			ImGui.SameLine();
 			ImGui.Checkbox("Show Borders", ref showTableBorders);
@@ -121,10 +118,8 @@ internal sealed class LayoutDemo : IDemoTab
 				ImGui.EndTable();
 			}
 
-			ImGui.Separator();
-
 			// Child windows
-			ImGui.Text("Child Windows:");
+			ImGui.SeparatorText("Child Windows:");
 			if (ImGui.BeginChild("ScrollableChild", new Vector2(0, 150)))
 			{
 				for (int i = 0; i < 50; i++)

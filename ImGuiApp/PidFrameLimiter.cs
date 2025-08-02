@@ -538,17 +538,6 @@ internal class PidFrameLimiter
 		{
 			HandleAutoTuningProgression(error);
 		}
-
-		// Optional: Log PID state for debugging (remove in production)
-#if DEBUG
-		if (DateTime.UtcNow.Millisecond % 100 < 16) // Log roughly every 100ms
-		{
-			Debug.WriteLine(
-				$"PID Frame Limiter - Target: {targetFrameTimeMs:F1}ms, " +
-				$"Actual: {smoothedFrameTime:F1}ms, Error: {error:F1}ms, " +
-				$"Sleep: {baseSleepMs:F1}ms, P: {CurrentKp * error:F2}, I: {CurrentKi * integral:F2}, D: {CurrentKd * derivative:F2}");
-		}
-#endif
 	}
 
 	internal static double CalculateStability(List<double> errors)

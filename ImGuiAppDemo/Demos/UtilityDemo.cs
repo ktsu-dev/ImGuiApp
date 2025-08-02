@@ -6,6 +6,7 @@ namespace ktsu.ImGuiApp.Demo.Demos;
 
 using System.Text;
 using Hexa.NET.ImGui;
+using ktsu.ImGuiApp;
 
 /// <summary>
 /// Demo for utility tools and debugging features
@@ -14,31 +15,12 @@ internal sealed class UtilityDemo : IDemoTab
 {
 	private string filePath = "";
 	private string fileContent = "";
-	private bool showImGuiDemo;
-	private bool showStyleEditor;
-	private bool showMetrics;
 
 	public string TabName => "Utilities & Tools";
 
 	public void Update(float deltaTime)
 	{
-		// Handle additional windows
-		if (showImGuiDemo)
-		{
-			ImGui.ShowDemoWindow(ref showImGuiDemo);
-		}
-
-		if (showStyleEditor)
-		{
-			ImGui.Begin("Style Editor", ref showStyleEditor);
-			ImGui.ShowStyleEditor();
-			ImGui.End();
-		}
-
-		if (showMetrics)
-		{
-			ImGui.ShowMetricsWindow(ref showMetrics);
-		}
+		// No additional windows managed here - all tools are now centralized in ImGuiApp
 	}
 
 	public void Render()
@@ -46,7 +28,7 @@ internal sealed class UtilityDemo : IDemoTab
 		if (ImGui.BeginTabItem(TabName))
 		{
 			// File operations
-			ImGui.Text("File Operations:");
+			ImGui.SeparatorText("File Operations:");
 			ImGui.InputText("File Path", ref filePath, 256);
 			ImGui.SameLine();
 			if (ImGui.Button("Load") && !string.IsNullOrEmpty(filePath))
@@ -64,14 +46,12 @@ internal sealed class UtilityDemo : IDemoTab
 
 			if (!string.IsNullOrEmpty(fileContent))
 			{
-				ImGui.Text("File Content Preview:");
+				ImGui.SeparatorText("File Content Preview:");
 				ImGui.TextWrapped(fileContent.Length > 500 ? fileContent[..500] + "..." : fileContent);
 			}
 
-			ImGui.Separator();
-
 			// System information
-			ImGui.Text("System Information:");
+			ImGui.SeparatorText("System Information:");
 			unsafe
 			{
 				byte* ptr = ImGui.GetVersion();
@@ -84,23 +64,26 @@ internal sealed class UtilityDemo : IDemoTab
 			}
 			ImGui.Text($"Display Size: {ImGui.GetIO().DisplaySize}");
 
-			ImGui.Separator();
-
 			// Debugging tools
-			ImGui.Text("Debug Tools:");
+			ImGui.SeparatorText("Debug Tools:");
 			if (ImGui.Button("Show ImGui Demo"))
 			{
-				showImGuiDemo = true;
+				ImGuiApp.ShowImGuiDemo();
 			}
 			ImGui.SameLine();
 			if (ImGui.Button("Show Style Editor"))
 			{
-				showStyleEditor = true;
+				ImGuiApp.ShowImGuiStyleEditor();
 			}
 			ImGui.SameLine();
 			if (ImGui.Button("Show Metrics"))
 			{
-				showMetrics = true;
+				ImGuiApp.ShowImGuiMetrics();
+			}
+			ImGui.SameLine();
+			if (ImGui.Button("Show Performance Monitor"))
+			{
+				ImGuiApp.ShowPerformanceMonitor();
 			}
 
 			ImGui.EndTabItem();

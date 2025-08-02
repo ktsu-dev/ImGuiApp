@@ -101,9 +101,16 @@ public static partial class ImGuiApp
 	/// </summary>
 	internal static void OnUserInput() => lastInputTime = DateTime.UtcNow;
 
-	internal static bool showImGuiMetrics;
-	internal static bool showImGuiDemo;
-	internal static bool showPerformanceMonitor;
+	internal static bool isImGuiMetricsVisible;
+	internal static bool isImGuiDemoVisible;
+	internal static bool isImGuiStyleEditorVisible;
+	internal static bool isPerformanceMonitorVisible;
+
+	// Track whether we need to focus windows on their first frame
+	internal static bool shouldFocusImGuiDemo;
+	internal static bool shouldFocusImGuiMetrics;
+	internal static bool shouldFocusImGuiStyleEditor;
+	internal static bool shouldFocusPerformanceMonitor;
 
 	// Performance monitoring data structures
 	internal static readonly Queue<float> performanceFrameTimes = new();
@@ -131,6 +138,54 @@ public static partial class ImGuiApp
 		}
 
 		window.Close();
+	}
+
+	/// <summary>
+	/// Opens the ImGui Demo window.
+	/// </summary>
+	public static void ShowImGuiDemo()
+	{
+		if (!isImGuiDemoVisible)
+		{
+			shouldFocusImGuiDemo = true;
+		}
+		isImGuiDemoVisible = true;
+	}
+
+	/// <summary>
+	/// Opens the ImGui Metrics window.
+	/// </summary>
+	public static void ShowImGuiMetrics()
+	{
+		if (!isImGuiMetricsVisible)
+		{
+			shouldFocusImGuiMetrics = true;
+		}
+		isImGuiMetricsVisible = true;
+	}
+
+	/// <summary>
+	/// Opens the ImGui Style Editor window.
+	/// </summary>
+	public static void ShowImGuiStyleEditor()
+	{
+		if (!isImGuiStyleEditorVisible)
+		{
+			shouldFocusImGuiStyleEditor = true;
+		}
+		isImGuiStyleEditorVisible = true;
+	}
+
+	/// <summary>
+	/// Opens the Performance Monitor window.
+	/// </summary>
+	public static void ShowPerformanceMonitor()
+	{
+		if (!isPerformanceMonitorVisible)
+		{
+			shouldFocusPerformanceMonitor = true;
+		}
+		isPerformanceMonitorVisible = true;
 	}
 
 	internal static ImGuiAppConfig Config { get; set; } = new();
@@ -690,19 +745,54 @@ public static partial class ImGuiApp
 
 				if (ImGui.BeginMenu("Debug"))
 				{
-					if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
+					if (ImGui.MenuItem("Show ImGui Demo", "", isImGuiDemoVisible))
 					{
-						showImGuiDemo = !showImGuiDemo;
+						if (!isImGuiDemoVisible)
+						{
+							ShowImGuiDemo();
+						}
+						else
+						{
+							isImGuiDemoVisible = false;
+						}
 					}
 
-					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
+					if (ImGui.MenuItem("Show ImGui Metrics", "", isImGuiMetricsVisible))
 					{
-						showImGuiMetrics = !showImGuiMetrics;
+						if (!isImGuiMetricsVisible)
+						{
+							ShowImGuiMetrics();
+						}
+						else
+						{
+							isImGuiMetricsVisible = false;
+						}
 					}
 
-					if (ImGui.MenuItem("Show Performance Monitor", "", showPerformanceMonitor))
+					if (ImGui.MenuItem("Show Style Editor", "", isImGuiStyleEditorVisible))
 					{
-						showPerformanceMonitor = !showPerformanceMonitor;
+						if (!isImGuiStyleEditorVisible)
+						{
+							ShowImGuiStyleEditor();
+						}
+						else
+						{
+							isImGuiStyleEditorVisible = false;
+						}
+					}
+
+					ImGui.Separator();
+
+					if (ImGui.MenuItem("Show Performance Monitor", "", isPerformanceMonitorVisible))
+					{
+						if (!isPerformanceMonitorVisible)
+						{
+							ShowPerformanceMonitor();
+						}
+						else
+						{
+							isPerformanceMonitorVisible = false;
+						}
 					}
 
 					ImGui.EndMenu();
@@ -725,7 +815,7 @@ public static partial class ImGuiApp
 		ImGui.SetNextWindowPos(ImGui.GetMainViewport().WorkPos);
 		ImGuiStylePtr style = ImGui.GetStyle();
 		System.Numerics.Vector4 borderColor = style.Colors[(int)ImGuiCol.Border];
-		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
+		if (ImGui.Begin("##mainWindow", ref b, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus))
 		{
 			style.Colors[(int)ImGuiCol.Border] = borderColor;
 			tickDelegate?.Invoke(dt);
@@ -733,14 +823,57 @@ public static partial class ImGuiApp
 
 		ImGui.End();
 
-		if (showImGuiDemo)
+		if (isImGuiDemoVisible)
 		{
-			ImGui.ShowDemoWindow(ref showImGuiDemo);
+			// Position the demo window to ensure it's visible and accessible
+			ImGui.SetNextWindowPos(new System.Numerics.Vector2(50, 50), ImGuiCond.FirstUseEver);
+			ImGui.SetNextWindowSize(new System.Numerics.Vector2(800, 600), ImGuiCond.FirstUseEver);
+
+			// Focus on first frame after opening for good UX
+			if (shouldFocusImGuiDemo)
+			{
+				ImGui.SetNextWindowFocus();
+				shouldFocusImGuiDemo = false;
+			}
+
+			ImGui.ShowDemoWindow(ref isImGuiDemoVisible);
 		}
 
-		if (showImGuiMetrics)
+		if (isImGuiMetricsVisible)
 		{
-			ImGui.ShowMetricsWindow(ref showImGuiMetrics);
+			// Position the metrics window to ensure it's visible and accessible
+			ImGui.SetNextWindowPos(new System.Numerics.Vector2(100, 100), ImGuiCond.FirstUseEver);
+			ImGui.SetNextWindowSize(new System.Numerics.Vector2(600, 500), ImGuiCond.FirstUseEver);
+
+			// Focus on first frame after opening for good UX
+			if (shouldFocusImGuiMetrics)
+			{
+				ImGui.SetNextWindowFocus();
+				shouldFocusImGuiMetrics = false;
+			}
+
+			ImGui.ShowMetricsWindow(ref isImGuiMetricsVisible);
+		}
+
+		if (isImGuiStyleEditorVisible)
+		{
+			// Position and configure the style editor window for better accessibility
+			ImGui.SetNextWindowPos(new System.Numerics.Vector2(150, 150), ImGuiCond.FirstUseEver);
+			ImGui.SetNextWindowSize(new System.Numerics.Vector2(500, 400), ImGuiCond.FirstUseEver);
+
+			// Focus on first frame after opening for good UX
+			if (shouldFocusImGuiStyleEditor)
+			{
+				ImGui.SetNextWindowFocus();
+				shouldFocusImGuiStyleEditor = false;
+			}
+
+			if (ImGui.Begin("Style Editor", ref isImGuiStyleEditorVisible))
+			{
+				ImGui.ShowStyleEditor();
+			}
+
+			ImGui.End();
 		}
 	}
 
@@ -1200,9 +1333,16 @@ public static partial class ImGuiApp
 		IsIdle = false;
 		lastInputTime = DateTime.UtcNow;
 		targetFrameTimeMs = 1000.0 / 30.0;
-		showImGuiMetrics = false;
-		showImGuiDemo = false;
-		showPerformanceMonitor = false;
+		isImGuiMetricsVisible = false;
+		isImGuiDemoVisible = false;
+		isImGuiStyleEditorVisible = false;
+		isPerformanceMonitorVisible = false;
+
+		shouldFocusImGuiDemo = false;
+		shouldFocusImGuiMetrics = false;
+		shouldFocusImGuiStyleEditor = false;
+		shouldFocusPerformanceMonitor = false;
+
 		performanceFrameTimes.Clear();
 		performanceFrameTimeSum = 0;
 		performanceFpsHistory.Clear();
@@ -1321,12 +1461,23 @@ public static partial class ImGuiApp
 	/// </summary>
 	internal static void RenderPerformanceMonitor()
 	{
-		if (!showPerformanceMonitor)
+		if (!isPerformanceMonitorVisible)
 		{
 			return;
 		}
 
-		if (ImGui.Begin("Performance Monitor", ref showPerformanceMonitor))
+		// Position the performance monitor window to ensure it's visible and accessible
+		ImGui.SetNextWindowPos(new System.Numerics.Vector2(200, 200), ImGuiCond.FirstUseEver);
+		ImGui.SetNextWindowSize(new System.Numerics.Vector2(500, 350), ImGuiCond.FirstUseEver);
+
+		// Focus on first frame after opening for good UX
+		if (shouldFocusPerformanceMonitor)
+		{
+			ImGui.SetNextWindowFocus();
+			shouldFocusPerformanceMonitor = false;
+		}
+
+		if (ImGui.Begin("Performance Monitor", ref isPerformanceMonitorVisible))
 		{
 			ImGui.TextWrapped("This window shows the current performance state and throttling behavior.");
 			ImGui.Separator();
