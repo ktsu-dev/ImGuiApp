@@ -29,6 +29,7 @@ internal static class ImGuiAppDemo
 		demoTabs.Add(new NerdFontDemo());
 		demoTabs.Add(new ImGuizmoDemo());
 		demoTabs.Add(new ImNodesDemo());
+		demoTabs.Add(new CleanImNodesDemo());
 		demoTabs.Add(new ImPlotDemo());
 		demoTabs.Add(new UtilityDemo());
 	}

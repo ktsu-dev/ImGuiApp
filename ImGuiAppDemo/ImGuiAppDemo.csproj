@@ -1,6 +1,7 @@
 <Project Sdk="ktsu.Sdk.ImGuiApp">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>CA1002,CA1062,CA1822,IDE0060,CA1515,CA1854</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="icon.png">
@@ -17,6 +18,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImGuiApp\ImGuiApp.csproj" />
+    <ProjectReference Include="..\ImGuiNodeEditor\ImGuiNodeEditor.csproj" />
+    <ProjectReference Include="..\NodeGraph\NodeGraph.csproj" />
   </ItemGroup>
 
   <ItemGroup>
