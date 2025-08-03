@@ -5,7 +5,7 @@
 namespace ktsu.ImGuiApp;
 
 using ktsu.Extensions;
-using ktsu.StrongPaths;
+using ktsu.Semantics;
 
 /// <summary>
 /// Simple file logger for debugging crashes
