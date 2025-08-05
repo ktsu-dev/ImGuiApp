@@ -366,7 +366,7 @@ public static class FontMemoryGuard
 	/// </summary>
 	/// <param name="renderer">GPU renderer string from OpenGL.</param>
 	/// <returns>True if the GPU appears to be integrated.</returns>
-	private static bool IsIntegratedGpu(string renderer)
+	public static bool IsIntegratedGpu(string renderer)
 	{
 		if (string.IsNullOrEmpty(renderer))
 		{
@@ -382,7 +382,7 @@ public static class FontMemoryGuard
 
 		// AMD integrated GPU patterns
 		string[] amdIntegratedPatterns = [
-			"radeon(tm) graphics", "vega", "rdna", "apu"
+			"radeon(tm)", "vega", "rdna", "apu", "r5 graphics", "r7 graphics"
 		];
 
 		// General integrated GPU indicators
@@ -416,13 +416,13 @@ public static class FontMemoryGuard
 		if (isIntelGpu)
 		{
 			// Intel integrated GPU memory recommendations
-			recommendedMemory = AnalyzeIntelGpuGeneration(renderer);
+			recommendedMemory = GetIntelGpuMemoryLimit(renderer);
 			DebugLogger.Log($"FontMemoryGuard: Applied Intel integrated GPU heuristics: {recommendedMemory / (1024 * 1024)}MB limit");
 		}
 		else if (isAmdGpu && isIntegratedGpu)
 		{
 			// AMD integrated GPU (APU) memory recommendations
-			recommendedMemory = AnalyzeAmdApuGeneration(renderer);
+			recommendedMemory = GetAmdApuMemoryLimit(renderer);
 			DebugLogger.Log($"FontMemoryGuard: Applied AMD integrated GPU heuristics: {recommendedMemory / (1024 * 1024)}MB limit");
 		}
 		else if (isIntegratedGpu)
@@ -443,11 +443,11 @@ public static class FontMemoryGuard
 	}
 
 	/// <summary>
-	/// Analyzes Intel GPU generation from renderer string to determine appropriate memory limits.
+	/// Gets the recommended memory limit for Intel integrated graphics based on the renderer string.
 	/// </summary>
-	/// <param name="renderer">GPU renderer string.</param>
+	/// <param name="renderer">The Intel GPU renderer string.</param>
 	/// <returns>Recommended memory limit in bytes.</returns>
-	private static long AnalyzeIntelGpuGeneration(string renderer)
+	public static long GetIntelGpuMemoryLimit(string renderer)
 	{
 		if (string.IsNullOrEmpty(renderer))
 		{
@@ -455,6 +455,12 @@ public static class FontMemoryGuard
 		}
 
 		string rendererLower = renderer.ToLowerInvariant();
+
+		// Iris graphics (higher end integrated) - check first before Xe to get correct priority
+		if (rendererLower.Contains("iris"))
+		{
+			return 80 * 1024 * 1024; // 80MB - Iris has better performance
+		}
 
 		// Modern Intel GPUs (12th gen+, Xe Graphics)
 		if (rendererLower.Contains("xe") || rendererLower.Contains("arc"))
@@ -486,22 +492,16 @@ public static class FontMemoryGuard
 			}
 		}
 
-		// Iris graphics (higher end integrated)
-		if (rendererLower.Contains("iris"))
-		{
-			return 80 * 1024 * 1024; // 80MB - Iris has better performance
-		}
-
 		// Default for unknown Intel GPU
 		return 32 * 1024 * 1024; // 32MB conservative
 	}
 
 	/// <summary>
-	/// Analyzes AMD APU generation from renderer string to determine appropriate memory limits.
+	/// Gets the recommended memory limit for AMD APU graphics based on the renderer string.
 	/// </summary>
-	/// <param name="renderer">GPU renderer string.</param>
+	/// <param name="renderer">The AMD APU renderer string.</param>
 	/// <returns>Recommended memory limit in bytes.</returns>
-	private static long AnalyzeAmdApuGeneration(string renderer)
+	public static long GetAmdApuMemoryLimit(string renderer)
 	{
 		if (string.IsNullOrEmpty(renderer))
 		{
@@ -511,7 +511,7 @@ public static class FontMemoryGuard
 		string rendererLower = renderer.ToLowerInvariant();
 
 		// Modern RDNA2/3 APUs (6000+ series, Steam Deck)
-		if (rendererLower.Contains("rdna") || rendererLower.Contains("6600") || rendererLower.Contains("6800") || rendererLower.Contains("7600"))
+		if (rendererLower.Contains("rdna") || rendererLower.Contains("6600") || rendererLower.Contains("6800") || rendererLower.Contains("7600") || rendererLower.Contains("680m"))
 		{
 			return 128 * 1024 * 1024; // 128MB - Modern AMD APUs are quite capable
 		}
