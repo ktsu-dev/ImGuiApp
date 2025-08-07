@@ -536,16 +536,6 @@ public static partial class ImGuiApp
 
 	internal static void ValidateConfig(ImGuiAppConfig config)
 	{
-		if (config.InitialWindowState.Size.X <= 0 || config.InitialWindowState.Size.Y <= 0)
-		{
-			throw new ArgumentException("Initial window size must be greater than zero.", nameof(config));
-		}
-
-		if (config.InitialWindowState.Pos.X < 0 || config.InitialWindowState.Pos.Y < 0)
-		{
-			throw new ArgumentException("Initial window position must be non-negative.", nameof(config));
-		}
-
 		if (!string.IsNullOrEmpty(config.IconPath) && !File.Exists(config.IconPath))
 		{
 			throw new FileNotFoundException("Icon file not found.", config.IconPath);
