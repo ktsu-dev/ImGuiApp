@@ -4,10 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Main Application Dependencies -->
-    <PackageVersion Include="coverlet.collector" Version="6.0.4">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageVersion>
     <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.8.5" />
     <PackageVersion Include="ktsu.Invoker" Version="1.1.0" />
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.2" />
@@ -24,6 +20,10 @@
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageVersion Include="System.Text.Json" Version="9.0.8" />
     <!-- Test Dependencies -->
+    <PackageVersion Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="17.14.2" />
