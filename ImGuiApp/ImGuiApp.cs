@@ -936,11 +936,11 @@ public static partial class ImGuiApp
 		}
 	}
 
-	// Using the new ImGui 1.92.0 dynamic font system
-	// Fonts can now be rendered at any size dynamically - no need to preload multiple sizes!
+	// Using the new ImGui 1.92.0 dynamic font system with memory guards
+	// Fonts can now be rendered at any size dynamically, but we limit memory usage for small GPUs
 	internal static unsafe void InitFonts()
 	{
-		DebugLogger.Log("InitFonts: Starting font initialization");
+		DebugLogger.Log("InitFonts: Starting font initialization with memory guards");
 
 		// Only load fonts if they haven't been loaded or if scale factor has changed
 		if (controller?.FontsConfigured == true && Math.Abs(lastFontScaleFactor - ScaleFactor) < 0.01f)
@@ -954,22 +954,54 @@ public static partial class ImGuiApp
 		ImGuiIOPtr io = ImGui.GetIO();
 		ImFontAtlasPtr fontAtlasPtr = io.Fonts;
 
+		// Initialize font memory configuration
+		FontMemoryGuard.CurrentConfig = Config.FontMemoryConfig;
+
+		// Try to detect GPU memory and adjust limits
+		if (gl != null)
+		{
+			FontMemoryGuard.TryDetectAndConfigureGpuMemory(gl);
+		}
+
 		// Clear existing font data and indices
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
 
+		// Load fonts from configuration
+		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
+		int fontCount = fontsToLoad.Count();
+
+		// Get emoji font data
+		byte[]? emojiBytes = ImGuiAppConfig.EmojiFont;
+		bool hasEmojiFont = emojiBytes != null;
+
+		// Estimate memory usage and determine constraints
+		FontMemoryGuard.FontMemoryEstimate memoryEstimate = FontMemoryGuard.EstimateMemoryUsage(
+			fontCount,
+			CommonFontSizes,
+			hasEmojiFont,
+			Config.EnableUnicodeSupport,
+			ScaleFactor);
+
+		// Determine fallback strategy
+		FontMemoryGuard.FallbackStrategy fallbackStrategy = FontMemoryGuard.DetermineFallbackStrategy(memoryEstimate);
+
+		// Log memory usage information
+		FontMemoryGuard.LogMemoryUsage(memoryEstimate, fallbackStrategy);
+
+		// Apply fallback constraints
+		int[] fontSizesToLoad = ApplyFallbackConstraints(fallbackStrategy, memoryEstimate);
+		bool shouldLoadEmojis = ShouldLoadEmojis(fallbackStrategy, hasEmojiFont);
+		bool shouldUseReducedUnicode = ShouldUseReducedUnicode(fallbackStrategy);
+
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
-
-		// Load fonts from configuration at multiple sizes
-		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 		int defaultFontIndex = -1;
 
-		// Pre-allocate emoji font memory outside the loops for reuse
+		// Pre-allocate emoji font memory if needed
 		nint emojiHandle = IntPtr.Zero;
 		int emojiLength = 0;
-		byte[]? emojiBytes = ImGuiAppConfig.EmojiFont;
-		if (emojiBytes != null)
+		if (shouldLoadEmojis && emojiBytes != null)
 		{
 			emojiHandle = Marshal.AllocHGlobal(emojiBytes.Length);
 			currentFontMemoryHandles.Add(emojiHandle);
@@ -977,6 +1009,7 @@ public static partial class ImGuiApp
 			emojiLength = emojiBytes.Length;
 		}
 
+		// Load fonts with memory constraints applied
 		foreach ((string name, byte[] fontBytes) in fontsToLoad)
 		{
 			// Pre-allocate main font memory outside the size loop for reuse
@@ -984,12 +1017,15 @@ public static partial class ImGuiApp
 			currentFontMemoryHandles.Add(fontHandle);
 			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
 
-			foreach (int size in CommonFontSizes)
+			foreach (int size in fontSizesToLoad)
 			{
-				LoadFontFromMemory($"{name}_{size}", fontHandle, fontBytes.Length, fontAtlasPtr, size);
+				// Determine glyph ranges based on constraints
+				uint* glyphRanges = GetConstrainedGlyphRanges(fontAtlasPtr, shouldUseReducedUnicode);
+
+				LoadFontFromMemory($"{name}_{size}", fontHandle, fontBytes.Length, fontAtlasPtr, size, glyphRanges);
 
 				// Load and merge emoji font immediately after main font for proper merging
-				if (emojiHandle != IntPtr.Zero)
+				if (shouldLoadEmojis && emojiHandle != IntPtr.Zero)
 				{
 					LoadEmojiFontFromMemory(emojiHandle, emojiLength, fontAtlasPtr, size);
 				}
@@ -1032,6 +1068,9 @@ public static partial class ImGuiApp
 		// Build the font atlas to generate the texture
 		ImGuiP.ImFontAtlasBuildMain(fontAtlasPtr);
 
+		// Log final atlas information
+		LogFontAtlasInfo(fontAtlasPtr, fallbackStrategy);
+
 		// Set the default font for ImGui rendering
 		if (defaultFontIndex != -1 && defaultFontIndex < fontAtlasPtr.Fonts.Size)
 		{
@@ -1040,7 +1079,116 @@ public static partial class ImGuiApp
 
 		// Store the pinned font data for later cleanup
 		StorePinnedFontData(fontPinnedData);
-		DebugLogger.Log("InitFonts: Font initialization completed");
+		DebugLogger.Log("InitFonts: Font initialization completed with memory guards applied");
+	}
+
+	/// <summary>
+	/// Applies fallback constraints to font loading based on memory limits.
+	/// </summary>
+	/// <param name="fallbackStrategy">The determined fallback strategy.</param>
+	/// <param name="memoryEstimate">The memory estimate for font loading.</param>
+	/// <returns>Array of font sizes to load based on constraints.</returns>
+	internal static int[] ApplyFallbackConstraints(FontMemoryGuard.FallbackStrategy fallbackStrategy, FontMemoryGuard.FontMemoryEstimate memoryEstimate)
+	{
+		return fallbackStrategy switch
+		{
+			FontMemoryGuard.FallbackStrategy.None => CommonFontSizes,
+			FontMemoryGuard.FallbackStrategy.ReduceFontSizes => FontMemoryGuard.GetReducedFontSizes(CommonFontSizes, memoryEstimate.RecommendedMaxSizes, FontAppearance.DefaultFontPointSize),
+			FontMemoryGuard.FallbackStrategy.DisableEmojis => CommonFontSizes,
+			FontMemoryGuard.FallbackStrategy.ReduceUnicodeRanges => CommonFontSizes,
+			FontMemoryGuard.FallbackStrategy.MinimalFonts => FontMemoryGuard.GetReducedFontSizes(CommonFontSizes, FontMemoryGuard.CurrentConfig.MinFontSizesToLoad, FontAppearance.DefaultFontPointSize),
+			_ => CommonFontSizes
+		};
+	}
+
+	/// <summary>
+	/// Determines whether emoji fonts should be loaded based on fallback strategy.
+	/// </summary>
+	/// <param name="fallbackStrategy">The determined fallback strategy.</param>
+	/// <param name="hasEmojiFont">Whether emoji font data is available.</param>
+	/// <returns>True if emoji fonts should be loaded.</returns>
+	internal static bool ShouldLoadEmojis(FontMemoryGuard.FallbackStrategy fallbackStrategy, bool hasEmojiFont)
+	{
+		if (!hasEmojiFont)
+		{
+			return false;
+		}
+
+		return fallbackStrategy switch
+		{
+			FontMemoryGuard.FallbackStrategy.DisableEmojis => false,
+			FontMemoryGuard.FallbackStrategy.ReduceUnicodeRanges => false,
+			FontMemoryGuard.FallbackStrategy.MinimalFonts => false,
+			_ => true
+		};
+	}
+
+	/// <summary>
+	/// Determines whether reduced Unicode ranges should be used based on fallback strategy.
+	/// </summary>
+	/// <param name="fallbackStrategy">The determined fallback strategy.</param>
+	/// <returns>True if reduced Unicode ranges should be used.</returns>
+	internal static bool ShouldUseReducedUnicode(FontMemoryGuard.FallbackStrategy fallbackStrategy)
+	{
+		return fallbackStrategy switch
+		{
+			FontMemoryGuard.FallbackStrategy.ReduceUnicodeRanges => true,
+			FontMemoryGuard.FallbackStrategy.MinimalFonts => true,
+			_ => false
+		};
+	}
+
+	/// <summary>
+	/// Gets the appropriate glyph ranges based on memory constraints.
+	/// </summary>
+	/// <param name="fontAtlasPtr">The font atlas for building ranges.</param>
+	/// <param name="useReducedUnicode">Whether to use reduced Unicode ranges.</param>
+	/// <returns>Pointer to the appropriate glyph ranges.</returns>
+	internal static unsafe uint* GetConstrainedGlyphRanges(ImFontAtlasPtr fontAtlasPtr, bool useReducedUnicode)
+	{
+		if (useReducedUnicode)
+		{
+			return FontMemoryGuard.GetReducedUnicodeRanges(fontAtlasPtr);
+		}
+		else if (Config.EnableUnicodeSupport)
+		{
+			return FontHelper.GetExtendedUnicodeRanges(fontAtlasPtr);
+		}
+		else
+		{
+			return fontAtlasPtr.GetGlyphRangesDefault();
+		}
+	}
+
+	/// <summary>
+	/// Logs information about the final font atlas after building.
+	/// </summary>
+	/// <param name="fontAtlasPtr">The built font atlas.</param>
+	/// <param name="fallbackStrategy">The applied fallback strategy.</param>
+	internal static unsafe void LogFontAtlasInfo(ImFontAtlasPtr fontAtlasPtr, FontMemoryGuard.FallbackStrategy fallbackStrategy)
+	{
+		// Get atlas texture information using the correct API for Hexa.NET.ImGui
+		ImTextureDataPtr texData = fontAtlasPtr.TexData;
+		int width = texData.Width;
+		int height = texData.Height;
+		int bytesPerPixel = 4; // RGBA32 = 4 bytes per pixel
+		long atlasMemoryBytes = (long)width * height * bytesPerPixel;
+
+		DebugLogger.Log($"FontMemoryGuard: Final font atlas size: {width}x{height} pixels");
+		DebugLogger.Log($"FontMemoryGuard: Final font atlas memory: {atlasMemoryBytes / (1024 * 1024)}MB");
+		DebugLogger.Log($"FontMemoryGuard: Applied fallback strategy: {fallbackStrategy}");
+		DebugLogger.Log($"FontMemoryGuard: Loaded {fontAtlasPtr.Fonts.Size} font variants");
+
+		// Warn if atlas is getting close to common GPU limits
+		if (width > 2048 || height > 2048)
+		{
+			DebugLogger.Log("FontMemoryGuard: Warning - Large font atlas may cause issues on older GPUs");
+		}
+
+		if (atlasMemoryBytes > FontMemoryGuard.CurrentConfig.MaxAtlasMemoryBytes)
+		{
+			DebugLogger.Log("FontMemoryGuard: Warning - Font atlas exceeds configured memory limit");
+		}
 	}
 
 	/// <summary>

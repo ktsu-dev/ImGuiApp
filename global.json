@@ -4,12 +4,12 @@
     "rollForward": "latestFeature"
   },
   "msbuild-sdks": {
-    "ktsu.Sdk": "1.48.0",
-    "ktsu.Sdk.Lib": "1.48.0",
-    "ktsu.Sdk.ConsoleApp": "1.48.0",
-    "ktsu.Sdk.Test": "1.48.0",
-    "ktsu.Sdk.ImGuiApp": "1.48.0",
-    "ktsu.Sdk.WinApp": "1.48.0",
-    "ktsu.Sdk.WinTest": "1.48.0"
+    "ktsu.Sdk": "1.56.0",
+    "ktsu.Sdk.Lib": "1.56.0",
+    "ktsu.Sdk.ConsoleApp": "1.56.0",
+    "ktsu.Sdk.Test": "1.56.0",
+    "ktsu.Sdk.ImGuiApp": "1.56.0",
+    "ktsu.Sdk.WinApp": "1.56.0",
+    "ktsu.Sdk.WinTest": "1.56.0"
   }
 }
