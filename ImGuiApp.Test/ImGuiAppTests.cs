@@ -2,8 +2,6 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 [assembly: DoNotParallelize]
 
 namespace ktsu.ImGuiApp.Test;
@@ -154,9 +152,11 @@ public sealed class ImGuiAppTests : IDisposable
 
 		// Allow position and size to be set
 		Vector2D<int> finalPosition = offScreenPosition;
+		Vector2D<int> finalSize = windowSize;
 		mockWindow.SetupSet(w => w.Position = It.IsAny<Vector2D<int>>())
 			.Callback<Vector2D<int>>(pos => finalPosition = pos);
-		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>());
+		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>())
+			.Callback<Vector2D<int>>(size => finalSize = size);
 		mockWindow.SetupSet(w => w.WindowState = It.IsAny<WindowState>());
 
 		// Set the mock window directly using internal field
@@ -166,14 +166,191 @@ public sealed class ImGuiAppTests : IDisposable
 		ImGuiApp.EnsureWindowPositionIsValid();
 
 		// Verify the window was moved to a valid position
-		mockWindow.VerifySet(w => w.Position = It.Is<Vector2D<int>>(pos =>
-			monitorBounds.Contains(pos) ||
-			monitorBounds.Contains(pos + windowSize)));
+		Assert.IsTrue(monitorBounds.Contains(finalPosition),
+			"Window position should be within monitor bounds");
 
-		// Additional verification that the window is now visible
-		Assert.IsTrue(monitorBounds.Contains(finalPosition) ||
-			monitorBounds.Contains(finalPosition + windowSize),
-			"Window should be moved to a visible position on the monitor");
+		// Verify the window size was preserved (improvement from new logic)
+		Assert.AreEqual(windowSize, finalSize, "Window size should be preserved when it fits");
+	}
+
+	[TestMethod]
+	public void EnsureWindowPositionIsValid_WithPerformanceOptimization_SkipsUnnecessaryChecks()
+	{
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		Mock<IWindow> mockWindow = new();
+		Mock<IMonitor> mockMonitor = new();
+
+		Rectangle<int> monitorBounds = new(0, 0, 1920, 1080);
+		mockMonitor.Setup(m => m.Bounds).Returns(monitorBounds);
+
+		Vector2D<int> validPosition = new(100, 100);
+		Vector2D<int> validSize = new(800, 600);
+		mockWindow.Setup(w => w.Size).Returns(validSize);
+		mockWindow.Setup(w => w.Position).Returns(validPosition);
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+
+		ImGuiApp.window = mockWindow.Object;
+
+		// First call should perform validation
+		ImGuiApp.EnsureWindowPositionIsValid();
+		int boundsCallsAfterFirst = mockMonitor.Invocations.Count;
+
+		// Second call with same position/size should skip validation (performance optimization)
+		ImGuiApp.EnsureWindowPositionIsValid();
+		int boundsCallsAfterSecond = mockMonitor.Invocations.Count;
+
+		// Should have made no additional calls on second invocation due to caching
+		Assert.AreEqual(boundsCallsAfterFirst, boundsCallsAfterSecond,
+			"Second call should skip validation due to performance optimization");
+	}
+
+	[TestMethod]
+	public void EnsureWindowPositionIsValid_WithPartiallyVisibleWindow_RelocatesWhenInsufficientlyVisible()
+	{
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		Mock<IWindow> mockWindow = new();
+		Mock<IMonitor> mockMonitor = new();
+
+		Rectangle<int> monitorBounds = new(0, 0, 1920, 1080);
+		mockMonitor.Setup(m => m.Bounds).Returns(monitorBounds);
+
+		// Window with only small corner visible (less than 25% visibility requirement)
+		Vector2D<int> windowSize = new(800, 600);
+		Vector2D<int> barelyVisiblePosition = new(1870, 1030); // Only 50x50 pixels visible
+		mockWindow.Setup(w => w.Size).Returns(windowSize);
+		mockWindow.Setup(w => w.Position).Returns(barelyVisiblePosition);
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+
+		Vector2D<int> finalPosition = barelyVisiblePosition;
+		mockWindow.SetupSet(w => w.Position = It.IsAny<Vector2D<int>>())
+			.Callback<Vector2D<int>>(pos => finalPosition = pos);
+		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>());
+		mockWindow.SetupSet(w => w.WindowState = It.IsAny<WindowState>());
+
+		ImGuiApp.window = mockWindow.Object;
+		ImGuiApp.EnsureWindowPositionIsValid();
+
+		// Window should be relocated since it's insufficiently visible
+		Assert.AreNotEqual(barelyVisiblePosition, finalPosition,
+			"Window should be relocated when insufficiently visible");
+		Assert.IsTrue(monitorBounds.Contains(finalPosition),
+			"Relocated window should be fully within monitor bounds");
+	}
+
+	[TestMethod]
+	public void EnsureWindowPositionIsValid_WithSufficientlyVisibleWindow_LeavesWindowAlone()
+	{
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		Mock<IWindow> mockWindow = new();
+		Mock<IMonitor> mockMonitor = new();
+
+		Rectangle<int> monitorBounds = new(0, 0, 1920, 1080);
+		mockMonitor.Setup(m => m.Bounds).Returns(monitorBounds);
+
+		// Window with significant visibility (more than 25%)
+		// Window 800x600 = 480,000 pixels total
+		// Visible portion: 400x300 = 120,000 pixels (25% exactly)
+		Vector2D<int> windowSize = new(800, 600);
+		Vector2D<int> partiallyVisiblePosition = new(1520, 780); // 400x300 pixels visible
+		mockWindow.Setup(w => w.Size).Returns(windowSize);
+		mockWindow.Setup(w => w.Position).Returns(partiallyVisiblePosition);
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+
+		mockWindow.SetupSet(w => w.Position = It.IsAny<Vector2D<int>>());
+
+		ImGuiApp.window = mockWindow.Object;
+		ImGuiApp.EnsureWindowPositionIsValid();
+
+		// Window position should not be changed since it has sufficient visibility
+		mockWindow.VerifySet(w => w.Position = It.IsAny<Vector2D<int>>(), Times.Never,
+			"Window should not be moved when sufficiently visible");
+	}
+
+	[TestMethod]
+	public void EnsureWindowPositionIsValid_WithOversizedWindow_FitsToMonitor()
+	{
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		Mock<IWindow> mockWindow = new();
+		Mock<IMonitor> mockMonitor = new();
+
+		// Small monitor
+		Rectangle<int> smallMonitorBounds = new(0, 0, 1024, 768);
+		mockMonitor.Setup(m => m.Bounds).Returns(smallMonitorBounds);
+
+		// Oversized window completely off-screen
+		Vector2D<int> oversizedSize = new(2000, 1500);
+		Vector2D<int> offScreenPosition = new(-2500, -2000); // Completely off-screen
+		mockWindow.Setup(w => w.Size).Returns(oversizedSize);
+		mockWindow.Setup(w => w.Position).Returns(offScreenPosition);
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+
+		Vector2D<int> finalSize = oversizedSize;
+		mockWindow.SetupSet(w => w.Position = It.IsAny<Vector2D<int>>());
+		mockWindow.SetupSet(w => w.Size = It.IsAny<Vector2D<int>>())
+			.Callback<Vector2D<int>>(size => finalSize = size);
+		mockWindow.SetupSet(w => w.WindowState = It.IsAny<WindowState>());
+
+		ImGuiApp.window = mockWindow.Object;
+		ImGuiApp.EnsureWindowPositionIsValid();
+
+		// Debug: Check if window was relocated at all
+		mockWindow.VerifySet(w => w.Position = It.IsAny<Vector2D<int>>(), Times.AtLeastOnce,
+			"Window should have been relocated when completely off-screen");
+
+		// Window should be resized to fit monitor (with 100px margin)
+		Assert.IsTrue(finalSize.X <= smallMonitorBounds.Size.X - 100,
+			$"Window width {finalSize.X} should be <= {smallMonitorBounds.Size.X - 100} to fit monitor");
+		Assert.IsTrue(finalSize.Y <= smallMonitorBounds.Size.Y - 100,
+			$"Window height {finalSize.Y} should be <= {smallMonitorBounds.Size.Y - 100} to fit monitor");
+		Assert.IsTrue(finalSize.X >= 640 && finalSize.Y >= 480,
+			$"Window size {finalSize} should maintain minimum size of 640x480");
+	}
+
+	[TestMethod]
+	public void ForceWindowPositionValidation_ForcesNextValidation()
+	{
+		// Reset state to ensure clean test environment
+		ResetState();
+
+		Mock<IWindow> mockWindow = new();
+		Mock<IMonitor> mockMonitor = new();
+
+		Rectangle<int> monitorBounds = new(0, 0, 1920, 1080);
+		mockMonitor.Setup(m => m.Bounds).Returns(monitorBounds);
+
+		Vector2D<int> validPosition = new(100, 100);
+		Vector2D<int> validSize = new(800, 600);
+		mockWindow.Setup(w => w.Size).Returns(validSize);
+		mockWindow.Setup(w => w.Position).Returns(validPosition);
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+
+		ImGuiApp.window = mockWindow.Object;
+
+		// First validation
+		ImGuiApp.EnsureWindowPositionIsValid();
+		int callsAfterFirst = mockMonitor.Invocations.Count;
+
+		// Force validation should make next call perform validation even with same position
+		ImGuiApp.ForceWindowPositionValidation();
+		ImGuiApp.EnsureWindowPositionIsValid();
+		int callsAfterForced = mockMonitor.Invocations.Count;
+
+		// Should have made additional calls after forcing validation
+		Assert.IsTrue(callsAfterForced > callsAfterFirst,
+			"Forced validation should cause additional monitor access");
 	}
 
 	[TestMethod]

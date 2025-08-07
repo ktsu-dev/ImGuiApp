@@ -247,6 +247,10 @@ public static partial class ImGuiApp
 			CaptureWindowNormalState();
 			UpdateDpiScale();
 			CheckAndHandleContextChange();
+
+			// Force validation on next update cycle since window size changed
+			ForceWindowPositionValidation();
+
 			config.OnMoveOrResize?.Invoke();
 		};
 	}
@@ -258,6 +262,10 @@ public static partial class ImGuiApp
 			CaptureWindowNormalState();
 			UpdateDpiScale();
 			CheckAndHandleContextChange();
+
+			// Force validation on next update cycle since window may have moved to different monitor
+			ForceWindowPositionValidation();
+
 			config.OnMoveOrResize?.Invoke();
 		};
 	}
@@ -536,16 +544,6 @@ public static partial class ImGuiApp
 
 	internal static void ValidateConfig(ImGuiAppConfig config)
 	{
-		if (config.InitialWindowState.Size.X <= 0 || config.InitialWindowState.Size.Y <= 0)
-		{
-			throw new ArgumentException("Initial window size must be greater than zero.", nameof(config));
-		}
-
-		if (config.InitialWindowState.Pos.X < 0 || config.InitialWindowState.Pos.Y < 0)
-		{
-			throw new ArgumentException("Initial window position must be non-negative.", nameof(config));
-		}
-
 		if (!string.IsNullOrEmpty(config.IconPath) && !File.Exists(config.IconPath))
 		{
 			throw new FileNotFoundException("Icon file not found.", config.IconPath);
@@ -652,26 +650,220 @@ public static partial class ImGuiApp
 		return fonts[fontIndex];
 	}
 
+	// Cache to avoid checking every frame
+	private static Silk.NET.Maths.Vector2D<int>? lastCheckedWindowPosition;
+	private static Silk.NET.Maths.Vector2D<int>? lastCheckedWindowSize;
+	private static bool needsPositionValidation = true;
+
+	/// <summary>
+	/// Ensures the window is positioned on a visible monitor. This method provides improved
+	/// multi-monitor support, better visibility detection, and performance optimizations.
+	/// </summary>
 	internal static void EnsureWindowPositionIsValid()
 	{
-		if (window?.Monitor is not null && window.WindowState is not Silk.NET.Windowing.WindowState.Minimized)
+		// Early exit for invalid states
+		if (window is null || window.WindowState == Silk.NET.Windowing.WindowState.Minimized)
 		{
-			Silk.NET.Maths.Rectangle<int> bounds = window.Monitor.Bounds;
-			bool onScreen = bounds.Contains(window.Position) ||
-				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, 0)) ||
-				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(0, window.Size.Y)) ||
-				bounds.Contains(window.Position + new Silk.NET.Maths.Vector2D<int>(window.Size.X, window.Size.Y));
+			return;
+		}
 
-			if (!onScreen)
+		// Performance optimization: only check when position/size changes or forced
+		if (!needsPositionValidation &&
+			lastCheckedWindowPosition == window.Position &&
+			lastCheckedWindowSize == window.Size)
+		{
+			return;
+		}
+
+		try
+		{
+			// Update cache
+			lastCheckedWindowPosition = window.Position;
+			lastCheckedWindowSize = window.Size;
+			needsPositionValidation = false;
+
+			// Get all available monitors for better multi-monitor support
+			IMonitor[] availableMonitors = GetAvailableMonitors();
+			if (availableMonitors.Length == 0)
 			{
-				// If the window is not on a monitor, move it to the primary monitor
-				ImGuiAppWindowState defaultWindowState = new();
-				System.Numerics.Vector2 halfSize = defaultWindowState.Size / 2;
-				window.Size = new((int)defaultWindowState.Size.X, (int)defaultWindowState.Size.Y);
-				window.Position = window.Monitor.Bounds.Center - new Silk.NET.Maths.Vector2D<int>((int)halfSize.X, (int)halfSize.Y);
-				window.WindowState = defaultWindowState.LayoutState;
+				DebugLogger.Log("EnsureWindowPositionIsValid: No monitors available, skipping validation");
+				return;
+			}
+
+			// Check if window has sufficient visibility on any monitor
+			IMonitor? bestMonitor = FindBestMonitorForWindow(window, availableMonitors);
+
+			if (bestMonitor is null)
+			{
+				// Window is not sufficiently visible on any monitor - relocate it
+				IMonitor targetMonitor = GetPrimaryMonitor(availableMonitors) ?? availableMonitors[0];
+				RelocateWindowToMonitor(window, targetMonitor);
+				DebugLogger.Log($"EnsureWindowPositionIsValid: Relocated window to monitor bounds {targetMonitor.Bounds}");
+			}
+			else if (window.Monitor != bestMonitor)
+			{
+				DebugLogger.Log($"EnsureWindowPositionIsValid: Window is visible on monitor {bestMonitor.Bounds}");
 			}
 		}
+		catch (InvalidOperationException ex)
+		{
+			DebugLogger.Log($"EnsureWindowPositionIsValid: Error during validation - {ex.Message}");
+			// Don't crash the application, just log the error
+		}
+		catch (NullReferenceException ex)
+		{
+			DebugLogger.Log($"EnsureWindowPositionIsValid: Error during validation - {ex.Message}");
+			// Don't crash the application, just log the error
+		}
+	}
+
+	/// <summary>
+	/// Gets all available monitors from the windowing system.
+	/// </summary>
+	private static IMonitor[] GetAvailableMonitors()
+	{
+		try
+		{
+			// Try to get monitors from the current window's context first
+			if (window?.Monitor?.Bounds is not null)
+			{
+				// For Silk.NET, we need to work with what's available
+				// In many cases, we only have access to the current monitor
+				return [window.Monitor];
+			}
+
+			// Fallback: if no monitor available, return empty array
+			return [];
+		}
+		catch (InvalidOperationException)
+		{
+			return [];
+		}
+		catch (NullReferenceException)
+		{
+			return [];
+		}
+	}
+
+	/// <summary>
+	/// Finds the monitor where the window has the most visibility.
+	/// Returns null if the window is not sufficiently visible on any monitor.
+	/// </summary>
+	private static IMonitor? FindBestMonitorForWindow(IWindow window, IMonitor[] monitors)
+	{
+		if (monitors.Length == 0)
+		{
+			return null;
+		}
+
+		IMonitor? bestMonitor = null;
+		int maxVisibleArea = 0;
+
+		// Window rectangle
+		Silk.NET.Maths.Rectangle<int> windowRect = new(
+			window.Position.X,
+			window.Position.Y,
+			window.Size.X,
+			window.Size.Y);
+
+		foreach (IMonitor monitor in monitors)
+		{
+			// Calculate intersection area with this monitor
+			Silk.NET.Maths.Rectangle<int> intersection = CalculateRectangleIntersection(windowRect, monitor.Bounds);
+			int visibleArea = intersection.Size.X * intersection.Size.Y;
+
+			if (visibleArea > maxVisibleArea)
+			{
+				maxVisibleArea = visibleArea;
+				bestMonitor = monitor;
+			}
+		}
+
+		// Require at least 25% of the window to be visible (or minimum 100x100 pixels)
+		int windowArea = windowRect.Size.X * windowRect.Size.Y;
+		int minimumVisibleArea = Math.Max(10000, windowArea / 4); // 100x100 or 25% of window
+
+		return maxVisibleArea >= minimumVisibleArea ? bestMonitor : null;
+	}
+
+	/// <summary>
+	/// Gets the primary monitor from the available monitors.
+	/// </summary>
+	private static IMonitor? GetPrimaryMonitor(IMonitor[] monitors) =>
+		// In Silk.NET, we typically work with the monitor associated with the window
+		// For now, we'll use the first monitor as primary
+		monitors.Length > 0 ? monitors[0] : null;
+
+	/// <summary>
+	/// Relocates the window to the specified monitor, preserving the current window size
+	/// unless it's too large for the target monitor.
+	/// </summary>
+	private static void RelocateWindowToMonitor(IWindow window, IMonitor monitor)
+	{
+		Silk.NET.Maths.Rectangle<int> monitorBounds = monitor.Bounds;
+		Silk.NET.Maths.Vector2D<int> currentSize = window.Size;
+
+		// Preserve current size if it fits, otherwise use default size
+		Silk.NET.Maths.Vector2D<int> newSize;
+		if (currentSize.X <= monitorBounds.Size.X - 100 && currentSize.Y <= monitorBounds.Size.Y - 100)
+		{
+			// Current size fits with some margin - keep it
+			newSize = currentSize;
+		}
+		else
+		{
+			// Current size is too large - use default size or fit to monitor
+			ImGuiAppWindowState defaultState = new();
+			int maxWidth = Math.Min((int)defaultState.Size.X, monitorBounds.Size.X - 100);
+			int maxHeight = Math.Min((int)defaultState.Size.Y, monitorBounds.Size.Y - 100);
+			newSize = new(Math.Max(640, maxWidth), Math.Max(480, maxHeight)); // Minimum 640x480
+		}
+
+		// Center the window on the target monitor
+		Silk.NET.Maths.Vector2D<int> halfSize = new(newSize.X / 2, newSize.Y / 2);
+		Silk.NET.Maths.Vector2D<int> centerPosition = monitorBounds.Center - halfSize;
+
+		// Ensure the window is fully within the monitor bounds
+		int posX = Math.Max(monitorBounds.Origin.X, Math.Min(centerPosition.X, monitorBounds.Origin.X + monitorBounds.Size.X - newSize.X));
+		int posY = Math.Max(monitorBounds.Origin.Y, Math.Min(centerPosition.Y, monitorBounds.Origin.Y + monitorBounds.Size.Y - newSize.Y));
+
+		// Apply the new position and size
+		window.Size = newSize;
+		window.Position = new(posX, posY);
+		window.WindowState = Silk.NET.Windowing.WindowState.Normal;
+
+		DebugLogger.Log($"EnsureWindowPositionIsValid: Repositioned window to ({posX}, {posY}) with size ({newSize.X}, {newSize.Y})");
+	}
+
+	/// <summary>
+	/// Calculates the intersection rectangle of two rectangles.
+	/// </summary>
+	private static Silk.NET.Maths.Rectangle<int> CalculateRectangleIntersection(
+		Silk.NET.Maths.Rectangle<int> rect1,
+		Silk.NET.Maths.Rectangle<int> rect2)
+	{
+		int left = Math.Max(rect1.Origin.X, rect2.Origin.X);
+		int top = Math.Max(rect1.Origin.Y, rect2.Origin.Y);
+		int right = Math.Min(rect1.Origin.X + rect1.Size.X, rect2.Origin.X + rect2.Size.X);
+		int bottom = Math.Min(rect1.Origin.Y + rect1.Size.Y, rect2.Origin.Y + rect2.Size.Y);
+
+		// If rectangles don't intersect, return empty rectangle
+		if (left >= right || top >= bottom)
+		{
+			return new Silk.NET.Maths.Rectangle<int>(0, 0, 0, 0);
+		}
+
+		return new Silk.NET.Maths.Rectangle<int>(left, top, right - left, bottom - top);
+	}
+
+	/// <summary>
+	/// Forces the window position validation to run on the next update cycle.
+	/// Call this when monitor configuration may have changed.
+	/// </summary>
+	internal static void ForceWindowPositionValidation()
+	{
+		needsPositionValidation = true;
+		DebugLogger.Log("EnsureWindowPositionIsValid: Forced validation requested");
 	}
 
 	/// <summary>

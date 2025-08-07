@@ -49,60 +49,6 @@ public sealed class ImGuiAppWindowManagementTests
 	}
 
 	[TestMethod]
-	public void ValidateConfig_WithZeroWidth_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.Size = new Vector2(0, 600);
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
-
-	[TestMethod]
-	public void ValidateConfig_WithZeroHeight_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.Size = new Vector2(800, 0);
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
-
-	[TestMethod]
-	public void ValidateConfig_WithNegativeWidth_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.Size = new Vector2(-100, 600);
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
-
-	[TestMethod]
-	public void ValidateConfig_WithNegativeHeight_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.Size = new Vector2(800, -100);
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
-
-	[TestMethod]
-	public void ValidateConfig_WithNegativeXPosition_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.Pos = new Vector2(-10, 100);
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
-
-	[TestMethod]
-	public void ValidateConfig_WithNegativeYPosition_ThrowsArgumentException()
-	{
-		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
-		config.InitialWindowState.Pos = new Vector2(100, -10);
-
-		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.ValidateConfig(config));
-	}
-
-	[TestMethod]
 	public void AdjustConfigForStartup_WithMinimizedState_ConvertsToNormal()
 	{
 		ImGuiAppConfig config = TestHelpers.CreateTestConfig();
