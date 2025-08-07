@@ -24,6 +24,50 @@ internal static partial class NativeMethods
 	[return: MarshalAs(UnmanagedType.Bool)]
 	internal static partial bool SetProcessDPIAware();
 
+	/// <summary>
+	/// Sets the DPI awareness context for the process (Windows 10 version 1607 and later).
+	/// </summary>
+	/// <param name="dpiContext">The DPI awareness context to set.</param>
+	/// <returns>The previous DPI awareness context, or null if the function failed.</returns>
+	[LibraryImport("user32.dll")]
+	internal static partial nint SetProcessDpiAwarenessContext(nint dpiContext);
+
+	/// <summary>
+	/// Sets the DPI awareness for the process (Windows 8.1 and later).
+	/// </summary>
+	/// <param name="value">The DPI awareness value to set.</param>
+	/// <returns>HRESULT indicating success or failure.</returns>
+	[LibraryImport("Shcore.dll")]
+	internal static partial int SetProcessDpiAwareness(ProcessDpiAwareness value);
+
+	/// <summary>
+	/// DPI awareness values for SetProcessDpiAwareness.
+	/// </summary>
+	internal enum ProcessDpiAwareness
+	{
+		/// <summary>
+		/// DPI unaware. This app does not scale for DPI changes and is always assumed to have a scale factor of 100% (96 DPI).
+		/// </summary>
+		ProcessDpiUnaware = 0,
+
+		/// <summary>
+		/// System DPI aware. This app does not scale for DPI changes.
+		/// </summary>
+		ProcessSystemDpiAware = 1,
+
+		/// <summary>
+		/// Per monitor DPI aware. This app checks for the DPI when it is created and adjusts the scale factor whenever the DPI changes.
+		/// </summary>
+		ProcessPerMonitorDpiAware = 2
+	}
+
+	// DPI Awareness Context constants
+	internal static readonly nint DPI_AWARENESS_CONTEXT_UNAWARE = new(-1);
+	internal static readonly nint DPI_AWARENESS_CONTEXT_SYSTEM_AWARE = new(-2);
+	internal static readonly nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE = new(-3);
+	internal static readonly nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new(-4);
+	internal static readonly nint DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED = new(-5);
+
 	internal const string X11LibraryName = "libX11.so.6";
 
 	/// <summary>

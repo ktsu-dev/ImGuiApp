@@ -21,12 +21,50 @@ public static partial class ForceDpiAware
 
 	/// <summary>
 	/// Marks the application as DPI-Aware when running on the Windows operating system.
+	/// Uses modern DPI awareness APIs for better compatibility with windowing libraries.
 	/// </summary>
 	public static void Windows()
 	{
 		// Make process DPI aware for proper window sizing on high-res screens.
-		if (OperatingSystem.IsWindowsVersionAtLeast(6))
+		// Use the most modern API available for better compatibility with GLFW and other windowing libraries.
+
+		if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393)) // Windows 10 Version 1607
 		{
+			// Try the modern DPI awareness context API first (recommended)
+			try
+			{
+				nint result = NativeMethods.SetProcessDpiAwarenessContext(NativeMethods.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+				if (result != IntPtr.Zero)
+				{
+					return; // Success
+				}
+			}
+			catch (EntryPointNotFoundException)
+			{
+				// SetProcessDpiAwarenessContext not available, fall back to older API
+			}
+		}
+
+		if (OperatingSystem.IsWindowsVersionAtLeast(6, 3)) // Windows 8.1
+		{
+			// Fall back to SetProcessDpiAwareness
+			try
+			{
+				int result = NativeMethods.SetProcessDpiAwareness(NativeMethods.ProcessDpiAwareness.ProcessPerMonitorDpiAware);
+				if (result == 0) // S_OK
+				{
+					return; // Success
+				}
+			}
+			catch (EntryPointNotFoundException)
+			{
+				// SetProcessDpiAwareness not available, fall back to oldest API
+			}
+		}
+
+		if (OperatingSystem.IsWindowsVersionAtLeast(6)) // Windows Vista
+		{
+			// Fall back to the legacy API as last resort
 			NativeMethods.SetProcessDPIAware();
 		}
 	}
