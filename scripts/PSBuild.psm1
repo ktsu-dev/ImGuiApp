@@ -1735,7 +1735,7 @@ function Invoke-NuGetPublish {
         Write-StepHeader "Publishing to packages.ktsu.dev" -Tags "Invoke-NuGetPublish"
 
         # Execute the command and stream output
-        "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.KtsuPackageKey)`" --source `"https://packages.ktsu.dev/nuget/v3/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
+        "dotnet nuget push `"$($BuildConfiguration.PackagePattern)`" --api-key `"$($BuildConfiguration.KtsuPackageKey)`" --source `"https://packages.ktsu.dev/v3/index.json`" --skip-duplicate" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-NuGetPublish"
         Assert-LastExitCode "packages.ktsu.dev package publish failed"
     } else {
         Write-Information "Skipping packages.ktsu.dev publishing - no API key provided" -Tags "Invoke-NuGetPublish"
