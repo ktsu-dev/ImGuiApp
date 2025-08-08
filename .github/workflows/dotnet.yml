@@ -35,6 +35,7 @@ jobs:
       version: ${{ steps.pipeline.outputs.version }}
       release_hash: ${{ steps.pipeline.outputs.release_hash }}
       should_release: ${{ steps.pipeline.outputs.should_release }}
+      skipped_release: ${{ steps.pipeline.outputs.skipped_release }}
 
     steps:
       - name: Set up JDK 17
@@ -141,8 +142,12 @@ jobs:
           "release_hash=$($buildConfig.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
           "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
 
+          if ($buildConfig.Data.SkippedRelease) {
+            "skipped_release=true" >> $env:GITHUB_OUTPUT
+          }
+
       - name: End SonarQube
-        if: ${{ env.SONAR_TOKEN != '' }}
+        if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.skipped_release != 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
@@ -151,7 +156,7 @@ jobs:
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.pipeline.outputs.skipped_release != 'true'
         with:
           name: coverage-report
           path: |
@@ -161,7 +166,7 @@ jobs:
   winget:
     name: Update Winget Manifests
     needs: build
-    if: needs.build.outputs.should_release == 'true'
+    if: needs.build.outputs.should_release == 'true' && needs.build.outputs.skipped_release != 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -198,7 +203,7 @@ jobs:
   security:
     name: Security Scanning
     needs: build
-    if: needs.build.outputs.should_release == 'true'
+    if: needs.build.outputs.should_release == 'true' && needs.build.outputs.skipped_release != 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
