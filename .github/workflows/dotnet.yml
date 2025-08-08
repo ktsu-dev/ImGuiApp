@@ -115,6 +115,7 @@ jobs:
             -GitHubRepo "${{ github.repository }}" `
             -GithubToken "${{ github.token }}" `
             -NuGetApiKey "${{ secrets.NUGET_KEY }}" `
+            -KtsuPackageKey "${{ secrets.KTSU_PACKAGE_KEY }}" `
             -WorkspacePath "${{ github.workspace }}" `
             -ExpectedOwner "ktsu-dev" `
             -ChangelogFile "CHANGELOG.md" `
