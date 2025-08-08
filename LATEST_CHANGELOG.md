@@ -1,5 +1,6 @@
-## v2.1.6 (patch)
+## v2.1.7 (patch)
 
-Changes since v2.1.5:
+Changes since v2.1.6:
 
-- Add Ktsu package key support in build configuration: Updated the .NET CI workflow and PowerShell script to include an optional Ktsu package key for publishing. Enhanced documentation for the new parameter and added conditional publishing logic for Ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix NuGet package source URL in Invoke-NuGetPublish function: Updated the source URL to ensure correct package publishing to packages.ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance .NET CI workflow: Added support for skipped releases in the GitHub Actions workflow. Updated conditions for SonarQube execution, coverage report upload, and Winget manifest updates to account for skipped releases, improving control over the release process. ([@matt-edmondson](https://github.com/matt-edmondson))
