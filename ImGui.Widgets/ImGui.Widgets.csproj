@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ktsu.Extensions" />
+    <PackageReference Include="ktsu.CaseConverter" />
+    <PackageReference Include="ktsu.FuzzySearch" />
+    <PackageReference Include="ktsu.ImGui.Styler" />
+    <PackageReference Include="ktsu.ScopedAction" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
+    <PackageReference Include="ktsu.TextFilter" />
+  </ItemGroup>
+
+</Project>

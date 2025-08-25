@@ -1,0 +1,16 @@
+﻿<Project Sdk="ktsu.Sdk.ImGuiApp">
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.ImGuiApp" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImGuiStyler\ImGuiStyler.csproj" />
+  </ItemGroup>
+</Project>

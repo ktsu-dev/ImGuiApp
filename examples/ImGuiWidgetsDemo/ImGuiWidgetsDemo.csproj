@@ -1,0 +1,19 @@
+﻿<Project Sdk="ktsu.Sdk.ImGuiApp">
+
+  <ItemGroup>
+    <PackageReference Include="ktsu.ImGuiApp" />
+    <PackageReference Include="ktsu.ImGuiPopups" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImGuiWidgets\ImGuiWidgets.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="ktsu.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

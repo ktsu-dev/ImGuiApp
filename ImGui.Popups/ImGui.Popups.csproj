@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="ktsu.Sdk" />
+
+  <ItemGroup>
+    <PackageReference Include = "Hexa.NET.ImGui" />
+    <PackageReference Include = "ktsu.Extensions" />
+    <PackageReference Include = "ktsu.CaseConverter" />
+    <PackageReference Include = "ktsu.ScopedAction" />
+    <PackageReference Include = "ktsu.TextFilter" />
+    <PackageReference Include = "Microsoft.Extensions.FileSystemGlobbing" />
+  </ItemGroup>
+
+</Project>

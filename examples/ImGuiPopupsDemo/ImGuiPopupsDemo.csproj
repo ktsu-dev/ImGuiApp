@@ -1,0 +1,9 @@
+<Project Sdk = "ktsu.Sdk.ImGuiApp">
+  <ItemGroup>
+    <PackageReference Include = "ktsu.ImGuiApp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include = "..\ImGuiPopups\ImGuiPopups.csproj" />
+  </ItemGroup>
+</Project>

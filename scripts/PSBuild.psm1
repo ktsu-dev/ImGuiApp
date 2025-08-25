@@ -1452,37 +1452,11 @@ function Invoke-DotNetTest {
         Runs dotnet test with code coverage collection.
     .DESCRIPTION
         Runs dotnet test with code coverage collection.
-    .PARAMETER Configuration
-        The build configuration to use.
-    .PARAMETER CoverageOutputPath
-        The path to output code coverage results.
     #>
-    [CmdletBinding()]
-    param (
-        [string]$Configuration = "Release",
-        [string]$CoverageOutputPath = "coverage"
-    )
-
     Write-StepHeader "Running Tests with Coverage" -Tags "Invoke-DotNetTest"
-
-    # Ensure the TestResults directory exists
-    $testResultsPath = Join-Path $CoverageOutputPath "TestResults"
-    New-Item -Path $testResultsPath -ItemType Directory -Force | Out-Null
-
     # Run tests with both coverage collection and TRX logging for SonarQube
-    "dotnet test --configuration $Configuration /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=`"coverage.opencover.xml`" --results-directory `"$testResultsPath`" --logger `"trx;LogFileName=TestResults.trx`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
+    "dotnet-coverage collect `"dotnet test`" -f xml -o `"coverage.xml`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
     Assert-LastExitCode "Tests failed"
-
-    # Find and copy coverage file to expected location for SonarQube
-    $coverageFiles = @(Get-ChildItem -Path . -Recurse -Filter "coverage.opencover.xml" -ErrorAction SilentlyContinue)
-    if ($coverageFiles.Count -gt 0) {
-        $latestCoverageFile = $coverageFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        $targetCoverageFile = Join-Path $CoverageOutputPath "coverage.opencover.xml"
-        Copy-Item -Path $latestCoverageFile.FullName -Destination $targetCoverageFile -Force
-        Write-Information "Coverage file copied to: $targetCoverageFile" -Tags "Invoke-DotNetTest"
-    } else {
-        Write-Information "Warning: No coverage file found" -Tags "Invoke-DotNetTest"
-    }
 }
 
 function Invoke-DotNetPack {
@@ -2159,7 +2133,7 @@ function Invoke-BuildWorkflow {
         # Build and Test
         Invoke-DotNetRestore | Write-InformationStream -Tags "Invoke-BuildWorkflow"
         Invoke-DotNetBuild -Configuration $Configuration -BuildArgs $BuildArgs | Write-InformationStream -Tags "Invoke-BuildWorkflow"
-        Invoke-DotNetTest -Configuration $Configuration -CoverageOutputPath "coverage" | Write-InformationStream -Tags "Invoke-BuildWorkflow"
+        Invoke-DotNetTest | Write-InformationStream -Tags "Invoke-BuildWorkflow"
 
         return [PSCustomObject]@{
             Success = $true
