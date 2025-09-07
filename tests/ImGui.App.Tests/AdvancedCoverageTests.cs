@@ -2,11 +2,11 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.Test;
+namespace ktsu.ImGui.App.Test;
 
 using System;
 using Hexa.NET.ImGui;
-using ktsu.ImGuiApp.ImGuiController;
+using ktsu.ImGui.App.ImGuiController;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

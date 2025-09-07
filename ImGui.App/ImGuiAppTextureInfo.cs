@@ -2,9 +2,9 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 using Hexa.NET.ImGui;
-using ktsu.StrongPaths;
+using ktsu.Semantics.Paths;
 
 /// <summary>
 /// Represents information about a texture, including its file path, texture ID, width, and height.

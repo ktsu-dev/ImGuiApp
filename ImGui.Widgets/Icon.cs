@@ -2,13 +2,13 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgets;
+namespace ktsu.ImGui.Widgets;
 
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGuiStyler;
+using ktsu.ImGui.Styler;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -44,7 +44,7 @@ public static partial class ImGuiWidgets
 		/// <summary>
 		/// The color of the icon.
 		/// </summary>
-		public Vector4 Color { get; init; } = ImGuiStyler.Color.Palette.Neutral.White.Value;
+		public Vector4 Color { get; init; } = Styler.Color.Palette.Neutral.White.Value;
 
 		/// <summary>
 		/// The tooltip to display.

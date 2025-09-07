@@ -4,7 +4,7 @@
 
 #pragma warning disable IDE0078 // Use pattern matching
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 
 using System.ComponentModel;
 using System.Globalization;

@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.Test;
+namespace ktsu.ImGui.App.Test;
 
 using System.Collections.Concurrent;
 using ktsu.Extensions;

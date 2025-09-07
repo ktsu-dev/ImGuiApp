@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiStylerDemo;
+namespace ktsu.ImGui.Examples.Styler;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +10,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGuiApp;
-using ktsu.ImGuiStyler;
+using ktsu.ImGui.App;
+using ktsu.ImGui.Styler;
 using ktsu.ThemeProvider;
 
 /// <summary>
@@ -218,7 +218,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Separator();
 
 		// Check if a theme is active
-		System.Collections.Immutable.ImmutableDictionary<SemanticColorRequest, PerceptualColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
 		if (completePalette is null)
 		{
 			ImGui.TextWrapped("No theme is currently active. Select a theme from the Theme Gallery tab to see its complete palette.");

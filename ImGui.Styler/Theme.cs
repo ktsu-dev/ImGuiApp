@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiStyler;
+namespace ktsu.ImGui.Styler;
 
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
@@ -20,7 +20,7 @@ public static class Theme
 	private static string? currentThemeName;
 
 	// Cache for complete palettes to avoid recalculating them every frame
-	private static readonly Dictionary<string, ImmutableDictionary<SemanticColorRequest, PerceptualColor>> paletteCache = [];
+	private static readonly Dictionary<string, IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>> paletteCache = [];
 	private static readonly Lock paletteCacheLock = new();
 
 	// ThemeBrowser modal instance
@@ -37,7 +37,7 @@ public static class Theme
 		ArgumentNullException.ThrowIfNull(theme);
 
 		// Map the theme to ImGui colors
-		ImmutableDictionary<ImGuiCol, Vector4> colorMapping = paletteMapper.MapTheme(theme);
+		IReadOnlyDictionary<ImGuiCol, Vector4> colorMapping = paletteMapper.MapTheme(theme);
 
 		// Apply all colors to ImGui
 		unsafe
@@ -56,7 +56,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The semantic theme to get the color mapping for.</param>
 	/// <returns>A dictionary mapping ImGui colors to their theme-based values.</returns>
-	public static ImmutableDictionary<ImGuiCol, Vector4> GetColorMapping(ISemanticTheme theme)
+	public static IReadOnlyDictionary<ImGuiCol, Vector4> GetColorMapping(ISemanticTheme theme)
 	{
 		ArgumentNullException.ThrowIfNull(theme);
 		return paletteMapper.MapTheme(theme);
@@ -160,11 +160,11 @@ public static class Theme
 			ImGui.Separator();
 
 			// Group themes by family for better organization
-			IOrderedEnumerable<KeyValuePair<string, ImmutableArray<ThemeRegistry.ThemeInfo>>> themesByFamily = ThemesByFamily.OrderBy(kvp => kvp.Key);
+			IOrderedEnumerable<KeyValuePair<string, IReadOnlyList<ThemeRegistry.ThemeInfo>>> themesByFamily = ThemesByFamily.OrderBy(kvp => kvp.Key);
 
-			foreach ((string family, ImmutableArray<ThemeRegistry.ThemeInfo> themes) in themesByFamily)
+			foreach ((string family, IReadOnlyList<ThemeRegistry.ThemeInfo> themes) in themesByFamily)
 			{
-				if (themes.Length == 1)
+				if (themes.Count == 1)
 				{
 					// Single theme - render directly with color swatches
 					ThemeRegistry.ThemeInfo theme = themes[0];
@@ -196,19 +196,19 @@ public static class Theme
 	/// <param name="family">The theme family name.</param>
 	/// <param name="themes">The themes in the family.</param>
 	/// <returns>True if a theme was selected and changed, false otherwise.</returns>
-	private static bool RenderFamilySubmenu(string family, ImmutableArray<ThemeRegistry.ThemeInfo> themes)
+	private static bool RenderFamilySubmenu(string family, IReadOnlyList<ThemeRegistry.ThemeInfo> themes)
 	{
 		bool themeChanged = false;
 
 		// Use dialog window style for the family header using colors from the first theme
 		bool anyFamilyThemeSelected = themes.Any(t => t.Name == currentThemeName);
 
-		if (RenderFamilyMenuHeader(family, themes.Length > 0 ? themes[0] : null, anyFamilyThemeSelected))
+		if (RenderFamilyMenuHeader(family, themes.Count > 0 ? themes[0] : null, anyFamilyThemeSelected))
 		{
 			try
 			{
 				// Group by dark/light for families with many variants
-				if (themes.Length > 4)
+				if (themes.Count > 4)
 				{
 					ThemeRegistry.ThemeInfo[] darkThemes = [.. themes.Where(t => t.IsDark)];
 					ThemeRegistry.ThemeInfo[] lightThemes = [.. themes.Where(t => !t.IsDark)];
@@ -397,7 +397,7 @@ public static class Theme
 		try
 		{
 			// Get the theme's complete palette for color preview
-			ImmutableDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(theme.CreateInstance());
+			IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(theme.CreateInstance());
 
 			// Define the colors we want to show: primary, alternate, medium neutral, low neutral
 			SemanticColorRequest[] colorRequests = [
@@ -516,7 +516,7 @@ public static class Theme
 		try
 		{
 			// Get the theme's complete palette for color preview
-			ImmutableDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(theme.CreateInstance());
+			IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(theme.CreateInstance());
 
 			// Get primary color for title bar and surface color for background
 			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
@@ -687,7 +687,7 @@ public static class Theme
 				try
 				{
 					// Use the complete palette for efficient color extraction
-					ImmutableDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+					IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
 
 					// Get primary color for title bar
 					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out PerceptualColor primary))
@@ -851,7 +851,7 @@ public static class Theme
 			try
 			{
 				// Use the complete palette for efficient color extraction
-				ImmutableDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+				IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
 
 				// Get primary color for title bar
 				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out PerceptualColor primary))
@@ -968,27 +968,27 @@ public static class Theme
 	/// <summary>
 	/// Gets all available themes with their metadata.
 	/// </summary>
-	public static ImmutableArray<ThemeRegistry.ThemeInfo> AllThemes => ThemeRegistry.AllThemes;
+	public static IReadOnlyList<ThemeRegistry.ThemeInfo> AllThemes => ThemeRegistry.AllThemes;
 
 	/// <summary>
 	/// Gets all dark themes.
 	/// </summary>
-	public static ImmutableArray<ThemeRegistry.ThemeInfo> DarkThemes => ThemeRegistry.DarkThemes;
+	public static IReadOnlyList<ThemeRegistry.ThemeInfo> DarkThemes => ThemeRegistry.DarkThemes;
 
 	/// <summary>
 	/// Gets all light themes.
 	/// </summary>
-	public static ImmutableArray<ThemeRegistry.ThemeInfo> LightThemes => ThemeRegistry.LightThemes;
+	public static IReadOnlyList<ThemeRegistry.ThemeInfo> LightThemes => ThemeRegistry.LightThemes;
 
 	/// <summary>
 	/// Gets themes grouped by family.
 	/// </summary>
-	public static ImmutableDictionary<string, ImmutableArray<ThemeRegistry.ThemeInfo>> ThemesByFamily => ThemeRegistry.ThemesByFamily;
+	public static IReadOnlyDictionary<string, IReadOnlyList<ThemeRegistry.ThemeInfo>> ThemesByFamily => ThemeRegistry.ThemesByFamily;
 
 	/// <summary>
 	/// Gets all theme families.
 	/// </summary>
-	public static ImmutableArray<string> Families => ThemeRegistry.Families;
+	public static IReadOnlyList<string> Families => ThemeRegistry.Families;
 
 	/// <summary>
 	/// Finds a theme by name (case-insensitive).
@@ -1002,20 +1002,20 @@ public static class Theme
 	/// </summary>
 	/// <param name="family">The family name.</param>
 	/// <returns>Array of themes in the family.</returns>
-	public static ImmutableArray<ThemeRegistry.ThemeInfo> GetThemesInFamily(string family) => ThemeRegistry.GetThemesInFamily(family);
+	public static IReadOnlyList<ThemeRegistry.ThemeInfo> GetThemesInFamily(string family) => ThemeRegistry.GetThemesInFamily(family);
 
 	/// <summary>
 	/// Creates instances of all themes.
 	/// </summary>
 	/// <returns>Array of all theme instances.</returns>
-	public static ImmutableArray<ISemanticTheme> CreateAllThemeInstances() => ThemeRegistry.CreateAllThemeInstances();
+	public static IReadOnlyList<ISemanticTheme> CreateAllThemeInstances() => ThemeRegistry.CreateAllThemeInstances();
 
 	/// <summary>
 	/// Creates theme instances for a specific family.
 	/// </summary>
 	/// <param name="family">The family name.</param>
 	/// <returns>Array of theme instances in the family.</returns>
-	public static ImmutableArray<ISemanticTheme> CreateThemeInstancesInFamily(string family) => ThemeRegistry.CreateThemeInstancesInFamily(family);
+	public static IReadOnlyList<ISemanticTheme> CreateThemeInstancesInFamily(string family) => ThemeRegistry.CreateThemeInstancesInFamily(family);
 
 	#endregion
 
@@ -1026,7 +1026,7 @@ public static class Theme
 	/// This provides every color that can be requested from the theme, useful for theme exploration and previews.
 	/// </summary>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if no theme is active.</returns>
-	public static ImmutableDictionary<SemanticColorRequest, PerceptualColor>? GetCurrentThemeCompletePalette()
+	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? GetCurrentThemeCompletePalette()
 	{
 		ThemeRegistry.ThemeInfo? currentTheme = CurrentTheme;
 		if (currentTheme is null)
@@ -1044,7 +1044,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The semantic theme to generate the complete palette from.</param>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color.</returns>
-	public static ImmutableDictionary<SemanticColorRequest, PerceptualColor> GetCompletePalette(ISemanticTheme theme)
+	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> GetCompletePalette(ISemanticTheme theme)
 	{
 		ArgumentNullException.ThrowIfNull(theme);
 
@@ -1054,14 +1054,14 @@ public static class Theme
 		// Check cache first
 		using (paletteCacheLock.EnterScope())
 		{
-			if (paletteCache.TryGetValue(cacheKey, out ImmutableDictionary<SemanticColorRequest, PerceptualColor>? cachedPalette))
+			if (paletteCache.TryGetValue(cacheKey, out IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? cachedPalette))
 			{
 				return cachedPalette;
 			}
 		}
 
 		// Generate the palette
-		ImmutableDictionary<SemanticColorRequest, PerceptualColor> palette = GeneratePaletteUncached(theme);
+		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> palette = GeneratePaletteUncached(theme);
 
 		// Cache the result
 		using (paletteCacheLock.EnterScope())
@@ -1085,7 +1085,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The theme to generate the palette from.</param>
 	/// <returns>The complete palette dictionary.</returns>
-	private static ImmutableDictionary<SemanticColorRequest, PerceptualColor> GeneratePaletteUncached(ISemanticTheme theme) =>
+	private static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> GeneratePaletteUncached(ISemanticTheme theme) =>
 		SemanticColorMapper.MakeCompletePalette(theme);
 
 	/// <summary>
@@ -1130,7 +1130,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="themeName">The name of the theme to get the palette for.</param>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if theme not found.</returns>
-	public static ImmutableDictionary<SemanticColorRequest, PerceptualColor>? GetCompletePalette(string themeName)
+	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? GetCompletePalette(string themeName)
 	{
 		ThemeRegistry.ThemeInfo? themeInfo = FindTheme(themeName);
 		if (themeInfo is null)
@@ -1148,7 +1148,7 @@ public static class Theme
 	/// <returns>An array of all available semantic color requests, or empty array if no theme is active.</returns>
 	public static ImmutableArray<SemanticColorRequest> GetCurrentThemeAvailableColorRequests()
 	{
-		ImmutableDictionary<SemanticColorRequest, PerceptualColor>? palette = GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? palette = GetCurrentThemeCompletePalette();
 		return palette?.Keys.ToImmutableArray() ?? [];
 	}
 
@@ -1161,7 +1161,7 @@ public static class Theme
 	/// <returns>True if the color was found, false otherwise.</returns>
 	public static bool TryGetColor(SemanticColorRequest request, out PerceptualColor color)
 	{
-		ImmutableDictionary<SemanticColorRequest, PerceptualColor>? palette = GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? palette = GetCurrentThemeCompletePalette();
 		if (palette is not null && palette.TryGetValue(request, out color))
 		{
 			return true;

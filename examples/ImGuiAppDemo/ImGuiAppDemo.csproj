@@ -1,6 +1,11 @@
-<Project Sdk="ktsu.Sdk.ImGuiApp">
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+  <Sdk Name="ktsu.Sdk.App" />
+
   <PropertyGroup>
-    <TargetFrameworks>net9.0;net8.0;</TargetFrameworks>
+    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
@@ -8,12 +13,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ImGuiApp\ImGuiApp.csproj" />
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <PackageReference Include="ktsu.Extensions" />
+    <PackageReference Include="ktsu.Semantics.Paths" />
+    <PackageReference Include="ktsu.Semantics.Strings" />
   </ItemGroup>
 
   <ItemGroup>

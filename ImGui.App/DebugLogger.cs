@@ -2,10 +2,10 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 
-using ktsu.Extensions;
-using ktsu.StrongPaths;
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 
 /// <summary>
 /// Simple file logger for debugging crashes

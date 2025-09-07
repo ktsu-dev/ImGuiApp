@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 
 /// <summary>
 /// Represents performance settings for throttled rendering to save system resources.

@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 using System.Runtime.InteropServices;
 
 internal static partial class NativeMethods
@@ -21,6 +21,7 @@ internal static partial class NativeMethods
 	/// </summary>
 	/// <returns>True if the operation was successful; otherwise, false.</returns>
 	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	[return: MarshalAs(UnmanagedType.Bool)]
 	internal static partial bool SetProcessDPIAware();
 
@@ -30,6 +31,7 @@ internal static partial class NativeMethods
 	/// <param name="dpiContext">The DPI awareness context to set.</param>
 	/// <returns>The previous DPI awareness context, or null if the function failed.</returns>
 	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial nint SetProcessDpiAwarenessContext(nint dpiContext);
 
 	/// <summary>
@@ -38,6 +40,7 @@ internal static partial class NativeMethods
 	/// <param name="value">The DPI awareness value to set.</param>
 	/// <returns>HRESULT indicating success or failure.</returns>
 	[LibraryImport("Shcore.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int SetProcessDpiAwareness(ProcessDpiAwareness value);
 
 	/// <summary>
@@ -76,6 +79,7 @@ internal static partial class NativeMethods
 	/// <param name="display">The name of the display.</param>
 	/// <returns>A handle to the display structure.</returns>
 	[LibraryImport(X11LibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial IntPtr XOpenDisplay([MarshalAs(UnmanagedType.LPStr)] string display);
 
 	/// <summary>
@@ -86,6 +90,7 @@ internal static partial class NativeMethods
 	/// <param name="option">The option name.</param>
 	/// <returns>The value of the default setting.</returns>
 	[LibraryImport(X11LibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial IntPtr XGetDefault(IntPtr display, [MarshalAs(UnmanagedType.LPStr)] string program, [MarshalAs(UnmanagedType.LPStr)] string option);
 
 	/// <summary>
@@ -95,6 +100,7 @@ internal static partial class NativeMethods
 	/// <param name="screenNumber">The screen number.</param>
 	/// <returns>The width of the screen in pixels.</returns>
 	[LibraryImport(X11LibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int XDisplayWidth(IntPtr display, int screenNumber);
 
 	/// <summary>
@@ -104,6 +110,7 @@ internal static partial class NativeMethods
 	/// <param name="screenNumber">The screen number.</param>
 	/// <returns>The width of the screen in millimeters.</returns>
 	[LibraryImport(X11LibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int XDisplayWidthMM(IntPtr display, int screenNumber);
 
 	/// <summary>
@@ -112,6 +119,7 @@ internal static partial class NativeMethods
 	/// <param name="display">A handle to the display structure.</param>
 	/// <returns>Zero if the operation was successful; otherwise, a non-zero value.</returns>
 	[LibraryImport(X11LibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int XCloseDisplay(IntPtr display);
 
 	/// <summary>
@@ -152,14 +160,18 @@ internal static partial class NativeMethods
 	private const string GDILibraryName = "gdiplus.dll";
 
 	[LibraryImport(GDILibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int GdiplusStartup(out IntPtr token, in StartupInputEx input, out StartupOutput output);
 
 	[LibraryImport(GDILibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int GdipCreateFromHWND(IntPtr hwnd, out IntPtr graphics);
 
 	[LibraryImport(GDILibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int GdipDeleteGraphics(IntPtr graphics);
 
 	[LibraryImport(GDILibraryName)]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int GdipGetDpiX(IntPtr graphics, out float dpi);
 }

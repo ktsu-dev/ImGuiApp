@@ -2,7 +2,8 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App.ImGuiController;
+
 using Silk.NET.OpenGL;
 
 /// <summary>

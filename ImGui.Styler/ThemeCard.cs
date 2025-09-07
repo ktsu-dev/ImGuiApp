@@ -2,11 +2,10 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiStyler;
+namespace ktsu.ImGui.Styler;
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ThemeProvider;
@@ -89,7 +88,7 @@ public static class ThemeCard
 			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
 			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
 			ImColor textColor = Color.Palette.Neutral.White; // Fallback
-			ImmutableDictionary<SemanticColorRequest, PerceptualColor>? completePalette = null;
+			IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette = null;
 
 			try
 			{
@@ -321,7 +320,7 @@ public static class ThemeCard
 	/// <param name="completePalette">The complete color palette for the theme.</param>
 	/// <param name="dialogMax">The bottom-right corner of the dialog area.</param>
 	/// <param name="margin">The margin from the dialog edge.</param>
-	private static void DrawSemanticSwatches(ImDrawListPtr drawList, ImmutableDictionary<SemanticColorRequest, PerceptualColor>? completePalette, Vector2 dialogMax, float margin)
+	private static void DrawSemanticSwatches(ImDrawListPtr drawList, IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette, Vector2 dialogMax, float margin)
 	{
 		// Skip drawing swatches if palette is not available
 		if (completePalette is null)

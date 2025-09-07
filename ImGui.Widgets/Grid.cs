@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgets;
+namespace ktsu.ImGui.Widgets;
 
 using System.Drawing;
 using System.Numerics;
@@ -165,7 +165,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal static class GridImpl
 	{
-		internal class GridLayout()
+		internal sealed class GridLayout()
 		{
 			internal Point Dimensions { private get; init; }
 			internal float[] ColumnWidths { get; init; } = [];

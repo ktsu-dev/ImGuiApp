@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -11,11 +11,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
-using ktsu.Extensions;
-using ktsu.ImGuiApp.ImGuiController;
+using ktsu.ImGui.App.ImGuiController;
 using ktsu.Invoker;
 using ktsu.ScopedAction;
-using ktsu.StrongPaths;
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;

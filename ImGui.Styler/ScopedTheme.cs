@@ -2,10 +2,9 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiStyler;
+namespace ktsu.ImGui.Styler;
 
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ScopedAction;
@@ -20,7 +19,7 @@ public class ScopedTheme : ScopedAction
 	/// <summary>
 	/// Cache for storing computed color mappings per theme to avoid repeated computation.
 	/// </summary>
-	private static readonly ConcurrentDictionary<string, ImmutableDictionary<ImGuiCol, Vector4>> colorMappingCache = new();
+	private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<ImGuiCol, Vector4>> colorMappingCache = new();
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ScopedTheme"/> class.
@@ -34,7 +33,7 @@ public class ScopedTheme : ScopedAction
 		string cacheKey = theme.GetType().FullName ?? theme.GetType().Name;
 
 		// Get the color mapping from cache or compute it
-		ImmutableDictionary<ImGuiCol, Vector4> colorMapping = colorMappingCache.GetOrAdd(cacheKey, _ => Theme.GetColorMapping(theme));
+		IReadOnlyDictionary<ImGuiCol, Vector4> colorMapping = colorMappingCache.GetOrAdd(cacheKey, _ => Theme.GetColorMapping(theme));
 
 		int numStyles = 0;
 

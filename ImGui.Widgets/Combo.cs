@@ -2,13 +2,13 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgets;
+namespace ktsu.ImGui.Widgets;
 
 using System.Collections.ObjectModel;
-
+using System.Globalization;
 using Hexa.NET.ImGui;
 
-using ktsu.StrongStrings;
+using ktsu.Semantics.Strings;
 
 public static partial class ImGuiWidgets
 {
@@ -41,12 +41,12 @@ public static partial class ImGuiWidgets
 	/// <param name="selectedValue">The currently selected value.</param>
 	/// <param name="possibleValues">The collection of possible values.</param>
 	/// <returns>If a combo value was selected.</returns>
-	public static bool Combo<TString>(string label, ref TString selectedValue, Collection<TString> possibleValues) where TString : IString
+	public static bool Combo<TString>(string label, ref TString selectedValue, Collection<TString> possibleValues) where TString : ISemanticString
 	{
 		ArgumentNullException.ThrowIfNull(possibleValues);
 
 		int currentIndex = possibleValues.IndexOf(selectedValue);
-		string[] possibleValuesNames = [.. possibleValues.Select(e => e.ToString())];
+		string[] possibleValuesNames = [.. possibleValues.Select(e => e.ToString(CultureInfo.InvariantCulture))];
 		if (ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length))
 		{
 			selectedValue = possibleValues[currentIndex];

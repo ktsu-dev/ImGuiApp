@@ -1,11 +1,23 @@
-<Project Sdk="ktsu.Sdk.Test">
+<Project>
+  <Sdk Name="MStest.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
+    <TestingPlatformShowTestsFailureDetails>true</TestingPlatformShowTestsFailureDetails>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ImGuiStyler\ImGuiStyler.csproj" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Silk.NET.OpenGL" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <ProjectReference Include="..\..\ImGui.Styler\ImGui.Styler.csproj" />
   </ItemGroup>
-
 </Project>

@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp;
+namespace ktsu.ImGui.App;
 
 using System.Diagnostics;
 using System.Threading;
@@ -11,7 +11,7 @@ using System.Threading;
 /// A PID controller-based frame limiter that provides accurate frame rate control
 /// by learning from past errors and dynamically adjusting sleep times.
 /// </summary>
-internal class PidFrameLimiter
+internal sealed class PidFrameLimiter
 {
 	internal readonly double kp; // Proportional gain
 	internal readonly double ki; // Integral gain

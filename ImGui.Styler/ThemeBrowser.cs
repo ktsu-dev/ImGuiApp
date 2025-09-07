@@ -2,14 +2,14 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiStyler;
+namespace ktsu.ImGui.Styler;
 
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ThemeProvider;
-using ktsu.ImGuiPopups;
+using ktsu.ImGui.Popups;
 
 /// <summary>
 /// A modal theme browser that allows users to select themes from a visual grid.

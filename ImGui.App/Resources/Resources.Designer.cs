@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ktsu.ImGuiApp.Resources
+namespace ktsu.ImGui.App.Resources
 {
 	using System;
 

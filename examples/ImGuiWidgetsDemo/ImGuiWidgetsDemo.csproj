@@ -1,19 +1,15 @@
-﻿<Project Sdk="ktsu.Sdk.ImGuiApp">
+﻿<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+  <Sdk Name="ktsu.Sdk.App" />
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ktsu.ImGuiApp" />
-    <PackageReference Include="ktsu.ImGuiPopups" />
-    <PackageReference Include="System.Text.Json" />
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\..\ImGui.Widgets\ImGui.Widgets.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ImGuiWidgets\ImGuiWidgets.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="ktsu.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

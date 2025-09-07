@@ -2,14 +2,14 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiPopupsDemo;
+namespace ktsu.ImGui.Examples.Popups;
 
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGuiApp;
-using ktsu.ImGuiPopups;
+using ktsu.ImGui.App;
+using ktsu.ImGui.Popups;
 
 internal static class ImGuiPopupsDemo
 {

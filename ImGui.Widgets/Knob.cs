@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgets;
+namespace ktsu.ImGui.Widgets;
 using System;
 using System.Globalization;
 using System.Numerics;
@@ -120,7 +120,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal static class KnobImpl
 	{
-		public class KnobColors
+		public sealed class KnobColors
 		{
 			public ImColor Base { get; set; }
 			public ImColor Hovered { get; set; }
@@ -192,7 +192,7 @@ public static partial class ImGuiWidgets
 			DrawArc1(center, radius, mid_angle - overlap, endAngle, thickness, color, numSegments);
 		}
 
-		private class KnobInternal<TDataType> where TDataType : unmanaged, INumber<TDataType>
+		private sealed class KnobInternal<TDataType> where TDataType : unmanaged, INumber<TDataType>
 		{
 			public float Radius { get; set; }
 			public bool ValueChanged { get; set; }

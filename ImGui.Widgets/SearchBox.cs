@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgets;
+namespace ktsu.ImGui.Widgets;
 
 using System;
 using System.Collections.Generic;

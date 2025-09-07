@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiPopups;
+namespace ktsu.ImGui.Popups;
 
 using System;
 using System.Collections.ObjectModel;
@@ -13,10 +13,11 @@ using System.Text.Json.Serialization;
 
 using Hexa.NET.ImGui;
 
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 using ktsu.Extensions;
-using ktsu.StrongPaths;
-
 using Microsoft.Extensions.FileSystemGlobbing;
+using System.Text;
 
 /// <summary>
 /// Partial class containing various ImGui popup implementations.
@@ -84,17 +85,17 @@ public partial class ImGuiPopups
 		/// Gets or sets the current directory being displayed.
 		/// </summary>
 		[JsonInclude]
-		private AbsoluteDirectoryPath CurrentDirectory { get; set; } = (AbsoluteDirectoryPath)Environment.CurrentDirectory;
+		private AbsoluteDirectoryPath CurrentDirectory { get; set; } = Environment.CurrentDirectory.As<AbsoluteDirectoryPath>();
 
 		/// <summary>
 		/// Collection of current contents (files and directories) in the current directory.
 		/// </summary>
-		private Collection<AnyAbsolutePath> CurrentContents { get; set; } = [];
+		private Collection<IAbsolutePath> CurrentContents { get; set; } = [];
 
 		/// <summary>
 		/// The currently selected item.
 		/// </summary>
-		private AnyAbsolutePath ChosenItem { get; set; } = new();
+		private IAbsolutePath ChosenItem { get; set; } = AbsolutePath.Create("");
 
 		/// <summary>
 		/// Collection of logical drives available.
@@ -220,12 +221,17 @@ public partial class ImGuiPopups
 			{
 				if (ImGui.BeginCombo("##Drives", Drives[0]))
 				{
-					string currentDrive = CurrentDirectory.Split(Path.VolumeSeparatorChar).First() + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar;
+					StringBuilder currentDriveStringBuilder = new();
+					currentDriveStringBuilder.Append(CurrentDirectory.Split(Path.VolumeSeparatorChar).Current);
+					currentDriveStringBuilder.Append(Path.VolumeSeparatorChar);
+					currentDriveStringBuilder.Append(Path.DirectorySeparatorChar);
+					string currentDrive = currentDriveStringBuilder.ToString();
+
 					foreach (string drive in Drives)
 					{
 						if (ImGui.Selectable(drive, drive == currentDrive))
 						{
-							CurrentDirectory = (AbsoluteDirectoryPath)drive;
+							CurrentDirectory = drive.As<AbsoluteDirectoryPath>();
 							RefreshContents();
 						}
 					}
@@ -254,20 +260,20 @@ public partial class ImGuiPopups
 							string? newPath = Path.GetDirectoryName(CurrentDirectory.WeakString.Trim(Path.DirectorySeparatorChar));
 							if (newPath is not null)
 							{
-								CurrentDirectory = (AbsoluteDirectoryPath)newPath;
+								CurrentDirectory = newPath.As<AbsoluteDirectoryPath>();
 								RefreshContents();
 							}
 						}
 					}
 
-					foreach (AnyAbsolutePath? path in CurrentContents.OrderBy(p => p is not AbsoluteDirectoryPath).ThenBy(p => p).ToCollection())
+					foreach (IAbsolutePath? path in CurrentContents.OrderBy(p => p is not AbsoluteDirectoryPath).ThenBy(p => p).ToCollection())
 					{
 						ImGui.TableNextRow();
 						ImGui.TableNextColumn();
 						AbsoluteDirectoryPath? directory = path as AbsoluteDirectoryPath;
 						AbsoluteFilePath? file = path as AbsoluteFilePath;
-						string displayPath = path.WeakString;
-						displayPath = displayPath.RemovePrefix(CurrentDirectory).Trim(Path.DirectorySeparatorChar);
+						string displayPath = directory?.WeakString ?? file?.WeakString ?? string.Empty;
+						displayPath = displayPath.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
 
 						if (directory is not null)
 						{
@@ -307,7 +313,7 @@ public partial class ImGuiPopups
 			{
 				string fileName = FileName;
 				ImGui.InputText("##SaveAs", ref fileName, 256);
-				FileName = (FileName)fileName;
+				FileName = fileName.As<FileName>();
 			}
 
 			string confirmText = BrowserMode switch
@@ -344,11 +350,11 @@ public partial class ImGuiPopups
 					return;
 				}
 
-				OnChooseFile((AbsoluteFilePath)Path.GetFullPath(chosenFile));
+				OnChooseFile(Path.GetFullPath(chosenFile).As<AbsoluteFilePath>());
 			}
 			else if (BrowserTarget == FilesystemBrowserTarget.Directory && ChosenItem is AbsoluteDirectoryPath directory)
 			{
-				OnChooseDirectory((AbsoluteDirectoryPath)Path.GetFullPath(directory));
+				OnChooseDirectory(Path.GetFullPath(directory).As<AbsoluteDirectoryPath>());
 			}
 
 			ImGui.CloseCurrentPopup();
@@ -359,15 +365,20 @@ public partial class ImGuiPopups
 		/// </summary>
 		private void RefreshContents()
 		{
-			ChosenItem = new();
+			ChosenItem = AbsolutePath.Create("");
 			CurrentContents.Clear();
-			CurrentDirectory.Contents.ForEach(p =>
+			CurrentDirectory.GetContents().ForEach(p =>
 			{
 				if (BrowserTarget == FilesystemBrowserTarget.File || (BrowserTarget == FilesystemBrowserTarget.Directory && p is AbsoluteDirectoryPath))
 				{
-					if (p is AbsoluteDirectoryPath || Matcher.Match(Path.GetFileName(p)).HasMatches)
+					if (p is not AbsolutePath absolutePath)
 					{
-						CurrentContents.Add(p);
+						throw new InvalidOperationException("Path is not an absolute path.");
+					}
+
+					if (absolutePath.IsDirectory || Matcher.Match(Path.GetFileName(absolutePath.WeakString)).HasMatches)
+					{
+						CurrentContents.Add(absolutePath);
 					}
 				}
 			});

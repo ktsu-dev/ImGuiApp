@@ -2,15 +2,13 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiStyler;
+namespace ktsu.ImGui.Styler;
 
-using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.Extensions;
 using ktsu.ThemeProvider;
 
 /// <summary>
@@ -36,7 +34,7 @@ public static class Color
 	{
 		ArgumentNullException.ThrowIfNull(hex, nameof(hex));
 
-		if (hex.StartsWithOrdinal("#"))
+		if (hex.StartsWith('#'))
 		{
 			hex = hex[1..];
 		}
@@ -252,7 +250,7 @@ public static class Color
 				SemanticColorRequest request = new(meaning, priority);
 
 				// Use SemanticColorMapper to get the color from the current theme
-				ImmutableDictionary<SemanticColorRequest, PerceptualColor> colorMapping = SemanticColorMapper.MapColors([request], Theme.CurrentTheme.CreateInstance());
+				IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> colorMapping = SemanticColorMapper.MapColors([request], Theme.CurrentTheme.CreateInstance());
 
 				if (colorMapping.TryGetValue(request, out PerceptualColor perceptualColor))
 				{
@@ -283,7 +281,7 @@ public static class Color
 	private static ImColor GetThemeColor(ImColor fallbackColor)
 	{
 		// Check if a theme is currently applied and get its complete palette
-		ImmutableDictionary<SemanticColorRequest, PerceptualColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
 		if (completePalette is not null)
 		{
 			try

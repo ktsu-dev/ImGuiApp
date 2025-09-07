@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.ImGuiController;
+namespace ktsu.ImGui.App.ImGuiController;
 
 using System;
 
@@ -21,9 +21,14 @@ public readonly struct ImGuiFontConfig : IEquatable<ImGuiFontConfig>
 	/// <param name="getGlyphRange">A function to get the glyph range for the font.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="fontSize"/> is less than or equal to zero.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="fontPath"/> is null.</exception>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1512:Use ArgumentOutOfRangeException throw helper", Justification = "<Pending>")]
 	public ImGuiFontConfig(string fontPath, int fontSize, Func<ImGuiIOPtr, IntPtr>? getGlyphRange = null)
 	{
-		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fontSize);
+		if (fontSize <= 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(fontSize));
+		}
+
 		FontPath = fontPath ?? throw new ArgumentNullException(nameof(fontPath));
 		FontSize = fontSize;
 		GetGlyphRange = getGlyphRange;

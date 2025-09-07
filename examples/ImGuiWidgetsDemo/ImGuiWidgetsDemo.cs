@@ -2,21 +2,23 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgetsDemo;
+namespace ktsu.ImGui.Examples.Widgets;
 
 using System.Collections.ObjectModel;
 using System.Numerics;
 using Hexa.NET.ImGui;
-using ktsu.Extensions;
-using ktsu.ImGuiApp;
-using ktsu.ImGuiPopups;
-using ktsu.ImGuiStyler;
-using ktsu.ImGuiWidgets;
-using ktsu.StrongPaths;
-using ktsu.StrongStrings;
+using ktsu.ImGui.App;
+using ktsu.ImGui.Popups;
+using ktsu.ImGui.Styler;
+using ktsu.ImGui.Widgets;
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 using ktsu.TextFilter;
 
-internal sealed record class StrongStringExample : StrongStringAbstract<StrongStringExample> { }
+/// <summary>
+/// Demo strong string example.
+/// </summary>
+public sealed record class StrongStringExample : SemanticString<StrongStringExample> { }
 
 /// <summary>
 /// Demo enum values.
@@ -150,7 +152,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowAdvancedDemos(float size)
 	{
-		AbsoluteFilePath ktsuIconPath = (AbsoluteDirectoryPath)Environment.CurrentDirectory / (FileName)"ktsu.png";
+		AbsoluteFilePath ktsuIconPath = Environment.CurrentDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>();
 		ImGuiAppTextureInfo ktsuTexture = ImGuiApp.GetOrLoadTexture(ktsuIconPath);
 
 		ImGui.TextUnformatted("Advanced Widget Demos");

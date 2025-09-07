@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiPopups;
+namespace ktsu.ImGui.Popups;
 
 using System.Numerics;
 

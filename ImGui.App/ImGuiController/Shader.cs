@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.ImGuiController;
+namespace ktsu.ImGui.App.ImGuiController;
 
 using System;
 using System.Collections.Generic;
@@ -19,7 +19,7 @@ internal struct UniformFieldInfo
 	public UniformType Type;
 }
 
-internal class Shader : IDisposable
+internal sealed class Shader : IDisposable
 {
 	public uint Program { get; private set; }
 	internal readonly Dictionary<string, int> _uniformToLocation = [];
@@ -51,7 +51,7 @@ internal class Shader : IDisposable
 	/// Protected implementation of Dispose pattern.
 	/// </summary>
 	/// <param name="disposing">true if disposing managed resources, false if called from finalizer</param>
-	protected virtual void Dispose(bool disposing)
+	private void Dispose(bool disposing)
 	{
 		if (_disposed)
 		{

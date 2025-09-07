@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.ImGuiController;
+namespace ktsu.ImGui.App.ImGuiController;
 
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,9 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-internal class ImGuiController : IDisposable
+using ktsu.ImGui.App;
+
+internal sealed class ImGuiController : IDisposable
 {
 
 	internal GL? _gl;
@@ -905,7 +907,7 @@ internal class ImGuiController : IDisposable
 	/// Protected implementation of Dispose pattern.
 	/// </summary>
 	/// <param name="disposing">true if disposing managed resources, false if called from finalizer</param>
-	protected virtual void Dispose(bool disposing)
+	private void Dispose(bool disposing)
 	{
 		if (_disposed)
 		{

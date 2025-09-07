@@ -1,16 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetFrameworks>net8.0;net9.0;</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
-    <PackageReference Include="ktsu.Extensions" />
-    <PackageReference Include="ktsu.ImGui.Popups" />
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.ThemeProvider" />
     <PackageReference Include="ktsu.ThemeProvider.ImGui" />
+    <ProjectReference Include="..\ImGui.Popups\ImGui.Popups.csproj" />
   </ItemGroup>
 
 </Project>

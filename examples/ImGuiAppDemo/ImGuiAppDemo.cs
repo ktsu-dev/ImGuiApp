@@ -2,17 +2,17 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.Demo;
+namespace ktsu.ImGui.Examples.App;
 
 using System.Numerics;
 using System.Text;
 
 using Hexa.NET.ImGui;
 
-using ktsu.Extensions;
-using ktsu.ImGuiApp;
-using ktsu.ImGuiAppDemo.Properties;
-using ktsu.StrongPaths;
+using ktsu.ImGui.App;
+using ktsu.ImGui.Examples.App.Properties;
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 
 internal static class ImGuiAppDemo
 {

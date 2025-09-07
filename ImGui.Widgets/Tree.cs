@@ -2,13 +2,13 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiWidgets;
+namespace ktsu.ImGui.Widgets;
 
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGuiStyler;
+using ktsu.ImGui.Styler;
 using ktsu.ScopedAction;
 
 /// <summary>

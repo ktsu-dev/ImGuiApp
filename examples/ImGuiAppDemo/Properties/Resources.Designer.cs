@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ktsu.ImGuiAppDemo.Properties {
+namespace ktsu.ImGui.Examples.App.Properties {
     using System;
 
 

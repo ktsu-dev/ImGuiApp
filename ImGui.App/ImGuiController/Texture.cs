@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGuiApp.ImGuiController;
+namespace ktsu.ImGui.App.ImGuiController;
 
 using System;
 
@@ -34,7 +34,7 @@ public enum TextureCoordinate
 	R = TextureParameterName.TextureWrapR
 }
 
-internal class Texture : IDisposable
+internal sealed class Texture : IDisposable
 {
 	public const SizedInternalFormat Srgb8Alpha8 = (SizedInternalFormat)GLEnum.Srgb8Alpha8;
 	public const SizedInternalFormat Rgb32F = (SizedInternalFormat)GLEnum.Rgb32f;
@@ -43,7 +43,6 @@ internal class Texture : IDisposable
 
 	public static float? MaxAniso;
 	internal readonly GL _gl;
-	public readonly string? Name;
 	public readonly uint GlTexture;
 	public readonly uint Width, Height;
 	public readonly uint MipmapLevels;
@@ -132,7 +131,7 @@ internal class Texture : IDisposable
 	/// Protected implementation of Dispose pattern.
 	/// </summary>
 	/// <param name="disposing">true if disposing managed resources, false if called from finalizer</param>
-	protected virtual void Dispose(bool disposing)
+	private void Dispose(bool disposing)
 	{
 		if (_disposed)
 		{

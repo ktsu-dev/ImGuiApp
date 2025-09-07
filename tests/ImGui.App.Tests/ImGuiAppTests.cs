@@ -4,7 +4,7 @@
 
 [assembly: DoNotParallelize]
 
-namespace ktsu.ImGuiApp.Test;
+namespace ktsu.ImGui.App.Test;
 
 using System.Numerics;
 using ktsu.Extensions;
