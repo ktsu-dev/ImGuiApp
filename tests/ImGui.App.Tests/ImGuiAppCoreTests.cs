@@ -2,11 +2,11 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 using System.Collections.Concurrent;
-using ktsu.Extensions;
-using ktsu.StrongPaths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

@@ -2,14 +2,14 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using System.Numerics;
 
-using ktsu.StrongPaths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Windowing;
+using ktsu.Semantics.Paths;
 
 /// <summary>
 /// Tests for ImGuiApp window management functionality including initialization, configuration validation, and event handling.

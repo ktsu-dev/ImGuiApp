@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using System;
 using Hexa.NET.ImGui;

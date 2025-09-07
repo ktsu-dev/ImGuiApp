@@ -2,11 +2,12 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using System;
 using System.Collections.Generic;
-using ktsu.ImGuiApp.ImGuiController;
+using ktsu.ImGui.App.ImGuiController;
+using ktsu.ImGui.App;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

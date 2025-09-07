@@ -2,9 +2,10 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ktsu.ImGui.App.ImGuiController;
 
 /// <summary>
 /// Tests for platform-specific functionality including DPI awareness, native methods, and GDI+ helpers.
@@ -68,7 +69,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void UniformFieldInfo_IsStruct()
 	{
-		Type type = typeof(ImGuiController.UniformFieldInfo);
+		Type type = typeof(UniformFieldInfo);
 		Assert.IsTrue(type.IsValueType);
 		Assert.IsFalse(type.IsClass);
 	}
@@ -77,7 +78,7 @@ public class PlatformSpecificTests
 	public void UniformFieldInfo_HasExpectedFields()
 	{
 		// Test UniformFieldInfo through direct access using internal visibility
-		ImGuiController.UniformFieldInfo uniformInfo = new()
+		UniformFieldInfo uniformInfo = new()
 		{
 			Location = 1,
 			Name = "test",
@@ -101,7 +102,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void Shader_IsInternalClass()
 	{
-		Type shaderType = typeof(ImGuiController.Shader);
+		Type shaderType = typeof(Shader);
 		Assert.IsTrue(shaderType.IsClass);
 		Assert.IsFalse(shaderType.IsPublic);
 	}
@@ -109,7 +110,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void Texture_IsInternalClass()
 	{
-		Type textureType = typeof(ImGuiController.Texture);
+		Type textureType = typeof(Texture);
 		Assert.IsTrue(textureType.IsClass);
 		Assert.IsFalse(textureType.IsPublic);
 	}
@@ -121,7 +122,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void IGL_IsInterface()
 	{
-		Type iglType = typeof(ImGuiController.IGL);
+		Type iglType = typeof(IGL);
 		Assert.IsTrue(iglType.IsInterface);
 		Assert.IsTrue(iglType.IsPublic);
 	}
@@ -129,7 +130,7 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void IGL_InheritsFromIDisposable()
 	{
-		Type iglType = typeof(ImGuiController.IGL);
+		Type iglType = typeof(IGL);
 		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(iglType));
 	}
 
@@ -159,8 +160,8 @@ public class PlatformSpecificTests
 	[TestMethod]
 	public void GLWrapper_ImplementsIGL()
 	{
-		Type wrapperType = typeof(ImGuiController.GLWrapper);
-		Assert.IsTrue(typeof(ImGuiController.IGL).IsAssignableFrom(wrapperType));
+		Type wrapperType = typeof(GLWrapper);
+		Assert.IsTrue(typeof(IGL).IsAssignableFrom(wrapperType));
 	}
 
 	#endregion

@@ -926,7 +926,7 @@ internal static class ImGuiAppDemo
 		ImGui.Text("Built with:");
 		ImGui.BulletText("Hexa.NET.ImGui");
 		ImGui.BulletText("Silk.NET");
-		ImGui.BulletText("ktsu.ImGuiApp Framework");
+		ImGui.BulletText("ktsu.ImGui Framework");
 		ImGui.End();
 	}
 

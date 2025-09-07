@@ -2,6 +2,10 @@
   <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ktsu.ImGui.App.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworks>net8.0;net9.0;net7.0</TargetFrameworks>
@@ -31,5 +35,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+
+
 
 </Project>

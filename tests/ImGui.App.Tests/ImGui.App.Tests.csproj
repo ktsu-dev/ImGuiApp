@@ -10,6 +10,8 @@
     <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
     <TestingPlatformShowTestsFailureDetails>true</TestingPlatformShowTestsFailureDetails>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>ktsu.ImGui.App.Tests</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

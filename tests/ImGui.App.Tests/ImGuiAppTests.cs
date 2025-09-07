@@ -4,16 +4,16 @@
 
 [assembly: DoNotParallelize]
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using System.Numerics;
-using ktsu.Extensions;
-using ktsu.StrongPaths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
+using ktsu.Semantics.Strings;
+using ktsu.Semantics.Paths;
 
 [TestClass]
 public sealed class ImGuiAppTests : IDisposable

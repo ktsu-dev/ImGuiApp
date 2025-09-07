@@ -2,13 +2,13 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using System.Numerics;
-using ktsu.Extensions;
-using ktsu.StrongPaths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Silk.NET.Windowing;
+using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 
 /// <summary>
 /// Tests for ImGuiApp data structures including texture info, window state, configuration, and performance settings.

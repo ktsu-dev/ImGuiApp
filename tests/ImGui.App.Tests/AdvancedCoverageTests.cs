@@ -2,12 +2,13 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Test;
+namespace ktsu.ImGui.App.Tests;
 
 using System;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ktsu.Semantics.Paths;
 
 /// <summary>
 /// Advanced tests targeting specific low-coverage areas including OpenGL functionality, shader management, and texture operations.
@@ -179,8 +180,8 @@ public class AdvancedCoverageTests
 	[TestMethod]
 	public void ImGuiApp_Textures_MultipleAccess_ReturnsSameInstance()
 	{
-		System.Collections.Concurrent.ConcurrentDictionary<StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures1 = ImGuiApp.Textures;
-		System.Collections.Concurrent.ConcurrentDictionary<StrongPaths.AbsoluteFilePath, ImGuiAppTextureInfo> textures2 = ImGuiApp.Textures;
+		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> textures1 = ImGuiApp.Textures;
+		System.Collections.Concurrent.ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> textures2 = ImGuiApp.Textures;
 
 		// Should return the same collection instance
 		Assert.AreSame(textures1, textures2);
