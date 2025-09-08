@@ -3,41 +3,22 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Main Application Dependencies -->
-    <PackageVersion Include="coverlet.collector" Version="6.0.4">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageVersion>
+    <PackageVersion Include="ktsu.Extensions" Version="1.5.7" />
+    <PackageVersion Include="ktsu.ThemeProvider" Version="1.0.9" />
+    <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="1.0.9" />
+    <PackageVersion Include="ktsu.Semantics.Paths" Version="1.0.21" />
+    <PackageVersion Include="ktsu.Semantics.Strings" Version="1.0.21" />
+    <PackageVersion Include="ktsu.RoundTripStringJsonConverter" Version="1.0.3" />
+    <PackageVersion Include="ktsu.CaseConverter" Version="1.3.3" />
     <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.8.5" />
-    <PackageVersion Include="ktsu.Invoker" Version="1.1.0" />
-    <PackageVersion Include="ktsu.ScopedAction" Version="1.1.4" />
-    <PackageVersion Include="ktsu.StrongPaths" Version="1.3.2" />
-    <PackageVersion Include="Silk.NET" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.Assimp" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.Direct3D12" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.Input.Extensions" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.Input.Sdl" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.OpenGL" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.OpenGLES" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.OpenXR" Version="2.22.0" />
-    <PackageVersion Include="Silk.NET.Windowing.Sdl" Version="2.22.0" />
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.8" />
-    <!-- Test Dependencies -->
+    <PackageVersion Include="ktsu.Invoker" Version="1.1.1" />
+    <PackageVersion Include="ktsu.ScopedAction" Version="1.1.5" />
+    <PackageVersion Include="ktsu.FuzzySearch" Version="1.2.2" />
+    <PackageVersion Include="ktsu.TextFilter" Version="1.5.4" />
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="17.14.2" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.CrashDump" Version="1.7.3" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.Fakes" Version="17.14.1" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="1.7.3" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.HotReload" Version="1.7.3" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="1.7.3" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="1.7.3" />
-    <PackageVersion Include="MSTest.TestAdapter" Version="3.10.1" />
-    <PackageVersion Include="MSTest.TestFramework" Version="3.10.1" />
-    <PackageVersion Include="coverlet.msbuild" Version="6.0.4" />
-    <!-- SDK Dependencies -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="8.0.0" />
+    <PackageVersion Include="Silk.NET" Version="2.22" />
+    <PackageVersion Include="Silk.NET.OpenGL" Version="2.22" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.8" />
   </ItemGroup>
 </Project>

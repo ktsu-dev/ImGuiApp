@@ -1,0 +1,16 @@
+﻿<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+  <Sdk Name="ktsu.Sdk.App" />
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\..\ImGui.Styler\ImGui.Styler.csproj" />
+  </ItemGroup>
+</Project>

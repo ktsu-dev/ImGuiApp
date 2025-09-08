@@ -1,0 +1,15 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+  <Sdk Name="ktsu.Sdk.App" />
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\..\ImGui.Popups\ImGui.Popups.csproj" />
+  </ItemGroup>
+</Project>
