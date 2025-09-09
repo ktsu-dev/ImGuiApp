@@ -1,3 +1,5 @@
-## v2.1.8
+## v2.1.9 (patch)
 
-No significant changes detected since v2.1.8.
+Changes since v2.1.8:
+
+- Fix missing package references ([@matt-edmondson](https://github.com/matt-edmondson))
