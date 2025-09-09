@@ -18,6 +18,10 @@
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Silk.NET" Version="2.22" />
     <PackageVersion Include="Silk.NET.OpenGL" Version="2.22" />
+    <PackageVersion Include="Silk.NET.Input" Version="2.22" />
+    <PackageVersion Include="Silk.NET.Input.Sdl" Version="2.22" />
+    <PackageVersion Include="Silk.NET.Windowing" Version="2.22" />
+    <PackageVersion Include="Silk.NET.Windowing.Sdl" Version="2.22" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.8" />
   </ItemGroup>
