@@ -71,6 +71,13 @@ public class ImGuiAppConfig
 	public Action OnMoveOrResize { get; init; } = () => { };
 
 	/// <summary>
+	/// Gets or sets the action to be performed when the global UI scale changes.
+	/// The parameter is the new scale factor (e.g., 1.0 for 100%, 1.5 for 150%).
+	/// This can be used to persist the scale preference.
+	/// </summary>
+	public Action<float> OnGlobalScaleChanged { get; init; } = (scale) => { };
+
+	/// <summary>
 	/// Gets or sets the fonts to be used in the application.
 	/// </summary>
 	/// <value>
