@@ -903,7 +903,7 @@ internal static class ImGuiAppDemo
 		animationTime += dt;
 
 		// Bouncing animation
-		bounceOffset = MathF.Abs(MathF.Sin(animationTime * 3)) * 50;
+		bounceOffset = (MathF.Abs(MathF.Sin(animationTime * 3)) * 50) - 25;
 
 		// Pulse animation
 		pulseScale = 0.8f + (0.4f * MathF.Sin(animationTime * 4));
