@@ -4,9 +4,12 @@
     "rollForward": "latestFeature"
   },
   "msbuild-sdks": {
-    "MSTest.Sdk": "3.10.2",
-    "ktsu.Sdk": "1.75.0",
-    "ktsu.Sdk.ConsoleApp": "1.75.0",
-    "ktsu.Sdk.App": "1.75.0"
+    "ktsu.Sdk": "1.56.0",
+    "ktsu.Sdk.Lib": "1.56.0",
+    "ktsu.Sdk.ConsoleApp": "1.56.0",
+    "ktsu.Sdk.Test": "1.56.0",
+    "ktsu.Sdk.ImGuiApp": "1.56.0",
+    "ktsu.Sdk.WinApp": "1.56.0",
+    "ktsu.Sdk.WinTest": "1.56.0"
   }
 }
