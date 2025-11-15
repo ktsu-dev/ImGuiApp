@@ -110,6 +110,8 @@ internal static class ImGuiAppDemo
 		{
 			{ nameof(Resources.CARDCHAR), Resources.CARDCHAR }
 		},
+		// Example of handling global scale changes for accessibility
+		OnGlobalScaleChanged = (scale) => Console.WriteLine($"Global UI scale changed to {scale * 100:F0}% - This can be persisted to user preferences"),
 		// Example of configuring performance settings for throttled rendering
 		// Uses PID controller for accurate frame rate limiting instead of simple sleep-based approach
 		// VSync is disabled to allow frame limiting below monitor refresh rate
