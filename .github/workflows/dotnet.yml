@@ -26,7 +26,7 @@ jobs:
   build:
     name: Build, Test & Release
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: write # For creating releases and committing metadata
       packages: write # For publishing packages
@@ -35,7 +35,6 @@ jobs:
       version: ${{ steps.pipeline.outputs.version }}
       release_hash: ${{ steps.pipeline.outputs.release_hash }}
       should_release: ${{ steps.pipeline.outputs.should_release }}
-      skipped_release: ${{ steps.pipeline.outputs.skipped_release }}
 
     steps:
       - name: Set up JDK 17
@@ -59,11 +58,6 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
           cache: true
           cache-dependency-path: "**/*.csproj"
-
-      - name: Install dotnet-coverage
-        shell: pwsh
-        run: |
-            dotnet tool install --global dotnet-coverage
 
       - name: Cache SonarQube Cloud packages
         if: ${{ env.SONAR_TOKEN != '' }}
@@ -90,7 +84,7 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' && steps.cache-sonar-scanner.outputs.cache-hit != 'true' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+        shell: powershell
         run: |
           New-Item -Path .\.sonar\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
@@ -99,9 +93,9 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+        shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.coverage.exclusions="**/*Tests/**/*,**/*Test/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="coverage/coverage.opencover.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.verbose=true
 
       - name: Run PSBuild Pipeline
         id: pipeline
@@ -121,7 +115,6 @@ jobs:
             -GitHubRepo "${{ github.repository }}" `
             -GithubToken "${{ github.token }}" `
             -NuGetApiKey "${{ secrets.NUGET_KEY }}" `
-            -KtsuPackageKey "${{ secrets.KTSU_PACKAGE_KEY }}" `
             -WorkspacePath "${{ github.workspace }}" `
             -ExpectedOwner "ktsu-dev" `
             -ChangelogFile "CHANGELOG.md" `
@@ -147,21 +140,17 @@ jobs:
           "release_hash=$($buildConfig.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
           "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
 
-          if ($buildConfig.Data.SkippedRelease) {
-            "skipped_release=true" >> $env:GITHUB_OUTPUT
-          }
-
       - name: End SonarQube
-        if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.skipped_release != 'true'
+        if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+        shell: powershell
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
-        if: always() && steps.pipeline.outputs.skipped_release != 'true'
+        if: always()
         with:
           name: coverage-report
           path: |
@@ -171,7 +160,7 @@ jobs:
   winget:
     name: Update Winget Manifests
     needs: build
-    if: needs.build.outputs.should_release == 'true' && needs.build.outputs.skipped_release != 'true'
+    if: needs.build.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -208,7 +197,7 @@ jobs:
   security:
     name: Security Scanning
     needs: build
-    if: needs.build.outputs.should_release == 'true' && needs.build.outputs.skipped_release != 'true'
+    if: needs.build.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
