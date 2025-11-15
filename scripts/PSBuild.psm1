@@ -2193,8 +2193,8 @@ function Invoke-ReleaseWorkflow {
 
         # Create NuGet packages
         try {
-                    Write-StepHeader "Packaging Libraries" -Tags "Invoke-DotNetPack"
-        Invoke-DotNetPack -Configuration $Configuration -OutputPath $BuildConfiguration.StagingPath -LatestChangelogFile $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Invoke-DotNetPack"
+            Write-StepHeader "Packaging Libraries" -Tags "Invoke-DotNetPack"
+            Invoke-DotNetPack -Configuration $Configuration -OutputPath $BuildConfiguration.StagingPath -LatestChangelogFile $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Invoke-DotNetPack"
 
             # Add package paths if they exist
             if (Test-Path $BuildConfiguration.PackagePattern) {
