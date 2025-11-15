@@ -1,38 +1,6 @@
-## v2.1.9
-
-Changes since v2.1.9:
-## v2.1.9 (patch)
-
-Changes since v2.1.8:
-
-- Fix missing package references ([@matt-edmondson](https://github.com/matt-edmondson))
-## v2.1.8 (patch)
-
-Changes since v2.1.7:
-
-- Enhance project structure and testing: Added new dependencies in Directory.Packages.props, introduced a new Tests project in the solution, and updated project references. Refactored namespaces for consistency across multiple files. Updated test configurations and example projects to align with the new structure. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Initial combined commit ([@matt-edmondson](https://github.com/matt-edmondson))
-## v2.1.7 (patch)
-
-Changes since v2.1.6:
-
-- Fix NuGet package source URL in Invoke-NuGetPublish function: Updated the source URL to ensure correct package publishing to packages.ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance .NET CI workflow: Added support for skipped releases in the GitHub Actions workflow. Updated conditions for SonarQube execution, coverage report upload, and Winget manifest updates to account for skipped releases, improving control over the release process. ([@matt-edmondson](https://github.com/matt-edmondson))
-## v2.1.6 (patch)
-
-Changes since v2.1.5:
-
-- Add Ktsu package key support in build configuration: Updated the .NET CI workflow and PowerShell script to include an optional Ktsu package key for publishing. Enhanced documentation for the new parameter and added conditional publishing logic for Ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
-## v2.1.5 (patch)
-
-Changes since v2.1.4:
-
-- Implement modern DPI awareness handling in Windows: Updated ForceDpiAware to utilize the latest DPI awareness APIs for better compatibility with windowing libraries. Added fallback mechanisms for older Windows versions and enhanced NativeMethods with new DPI awareness context functions. ([@matt-edmondson](https://github.com/matt-edmondson))
-## v2.1.4 (patch)
+## v2.1.3
 
 Changes since v2.1.3:
-
-- Enhance window position validation logic: Implemented performance optimizations to skip unnecessary checks when window position and size remain unchanged. Added methods for better multi-monitor support, ensuring windows are relocated when insufficiently visible. Updated tests to verify new behavior and performance improvements. ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v2.1.3 (patch)
 
 Changes since v2.1.2:
