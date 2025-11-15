@@ -59,7 +59,7 @@ jobs:
           # Function to get latest version from NuGet
           function Get-LatestNuGetVersion {
               param([string]$PackageId)
-
+              
               try {
                   Write-Host "Checking NuGet for package: $PackageId"
                   # NuGet API requires lowercase package names
@@ -84,11 +84,11 @@ jobs:
                   [string]$SdkName,
                   [string]$NewVersion
               )
-
+              
               $content = Get-Content $FilePath -Raw
               $pattern = "Sdk=`"$SdkName/[\d\.]+"
               $replacement = "Sdk=`"$SdkName/$NewVersion"
-
+              
               if ($content -match $pattern) {
                   $newContent = $content -replace $pattern, $replacement
                   if ($content -ne $newContent) {
@@ -107,11 +107,11 @@ jobs:
                   [string]$SdkName,
                   [string]$NewVersion
               )
-
+              
               try {
                   $json = Get-Content $FilePath -Raw | ConvertFrom-Json
                   $updated = $false
-
+                  
                   # Check if msbuild-sdks section exists
                   if ($json.PSObject.Properties.Name -contains "msbuild-sdks") {
                       if ($json."msbuild-sdks".PSObject.Properties.Name -contains $SdkName) {
@@ -122,7 +122,7 @@ jobs:
                           }
                       }
                   }
-
+                  
                   if ($updated) {
                       $json | ConvertTo-Json -Depth 10 | Set-Content -Path $FilePath -NoNewline
                       Write-Host "Updated $FilePath : $SdkName -> $NewVersion"
@@ -147,7 +147,7 @@ jobs:
               if ($content -match 'Sdk="(ktsu\.Sdk\.\w+)/([\d\.]+)"') {
                   $sdkName = $matches[1]
                   $currentVersion = $matches[2]
-
+                  
                   if (-not $sdkVersions.ContainsKey($sdkName)) {
                       $sdkVersions[$sdkName] = $currentVersion
                   }
@@ -162,7 +162,7 @@ jobs:
                       foreach ($property in $json."msbuild-sdks".PSObject.Properties) {
                           $sdkName = $property.Name
                           $currentVersion = $property.Value
-
+                          
                           # Only track ktsu SDKs
                           if ($sdkName -like "ktsu.Sdk.*") {
                               if (-not $sdkVersions.ContainsKey($sdkName)) {
@@ -191,7 +191,7 @@ jobs:
           foreach ($sdk in $sdkVersions.Keys) {
               Write-Host "Checking for updates to $sdk..."
               $latestVersion = Get-LatestNuGetVersion -PackageId $sdk
-
+              
               if ($latestVersion -and $latestVersion -ne $sdkVersions[$sdk]) {
                   $updates[$sdk] = $latestVersion
                   Write-Host "  Update available: $($sdkVersions[$sdk]) -> $latestVersion"
@@ -231,7 +231,7 @@ jobs:
 
           if ($hasUpdates) {
               "has_updates=true" >> $env:GITHUB_OUTPUT
-
+              
               # Create summary of changes
               $summary = "SDK Updates:`n"
               foreach ($sdk in $updates.Keys) {

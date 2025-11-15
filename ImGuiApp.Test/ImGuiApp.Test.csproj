@@ -1,0 +1,33 @@
+<Project Sdk="ktsu.Sdk.Test">
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Silk.NET.OpenGL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="coverlet.msbuild">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Update="Microsoft.NET.Test.Sdk" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CrashDump" />
+    <PackageReference Update="Microsoft.Testing.Extensions.Fakes" />
+    <PackageReference Update="Microsoft.Testing.Extensions.HangDump" />
+    <PackageReference Update="Microsoft.Testing.Extensions.HotReload" />
+    <PackageReference Update="Microsoft.Testing.Extensions.Retry" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" />
+    <PackageReference Update="MSTest.TestAdapter" />
+    <PackageReference Update="MSTest.TestFramework" />
+  </ItemGroup>
+
+</Project>
