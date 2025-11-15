@@ -20,6 +20,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **PID Frame Limiting**: Precision frame rate control using a PID controller with comprehensive auto-tuning capabilities for highly accurate target FPS achievement
 - **DPI Awareness**: Built-in support for high-DPI displays and scaling
 - **Font Management**: Flexible font loading system with customization options and dynamic scaling
+- **Font Memory Guard**: Intelligent GPU memory management for font atlases with special handling for Intel & AMD integrated GPUs
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
 - **Texture Support**: Built-in texture management with caching and automatic cleanup for ImGui
 - **Debug Logging**: Comprehensive debug logging system for troubleshooting crashes and performance issues
@@ -473,6 +474,63 @@ A utility class for applying font styles using a using statement.
 | `FontAppearance` | `string fontName` | Creates a font appearance with the named font at default size |
 | `FontAppearance` | `float fontSize` | Creates a font appearance with the default font at the specified size |
 | `FontAppearance` | `string fontName, float fontSize` | Creates a font appearance with the named font at the specified size |
+
+### `FontMemoryGuard` Static Class
+
+Provides intelligent memory management for font atlas textures, preventing excessive memory allocation on systems with integrated GPUs or high-resolution displays.
+
+#### Key Features
+
+- **Automatic GPU Detection**: Identifies Intel and AMD integrated GPUs using renderer string analysis
+- **Smart Memory Limits**: Conservative 16-96MB limits for integrated GPUs vs 64-128MB for discrete GPUs
+- **Generation-Aware**: Newer integrated GPUs (Intel Xe, AMD RDNA2+) get higher memory limits
+- **Fallback Strategies**: Automatically reduces font sizes, disables emojis, or limits Unicode ranges when memory constrained
+- **Memory Estimation**: Calculates expected memory usage before font loading
+
+#### Why This Matters
+
+Integrated GPUs share system RAM and have limited memory bandwidth. A 4K display with full Unicode font support can easily create 200MB+ font atlases, potentially causing:
+- Application crashes from GPU memory exhaustion
+- Severe performance degradation from memory pressure
+- System-wide slowdowns as GPU competes with CPU for RAM bandwidth
+
+#### Configuration
+
+```csharp
+// Configure font memory limits
+FontMemoryGuard.CurrentConfig = new FontMemoryGuard.FontMemoryConfig
+{
+    MaxAtlasMemoryBytes = 64 * 1024 * 1024, // 64MB default
+    EnableGpuMemoryDetection = true,
+    MaxGpuMemoryPercentage = 0.1f, // 10% for discrete GPUs
+    EnableIntelGpuHeuristics = true,
+    EnableAmdApuHeuristics = true,
+    EnableFallbackStrategies = true,
+    MinFontSizesToLoad = 3,
+    DisableEmojisOnLowMemory = true,
+    ReduceUnicodeRangesOnLowMemory = true
+};
+```
+
+#### Memory Estimation
+
+```csharp
+// Estimate memory usage before loading fonts
+var estimate = FontMemoryGuard.EstimateMemoryUsage(
+    fontCount: 2,
+    fontSizes: new[] { 12, 16, 20, 24 },
+    includeEmojis: true,
+    includeExtendedUnicode: true,
+    scaleFactor: 1.5f
+);
+
+if (estimate.ExceedsLimits)
+{
+    Console.WriteLine($"Estimated memory: {estimate.EstimatedBytes / 1024 / 1024}MB");
+    Console.WriteLine($"Recommended max sizes: {estimate.RecommendedMaxSizes}");
+    Console.WriteLine($"Should disable emojis: {estimate.ShouldDisableEmojis}");
+}
+```
 
 ### `ImGuiAppWindowState` Class
 
