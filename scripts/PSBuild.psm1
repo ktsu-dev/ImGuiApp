@@ -1315,30 +1315,49 @@ function Update-ProjectMetadata {
         Write-Information "Current commit hash: $currentHash" -Tags "Update-ProjectMetadata"
 
         if (-not [string]::IsNullOrWhiteSpace($postStatus)) {
-            # Configure git user before committing
-            Set-GitIdentity | Write-InformationStream -Tags "Update-ProjectMetadata"
+            # Only commit and push changes if this is the official repository
+            if ($BuildConfiguration.IsOfficial) {
+                # Configure git user before committing
+                Set-GitIdentity | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-            Write-Information "Committing changes..." -Tags "Update-ProjectMetadata"
-            "git commit -m `"$CommitMessage`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
+                Write-Information "Committing changes..." -Tags "Update-ProjectMetadata"
+                "git commit -m `"$CommitMessage`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-            Write-Information "Pushing changes..." -Tags "Update-ProjectMetadata"
-            "git push" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
+                Write-Information "Pushing changes..." -Tags "Update-ProjectMetadata"
+                "git push" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-            Write-Information "Getting release hash..." -Tags "Update-ProjectMetadata"
-            $releaseHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
-            Write-Information "Metadata committed as $releaseHash" -Tags "Update-ProjectMetadata"
+                Write-Information "Getting release hash..." -Tags "Update-ProjectMetadata"
+                $releaseHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
+                Write-Information "Metadata committed as $releaseHash" -Tags "Update-ProjectMetadata"
 
-            Write-Information "Metadata update completed successfully with changes" -Tags "Update-ProjectMetadata"
-            Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
-            Write-Information "Release Hash: $releaseHash" -Tags "Update-ProjectMetadata"
+                Write-Information "Metadata update completed successfully with changes" -Tags "Update-ProjectMetadata"
+                Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
+                Write-Information "Release Hash: $releaseHash" -Tags "Update-ProjectMetadata"
 
-            return [PSCustomObject]@{
-                Success = $true
-                Error = ""
-                Data = [PSCustomObject]@{
-                    Version = $version
-                    ReleaseHash = $releaseHash
-                    HasChanges = $true
+                return [PSCustomObject]@{
+                    Success = $true
+                    Error = ""
+                    Data = [PSCustomObject]@{
+                        Version = $version
+                        ReleaseHash = $releaseHash
+                        HasChanges = $true
+                    }
+                }
+            }
+            else {
+                Write-Information "Changes detected but not committing (fork repository)" -Tags "Update-ProjectMetadata"
+                Write-Information "Metadata files generated locally for build purposes" -Tags "Update-ProjectMetadata"
+                Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
+                Write-Information "Using current commit hash: $currentHash" -Tags "Update-ProjectMetadata"
+
+                return [PSCustomObject]@{
+                    Success = $true
+                    Error = ""
+                    Data = [PSCustomObject]@{
+                        Version = $version
+                        ReleaseHash = $currentHash
+                        HasChanges = $false
+                    }
                 }
             }
         }
