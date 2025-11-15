@@ -124,6 +124,12 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static float ScaleFactor { get; private set; } = 1;
 
+	/// <summary>
+	/// Gets the global UI scale factor for accessibility.
+	/// This scale is applied on top of DPI scaling and affects all UI elements.
+	/// </summary>
+	public static float GlobalScale { get; private set; } = 1.0f;
+
 	internal static ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> Textures { get; } = [];
 
 	/// <summary>
@@ -138,6 +144,23 @@ public static partial class ImGuiApp
 		}
 
 		window.Close();
+	}
+
+	/// <summary>
+	/// Sets the global UI scale factor for accessibility.
+	/// This scale is applied on top of DPI scaling and affects all UI elements.
+	/// </summary>
+	/// <param name="scale">The scale factor to set. Valid range is 0.5 to 3.0.</param>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when scale is outside the valid range.</exception>
+	public static void SetGlobalScale(float scale)
+	{
+		if (scale is < 0.5f or > 3.0f)
+		{
+			throw new ArgumentOutOfRangeException(nameof(scale), scale, "Scale must be between 0.5 and 3.0");
+		}
+
+		GlobalScale = scale;
+		Config.OnGlobalScaleChanged?.Invoke(scale);
 	}
 
 	/// <summary>
@@ -444,7 +467,8 @@ public static partial class ImGuiApp
 	{
 		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out float bestFontSize);
 		float scaleRatio = bestFontSize / FontAppearance.DefaultFontPointSize;
-		using (new UIScaler(scaleRatio))
+		float combinedScale = scaleRatio * GlobalScale;
+		using (new UIScaler(combinedScale))
 		{
 			RenderWithDefaultFont(renderAction);
 		}
@@ -742,6 +766,46 @@ public static partial class ImGuiApp
 			if (ImGui.BeginMainMenuBar())
 			{
 				menuDelegate();
+
+				if (ImGui.BeginMenu("Scale"))
+				{
+					if (ImGui.MenuItem("50%", "", Math.Abs(GlobalScale - 0.5f) < 0.01f))
+					{
+						SetGlobalScale(0.5f);
+					}
+
+					if (ImGui.MenuItem("75%", "", Math.Abs(GlobalScale - 0.75f) < 0.01f))
+					{
+						SetGlobalScale(0.75f);
+					}
+
+					if (ImGui.MenuItem("100%", "", Math.Abs(GlobalScale - 1.0f) < 0.01f))
+					{
+						SetGlobalScale(1.0f);
+					}
+
+					if (ImGui.MenuItem("125%", "", Math.Abs(GlobalScale - 1.25f) < 0.01f))
+					{
+						SetGlobalScale(1.25f);
+					}
+
+					if (ImGui.MenuItem("150%", "", Math.Abs(GlobalScale - 1.5f) < 0.01f))
+					{
+						SetGlobalScale(1.5f);
+					}
+
+					if (ImGui.MenuItem("175%", "", Math.Abs(GlobalScale - 1.75f) < 0.01f))
+					{
+						SetGlobalScale(1.75f);
+					}
+
+					if (ImGui.MenuItem("200%", "", Math.Abs(GlobalScale - 2.0f) < 0.01f))
+					{
+						SetGlobalScale(2.0f);
+					}
+
+					ImGui.EndMenu();
+				}
 
 				if (ImGui.BeginMenu("Debug"))
 				{
@@ -1349,6 +1413,7 @@ public static partial class ImGuiApp
 		performanceLastFpsUpdateTime = 0;
 		performanceFrameCount = 0;
 		ScaleFactor = 1;
+		GlobalScale = 1.0f;
 		Textures.Clear();
 		Config = new();
 	}

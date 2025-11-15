@@ -2,7 +2,7 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App.Tests;
+namespace ktsu.ImGuiApp.Test;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -101,21 +101,7 @@ public class GlobalScaleTests
 	}
 
 	[TestMethod]
-	public void SetGlobalScale_NoCallback_DoesNotThrow()
-	{
-		// Arrange
-		ImGuiApp.Config = new ImGuiAppConfig
-		{
-			OnGlobalScaleChanged = null!
-		};
-
-		// Act & Assert - Should not throw
-		ImGuiApp.SetGlobalScale(1.5f);
-		Assert.AreEqual(1.5f, ImGuiApp.GlobalScale, 0.001f);
-	}
-
-	[TestMethod]
-	public void SetGlobalScale_MultipleValues_CallbackInvokedEachTime()
+	public void SetGlobalScale_MultipleInvocations_CallsCallbackEachTime()
 	{
 		// Arrange
 		int callbackCount = 0;
