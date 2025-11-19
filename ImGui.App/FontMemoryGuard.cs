@@ -287,7 +287,7 @@ public static class FontMemoryGuard
 	/// <returns>True if GPU memory was successfully detected and configuration updated.</returns>
 	public static unsafe bool TryDetectAndConfigureGpuMemory(GL gl)
 	{
-		if (!CurrentConfig.EnableGpuMemoryDetection || gl == null)
+		if (gl == null || !CurrentConfig.EnableGpuMemoryDetection)
 		{
 			return false;
 		}
