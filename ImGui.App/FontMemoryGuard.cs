@@ -720,6 +720,11 @@ public static class FontMemoryGuard
 
 	private static int CalculateRecommendedMaxSizes(long estimatedBytes, int fontCount, int baseGlyphCount, float scaleFactor)
 	{
+		if (fontCount <= 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(fontCount), "Font count must be greater than zero");
+		}
+
 		if (estimatedBytes <= CurrentConfig.MaxAtlasMemoryBytes)
 		{
 			return int.MaxValue; // No limit needed
