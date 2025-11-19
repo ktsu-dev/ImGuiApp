@@ -375,14 +375,21 @@ public static class FontMemoryGuard
 
 		string rendererLower = renderer.ToLowerInvariant();
 
-		// Intel integrated GPU patterns
+		// First check for known discrete GPU patterns - if found, this is NOT integrated
+		string[] discretePatterns = ["arc", "rx 6", "rx 7", "rtx", "geforce"];
+		if (discretePatterns.Any(rendererLower.Contains))
+		{
+			return false;
+		}
+
+		// Intel integrated GPU patterns - exclude Arc discrete GPUs
 		string[] intelIntegratedPatterns = [
-			"intel", "hd graphics", "uhd graphics", "iris", "xe graphics"
+			"hd graphics", "uhd graphics", "iris xe", "xe graphics"
 		];
 
-		// AMD integrated GPU patterns
+		// AMD integrated GPU patterns - be more specific
 		string[] amdIntegratedPatterns = [
-			"radeon(tm)", "vega", "rdna", "apu", "r5 graphics", "r7 graphics"
+			"radeon(tm)", "vega", "apu", "r5 graphics", "r7 graphics", "680m", "780m"
 		];
 
 		// General integrated GPU indicators

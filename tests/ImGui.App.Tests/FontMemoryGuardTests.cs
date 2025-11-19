@@ -345,6 +345,11 @@ public class FontMemoryGuardTests
 		// Should not detect discrete GPUs as integrated
 		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("NVIDIA GeForce RTX 3060"));
 		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6600 XT"));
+
+		// Intel Arc discrete GPUs should NOT be detected as integrated
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel Arc A770"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel(R) Arc(TM) A750 Graphics"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel Arc A380"));
 	}
 
 	[TestMethod]
@@ -358,6 +363,10 @@ public class FontMemoryGuardTests
 		// Should not detect discrete GPUs as integrated
 		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6600 XT"));
 		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 7900 XTX"));
+
+		// AMD RDNA discrete GPUs should NOT be detected as integrated
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6700 XT"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 7800 XT"));
 	}
 
 	[TestMethod]
