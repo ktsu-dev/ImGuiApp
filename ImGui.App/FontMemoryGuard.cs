@@ -239,12 +239,14 @@ public static class FontMemoryGuard
 	/// <summary>
 	/// Estimates the memory usage for font loading based on the provided parameters.
 	/// </summary>
-	/// <param name="fontCount">Number of font files to load.</param>
-	/// <param name="fontSizes">Array of font sizes to load.</param>
+	/// <param name="fontCount">Number of font files to load. Must be greater than zero.</param>
+	/// <param name="fontSizes">Array of font sizes to load. Cannot be null or empty.</param>
 	/// <param name="includeEmojis">Whether emoji fonts will be included.</param>
 	/// <param name="includeExtendedUnicode">Whether extended Unicode ranges will be included.</param>
-	/// <param name="scaleFactor">Current DPI scale factor.</param>
+	/// <param name="scaleFactor">Current DPI scale factor. Typically between 1.0 and 4.0.</param>
 	/// <returns>Font memory estimate.</returns>
+	/// <exception cref="ArgumentNullException">Thrown when fontSizes is null.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when fontCount is less than or equal to zero.</exception>
 	public static FontMemoryEstimate EstimateMemoryUsage(
 		int fontCount,
 		int[] fontSizes,
@@ -253,6 +255,11 @@ public static class FontMemoryGuard
 		float scaleFactor)
 	{
 		ArgumentNullException.ThrowIfNull(fontSizes);
+
+		if (fontCount <= 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(fontCount), fontCount, "Font count must be greater than zero.");
+		}
 
 		// Estimate glyph count based on configuration
 		int baseGlyphCount = 128; // ASCII
@@ -521,8 +528,8 @@ public static class FontMemoryGuard
 		string rendererLower = renderer.ToLowerInvariant();
 
 		// Modern RDNA2/3 APUs (Ryzen 6000+, Steam Deck, 680M/780M, Radeon(TM) Graphics)
-		if ((rendererLower.Contains("680m") || rendererLower.Contains("780m") || rendererLower.Contains("steam deck")) ||
-		    (rendererLower.Contains("radeon(tm)") && rendererLower.Contains("graphics")))
+		if (rendererLower.Contains("680m") || rendererLower.Contains("780m") || rendererLower.Contains("steam deck") ||
+			(rendererLower.Contains("radeon(tm)") && rendererLower.Contains("graphics")))
 		{
 			return 128 * 1024 * 1024; // 128MB - Modern AMD APUs are quite capable
 		}
