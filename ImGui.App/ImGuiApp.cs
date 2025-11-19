@@ -1428,8 +1428,8 @@ public static partial class ImGuiApp
 		ImTextureDataPtr texData = fontAtlasPtr.TexData;
 		int width = texData.Width;
 		int height = texData.Height;
-		int bytesPerPixel = 4; // RGBA32 = 4 bytes per pixel
-		long atlasMemoryBytes = (long)width * height * bytesPerPixel;
+		const int BytesPerPixelRGBA32 = 4; // RGBA32 = 4 bytes per pixel
+		long atlasMemoryBytes = (long)width * height * BytesPerPixelRGBA32;
 
 		DebugLogger.Log($"FontMemoryGuard: Final font atlas size: {width}x{height} pixels");
 		DebugLogger.Log($"FontMemoryGuard: Final font atlas memory: {atlasMemoryBytes / (1024 * 1024)}MB");
