@@ -60,6 +60,16 @@ public static class FontMemoryGuard
 	public const int EstimatedBytesPerGlyph = 128;
 
 	/// <summary>
+	/// Stores the reduced Unicode glyph ranges to prevent memory deallocation.
+	/// </summary>
+	internal static ImVector<uint> reducedUnicodeRanges;
+
+	/// <summary>
+	/// Tracks whether the reduced Unicode ranges have been initialized.
+	/// </summary>
+	internal static bool reducedUnicodeRangesInitialized;
+
+	/// <summary>
 	/// Configuration for font memory limits.
 	/// </summary>
 	public class FontMemoryConfig
@@ -630,22 +640,30 @@ public static class FontMemoryGuard
 	/// <returns>Pointer to reduced glyph ranges.</returns>
 	public static unsafe uint* GetReducedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
 	{
-		// Create a minimal set of ranges that still provides good functionality
-		ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
+		// Only build ranges once and store them to prevent memory deallocation
+		if (!reducedUnicodeRangesInitialized)
+		{
+			// Create a minimal set of ranges that still provides good functionality
+			ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
 
-		// Add default ranges (ASCII) - always needed
-		builder.AddRanges(fontAtlasPtr.GetGlyphRangesDefault());
+			// Add default ranges (ASCII) - always needed
+			builder.AddRanges(fontAtlasPtr.GetGlyphRangesDefault());
 
-		// Add only the most essential extended ranges
-		AddEssentialLatinExtended(builder);
-		AddEssentialSymbols(builder);
-		AddEssentialNerdFontRanges(builder);
+			// Add only the most essential extended ranges
+			AddEssentialLatinExtended(builder);
+			AddEssentialSymbols(builder);
+			AddEssentialNerdFontRanges(builder);
 
-		// Build and cache the ranges
-		ImVector<uint> reducedRanges = new();
-		builder.BuildRanges(ref reducedRanges);
+			// Build the ranges and store them in the static field
+			reducedUnicodeRanges = new ImVector<uint>();
+			fixed (ImVector<uint>* rangesPtr = &reducedUnicodeRanges)
+			{
+				builder.BuildRanges(rangesPtr);
+			}
+			reducedUnicodeRangesInitialized = true;
+		}
 
-		return reducedRanges.Data;
+		return reducedUnicodeRanges.Data;
 	}
 
 	/// <summary>
