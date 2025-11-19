@@ -534,12 +534,7 @@ public static class FontMemoryGuard
 
 		string rendererLower = renderer.ToLowerInvariant();
 
-		// Modern RDNA2/3 APUs (Ryzen 6000+, Steam Deck, 680M/780M, Radeon(TM) Graphics)
-		if (rendererLower.Contains("680m") || rendererLower.Contains("780m") || rendererLower.Contains("steam deck") ||
-			(rendererLower.Contains("radeon(tm)") && rendererLower.Contains("graphics")))
-		{
-			return 128 * 1024 * 1024; // 128MB - Modern AMD APUs are quite capable
-		}
+		// Check more specific patterns first before generic patterns
 
 		// Vega-based APUs (good performance)
 		if (rendererLower.Contains("vega"))
@@ -547,10 +542,18 @@ public static class FontMemoryGuard
 			return 96 * 1024 * 1024; // 96MB - Vega integrated graphics are decent
 		}
 
-		// Older GCN-based APUs
+		// Older GCN-based APUs (R5/R7)
 		if (rendererLower.Contains("radeon") && (rendererLower.Contains("r5") || rendererLower.Contains("r7")))
 		{
 			return 48 * 1024 * 1024; // 48MB - Older AMD APUs
+		}
+
+		// Modern RDNA2/3 APUs (Ryzen 6000+, Steam Deck, 680M/780M)
+		// This includes generic Radeon(TM) Graphics on modern APUs
+		if (rendererLower.Contains("680m") || rendererLower.Contains("780m") || rendererLower.Contains("steam deck") ||
+			(rendererLower.Contains("radeon(tm)") && rendererLower.Contains("graphics")))
+		{
+			return 128 * 1024 * 1024; // 128MB - Modern AMD APUs are quite capable
 		}
 
 		// Default for unknown AMD APU

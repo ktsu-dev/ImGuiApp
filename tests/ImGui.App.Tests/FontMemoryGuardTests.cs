@@ -70,7 +70,7 @@ public class FontMemoryGuardTests
 		// Test Equals with object
 		Assert.IsTrue(estimate1.Equals((object)estimate2));
 		Assert.IsFalse(estimate1.Equals((object)estimate3));
-		Assert.IsFalse(estimate1 == null);
+		Assert.IsFalse(estimate1.Equals(null));
 		Assert.IsFalse(estimate1.Equals("not an estimate"));
 	}
 
