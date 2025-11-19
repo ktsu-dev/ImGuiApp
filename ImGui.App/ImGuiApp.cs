@@ -1240,7 +1240,9 @@ public static partial class ImGuiApp
 			ScaleFactor);
 
 		// Determine fallback strategy
-		FontMemoryGuard.FallbackStrategy fallbackStrategy = FontMemoryGuard.DetermineFallbackStrategy(memoryEstimate);
+		FontMemoryGuard.FallbackStrategy fallbackStrategy = FontMemoryGuard.CurrentConfig.EnableFallbackStrategies
+			? FontMemoryGuard.DetermineFallbackStrategy(memoryEstimate)
+			: FontMemoryGuard.FallbackStrategy.None;
 
 		// Log memory usage information
 		FontMemoryGuard.LogMemoryUsage(memoryEstimate, fallbackStrategy);
