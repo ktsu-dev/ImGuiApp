@@ -510,8 +510,9 @@ public static class FontMemoryGuard
 
 		string rendererLower = renderer.ToLowerInvariant();
 
-		// Modern RDNA2/3 APUs (6000+ series, Steam Deck)
-		if (rendererLower.Contains("rdna") || rendererLower.Contains("6600") || rendererLower.Contains("6800") || rendererLower.Contains("7600") || rendererLower.Contains("680m"))
+		// Modern RDNA2/3 APUs (Ryzen 6000+, Steam Deck, 680M/780M, Radeon(TM) Graphics)
+		if ((rendererLower.Contains("680m") || rendererLower.Contains("780m") || rendererLower.Contains("steam deck")) ||
+		    (rendererLower.Contains("radeon(tm)") && rendererLower.Contains("graphics")))
 		{
 			return 128 * 1024 * 1024; // 128MB - Modern AMD APUs are quite capable
 		}
