@@ -1,5 +1,8 @@
 ## v2.1.10-pre.1 (prerelease)
 
+Incremental prerelease update.
+## v2.1.10-pre.1 (prerelease)
+
 Changes since v2.1.9:
 
 - Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
