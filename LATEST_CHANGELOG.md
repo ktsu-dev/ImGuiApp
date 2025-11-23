@@ -1,25 +1,3 @@
-## v2.2.0 (minor)
+## v2.2.0
 
-Changes since v2.1.0:
-
-- [minor] Add dynamic atlas sizing and glyph limit calculation ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add Ktsu package key support in build configuration: Updated the .NET CI workflow and PowerShell script to include an optional Ktsu package key for publishing. Enhanced documentation for the new parameter and added conditional publishing logic for Ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Implement modern DPI awareness handling in Windows: Updated ForceDpiAware to utilize the latest DPI awareness APIs for better compatibility with windowing libraries. Added fallback mechanisms for older Windows versions and enhanced NativeMethods with new DPI awareness context functions. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Fix gpu detection priority ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance project structure and testing: Added new dependencies in Directory.Packages.props, introduced a new Tests project in the solution, and updated project references. Refactored namespaces for consistency across multiple files. Updated test configurations and example projects to align with the new structure. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance font initialization with memory management features ([@matt-edmondson](https://github.com/matt-edmondson))
-- Additional tests ([@matt-edmondson](https://github.com/matt-edmondson))
-- Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor glyph calculation for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor SonarQube conditional checks in GitHub Actions: Updated syntax for SONAR_TOKEN checks to use the correct expression format, ensuring proper execution of caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor SonarQube token handling in GitHub Actions: Updated conditional checks to use environment variables for SONAR_TOKEN, ensuring consistent access across caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Initial combined commit ([@matt-edmondson](https://github.com/matt-edmondson))
-- Fix missing package references ([@matt-edmondson](https://github.com/matt-edmondson))
-- Fix NuGet package source URL in Invoke-NuGetPublish function: Updated the source URL to ensure correct package publishing to packages.ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance SonarQube integration in GitHub Actions: Added conditional checks for SONAR_TOKEN to ensure caching and installation steps only execute when the token is available, improving workflow reliability. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance window position validation logic: Implemented performance optimizations to skip unnecessary checks when window position and size remain unchanged. Added methods for better multi-monitor support, ensuring windows are relocated when insufficiently visible. Updated tests to verify new behavior and performance improvements. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor ImGuiApp configuration handling: Introduced AdjustConfigForStartup method to automatically convert minimized window state to normal during startup, improving application reliability. Updated tests to validate this new behavior. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update ImGuiApp configuration validation: Automatically convert minimized and fullscreen window states to normal during startup to prevent issues. Updated tests to reflect this change, ensuring proper state handling without exceptions. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add manual trigger support to GitHub Actions workflow: Enabled workflow_dispatch to allow manual execution of the .NET CI pipeline. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance .NET CI workflow: Added support for skipped releases in the GitHub Actions workflow. Updated conditions for SonarQube execution, coverage report upload, and Winget manifest updates to account for skipped releases, improving control over the release process. ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.2.0.
