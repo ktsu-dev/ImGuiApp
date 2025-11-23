@@ -98,7 +98,7 @@ public static class FontMemoryGuard
 		const float packingEfficiency = 0.75f;
 
 		// Calculate max glyphs
-		long maxGlyphs = (long)((atlasArea * packingEfficiency) / glyphArea);
+		long maxGlyphs = (long)(atlasArea * packingEfficiency / glyphArea);
 
 		// Cap at reasonable maximum and ensure it fits in int
 		return (int)Math.Min(maxGlyphs, 100000);
