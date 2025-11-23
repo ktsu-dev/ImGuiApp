@@ -1223,6 +1223,11 @@ public static partial class ImGuiApp
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
 
+		// Note: Atlas texture size configuration not available in current Hexa.NET.ImGui binding
+		// The glyph limit calculation below uses RecommendedAtlasSize to determine if fallback is needed
+		// Modern ImGui versions automatically expand the atlas texture as needed
+		DebugLogger.Log($"InitFonts: Target atlas texture size: {FontMemoryGuard.CurrentConfig.RecommendedAtlasSize}x{FontMemoryGuard.CurrentConfig.RecommendedAtlasSize}");
+
 		// Load fonts from configuration
 		IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad = Config.Fonts.Concat(Config.DefaultFonts);
 		int fontCount = fontsToLoad.Count();

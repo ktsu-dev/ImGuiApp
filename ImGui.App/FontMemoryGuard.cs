@@ -48,16 +48,61 @@ public static class FontMemoryGuard
 	public const long MinAtlasMemoryBytes = 8 * 1024 * 1024; // 8MB
 
 	/// <summary>
-	/// Maximum font atlas texture dimension (e.g., 4096x4096).
+	/// Default font atlas texture dimension (4096x4096).
 	/// Most GPUs support at least this size.
 	/// </summary>
-	public const int MaxAtlasTextureDimension = 4096;
+	public const int DefaultAtlasTextureDimension = 4096;
+
+	/// <summary>
+	/// Maximum font atlas texture dimension for high-end GPUs (8192x8192).
+	/// Modern discrete GPUs typically support this size.
+	/// </summary>
+	public const int MaxAtlasTextureDimension = 8192;
+
+	/// <summary>
+	/// Minimum font atlas texture dimension for low-end/integrated GPUs (2048x2048).
+	/// Used as a fallback for very constrained environments.
+	/// </summary>
+	public const int MinAtlasTextureDimension = 2048;
 
 	/// <summary>
 	/// Estimated bytes per glyph for memory calculations.
 	/// This is a rough estimate based on typical font rasterization.
 	/// </summary>
 	public const int EstimatedBytesPerGlyph = 128;
+
+	/// <summary>
+	/// Calculates the maximum number of glyphs that can be reliably packed into a font atlas
+	/// based on the atlas texture dimensions.
+	/// </summary>
+	/// <param name="atlasDimension">The width/height of the square atlas texture (e.g., 4096, 8192).</param>
+	/// <param name="averageFontSize">Average font size in pixels (default 16).</param>
+	/// <returns>Estimated maximum glyph count.</returns>
+	/// <remarks>
+	/// Calculation based on:
+	/// - Atlas area: atlasDimension * atlasDimension
+	/// - Average glyph size: ~(fontSize * 1.5) squared
+	/// - Packing efficiency: ~75% (texture packer overhead)
+	/// Note: ImGui uses a SINGLE atlas by default and does not automatically create multiple atlases.
+	/// </remarks>
+	public static int CalculateMaxGlyphCount(int atlasDimension, int averageFontSize = 16)
+	{
+		// Calculate atlas area
+		long atlasArea = (long)atlasDimension * atlasDimension;
+
+		// Estimate average glyph area (glyphs are typically 1.5x font size with padding)
+		int glyphDimension = (int)(averageFontSize * 1.5f);
+		long glyphArea = (long)glyphDimension * glyphDimension;
+
+		// Account for packing efficiency (~75% utilization)
+		const float packingEfficiency = 0.75f;
+
+		// Calculate max glyphs
+		long maxGlyphs = (long)((atlasArea * packingEfficiency) / glyphArea);
+
+		// Cap at reasonable maximum and ensure it fits in int
+		return (int)Math.Min(maxGlyphs, 100000);
+	}
 
 	/// <summary>
 	/// Stores the reduced Unicode glyph ranges to prevent memory deallocation.
@@ -89,6 +134,12 @@ public static class FontMemoryGuard
 		/// Note: Integrated GPUs automatically use lower percentages (3-5%) regardless of this setting.
 		/// </summary>
 		public float MaxGpuMemoryPercentage { get; set; } = 0.1f; // 10% for discrete GPUs
+
+		/// <summary>
+		/// Recommended atlas texture dimension based on GPU capabilities.
+		/// Will be set automatically during GPU detection.
+		/// </summary>
+		public int RecommendedAtlasSize { get; set; } = DefaultAtlasTextureDimension;
 
 		/// <summary>
 		/// Whether to enable special handling for Intel integrated GPUs.
@@ -279,8 +330,16 @@ public static class FontMemoryGuard
 		float scaleImpact = scaleFactor * scaleFactor; // Quadratic impact on texture size
 		long estimatedBytes = (long)(totalGlyphCount * EstimatedBytesPerGlyph * scaleImpact);
 
+		// Calculate max glyphs based on configured atlas size and average font size
+		int averageFontSize = fontSizes.Length > 0 ? (int)fontSizes.Average() : 16;
+		int maxGlyphsForAtlas = CalculateMaxGlyphCount(CurrentConfig.RecommendedAtlasSize, averageFontSize);
+
 		// Determine if limits are exceeded and recommend fallbacks
-		bool exceedsLimits = estimatedBytes > CurrentConfig.MaxAtlasMemoryBytes;
+		// Check both memory limit AND glyph count limit (texture packer has hard limits)
+		bool exceedsMemoryLimit = estimatedBytes > CurrentConfig.MaxAtlasMemoryBytes;
+		bool exceedsGlyphLimit = totalGlyphCount > maxGlyphsForAtlas;
+		bool exceedsLimits = exceedsMemoryLimit || exceedsGlyphLimit;
+
 		int recommendedMaxSizes = CalculateRecommendedMaxSizes(estimatedBytes, fontCount, baseGlyphCount, scaleFactor);
 		bool shouldDisableEmojis = exceedsLimits && CurrentConfig.DisableEmojisOnLowMemory && includeEmojis;
 		bool shouldReduceUnicode = exceedsLimits && CurrentConfig.ReduceUnicodeRangesOnLowMemory && includeExtendedUnicode;
@@ -352,6 +411,33 @@ public static class FontMemoryGuard
 			{
 				long recommendedFontMemory = CalculateRecommendedMemoryFromDetection(availableMemoryKB, isIntegratedGpu);
 				CurrentConfig.MaxAtlasMemoryBytes = recommendedFontMemory;
+
+				// Set atlas size based on GPU type and memory
+				if (isIntegratedGpu)
+				{
+					// Integrated GPUs: use smaller atlas to reduce memory pressure
+					CurrentConfig.RecommendedAtlasSize = MinAtlasTextureDimension; // 2048
+					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for integrated GPU");
+				}
+				else if (availableMemoryKB > 8 * 1024 * 1024) // > 8GB VRAM
+				{
+					// High-end discrete GPUs: use maximum atlas size
+					CurrentConfig.RecommendedAtlasSize = MaxAtlasTextureDimension; // 8192
+					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for high-end discrete GPU");
+				}
+				else if (availableMemoryKB > 4 * 1024 * 1024) // > 4GB VRAM
+				{
+					// Mid-range discrete GPUs: use larger than default atlas
+					CurrentConfig.RecommendedAtlasSize = 6144; // 6144
+					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for mid-range discrete GPU");
+				}
+				else
+				{
+					// Low-end discrete GPUs: use default atlas size
+					CurrentConfig.RecommendedAtlasSize = DefaultAtlasTextureDimension; // 4096
+					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for low-end discrete GPU");
+				}
+
 				DebugLogger.Log($"FontMemoryGuard: Set font memory limit to {recommendedFontMemory / (1024 * 1024)}MB based on GPU memory detection");
 				return true;
 			}
@@ -693,10 +779,21 @@ public static class FontMemoryGuard
 		DebugLogger.Log($"FontMemoryGuard: Estimated font memory usage: {estimate.EstimatedBytes / (1024 * 1024)}MB");
 		DebugLogger.Log($"FontMemoryGuard: Memory limit: {CurrentConfig.MaxAtlasMemoryBytes / (1024 * 1024)}MB");
 		DebugLogger.Log($"FontMemoryGuard: Estimated glyph count: {estimate.EstimatedGlyphCount:N0}");
+		DebugLogger.Log($"FontMemoryGuard: Atlas size: {CurrentConfig.RecommendedAtlasSize}x{CurrentConfig.RecommendedAtlasSize}");
 
 		if (estimate.ExceedsLimits)
 		{
-			DebugLogger.Log($"FontMemoryGuard: Memory limit exceeded, applying fallback strategy: {strategy}");
+			string reason = "";
+			if (estimate.EstimatedBytes > CurrentConfig.MaxAtlasMemoryBytes)
+			{
+				reason = "memory limit exceeded";
+			}
+			int maxGlyphs = CalculateMaxGlyphCount(CurrentConfig.RecommendedAtlasSize);
+			if (estimate.EstimatedGlyphCount > maxGlyphs)
+			{
+				reason += (reason.Length > 0 ? " and " : "") + "glyph count limit exceeded";
+			}
+			DebugLogger.Log($"FontMemoryGuard: Limits exceeded ({reason}), applying fallback strategy: {strategy}");
 			if (estimate.ShouldDisableEmojis)
 			{
 				DebugLogger.Log("FontMemoryGuard: Disabling emoji fonts to reduce memory usage");

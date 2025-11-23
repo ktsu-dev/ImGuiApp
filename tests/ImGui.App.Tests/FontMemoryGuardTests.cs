@@ -419,7 +419,9 @@ public class FontMemoryGuardTests
 	{
 		Assert.AreEqual(64 * 1024 * 1024, FontMemoryGuard.DefaultMaxAtlasMemoryBytes);
 		Assert.AreEqual(8 * 1024 * 1024, FontMemoryGuard.MinAtlasMemoryBytes);
-		Assert.AreEqual(4096, FontMemoryGuard.MaxAtlasTextureDimension);
+		Assert.AreEqual(8192, FontMemoryGuard.MaxAtlasTextureDimension);
+		Assert.AreEqual(4096, FontMemoryGuard.DefaultAtlasTextureDimension);
+		Assert.AreEqual(2048, FontMemoryGuard.MinAtlasTextureDimension);
 		Assert.AreEqual(128, FontMemoryGuard.EstimatedBytesPerGlyph);
 	}
 
@@ -462,6 +464,104 @@ public class FontMemoryGuardTests
 		// With EnableFallbackStrategies true, we should get a fallback strategy
 		FontMemoryGuard.FallbackStrategy strategy = FontMemoryGuard.DetermineFallbackStrategy(estimate);
 		Assert.AreNotEqual(FontMemoryGuard.FallbackStrategy.None, strategy);
+	}
+
+	#endregion
+
+	#region Atlas Size and Glyph Limit Tests
+
+	[TestMethod]
+	public void CalculateMaxGlyphCount_DefaultAtlasSize_ReturnsExpectedRange()
+	{
+		int maxGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.DefaultAtlasTextureDimension);
+
+		// For 4096x4096 with 16px average font size and 75% packing efficiency
+		// Expected: ~25,000-35,000 glyphs
+		Assert.IsTrue(maxGlyphs >= 20000, $"Expected at least 20,000 glyphs, got {maxGlyphs}");
+		Assert.IsTrue(maxGlyphs <= 40000, $"Expected at most 40,000 glyphs, got {maxGlyphs}");
+	}
+
+	[TestMethod]
+	public void CalculateMaxGlyphCount_MaxAtlasSize_ReturnsMoreGlyphs()
+	{
+		int defaultGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.DefaultAtlasTextureDimension);
+		int maxGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.MaxAtlasTextureDimension);
+
+		// 8192x8192 should hold ~4x more glyphs than 4096x4096 (area doubles)
+		Assert.IsTrue(maxGlyphs > defaultGlyphs * 3, "Max atlas size should hold significantly more glyphs");
+		Assert.IsTrue(maxGlyphs >= 80000, $"Expected at least 80,000 glyphs for 8192 atlas, got {maxGlyphs}");
+	}
+
+	[TestMethod]
+	public void CalculateMaxGlyphCount_MinAtlasSize_ReturnsFewerGlyphs()
+	{
+		int defaultGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.DefaultAtlasTextureDimension);
+		int minGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.MinAtlasTextureDimension);
+
+		// 2048x2048 should hold ~1/4 glyphs of 4096x4096
+		Assert.IsTrue(minGlyphs < defaultGlyphs / 3, "Min atlas size should hold significantly fewer glyphs");
+		Assert.IsTrue(minGlyphs >= 5000, $"Expected at least 5,000 glyphs for 2048 atlas, got {minGlyphs}");
+	}
+
+	[TestMethod]
+	public void CalculateMaxGlyphCount_LargerFontSize_ReturnsFewerGlyphs()
+	{
+		int smallFontGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(4096, averageFontSize: 12);
+		int largeFontGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(4096, averageFontSize: 24);
+
+		// Larger fonts should fit fewer glyphs
+		Assert.IsTrue(largeFontGlyphs < smallFontGlyphs, "Larger fonts should result in fewer glyphs fitting");
+		// Roughly 4x fewer glyphs for 2x font size (area quadruples)
+		Assert.IsTrue(largeFontGlyphs < smallFontGlyphs / 3, "Large font glyph count should be significantly less");
+	}
+
+	[TestMethod]
+	public void FontMemoryConfig_DefaultRecommendedAtlasSize_IsDefault()
+	{
+		FontMemoryGuard.FontMemoryConfig config = new();
+
+		Assert.AreEqual(FontMemoryGuard.DefaultAtlasTextureDimension, config.RecommendedAtlasSize);
+	}
+
+	[TestMethod]
+	public void EstimateMemoryUsage_ExceedsGlyphLimit_SetsExceedsLimits()
+	{
+		// Configure a very small atlas that can't fit many glyphs
+		FontMemoryGuard.CurrentConfig.RecommendedAtlasSize = FontMemoryGuard.MinAtlasTextureDimension; // 2048
+		FontMemoryGuard.CurrentConfig.MaxAtlasMemoryBytes = 1024 * 1024 * 1024; // 1GB - plenty of memory
+
+		// Try to load many fonts with full Unicode and emoji support
+		int[] largeFontSizes = [12, 14, 16, 18, 20, 24, 32, 48];
+
+		FontMemoryGuard.FontMemoryEstimate estimate = FontMemoryGuard.EstimateMemoryUsage(
+			fontCount: 3,
+			fontSizes: largeFontSizes,
+			includeEmojis: true,
+			includeExtendedUnicode: true,
+			scaleFactor: 1.0f);
+
+		// Should exceed glyph limit even though we have plenty of memory
+		Assert.IsTrue(estimate.ExceedsLimits, "Should exceed glyph limits with small atlas and many fonts");
+	}
+
+	[TestMethod]
+	public void EstimateMemoryUsage_LargeAtlas_AllowsMoreGlyphs()
+	{
+		// Configure max atlas size
+		FontMemoryGuard.CurrentConfig.RecommendedAtlasSize = FontMemoryGuard.MaxAtlasTextureDimension; // 8192
+		FontMemoryGuard.CurrentConfig.MaxAtlasMemoryBytes = 1024 * 1024 * 1024; // 1GB
+
+		int[] fontSizes = [12, 16, 20];
+
+		FontMemoryGuard.FontMemoryEstimate estimate = FontMemoryGuard.EstimateMemoryUsage(
+			fontCount: 2,
+			fontSizes: fontSizes,
+			includeEmojis: true,
+			includeExtendedUnicode: true,
+			scaleFactor: 1.0f);
+
+		// With large atlas, moderate glyph count should be fine
+		Assert.IsFalse(estimate.ExceedsLimits, "Should NOT exceed limits with large atlas and moderate glyph count");
 	}
 
 	#endregion
