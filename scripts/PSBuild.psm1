@@ -1315,49 +1315,30 @@ function Update-ProjectMetadata {
         Write-Information "Current commit hash: $currentHash" -Tags "Update-ProjectMetadata"
 
         if (-not [string]::IsNullOrWhiteSpace($postStatus)) {
-            # Only commit and push changes if this is the official repository
-            if ($BuildConfiguration.IsOfficial) {
-                # Configure git user before committing
-                Set-GitIdentity | Write-InformationStream -Tags "Update-ProjectMetadata"
+            # Configure git user before committing
+            Set-GitIdentity | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-                Write-Information "Committing changes..." -Tags "Update-ProjectMetadata"
-                "git commit -m `"$CommitMessage`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
+            Write-Information "Committing changes..." -Tags "Update-ProjectMetadata"
+            "git commit -m `"$CommitMessage`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-                Write-Information "Pushing changes..." -Tags "Update-ProjectMetadata"
-                "git push" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
+            Write-Information "Pushing changes..." -Tags "Update-ProjectMetadata"
+            "git push" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-                Write-Information "Getting release hash..." -Tags "Update-ProjectMetadata"
-                $releaseHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
-                Write-Information "Metadata committed as $releaseHash" -Tags "Update-ProjectMetadata"
+            Write-Information "Getting release hash..." -Tags "Update-ProjectMetadata"
+            $releaseHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
+            Write-Information "Metadata committed as $releaseHash" -Tags "Update-ProjectMetadata"
 
-                Write-Information "Metadata update completed successfully with changes" -Tags "Update-ProjectMetadata"
-                Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
-                Write-Information "Release Hash: $releaseHash" -Tags "Update-ProjectMetadata"
+            Write-Information "Metadata update completed successfully with changes" -Tags "Update-ProjectMetadata"
+            Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
+            Write-Information "Release Hash: $releaseHash" -Tags "Update-ProjectMetadata"
 
-                return [PSCustomObject]@{
-                    Success = $true
-                    Error = ""
-                    Data = [PSCustomObject]@{
-                        Version = $version
-                        ReleaseHash = $releaseHash
-                        HasChanges = $true
-                    }
-                }
-            }
-            else {
-                Write-Information "Changes detected but not committing (fork repository)" -Tags "Update-ProjectMetadata"
-                Write-Information "Metadata files generated locally for build purposes" -Tags "Update-ProjectMetadata"
-                Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
-                Write-Information "Using current commit hash: $currentHash" -Tags "Update-ProjectMetadata"
-
-                return [PSCustomObject]@{
-                    Success = $true
-                    Error = ""
-                    Data = [PSCustomObject]@{
-                        Version = $version
-                        ReleaseHash = $currentHash
-                        HasChanges = $false
-                    }
+            return [PSCustomObject]@{
+                Success = $true
+                Error = ""
+                Data = [PSCustomObject]@{
+                    Version = $version
+                    ReleaseHash = $releaseHash
+                    HasChanges = $true
                 }
             }
         }
@@ -1471,11 +1452,37 @@ function Invoke-DotNetTest {
         Runs dotnet test with code coverage collection.
     .DESCRIPTION
         Runs dotnet test with code coverage collection.
+    .PARAMETER Configuration
+        The build configuration to use.
+    .PARAMETER CoverageOutputPath
+        The path to output code coverage results.
     #>
+    [CmdletBinding()]
+    param (
+        [string]$Configuration = "Release",
+        [string]$CoverageOutputPath = "coverage"
+    )
+
     Write-StepHeader "Running Tests with Coverage" -Tags "Invoke-DotNetTest"
+
+    # Ensure the TestResults directory exists
+    $testResultsPath = Join-Path $CoverageOutputPath "TestResults"
+    New-Item -Path $testResultsPath -ItemType Directory -Force | Out-Null
+
     # Run tests with both coverage collection and TRX logging for SonarQube
-    "dotnet-coverage collect `"dotnet test`" -f xml -o `"coverage.xml`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
+    "dotnet test --configuration $Configuration /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=`"coverage.opencover.xml`" --results-directory `"$testResultsPath`" --logger `"trx;LogFileName=TestResults.trx`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
     Assert-LastExitCode "Tests failed"
+
+    # Find and copy coverage file to expected location for SonarQube
+    $coverageFiles = @(Get-ChildItem -Path . -Recurse -Filter "coverage.opencover.xml" -ErrorAction SilentlyContinue)
+    if ($coverageFiles.Count -gt 0) {
+        $latestCoverageFile = $coverageFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $targetCoverageFile = Join-Path $CoverageOutputPath "coverage.opencover.xml"
+        Copy-Item -Path $latestCoverageFile.FullName -Destination $targetCoverageFile -Force
+        Write-Information "Coverage file copied to: $targetCoverageFile" -Tags "Invoke-DotNetTest"
+    } else {
+        Write-Information "Warning: No coverage file found" -Tags "Invoke-DotNetTest"
+    }
 }
 
 function Invoke-DotNetPack {
@@ -2152,7 +2159,7 @@ function Invoke-BuildWorkflow {
         # Build and Test
         Invoke-DotNetRestore | Write-InformationStream -Tags "Invoke-BuildWorkflow"
         Invoke-DotNetBuild -Configuration $Configuration -BuildArgs $BuildArgs | Write-InformationStream -Tags "Invoke-BuildWorkflow"
-        Invoke-DotNetTest | Write-InformationStream -Tags "Invoke-BuildWorkflow"
+        Invoke-DotNetTest -Configuration $Configuration -CoverageOutputPath "coverage" | Write-InformationStream -Tags "Invoke-BuildWorkflow"
 
         return [PSCustomObject]@{
             Success = $true

@@ -26,7 +26,7 @@ jobs:
   build:
     name: Build, Test & Release
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: write # For creating releases and committing metadata
       packages: write # For publishing packages
@@ -60,11 +60,6 @@ jobs:
           cache: true
           cache-dependency-path: "**/*.csproj"
 
-      - name: Install dotnet-coverage
-        shell: pwsh
-        run: |
-            dotnet tool install --global dotnet-coverage
-
       - name: Cache SonarQube Cloud packages
         if: ${{ env.SONAR_TOKEN != '' }}
         uses: actions/cache@v4
@@ -90,7 +85,7 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' && steps.cache-sonar-scanner.outputs.cache-hit != 'true' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+        shell: powershell
         run: |
           New-Item -Path .\.sonar\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
@@ -99,9 +94,9 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+        shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.coverage.exclusions="**/*Tests/**/*,**/*Test/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="coverage/coverage.opencover.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.verbose=true
 
       - name: Run PSBuild Pipeline
         id: pipeline
@@ -142,20 +137,28 @@ jobs:
               throw $result.Error
           }
 
-          # Set outputs for GitHub Actions from build configuration
-          "version=$($buildConfig.Data.Version)" >> $env:GITHUB_OUTPUT
-          "release_hash=$($buildConfig.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
-          "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
-
-          if ($buildConfig.Data.SkippedRelease) {
+          # Set outputs for GitHub Actions from build configuration and pipeline result
+          # Use pipeline result values when available (for skipped releases), otherwise use buildConfig
+          if ($result.Data.SkippedRelease) {
+            "version=$($result.Data.Version)" >> $env:GITHUB_OUTPUT
+            "release_hash=$($result.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
+            "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
             "skipped_release=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "version=$($buildConfig.Data.Version)" >> $env:GITHUB_OUTPUT
+            "release_hash=$($buildConfig.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
+            "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
+            # Check for skipped release from buildConfig as fallback
+            if ($buildConfig.Data.SkippedRelease) {
+              "skipped_release=true" >> $env:GITHUB_OUTPUT
+            }
           }
 
       - name: End SonarQube
         if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.skipped_release != 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+        shell: powershell
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
