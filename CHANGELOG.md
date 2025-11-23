@@ -10,6 +10,7 @@ Changes since v2.1.0:
 - Enhance font initialization with memory management features ([@matt-edmondson](https://github.com/matt-edmondson))
 - Additional tests ([@matt-edmondson](https://github.com/matt-edmondson))
 - Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor glyph calculation for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor SonarQube conditional checks in GitHub Actions: Updated syntax for SONAR_TOKEN checks to use the correct expression format, ensuring proper execution of caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor SonarQube token handling in GitHub Actions: Updated conditional checks to use environment variables for SONAR_TOKEN, ensuring consistent access across caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Initial combined commit ([@matt-edmondson](https://github.com/matt-edmondson))
