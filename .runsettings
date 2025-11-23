@@ -4,5 +4,22 @@
   <RunConfiguration>
     <ResultsDirectory>.\coverage</ResultsDirectory>
   </RunConfiguration>
+  <!-- Specify a deterministic output directory -->
+  <RunConfiguration>
+    <ResultsDirectory>.\coverage</ResultsDirectory>
+  </RunConfiguration>
 
+  <!-- Configuration for coverlet data collector -->
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage" uri="datacollector://Microsoft/CodeCoverage/2.0" assemblyQualifiedName="coverlet.collector.DataCollectors.CoverletInProcDataCollector, coverlet.collector, Version=6.0.4.0, Culture=neutral, PublicKeyToken=null">
+        <Configuration>
+          <Format>opencover</Format>
+          <OutputPath>coverage.opencover.xml</OutputPath>
+          <Exclude>[*Test*]*,[*Tests*]*</Exclude>
+          <ExcludeByFile>**/obj/**/*</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
 </RunSettings>
