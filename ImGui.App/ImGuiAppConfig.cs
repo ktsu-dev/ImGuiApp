@@ -105,6 +105,12 @@ public class ImGuiAppConfig
 	/// </summary>
 	public ImGuiAppPerformanceSettings PerformanceSettings { get; init; } = new();
 
+	/// <summary>
+	/// Gets or sets the font memory configuration for limiting texture memory allocation.
+	/// This helps prevent excessive memory usage on small GPUs or high-resolution displays.
+	/// </summary>
+	public FontMemoryGuard.FontMemoryConfig FontMemoryConfig { get; init; } = new();
+
 	internal Dictionary<string, byte[]> DefaultFonts { get; init; } = new Dictionary<string, byte[]>
 		{
 			{ "default", Resources.Resources.NerdFont}
