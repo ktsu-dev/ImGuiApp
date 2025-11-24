@@ -92,8 +92,9 @@ function Test-IsLibraryOnlyProject {
             $csprojContent = Get-Content -Path $csprojFile.FullName -Raw
             $projectName = $csprojFile.BaseName
 
-            # Check if this is the main project (matches repository name)
-            $isMainProject = ($projectName -eq $repoName)
+            # Check if this is the main project (matches repository name or starts with it)
+            # For multi-project solutions like "Semantics.Strings" in repo "Semantics"
+            $isMainProject = ($projectName -eq $repoName -or $projectName.StartsWith("$repoName."))
 
             # Skip test projects
             $isTestProject = ($csprojContent -match 'Sdk="[^"]*\.Test["/]' -or
