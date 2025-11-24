@@ -1,6 +1,8 @@
-## v2.2.0
+## v2.2.1-pre.1 (prerelease)
 
-No significant changes detected since v2.2.0.
+Changes since v2.2.0:
+
+- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 ## v2.2.0 (minor)
 
 Changes since v2.1.0:
