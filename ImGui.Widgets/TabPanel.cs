@@ -406,6 +406,12 @@ public static partial class ImGuiWidgets
 						tabFlags |= ImGuiTabItemFlags.UnsavedDocument;
 					}
 
+					if (!Closable)
+					{
+						tabFlags |= (ImGuiTabItemFlags)ImGuiTabItemFlagsPrivate.NoCloseButton;
+						tabFlags |= ImGuiTabItemFlags.NoCloseWithMiddleMouseButton;
+					}
+
 					bool tabOpen = true;
 
 					if (ImGui.BeginTabItem($"{tab.Label}##{tab.Id}", ref tabOpen, tabFlags))
