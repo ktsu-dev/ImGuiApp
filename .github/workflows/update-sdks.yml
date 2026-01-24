@@ -19,7 +19,7 @@ concurrency:
 permissions: read-all
 
 env:
-  DOTNET_VERSION: "9.0"
+  DOTNET_VERSION: "10.0"
 
 jobs:
   update-sdks:
@@ -257,7 +257,7 @@ jobs:
 
       - name: Run Tests
         if: steps.update_sdks.outputs.has_updates == 'true'
-        run: dotnet test --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage"
+        run: dotnet test --no-build --configuration Release --report-trx
 
       - name: Check for Changes
         if: steps.update_sdks.outputs.has_updates == 'true'
