@@ -1465,19 +1465,34 @@ function Invoke-DotNetTest {
 
     Write-StepHeader "Running Tests with Coverage" -Tags "Invoke-DotNetTest"
 
+    # Check if there are any test projects in the solution
+    $testProjects = @(Get-ChildItem -Recurse -Filter "*.csproj" | Where-Object {
+        $_.Name -match "\.Test\.csproj$" -or
+        $_.Directory.Name -match "\.Test$" -or
+        $_.Directory.Name -eq "Test" -or
+        (Select-String -Path $_.FullName -Pattern "<IsTestProject>true</IsTestProject>" -Quiet)
+    })
+
+    if ($testProjects.Count -eq 0) {
+        Write-Information "No test projects found in solution. Skipping test execution." -Tags "Invoke-DotNetTest"
+        return
+    }
+
+    Write-Information "Found $($testProjects.Count) test project(s)" -Tags "Invoke-DotNetTest"
+
     # Ensure the TestResults directory exists
     $testResultsPath = Join-Path $CoverageOutputPath "TestResults"
     New-Item -Path $testResultsPath -ItemType Directory -Force | Out-Null
 
     # Run tests with both coverage collection and TRX logging for SonarQube
-    "dotnet test --configuration $Configuration /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=`"coverage.opencover.xml`" --results-directory `"$testResultsPath`" --logger `"trx;LogFileName=TestResults.trx`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
+    "dotnet test --configuration $Configuration --coverage --coverage-output-format xml --coverage-output `"coverage.xml`" --results-directory `"$testResultsPath`" --report-trx --report-trx-filename TestResults.trx" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetTest"
     Assert-LastExitCode "Tests failed"
 
     # Find and copy coverage file to expected location for SonarQube
-    $coverageFiles = @(Get-ChildItem -Path . -Recurse -Filter "coverage.opencover.xml" -ErrorAction SilentlyContinue)
+    $coverageFiles = @(Get-ChildItem -Path . -Recurse -Filter "coverage.xml" -ErrorAction SilentlyContinue)
     if ($coverageFiles.Count -gt 0) {
         $latestCoverageFile = $coverageFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        $targetCoverageFile = Join-Path $CoverageOutputPath "coverage.opencover.xml"
+        $targetCoverageFile = Join-Path $CoverageOutputPath "coverage.xml"
         Copy-Item -Path $latestCoverageFile.FullName -Destination $targetCoverageFile -Force
         Write-Information "Coverage file copied to: $targetCoverageFile" -Tags "Invoke-DotNetTest"
     } else {
