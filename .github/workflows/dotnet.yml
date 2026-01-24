@@ -20,7 +20,7 @@ concurrency:
 permissions: read-all
 
 env:
-  DOTNET_VERSION: "9.0" # Only needed for actions/setup-dotnet
+  DOTNET_VERSION: "10.0" # Only needed for actions/setup-dotnet
 
 jobs:
   build:
@@ -96,7 +96,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="coverage/coverage.opencover.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx"
 
       - name: Run PSBuild Pipeline
         id: pipeline
