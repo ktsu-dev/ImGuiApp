@@ -645,3 +645,6 @@ Temporary Items
 # SpecStory derived-cursor-rules.mdc backup files
 /ai_rules_backups/*
 .specstory/ai_rules_backups/*
+
+# Claude.ai local settings
+.claude/settings.local.json
