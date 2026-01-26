@@ -811,15 +811,31 @@ Write-Host "  Tags: $($config.tags -join ', ')" -ForegroundColor Cyan
 $releaseUrl = "https://api.github.com/repos/$($config.githubRepo)/releases/tags/v$Version"
 $downloadBaseUrl = "https://github.com/$($config.githubRepo)/releases/download/v$Version"
 
+# Build headers for GitHub API requests (with optional authentication)
+$githubHeaders = @{
+    "User-Agent" = "Winget-Manifest-Updater"
+    "Accept" = "application/vnd.github.v3+json"
+}
+
+# Check for GITHUB_TOKEN environment variable for authenticated requests (higher rate limit)
+$githubToken = $env:GITHUB_TOKEN
+if (-not $githubToken) {
+    $githubToken = $env:GH_TOKEN
+}
+if ($githubToken) {
+    $githubHeaders["Authorization"] = "Bearer $githubToken"
+    Write-Host "Using authenticated GitHub API requests" -ForegroundColor Green
+} else {
+    Write-Host "Warning: No GITHUB_TOKEN found. API requests may be rate-limited." -ForegroundColor Yellow
+    Write-Host "Set GITHUB_TOKEN environment variable for authenticated requests." -ForegroundColor Yellow
+}
+
 Write-Host "Updating winget manifests for $($config.packageName) version $Version..." -ForegroundColor Green
 
 # Fetch release information from GitHub
 try {
     Write-Host "Fetching release information from GitHub..." -ForegroundColor Yellow
-    $release = Invoke-RestMethod -Uri $releaseUrl -Headers @{
-        "User-Agent" = "Winget-Manifest-Updater"
-        "Accept" = "application/vnd.github.v3+json"
-    }
+    $release = Invoke-RestMethod -Uri $releaseUrl -Headers $githubHeaders
 
     Write-Host "Found release: $($release.name)" -ForegroundColor Green
     $releaseDate = [DateTime]::Parse($release.published_at).ToString("yyyy-MM-dd")
