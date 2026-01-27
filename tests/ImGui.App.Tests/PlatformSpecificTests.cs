@@ -20,8 +20,8 @@ public class PlatformSpecificTests
 	{
 		double scaleFactor = ForceDpiAware.GetWindowScaleFactor();
 
-		Assert.IsTrue(scaleFactor > 0);
-		Assert.IsTrue(scaleFactor <= 10.25); // MaxScaleFactor
+		Assert.IsGreaterThan(0, scaleFactor, "Scale factor should be greater than zero");
+		Assert.IsLessThanOrEqualTo(10.25, scaleFactor, "Scale factor should not exceed MaxScaleFactor (10.25)");
 	}
 
 	[TestMethod]
@@ -29,7 +29,7 @@ public class PlatformSpecificTests
 	{
 		double actualScale = ForceDpiAware.GetActualScaleFactor();
 
-		Assert.IsTrue(actualScale > 0);
+		Assert.IsGreaterThan(0, actualScale, "Actual scale factor should be greater than zero");
 	}
 
 	#endregion
@@ -40,7 +40,7 @@ public class PlatformSpecificTests
 	public void GdiPlusHelper_IsStaticClass()
 	{
 		Type gdiPlusHelperType = typeof(GdiPlusHelper);
-		Assert.IsTrue(gdiPlusHelperType.IsAbstract && gdiPlusHelperType.IsSealed);
+		Assert.IsTrue(gdiPlusHelperType.IsAbstract && gdiPlusHelperType.IsSealed, "GdiPlusHelper should be a static class (abstract and sealed)");
 	}
 
 	#endregion
@@ -51,15 +51,15 @@ public class PlatformSpecificTests
 	public void NativeMethods_IsStaticClass()
 	{
 		Type nativeMethodsType = typeof(NativeMethods);
-		Assert.IsTrue(nativeMethodsType.IsAbstract && nativeMethodsType.IsSealed);
+		Assert.IsTrue(nativeMethodsType.IsAbstract && nativeMethodsType.IsSealed, "NativeMethods should be a static class (abstract and sealed)");
 	}
 
 	[TestMethod]
 	public void NativeMethods_IsInternalClass()
 	{
 		Type nativeMethodsType = typeof(NativeMethods);
-		Assert.IsTrue(nativeMethodsType.IsClass);
-		Assert.IsFalse(nativeMethodsType.IsPublic);
+		Assert.IsTrue(nativeMethodsType.IsClass, "NativeMethods should be a class");
+		Assert.IsFalse(nativeMethodsType.IsPublic, "NativeMethods should not be public (internal)");
 	}
 
 	#endregion
@@ -70,8 +70,8 @@ public class PlatformSpecificTests
 	public void UniformFieldInfo_IsStruct()
 	{
 		Type type = typeof(UniformFieldInfo);
-		Assert.IsTrue(type.IsValueType);
-		Assert.IsFalse(type.IsClass);
+		Assert.IsTrue(type.IsValueType, "UniformFieldInfo should be a value type (struct)");
+		Assert.IsFalse(type.IsClass, "UniformFieldInfo should not be a class");
 	}
 
 	[TestMethod]
@@ -103,16 +103,16 @@ public class PlatformSpecificTests
 	public void Shader_IsInternalClass()
 	{
 		Type shaderType = typeof(Shader);
-		Assert.IsTrue(shaderType.IsClass);
-		Assert.IsFalse(shaderType.IsPublic);
+		Assert.IsTrue(shaderType.IsClass, "Shader should be a class");
+		Assert.IsFalse(shaderType.IsPublic, "Shader should not be public (internal)");
 	}
 
 	[TestMethod]
 	public void Texture_IsInternalClass()
 	{
 		Type textureType = typeof(Texture);
-		Assert.IsTrue(textureType.IsClass);
-		Assert.IsFalse(textureType.IsPublic);
+		Assert.IsTrue(textureType.IsClass, "Texture should be a class");
+		Assert.IsFalse(textureType.IsPublic, "Texture should not be public (internal)");
 	}
 
 	#endregion
@@ -123,45 +123,45 @@ public class PlatformSpecificTests
 	public void IGL_IsInterface()
 	{
 		Type iglType = typeof(IGL);
-		Assert.IsTrue(iglType.IsInterface);
-		Assert.IsTrue(iglType.IsPublic);
+		Assert.IsTrue(iglType.IsInterface, "IGL should be an interface");
+		Assert.IsTrue(iglType.IsPublic, "IGL should be public");
 	}
 
 	[TestMethod]
 	public void IGL_InheritsFromIDisposable()
 	{
 		Type iglType = typeof(IGL);
-		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(iglType));
+		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(iglType), "IGL should inherit from IDisposable");
 	}
 
 	[TestMethod]
 	public void IOpenGLFactory_IsInterface()
 	{
 		Type factoryType = typeof(IOpenGLFactory);
-		Assert.IsTrue(factoryType.IsInterface);
-		Assert.IsTrue(factoryType.IsPublic);
+		Assert.IsTrue(factoryType.IsInterface, "IOpenGLFactory should be an interface");
+		Assert.IsTrue(factoryType.IsPublic, "IOpenGLFactory should be public");
 	}
 
 	[TestMethod]
 	public void IOpenGLProvider_IsInterface()
 	{
 		Type providerType = typeof(IOpenGLProvider);
-		Assert.IsTrue(providerType.IsInterface);
-		Assert.IsTrue(providerType.IsPublic);
+		Assert.IsTrue(providerType.IsInterface, "IOpenGLProvider should be an interface");
+		Assert.IsTrue(providerType.IsPublic, "IOpenGLProvider should be public");
 	}
 
 	[TestMethod]
 	public void IOpenGLProvider_InheritsFromIDisposable()
 	{
 		Type providerType = typeof(IOpenGLProvider);
-		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(providerType));
+		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(providerType), "IOpenGLProvider should inherit from IDisposable");
 	}
 
 	[TestMethod]
 	public void GLWrapper_ImplementsIGL()
 	{
 		Type wrapperType = typeof(GLWrapper);
-		Assert.IsTrue(typeof(IGL).IsAssignableFrom(wrapperType));
+		Assert.IsTrue(typeof(IGL).IsAssignableFrom(wrapperType), "GLWrapper should implement IGL");
 	}
 
 	#endregion

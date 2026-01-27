@@ -4,12 +4,15 @@
   <Sdk Name="ktsu.Sdk.App" />
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
     <ProjectReference Include="..\..\ImGui.Popups\ImGui.Popups.csproj" />
+    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 </Project>

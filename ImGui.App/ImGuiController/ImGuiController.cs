@@ -128,10 +128,7 @@ internal sealed class ImGuiController : IDisposable
 		_frameBegun = true;
 		_keyboard = _input?.Keyboards[0];
 		_mouse = _input?.Mice[0];
-		if (_view is not null)
-		{
-			_view.Resize += WindowResized;
-		}
+		_view?.Resize += WindowResized;
 
 		if (_keyboard is not null)
 		{

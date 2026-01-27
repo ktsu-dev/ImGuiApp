@@ -3,16 +3,21 @@
   <Sdk Name="ktsu.Sdk" />
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include = "Hexa.NET.ImGui" />
-    <PackageReference Include = "ktsu.Extensions" />
-    <PackageReference Include = "ktsu.CaseConverter" />
-    <PackageReference Include = "ktsu.ScopedAction" />
-    <PackageReference Include = "ktsu.TextFilter" />
-    <PackageReference Include = "Microsoft.Extensions.FileSystemGlobbing" />
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Extensions" />
+    <PackageReference Include="ktsu.CaseConverter" />
+    <PackageReference Include="ktsu.ScopedAction" />
+    <PackageReference Include="ktsu.TextFilter" />
+    <PackageReference Include="ktsu.Semantics.Strings" />
+    <PackageReference Include="ktsu.Semantics.Paths" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
+    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 
 </Project>

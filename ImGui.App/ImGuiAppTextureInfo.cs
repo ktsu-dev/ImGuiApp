@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.ImGui.App;
+
 using Hexa.NET.ImGui;
 using ktsu.Semantics.Paths;
 

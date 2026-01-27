@@ -358,7 +358,7 @@ public sealed class ImGuiAppWindowManagementTests
 
 		ImGuiApp.UpdateWindowPerformance();
 
-		Assert.IsFalse(ImGuiApp.IsIdle);
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be false when idle detection is disabled");
 	}
 
 	[TestMethod]

@@ -67,7 +67,7 @@ public class AdvancedCoverageTests
 	{
 		ImGuiFontConfig config = new("test.ttf", 16);
 		bool result = config.Equals(null);
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "Equals should return false when comparing with null");
 	}
 
 	[TestMethod]
@@ -75,7 +75,7 @@ public class AdvancedCoverageTests
 	{
 		ImGuiFontConfig config = new("test.ttf", 16);
 		bool result = config.Equals("not a font config");
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "Equals should return false when comparing with a different type");
 	}
 
 	[TestMethod]
@@ -84,7 +84,7 @@ public class AdvancedCoverageTests
 		ImGuiFontConfig config1 = new("test.ttf", 16);
 		ImGuiFontConfig config2 = new("test.ttf", 16);
 		bool result = config1.Equals(config2);
-		Assert.IsTrue(result);
+		Assert.IsTrue(result, "Equals should return true when comparing configs with same values");
 	}
 
 	[TestMethod]
@@ -102,10 +102,10 @@ public class AdvancedCoverageTests
 		bool notEqual1 = config1 != config2;
 		bool notEqual2 = config1 != config3;
 
-		Assert.IsTrue(equal1);
-		Assert.IsFalse(equal2);
-		Assert.IsFalse(notEqual1);
-		Assert.IsTrue(notEqual2);
+		Assert.IsTrue(equal1, "Equality operator should return true for configs with same values");
+		Assert.IsFalse(equal2, "Equality operator should return false for configs with different values");
+		Assert.IsFalse(notEqual1, "Inequality operator should return false for configs with same values");
+		Assert.IsTrue(notEqual2, "Inequality operator should return true for configs with different values");
 	}
 
 	[TestMethod]
@@ -118,7 +118,7 @@ public class AdvancedCoverageTests
 		ImGuiFontConfig config2 = new("test.ttf", 16, GlyphRange2);
 
 		bool result = config1.Equals(config2);
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "Equals should return false when configs have different glyph range delegates");
 	}
 
 	#endregion
@@ -210,8 +210,8 @@ public class AdvancedCoverageTests
 		Assert.AreEqual(0.0, settings.IdleFps);
 		Assert.AreEqual(0.0, settings.NotVisibleFps);
 		Assert.AreEqual(0.0, settings.IdleTimeoutSeconds);
-		Assert.IsFalse(settings.EnableThrottledRendering);
-		Assert.IsFalse(settings.EnableIdleDetection);
+		Assert.IsFalse(settings.EnableThrottledRendering, "EnableThrottledRendering should be false when set to false");
+		Assert.IsFalse(settings.EnableIdleDetection, "EnableIdleDetection should be false when set to false");
 	}
 
 	[TestMethod]
@@ -233,8 +233,8 @@ public class AdvancedCoverageTests
 		Assert.AreEqual(-3.0, settings.IdleFps);
 		Assert.AreEqual(-4.0, settings.NotVisibleFps);
 		Assert.AreEqual(-5.0, settings.IdleTimeoutSeconds);
-		Assert.IsTrue(settings.EnableThrottledRendering);
-		Assert.IsTrue(settings.EnableIdleDetection);
+		Assert.IsTrue(settings.EnableThrottledRendering, "EnableThrottledRendering should be true when set to true");
+		Assert.IsTrue(settings.EnableIdleDetection, "EnableIdleDetection should be true when set to true");
 	}
 
 	#endregion
@@ -259,10 +259,10 @@ public class AdvancedCoverageTests
 	{
 		ImGuiAppConfig config = new();
 		config.Fonts.Add("test", [1, 2, 3]);
-		Assert.AreEqual(1, config.Fonts.Count);
+		Assert.HasCount(1, config.Fonts);
 
 		config.Fonts.Clear();
-		Assert.AreEqual(0, config.Fonts.Count);
+		Assert.IsEmpty(config.Fonts);
 	}
 
 	[TestMethod]
@@ -275,7 +275,7 @@ public class AdvancedCoverageTests
 		config.Fonts.Add("Arial", font1);
 		config.Fonts.Add("Times", font2);
 
-		Assert.AreEqual(2, config.Fonts.Count);
+		Assert.HasCount(2, config.Fonts);
 		Assert.AreSame(font1, config.Fonts["Arial"]);
 		Assert.AreSame(font2, config.Fonts["Times"]);
 	}

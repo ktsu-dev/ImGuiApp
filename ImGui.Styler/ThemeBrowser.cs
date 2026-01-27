@@ -29,12 +29,12 @@ public class ThemeBrowser
 	/// <summary>
 	/// The action to invoke when a theme is selected.
 	/// </summary>
-	private Action<string>? onThemeSelected;
+	private Action<string>? onThemeSelectedCallback;
 
 	/// <summary>
 	/// The action to invoke when the default theme is requested.
 	/// </summary>
-	private Action? onDefaultRequested;
+	private Action? onDefaultRequestedCallback;
 
 	/// <summary>
 	/// Tracks whether a theme change occurred during the current modal session.
@@ -50,8 +50,8 @@ public class ThemeBrowser
 	/// <param name="customSize">Custom size of the modal. If not specified, uses a default size.</param>
 	public void Open(string title = "🎨 Theme Browser", Action<string>? onThemeSelected = null, Action? onDefaultRequested = null, Vector2? customSize = null)
 	{
-		this.onThemeSelected = onThemeSelected;
-		this.onDefaultRequested = onDefaultRequested;
+		onThemeSelectedCallback = onThemeSelected;
+		onDefaultRequestedCallback = onDefaultRequested;
 		themeChanged = false; // Reset theme change tracking for this modal session
 		Vector2 size = customSize ?? new Vector2(900, 650); // Increased width to accommodate wider theme cards
 		modal.Open(title, ShowContent, size);
@@ -139,7 +139,7 @@ public class ThemeBrowser
 			if (Theme.Apply(selectedTheme.Name))
 			{
 				themeChanged = true; // Set flag when theme is successfully applied
-				onThemeSelected?.Invoke(selectedTheme.Name);
+				onThemeSelectedCallback?.Invoke(selectedTheme.Name);
 				//ImGui.CloseCurrentPopup();
 			}
 		}, cardSize);
@@ -160,7 +160,7 @@ public class ThemeBrowser
 			{
 				Theme.ResetToDefault();
 				themeChanged = true; // Set flag when default is applied
-				onDefaultRequested?.Invoke();
+				onDefaultRequestedCallback?.Invoke();
 				//ImGui.CloseCurrentPopup();
 			}
 		}

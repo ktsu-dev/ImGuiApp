@@ -4,7 +4,7 @@
   <Sdk Name="ktsu.Sdk.App" />
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -19,6 +19,9 @@
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
+    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 
   <ItemGroup>

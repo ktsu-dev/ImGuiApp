@@ -16,8 +16,8 @@ public class ForceDpiAwareTests
 		double scaleFactor = ForceDpiAware.GetWindowScaleFactor();
 
 		// Assert
-		Assert.IsTrue(scaleFactor > 0);
-		Assert.IsTrue(scaleFactor <= 10.25); // MaxScaleFactor
+		Assert.IsGreaterThan(0, scaleFactor, "Scale factor should be greater than 0");
+		Assert.IsLessThanOrEqualTo(10.25, scaleFactor, "Scale factor should not exceed MaxScaleFactor (10.25)"); // MaxScaleFactor
 	}
 
 	[TestMethod]
@@ -27,6 +27,6 @@ public class ForceDpiAwareTests
 		double actualScale = ForceDpiAware.GetActualScaleFactor();
 
 		// Assert
-		Assert.IsTrue(actualScale > 0);
+		Assert.IsGreaterThan(0, actualScale, "Actual scale factor should be greater than 0");
 	}
 }

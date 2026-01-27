@@ -1,17 +1,15 @@
 <Project>
-  <Sdk Name="MStest.Sdk" />
+  <Sdk Name="MSTest.Sdk" />
   <Sdk Name="ktsu.Sdk" />
 
   <PropertyGroup>
     <IsTestProject>true</IsTestProject>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
-    <TestingPlatformShowTestsFailureDetails>true</TestingPlatformShowTestsFailureDetails>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>ktsu.ImGui.App.Tests</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
+    <EnableSourceLink>false</EnableSourceLink>
   </PropertyGroup>
 
   <ItemGroup>

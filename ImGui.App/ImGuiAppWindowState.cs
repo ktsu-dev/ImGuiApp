@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.ImGui.App;
+
 using System.Numerics;
 
 using Silk.NET.Windowing;

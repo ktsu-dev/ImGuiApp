@@ -342,10 +342,7 @@ public static partial class ImGuiWidgets
 		public void SetSize(string id, float size)
 		{
 			DividerZone? zone = Zones.FirstOrDefault(z => z.Id == id);
-			if (zone != null)
-			{
-				zone.Size = size;
-			}
+			zone?.Size = size;
 		}
 
 		/// <summary>

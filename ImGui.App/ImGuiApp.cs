@@ -489,17 +489,11 @@ public static partial class ImGuiApp
 
 	internal static void CleanupOpenGL()
 	{
-		if (gl != null)
-		{
-			gl.Dispose();
-			gl = null;
-		}
+		gl?.Dispose();
+		gl = null;
 
-		if (glProvider != null)
-		{
-			glProvider.Dispose();
-			glProvider = null;
-		}
+		glProvider?.Dispose();
+		glProvider = null;
 	}
 
 	/// <summary>

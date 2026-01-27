@@ -96,7 +96,7 @@ public class GlobalScaleTests
 		ImGuiApp.SetGlobalScale(1.25f);
 
 		// Assert
-		Assert.IsTrue(callbackInvoked);
+		Assert.IsTrue(callbackInvoked, "Expected OnGlobalScaleChanged callback to be invoked when SetGlobalScale is called");
 		Assert.AreEqual(1.25f, callbackScale, 0.001f);
 	}
 

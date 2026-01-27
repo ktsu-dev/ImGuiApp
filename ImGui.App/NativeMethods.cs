@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.ImGui.App;
+
 using System.Runtime.InteropServices;
 
 internal static partial class NativeMethods

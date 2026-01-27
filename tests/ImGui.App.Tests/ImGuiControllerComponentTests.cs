@@ -76,9 +76,9 @@ public class ImGuiControllerComponentTests
 		ImGuiFontConfig config1 = new("test.ttf", 16);
 		ImGuiFontConfig config2 = new("test.ttf", 16);
 
-		Assert.IsTrue(config1.Equals(config2));
-		Assert.IsTrue(config1 == config2);
-		Assert.IsFalse(config1 != config2);
+		Assert.IsTrue(config1.Equals(config2), "Configs with same values should be equal");
+		Assert.IsTrue(config1 == config2, "Equality operator should return true for equal configs");
+		Assert.IsFalse(config1 != config2, "Inequality operator should return false for equal configs");
 	}
 
 	[TestMethod]
@@ -88,10 +88,10 @@ public class ImGuiControllerComponentTests
 		ImGuiFontConfig config2 = new("test2.ttf", 16);
 		ImGuiFontConfig config3 = new("test1.ttf", 18);
 
-		Assert.IsFalse(config1.Equals(config2));
-		Assert.IsFalse(config1.Equals(config3));
-		Assert.IsFalse(config1 == config2);
-		Assert.IsTrue(config1 != config2);
+		Assert.IsFalse(config1.Equals(config2), "Configs with different paths should not be equal");
+		Assert.IsFalse(config1.Equals(config3), "Configs with different sizes should not be equal");
+		Assert.IsFalse(config1 == config2, "Equality operator should return false for different configs");
+		Assert.IsTrue(config1 != config2, "Inequality operator should return true for different configs");
 	}
 
 	[TestMethod]
@@ -110,17 +110,17 @@ public class ImGuiControllerComponentTests
 		ImGuiFontConfig config2 = new("test.ttf", 16);
 		object config2AsObject = config2;
 
-		Assert.IsTrue(config1.Equals(config2AsObject));
-		Assert.IsFalse(config1.Equals("not a font config"));
-		Assert.IsFalse(config1.Equals(null));
+		Assert.IsTrue(config1.Equals(config2AsObject), "Equals should work with boxed config object");
+		Assert.IsFalse(config1.Equals("not a font config"), "Equals should return false for different type");
+		Assert.IsFalse(config1.Equals(null), "Equals should return false for null");
 	}
 
 	[TestMethod]
 	public void ImGuiFontConfig_IsStruct()
 	{
 		Type configType = typeof(ImGuiFontConfig);
-		Assert.IsTrue(configType.IsValueType);
-		Assert.IsFalse(configType.IsClass);
+		Assert.IsTrue(configType.IsValueType, "ImGuiFontConfig should be a value type");
+		Assert.IsFalse(configType.IsClass, "ImGuiFontConfig should not be a class");
 	}
 
 	[TestMethod]
@@ -128,7 +128,7 @@ public class ImGuiControllerComponentTests
 	{
 		Type configType = typeof(ImGuiFontConfig);
 		Type equatableType = typeof(IEquatable<ImGuiFontConfig>);
-		Assert.IsTrue(equatableType.IsAssignableFrom(configType));
+		Assert.IsTrue(equatableType.IsAssignableFrom(configType), "ImGuiFontConfig should implement IEquatable<ImGuiFontConfig>");
 	}
 
 	#endregion
@@ -154,7 +154,7 @@ public class ImGuiControllerComponentTests
 	public void WindowOpenGLFactory_ImplementsIOpenGLFactory()
 	{
 		Type factoryType = typeof(WindowOpenGLFactory);
-		Assert.IsTrue(typeof(IOpenGLFactory).IsAssignableFrom(factoryType));
+		Assert.IsTrue(typeof(IOpenGLFactory).IsAssignableFrom(factoryType), "WindowOpenGLFactory should implement IOpenGLFactory");
 	}
 
 	#endregion
@@ -209,7 +209,7 @@ public class ImGuiControllerComponentTests
 	public void OpenGLProvider_ImplementsIDisposable()
 	{
 		Type providerType = typeof(OpenGLProvider);
-		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(providerType));
+		Assert.IsTrue(typeof(IDisposable).IsAssignableFrom(providerType), "OpenGLProvider should implement IDisposable");
 	}
 
 	#endregion
@@ -219,10 +219,14 @@ public class ImGuiControllerComponentTests
 	[TestMethod]
 	public void TextureCoordinate_EnumValues_HaveCorrectMappings()
 	{
+#pragma warning disable MSTEST0032 // Assertion condition is always true
+#pragma warning disable MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
 		Assert.AreEqual(0, (int)TextureCoordinate.None);
 		Assert.AreEqual((int)Silk.NET.OpenGL.TextureParameterName.TextureWrapS, (int)TextureCoordinate.S);
 		Assert.AreEqual((int)Silk.NET.OpenGL.TextureParameterName.TextureWrapT, (int)TextureCoordinate.T);
 		Assert.AreEqual((int)Silk.NET.OpenGL.TextureParameterName.TextureWrapR, (int)TextureCoordinate.R);
+#pragma warning restore MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
+#pragma warning restore MSTEST0032 // Assertion condition is always true
 	}
 
 	[TestMethod]
@@ -230,27 +234,31 @@ public class ImGuiControllerComponentTests
 	{
 		TextureCoordinate[] values = Enum.GetValues<TextureCoordinate>();
 
-		Assert.IsTrue(values.Length >= 4);
-		Assert.IsTrue(values.Contains(TextureCoordinate.None));
-		Assert.IsTrue(values.Contains(TextureCoordinate.S));
-		Assert.IsTrue(values.Contains(TextureCoordinate.T));
-		Assert.IsTrue(values.Contains(TextureCoordinate.R));
+		Assert.IsGreaterThanOrEqualTo(4, values.Length, "TextureCoordinate enum should have at least 4 values");
+		CollectionAssert.Contains(values, TextureCoordinate.None, "TextureCoordinate should contain None");
+		CollectionAssert.Contains(values, TextureCoordinate.S, "TextureCoordinate should contain S");
+		CollectionAssert.Contains(values, TextureCoordinate.T, "TextureCoordinate should contain T");
+		CollectionAssert.Contains(values, TextureCoordinate.R, "TextureCoordinate should contain R");
 	}
 
 	[TestMethod]
 	public void TextureCoordinate_IsEnum()
 	{
 		Type coordType = typeof(TextureCoordinate);
-		Assert.IsTrue(coordType.IsEnum);
+		Assert.IsTrue(coordType.IsEnum, "TextureCoordinate should be an enum type");
 		Assert.AreEqual(typeof(int), Enum.GetUnderlyingType(coordType));
 	}
 
 	[TestMethod]
 	public void Texture_Constants_HaveExpectedValues()
 	{
+#pragma warning disable MSTEST0032 // Assertion condition is always true
+#pragma warning disable MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
 		Assert.AreEqual((Silk.NET.OpenGL.SizedInternalFormat)Silk.NET.OpenGL.GLEnum.Srgb8Alpha8, Texture.Srgb8Alpha8);
 		Assert.AreEqual((Silk.NET.OpenGL.SizedInternalFormat)Silk.NET.OpenGL.GLEnum.Rgb32f, Texture.Rgb32F);
 		Assert.AreEqual((Silk.NET.OpenGL.GLEnum)0x84FF, Texture.MaxTextureMaxAnisotropy);
+#pragma warning restore MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
+#pragma warning restore MSTEST0032 // Assertion condition is always true
 	}
 
 	#endregion

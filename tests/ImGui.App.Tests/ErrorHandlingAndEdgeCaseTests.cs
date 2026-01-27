@@ -103,7 +103,7 @@ public class ErrorHandlingAndEdgeCaseTests
 		// Verify that the internal time was updated using direct access
 		DateTime lastTime = ImGuiApp.lastInputTime;
 
-		Assert.IsTrue(lastTime >= startTime);
+		Assert.IsTrue(lastTime >= startTime, "Last input time should be at or after start time");
 	}
 
 	[TestMethod]
@@ -213,9 +213,9 @@ public class ErrorHandlingAndEdgeCaseTests
 		Assert.AreEqual(double.MinValue, settings.UnfocusedFps);
 		Assert.AreEqual(double.PositiveInfinity, settings.IdleFps);
 		Assert.AreEqual(double.NegativeInfinity, settings.NotVisibleFps);
-		Assert.IsTrue(double.IsNaN(settings.IdleTimeoutSeconds));
-		Assert.IsTrue(settings.EnableThrottledRendering);
-		Assert.IsFalse(settings.EnableIdleDetection);
+		Assert.IsTrue(double.IsNaN(settings.IdleTimeoutSeconds), "IdleTimeoutSeconds should be NaN");
+		Assert.IsTrue(settings.EnableThrottledRendering, "EnableThrottledRendering should be true");
+		Assert.IsFalse(settings.EnableIdleDetection, "EnableIdleDetection should be false");
 	}
 
 	#endregion
@@ -259,8 +259,8 @@ public class ErrorHandlingAndEdgeCaseTests
 
 		config.Fonts.Add("", fontData);
 
-		Assert.AreEqual(1, config.Fonts.Count);
-		Assert.IsTrue(config.Fonts.ContainsKey(""));
+		Assert.HasCount(1, config.Fonts);
+		Assert.IsTrue(config.Fonts.ContainsKey(""), "Fonts dictionary should contain empty string key");
 		Assert.AreSame(fontData, config.Fonts[""]);
 	}
 
@@ -272,9 +272,9 @@ public class ErrorHandlingAndEdgeCaseTests
 
 		config.Fonts.Add("empty", emptyFont);
 
-		Assert.AreEqual(1, config.Fonts.Count);
+		Assert.HasCount(1, config.Fonts);
 		Assert.AreSame(emptyFont, config.Fonts["empty"]);
-		Assert.AreEqual(0, config.Fonts["empty"].Length);
+		Assert.IsEmpty(config.Fonts["empty"]);
 	}
 
 	[TestMethod]
@@ -285,9 +285,9 @@ public class ErrorHandlingAndEdgeCaseTests
 
 		config.Fonts.Add("large", largeFont);
 
-		Assert.AreEqual(1, config.Fonts.Count);
+		Assert.HasCount(1, config.Fonts);
 		Assert.AreSame(largeFont, config.Fonts["large"]);
-		Assert.AreEqual(1000000, config.Fonts["large"].Length);
+		Assert.HasCount(1000000, config.Fonts["large"]);
 	}
 
 	#endregion
@@ -301,8 +301,8 @@ public class ErrorHandlingAndEdgeCaseTests
 		// Since NativeMethods is an internal static partial class,
 		// the fact that this compiles means it's accessible and static
 		Assert.IsNotNull(typeof(NativeMethods));
-		Assert.IsTrue(typeof(NativeMethods).IsClass);
-		Assert.IsTrue(typeof(NativeMethods).IsAbstract && typeof(NativeMethods).IsSealed);
+		Assert.IsTrue(typeof(NativeMethods).IsClass, "NativeMethods should be a class");
+		Assert.IsTrue(typeof(NativeMethods).IsAbstract && typeof(NativeMethods).IsSealed, "NativeMethods should be a static class (abstract and sealed)");
 	}
 
 	[TestMethod]
@@ -312,8 +312,8 @@ public class ErrorHandlingAndEdgeCaseTests
 		// Since GdiPlusHelper is an internal static class,
 		// the fact that this compiles means it's accessible and static
 		Assert.IsNotNull(typeof(GdiPlusHelper));
-		Assert.IsTrue(typeof(GdiPlusHelper).IsClass);
-		Assert.IsTrue(typeof(GdiPlusHelper).IsAbstract && typeof(GdiPlusHelper).IsSealed);
+		Assert.IsTrue(typeof(GdiPlusHelper).IsClass, "GdiPlusHelper should be a class");
+		Assert.IsTrue(typeof(GdiPlusHelper).IsAbstract && typeof(GdiPlusHelper).IsSealed, "GdiPlusHelper should be a static class (abstract and sealed)");
 	}
 
 	[TestMethod]
@@ -323,8 +323,8 @@ public class ErrorHandlingAndEdgeCaseTests
 		// Since FontHelper is a public static class,
 		// the fact that this compiles means it's accessible and static
 		Assert.IsNotNull(typeof(FontHelper));
-		Assert.IsTrue(typeof(FontHelper).IsClass);
-		Assert.IsTrue(typeof(FontHelper).IsAbstract && typeof(FontHelper).IsSealed);
+		Assert.IsTrue(typeof(FontHelper).IsClass, "FontHelper should be a class");
+		Assert.IsTrue(typeof(FontHelper).IsAbstract && typeof(FontHelper).IsSealed, "FontHelper should be a static class (abstract and sealed)");
 	}
 
 	#endregion
@@ -357,8 +357,8 @@ public class ErrorHandlingAndEdgeCaseTests
 		double windowScale = ForceDpiAware.GetWindowScaleFactor();
 		double actualScale = ForceDpiAware.GetActualScaleFactor();
 
-		Assert.IsTrue(windowScale > 0, "Window scale factor should be positive");
-		Assert.IsTrue(actualScale > 0, "Actual scale factor should be positive");
+		Assert.IsGreaterThan(0, windowScale, "Window scale factor should be positive");
+		Assert.IsGreaterThan(0, actualScale, "Actual scale factor should be positive");
 	}
 
 	#endregion

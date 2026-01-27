@@ -24,7 +24,7 @@ public class FontAndUITests
 	public void FontHelper_IsStaticClass()
 	{
 		Type fontHelperType = typeof(FontHelper);
-		Assert.IsTrue(fontHelperType.IsAbstract && fontHelperType.IsSealed);
+		Assert.IsTrue(fontHelperType.IsAbstract && fontHelperType.IsSealed, "FontHelper should be a static class (abstract and sealed)");
 	}
 
 	[TestMethod]
@@ -82,15 +82,19 @@ public class FontAndUITests
 	[TestMethod]
 	public void FontAppearance_InheritsScopedAction()
 	{
-		Assert.IsTrue(typeof(FontAppearance).IsSubclassOf(typeof(ScopedAction.ScopedAction)));
+		Assert.IsTrue(typeof(FontAppearance).IsSubclassOf(typeof(ScopedAction.ScopedAction)), "FontAppearance should inherit from ScopedAction");
 	}
 
 	[TestMethod]
 	public void FontAppearance_Constants_HaveExpectedValues()
 	{
+#pragma warning disable MSTEST0032 // Assertion condition is always true
+#pragma warning disable MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
 		// Access FontAppearance constants directly using internal access
 		Assert.AreEqual("default", FontAppearance.DefaultFontName);
 		Assert.AreEqual(14, FontAppearance.DefaultFontPointSize);
+#pragma warning restore MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
+#pragma warning restore MSTEST0032 // Assertion condition is always true
 	}
 
 	#endregion
@@ -100,7 +104,7 @@ public class FontAndUITests
 	[TestMethod]
 	public void UIScaler_InheritsScopedAction()
 	{
-		Assert.IsTrue(typeof(UIScaler).IsSubclassOf(typeof(ScopedAction.ScopedAction)));
+		Assert.IsTrue(typeof(UIScaler).IsSubclassOf(typeof(ScopedAction.ScopedAction)), "UIScaler should inherit from ScopedAction");
 	}
 
 	#endregion
@@ -111,7 +115,7 @@ public class FontAndUITests
 	public void Util_IsStaticClass()
 	{
 		Type utilType = typeof(ImGuiController.Util);
-		Assert.IsTrue(utilType.IsAbstract && utilType.IsSealed);
+		Assert.IsTrue(utilType.IsAbstract && utilType.IsSealed, "Util should be a static class (abstract and sealed)");
 	}
 
 	[TestMethod]

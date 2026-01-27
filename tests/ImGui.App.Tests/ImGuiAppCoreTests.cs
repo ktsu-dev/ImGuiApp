@@ -26,20 +26,20 @@ public class ImGuiAppCoreTests
 	[TestMethod]
 	public void IsFocused_AfterReset_ReturnsTrue()
 	{
-		Assert.IsTrue(ImGuiApp.IsFocused);
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be true after reset");
 	}
 
 	[TestMethod]
 	public void IsIdle_AfterReset_ReturnsFalse()
 	{
-		Assert.IsFalse(ImGuiApp.IsIdle);
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be false after reset");
 	}
 
 	[TestMethod]
 	public void IsVisible_WithNullWindow_ReturnsFalse()
 	{
 		bool isVisible = ImGuiApp.IsVisible;
-		Assert.IsFalse(isVisible);
+		Assert.IsFalse(isVisible, "IsVisible should be false when window is null");
 	}
 
 	[TestMethod]
@@ -73,7 +73,7 @@ public class ImGuiAppCoreTests
 	public void Textures_AfterReset_IsEmpty()
 	{
 		ConcurrentDictionary<AbsoluteFilePath, ImGuiAppTextureInfo> textures = ImGuiApp.Textures;
-		Assert.AreEqual(0, textures.Count);
+		Assert.IsEmpty(textures);
 	}
 
 	#endregion
@@ -87,7 +87,7 @@ public class ImGuiAppCoreTests
 		ImGuiApp.OnUserInput();
 		DateTime after = ImGuiApp.lastInputTime;
 
-		Assert.IsTrue(after >= before);
+		Assert.IsTrue(after >= before, "lastInputTime should be updated to a time equal to or after the previous value");
 	}
 
 	[TestMethod]
@@ -118,10 +118,10 @@ public class ImGuiAppCoreTests
 	{
 		ImGuiApp.Reset();
 
-		Assert.IsFalse(ImGuiApp.IsIdle);
-		Assert.IsTrue(ImGuiApp.IsFocused);
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be false after reset");
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be true after reset");
 		Assert.IsNotNull(ImGuiApp.WindowState);
-		Assert.AreEqual(0, ImGuiApp.Textures.Count);
+		Assert.IsEmpty(ImGuiApp.Textures);
 	}
 
 	#endregion
@@ -134,7 +134,7 @@ public class ImGuiAppCoreTests
 		AbsoluteFilePath testPath = Path.GetFullPath("nonexistent_texture.png").As<AbsoluteFilePath>();
 		bool result = ImGuiApp.TryGetTexture(testPath, out ImGuiAppTextureInfo? textureInfo);
 
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "TryGetTexture should return false for non-existent texture");
 		Assert.IsNull(textureInfo);
 	}
 
@@ -144,7 +144,7 @@ public class ImGuiAppCoreTests
 		string testPath = Path.GetFullPath("nonexistent_texture.png");
 		bool result = ImGuiApp.TryGetTexture(testPath, out ImGuiAppTextureInfo? textureInfo);
 
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "TryGetTexture should return false for non-existent texture");
 		Assert.IsNull(textureInfo);
 	}
 
@@ -162,8 +162,8 @@ public class ImGuiAppCoreTests
 	public void CoreProperties_AreReadOnly()
 	{
 		// Test that these properties can be accessed directly and have expected default values
-		Assert.IsTrue(ImGuiApp.IsFocused);
-		Assert.IsFalse(ImGuiApp.IsIdle);
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be true by default");
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be false by default");
 		Assert.AreEqual(1.0f, ImGuiApp.ScaleFactor);
 
 		// Test properties are read-only by attempting direct access (compilation test)
@@ -172,9 +172,9 @@ public class ImGuiAppCoreTests
 		bool idleValue = ImGuiApp.IsIdle;
 		float scaleValue = ImGuiApp.ScaleFactor;
 
-		Assert.IsTrue(focusedValue || !focusedValue);  // Tautology to use the values
-		Assert.IsTrue(idleValue || !idleValue);
-		Assert.IsTrue(scaleValue >= 0);
+		Assert.IsTrue(focusedValue || !focusedValue, "focusedValue should be a valid boolean");  // Tautology to use the values
+		Assert.IsTrue(idleValue || !idleValue, "idleValue should be a valid boolean");
+		Assert.IsGreaterThanOrEqualTo(0, scaleValue, "ScaleFactor should be non-negative");
 	}
 
 	#endregion
@@ -197,8 +197,8 @@ public class ImGuiAppCoreTests
 		// Test DebugLogger functionality through direct access
 		// The fact that this compiles means DebugLogger is accessible as internal
 		Assert.IsNotNull(typeof(DebugLogger));
-		Assert.IsTrue(typeof(DebugLogger).IsClass);
-		Assert.IsTrue(typeof(DebugLogger).IsAbstract && typeof(DebugLogger).IsSealed);
+		Assert.IsTrue(typeof(DebugLogger).IsClass, "DebugLogger should be a class");
+		Assert.IsTrue(typeof(DebugLogger).IsAbstract && typeof(DebugLogger).IsSealed, "DebugLogger should be a static class (abstract and sealed)");
 	}
 
 	[TestMethod]

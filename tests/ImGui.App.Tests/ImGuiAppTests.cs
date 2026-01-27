@@ -310,10 +310,10 @@ public sealed class ImGuiAppTests : IDisposable
 			"Window should have been relocated when completely off-screen");
 
 		// Window should be resized to fit monitor (with 100px margin)
-		Assert.IsTrue(finalSize.X <= smallMonitorBounds.Size.X - 100,
-			$"Window width {finalSize.X} should be <= {smallMonitorBounds.Size.X - 100} to fit monitor");
-		Assert.IsTrue(finalSize.Y <= smallMonitorBounds.Size.Y - 100,
-			$"Window height {finalSize.Y} should be <= {smallMonitorBounds.Size.Y - 100} to fit monitor");
+		Assert.IsLessThanOrEqualTo(smallMonitorBounds.Size.X - 100,
+finalSize.X, $"Window width {finalSize.X} should be <= {smallMonitorBounds.Size.X - 100} to fit monitor");
+		Assert.IsLessThanOrEqualTo(smallMonitorBounds.Size.Y - 100,
+finalSize.Y, $"Window height {finalSize.Y} should be <= {smallMonitorBounds.Size.Y - 100} to fit monitor");
 		Assert.IsTrue(finalSize.X >= 640 && finalSize.Y >= 480,
 			$"Window size {finalSize} should maintain minimum size of 640x480");
 	}
@@ -349,8 +349,8 @@ public sealed class ImGuiAppTests : IDisposable
 		int callsAfterForced = mockMonitor.Invocations.Count;
 
 		// Should have made additional calls after forcing validation
-		Assert.IsTrue(callsAfterForced > callsAfterFirst,
-			"Forced validation should cause additional monitor access");
+		Assert.IsGreaterThan(callsAfterFirst,
+callsAfterForced, "Forced validation should cause additional monitor access");
 	}
 
 	[TestMethod]
@@ -462,12 +462,12 @@ public sealed class ImGuiAppTests : IDisposable
 		ImGuiAppPerformanceSettings settings = new();
 
 		// Assert
-		Assert.IsTrue(settings.EnableThrottledRendering);
+		Assert.IsTrue(settings.EnableThrottledRendering, "EnableThrottledRendering should default to true");
 		Assert.AreEqual(30.0, settings.FocusedFps);
 		Assert.AreEqual(5.0, settings.UnfocusedFps);
 		Assert.AreEqual(10.0, settings.IdleFps);
 		Assert.AreEqual(2.0, settings.NotVisibleFps);
-		Assert.IsTrue(settings.EnableIdleDetection);
+		Assert.IsTrue(settings.EnableIdleDetection, "EnableIdleDetection should default to true");
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
 	}
 
@@ -482,8 +482,8 @@ public sealed class ImGuiAppTests : IDisposable
 		ImGuiApp.Reset();
 
 		// Assert - Verify that performance-related fields are reset to their default values
-		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be reset to false");
-		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be reset to true");
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be reset to false after Reset");
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be reset to true after Reset");
 
 		// Note: lastInputTime is private so we can't directly test it, but the Reset() method
 		// should set it to DateTime.UtcNow, which will be tested implicitly through the idle detection logic
@@ -496,8 +496,8 @@ public sealed class ImGuiAppTests : IDisposable
 		ImGuiApp.Reset();
 
 		// Verify initial clean state
-		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should start as true");
-		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should start as false");
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should start as true after Reset");
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should start as false after Reset");
 
 		// Act - Simulate some state changes that could happen during a test
 		// We can call OnUserInput to update lastInputTime
@@ -507,8 +507,8 @@ public sealed class ImGuiAppTests : IDisposable
 		ImGuiApp.Reset();
 
 		// Assert - Verify that Reset properly restored the default state
-		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be reset to true");
-		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be reset to false");
+		Assert.IsTrue(ImGuiApp.IsFocused, "IsFocused should be reset to true after second Reset");
+		Assert.IsFalse(ImGuiApp.IsIdle, "IsIdle should be reset to false after second Reset");
 
 		// The lastInputTime should be reset to DateTime.UtcNow (current time)
 		// We can't test this directly, but the behavior should be consistent

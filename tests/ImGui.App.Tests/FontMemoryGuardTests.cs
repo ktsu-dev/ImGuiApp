@@ -62,16 +62,16 @@ public class FontMemoryGuardTests
 		Assert.AreNotEqual(estimate1, estimate3);
 
 		// Test operators
-		Assert.IsTrue(estimate1 == estimate2);
-		Assert.IsFalse(estimate1 == estimate3);
-		Assert.IsFalse(estimate1 != estimate2);
-		Assert.IsTrue(estimate1 != estimate3);
+		Assert.IsTrue(estimate1 == estimate2, "Equality operator should return true for equal estimates");
+		Assert.IsFalse(estimate1 == estimate3, "Equality operator should return false for different estimates");
+		Assert.IsFalse(estimate1 != estimate2, "Inequality operator should return false for equal estimates");
+		Assert.IsTrue(estimate1 != estimate3, "Inequality operator should return true for different estimates");
 
 		// Test Equals with object
-		Assert.IsTrue(estimate1.Equals((object)estimate2));
-		Assert.IsFalse(estimate1.Equals((object)estimate3));
-		Assert.IsFalse(estimate1.Equals(null));
-		Assert.IsFalse(estimate1.Equals("not an estimate"));
+		Assert.IsTrue(estimate1.Equals((object)estimate2), "Equals should return true for equal boxed estimates");
+		Assert.IsFalse(estimate1.Equals((object)estimate3), "Equals should return false for different boxed estimates");
+		Assert.IsFalse(estimate1.Equals(null), "Equals should return false for null");
+		Assert.IsFalse(estimate1.Equals("not an estimate"), "Equals should return false for different type");
 	}
 
 	[TestMethod]
@@ -116,9 +116,9 @@ public class FontMemoryGuardTests
 			includeExtendedUnicode: true,
 			scaleFactor: 1.0f);
 
-		Assert.IsTrue(estimate.EstimatedBytes > 0);
-		Assert.IsTrue(estimate.EstimatedGlyphCount > 0);
-		Assert.IsTrue(estimate.RecommendedMaxSizes > 0);
+		Assert.IsGreaterThan(0, estimate.EstimatedBytes, "EstimatedBytes should be greater than 0 for valid parameters");
+		Assert.IsGreaterThan(0, estimate.EstimatedGlyphCount, "EstimatedGlyphCount should be greater than 0 for valid parameters");
+		Assert.IsGreaterThan(0, estimate.RecommendedMaxSizes, "RecommendedMaxSizes should be greater than 0 for valid parameters");
 	}
 
 	[TestMethod]
@@ -129,7 +129,7 @@ public class FontMemoryGuardTests
 		FontMemoryGuard.FontMemoryEstimate lowScaleEstimate = FontMemoryGuard.EstimateMemoryUsage(1, fontSizes, false, false, 1.0f);
 		FontMemoryGuard.FontMemoryEstimate highScaleEstimate = FontMemoryGuard.EstimateMemoryUsage(1, fontSizes, false, false, 2.0f);
 
-		Assert.IsTrue(highScaleEstimate.EstimatedBytes > lowScaleEstimate.EstimatedBytes);
+		Assert.IsGreaterThan(lowScaleEstimate.EstimatedBytes, highScaleEstimate.EstimatedBytes, "Higher scale factor should result in higher memory estimate");
 	}
 
 	[TestMethod]
@@ -142,10 +142,10 @@ public class FontMemoryGuardTests
 		FontMemoryGuard.FontMemoryEstimate emojiEstimate = FontMemoryGuard.EstimateMemoryUsage(1, fontSizes, true, false, 1.0f);
 		FontMemoryGuard.FontMemoryEstimate fullEstimate = FontMemoryGuard.EstimateMemoryUsage(1, fontSizes, true, true, 1.0f);
 
-		Assert.IsTrue(unicodeEstimate.EstimatedGlyphCount > basicEstimate.EstimatedGlyphCount);
-		Assert.IsTrue(emojiEstimate.EstimatedGlyphCount > basicEstimate.EstimatedGlyphCount);
-		Assert.IsTrue(fullEstimate.EstimatedGlyphCount > unicodeEstimate.EstimatedGlyphCount);
-		Assert.IsTrue(fullEstimate.EstimatedGlyphCount > emojiEstimate.EstimatedGlyphCount);
+		Assert.IsGreaterThan(basicEstimate.EstimatedGlyphCount, unicodeEstimate.EstimatedGlyphCount, "Extended Unicode should increase glyph count");
+		Assert.IsGreaterThan(basicEstimate.EstimatedGlyphCount, emojiEstimate.EstimatedGlyphCount, "Emojis should increase glyph count");
+		Assert.IsGreaterThan(unicodeEstimate.EstimatedGlyphCount, fullEstimate.EstimatedGlyphCount, "Full estimate with emojis should exceed Unicode-only");
+		Assert.IsGreaterThan(emojiEstimate.EstimatedGlyphCount, fullEstimate.EstimatedGlyphCount, "Full estimate with Unicode should exceed emoji-only");
 	}
 
 	[TestMethod]
@@ -170,7 +170,7 @@ public class FontMemoryGuardTests
 			includeExtendedUnicode: true,
 			scaleFactor: 2.0f); // High DPI
 
-		Assert.IsTrue(estimate.ExceedsLimits, "Should exceed the very low memory limit");
+		Assert.IsTrue(estimate.ExceedsLimits, "Should exceed limits with very low memory limit and high requirements");
 	}
 
 	#endregion
@@ -192,8 +192,8 @@ public class FontMemoryGuardTests
 		int[] originalSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
 		int[] result = FontMemoryGuard.GetReducedFontSizes(originalSizes, 3, 14);
 
-		Assert.AreEqual(3, result.Length);
-		Assert.IsTrue(result.Contains(14), "Should always include preferred size");
+		Assert.HasCount(3, result);
+		CollectionAssert.Contains(result, 14, "Should always include preferred size");
 	}
 
 	[TestMethod]
@@ -202,8 +202,8 @@ public class FontMemoryGuardTests
 		int[] originalSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
 		int[] result = FontMemoryGuard.GetReducedFontSizes(originalSizes, 4, 16);
 
-		Assert.IsTrue(result.Contains(16), "Should include preferred size 16");
-		Assert.AreEqual(4, result.Length);
+		CollectionAssert.Contains(result, 16, "Should include preferred size 16");
+		Assert.HasCount(4, result);
 	}
 
 	[TestMethod]
@@ -213,7 +213,7 @@ public class FontMemoryGuardTests
 		int[] originalSizes = [12, 14, 16, 18, 20];
 		int[] result = FontMemoryGuard.GetReducedFontSizes(originalSizes, 1, 14); // Request only 1, but min is 2
 
-		Assert.IsTrue(result.Length >= 2, "Should respect minimum font sizes setting");
+		Assert.IsGreaterThanOrEqualTo(2, result.Length, "Result length should be at least MinFontSizesToLoad");
 	}
 
 	[TestMethod]
@@ -231,7 +231,7 @@ public class FontMemoryGuardTests
 
 		for (int i = 1; i < result.Length; i++)
 		{
-			Assert.IsTrue(result[i] > result[i - 1], "Result should be sorted in ascending order");
+			Assert.IsGreaterThan(result[i - 1], result[i], $"Result should be sorted in ascending order at index {i}");
 		}
 	}
 
@@ -316,7 +316,7 @@ public class FontMemoryGuardTests
 	public void TryDetectAndConfigureGpuMemory_NullGL_ReturnsFalse()
 	{
 		bool result = FontMemoryGuard.TryDetectAndConfigureGpuMemory(null!);
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "Should return false when GL is null");
 	}
 
 	[TestMethod]
@@ -326,7 +326,7 @@ public class FontMemoryGuardTests
 
 		// Since detection is disabled, the method should return false regardless of GL
 		bool result = FontMemoryGuard.TryDetectAndConfigureGpuMemory(null!);
-		Assert.IsFalse(result);
+		Assert.IsFalse(result, "Should return false when GPU memory detection is disabled");
 	}
 
 	#endregion
@@ -337,36 +337,36 @@ public class FontMemoryGuardTests
 	public void FontMemoryGuard_IsIntegratedGpu_DetectsIntelCorrectly()
 	{
 		// Test Intel GPU detection patterns
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) HD Graphics 530"));
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) UHD Graphics 620"));
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) Xe Graphics"));
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) Iris(R) Xe Graphics"));
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) HD Graphics 530"), "Intel HD Graphics should be detected as integrated");
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) UHD Graphics 620"), "Intel UHD Graphics should be detected as integrated");
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) Xe Graphics"), "Intel Xe Graphics should be detected as integrated");
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("Intel(R) Iris(R) Xe Graphics"), "Intel Iris Xe Graphics should be detected as integrated");
 
 		// Should not detect discrete GPUs as integrated
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("NVIDIA GeForce RTX 3060"));
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6600 XT"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("NVIDIA GeForce RTX 3060"), "NVIDIA GeForce should not be detected as integrated");
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6600 XT"), "AMD Radeon RX should not be detected as integrated");
 
 		// Intel Arc discrete GPUs should NOT be detected as integrated
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel Arc A770"));
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel(R) Arc(TM) A750 Graphics"));
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel Arc A380"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel Arc A770"), "Intel Arc should not be detected as integrated");
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel(R) Arc(TM) A750 Graphics"), "Intel Arc A750 should not be detected as integrated");
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("Intel Arc A380"), "Intel Arc A380 should not be detected as integrated");
 	}
 
 	[TestMethod]
 	public void FontMemoryGuard_IsIntegratedGpu_DetectsAmdApuCorrectly()
 	{
 		// Test AMD APU detection patterns
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("AMD Radeon(TM) Vega 8 Graphics"));
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("AMD Radeon(TM) 680M"));
-		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("AMD Radeon(TM) R7 Graphics"));
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("AMD Radeon(TM) Vega 8 Graphics"), "AMD Vega integrated should be detected");
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("AMD Radeon(TM) 680M"), "AMD 680M integrated should be detected");
+		Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu("AMD Radeon(TM) R7 Graphics"), "AMD R7 integrated should be detected");
 
 		// Should not detect discrete GPUs as integrated
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6600 XT"));
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 7900 XTX"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6600 XT"), "AMD RX 6600 XT should not be detected as integrated");
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 7900 XTX"), "AMD RX 7900 XTX should not be detected as integrated");
 
 		// AMD RDNA discrete GPUs should NOT be detected as integrated
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6700 XT"));
-		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 7800 XT"));
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 6700 XT"), "AMD RX 6700 XT should not be detected as integrated");
+		Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu("AMD Radeon RX 7800 XT"), "AMD RX 7800 XT should not be detected as integrated");
 	}
 
 	[TestMethod]
@@ -404,25 +404,29 @@ public class FontMemoryGuardTests
 		FontMemoryGuard.FontMemoryConfig config = new();
 
 		Assert.AreEqual(FontMemoryGuard.DefaultMaxAtlasMemoryBytes, config.MaxAtlasMemoryBytes);
-		Assert.IsTrue(config.EnableGpuMemoryDetection);
+		Assert.IsTrue(config.EnableGpuMemoryDetection, "EnableGpuMemoryDetection should default to true");
 		Assert.AreEqual(0.1f, config.MaxGpuMemoryPercentage);
-		Assert.IsTrue(config.EnableFallbackStrategies);
+		Assert.IsTrue(config.EnableFallbackStrategies, "EnableFallbackStrategies should default to true");
 		Assert.AreEqual(3, config.MinFontSizesToLoad);
-		Assert.IsTrue(config.DisableEmojisOnLowMemory);
-		Assert.IsTrue(config.ReduceUnicodeRangesOnLowMemory);
-		Assert.IsTrue(config.EnableIntelGpuHeuristics);
-		Assert.IsTrue(config.EnableAmdApuHeuristics);
+		Assert.IsTrue(config.DisableEmojisOnLowMemory, "DisableEmojisOnLowMemory should default to true");
+		Assert.IsTrue(config.ReduceUnicodeRangesOnLowMemory, "ReduceUnicodeRangesOnLowMemory should default to true");
+		Assert.IsTrue(config.EnableIntelGpuHeuristics, "EnableIntelGpuHeuristics should default to true");
+		Assert.IsTrue(config.EnableAmdApuHeuristics, "EnableAmdApuHeuristics should default to true");
 	}
 
 	[TestMethod]
 	public void FontMemoryGuard_Constants_HaveExpectedValues()
 	{
+#pragma warning disable MSTEST0032 // Assertion condition is always true
+#pragma warning disable MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
 		Assert.AreEqual(64 * 1024 * 1024, FontMemoryGuard.DefaultMaxAtlasMemoryBytes);
 		Assert.AreEqual(8 * 1024 * 1024, FontMemoryGuard.MinAtlasMemoryBytes);
 		Assert.AreEqual(8192, FontMemoryGuard.MaxAtlasTextureDimension);
 		Assert.AreEqual(4096, FontMemoryGuard.DefaultAtlasTextureDimension);
 		Assert.AreEqual(2048, FontMemoryGuard.MinAtlasTextureDimension);
 		Assert.AreEqual(128, FontMemoryGuard.EstimatedBytesPerGlyph);
+#pragma warning restore MSTEST0025 // Use 'Assert.Fail' instead of an always-failing assert
+#pragma warning restore MSTEST0032 // Assertion condition is always true
 	}
 
 	[TestMethod]
@@ -444,7 +448,7 @@ public class FontMemoryGuardTests
 		// Since DetermineFallbackStrategy is still callable directly, we test the integration behavior
 		// by verifying that the configuration setting is properly checked in the application code
 		// Note: This test verifies the configuration property exists and can be set
-		Assert.IsFalse(FontMemoryGuard.CurrentConfig.EnableFallbackStrategies);
+		Assert.IsFalse(FontMemoryGuard.CurrentConfig.EnableFallbackStrategies, "EnableFallbackStrategies should be false when disabled");
 	}
 
 	[TestMethod]
@@ -477,8 +481,8 @@ public class FontMemoryGuardTests
 
 		// For 4096x4096 with 16px average font size and 75% packing efficiency
 		// Expected: ~25,000-35,000 glyphs
-		Assert.IsTrue(maxGlyphs >= 20000, $"Expected at least 20,000 glyphs, got {maxGlyphs}");
-		Assert.IsTrue(maxGlyphs <= 40000, $"Expected at most 40,000 glyphs, got {maxGlyphs}");
+		Assert.IsGreaterThanOrEqualTo(20000, maxGlyphs, $"Expected at least 20,000 glyphs, got {maxGlyphs}");
+		Assert.IsLessThanOrEqualTo(40000, maxGlyphs, $"Expected at most 40,000 glyphs, got {maxGlyphs}");
 	}
 
 	[TestMethod]
@@ -488,8 +492,8 @@ public class FontMemoryGuardTests
 		int maxGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.MaxAtlasTextureDimension);
 
 		// 8192x8192 should hold ~4x more glyphs than 4096x4096 (area doubles)
-		Assert.IsTrue(maxGlyphs > defaultGlyphs * 3, "Max atlas size should hold significantly more glyphs");
-		Assert.IsTrue(maxGlyphs >= 80000, $"Expected at least 80,000 glyphs for 8192 atlas, got {maxGlyphs}");
+		Assert.IsGreaterThan(defaultGlyphs * 3, maxGlyphs, $"Max atlas should hold more than 3x default glyphs ({maxGlyphs} vs {defaultGlyphs * 3})");
+		Assert.IsGreaterThanOrEqualTo(80000, maxGlyphs, $"Expected at least 80,000 glyphs for 8192 atlas, got {maxGlyphs}");
 	}
 
 	[TestMethod]
@@ -499,8 +503,8 @@ public class FontMemoryGuardTests
 		int minGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(FontMemoryGuard.MinAtlasTextureDimension);
 
 		// 2048x2048 should hold ~1/4 glyphs of 4096x4096
-		Assert.IsTrue(minGlyphs < defaultGlyphs / 3, "Min atlas size should hold significantly fewer glyphs");
-		Assert.IsTrue(minGlyphs >= 5000, $"Expected at least 5,000 glyphs for 2048 atlas, got {minGlyphs}");
+		Assert.IsLessThan(defaultGlyphs / 3, minGlyphs, $"Min atlas should hold less than 1/3 default glyphs ({minGlyphs} vs {defaultGlyphs / 3})");
+		Assert.IsGreaterThanOrEqualTo(5000, minGlyphs, $"Expected at least 5,000 glyphs for 2048 atlas, got {minGlyphs}");
 	}
 
 	[TestMethod]
@@ -510,9 +514,9 @@ public class FontMemoryGuardTests
 		int largeFontGlyphs = FontMemoryGuard.CalculateMaxGlyphCount(4096, averageFontSize: 24);
 
 		// Larger fonts should fit fewer glyphs
-		Assert.IsTrue(largeFontGlyphs < smallFontGlyphs, "Larger fonts should result in fewer glyphs fitting");
+		Assert.IsLessThan(smallFontGlyphs, largeFontGlyphs, $"Larger fonts should fit fewer glyphs ({largeFontGlyphs} vs {smallFontGlyphs})");
 		// Roughly 4x fewer glyphs for 2x font size (area quadruples)
-		Assert.IsTrue(largeFontGlyphs < smallFontGlyphs / 3, "Large font glyph count should be significantly less");
+		Assert.IsLessThan(smallFontGlyphs / 3, largeFontGlyphs, $"Large font glyph count should be less than 1/3 of small ({largeFontGlyphs} vs {smallFontGlyphs / 3})");
 	}
 
 	[TestMethod]
@@ -541,7 +545,7 @@ public class FontMemoryGuardTests
 			scaleFactor: 1.0f);
 
 		// Should exceed glyph limit even though we have plenty of memory
-		Assert.IsTrue(estimate.ExceedsLimits, "Should exceed glyph limits with small atlas and many fonts");
+		Assert.IsTrue(estimate.ExceedsLimits, "Should exceed glyph limits with small atlas, multiple fonts, and full character sets");
 	}
 
 	[TestMethod]
@@ -561,7 +565,7 @@ public class FontMemoryGuardTests
 			scaleFactor: 1.0f);
 
 		// With large atlas, moderate glyph count should be fine
-		Assert.IsFalse(estimate.ExceedsLimits, "Should NOT exceed limits with large atlas and moderate glyph count");
+		Assert.IsFalse(estimate.ExceedsLimits, "Should not exceed limits with large atlas and moderate font configuration");
 	}
 
 	#endregion

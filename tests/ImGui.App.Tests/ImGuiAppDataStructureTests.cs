@@ -56,8 +56,8 @@ public class ImGuiAppDataStructureTests
 	public void ImGuiAppTextureInfo_IsPublicClass()
 	{
 		Type textureInfoType = typeof(ImGuiAppTextureInfo);
-		Assert.IsTrue(textureInfoType.IsClass);
-		Assert.IsTrue(textureInfoType.IsPublic);
+		Assert.IsTrue(textureInfoType.IsClass, "ImGuiAppTextureInfo should be a class type");
+		Assert.IsTrue(textureInfoType.IsPublic, "ImGuiAppTextureInfo should be publicly accessible");
 	}
 
 	#endregion
@@ -94,8 +94,8 @@ public class ImGuiAppDataStructureTests
 	public void ImGuiAppWindowState_IsPublicClass()
 	{
 		Type windowStateType = typeof(ImGuiAppWindowState);
-		Assert.IsTrue(windowStateType.IsClass);
-		Assert.IsTrue(windowStateType.IsPublic);
+		Assert.IsTrue(windowStateType.IsClass, "ImGuiAppWindowState should be a class type");
+		Assert.IsTrue(windowStateType.IsPublic, "ImGuiAppWindowState should be publicly accessible");
 	}
 
 	#endregion
@@ -133,9 +133,9 @@ public class ImGuiAppDataStructureTests
 
 		Assert.AreEqual("Test App", config.Title);
 		Assert.AreEqual("test.ico", config.IconPath);
-		Assert.IsTrue(config.TestMode);
-		Assert.IsFalse(config.EnableUnicodeSupport);
-		Assert.IsFalse(config.SaveIniSettings);
+		Assert.IsTrue(config.TestMode, "TestMode should be true when explicitly set to true");
+		Assert.IsFalse(config.EnableUnicodeSupport, "EnableUnicodeSupport should be false when explicitly set to false");
+		Assert.IsFalse(config.SaveIniSettings, "SaveIniSettings should be false when explicitly set to false");
 	}
 
 	[TestMethod]
@@ -146,8 +146,8 @@ public class ImGuiAppDataStructureTests
 
 		config.Fonts.Add("TestFont", testFontData);
 
-		Assert.AreEqual(1, config.Fonts.Count);
-		Assert.IsTrue(config.Fonts.ContainsKey("TestFont"));
+		Assert.HasCount(1, config.Fonts);
+		Assert.IsTrue(config.Fonts.ContainsKey("TestFont"), "Fonts dictionary should contain the added 'TestFont' key");
 		Assert.AreSame(testFontData, config.Fonts["TestFont"]);
 	}
 
@@ -157,15 +157,15 @@ public class ImGuiAppDataStructureTests
 		byte[]? emojiFont = ImGuiAppConfig.EmojiFont;
 
 		// The font may or may not be available depending on the build configuration
-		Assert.IsTrue(emojiFont is null || emojiFont.Length > 0);
+		Assert.IsTrue(emojiFont is null || emojiFont.Length > 0, "EmojiFont should either be null or contain font data with non-zero length");
 	}
 
 	[TestMethod]
 	public void ImGuiAppConfig_IsPublicClass()
 	{
 		Type configType = typeof(ImGuiAppConfig);
-		Assert.IsTrue(configType.IsClass);
-		Assert.IsTrue(configType.IsPublic);
+		Assert.IsTrue(configType.IsClass, "ImGuiAppConfig should be a class type");
+		Assert.IsTrue(configType.IsPublic, "ImGuiAppConfig should be publicly accessible");
 	}
 
 	#endregion
@@ -177,12 +177,12 @@ public class ImGuiAppDataStructureTests
 	{
 		ImGuiAppPerformanceSettings settings = new();
 
-		Assert.IsTrue(settings.EnableThrottledRendering);
+		Assert.IsTrue(settings.EnableThrottledRendering, "EnableThrottledRendering should default to true");
 		Assert.AreEqual(30.0, settings.FocusedFps);
 		Assert.AreEqual(5.0, settings.UnfocusedFps);
 		Assert.AreEqual(10.0, settings.IdleFps);
 		Assert.AreEqual(2.0, settings.NotVisibleFps);
-		Assert.IsTrue(settings.EnableIdleDetection);
+		Assert.IsTrue(settings.EnableIdleDetection, "EnableIdleDetection should default to true");
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
 	}
 
@@ -200,12 +200,12 @@ public class ImGuiAppDataStructureTests
 			IdleTimeoutSeconds = 60.0
 		};
 
-		Assert.IsFalse(settings.EnableThrottledRendering);
+		Assert.IsFalse(settings.EnableThrottledRendering, "EnableThrottledRendering should be false when explicitly set to false");
 		Assert.AreEqual(60.0, settings.FocusedFps);
 		Assert.AreEqual(15.0, settings.UnfocusedFps);
 		Assert.AreEqual(5.0, settings.IdleFps);
 		Assert.AreEqual(1.0, settings.NotVisibleFps);
-		Assert.IsFalse(settings.EnableIdleDetection);
+		Assert.IsFalse(settings.EnableIdleDetection, "EnableIdleDetection should be false when explicitly set to false");
 		Assert.AreEqual(60.0, settings.IdleTimeoutSeconds);
 	}
 
@@ -213,8 +213,8 @@ public class ImGuiAppDataStructureTests
 	public void ImGuiAppPerformanceSettings_IsPublicClass()
 	{
 		Type settingsType = typeof(ImGuiAppPerformanceSettings);
-		Assert.IsTrue(settingsType.IsClass);
-		Assert.IsTrue(settingsType.IsPublic);
+		Assert.IsTrue(settingsType.IsClass, "ImGuiAppPerformanceSettings should be a class type");
+		Assert.IsTrue(settingsType.IsPublic, "ImGuiAppPerformanceSettings should be publicly accessible");
 	}
 
 	#endregion

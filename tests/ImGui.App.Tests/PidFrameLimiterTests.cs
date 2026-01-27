@@ -76,7 +76,7 @@ public sealed class PidFrameLimiterTests
 		// After reset, the limiter should behave as if newly created
 		string diagnosticInfo = _frameLimiter.GetDiagnosticInfo();
 		Assert.IsNotNull(diagnosticInfo);
-		Assert.IsTrue(diagnosticInfo.Contains("Sleep: 0"));
+		StringAssert.Contains(diagnosticInfo, "Sleep: 0", "Diagnostic info should show sleep time is reset to 0");
 	}
 
 	[TestMethod]
@@ -140,10 +140,10 @@ public sealed class PidFrameLimiterTests
 		string diagnosticInfo = _frameLimiter.GetDiagnosticInfo();
 
 		Assert.IsNotNull(diagnosticInfo);
-		Assert.IsTrue(diagnosticInfo.Contains("PID State"));
-		Assert.IsTrue(diagnosticInfo.Contains("Sleep"));
-		Assert.IsTrue(diagnosticInfo.Contains("Error"));
-		Assert.IsTrue(diagnosticInfo.Contains("Frame Time"));
+		StringAssert.Contains(diagnosticInfo, "PID State", "Diagnostic info should include PID State");
+		StringAssert.Contains(diagnosticInfo, "Sleep", "Diagnostic info should include Sleep");
+		StringAssert.Contains(diagnosticInfo, "Error", "Diagnostic info should include Error");
+		StringAssert.Contains(diagnosticInfo, "Frame Time", "Diagnostic info should include Frame Time");
 	}
 
 	#endregion
@@ -178,12 +178,12 @@ public sealed class PidFrameLimiterTests
 
 		_frameLimiter.StartAutoTuning();
 		(bool isActive, _, _, _, _) = _frameLimiter.GetTuningStatus();
-		Assert.IsTrue(isActive);
+		Assert.IsTrue(isActive, "Auto-tuning should be active after StartAutoTuning");
 
 		_frameLimiter.SetManualPidParameters(1.0, 0.1, 0.2);
 
 		(isActive, _, _, _, _) = _frameLimiter.GetTuningStatus();
-		Assert.IsFalse(isActive);
+		Assert.IsFalse(isActive, "Auto-tuning should be stopped after setting manual PID parameters");
 	}
 
 	#endregion
@@ -199,10 +199,10 @@ public sealed class PidFrameLimiterTests
 
 		(bool isActive, int currentStep, int totalSteps, double progress, _) = _frameLimiter.GetTuningStatus();
 
-		Assert.IsTrue(isActive);
-		Assert.IsTrue(currentStep > 0);
-		Assert.IsTrue(totalSteps > 0);
-		Assert.IsTrue(progress is >= 0.0 and <= 100.0);
+		Assert.IsTrue(isActive, "Auto-tuning should be active after starting");
+		Assert.IsGreaterThan(0, currentStep, "Current step should be greater than 0 when tuning is active");
+		Assert.IsGreaterThan(0, totalSteps, "Total steps should be greater than 0 when tuning is active");
+		Assert.IsTrue(progress is >= 0.0 and <= 100.0, "Progress should be between 0 and 100 percent");
 	}
 
 	[TestMethod]
@@ -215,7 +215,7 @@ public sealed class PidFrameLimiterTests
 
 		(bool isActive, _, _, _, _) = _frameLimiter.GetTuningStatus();
 
-		Assert.IsFalse(isActive);
+		Assert.IsFalse(isActive, "Auto-tuning should be inactive after stopping");
 	}
 
 	[TestMethod]
@@ -227,12 +227,12 @@ public sealed class PidFrameLimiterTests
 
 		(bool isActive, int currentStep, int totalSteps, double progress, _, string phase) = _frameLimiter.GetTuningStatusDetailed();
 
-		Assert.IsTrue(isActive);
-		Assert.IsTrue(currentStep > 0);
-		Assert.IsTrue(totalSteps > 0);
-		Assert.IsTrue(progress is >= 0.0 and <= 100.0);
+		Assert.IsTrue(isActive, "Auto-tuning should be active after starting");
+		Assert.IsGreaterThan(0, currentStep, "Current step should be greater than 0 when tuning is active");
+		Assert.IsGreaterThan(0, totalSteps, "Total steps should be greater than 0 when tuning is active");
+		Assert.IsTrue(progress is >= 0.0 and <= 100.0, "Progress should be between 0 and 100 percent");
 		Assert.IsNotNull(phase);
-		Assert.IsTrue(phase.Contains("Tuning"));
+		StringAssert.Contains(phase, "Tuning", "Phase should contain 'Tuning' when auto-tuning is active");
 	}
 
 	[TestMethod]
@@ -242,7 +242,7 @@ public sealed class PidFrameLimiterTests
 
 		(bool isActive, int currentStep, int totalSteps, double progress, _) = _frameLimiter.GetTuningStatus();
 
-		Assert.IsFalse(isActive);
+		Assert.IsFalse(isActive, "Auto-tuning should be inactive when not started");
 		Assert.AreEqual(0, currentStep);
 		Assert.AreEqual(0, totalSteps);
 		Assert.AreEqual(0.0, progress);
@@ -304,7 +304,7 @@ public sealed class PidFrameLimiterTests
 		DateTime end = DateTime.UtcNow;
 
 		double elapsedMs = (end - start).TotalMilliseconds;
-		Assert.IsTrue(elapsedMs < 5.0, $"Expected immediate return, but took {elapsedMs}ms");
+		Assert.IsLessThan(5.0, elapsedMs, $"Expected immediate return, but took {elapsedMs}ms");
 	}
 
 	[TestMethod]
@@ -315,7 +315,7 @@ public sealed class PidFrameLimiterTests
 		DateTime end = DateTime.UtcNow;
 
 		double elapsedMs = (end - start).TotalMilliseconds;
-		Assert.IsTrue(elapsedMs < 5.0, $"Expected immediate return, but took {elapsedMs}ms");
+		Assert.IsLessThan(5.0, elapsedMs, $"Expected immediate return, but took {elapsedMs}ms");
 	}
 
 	[TestMethod]
@@ -329,8 +329,8 @@ public sealed class PidFrameLimiterTests
 		double elapsedMs = (end - start).TotalMilliseconds;
 
 		// Allow for some tolerance in timing due to OS scheduling
-		Assert.IsTrue(elapsedMs >= targetSleepMs * 0.8, $"Sleep was too short: {elapsedMs}ms vs target {targetSleepMs}ms");
-		Assert.IsTrue(elapsedMs <= targetSleepMs * 2.0, $"Sleep was too long: {elapsedMs}ms vs target {targetSleepMs}ms");
+		Assert.IsGreaterThanOrEqualTo(targetSleepMs * 0.8, elapsedMs, $"Sleep was too short: {elapsedMs}ms vs target {targetSleepMs}ms");
+		Assert.IsLessThanOrEqualTo(targetSleepMs * 2.0, elapsedMs, $"Sleep was too long: {elapsedMs}ms vs target {targetSleepMs}ms");
 	}
 
 	#endregion
@@ -358,7 +358,7 @@ public sealed class PidFrameLimiterTests
 	{
 		List<double> variedErrors = [1.0, 5.0, 3.0, 7.0, 2.0];
 		double stability = PidFrameLimiter.CalculateStability(variedErrors);
-		Assert.IsTrue(stability > 0.0);
+		Assert.IsGreaterThan(0.0, stability, "Stability should be positive for varied error values");
 	}
 
 	[TestMethod]
@@ -373,14 +373,14 @@ public sealed class PidFrameLimiterTests
 	public void CalculateScore_WithLowErrors_ReturnsHighScore()
 	{
 		double score = PidFrameLimiter.CalculateScore(0.1, 0.2, 0.05);
-		Assert.IsTrue(score > 0.5, $"Expected high score for low errors, got {score}");
+		Assert.IsGreaterThan(0.5, score, $"Expected high score for low errors, got {score}");
 	}
 
 	[TestMethod]
 	public void CalculateScore_WithHighErrors_ReturnsLowScore()
 	{
 		double score = PidFrameLimiter.CalculateScore(10.0, 20.0, 5.0);
-		Assert.IsTrue(score < 0.1, $"Expected low score for high errors, got {score}");
+		Assert.IsLessThan(0.1, score, $"Expected low score for high errors, got {score}");
 	}
 
 	[TestMethod]
@@ -389,8 +389,8 @@ public sealed class PidFrameLimiterTests
 		double score1 = PidFrameLimiter.CalculateScore(0.0, 0.0, 0.0);
 		double score2 = PidFrameLimiter.CalculateScore(100.0, 200.0, 50.0);
 
-		Assert.IsTrue(score1 > 0.0);
-		Assert.IsTrue(score2 > 0.0);
+		Assert.IsGreaterThan(0.0, score1, "Score should be positive even with zero errors");
+		Assert.IsGreaterThan(0.0, score2, "Score should be positive even with high errors");
 	}
 
 	#endregion
@@ -504,7 +504,7 @@ public sealed class PidFrameLimiterTests
 			_frameLimiter.StopAutoTuning();
 
 			(bool isActive, _, _, _, _) = _frameLimiter.GetTuningStatus();
-			Assert.IsFalse(isActive);
+			Assert.IsFalse(isActive, "Auto-tuning should be inactive after multiple start/stop cycles");
 		}
 #pragma warning disable CA1031 // Do not catch general exception types
 		catch (Exception ex)
@@ -541,7 +541,7 @@ public sealed class PidFrameLimiterTests
 		Assert.IsNotNull(_frameLimiter);
 
 		double duration = _frameLimiter.GetCurrentTuningDuration();
-		Assert.IsTrue(duration > 0.0);
+		Assert.IsGreaterThan(0.0, duration, "Tuning duration should be greater than 0");
 	}
 
 	[TestMethod]

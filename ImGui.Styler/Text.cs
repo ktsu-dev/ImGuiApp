@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.ImGui.Styler;
+
 using Hexa.NET.ImGui;
 
 /// <summary>

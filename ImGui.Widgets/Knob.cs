@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.ImGui.Widgets;
+
 using System;
 using System.Globalization;
 using System.Numerics;

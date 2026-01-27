@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <TargetFrameworks>net8.0;net9.0;</TargetFrameworks>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
@@ -12,6 +12,9 @@
     <PackageReference Include="ktsu.ThemeProvider" />
     <PackageReference Include="ktsu.ThemeProvider.ImGui" />
     <ProjectReference Include="..\ImGui.Popups\ImGui.Popups.csproj" />
+    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 
 </Project>
