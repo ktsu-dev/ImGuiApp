@@ -31,7 +31,14 @@ public static partial class ImGuiWidgets
 	{
 		string hint = TextFilter.GetHint(filterType) + "\nRight-click for options";
 
-		bool changed = ImGui.InputTextWithHint(label, hint, ref filterText, 256);
+		// Only show hint if there's enough width to display it fully
+		// The tooltip covers this case when the hint doesn't fit
+		float availableWidth = ImGui.CalcItemWidth();
+		float hintWidth = ImGui.CalcTextSize(hint).X;
+		float framePadding = ImGui.GetStyle().FramePadding.X * 2;
+		string displayHint = (hintWidth + framePadding) <= availableWidth ? hint : string.Empty;
+
+		bool changed = ImGui.InputTextWithHint(label, displayHint, ref filterText, 256);
 		bool isHovered = ImGui.IsItemHovered();
 		bool isRightMouseClicked = ImGui.IsMouseClicked(ImGuiMouseButton.Right);
 
