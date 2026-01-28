@@ -1,5 +1,3 @@
-## v2.2.2 (patch)
+## v2.2.3
 
-Changes since v2.2.1:
-
-- migrate to dotnet 10 ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.2.3.
