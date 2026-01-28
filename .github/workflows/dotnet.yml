@@ -60,6 +60,11 @@ jobs:
           cache: true
           cache-dependency-path: "**/*.csproj"
 
+      # Ensure NuGet packages directory exists for caching (prevents error when pipeline exits early)
+      - name: Ensure NuGet cache directory exists
+        run: New-Item -Path "$env:USERPROFILE\.nuget\packages" -ItemType Directory -Force
+        shell: pwsh
+
       - name: Cache SonarQube Cloud packages
         if: ${{ env.SONAR_TOKEN != '' }}
         uses: actions/cache@v4
