@@ -648,3 +648,6 @@ Temporary Items
 
 # Claude.ai local settings
 .claude/settings.local.json
+
+# ImGui.ini files
+imgui.ini
