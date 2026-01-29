@@ -1,12 +1,8 @@
-## v2.2.4-pre.1 (prerelease)
+## v2.2.4 (patch)
 
 Changes since v2.2.3:
 
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Refactor null argument checks to use Ensure.NotNull for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v2.2.3 (patch)
 
 Changes since v2.2.2:
