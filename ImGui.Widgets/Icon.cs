@@ -171,8 +171,8 @@ public static partial class ImGuiWidgets
 	{
 		internal static bool Show(string label, uint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
 		{
-			ArgumentNullException.ThrowIfNull(label);
-			ArgumentNullException.ThrowIfNull(options);
+			Ensure.NotNull(label);
+			Ensure.NotNull(options);
 
 			bool wasClicked = false;
 

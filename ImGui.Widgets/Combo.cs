@@ -43,7 +43,7 @@ public static partial class ImGuiWidgets
 	/// <returns>If a combo value was selected.</returns>
 	public static bool Combo<TString>(string label, ref TString selectedValue, Collection<TString> possibleValues) where TString : ISemanticString
 	{
-		ArgumentNullException.ThrowIfNull(possibleValues);
+		Ensure.NotNull(possibleValues);
 
 		int currentIndex = possibleValues.IndexOf(selectedValue);
 		string[] possibleValuesNames = [.. possibleValues.Select(e => e.ToString(CultureInfo.InvariantCulture))];
@@ -65,7 +65,7 @@ public static partial class ImGuiWidgets
 	/// <returns>If a combo value was selected.</returns>
 	public static bool Combo(string label, ref string selectedValue, Collection<string> possibleValues)
 	{
-		ArgumentNullException.ThrowIfNull(possibleValues);
+		Ensure.NotNull(possibleValues);
 
 		int currentIndex = possibleValues.IndexOf(selectedValue);
 		string[] possibleValuesNames = [.. possibleValues];

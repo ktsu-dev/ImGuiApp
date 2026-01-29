@@ -120,8 +120,8 @@ public static partial class ImGuiWidgets
 		ref TextFilterMatchOptions matchOptions
 	)
 	{
-		ArgumentNullException.ThrowIfNull(items);
-		ArgumentNullException.ThrowIfNull(selector);
+		Ensure.NotNull(items);
+		Ensure.NotNull(selector);
 
 		SearchBox(label, ref filterText, ref filterType, ref matchOptions);
 
@@ -152,8 +152,8 @@ public static partial class ImGuiWidgets
 		Func<T, string> selector
 	)
 	{
-		ArgumentNullException.ThrowIfNull(items);
-		ArgumentNullException.ThrowIfNull(selector);
+		Ensure.NotNull(items);
+		Ensure.NotNull(selector);
 
 		TextFilterType filterType = TextFilterType.Fuzzy;
 		TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;

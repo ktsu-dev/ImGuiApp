@@ -27,7 +27,7 @@ public class ScopedTheme : ScopedAction
 	/// <param name="theme">The semantic theme to apply.</param>
 	public ScopedTheme(ISemanticTheme theme)
 	{
-		ArgumentNullException.ThrowIfNull(theme);
+		Ensure.NotNull(theme);
 
 		// Create a cache key based on the theme type name (assumes one theme per type)
 		string cacheKey = theme.GetType().FullName ?? theme.GetType().Name;

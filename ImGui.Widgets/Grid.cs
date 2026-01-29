@@ -98,9 +98,9 @@ public static partial class ImGuiWidgets
 	/// <param name="drawDelegate">The delegate to draw each item.</param>
 	public static void RowMajorGrid<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate)
 	{
-		ArgumentNullException.ThrowIfNull(items);
-		ArgumentNullException.ThrowIfNull(measureDelegate);
-		ArgumentNullException.ThrowIfNull(drawDelegate);
+		Ensure.NotNull(items);
+		Ensure.NotNull(measureDelegate);
+		Ensure.NotNull(drawDelegate);
 
 		GridImpl.ShowRowMajor(id, items, measureDelegate, drawDelegate, new());
 	}
@@ -116,10 +116,10 @@ public static partial class ImGuiWidgets
 	/// <param name="gridOptions">Additional options to modify the grid behaviour</param>
 	public static void RowMajorGrid<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
 	{
-		ArgumentNullException.ThrowIfNull(items);
-		ArgumentNullException.ThrowIfNull(measureDelegate);
-		ArgumentNullException.ThrowIfNull(drawDelegate);
-		ArgumentNullException.ThrowIfNull(gridOptions);
+		Ensure.NotNull(items);
+		Ensure.NotNull(measureDelegate);
+		Ensure.NotNull(drawDelegate);
+		Ensure.NotNull(gridOptions);
 
 		GridImpl.ShowRowMajor(id, items, measureDelegate, drawDelegate, gridOptions);
 	}
@@ -134,9 +134,9 @@ public static partial class ImGuiWidgets
 	/// <param name="drawDelegate">The delegate to draw each item.</param>
 	public static void ColumnMajorGrid<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate)
 	{
-		ArgumentNullException.ThrowIfNull(items);
-		ArgumentNullException.ThrowIfNull(measureDelegate);
-		ArgumentNullException.ThrowIfNull(drawDelegate);
+		Ensure.NotNull(items);
+		Ensure.NotNull(measureDelegate);
+		Ensure.NotNull(drawDelegate);
 
 		GridImpl.ShowColumnMajor(id, items, measureDelegate, drawDelegate, new());
 	}
@@ -152,10 +152,10 @@ public static partial class ImGuiWidgets
 	/// <param name="gridOptions">Additional options to modify the grid behaviour</param>
 	public static void ColumnMajorGrid<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
 	{
-		ArgumentNullException.ThrowIfNull(items);
-		ArgumentNullException.ThrowIfNull(measureDelegate);
-		ArgumentNullException.ThrowIfNull(drawDelegate);
-		ArgumentNullException.ThrowIfNull(gridOptions);
+		Ensure.NotNull(items);
+		Ensure.NotNull(measureDelegate);
+		Ensure.NotNull(drawDelegate);
+		Ensure.NotNull(gridOptions);
 
 		GridImpl.ShowColumnMajor(id, items, measureDelegate, drawDelegate, gridOptions);
 	}

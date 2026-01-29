@@ -305,7 +305,7 @@ public static class FontMemoryGuard
 		bool includeExtendedUnicode,
 		float scaleFactor)
 	{
-		ArgumentNullException.ThrowIfNull(fontSizes);
+		Ensure.NotNull(fontSizes);
 
 		if (fontCount <= 0)
 		{
@@ -710,7 +710,7 @@ public static class FontMemoryGuard
 	/// <returns>Reduced array of font sizes.</returns>
 	public static int[] GetReducedFontSizes(int[] originalSizes, int maxSizes, int preferredSize = 14)
 	{
-		ArgumentNullException.ThrowIfNull(originalSizes);
+		Ensure.NotNull(originalSizes);
 
 		if (originalSizes.Length <= maxSizes)
 		{

@@ -34,7 +34,7 @@ public static class Theme
 	/// <param name="theme">The semantic theme to apply.</param>
 	public static void Apply(ISemanticTheme theme)
 	{
-		ArgumentNullException.ThrowIfNull(theme);
+		Ensure.NotNull(theme);
 
 		// Map the theme to ImGui colors
 		IReadOnlyDictionary<ImGuiCol, Vector4> colorMapping = paletteMapper.MapTheme(theme);
@@ -58,7 +58,7 @@ public static class Theme
 	/// <returns>A dictionary mapping ImGui colors to their theme-based values.</returns>
 	public static IReadOnlyDictionary<ImGuiCol, Vector4> GetColorMapping(ISemanticTheme theme)
 	{
-		ArgumentNullException.ThrowIfNull(theme);
+		Ensure.NotNull(theme);
 		return paletteMapper.MapTheme(theme);
 	}
 
@@ -1046,7 +1046,7 @@ public static class Theme
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color.</returns>
 	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> GetCompletePalette(ISemanticTheme theme)
 	{
-		ArgumentNullException.ThrowIfNull(theme);
+		Ensure.NotNull(theme);
 
 		// Generate a cache key based on the theme
 		string cacheKey = GenerateThemeCacheKey(theme);

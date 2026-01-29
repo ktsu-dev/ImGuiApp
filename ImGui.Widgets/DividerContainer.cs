@@ -365,7 +365,7 @@ public static partial class ImGuiWidgets
 		/// <exception cref="ArgumentException"></exception>
 		public void SetSizesFromList(ICollection<float> sizes)
 		{
-			ArgumentNullException.ThrowIfNull(sizes, nameof(sizes));
+			Ensure.NotNull(sizes, nameof(sizes));
 
 			if (sizes.Count != Zones.Count)
 			{

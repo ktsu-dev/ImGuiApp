@@ -503,7 +503,7 @@ public static partial class ImGuiApp
 	public static void Start(ImGuiAppConfig config)
 	{
 		DebugLogger.Log("ImGuiApp.Start: Starting application");
-		ArgumentNullException.ThrowIfNull(config);
+		Ensure.NotNull(config);
 
 		if (window != null)
 		{
@@ -1066,8 +1066,8 @@ public static partial class ImGuiApp
 	/// <param name="action">The action to perform with the image bytes.</param>
 	public static void UseImageBytes(Image<Rgba32> image, Action<byte[]> action)
 	{
-		ArgumentNullException.ThrowIfNull(image);
-		ArgumentNullException.ThrowIfNull(action);
+		Ensure.NotNull(image);
+		Ensure.NotNull(action);
 
 		int bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
 

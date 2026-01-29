@@ -296,7 +296,7 @@ public static class FontHelper
 	/// <returns>The ImFont pointer for the added font, or null if failed.</returns>
 	public static unsafe ImFontPtr? AddCustomFont(ImGuiIOPtr io, byte[] fontData, float fontSize, uint* glyphRanges = null, bool mergeWithPrevious = false)
 	{
-		ArgumentNullException.ThrowIfNull(fontData);
+		Ensure.NotNull(fontData);
 
 		GCHandle fontHandle = default;
 		try

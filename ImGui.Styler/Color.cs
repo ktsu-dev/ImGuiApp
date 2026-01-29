@@ -32,7 +32,7 @@ public static class Color
 	/// <exception cref="ArgumentException">Thrown when the <paramref name="hex"/> is not in the correct format.</exception>
 	public static ImColor FromHex(string hex)
 	{
-		ArgumentNullException.ThrowIfNull(hex, nameof(hex));
+		Ensure.NotNull(hex, nameof(hex));
 
 		if (hex.StartsWith('#'))
 		{

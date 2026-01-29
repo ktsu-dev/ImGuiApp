@@ -47,9 +47,9 @@ public static class ThemeCard
 	/// <param name="isSelected">Whether this theme is currently selected. If not specified, compares against current theme.</param>
 	public static void Render(ThemeRegistry.ThemeInfo theme, string displayName, Action<ThemeRegistry.ThemeInfo> onThemeSelected, Vector2? size = null, bool? isSelected = null)
 	{
-		ArgumentNullException.ThrowIfNull(theme);
-		ArgumentNullException.ThrowIfNull(displayName);
-		ArgumentNullException.ThrowIfNull(onThemeSelected);
+		Ensure.NotNull(theme);
+		Ensure.NotNull(displayName);
+		Ensure.NotNull(onThemeSelected);
 
 		// Use the existing Render method and handle the click result
 		if (Render(theme, displayName, size, isSelected))
@@ -68,8 +68,8 @@ public static class ThemeCard
 	/// <returns>True if the theme card was clicked, false otherwise.</returns>
 	public static bool Render(ThemeRegistry.ThemeInfo theme, string displayName, Vector2? size = null, bool? isSelected = null)
 	{
-		ArgumentNullException.ThrowIfNull(theme);
-		ArgumentNullException.ThrowIfNull(displayName);
+		Ensure.NotNull(theme);
+		Ensure.NotNull(displayName);
 
 		bool clicked = false;
 
@@ -265,7 +265,7 @@ public static class ThemeCard
 	/// <returns>The theme that was clicked, or null if no theme was clicked.</returns>
 	public static ThemeRegistry.ThemeInfo? RenderGrid(IEnumerable<ThemeRegistry.ThemeInfo> themes, Vector2? cardSize = null, int? columnsPerRow = null)
 	{
-		ArgumentNullException.ThrowIfNull(themes);
+		Ensure.NotNull(themes);
 
 		Vector2 size = cardSize ?? new Vector2(180, 70);
 		int columns = columnsPerRow ?? Math.Max(1, (int)(ImGui.GetContentRegionAvail().X / (size.X + 10))); // 10px spacing
@@ -296,8 +296,8 @@ public static class ThemeCard
 	/// <param name="columnsPerRow">Number of cards per row. If not specified, calculates based on available width.</param>
 	public static void RenderGrid(IEnumerable<ThemeRegistry.ThemeInfo> themes, Action<ThemeRegistry.ThemeInfo> onThemeSelected, Vector2? cardSize = null, int? columnsPerRow = null)
 	{
-		ArgumentNullException.ThrowIfNull(themes);
-		ArgumentNullException.ThrowIfNull(onThemeSelected);
+		Ensure.NotNull(themes);
+		Ensure.NotNull(onThemeSelected);
 
 		Vector2 size = cardSize ?? new Vector2(180, 70);
 		int columns = columnsPerRow ?? Math.Max(1, (int)(ImGui.GetContentRegionAvail().X / (size.X + 10))); // 10px spacing
