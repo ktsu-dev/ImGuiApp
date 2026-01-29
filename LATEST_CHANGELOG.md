@@ -1,5 +1,3 @@
-## v2.2.6 (patch)
+## v2.2.6
 
-Changes since v2.2.5:
-
-- Enhance project name matching to handle variations in repository naming conventions ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.2.6.
