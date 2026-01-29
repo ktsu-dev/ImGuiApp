@@ -1,5 +1,5 @@
-## v2.2.4 (patch)
+## v2.2.5 (patch)
 
-Changes since v2.2.3:
+Changes since v2.2.4:
 
-- Refactor null argument checks to use Ensure.NotNull for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance CalculateOptimalPixelSize to consider global accessibility scale for improved rendering ([@matt-edmondson](https://github.com/matt-edmondson))
