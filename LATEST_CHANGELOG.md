@@ -1,5 +1,5 @@
-## v2.2.5 (patch)
+## v2.2.6 (patch)
 
-Changes since v2.2.4:
+Changes since v2.2.5:
 
-- Enhance CalculateOptimalPixelSize to consider global accessibility scale for improved rendering ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance project name matching to handle variations in repository naming conventions ([@matt-edmondson](https://github.com/matt-edmondson))
