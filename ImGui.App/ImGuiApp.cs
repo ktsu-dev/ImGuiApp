@@ -1508,13 +1508,14 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Calculates the optimal pixel size for a given point size based on current scale factor.
+	/// Calculates the optimal pixel size for a given point size based on current scale factor and global accessibility scale.
 	/// </summary>
 	/// <param name="pointSize">The desired point size.</param>
 	/// <returns>The optimal pixel size for crisp rendering.</returns>
 	internal static float CalculateOptimalPixelSize(int pointSize) =>
 		// Round to exact pixels for crisp rendering, avoiding fractional sizes that cause blurry text
-		Math.Max(1.0f, MathF.Round(pointSize * ScaleFactor));
+		// Include both DPI scale factor and global accessibility scale
+		Math.Max(1.0f, MathF.Round(pointSize * ScaleFactor * GlobalScale));
 
 	internal static void StorePinnedFontData(List<GCHandle> newPinnedData)
 	{
