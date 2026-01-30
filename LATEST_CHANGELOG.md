@@ -1,3 +1,5 @@
-## v2.2.6
+## v2.2.7 (patch)
 
-No significant changes detected since v2.2.6.
+Changes since v2.2.6:
+
+- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
