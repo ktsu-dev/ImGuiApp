@@ -158,6 +158,18 @@
     <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
   </Suppression>
   <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.Clear</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.get_Text</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
     <DiagnosticId>CP0008</DiagnosticId>
     <Target>T:System.Text.SpanLineEnumerator</Target>
     <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
@@ -189,7 +201,37 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.#ctor(System.Int32,System.Int32,System.IFormatProvider,System.Span{System.Char}):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.ReadOnlySpan{System.Char},System.Int32,System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.ReadOnlySpan{System.Char}):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0014</DiagnosticId>
     <Target>P:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.UrlFormat:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler:[T:System.Runtime.CompilerServices.NullableAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0014</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
     <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
     <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
   </Suppression>
@@ -214,6 +256,42 @@
   <Suppression>
     <DiagnosticId>CP0016</DiagnosticId>
     <Target>M:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.get_DiagnosticId:[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0016</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.#ctor(System.Int32,System.Int32,System.IFormatProvider):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0016</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.Object,System.Int32,System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0016</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.String,System.Int32,System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0016</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted(System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0016</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted``1(``0,System.Int32,System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
+    <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
+    <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0016</DiagnosticId>
+    <Target>M:System.Runtime.CompilerServices.DefaultInterpolatedStringHandler.AppendFormatted``1(``0,System.String):[T:System.Runtime.CompilerServices.NullableContextAttribute]</Target>
     <Left>lib/net9.0/ktsu.ImGui.Popups.dll</Left>
     <Right>lib/net10.0/ktsu.ImGui.Popups.dll</Right>
   </Suppression>
