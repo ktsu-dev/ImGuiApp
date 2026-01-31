@@ -676,7 +676,7 @@ function New-License {
     $content = $content.Replace('{PROJECT_URL}', $projectUrl)
 
     # Copyright line
-    $copyright = "Copyright (c) 2023-$year $Owner"
+    $copyright = "Copyright (c) 2023-$year $Owner contributors"
     $content = $content.Replace('{COPYRIGHT}', $copyright)
 
     # Normalize line endings
