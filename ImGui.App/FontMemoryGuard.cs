@@ -105,6 +105,74 @@ public static class FontMemoryGuard
 	}
 
 	/// <summary>
+	/// Calculates the total pixel area required for all glyphs across multiple font sizes.
+	/// This provides a more accurate estimate than using average font size because
+	/// larger font sizes consume disproportionately more atlas space.
+	/// </summary>
+	/// <param name="fontSizes">Array of font sizes to load.</param>
+	/// <param name="glyphsPerSize">Number of glyphs loaded per font size.</param>
+	/// <param name="scaleFactor">DPI scale factor (glyphs are rendered larger at higher DPI).</param>
+	/// <returns>Total pixel area required for all glyphs.</returns>
+	public static long CalculateTotalGlyphPixelArea(int[] fontSizes, int glyphsPerSize, float scaleFactor = 1.0f)
+	{
+		Ensure.NotNull(fontSizes);
+
+		long totalPixelArea = 0;
+
+		foreach (int fontSize in fontSizes)
+		{
+			// Glyphs are typically 1.5x font size with padding, scaled by DPI
+			float scaledFontSize = fontSize * scaleFactor;
+			int glyphDimension = (int)(scaledFontSize * 1.5f);
+			long glyphArea = (long)glyphDimension * glyphDimension;
+
+			totalPixelArea += glyphsPerSize * glyphArea;
+		}
+
+		return totalPixelArea;
+	}
+
+	/// <summary>
+	/// Checks if the requested glyph configuration will fit in the atlas.
+	/// </summary>
+	/// <param name="fontSizes">Array of font sizes to load.</param>
+	/// <param name="glyphsPerSize">Number of glyphs loaded per font size.</param>
+	/// <param name="atlasDimension">The atlas texture dimension.</param>
+	/// <param name="scaleFactor">DPI scale factor.</param>
+	/// <returns>True if the glyphs will fit, false otherwise.</returns>
+	public static bool WillGlyphsFitInAtlas(int[] fontSizes, int glyphsPerSize, int atlasDimension, float scaleFactor = 1.0f)
+	{
+		long requiredArea = CalculateTotalGlyphPixelArea(fontSizes, glyphsPerSize, scaleFactor);
+		long atlasArea = (long)atlasDimension * atlasDimension;
+
+		// Account for packing efficiency (~75% utilization)
+		const float packingEfficiency = 0.75f;
+		long usableArea = (long)(atlasArea * packingEfficiency);
+
+		return requiredArea <= usableArea;
+	}
+
+	/// <summary>
+	/// Calculates the percentage of atlas space that will be used.
+	/// </summary>
+	/// <param name="fontSizes">Array of font sizes to load.</param>
+	/// <param name="glyphsPerSize">Number of glyphs loaded per font size.</param>
+	/// <param name="atlasDimension">The atlas texture dimension.</param>
+	/// <param name="scaleFactor">DPI scale factor.</param>
+	/// <returns>Percentage of usable atlas space required (can exceed 100%).</returns>
+	public static float CalculateAtlasUsagePercentage(int[] fontSizes, int glyphsPerSize, int atlasDimension, float scaleFactor = 1.0f)
+	{
+		long requiredArea = CalculateTotalGlyphPixelArea(fontSizes, glyphsPerSize, scaleFactor);
+		long atlasArea = (long)atlasDimension * atlasDimension;
+
+		// Account for packing efficiency (~75% utilization)
+		const float packingEfficiency = 0.75f;
+		long usableArea = (long)(atlasArea * packingEfficiency);
+
+		return (float)requiredArea / usableArea * 100f;
+	}
+
+	/// <summary>
 	/// Stores the reduced Unicode glyph ranges to prevent memory deallocation.
 	/// </summary>
 	internal static ImVector<uint> reducedUnicodeRanges;
@@ -324,23 +392,26 @@ public static class FontMemoryGuard
 		}
 
 		// Calculate total glyph count across all fonts and sizes
-		int totalGlyphCount = fontCount * fontSizes.Length * baseGlyphCount;
+		int glyphsPerSize = fontCount * baseGlyphCount;
+		int totalGlyphCount = glyphsPerSize * fontSizes.Length;
 
-		// Apply scale factor impact (higher DPI = larger textures)
-		float scaleImpact = scaleFactor * scaleFactor; // Quadratic impact on texture size
-		long estimatedBytes = (long)(totalGlyphCount * EstimatedBytesPerGlyph * scaleImpact);
+		// Calculate actual pixel area required using per-size calculation
+		// This is more accurate than average-based estimation because larger fonts
+		// consume disproportionately more atlas space (quadratic with size)
+		long totalPixelArea = CalculateTotalGlyphPixelArea(fontSizes, glyphsPerSize, scaleFactor);
 
-		// Calculate max glyphs based on configured atlas size and average font size
-		int averageFontSize = fontSizes.Length > 0 ? (int)fontSizes.Average() : 16;
-		int maxGlyphsForAtlas = CalculateMaxGlyphCount(CurrentConfig.RecommendedAtlasSize, averageFontSize);
+		// Estimate memory bytes based on pixel area (RGBA = 4 bytes per pixel for the atlas texture)
+		// Plus overhead for glyph metadata
+		long estimatedBytes = (totalPixelArea * 4) + (totalGlyphCount * 64); // 64 bytes metadata per glyph
 
-		// Determine if limits are exceeded and recommend fallbacks
-		// Check both memory limit AND glyph count limit (texture packer has hard limits)
+		// Check if glyphs will fit in the atlas using accurate per-size calculation
+		bool exceedsAtlasCapacity = !WillGlyphsFitInAtlas(fontSizes, glyphsPerSize, CurrentConfig.RecommendedAtlasSize, scaleFactor);
+
+		// Determine if limits are exceeded
 		bool exceedsMemoryLimit = estimatedBytes > CurrentConfig.MaxAtlasMemoryBytes;
-		bool exceedsGlyphLimit = totalGlyphCount > maxGlyphsForAtlas;
-		bool exceedsLimits = exceedsMemoryLimit || exceedsGlyphLimit;
+		bool exceedsLimits = exceedsMemoryLimit || exceedsAtlasCapacity;
 
-		int recommendedMaxSizes = CalculateRecommendedMaxSizes(estimatedBytes, fontCount, baseGlyphCount, scaleFactor);
+		int recommendedMaxSizes = CalculateRecommendedMaxSizes(fontSizes, glyphsPerSize, scaleFactor);
 		bool shouldDisableEmojis = exceedsLimits && CurrentConfig.DisableEmojisOnLowMemory && includeEmojis;
 		bool shouldReduceUnicode = exceedsLimits && CurrentConfig.ReduceUnicodeRangesOnLowMemory && includeExtendedUnicode;
 
@@ -825,24 +896,30 @@ public static class FontMemoryGuard
 		// This is based on the ranges defined in FontHelper.AddEmojiRanges
 		3000; // Conservative estimate
 
-	private static int CalculateRecommendedMaxSizes(long estimatedBytes, int fontCount, int baseGlyphCount, float scaleFactor)
+	private static int CalculateRecommendedMaxSizes(int[] fontSizes, int glyphsPerSize, float scaleFactor)
 	{
-		if (fontCount <= 0)
-		{
-			throw new ArgumentOutOfRangeException(nameof(fontCount), "Font count must be greater than zero");
-		}
-
-		if (estimatedBytes <= CurrentConfig.MaxAtlasMemoryBytes)
+		// Check if current configuration fits
+		if (WillGlyphsFitInAtlas(fontSizes, glyphsPerSize, CurrentConfig.RecommendedAtlasSize, scaleFactor))
 		{
 			return int.MaxValue; // No limit needed
 		}
 
-		// Calculate how many sizes we can fit within the memory limit
-		long bytesPerFontPerSize = (long)(baseGlyphCount * EstimatedBytesPerGlyph * scaleFactor * scaleFactor);
-		long availableBytesPerFont = CurrentConfig.MaxAtlasMemoryBytes / fontCount;
-		int maxSizesPerFont = (int)(availableBytesPerFont / bytesPerFontPerSize);
+		// Try progressively fewer font sizes, removing largest sizes first
+		// (larger sizes consume quadratically more atlas space)
+		int[] sortedSizes = [.. fontSizes.OrderBy(s => s)];
 
-		return Math.Max(CurrentConfig.MinFontSizesToLoad, maxSizesPerFont);
+		for (int maxSizes = sortedSizes.Length - 1; maxSizes >= CurrentConfig.MinFontSizesToLoad; maxSizes--)
+		{
+			// Take the smallest N sizes (remove largest ones first)
+			int[] reducedSizes = [.. sortedSizes.Take(maxSizes)];
+
+			if (WillGlyphsFitInAtlas(reducedSizes, glyphsPerSize, CurrentConfig.RecommendedAtlasSize, scaleFactor))
+			{
+				return maxSizes;
+			}
+		}
+
+		return CurrentConfig.MinFontSizesToLoad;
 	}
 
 	private static void AddEssentialLatinExtended(ImFontGlyphRangesBuilderPtr builder)
