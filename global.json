@@ -5,9 +5,9 @@
   },
   "msbuild-sdks": {
     "MSTest.Sdk": "4.0.2",
-    "ktsu.Sdk": "2.3.0",
-    "ktsu.Sdk.ConsoleApp": "2.3.0",
-    "ktsu.Sdk.App": "2.3.0"
+    "ktsu.Sdk": "2.5.0",
+    "ktsu.Sdk.ConsoleApp": "2.5.0",
+    "ktsu.Sdk.App": "2.5.0"
   },
   "test": {
     "runner": "Microsoft.Testing.Platform"
