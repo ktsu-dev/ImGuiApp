@@ -1,3 +1,9 @@
+## v2.2.10-pre.1 (prerelease)
+
+Changes since v2.2.9:
+
+- Fix workflow to skip metadata commits in forked repos ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
 ## v2.2.9 (patch)
 
 Changes since v2.2.8:
@@ -12,10 +18,7 @@ Changes since v2.2.9-pre.1:
 - Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
 ## v2.2.9-pre.1 (prerelease)
 
-Changes since v2.2.8:
-
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+Incremental prerelease update.
 ## v2.2.8 (patch)
 
 Changes since v2.2.7:
