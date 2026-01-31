@@ -29,7 +29,7 @@ public readonly struct ImGuiFontConfig : IEquatable<ImGuiFontConfig>
 			throw new ArgumentOutOfRangeException(nameof(fontSize));
 		}
 
-		FontPath = fontPath ?? throw new ArgumentNullException(nameof(fontPath));
+		FontPath = Ensure.NotNull(fontPath);
 		FontSize = fontSize;
 		GetGlyphRange = getGlyphRange;
 	}

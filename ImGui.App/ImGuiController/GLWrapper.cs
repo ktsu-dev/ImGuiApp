@@ -18,7 +18,7 @@ public sealed class GLWrapper(GL gl) : IGL
 	/// <summary>
 	/// Gets the underlying GL instance.
 	/// </summary>
-	public GL UnderlyingGL { get; } = gl ?? throw new ArgumentNullException(nameof(gl));
+	public GL UnderlyingGL { get; } = Ensure.NotNull(gl);
 
 	/// <inheritdoc/>
 	public void GetInteger(GLEnum pname, out int data)

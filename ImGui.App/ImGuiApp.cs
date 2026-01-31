@@ -1165,7 +1165,7 @@ public static partial class ImGuiApp
 	/// <param name="textureInfo">The texture info containing the texture ID to delete.</param>
 	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
 	/// <exception cref="ArgumentNullException">Thrown if the textureInfo is null.</exception>
-	public static void DeleteTexture(ImGuiAppTextureInfo textureInfo) => DeleteTexture(textureInfo?.TextureId ?? throw new ArgumentNullException(nameof(textureInfo)));
+	public static void DeleteTexture(ImGuiAppTextureInfo textureInfo) => DeleteTexture(Ensure.NotNull(textureInfo).TextureId);
 
 	internal static void UpdateDpiScale()
 	{
