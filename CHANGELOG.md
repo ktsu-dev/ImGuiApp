@@ -1,6 +1,9 @@
-## v2.2.7
+## v2.2.8 (patch)
 
-No significant changes detected since v2.2.7.
+Changes since v2.2.7:
+
+- Refactor null checks to use Ensure.NotNull for improved readability and consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refine glyph area calculations and atlas fitting checks for improved memory management ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v2.2.7 (patch)
 
 Changes since v2.2.6:
