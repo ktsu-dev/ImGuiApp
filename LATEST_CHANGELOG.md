@@ -1,7 +1,5 @@
-## v2.2.9-pre.2 (prerelease)
+## v2.2.9 (patch)
 
-Changes since v2.2.9-pre.1:
+Changes since v2.2.8:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync COPYRIGHT.md ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Add compatibility suppressions for DefaultInterpolatedStringHandler in multiple modules ([@matt-edmondson](https://github.com/matt-edmondson))
