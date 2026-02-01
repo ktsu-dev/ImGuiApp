@@ -1214,9 +1214,13 @@ function Update-ProjectMetadata {
     .DESCRIPTION
         Generates and updates version information, license, changelog, and other metadata files for a project.
         This function centralizes all metadata generation to ensure consistency across project documentation.
+        
+        Metadata files are always generated, but commits and pushes are only performed in official repositories
+        (not forks). This is controlled by the BuildConfiguration.IsOfficial flag.
     .PARAMETER BuildConfiguration
         The build configuration object containing paths, version info, and GitHub details.
-        Should be obtained from Get-BuildConfiguration.
+        Should be obtained from Get-BuildConfiguration. The IsOfficial property determines whether
+        metadata changes will be committed and pushed.
     .PARAMETER Authors
         Optional array of author names to include in the AUTHORS.md file.
     .PARAMETER CommitMessage
@@ -1315,18 +1319,24 @@ function Update-ProjectMetadata {
         Write-Information "Current commit hash: $currentHash" -Tags "Update-ProjectMetadata"
 
         if (-not [string]::IsNullOrWhiteSpace($postStatus)) {
-            # Configure git user before committing
-            Set-GitIdentity | Write-InformationStream -Tags "Update-ProjectMetadata"
+            # Only commit and push metadata changes in official repositories
+            if ($BuildConfiguration.IsOfficial) {
+                # Configure git user before committing
+                Set-GitIdentity | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-            Write-Information "Committing changes..." -Tags "Update-ProjectMetadata"
-            "git commit -m `"$CommitMessage`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
+                Write-Information "Committing changes..." -Tags "Update-ProjectMetadata"
+                "git commit -m `"$CommitMessage`"" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-            Write-Information "Pushing changes..." -Tags "Update-ProjectMetadata"
-            "git push" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
+                Write-Information "Pushing changes..." -Tags "Update-ProjectMetadata"
+                "git push" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Update-ProjectMetadata"
 
-            Write-Information "Getting release hash..." -Tags "Update-ProjectMetadata"
-            $releaseHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
-            Write-Information "Metadata committed as $releaseHash" -Tags "Update-ProjectMetadata"
+                Write-Information "Getting release hash..." -Tags "Update-ProjectMetadata"
+                $releaseHash = "git rev-parse HEAD" | Invoke-ExpressionWithLogging
+                Write-Information "Metadata committed as $releaseHash" -Tags "Update-ProjectMetadata"
+            } else {
+                Write-Information "Skipping metadata commit/push (not an official repository)" -Tags "Update-ProjectMetadata"
+                $releaseHash = $currentHash
+            }
 
             Write-Information "Metadata update completed successfully with changes" -Tags "Update-ProjectMetadata"
             Write-Information "Version: $version" -Tags "Update-ProjectMetadata"
