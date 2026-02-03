@@ -1,8 +1,8 @@
-## v2.2.10-pre.3 (prerelease)
+## v2.2.10 (patch)
 
-Changes since v2.2.10-pre.2:
+Changes since v2.2.9:
 
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Exclude test projects from packaging and publishing processes in Invoke-DotNetPack and Invoke-DotNetPublish functions ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v2.2.10-pre.2 (prerelease)
 
 Changes since v2.2.10-pre.1:
