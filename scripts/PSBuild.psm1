@@ -1539,8 +1539,14 @@ function Invoke-DotNetPack {
     # Ensure output directory exists
     New-Item -Path $OutputPath -ItemType Directory -Force | Write-InformationStream -Tags "Invoke-DotNetPack"
 
-    # Check if any projects exist
-    $projectFiles = @(Get-ChildItem -Recurse -Filter *.csproj -ErrorAction SilentlyContinue)
+    # Check if any projects exist (excluding test projects)
+    $projectFiles = @(Get-ChildItem -Recurse -Filter *.csproj -ErrorAction SilentlyContinue | Where-Object {
+        -not ($_.Name -match "\.Tests?\.csproj$" -or
+              $_.Directory.Name -match "\.Tests?$" -or
+              $_.Directory.Name -eq "Tests" -or
+              $_.Directory.Name -eq "Test" -or
+              (Select-String -Path $_.FullName -Pattern "<IsTestProject>true</IsTestProject>" -Quiet))
+    })
     if ($projectFiles.Count -eq 0) {
         Write-Information "No .NET library projects found to package" -Tags "Invoke-DotNetPack"
         return
@@ -1563,21 +1569,23 @@ function Invoke-DotNetPack {
             Write-Information "No latest changelog found, SDK will use full CHANGELOG.md (automatically truncated if needed)" -Tags "Invoke-DotNetPack"
         }
 
-        # Build either a specific project or all projects
+        # Build either a specific project or all non-test projects
         if ([string]::IsNullOrWhiteSpace($Project)) {
-            Write-Information "Packaging all projects in solution..." -Tags "Invoke-DotNetPack"
-            "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
+            Write-Information "Packaging $($projectFiles.Count) non-test projects..." -Tags "Invoke-DotNetPack"
+            foreach ($proj in $projectFiles) {
+                $projName = [System.IO.Path]::GetFileNameWithoutExtension($proj)
+                Write-Information "Packaging project: $projName" -Tags "Invoke-DotNetPack"
+                "dotnet pack `"$proj`" --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Library packaging failed for $projName with exit code $LASTEXITCODE"
+                }
+            }
         } else {
             Write-Information "Packaging project: $Project" -Tags "Invoke-DotNetPack"
             "dotnet pack $Project --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
-        }
-
-        if ($LASTEXITCODE -ne 0) {
-            # Get more details about what might have failed
-            Write-Information "Packaging failed with exit code $LASTEXITCODE, trying again with quiet verbosity..." -Tags "Invoke-DotNetPack"
-            "dotnet pack --configuration $Configuration -logger:`"Microsoft.Build.Logging.ConsoleLogger,Microsoft.Build;Summary;ForceNoAlign;ShowTimestamp;ShowCommandLine;Verbosity=quiet`" --no-build --output $OutputPath $releaseNotesProperty" | Invoke-ExpressionWithLogging | Write-InformationStream -Tags "Invoke-DotNetPack"
-
-            throw "Library packaging failed with exit code $LASTEXITCODE"
+            if ($LASTEXITCODE -ne 0) {
+                throw "Library packaging failed with exit code $LASTEXITCODE"
+            }
         }
 
         # Report on created packages
@@ -1623,8 +1631,14 @@ function Invoke-DotNetPublish {
 
     Write-StepHeader "Publishing Applications" -Tags "Invoke-DotNetPublish"
 
-    # Find all projects
-    $projectFiles = @(Get-ChildItem -Recurse -Filter *.csproj -ErrorAction SilentlyContinue)
+    # Find all projects (excluding test projects)
+    $projectFiles = @(Get-ChildItem -Recurse -Filter *.csproj -ErrorAction SilentlyContinue | Where-Object {
+        -not ($_.Name -match "\.Tests?\.csproj$" -or
+              $_.Directory.Name -match "\.Tests?$" -or
+              $_.Directory.Name -eq "Tests" -or
+              $_.Directory.Name -eq "Test" -or
+              (Select-String -Path $_.FullName -Pattern "<IsTestProject>true</IsTestProject>" -Quiet))
+    })
     if ($projectFiles.Count -eq 0) {
         Write-Information "No .NET application projects found to publish" -Tags "Invoke-DotNetPublish"
         return
