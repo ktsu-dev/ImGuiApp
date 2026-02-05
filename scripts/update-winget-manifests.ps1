@@ -123,7 +123,9 @@ function Test-IsLibraryOnlyProject {
             $isExecutable = ($csprojContent -match "<OutputType>\s*Exe\s*</OutputType>" -or
                            $csprojContent -match "<OutputType>\s*WinExe\s*</OutputType>" -or
                            $csprojContent -match 'Sdk="[^"]*\.App["/]' -or
-                           $csprojContent -match 'Sdk="[^"]*Sdk\.App["/]')
+                           $csprojContent -match 'Sdk="[^"]*Sdk\.App["/]' -or
+                           $csprojContent -match '<Sdk\s+Name="[^"]*\.App"\s*/>' -or
+                           $csprojContent -match '<Sdk\s+Name="[^"]*Sdk\.App"\s*/>')
 
             # Check if it's a library (explicit markers or implicit)
             $isLibrary = ($csprojContent -match "<OutputType>\s*Library\s*</OutputType>" -or
@@ -133,6 +135,9 @@ function Test-IsLibraryOnlyProject {
                          $csprojContent -match 'Sdk="[^"]*\.Lib["/]' -or
                          $csprojContent -match 'Sdk="[^"]*Sdk\.Lib["/]' -or
                          $csprojContent -match 'Sdk="[^"]*Library[^"]*"' -or
+                         $csprojContent -match '<Sdk\s+Name="[^"]*\.Lib"\s*/>' -or
+                         $csprojContent -match '<Sdk\s+Name="[^"]*Sdk\.Lib"\s*/>' -or
+                         $csprojContent -match '<Sdk\s+Name="[^"]*Library[^"]*"\s*/>' -or
                          $csprojContent -match "<TargetFrameworks>" -or  # Multiple target frameworks often = library
                          (-not $isExecutable))  # No explicit exe = library by default
 
@@ -184,121 +189,62 @@ function Exit-GracefullyForLibrary {
     exit 0
 }
 
+function Get-MSBuildProperty {
+    param (
+        [string]$ProjectPath,
+        [string]$PropertyName
+    )
+
+    try {
+        $dotnetPath = Get-Command dotnet -ErrorAction SilentlyContinue
+        if (-not $dotnetPath) {
+            return $null
+        }
+
+        # Use dotnet msbuild with /getProperty to get the evaluated property value
+        $result = & dotnet msbuild "$ProjectPath" /nologo /t:Build /p:DesignTimeBuild=true /getProperty:$PropertyName 2>$null
+        if ($LASTEXITCODE -eq 0 -and $result) {
+            $value = $result.Trim()
+            if ($value -and $value -ne "") {
+                return $value
+            }
+        }
+    }
+    catch {
+        # Silently fail, caller will handle null
+    }
+
+    return $null
+}
+
 function Get-MSBuildProperties {
     param (
         [string]$ProjectPath
     )
 
     try {
-        # Check if MSBuild is available
-        $msbuild = $null
-        $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-
-        if (Test-Path $vsWhere) {
-            # Use Visual Studio installation path
-            $vsPath = & $vsWhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-            if ($vsPath) {
-                $msbuildPath = Join-Path $vsPath "MSBuild\Current\Bin\MSBuild.exe"
-                if (-not (Test-Path $msbuildPath)) {
-                    # Try older VS versions
-                    $msbuildPath = Join-Path $vsPath "MSBuild\15.0\Bin\MSBuild.exe"
-                }
-
-                if (Test-Path $msbuildPath) {
-                    $msbuild = $msbuildPath
-                }
-            }
-        }
-
-        # If VS installation not found, try .NET SDK's MSBuild
-        if (-not $msbuild) {
-            $dotnetPath = Get-Command dotnet -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-            if ($dotnetPath) {
-                $msbuild = "dotnet msbuild"
-            }
-        }
-
-        if (-not $msbuild) {
-            Write-Host "MSBuild not found. Falling back to XML parsing." -ForegroundColor Yellow
+        $dotnetPath = Get-Command dotnet -ErrorAction SilentlyContinue
+        if (-not $dotnetPath) {
+            Write-Host "dotnet CLI not found. Falling back to XML parsing." -ForegroundColor Yellow
             return $null
         }
 
-        # Create temporary file to store properties
-        $tempFile = [System.IO.Path]::GetTempFileName()
-
-        # Prepare MSBuild command
-        $propertiesToEvaluate = "AssemblyName;RootNamespace;PackageId;Product;Authors;Version;Description;RepositoryUrl;Copyright;PackageTags"
-        $msbuildArgs = @(
-            "`"$ProjectPath`"",
-            "/nologo",
-            "/t:_GetProjectProperties",
-            "/p:PropertiesToEvaluate=$propertiesToEvaluate",
-            "/p:OutputFile=`"$tempFile`""
-        )
-
-        # Create target file with task to write properties to file
-        $targetFile = [System.IO.Path]::GetTempFileName() + ".targets"
-
-@"
-<Project>
-    <Target Name="_GetProjectProperties">
-        <ItemGroup>
-            <_PropertiesToWrite Include="`$(PropertiesToEvaluate)" />
-        </ItemGroup>
-
-        <PropertyGroup>
-            <_PropOutput></_PropOutput>
-        </PropertyGroup>
-
-        <CreateItem Include="`$(PropertiesToEvaluate)">
-            <Output TaskParameter="Include" ItemName="PropertiesToWrite" />
-        </CreateItem>
-
-        <!-- Evaluate and write each property -->
-        <CreateProperty Value="`$(_PropOutput)%0A$([System.Environment]::NewLine)%(PropertiesToWrite.Identity)=$([System.Environment]::NewLine)$([Microsoft.Build.Evaluation.ProjectProperty]::GetPropertyValue('%(PropertiesToWrite.Identity)'))">
-            <Output TaskParameter="Value" PropertyName="_PropOutput" />
-        </CreateProperty>
-
-        <WriteLinesToFile File="`$(OutputFile)" Lines="`$(_PropOutput)" Overwrite="true" />
-
-        <Message Text="Project properties written to `$(OutputFile)" Importance="high" />
-    </Target>
-</Project>
-"@ | Out-File -FilePath $targetFile -Encoding UTF8
-
-        # Run MSBuild
-        if ($msbuild -eq "dotnet msbuild") {
-            $result = & dotnet msbuild @msbuildArgs "/p:CustomBeforeMicrosoftCommonTargets=$targetFile"
-        } else {
-            $result = & $msbuild @msbuildArgs "/p:CustomBeforeMicrosoftCommonTargets=$targetFile"
-        }
-
-        # Check if output file was created
-        if (-not (Test-Path $tempFile)) {
-            Write-Host "MSBuild did not generate properties file. Falling back to XML parsing." -ForegroundColor Yellow
-            return $null
-        }
-
-        # Read properties
-        $propertiesText = Get-Content $tempFile -Raw
         $properties = @{}
+        $propertyNames = @("AssemblyName", "RootNamespace", "PackageId", "Product", "Authors", "Version", "Description", "RepositoryUrl", "Copyright", "PackageTags")
 
-        foreach ($line in ($propertiesText -split "`n")) {
-            $line = $line.Trim()
-            if ($line -match "^([^=]+)=(.*)$") {
-                $propName = $Matches[1].Trim()
-                $propValue = $Matches[2].Trim()
-                if ($propName -and $propValue) {
-                    $properties[$propName] = $propValue
-                }
+        foreach ($propName in $propertyNames) {
+            $value = Get-MSBuildProperty -ProjectPath $ProjectPath -PropertyName $propName
+            if ($value) {
+                $properties[$propName] = $value
             }
         }
 
-        # Clean up temp files
-        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-        Remove-Item $targetFile -Force -ErrorAction SilentlyContinue
+        if ($properties.Count -gt 0) {
+            return $properties
+        }
 
-        return $properties
+        Write-Host "MSBuild property evaluation returned no results. Falling back to XML parsing." -ForegroundColor Yellow
+        return $null
     }
     catch {
         Write-Host "Error evaluating MSBuild properties: $_" -ForegroundColor Yellow
@@ -431,6 +377,7 @@ function Find-ProjectInfo {
         shortDescription = ""
         description = ""
         publisher = ""
+        rootNamespace = ""
     }
 
     # Try to get version from VERSION.md
@@ -538,6 +485,10 @@ function Find-ProjectInfo {
                     }
                 }
             }
+
+            if ($msBuildProps.RootNamespace) {
+                $projectInfo.rootNamespace = $msBuildProps.RootNamespace
+            }
         } else {
             # Fallback to parsing the csproj XML
             Write-Host "Falling back to parsing csproj XML" -ForegroundColor Yellow
@@ -566,6 +517,10 @@ function Find-ProjectInfo {
 
                 if ($csprojContent -match "<Authors>(.*?)</Authors>") {
                     $projectInfo.publisher = $Matches[1].Split(',')[0].Trim()
+                }
+
+                if ($csprojContent -match "<RootNamespace>(.*?)</RootNamespace>") {
+                    $projectInfo.rootNamespace = $Matches[1]
                 }
             }
         }
@@ -789,7 +744,7 @@ if ($projectInfo.version -and -not $Version) {
 
 # Build configuration object with detected and provided values
 $config = @{
-    packageId = if ($PackageId) { $PackageId } elseif ($config.packageId) { $config.packageId } else { "$owner.$repo" }
+    packageId = if ($PackageId) { $PackageId } elseif ($config.packageId) { $config.packageId } elseif ($projectInfo.rootNamespace) { $projectInfo.rootNamespace } else { "$owner.$repo" }
     githubRepo = $GitHubRepo
     artifactNamePattern = if ($ArtifactNamePattern) { $ArtifactNamePattern } elseif ($config.artifactNamePattern) { $config.artifactNamePattern } else { "$repo-{version}-{arch}.zip" }
     executableName = if ($ExecutableName) { $ExecutableName } elseif ($config.executableName) { $config.executableName } elseif ($projectInfo.executableName) { $projectInfo.executableName } else { "$repo.exe" }
@@ -1008,16 +963,17 @@ InstallModes:
 - interactive
 - silent
 UpgradeBehavior: install
-$commandsYaml
-$fileExtensionsYaml
+$($commandsYaml.TrimEnd())
+$($fileExtensionsYaml.TrimEnd())
 ReleaseDate: $releaseDate
 Dependencies:
   PackageDependencies:
+
 "@
 
 # Add .NET dependency based on project type
 if ($projectInfo.type -eq "csharp") {
-    $installerContent += "    - PackageIdentifier: Microsoft.DotNet.DesktopRuntime.9`n"
+    $installerContent += "  - PackageIdentifier: Microsoft.DotNet.DesktopRuntime.10`n"
 }
 
 $installerContent += "Installers:`n"
