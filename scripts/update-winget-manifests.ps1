@@ -229,6 +229,10 @@ function Get-MSBuildProperties {
             return $null
         }
 
+        # Restore packages first so SDK-provided properties are available
+        Write-Host "Restoring packages to resolve SDK properties..." -ForegroundColor Yellow
+        & dotnet restore "$ProjectPath" --verbosity quiet 2>$null
+
         $properties = @{}
         $propertyNames = @("AssemblyName", "RootNamespace", "PackageId", "Product", "Authors", "Version", "Description", "RepositoryUrl", "Copyright", "PackageTags")
 
@@ -744,7 +748,7 @@ if ($projectInfo.version -and -not $Version) {
 
 # Build configuration object with detected and provided values
 $config = @{
-    packageId = if ($PackageId) { $PackageId } elseif ($config.packageId) { $config.packageId } elseif ($projectInfo.rootNamespace) { $projectInfo.rootNamespace } else { "$owner.$repo" }
+    packageId = if ($PackageId) { $PackageId } elseif ($config.packageId) { $config.packageId } elseif ($projectInfo.rootNamespace) { $projectInfo.rootNamespace } elseif ($projectInfo.name) { $projectInfo.name } else { "$owner.$repo" }
     githubRepo = $GitHubRepo
     artifactNamePattern = if ($ArtifactNamePattern) { $ArtifactNamePattern } elseif ($config.artifactNamePattern) { $config.artifactNamePattern } else { "$repo-{version}-{arch}.zip" }
     executableName = if ($ExecutableName) { $ExecutableName } elseif ($config.executableName) { $config.executableName } elseif ($projectInfo.executableName) { $projectInfo.executableName } else { "$repo.exe" }
