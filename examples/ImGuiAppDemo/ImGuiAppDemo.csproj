@@ -16,6 +16,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="Hexa.NET.ImGuizmo" />
+    <PackageReference Include="Hexa.NET.ImNodes" />
+    <PackageReference Include="Hexa.NET.ImPlot" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
