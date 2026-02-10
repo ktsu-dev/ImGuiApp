@@ -424,14 +424,14 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			}
 
 			float maxForce = currentSettings.MaxForce.In(Units.Newton);
-			if (ImGui.SliderFloat("Max Force (N)", ref maxForce, 100.0f, 2000.0f))
+			if (ImGui.SliderFloat("Max Force (N)", ref maxForce, 10.0f, 2000.0f))
 			{
 				currentSettings = currentSettings with { MaxForce = Force<float>.FromNewtons(maxForce) };
 				settingsChanged = true;
 			}
 
 			float maxVelocity = currentSettings.MaxVelocity.In(Units.MetersPerSecond);
-			if (ImGui.SliderFloat("Max Velocity (m/s)", ref maxVelocity, 50.0f, 500.0f))
+			if (ImGui.SliderFloat("Max Velocity (m/s)", ref maxVelocity, 5.0f, 500.0f))
 			{
 				currentSettings = currentSettings with { MaxVelocity = Velocity<float>.FromMetersPerSecond(maxVelocity) };
 				settingsChanged = true;
