@@ -34,6 +34,9 @@ public static class ImGuiExtensionManager
 	private static object? nodesContext;
 	private static object? plotContext;
 
+	// Track whether the ImGui context has been shared with extensions
+	private static bool imGuiContextSet;
+
 	private static bool initialized;
 
 	/// <summary>
@@ -183,6 +186,12 @@ public static class ImGuiExtensionManager
 	/// </summary>
 	public static void BeginFrame()
 	{
+		// Guard: extension BeginFrame calls require a valid ImGui context
+		if (!imGuiContextSet)
+		{
+			return;
+		}
+
 		// Call ImGuizmo.BeginFrame() if available
 		try
 		{
@@ -252,6 +261,8 @@ public static class ImGuiExtensionManager
 		{
 			DebugLogger.Log($"ImGuiExtensionManager: Error calling ImPlot.SetImGuiContext(): {ex.InnerException?.Message ?? ex.Message}");
 		}
+
+		imGuiContextSet = true;
 	}
 
 	/// <summary>
@@ -366,6 +377,8 @@ public static class ImGuiExtensionManager
 				DebugLogger.Log($"ImGuiExtensionManager: Error destroying ImPlot context: {ex.InnerException?.Message ?? ex.Message}");
 			}
 		}
+
+		imGuiContextSet = false;
 	}
 
 	/// <summary>
