@@ -338,6 +338,13 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				currentSettings = currentSettings with { RestLinkLength = Length<float>.FromMeters(restLinkLength) };
 				settingsChanged = true;
 			}
+
+			float directionalBias = currentSettings.DirectionalBias;
+			if (ImGui.SliderFloat("Directional Bias (L→R)", ref directionalBias, 0.0f, 2.0f))
+			{
+				currentSettings = currentSettings with { DirectionalBias = directionalBias };
+				settingsChanged = true;
+			}
 		}
 
 		// Gravity settings
@@ -369,6 +376,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				Enabled = true,
 				RepulsionStrength = Force<float>.FromNewtons(2_000_000.0f),
 				LinkSpringStrength = 0.3f,
+				DirectionalBias = 0.3f,
 				GravityStrength = Force<float>.FromNewtons(20.0f),
 				OriginAnchorWeight = 0.2f,
 				DampingFactor = 0.95f,
@@ -389,6 +397,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				Enabled = true,
 				RepulsionStrength = Force<float>.FromNewtons(10_000_000.0f),
 				LinkSpringStrength = 1.0f,
+				DirectionalBias = 0.8f,
 				GravityStrength = Force<float>.FromNewtons(100.0f),
 				OriginAnchorWeight = 0.4f,
 				DampingFactor = 0.85f,

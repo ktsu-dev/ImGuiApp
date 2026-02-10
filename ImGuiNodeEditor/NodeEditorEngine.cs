@@ -357,6 +357,7 @@ public class NodeEditorEngine
 			// Calculate forces
 			CalculateRepulsionForces();
 			CalculateLinkForces();
+			CalculateDirectionalForces();
 			CalculateGravityForces();
 
 			// Update velocities and positions
@@ -446,6 +447,58 @@ public class NodeEditorEngine
 				nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + springForce };
 				nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force - springForce };
 			}
+		}
+	}
+
+	/// <summary>
+	/// Calculate horizontal directional forces that bias links to flow left-to-right.
+	/// For each link, a horizontal spring tries to place the output node RestLinkLength
+	/// pixels to the left of the input node. Uses asymmetric response: progressively
+	/// stronger when the link flows the wrong direction (right-to-left).
+	/// </summary>
+	private void CalculateDirectionalForces()
+	{
+		float bias = PhysicsSettings.DirectionalBias;
+		if (bias <= 0)
+		{
+			return;
+		}
+
+		float restLength = PhysicsSettings.RestLinkLength.In(Units.Meter);
+
+		foreach (Link link in links)
+		{
+			if (!pinToNodeIndex.TryGetValue(link.OutputPinId, out int outputIndex) ||
+				!pinToNodeIndex.TryGetValue(link.InputPinId, out int inputIndex))
+			{
+				continue;
+			}
+
+			Node outputNode = nodes[outputIndex];
+			Node inputNode = nodes[inputIndex];
+
+			float outputCenterX = outputNode.Position.X + (outputNode.Dimensions.X * 0.5f);
+			float inputCenterX = inputNode.Position.X + (inputNode.Dimensions.X * 0.5f);
+
+			// Desired: output is restLength to the left of input
+			// currentGap > 0 means output is already to the left (good)
+			// currentGap < 0 means output is to the right of input (wrong)
+			float currentGap = inputCenterX - outputCenterX;
+			float error = restLength - currentGap;
+
+			// Horizontal-only spring force: positive error → push output left, input right
+			float forceX = bias * error;
+
+			// Asymmetric boost: when the link goes the wrong direction, progressively
+			// increase force so it can overcome repulsion from nearby nodes.
+			// Multiplier is 1.0 at currentGap=0, grows smoothly with violation magnitude.
+			if (currentGap < 0)
+			{
+				forceX *= 1.0f + (MathF.Abs(currentGap) / restLength);
+			}
+
+			nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + new Vector2(-forceX, 0) };
+			nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force + new Vector2(forceX, 0) };
 		}
 	}
 

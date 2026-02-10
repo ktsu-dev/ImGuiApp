@@ -67,6 +67,7 @@ public record PhysicsSettings
 	public bool Enabled { get; init; } = false;
 	public Force<float> RepulsionStrength { get; init; } = Force<float>.FromNewtons(1_200_000.0f);
 	public float LinkSpringStrength { get; init; } = 0.5f; // Dimensionless spring constant
+	public float DirectionalBias { get; init; } = 0.5f; // Horizontal spring bias: output left, input right
 	public Force<float> GravityStrength { get; init; } = Force<float>.FromNewtons(50.0f);
 	public float OriginAnchorWeight { get; init; } = 1.0f; // 0 = pure centroid, 1 = pure world origin
 	public float DampingFactor { get; init; } = 0.5f; // Per-second velocity retention (time-independent)
