@@ -68,8 +68,8 @@ public record PhysicsSettings
 	public Force<float> RepulsionStrength { get; init; } = Force<float>.FromNewtons(1000.0f);
 	public float LinkSpringStrength { get; init; } = 0.5f; // Dimensionless spring constant
 	public Force<float> GravityStrength { get; init; } = Force<float>.FromNewtons(50.0f);
-	public float DampingFactor { get; init; } = 0.9f; // Dimensionless damping coefficient
-	public Length<float> MinRepulsionDistance { get; init; } = Length<float>.FromMeters(100.0f);
+	public float DampingFactor { get; init; } = 0.9f; // Per-second velocity retention (time-independent)
+	public Length<float> MinRepulsionDistance { get; init; } = Length<float>.FromMeters(50.0f); // Clamp floor to prevent force explosions
 	public Length<float> RestLinkLength { get; init; } = Length<float>.FromMeters(200.0f);
 	public Force<float> MaxForce { get; init; } = Force<float>.FromNewtons(500.0f);
 	public Velocity<float> MaxVelocity { get; init; } = Velocity<float>.FromMetersPerSecond(200.0f);

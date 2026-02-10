@@ -279,7 +279,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			}
 
 			float minRepulsionDistance = currentSettings.MinRepulsionDistance.In(Units.Meter);
-			if (ImGui.SliderFloat("Min Repulsion Distance (m)", ref minRepulsionDistance, 50.0f, 300.0f))
+			if (ImGui.SliderFloat("Min Repulsion Clamp (px)", ref minRepulsionDistance, 10.0f, 200.0f))
 			{
 				currentSettings = currentSettings with { MinRepulsionDistance = Length<float>.FromMeters(minRepulsionDistance) };
 				settingsChanged = true;
@@ -386,7 +386,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				LinkSpringStrength = 0.3f,
 				GravityStrength = Force<float>.FromNewtons(20.0f),
 				DampingFactor = 0.95f,
-				MinRepulsionDistance = Length<float>.FromMeters(120.0f),
+				MinRepulsionDistance = Length<float>.FromMeters(50.0f),
 				RestLinkLength = Length<float>.FromMeters(250.0f),
 				MaxForce = Force<float>.FromNewtons(300.0f),
 				MaxVelocity = Velocity<float>.FromMetersPerSecond(100.0f),
@@ -405,7 +405,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				LinkSpringStrength = 1.0f,
 				GravityStrength = Force<float>.FromNewtons(100.0f),
 				DampingFactor = 0.85f,
-				MinRepulsionDistance = Length<float>.FromMeters(150.0f),
+				MinRepulsionDistance = Length<float>.FromMeters(30.0f),
 				RestLinkLength = Length<float>.FromMeters(200.0f),
 				MaxForce = Force<float>.FromNewtons(800.0f),
 				MaxVelocity = Velocity<float>.FromMetersPerSecond(300.0f),

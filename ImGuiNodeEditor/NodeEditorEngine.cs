@@ -354,22 +354,24 @@ public class NodeEditorEngine
 				Vector2 nodeBCenter = nodeB.Position + (nodeB.Dimensions * 0.5f);
 
 				Vector2 direction = nodeACenter - nodeBCenter;
-				Length<float> distance = Length<float>.FromMeters(direction.Length());
+				float dist = direction.Length();
 
-				// Check if nodes are within repulsion range
-				if (distance < PhysicsSettings.MinRepulsionDistance && distance.In(Units.Meter) > 0.1f)
+				if (dist < 0.1f)
 				{
-					Vector2 normalizedDirection = direction / distance.In(Units.Meter);
-
-					// Calculate repulsion magnitude using inverse square law
-					float distanceSquared = distance.In(Units.Meter) * distance.In(Units.Meter);
-					float repulsionMagnitude = PhysicsSettings.RepulsionStrength.In(Units.Newton) / distanceSquared;
-
-					Vector2 repulsionForce = normalizedDirection * repulsionMagnitude;
-
-					nodes[i] = nodes[i] with { Force = nodes[i].Force + repulsionForce };
-					nodes[j] = nodes[j] with { Force = nodes[j].Force - repulsionForce };
+					continue;
 				}
+
+				Vector2 normalizedDirection = direction / dist;
+
+				// Inverse square repulsion, clamped at minimum distance to prevent explosions
+				float minDist = PhysicsSettings.MinRepulsionDistance.In(Units.Meter);
+				float effectiveDist = MathF.Max(dist, minDist);
+				float repulsionMagnitude = PhysicsSettings.RepulsionStrength.In(Units.Newton) / (effectiveDist * effectiveDist);
+
+				Vector2 repulsionForce = normalizedDirection * repulsionMagnitude;
+
+				nodes[i] = nodes[i] with { Force = nodes[i].Force + repulsionForce };
+				nodes[j] = nodes[j] with { Force = nodes[j].Force - repulsionForce };
 			}
 		}
 	}
@@ -472,8 +474,9 @@ public class NodeEditorEngine
 			// Update velocity (F = ma, assume mass = 1 kg)
 			Vector2 newVelocity = node.Velocity + (clampedForce * dt);
 
-			// Apply damping
-			newVelocity *= PhysicsSettings.DampingFactor;
+			// Apply damping (time-independent: DampingFactor is per-second retention)
+			float dampingPerSubstep = MathF.Pow(PhysicsSettings.DampingFactor, dt);
+			newVelocity *= dampingPerSubstep;
 
 			// Clamp velocity using semantic type
 			Velocity<float> velocityMagnitude = Velocity<float>.FromMetersPerSecond(newVelocity.Length());
