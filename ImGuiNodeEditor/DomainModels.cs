@@ -65,7 +65,7 @@ public enum PinDirection
 public record PhysicsSettings
 {
 	public bool Enabled { get; init; } = false;
-	public Force<float> RepulsionStrength { get; init; } = Force<float>.FromNewtons(1000.0f);
+	public Force<float> RepulsionStrength { get; init; } = Force<float>.FromNewtons(5_000_000.0f);
 	public float LinkSpringStrength { get; init; } = 0.5f; // Dimensionless spring constant
 	public Force<float> GravityStrength { get; init; } = Force<float>.FromNewtons(50.0f);
 	public float DampingFactor { get; init; } = 0.9f; // Per-second velocity retention (time-independent)
