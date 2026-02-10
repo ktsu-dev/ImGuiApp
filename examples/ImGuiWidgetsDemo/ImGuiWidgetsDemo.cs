@@ -56,6 +56,11 @@ internal static class ImGuiWidgetsDemo
 	private static float value = 0.5f;
 	private static float tab2Value = 0.5f;
 
+	// Radial Progress Bar demo state
+	private static float progressValue = 0.65f;
+	private static bool progressAnimating;
+	private static float progressAnimationSpeed = 0.3f;
+
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
 	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
 	private static ImGuiWidgets.TabPanel DemoTabPanel { get; } = new("DemoTabPanel", true, true);
@@ -143,6 +148,7 @@ internal static class ImGuiWidgetsDemo
 		ImGui.Separator();
 
 		ShowKnobDemo();
+		ShowRadialProgressBarDemo();
 		ShowColorIndicatorDemo();
 		ShowComboDemo();
 		ShowTextDemo();
@@ -477,6 +483,107 @@ internal static class ImGuiWidgetsDemo
 			if (ImGui.Button("Reset to 0.5"))
 			{
 				value = 0.5f;
+			}
+		}
+	}
+
+	private static void ShowRadialProgressBarDemo()
+	{
+		if (ImGui.CollapsingHeader("Radial Progress Bar"))
+		{
+			ImGui.TextUnformatted("Circular progress indicators for loading and progress tracking:");
+			ImGui.Separator();
+
+			// Animation controls
+			ImGui.TextUnformatted("Animation:");
+			ImGui.Checkbox("Animate", ref progressAnimating);
+			ImGui.SameLine();
+			ImGui.SetNextItemWidth(150);
+			ImGui.SliderFloat("Speed", ref progressAnimationSpeed, 0.1f, 2.0f, "%.1fx");
+
+			// Update animation
+			if (progressAnimating)
+			{
+				progressValue += progressAnimationSpeed * ImGui.GetIO().DeltaTime * 0.2f;
+				if (progressValue > 1.0f)
+				{
+					progressValue = 0.0f;
+				}
+			}
+
+			ImGui.Separator();
+
+			// Manual progress control
+			ImGui.TextUnformatted("Manual Control:");
+			if (ImGui.SliderFloat("Progress", ref progressValue, 0.0f, 1.0f, "%.2f"))
+			{
+				progressAnimating = false;
+			}
+
+			ImGui.Separator();
+
+			// Show different sizes and styles
+			ImGui.TextUnformatted("Different Sizes:");
+			ImGui.Columns(4, "ProgressBarColumns");
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 30);
+			ImGui.TextUnformatted("Small");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 50);
+			ImGui.TextUnformatted("Medium");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 70);
+			ImGui.TextUnformatted("Large");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 90);
+			ImGui.TextUnformatted("Extra Large");
+
+			ImGui.Columns(1);
+
+			ImGui.Separator();
+			ImGui.TextUnformatted("Options:");
+
+			ImGui.Columns(4, "ProgressBarOptionsColumns");
+
+			ImGuiWidgets.RadialProgressBar(progressValue);
+			ImGui.TextUnformatted("Default (CW, Top)");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.NoText);
+			ImGui.TextUnformatted("No Text");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.CounterClockwise);
+			ImGui.TextUnformatted("Counter-Clockwise");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.StartAtBottom);
+			ImGui.TextUnformatted("Start at Bottom");
+
+			ImGui.Columns(1);
+
+			ImGui.Separator();
+			ImGui.TextUnformatted($"Current Progress: {progressValue * 100.0f:F1}%");
+
+			if (ImGui.Button("Reset to 0%"))
+			{
+				progressValue = 0.0f;
+				progressAnimating = false;
+			}
+			ImGui.SameLine();
+			if (ImGui.Button("Set to 50%"))
+			{
+				progressValue = 0.5f;
+				progressAnimating = false;
+			}
+			ImGui.SameLine();
+			if (ImGui.Button("Set to 100%"))
+			{
+				progressValue = 1.0f;
+				progressAnimating = false;
 			}
 		}
 	}

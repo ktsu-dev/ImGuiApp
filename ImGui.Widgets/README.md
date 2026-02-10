@@ -5,6 +5,7 @@ ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provid
 ## Features
 
 - **Knobs**: Ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
+- **Radial Progress Bar**: Circular progress indicators for visualizing loading and progress
 - **Resizable Layout Dividers**: Draggable layout dividers for resizable layouts
 - **TabPanel**: Tabbed interface with closable, reorderable tabs and dirty indicator support
 - **Icons**: Customizable icons with various alignment options and event delegates
@@ -47,6 +48,46 @@ float value = 0.5f;
 float minValue = 0.0f;
 
 ImGuiWidgets.Knob("Knob", ref value, minValue);
+```
+
+### Radial Progress Bar
+
+The RadialProgressBar widget displays circular progress indicators perfect for loading states and progress tracking:
+
+```csharp
+float progress = 0.65f; // Progress from 0.0 to 1.0
+
+// Basic usage - displays with default size and settings (clockwise from top)
+ImGuiWidgets.RadialProgressBar(progress);
+
+// Custom size (radius in pixels)
+ImGuiWidgets.RadialProgressBar(progress, radius: 50);
+
+// Custom thickness
+ImGuiWidgets.RadialProgressBar(progress, radius: 50, thickness: 10);
+
+// Without percentage text in center
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.NoText);
+
+// Counter-clockwise direction (default is clockwise)
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.CounterClockwise);
+
+// Start at bottom instead of top
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.StartAtBottom);
+
+// Combine options: counter-clockwise starting at bottom
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, 
+    ImGuiRadialProgressBarOptions.CounterClockwise | ImGuiRadialProgressBarOptions.StartAtBottom);
+
+// Animated progress example
+float animatedProgress = 0.0f;
+void UpdateProgress(float deltaTime)
+{
+    animatedProgress += deltaTime * 0.2f;
+    if (animatedProgress > 1.0f) animatedProgress = 0.0f;
+    
+    ImGuiWidgets.RadialProgressBar(animatedProgress);
+}
 ```
 
 ### SearchBox
