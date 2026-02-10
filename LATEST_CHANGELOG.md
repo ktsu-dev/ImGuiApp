@@ -1,6 +1,5 @@
-## v2.2.11-pre.2 (prerelease)
+## v2.2.11 (patch)
 
-Changes since v2.2.11-pre.1:
+Changes since v2.2.10:
 
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Add visibility control for tabs in TabPanel ([@matt-edmondson](https://github.com/matt-edmondson))
