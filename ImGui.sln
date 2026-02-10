@@ -26,6 +26,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{5F0E6F1C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.App.Tests", "tests\ImGui.App.Tests\ImGui.App.Tests.csproj", "{D1B3E399-F4E4-D537-46FE-2585AF4E9262}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeGraph", "NodeGraph\NodeGraph.csproj", "{A959DCC5-5586-4A35-A567-807582807E34}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -132,6 +134,18 @@ Global
 		{D1B3E399-F4E4-D537-46FE-2585AF4E9262}.Release|x64.Build.0 = Release|Any CPU
 		{D1B3E399-F4E4-D537-46FE-2585AF4E9262}.Release|x86.ActiveCfg = Release|Any CPU
 		{D1B3E399-F4E4-D537-46FE-2585AF4E9262}.Release|x86.Build.0 = Release|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Debug|x64.Build.0 = Debug|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Debug|x86.Build.0 = Debug|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Release|x64.ActiveCfg = Release|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Release|x64.Build.0 = Release|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Release|x86.ActiveCfg = Release|Any CPU
+		{A959DCC5-5586-4A35-A567-807582807E34}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>ktsu.NodeGraph</PackageId>
+    <Title>Node Graph</Title>
+    <Description>Generic attributes and utilities for describing node graphs in a UI-agnostic way. Allows domain models to be decorated with node metadata without coupling to specific node editor implementations.</Description>
+    <PackageTags>nodegraph;attributes;metadata;nodes;graph;editor-agnostic</PackageTags>
+    <Authors>ktsu.dev</Authors>
+    <Copyright>Copyright (c) ktsu.dev</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ktsu-dev/ImGuiApp</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ktsu-dev/ImGuiApp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <NoWarn>CA1019,CA1720,CA1805,CA1308,CA1305,CA1031,CA1822</NoWarn>
+  </PropertyGroup>
+</Project>
