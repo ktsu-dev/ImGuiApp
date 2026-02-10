@@ -398,6 +398,13 @@ public static partial class ImGuiWidgets
 				for (int i = 0; i < Tabs.Count; i++)
 				{
 					Tab tab = Tabs[i];
+
+					// Skip hidden tabs
+					if (!tab.IsVisible)
+					{
+						continue;
+					}
+
 					ImGuiTabItemFlags tabFlags = ImGuiTabItemFlags.None;
 
 					// Use the UnsavedDocument flag for dirty indicator
@@ -465,6 +472,11 @@ public static partial class ImGuiWidgets
 		/// Gets or sets whether this tab's content has unsaved changes.
 		/// </summary>
 		public bool IsDirty { get; set; }
+
+		/// <summary>
+		/// Gets or sets whether this tab is visible in the tab bar.
+		/// </summary>
+		public bool IsVisible { get; set; } = true;
 
 		/// <summary>
 		/// Create a new tab with an auto-generated ID.
