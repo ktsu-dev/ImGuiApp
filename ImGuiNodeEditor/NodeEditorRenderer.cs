@@ -330,6 +330,7 @@ public class NodeEditorRenderer
 		foreach (Link link in engine.Links)
 		{
 			float? distance = engine.GetLinkDistance(link.Id);
+			float? stress = engine.GetLinkStress(link.Id);
 			if (!distance.HasValue)
 			{
 				continue;
@@ -350,10 +351,37 @@ public class NodeEditorRenderer
 			Vector2 startScreen = EditorToScreen(outputCenter);
 			Vector2 endScreen = EditorToScreen(inputCenter);
 
+			// Color based on stress: blue = compression, green = rest, red = tension
+			Vector4 stressColor = GetStressColor(stress ?? 0.0f);
+			uint linkColor = ImGui.ColorConvertFloat4ToU32(stressColor);
+
+			// Draw stress-colored line between node centers
+			drawList.AddLine(startScreen, endScreen, linkColor, 2.0f);
+
 			// Draw distance text at midpoint
 			Vector2 midpointScreen = (startScreen + endScreen) * 0.5f;
-			uint linkColor = ImGui.ColorConvertFloat4ToU32(new Vector4(0.3f, 0.7f, 1.0f, 0.8f));
 			drawList.AddText(midpointScreen, linkColor, $"{distance.Value:F0}px");
+		}
+	}
+
+	/// <summary>
+	/// Map link stress to a color: blue (compression) → green (rest) → red (tension)
+	/// </summary>
+	private static Vector4 GetStressColor(float stress)
+	{
+		// Clamp stress to [-1, 1] for color mapping
+		float t = Math.Clamp(stress, -1.0f, 1.0f);
+
+		if (t < 0)
+		{
+			// Compression: blue to green (t: -1 → 0)
+			float blend = 1.0f + t; // 0 → 1
+			return new Vector4(0.0f, blend, 1.0f - blend, 0.9f);
+		}
+		else
+		{
+			// Tension: green to red (t: 0 → 1)
+			return new Vector4(t, 1.0f - t, 0.0f, 0.9f);
 		}
 	}
 

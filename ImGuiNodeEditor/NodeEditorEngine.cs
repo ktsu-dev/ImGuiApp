@@ -243,6 +243,27 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
+	/// Get the normalized stress of a link: negative = compression, positive = tension.
+	/// Value of 0 means the link is at rest length. Value of 1 means stretched to 2x rest length.
+	/// </summary>
+	public float? GetLinkStress(int linkId)
+	{
+		float? distance = GetLinkDistance(linkId);
+		if (!distance.HasValue)
+		{
+			return null;
+		}
+
+		float restLength = PhysicsSettings.RestLinkLength.In(Units.Meter);
+		if (restLength < 0.1f)
+		{
+			return null;
+		}
+
+		return (distance.Value - restLength) / restLength;
+	}
+
+	/// <summary>
 	/// Set the world origin to the centroid of all current node positions.
 	/// Call after populating nodes so gravity doesn't immediately pull them toward (0,0).
 	/// </summary>
@@ -362,6 +383,9 @@ public class NodeEditorEngine
 
 			// Update velocities and positions
 			UpdateNodePositions(substepDeltaTime);
+
+			// Apply hard directional constraints (position-based, bypasses MaxForce)
+			ApplyDirectionalConstraints();
 		}
 
 		// Calculate total system energy for stability detection
@@ -452,9 +476,8 @@ public class NodeEditorEngine
 
 	/// <summary>
 	/// Calculate horizontal directional forces that bias links to flow left-to-right.
-	/// For each link, a horizontal spring tries to place the output node RestLinkLength
-	/// pixels to the left of the input node. Uses asymmetric response: progressively
-	/// stronger when the link flows the wrong direction (right-to-left).
+	/// Only applies force when linked nodes overlap horizontally or are in the wrong order,
+	/// so middle-chain nodes don't receive conflicting pulls from correctly-ordered links.
 	/// </summary>
 	private void CalculateDirectionalForces()
 	{
@@ -463,8 +486,6 @@ public class NodeEditorEngine
 		{
 			return;
 		}
-
-		float restLength = PhysicsSettings.RestLinkLength.In(Units.Meter);
 
 		foreach (Link link in links)
 		{
@@ -480,25 +501,91 @@ public class NodeEditorEngine
 			float outputCenterX = outputNode.Position.X + (outputNode.Dimensions.X * 0.5f);
 			float inputCenterX = inputNode.Position.X + (inputNode.Dimensions.X * 0.5f);
 
-			// Desired: output is restLength to the left of input
-			// currentGap > 0 means output is already to the left (good)
-			// currentGap < 0 means output is to the right of input (wrong)
+			// Minimum gap: output's right edge should clear input's left edge
+			float minGap = ((outputNode.Dimensions.X + inputNode.Dimensions.X) * 0.5f) + 20.0f;
 			float currentGap = inputCenterX - outputCenterX;
-			float error = restLength - currentGap;
+			float violation = minGap - currentGap;
 
-			// Horizontal-only spring force: positive error → push output left, input right
-			float forceX = bias * error;
-
-			// Asymmetric boost: when the link goes the wrong direction, progressively
-			// increase force so it can overcome repulsion from nearby nodes.
-			// Multiplier is 1.0 at currentGap=0, grows smoothly with violation magnitude.
-			if (currentGap < 0)
+			// Only apply force when nodes overlap horizontally or are in wrong order
+			if (violation > 0)
 			{
-				forceX *= 1.0f + (MathF.Abs(currentGap) / restLength);
+				float forceX = bias * violation;
+
+				// Stronger boost when output is to the right of input (wrong direction)
+				if (currentGap < 0)
+				{
+					forceX *= 1.0f + (MathF.Abs(currentGap) / minGap);
+				}
+
+				nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + new Vector2(-forceX, 0) };
+				nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force + new Vector2(forceX, 0) };
+			}
+		}
+	}
+
+	/// <summary>
+	/// Position-based directional constraint applied after force integration.
+	/// Directly nudges wrong-order linked nodes, bypassing the MaxForce clamp
+	/// to guarantee left-to-right ordering converges even under strong repulsion.
+	/// </summary>
+	private void ApplyDirectionalConstraints()
+	{
+		float bias = PhysicsSettings.DirectionalBias;
+		if (bias <= 0)
+		{
+			return;
+		}
+
+		foreach (Link link in links)
+		{
+			if (!pinToNodeIndex.TryGetValue(link.OutputPinId, out int outputIndex) ||
+				!pinToNodeIndex.TryGetValue(link.InputPinId, out int inputIndex))
+			{
+				continue;
 			}
 
-			nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + new Vector2(-forceX, 0) };
-			nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force + new Vector2(forceX, 0) };
+			Node outputNode = nodes[outputIndex];
+			Node inputNode = nodes[inputIndex];
+
+			float outputCenterX = outputNode.Position.X + (outputNode.Dimensions.X * 0.5f);
+			float inputCenterX = inputNode.Position.X + (inputNode.Dimensions.X * 0.5f);
+
+			// Only correct when output center is to the right of input center (wrong order)
+			if (outputCenterX > inputCenterX)
+			{
+				float overlap = outputCenterX - inputCenterX;
+				float correction = overlap * bias * 0.05f;
+
+				bool outputMovable = !outputNode.IsPinned && !draggedNodeIds.Contains(outputNode.Id);
+				bool inputMovable = !inputNode.IsPinned && !draggedNodeIds.Contains(inputNode.Id);
+
+				if (outputMovable && inputMovable)
+				{
+					// Split correction between both nodes
+					nodes[outputIndex] = nodes[outputIndex] with
+					{
+						Position = nodes[outputIndex].Position + new Vector2(-correction, 0)
+					};
+					nodes[inputIndex] = nodes[inputIndex] with
+					{
+						Position = nodes[inputIndex].Position + new Vector2(correction, 0)
+					};
+				}
+				else if (outputMovable)
+				{
+					nodes[outputIndex] = nodes[outputIndex] with
+					{
+						Position = nodes[outputIndex].Position + new Vector2(-correction * 2.0f, 0)
+					};
+				}
+				else if (inputMovable)
+				{
+					nodes[inputIndex] = nodes[inputIndex] with
+					{
+						Position = nodes[inputIndex].Position + new Vector2(correction * 2.0f, 0)
+					};
+				}
+			}
 		}
 	}
 

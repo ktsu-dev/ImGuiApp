@@ -382,7 +382,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				DampingFactor = 0.95f,
 				MinRepulsionDistance = Length<float>.FromMeters(50.0f),
 				RestLinkLength = Length<float>.FromMeters(250.0f),
-				MaxForce = Force<float>.FromNewtons(300.0f),
+				MaxForce = Force<float>.FromNewtons(3000.0f),
 				MaxVelocity = Velocity<float>.FromMetersPerSecond(100.0f),
 				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
 			};
@@ -403,7 +403,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				DampingFactor = 0.85f,
 				MinRepulsionDistance = Length<float>.FromMeters(30.0f),
 				RestLinkLength = Length<float>.FromMeters(200.0f),
-				MaxForce = Force<float>.FromNewtons(800.0f),
+				MaxForce = Force<float>.FromNewtons(10000.0f),
 				MaxVelocity = Velocity<float>.FromMetersPerSecond(300.0f),
 				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
 			};
@@ -433,7 +433,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			}
 
 			float maxForce = currentSettings.MaxForce.In(Units.Newton);
-			if (ImGui.SliderFloat("Max Force (N)", ref maxForce, 10.0f, 2000.0f))
+			if (ImGui.SliderFloat("Max Force (N)", ref maxForce, 100.0f, 50000.0f))
 			{
 				currentSettings = currentSettings with { MaxForce = Force<float>.FromNewtons(maxForce) };
 				settingsChanged = true;

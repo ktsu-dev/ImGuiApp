@@ -73,7 +73,7 @@ public record PhysicsSettings
 	public float DampingFactor { get; init; } = 0.5f; // Per-second velocity retention (time-independent)
 	public Length<float> MinRepulsionDistance { get; init; } = Length<float>.FromMeters(50.0f); // Clamp floor to prevent force explosions
 	public Length<float> RestLinkLength { get; init; } = Length<float>.FromMeters(225.0f);
-	public Force<float> MaxForce { get; init; } = Force<float>.FromNewtons(100.0f);
+	public Force<float> MaxForce { get; init; } = Force<float>.FromNewtons(5000.0f);
 	public Velocity<float> MaxVelocity { get; init; } = Velocity<float>.FromMetersPerSecond(50.0f);
 	public Frequency<float> TargetPhysicsHz { get; init; } = Frequency<float>.FromHertz(120.0f);
 	public float StabilityThreshold { get; init; } = 1.0f; // Total energy below this = stable
