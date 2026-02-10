@@ -445,8 +445,7 @@ public class NodeEditorEngine
 			{
 				Vector2 normalizedDirection = directionToCentroid / distance;
 
-				// Gravity proportional to distance from centroid - farther nodes pulled harder
-				float gravityForceMagnitude = PhysicsSettings.GravityStrength.In(Units.Newton) * (distance / 100.0f);
+				float gravityForceMagnitude = PhysicsSettings.GravityStrength.In(Units.Newton);
 				Vector2 gravityForce = normalizedDirection * gravityForceMagnitude;
 
 				nodes[i] = nodes[i] with { Force = nodes[i].Force + gravityForce };
