@@ -58,7 +58,7 @@ internal static class ImGuiWidgetsDemo
 
 	// Radial Progress Bar demo state
 	private static float progressValue = 0.65f;
-	private static bool progressAnimating = false;
+	private static bool progressAnimating;
 	private static float progressAnimationSpeed = 0.3f;
 
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");

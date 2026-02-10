@@ -84,12 +84,12 @@ public static partial class ImGuiWidgets
 			if (progress > 0.0f)
 			{
 				uint fgColor = ImGui.GetColorU32(progressColor);
-				
+
 				// Determine start position
-				float startAngle = options.HasFlag(ImGuiRadialProgressBarOptions.StartAtBottom) 
+				float startAngle = options.HasFlag(ImGuiRadialProgressBarOptions.StartAtBottom)
 					? MathF.PI * 0.5f  // Start at bottom (6 o'clock)
 					: -MathF.PI * 0.5f; // Start at top (12 o'clock)
-				
+
 				float sweepAngle = 2.0f * MathF.PI * progress;
 
 				if (options.HasFlag(ImGuiRadialProgressBarOptions.CounterClockwise))
