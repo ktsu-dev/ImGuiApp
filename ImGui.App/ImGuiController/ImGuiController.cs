@@ -120,6 +120,10 @@ internal sealed class ImGuiController : IDisposable
 		ImGui.CreateContext();
 
 		ImGui.StyleColorsDark();
+
+		ImGuiExtensionManager.Initialize();
+		ImGuiExtensionManager.SetImGuiContext();
+		ImGuiExtensionManager.CreateExtensionContexts();
 	}
 
 	internal void BeginFrame()
@@ -266,6 +270,7 @@ internal sealed class ImGuiController : IDisposable
 
 		_frameBegun = true;
 		ImGui.NewFrame();
+		ImGuiExtensionManager.BeginFrame();
 	}
 
 	/// <summary>
@@ -932,6 +937,7 @@ internal sealed class ImGuiController : IDisposable
 				_fontTexture.Dispose();
 				_shader.Dispose();
 
+				ImGuiExtensionManager.Cleanup();
 				ImGui.DestroyContext();
 			}
 		}
