@@ -21,6 +21,11 @@ public class NodeEditorRenderer
 	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
 	private readonly HashSet<int> currentlyDraggedNodes = [];
 
+	// Cached editor-to-screen transform: derived empirically from ImNodes
+	// during Render() so it matches ImNodes' internal coordinate system exactly
+	private Vector2 editorToScreenBase;
+	private bool hasEditorTransform;
+
 	/// <summary>
 	/// Set of node IDs currently being dragged by the user
 	/// </summary>
@@ -44,6 +49,11 @@ public class NodeEditorRenderer
 		{
 			ImNodes.Link(link.Id, link.OutputPinId, link.InputPinId);
 		}
+
+		// Cache the editor-to-screen transform while inside the editor context.
+		// Derived empirically from a reference node so it matches ImNodes' internal
+		// coordinate system exactly, regardless of how panning/origin are composed.
+		CacheEditorTransform(engine);
 
 		ImNodes.EndNodeEditor();
 	}
@@ -185,6 +195,26 @@ public class NodeEditorRenderer
 	}
 
 	/// <summary>
+	/// Cache the editor-to-screen transform by deriving it from a reference node's
+	/// known editor-space and screen-space positions within the active editor context
+	/// </summary>
+	private void CacheEditorTransform(NodeEditorEngine engine)
+	{
+		if (engine.Nodes.Count > 0)
+		{
+			int refNodeId = engine.Nodes[0].Id;
+			Vector2 refScreenPos = ImNodes.GetNodeScreenSpacePos(refNodeId);
+			Vector2 refEditorPos = ImNodes.GetNodeEditorSpacePos(refNodeId);
+			editorToScreenBase = refScreenPos - refEditorPos;
+			hasEditorTransform = true;
+		}
+		else
+		{
+			hasEditorTransform = false;
+		}
+	}
+
+	/// <summary>
 	/// Render debug overlays on top of the editor
 	/// </summary>
 	public void RenderDebugOverlays(NodeEditorEngine engine, Vector2 editorAreaPos, Vector2 editorAreaSize, bool showDebug)
@@ -194,7 +224,15 @@ public class NodeEditorRenderer
 			return;
 		}
 
+		if (engine.Nodes.Count == 0 || !hasEditorTransform)
+		{
+			return;
+		}
+
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+
+		// Clip debug overlays to the editor area so they don't spill into adjacent panels
+		drawList.PushClipRect(editorAreaPos, editorAreaPos + editorAreaSize, true);
 
 		// Render canvas origin
 		RenderOrigin(drawList, editorAreaPos, editorAreaSize, engine);
@@ -210,19 +248,25 @@ public class NodeEditorRenderer
 		{
 			RenderPhysicsDebugInfo(drawList, engine, editorAreaPos, editorAreaSize);
 		}
+
+		drawList.PopClipRect();
 	}
 
-	private static void RenderOrigin(ImDrawListPtr drawList, Vector2 editorAreaPos, Vector2 editorAreaSize, NodeEditorEngine engine)
+	/// <summary>
+	/// Convert an editor-space position to screen-space using the cached transform
+	/// </summary>
+	private Vector2 EditorToScreen(Vector2 editorPos) =>
+		editorToScreenBase + editorPos;
+
+	private void RenderOrigin(ImDrawListPtr drawList, Vector2 editorAreaPos, Vector2 editorAreaSize, NodeEditorEngine engine)
 	{
-		if (engine.Nodes.Count == 0)
+		if (!hasEditorTransform)
 		{
 			return;
 		}
 
-		// Use reference node method to find where editor space (0,0) maps to screen space
-		Node referenceNode = engine.Nodes[0];
-		Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
-		Vector2 originScreen = referenceScreenPos - referenceNode.Position;
+		// Use WorldOrigin (which tracks with panning) rather than a fixed Vector2.Zero
+		Vector2 originScreen = EditorToScreen(engine.WorldOrigin);
 
 		uint originColor = ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.8f, 1.0f, 1.0f));
 
@@ -233,9 +277,9 @@ public class NodeEditorRenderer
 		drawList.AddText(originScreen + new Vector2(25, -10), originColor, "ORIGIN (0,0)");
 	}
 
-	private static void RenderNodeDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine)
+	private void RenderNodeDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine)
 	{
-		if (engine.Nodes.Count == 0)
+		if (!hasEditorTransform)
 		{
 			return;
 		}
@@ -259,30 +303,30 @@ public class NodeEditorRenderer
 			totalArea += nodeArea;
 		}
 
-		// Convert to screen space using reference node method
-		Node referenceNode = engine.Nodes[0];
-		Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
-		Vector2 referenceGridPos = referenceNode.Position;
-
-		// Bounding box
+		// Bounding box (using cached reference data)
 		uint boundingBoxColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 0.0f, 0.6f));
-		Vector2 minPosScreen = referenceScreenPos + (minPos - referenceGridPos);
-		Vector2 maxPosScreen = referenceScreenPos + (maxPos - referenceGridPos);
+		Vector2 minPosScreen = EditorToScreen(minPos);
+		Vector2 maxPosScreen = EditorToScreen(maxPos);
 		drawList.AddRect(minPosScreen, maxPosScreen, boundingBoxColor, 0.0f, ImDrawFlags.None, 2.0f);
 
 		// Center of mass
 		if (totalArea > 0)
 		{
 			Vector2 centerOfMass = weightedCenterSum / totalArea;
-			Vector2 centerOfMassScreen = referenceScreenPos + (centerOfMass - referenceGridPos);
+			Vector2 centerOfMassScreen = EditorToScreen(centerOfMass);
 			uint centerOfMassColor = ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1.0f, 1.0f, 0.9f));
 			drawList.AddCircleFilled(centerOfMassScreen, 6.0f, centerOfMassColor);
 			drawList.AddCircle(centerOfMassScreen, 12.0f, centerOfMassColor, 16, 2.0f);
 		}
 	}
 
-	private static void RenderLinkDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine)
+	private void RenderLinkDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine)
 	{
+		if (!hasEditorTransform)
+		{
+			return;
+		}
+
 		foreach (Link link in engine.Links)
 		{
 			float? distance = engine.GetLinkDistance(link.Id);
@@ -300,9 +344,11 @@ public class NodeEditorRenderer
 				continue;
 			}
 
-			// Get screen positions
-			Vector2 startScreen = ImNodes.GetNodeScreenSpacePos(outputNode.Id);
-			Vector2 endScreen = ImNodes.GetNodeScreenSpacePos(inputNode.Id);
+			// Get screen positions using cached reference data (use node centers, not top-left)
+			Vector2 outputCenter = outputNode.Position + (outputNode.Dimensions * 0.5f);
+			Vector2 inputCenter = inputNode.Position + (inputNode.Dimensions * 0.5f);
+			Vector2 startScreen = EditorToScreen(outputCenter);
+			Vector2 endScreen = EditorToScreen(inputCenter);
 
 			// Draw distance text at midpoint
 			Vector2 midpointScreen = (startScreen + endScreen) * 0.5f;
@@ -311,31 +357,17 @@ public class NodeEditorRenderer
 		}
 	}
 
-	private static void RenderPhysicsDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine, Vector2 editorAreaPos, Vector2 editorAreaSize)
+	private void RenderPhysicsDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine, Vector2 editorAreaPos, Vector2 editorAreaSize)
 	{
-		if (engine.Nodes.Count == 0)
+		if (!hasEditorTransform)
 		{
 			return;
 		}
 
-		// Use reference node method for coordinate transformation
-		Node referenceNode = engine.Nodes[0];
-		Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
-		Vector2 referenceGridPos = referenceNode.Position;
-		Vector2 referenceCenter = referenceGridPos + (referenceNode.Dimensions * 0.5f);
-
-		// Calculate centroid in editor space (matches gravity target)
-		Vector2 centroid = Vector2.Zero;
-		foreach (Node node in engine.Nodes)
-		{
-			centroid += node.Position + (node.Dimensions * 0.5f);
-		}
-		centroid /= engine.Nodes.Count;
-
 		foreach (Node node in engine.Nodes)
 		{
 			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
-			Vector2 nodeCenterScreen = referenceScreenPos + (nodeCenter - referenceCenter);
+			Vector2 nodeCenterScreen = EditorToScreen(nodeCenter);
 
 			// Render force vector
 			if (node.Force.Length() > 1.0f)
@@ -361,8 +393,8 @@ public class NodeEditorRenderer
 			drawList.AddCircle(nodeCenterScreen, repulsionRadius, repulsionZoneColor, 32, 1.0f);
 		}
 
-		// Render gravity center (centroid of all nodes)
-		Vector2 centroidScreen = referenceScreenPos + (centroid - referenceCenter);
+		// Render gravity center (fixed point, in editor/position space)
+		Vector2 centroidScreen = EditorToScreen(engine.GravityCenter);
 		uint physicsCenterColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.0f, 1.0f, 0.9f)); // Magenta
 		drawList.AddCircleFilled(centroidScreen, 8.0f, physicsCenterColor);
 		drawList.AddCircle(centroidScreen, 15.0f, physicsCenterColor, 16, 2.0f);

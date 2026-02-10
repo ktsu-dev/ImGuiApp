@@ -39,6 +39,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		nodeFactory = new AttributeBasedNodeFactory(engine);
 		RegisterNodeTypes();
 		CreateDemoData();
+		engine.InitializeWorldOriginToCentroid();
 	}
 
 	public void Update(float deltaTime)
@@ -130,6 +131,40 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	{
 		// Update positions
 		Dictionary<int, Vector2> positionUpdates = renderer.GetNodePositionUpdates(engine);
+
+		// Detect uniform shift (all nodes moved by the same amount = panning).
+		// Apply the same shift to WorldOrigin so it stays in the nodes' coordinate space.
+		if (positionUpdates.Count == engine.Nodes.Count && positionUpdates.Count > 1)
+		{
+			Vector2 firstShift = Vector2.Zero;
+			bool isUniformShift = true;
+
+			foreach ((int nodeId, Vector2 newPosition) in positionUpdates)
+			{
+				Node? node = engine.Nodes.FirstOrDefault(n => n.Id == nodeId);
+				if (node == null)
+				{
+					continue;
+				}
+
+				Vector2 shift = newPosition - node.Position;
+				if (firstShift == Vector2.Zero)
+				{
+					firstShift = shift;
+				}
+				else if (Vector2.Distance(shift, firstShift) > 1.0f)
+				{
+					isUniformShift = false;
+					break;
+				}
+			}
+
+			if (isUniformShift && firstShift.LengthSquared() > 0.01f)
+			{
+				engine.WorldOrigin += firstShift;
+			}
+		}
+
 		foreach ((int nodeId, Vector2 newPosition) in positionUpdates)
 		{
 			engine.UpdateNodePosition(nodeId, newPosition);
@@ -172,6 +207,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		{
 			engine.Clear();
 			CreateDemoData();
+			engine.InitializeWorldOriginToCentroid();
 			lastActionMessage = "Reset to demo data";
 			lastActionColor = new Vector4(0.0f, 0.8f, 1.0f, 1.0f); // Cyan
 		}
@@ -313,9 +349,71 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				currentSettings = currentSettings with { GravityStrength = Force<float>.FromNewtons(gravityStrength) };
 				settingsChanged = true;
 			}
+
+			float originAnchorWeight = currentSettings.OriginAnchorWeight;
+			if (ImGui.SliderFloat("Origin Anchor Weight", ref originAnchorWeight, 0.0f, 1.0f))
+			{
+				currentSettings = currentSettings with { OriginAnchorWeight = originAnchorWeight };
+				settingsChanged = true;
+			}
 		}
 
 		// Damping and limits
+		(currentSettings, settingsChanged) = RenderDampingAndLimitsControls(currentSettings, settingsChanged, enabled);
+
+		// Quick presets
+		if (ImGui.Button("Gentle Physics"))
+		{
+			currentSettings = new PhysicsSettings
+			{
+				Enabled = true,
+				RepulsionStrength = Force<float>.FromNewtons(2_000_000.0f),
+				LinkSpringStrength = 0.3f,
+				GravityStrength = Force<float>.FromNewtons(20.0f),
+				OriginAnchorWeight = 0.2f,
+				DampingFactor = 0.95f,
+				MinRepulsionDistance = Length<float>.FromMeters(50.0f),
+				RestLinkLength = Length<float>.FromMeters(250.0f),
+				MaxForce = Force<float>.FromNewtons(300.0f),
+				MaxVelocity = Velocity<float>.FromMetersPerSecond(100.0f),
+				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
+			};
+			settingsChanged = true;
+		}
+
+		ImGui.SameLine();
+		if (ImGui.Button("Strong Physics"))
+		{
+			currentSettings = new PhysicsSettings
+			{
+				Enabled = true,
+				RepulsionStrength = Force<float>.FromNewtons(10_000_000.0f),
+				LinkSpringStrength = 1.0f,
+				GravityStrength = Force<float>.FromNewtons(100.0f),
+				OriginAnchorWeight = 0.4f,
+				DampingFactor = 0.85f,
+				MinRepulsionDistance = Length<float>.FromMeters(30.0f),
+				RestLinkLength = Length<float>.FromMeters(200.0f),
+				MaxForce = Force<float>.FromNewtons(800.0f),
+				MaxVelocity = Velocity<float>.FromMetersPerSecond(300.0f),
+				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
+			};
+			settingsChanged = true;
+		}
+
+		if (!enabled)
+		{
+			ImGui.EndDisabled();
+		}
+
+		if (settingsChanged)
+		{
+			engine.UpdatePhysicsSettings(currentSettings);
+		}
+	}
+
+	private (PhysicsSettings Settings, bool Changed) RenderDampingAndLimitsControls(PhysicsSettings currentSettings, bool settingsChanged, bool enabled)
+	{
 		if (ImGui.CollapsingHeader("Damping & Limits"))
 		{
 			float dampingFactor = currentSettings.DampingFactor;
@@ -376,53 +474,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			}
 		}
 
-		// Quick presets
-		if (ImGui.Button("Gentle Physics"))
-		{
-			currentSettings = new PhysicsSettings
-			{
-				Enabled = true,
-				RepulsionStrength = Force<float>.FromNewtons(2_000_000.0f),
-				LinkSpringStrength = 0.3f,
-				GravityStrength = Force<float>.FromNewtons(20.0f),
-				DampingFactor = 0.95f,
-				MinRepulsionDistance = Length<float>.FromMeters(50.0f),
-				RestLinkLength = Length<float>.FromMeters(250.0f),
-				MaxForce = Force<float>.FromNewtons(300.0f),
-				MaxVelocity = Velocity<float>.FromMetersPerSecond(100.0f),
-				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
-			};
-			settingsChanged = true;
-		}
-
-		ImGui.SameLine();
-		if (ImGui.Button("Strong Physics"))
-		{
-			currentSettings = new PhysicsSettings
-			{
-				Enabled = true,
-				RepulsionStrength = Force<float>.FromNewtons(10_000_000.0f),
-				LinkSpringStrength = 1.0f,
-				GravityStrength = Force<float>.FromNewtons(100.0f),
-				DampingFactor = 0.85f,
-				MinRepulsionDistance = Length<float>.FromMeters(30.0f),
-				RestLinkLength = Length<float>.FromMeters(200.0f),
-				MaxForce = Force<float>.FromNewtons(800.0f),
-				MaxVelocity = Velocity<float>.FromMetersPerSecond(300.0f),
-				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
-			};
-			settingsChanged = true;
-		}
-
-		if (!enabled)
-		{
-			ImGui.EndDisabled();
-		}
-
-		if (settingsChanged)
-		{
-			engine.UpdatePhysicsSettings(currentSettings);
-		}
+		return (currentSettings, settingsChanged);
 	}
 
 	private void RegisterNodeTypes()

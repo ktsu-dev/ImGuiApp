@@ -31,6 +31,17 @@ public class NodeEditorEngine
 	public PhysicsSettings PhysicsSettings { get; private set; } = new();
 
 	/// <summary>
+	/// Computed gravity target (blend of centroid and world origin), published for debug rendering.
+	/// </summary>
+	public Vector2 GravityCenter { get; set; } = Vector2.Zero;
+
+	/// <summary>
+	/// World origin in node-position space. Tracks with uniform node shifts (panning)
+	/// so it stays in the same coordinate space as node positions.
+	/// </summary>
+	public Vector2 WorldOrigin { get; set; } = Vector2.Zero;
+
+	/// <summary>
 	/// Create a new node with the specified number of input and output pins
 	/// </summary>
 	public Node CreateNode(Vector2 position, string name, int inputPinCount, int outputPinCount)
@@ -226,7 +237,29 @@ public class NodeEditorEngine
 			return null;
 		}
 
-		return Vector2.Distance(outputNode.Position, inputNode.Position);
+		Vector2 outputCenter = outputNode.Position + (outputNode.Dimensions * 0.5f);
+		Vector2 inputCenter = inputNode.Position + (inputNode.Dimensions * 0.5f);
+		return Vector2.Distance(outputCenter, inputCenter);
+	}
+
+	/// <summary>
+	/// Set the world origin to the centroid of all current node positions.
+	/// Call after populating nodes so gravity doesn't immediately pull them toward (0,0).
+	/// </summary>
+	public void InitializeWorldOriginToCentroid()
+	{
+		if (nodes.Count == 0)
+		{
+			WorldOrigin = Vector2.Zero;
+			return;
+		}
+
+		Vector2 centroid = Vector2.Zero;
+		for (int i = 0; i < nodes.Count; i++)
+		{
+			centroid += nodes[i].Position + (nodes[i].Dimensions * 0.5f);
+		}
+		WorldOrigin = centroid / nodes.Count;
 	}
 
 	/// <summary>
@@ -239,6 +272,7 @@ public class NodeEditorEngine
 		nextNodeId = 1;
 		nextLinkId = 1;
 		nextPinId = 1;
+		WorldOrigin = Vector2.Zero;
 	}
 
 	/// <summary>
@@ -416,16 +450,13 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Calculate gravity forces toward the centroid of all nodes (cohesion force)
+	/// Calculate gravity forces toward a blend of the node centroid and the world origin.
+	/// The centroid is recomputed each step from current node positions (same coordinate space),
+	/// then blended toward the world origin to anchor the cluster near (0,0).
 	/// </summary>
 	private void CalculateGravityForces()
 	{
-		if (nodes.Count < 2)
-		{
-			return;
-		}
-
-		// Calculate centroid of all node centers
+		// Compute centroid from current node centers
 		Vector2 centroid = Vector2.Zero;
 		for (int i = 0; i < nodes.Count; i++)
 		{
@@ -433,17 +464,23 @@ public class NodeEditorEngine
 		}
 		centroid /= nodes.Count;
 
+		// Blend centroid toward world origin: 0 = pure centroid, 1 = pure origin
+		Vector2 gravityTarget = Vector2.Lerp(centroid, WorldOrigin, PhysicsSettings.OriginAnchorWeight);
+
+		// Publish for debug rendering
+		GravityCenter = gravityTarget;
+
 		for (int i = 0; i < nodes.Count; i++)
 		{
 			Node node = nodes[i];
-			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
 
-			Vector2 directionToCentroid = centroid - nodeCenter;
-			float distance = directionToCentroid.Length();
+			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
+			Vector2 directionToCenter = gravityTarget - nodeCenter;
+			float distance = directionToCenter.Length();
 
 			if (distance > 0.1f)
 			{
-				Vector2 normalizedDirection = directionToCentroid / distance;
+				Vector2 normalizedDirection = directionToCenter / distance;
 
 				float gravityForceMagnitude = PhysicsSettings.GravityStrength.In(Units.Newton);
 				Vector2 gravityForce = normalizedDirection * gravityForceMagnitude;
