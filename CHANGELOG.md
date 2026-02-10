@@ -1,3 +1,31 @@
+## v2.3.0 (minor)
+
+Changes since v2.2.0:
+
+- Add compatibility suppressions for DynamicallyAccessedMemberTypes and ExperimentalAttribute in ImGui.Popups, ImGui.Styler, and ImGui.Widgets for .NET 10.0 ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add NodeGraph test suite with 106 tests covering attributes, pins, type system, and validation ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Guard BeginFrame against calling native extensions without ImGui context ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add CLAUDE.md for project guidance and architecture overview ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add unit tests for ImGuiExtensionManager ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add visibility control for tabs in TabPanel ([@matt-edmondson](https://github.com/matt-edmondson))
+- Dont show the close button on tabs inside a non-closable tab bar ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add Hexa.NET.ImGuizmo, ImNodes, and ImPlot package references ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor null checks to use Ensure.NotNull for improved readability and consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add CleanImNodesDemo with physics simulation and attribute-based node editor ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add ImGuiNodeEditor with physics simulation and attribute-based node factory ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refine glyph area calculations and atlas fitting checks for improved memory management ([@matt-edmondson](https://github.com/matt-edmondson))
+- migrate to dotnet 10 ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor null argument checks to use Ensure.NotNull for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Refactor demo app with modular tab-based architecture and extension demos ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance CalculateOptimalPixelSize to consider global accessibility scale for improved rendering ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Integrate ImGuiExtensionManager into ImGuiController lifecycle ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add compatibility suppressions for DefaultInterpolatedStringHandler in multiple modules ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add ImGuiExtensionManager for optional ImGuizmo, ImNodes, and ImPlot support ([@matt-edmondson](https://github.com/matt-edmondson))
+- Improve search box hint display logic based on available width ([@matt-edmondson](https://github.com/matt-edmondson))
+- Exclude test projects from packaging and publishing processes in Invoke-DotNetPack and Invoke-DotNetPublish functions ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance project name matching to handle variations in repository naming conventions ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add NodeGraph library with attribute-based node definitions ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v2.2.12-pre.1 (prerelease)
 
 Changes since v2.2.11:
