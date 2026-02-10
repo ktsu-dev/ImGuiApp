@@ -272,7 +272,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		if (ImGui.CollapsingHeader("Repulsion Forces"))
 		{
 			float repulsionStrength = currentSettings.RepulsionStrength.In(Units.Newton);
-			if (ImGui.SliderFloat("Repulsion Strength (N)", ref repulsionStrength, 100.0f, 5000.0f))
+			if (ImGui.SliderFloat("Repulsion Strength (N)", ref repulsionStrength, 100_000.0f, 50_000_000.0f))
 			{
 				currentSettings = currentSettings with { RepulsionStrength = Force<float>.FromNewtons(repulsionStrength) };
 				settingsChanged = true;
@@ -382,7 +382,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			currentSettings = new PhysicsSettings
 			{
 				Enabled = true,
-				RepulsionStrength = Force<float>.FromNewtons(500.0f),
+				RepulsionStrength = Force<float>.FromNewtons(2_000_000.0f),
 				LinkSpringStrength = 0.3f,
 				GravityStrength = Force<float>.FromNewtons(20.0f),
 				DampingFactor = 0.95f,
@@ -401,7 +401,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			currentSettings = new PhysicsSettings
 			{
 				Enabled = true,
-				RepulsionStrength = Force<float>.FromNewtons(2000.0f),
+				RepulsionStrength = Force<float>.FromNewtons(10_000_000.0f),
 				LinkSpringStrength = 1.0f,
 				GravityStrength = Force<float>.FromNewtons(100.0f),
 				DampingFactor = 0.85f,
