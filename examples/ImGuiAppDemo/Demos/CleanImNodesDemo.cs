@@ -43,6 +43,9 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 	public void Update(float deltaTime)
 	{
+		// Inform physics which nodes are being dragged so they're excluded from simulation
+		engine.SetDraggedNodes(renderer.CurrentlyDraggedNodes);
+
 		// Update physics simulation
 		engine.UpdatePhysics(deltaTime);
 
@@ -363,6 +366,13 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 				ImGui.TextColored(qualityColor, targetAchieved ?
 					"✓ Target achieved" : "⚠ Below target");
+
+				// Stability detection
+				ImGui.Text($"System Energy: {engine.TotalSystemEnergy:F2}");
+				if (engine.IsStable)
+				{
+					ImGui.TextColored(new Vector4(0.0f, 1.0f, 0.0f, 1.0f), "Layout stable");
+				}
 			}
 		}
 

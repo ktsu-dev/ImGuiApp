@@ -19,6 +19,12 @@ public class NodeEditorRenderer
 {
 	private readonly Dictionary<int, Vector2> lastKnownNodePositions = [];
 	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
+	private readonly HashSet<int> currentlyDraggedNodes = [];
+
+	/// <summary>
+	/// Set of node IDs currently being dragged by the user
+	/// </summary>
+	public IReadOnlySet<int> CurrentlyDraggedNodes => currentlyDraggedNodes;
 
 	/// <summary>
 	/// Render the entire node editor
@@ -47,6 +53,24 @@ public class NodeEditorRenderer
 	/// </summary>
 	private void RenderNode(Node node)
 	{
+		// Apply engine position to ImNodes BEFORE rendering the node
+		// This ensures physics-calculated positions are reflected immediately
+		if (lastKnownNodePositions.TryGetValue(node.Id, out Vector2 lastPos))
+		{
+			// Check if engine position differs from what we last set in ImNodes
+			if (Vector2.Distance(lastPos, node.Position) > 0.1f)
+			{
+				ImNodes.SetNodeEditorSpacePos(node.Id, node.Position);
+				lastKnownNodePositions[node.Id] = node.Position;
+			}
+		}
+		else
+		{
+			// First render - set initial position
+			ImNodes.SetNodeEditorSpacePos(node.Id, node.Position);
+			lastKnownNodePositions[node.Id] = node.Position;
+		}
+
 		ImNodes.BeginNode(node.Id);
 
 		// Node title
@@ -93,13 +117,6 @@ public class NodeEditorRenderer
 		}
 
 		ImNodes.EndNode();
-
-		// Set position if this is the first time we're seeing this node
-		if (!lastKnownNodePositions.ContainsKey(node.Id))
-		{
-			ImNodes.SetNodeEditorSpacePos(node.Id, node.Position);
-			lastKnownNodePositions[node.Id] = node.Position;
-		}
 	}
 
 	/// <summary>
@@ -108,6 +125,7 @@ public class NodeEditorRenderer
 	public Dictionary<int, Vector2> GetNodePositionUpdates(NodeEditorEngine engine)
 	{
 		Dictionary<int, Vector2> updates = [];
+		currentlyDraggedNodes.Clear();
 
 		foreach (Node node in engine.Nodes)
 		{
@@ -118,12 +136,14 @@ public class NodeEditorRenderer
 			}
 
 			Vector2 currentImNodesPos = ImNodes.GetNodeEditorSpacePos(node.Id);
-			Vector2 lastPos = lastKnownNodePositions[node.Id];
 
-			if (Vector2.Distance(lastPos, currentImNodesPos) > 0.1f)
+			// Only report a change if the ImNodes position differs from the ENGINE position
+			// This means the user dragged the node (ImNodes changed independently of us)
+			if (Vector2.Distance(node.Position, currentImNodesPos) > 0.1f)
 			{
 				updates[node.Id] = currentImNodesPos;
 				lastKnownNodePositions[node.Id] = currentImNodesPos;
+				currentlyDraggedNodes.Add(node.Id);
 			}
 		}
 
@@ -293,18 +313,18 @@ public class NodeEditorRenderer
 		Vector2 panning = ImNodes.EditorContextGetPanning();
 		Vector2 editorCenter = editorAreaPos + (editorAreaSize * 0.5f);
 
+		if (engine.Nodes.Count == 0)
+		{
+			return;
+		}
+
+		// Use reference node method for coordinate transformation
+		Node referenceNode = engine.Nodes[0];
+		Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
+		Vector2 referenceGridPos = referenceNode.Position;
+
 		foreach (Node node in engine.Nodes)
 		{
-			if (engine.Nodes.Count == 0)
-			{
-				continue;
-			}
-
-			// Use reference node method for coordinate transformation
-			Node referenceNode = engine.Nodes[0];
-			Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
-			Vector2 referenceGridPos = referenceNode.Position;
-
 			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
 			Vector2 nodeCenterScreen = referenceScreenPos + (nodeCenter - (referenceGridPos + (referenceNode.Dimensions * 0.5f)));
 
@@ -333,7 +353,6 @@ public class NodeEditorRenderer
 		}
 
 		// Render physics center (origin)
-		Vector2 physicsCenter = Vector2.Zero;
 		Vector2 physicsCenterScreen = editorCenter + panning; // Origin is at panning offset
 		uint physicsCenterColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.0f, 1.0f, 0.9f)); // Magenta
 		drawList.AddCircleFilled(physicsCenterScreen, 8.0f, physicsCenterColor);

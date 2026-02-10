@@ -19,7 +19,8 @@ public record Node(
 	List<Pin> OutputPins,
 	Vector2 Dimensions = default,
 	Vector2 Velocity = default,
-	Vector2 Force = default
+	Vector2 Force = default,
+	bool IsPinned = false
 );
 
 /// <summary>
@@ -73,4 +74,5 @@ public record PhysicsSettings
 	public Force<float> MaxForce { get; init; } = Force<float>.FromNewtons(500.0f);
 	public Velocity<float> MaxVelocity { get; init; } = Velocity<float>.FromMetersPerSecond(200.0f);
 	public Frequency<float> TargetPhysicsHz { get; init; } = Frequency<float>.FromHertz(120.0f);
+	public float StabilityThreshold { get; init; } = 1.0f; // Total energy below this = stable
 }

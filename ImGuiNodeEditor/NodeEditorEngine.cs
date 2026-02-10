@@ -17,6 +17,8 @@ public class NodeEditorEngine
 {
 	private readonly List<Node> nodes = [];
 	private readonly List<Link> links = [];
+	private readonly Dictionary<int, int> pinToNodeIndex = [];
+	private readonly HashSet<int> draggedNodeIds = [];
 	private int nextNodeId = 1;
 	private int nextLinkId = 1;
 	private int nextPinId = 1;
@@ -240,6 +242,32 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
+	/// Toggle whether a node is pinned (frozen during physics simulation)
+	/// </summary>
+	public void ToggleNodePinned(int nodeId)
+	{
+		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
+		if (node != null)
+		{
+			int index = nodes.IndexOf(node);
+			nodes[index] = node with { IsPinned = !node.IsPinned };
+		}
+	}
+
+	/// <summary>
+	/// Set which nodes are currently being dragged by the user.
+	/// Dragged nodes are temporarily excluded from physics simulation.
+	/// </summary>
+	public void SetDraggedNodes(IReadOnlySet<int> nodeIds)
+	{
+		draggedNodeIds.Clear();
+		foreach (int id in nodeIds)
+		{
+			draggedNodeIds.Add(id);
+		}
+	}
+
+	/// <summary>
 	/// Update physics settings
 	/// </summary>
 	public void UpdatePhysicsSettings(PhysicsSettings newSettings) => PhysicsSettings = newSettings;
@@ -248,6 +276,16 @@ public class NodeEditorEngine
 	/// Current physics simulation info (for debugging)
 	/// </summary>
 	public (int SubstepCount, float SubstepDeltaTime) LastPhysicsStepInfo { get; private set; }
+
+	/// <summary>
+	/// Total kinetic energy in the system (sum of velocity squared for all nodes)
+	/// </summary>
+	public float TotalSystemEnergy { get; private set; }
+
+	/// <summary>
+	/// Whether the physics simulation has settled (total energy below threshold)
+	/// </summary>
+	public bool IsStable { get; private set; }
 
 	/// <summary>
 	/// Update physics simulation for one frame with substeps for stability
@@ -259,6 +297,9 @@ public class NodeEditorEngine
 			LastPhysicsStepInfo = (0, 0.0f);
 			return;
 		}
+
+		// Build pin-to-node index for O(1) lookups during force calculations
+		RebuildPinToNodeIndex();
 
 		// Calculate substeps to achieve target physics frequency using semantic types
 		Time<float> frameDeltaTime = Time<float>.FromSeconds(deltaTime);
@@ -287,6 +328,14 @@ public class NodeEditorEngine
 			// Update velocities and positions
 			UpdateNodePositions(substepDeltaTime);
 		}
+
+		// Calculate total system energy for stability detection
+		TotalSystemEnergy = 0.0f;
+		for (int i = 0; i < nodes.Count; i++)
+		{
+			TotalSystemEnergy += nodes[i].Velocity.LengthSquared();
+		}
+		IsStable = TotalSystemEnergy < PhysicsSettings.StabilityThreshold;
 	}
 
 	/// <summary>
@@ -326,19 +375,20 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Calculate spring-damper forces for links
+	/// Calculate spring forces for links
 	/// </summary>
 	private void CalculateLinkForces()
 	{
 		foreach (Link link in links)
 		{
-			Node? outputNode = FindNodeByPin(link.OutputPinId);
-			Node? inputNode = FindNodeByPin(link.InputPinId);
-
-			if (outputNode == null || inputNode == null)
+			if (!pinToNodeIndex.TryGetValue(link.OutputPinId, out int outputIndex) ||
+				!pinToNodeIndex.TryGetValue(link.InputPinId, out int inputIndex))
 			{
 				continue;
 			}
+
+			Node outputNode = nodes[outputIndex];
+			Node inputNode = nodes[inputIndex];
 
 			Vector2 outputCenter = outputNode.Position + (outputNode.Dimensions * 0.5f);
 			Vector2 inputCenter = inputNode.Position + (inputNode.Dimensions * 0.5f);
@@ -357,23 +407,8 @@ public class NodeEditorEngine
 				float springForceMagnitude = PhysicsSettings.LinkSpringStrength * extension.In(Units.Meter);
 				Vector2 springForce = normalizedDirection * springForceMagnitude;
 
-				// Damping force (velocity-based) - dimensionless damping coefficient
-				Vector2 relativeVelocity = inputNode.Velocity - outputNode.Velocity;
-				Vector2 dampingForce = relativeVelocity * PhysicsSettings.DampingFactor * 0.1f;
-
-				Vector2 totalForce = springForce + dampingForce;
-
-				int outputIndex = nodes.IndexOf(outputNode);
-				int inputIndex = nodes.IndexOf(inputNode);
-
-				if (outputIndex >= 0)
-				{
-					nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + totalForce };
-				}
-				if (inputIndex >= 0)
-				{
-					nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force - totalForce };
-				}
+				nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + springForce };
+				nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force - springForce };
 			}
 		}
 	}
@@ -417,6 +452,13 @@ public class NodeEditorEngine
 		{
 			Node node = nodes[i];
 
+			// Skip pinned or dragged nodes - they still exert forces on others but don't move
+			if (node.IsPinned || draggedNodeIds.Contains(node.Id))
+			{
+				nodes[i] = node with { Velocity = Vector2.Zero, Force = Vector2.Zero };
+				continue;
+			}
+
 			// Clamp force using semantic type
 			Vector2 clampedForce = node.Force;
 			Force<float> forceMagnitude = Force<float>.FromNewtons(clampedForce.Length());
@@ -452,6 +494,25 @@ public class NodeEditorEngine
 				Velocity = newVelocity,
 				Force = clampedForce
 			};
+		}
+	}
+
+	/// <summary>
+	/// Rebuild the pin-to-node-index lookup for O(1) physics force lookups
+	/// </summary>
+	private void RebuildPinToNodeIndex()
+	{
+		pinToNodeIndex.Clear();
+		for (int i = 0; i < nodes.Count; i++)
+		{
+			foreach (Pin pin in nodes[i].InputPins)
+			{
+				pinToNodeIndex[pin.Id] = i;
+			}
+			foreach (Pin pin in nodes[i].OutputPins)
+			{
+				pinToNodeIndex[pin.Id] = i;
+			}
 		}
 	}
 
