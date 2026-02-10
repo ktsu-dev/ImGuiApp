@@ -49,8 +49,9 @@ public static partial class ImGuiWidgets
 	{
 		public static void Draw(float progress, float radius, float thickness, int segments, ImGuiRadialProgressBarOptions options)
 		{
-			// Clamp progress to valid range
+			// Validate input parameters
 			progress = Math.Clamp(progress, 0.0f, 1.0f);
+			segments = Math.Max(4, segments); // Ensure minimum segments for smooth rendering
 
 			// Calculate dimensions
 			float lineHeight = ImGui.GetTextLineHeight();
@@ -99,7 +100,9 @@ public static partial class ImGuiWidgets
 			// Draw percentage text in center
 			if (!options.HasFlag(ImGuiRadialProgressBarOptions.NoText))
 			{
-				string percentageText = $"{progress * 100.0f:F0}%";
+				// Note: String allocation per frame is acceptable in immediate mode GUI
+				int percentage = (int)(progress * 100.0f);
+				string percentageText = $"{percentage}%";
 				Vector2 textSize = ImGui.CalcTextSize(percentageText);
 				Vector2 textPos = new(center.X - (textSize.X * 0.5f), center.Y - (textSize.Y * 0.5f));
 				drawList.AddText(textPos, ImGui.GetColorU32(ImGuiCol.Text), percentageText);
