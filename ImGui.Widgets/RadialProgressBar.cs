@@ -24,9 +24,13 @@ public enum ImGuiRadialProgressBarOptions
 	/// </summary>
 	NoText = 1 << 0,
 	/// <summary>
-	/// Uses a clockwise direction instead of counter-clockwise.
+	/// Uses a counter-clockwise direction instead of clockwise.
 	/// </summary>
-	Clockwise = 1 << 1,
+	CounterClockwise = 1 << 1,
+	/// <summary>
+	/// Starts the progress bar at the bottom instead of the top.
+	/// </summary>
+	StartAtBottom = 1 << 2,
 }
 
 /// <summary>
@@ -80,20 +84,25 @@ public static partial class ImGuiWidgets
 			if (progress > 0.0f)
 			{
 				uint fgColor = ImGui.GetColorU32(progressColor);
-				float startAngle = -MathF.PI * 0.5f; // Start at top (12 o'clock)
+				
+				// Determine start position
+				float startAngle = options.HasFlag(ImGuiRadialProgressBarOptions.StartAtBottom) 
+					? MathF.PI * 0.5f  // Start at bottom (6 o'clock)
+					: -MathF.PI * 0.5f; // Start at top (12 o'clock)
+				
 				float sweepAngle = 2.0f * MathF.PI * progress;
 
-				if (options.HasFlag(ImGuiRadialProgressBarOptions.Clockwise))
+				if (options.HasFlag(ImGuiRadialProgressBarOptions.CounterClockwise))
 				{
-					// Clockwise: start at top, sweep clockwise
-					float endAngle = startAngle + sweepAngle;
-					DrawArc(drawList, center, calculatedRadius, startAngle, endAngle, calculatedThickness, fgColor, segments);
+					// Counter-clockwise: sweep counter-clockwise from start position
+					float endAngle = startAngle - sweepAngle;
+					DrawArc(drawList, center, calculatedRadius, endAngle, startAngle, calculatedThickness, fgColor, segments);
 				}
 				else
 				{
-					// Counter-clockwise: start at top, sweep counter-clockwise
-					float endAngle = startAngle - sweepAngle;
-					DrawArc(drawList, center, calculatedRadius, endAngle, startAngle, calculatedThickness, fgColor, segments);
+					// Clockwise (default): sweep clockwise from start position
+					float endAngle = startAngle + sweepAngle;
+					DrawArc(drawList, center, calculatedRadius, startAngle, endAngle, calculatedThickness, fgColor, segments);
 				}
 			}
 

@@ -57,7 +57,7 @@ The RadialProgressBar widget displays circular progress indicators perfect for l
 ```csharp
 float progress = 0.65f; // Progress from 0.0 to 1.0
 
-// Basic usage - displays with default size and settings
+// Basic usage - displays with default size and settings (clockwise from top)
 ImGuiWidgets.RadialProgressBar(progress);
 
 // Custom size (radius in pixels)
@@ -69,8 +69,15 @@ ImGuiWidgets.RadialProgressBar(progress, radius: 50, thickness: 10);
 // Without percentage text in center
 ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.NoText);
 
-// Clockwise direction (default is counter-clockwise)
-ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.Clockwise);
+// Counter-clockwise direction (default is clockwise)
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.CounterClockwise);
+
+// Start at bottom instead of top
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOptions.StartAtBottom);
+
+// Combine options: counter-clockwise starting at bottom
+ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, 
+    ImGuiRadialProgressBarOptions.CounterClockwise | ImGuiRadialProgressBarOptions.StartAtBottom);
 
 // Animated progress example
 float animatedProgress = 0.0f;

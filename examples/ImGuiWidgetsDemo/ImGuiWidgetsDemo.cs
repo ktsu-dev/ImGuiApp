@@ -546,18 +546,22 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 			ImGui.TextUnformatted("Options:");
 
-			ImGui.Columns(3, "ProgressBarOptionsColumns");
+			ImGui.Columns(4, "ProgressBarOptionsColumns");
 
 			ImGuiWidgets.RadialProgressBar(progressValue);
-			ImGui.TextUnformatted("Default");
+			ImGui.TextUnformatted("Default (CW, Top)");
 			ImGui.NextColumn();
 
 			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.NoText);
 			ImGui.TextUnformatted("No Text");
 			ImGui.NextColumn();
 
-			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.Clockwise);
-			ImGui.TextUnformatted("Clockwise");
+			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.CounterClockwise);
+			ImGui.TextUnformatted("Counter-Clockwise");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(progressValue, 0, 0, 32, ImGuiRadialProgressBarOptions.StartAtBottom);
+			ImGui.TextUnformatted("Start at Bottom");
 
 			ImGui.Columns(1);
 
