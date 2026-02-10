@@ -30,6 +30,7 @@ internal static class ImGuiAppDemo
 		demoTabs.Add(new ImGuizmoDemo());
 		demoTabs.Add(new ImNodesDemo());
 		demoTabs.Add(new ImPlotDemo());
+		demoTabs.Add(new CleanImNodesDemo());
 		demoTabs.Add(new UtilityDemo());
 	}
 
