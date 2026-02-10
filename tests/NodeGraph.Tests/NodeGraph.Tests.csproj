@@ -1,0 +1,19 @@
+<Project>
+  <Sdk Name="MSTest.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <RootNamespace>ktsu.NodeGraph.Tests</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+    <EnableSourceLink>false</EnableSourceLink>
+    <!-- Suppress warnings in test helper classes used for attribute testing -->
+    <NoWarn>CA1051;CA1002;CA1062;CA1515;CA1707;CA1815;CA1819;CA1822;CA2227;CS8604;IDE0060;MSTEST0039</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NodeGraph\NodeGraph.csproj" />
+  </ItemGroup>
+</Project>
