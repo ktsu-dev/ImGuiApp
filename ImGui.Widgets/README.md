@@ -74,7 +74,7 @@ ImGuiWidgets.RadialProgressBar(progress, 50, 0, 32, ImGuiRadialProgressBarOption
 
 // Animated progress example
 float animatedProgress = 0.0f;
-void OnRender(float deltaTime)
+void UpdateProgress(float deltaTime)
 {
     animatedProgress += deltaTime * 0.2f;
     if (animatedProgress > 1.0f) animatedProgress = 0.0f;
