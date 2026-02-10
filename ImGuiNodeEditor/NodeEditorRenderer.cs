@@ -197,10 +197,10 @@ public class NodeEditorRenderer
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 
 		// Render canvas origin
-		RenderOrigin(drawList, editorAreaPos, editorAreaSize);
+		RenderOrigin(drawList, editorAreaPos, editorAreaSize, engine);
 
 		// Render node debug info
-		RenderNodeDebugInfo(drawList, engine, editorAreaPos, editorAreaSize);
+		RenderNodeDebugInfo(drawList, engine);
 
 		// Render link debug info
 		RenderLinkDebugInfo(drawList, engine);
@@ -212,11 +212,17 @@ public class NodeEditorRenderer
 		}
 	}
 
-	private static void RenderOrigin(ImDrawListPtr drawList, Vector2 editorAreaPos, Vector2 editorAreaSize)
+	private static void RenderOrigin(ImDrawListPtr drawList, Vector2 editorAreaPos, Vector2 editorAreaSize, NodeEditorEngine engine)
 	{
-		Vector2 panning = ImNodes.EditorContextGetPanning();
-		Vector2 editorCenter = editorAreaPos + (editorAreaSize * 0.5f);
-		Vector2 originScreen = editorCenter + panning;
+		if (engine.Nodes.Count == 0)
+		{
+			return;
+		}
+
+		// Use reference node method to find where editor space (0,0) maps to screen space
+		Node referenceNode = engine.Nodes[0];
+		Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
+		Vector2 originScreen = referenceScreenPos - referenceNode.Position;
 
 		uint originColor = ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.8f, 1.0f, 1.0f));
 
@@ -227,7 +233,7 @@ public class NodeEditorRenderer
 		drawList.AddText(originScreen + new Vector2(25, -10), originColor, "ORIGIN (0,0)");
 	}
 
-	private static void RenderNodeDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine, Vector2 editorAreaPos, Vector2 editorAreaSize)
+	private static void RenderNodeDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine)
 	{
 		if (engine.Nodes.Count == 0)
 		{
@@ -240,9 +246,6 @@ public class NodeEditorRenderer
 
 		Vector2 weightedCenterSum = Vector2.Zero;
 		float totalArea = 0.0f;
-
-		Vector2 panning = ImNodes.EditorContextGetPanning();
-		Vector2 editorCenter = editorAreaPos + (editorAreaSize * 0.5f);
 
 		foreach (Node node in engine.Nodes)
 		{
@@ -310,9 +313,6 @@ public class NodeEditorRenderer
 
 	private static void RenderPhysicsDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine, Vector2 editorAreaPos, Vector2 editorAreaSize)
 	{
-		Vector2 panning = ImNodes.EditorContextGetPanning();
-		Vector2 editorCenter = editorAreaPos + (editorAreaSize * 0.5f);
-
 		if (engine.Nodes.Count == 0)
 		{
 			return;
@@ -322,11 +322,20 @@ public class NodeEditorRenderer
 		Node referenceNode = engine.Nodes[0];
 		Vector2 referenceScreenPos = ImNodes.GetNodeScreenSpacePos(referenceNode.Id);
 		Vector2 referenceGridPos = referenceNode.Position;
+		Vector2 referenceCenter = referenceGridPos + (referenceNode.Dimensions * 0.5f);
+
+		// Calculate centroid in editor space (matches gravity target)
+		Vector2 centroid = Vector2.Zero;
+		foreach (Node node in engine.Nodes)
+		{
+			centroid += node.Position + (node.Dimensions * 0.5f);
+		}
+		centroid /= engine.Nodes.Count;
 
 		foreach (Node node in engine.Nodes)
 		{
 			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
-			Vector2 nodeCenterScreen = referenceScreenPos + (nodeCenter - (referenceGridPos + (referenceNode.Dimensions * 0.5f)));
+			Vector2 nodeCenterScreen = referenceScreenPos + (nodeCenter - referenceCenter);
 
 			// Render force vector
 			if (node.Force.Length() > 1.0f)
@@ -352,12 +361,12 @@ public class NodeEditorRenderer
 			drawList.AddCircle(nodeCenterScreen, repulsionRadius, repulsionZoneColor, 32, 1.0f);
 		}
 
-		// Render physics center (origin)
-		Vector2 physicsCenterScreen = editorCenter + panning; // Origin is at panning offset
+		// Render gravity center (centroid of all nodes)
+		Vector2 centroidScreen = referenceScreenPos + (centroid - referenceCenter);
 		uint physicsCenterColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.0f, 1.0f, 0.9f)); // Magenta
-		drawList.AddCircleFilled(physicsCenterScreen, 8.0f, physicsCenterColor);
-		drawList.AddCircle(physicsCenterScreen, 15.0f, physicsCenterColor, 16, 2.0f);
-		drawList.AddText(physicsCenterScreen + new Vector2(20, -10), physicsCenterColor, "PHYSICS CENTER");
+		drawList.AddCircleFilled(centroidScreen, 8.0f, physicsCenterColor);
+		drawList.AddCircle(centroidScreen, 15.0f, physicsCenterColor, 16, 2.0f);
+		drawList.AddText(centroidScreen + new Vector2(20, -10), physicsCenterColor, "GRAVITY CENTER");
 	}
 
 	/// <summary>

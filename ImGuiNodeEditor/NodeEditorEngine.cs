@@ -416,26 +416,37 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Calculate gravity forces toward origin
+	/// Calculate gravity forces toward the centroid of all nodes (cohesion force)
 	/// </summary>
 	private void CalculateGravityForces()
 	{
-		Vector2 origin = Vector2.Zero;
+		if (nodes.Count < 2)
+		{
+			return;
+		}
+
+		// Calculate centroid of all node centers
+		Vector2 centroid = Vector2.Zero;
+		for (int i = 0; i < nodes.Count; i++)
+		{
+			centroid += nodes[i].Position + (nodes[i].Dimensions * 0.5f);
+		}
+		centroid /= nodes.Count;
 
 		for (int i = 0; i < nodes.Count; i++)
 		{
 			Node node = nodes[i];
 			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
 
-			Vector2 directionToOrigin = origin - nodeCenter;
-			Length<float> distance = Length<float>.FromMeters(directionToOrigin.Length());
+			Vector2 directionToCentroid = centroid - nodeCenter;
+			float distance = directionToCentroid.Length();
 
-			if (distance.In(Units.Meter) > 0.1f)
+			if (distance > 0.1f)
 			{
-				Vector2 normalizedDirection = directionToOrigin / distance.In(Units.Meter);
+				Vector2 normalizedDirection = directionToCentroid / distance;
 
-				// Apply constant gravity force toward origin
-				float gravityForceMagnitude = PhysicsSettings.GravityStrength.In(Units.Newton);
+				// Gravity proportional to distance from centroid - farther nodes pulled harder
+				float gravityForceMagnitude = PhysicsSettings.GravityStrength.In(Units.Newton) * (distance / 100.0f);
 				Vector2 gravityForce = normalizedDirection * gravityForceMagnitude;
 
 				nodes[i] = nodes[i] with { Force = nodes[i].Force + gravityForce };
