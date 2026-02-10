@@ -79,17 +79,20 @@ public static partial class ImGuiWidgets
 			if (progress > 0.0f)
 			{
 				uint fgColor = ImGui.GetColorU32(progressColor);
-				float startAngle = options.HasFlag(ImGuiRadialProgressBarOptions.Clockwise) ? -MathF.PI * 0.5f : -MathF.PI * 0.5f;
-				float endAngle = startAngle + (2.0f * MathF.PI * progress * (options.HasFlag(ImGuiRadialProgressBarOptions.Clockwise) ? 1.0f : 1.0f));
+				float startAngle = -MathF.PI * 0.5f; // Start at top (12 o'clock)
+				float sweepAngle = 2.0f * MathF.PI * progress;
 
 				if (options.HasFlag(ImGuiRadialProgressBarOptions.Clockwise))
 				{
+					// Clockwise: start at top, sweep clockwise
+					float endAngle = startAngle + sweepAngle;
 					DrawArc(drawList, center, calculatedRadius, startAngle, endAngle, calculatedThickness, fgColor, segments);
 				}
 				else
 				{
-					// Counter-clockwise: swap start and end, negate
-					DrawArc(drawList, center, calculatedRadius, -endAngle, -startAngle, calculatedThickness, fgColor, segments);
+					// Counter-clockwise: start at top, sweep counter-clockwise
+					float endAngle = startAngle - sweepAngle;
+					DrawArc(drawList, center, calculatedRadius, endAngle, startAngle, calculatedThickness, fgColor, segments);
 				}
 			}
 

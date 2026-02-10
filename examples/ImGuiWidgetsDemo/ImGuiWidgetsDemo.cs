@@ -496,10 +496,7 @@ internal static class ImGuiWidgetsDemo
 
 			// Animation controls
 			ImGui.TextUnformatted("Animation:");
-			if (ImGui.Checkbox("Animate", ref progressAnimating))
-			{
-				// Toggle animation
-			}
+			ImGui.Checkbox("Animate", ref progressAnimating);
 			ImGui.SameLine();
 			ImGui.SetNextItemWidth(150);
 			ImGui.SliderFloat("Speed", ref progressAnimationSpeed, 0.1f, 2.0f, "%.1fx");
