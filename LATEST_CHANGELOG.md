@@ -1,7 +1,6 @@
-## v2.3.2 (patch)
+## v2.3.3 (patch)
 
-Changes since v2.3.1:
+Changes since v2.3.2:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
 
