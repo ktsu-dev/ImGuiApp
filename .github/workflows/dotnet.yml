@@ -35,7 +35,6 @@ jobs:
       version: ${{ steps.pipeline.outputs.version }}
       release_hash: ${{ steps.pipeline.outputs.release_hash }}
       should_release: ${{ steps.pipeline.outputs.should_release }}
-      skipped_release: ${{ steps.pipeline.outputs.skipped_release }}
 
     steps:
       - name: Set up JDK 17
@@ -103,64 +102,48 @@ jobs:
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx"
 
-      - name: Run PSBuild Pipeline
+      - name: Clone KtsuBuild (Latest Tag)
+        run: |
+          LATEST_TAG=$(git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' | sed 's/refs\/tags\///' | sort -V | tail -1 || true)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No version tags found, falling back to HEAD"
+            git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          else
+            echo "Cloning KtsuBuild at tag: $LATEST_TAG"
+            git clone --depth 1 --branch "$LATEST_TAG" https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          fi
+        shell: bash
+
+      - name: Run KtsuBuild CI Pipeline
         id: pipeline
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          NUGET_API_KEY: ${{ secrets.NUGET_KEY }}
+          KTSU_PACKAGE_KEY: ${{ secrets.KTSU_PACKAGE_KEY }}
+          EXPECTED_OWNER: ktsu-dev
         run: |
-          # Import the PSBuild module
-          Import-Module ${{ github.workspace }}/scripts/PSBuild.psm1
+          # Run the CI pipeline
+          dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- ci --workspace "${{ github.workspace }}" --verbose
 
-          # Get build configuration
-          $buildConfig = Get-BuildConfiguration `
-            -ServerUrl "${{ github.server_url }}" `
-            -GitRef "${{ github.ref }}" `
-            -GitSha "${{ github.sha }}" `
-            -GitHubOwner "${{ github.repository_owner }}" `
-            -GitHubRepo "${{ github.repository }}" `
-            -GithubToken "${{ github.token }}" `
-            -NuGetApiKey "${{ secrets.NUGET_KEY }}" `
-            -KtsuPackageKey "${{ secrets.KTSU_PACKAGE_KEY }}" `
-            -WorkspacePath "${{ github.workspace }}" `
-            -ExpectedOwner "ktsu-dev" `
-            -ChangelogFile "CHANGELOG.md" `
-            -AssetPatterns @("staging/*.nupkg", "staging/*.zip")
+          # Set outputs for downstream jobs
+          $version = (Get-Content "${{ github.workspace }}/VERSION.md" -Raw).Trim()
+          "version=$version" >> $env:GITHUB_OUTPUT
 
-          if (-not $buildConfig.Success) {
-              throw $buildConfig.Error
-          }
+          $releaseHash = git rev-parse HEAD
+          "release_hash=$releaseHash" >> $env:GITHUB_OUTPUT
 
-          # Run the complete CI/CD pipeline
-          $result = Invoke-CIPipeline `
-            -BuildConfiguration $buildConfig.Data
-
-          if (-not $result.Success) {
-              Write-Information "CI/CD pipeline failed: $($result.Error)" -Tags "Invoke-CIPipeline"
-              Write-Information "Stack Trace: $($result.StackTrace)" -Tags "Invoke-CIPipeline"
-              Write-Information "Build Configuration: $($buildConfig.Data | ConvertTo-Json -Depth 10)" -Tags "Invoke-CIPipeline"
-              throw $result.Error
-          }
-
-          # Set outputs for GitHub Actions from build configuration and pipeline result
-          # Use pipeline result values when available (for skipped releases), otherwise use buildConfig
-          if ($result.Data.SkippedRelease) {
-            "version=$($result.Data.Version)" >> $env:GITHUB_OUTPUT
-            "release_hash=$($result.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
-            "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
-            "skipped_release=true" >> $env:GITHUB_OUTPUT
-          } else {
-            "version=$($buildConfig.Data.Version)" >> $env:GITHUB_OUTPUT
-            "release_hash=$($buildConfig.Data.ReleaseHash)" >> $env:GITHUB_OUTPUT
-            "should_release=$($buildConfig.Data.ShouldRelease)" >> $env:GITHUB_OUTPUT
-            # Check for skipped release from buildConfig as fallback
-            if ($buildConfig.Data.SkippedRelease) {
-              "skipped_release=true" >> $env:GITHUB_OUTPUT
-            }
-          }
+          # Compute should_release (same logic as BuildConfigurationProvider)
+          $isMain = "${{ github.ref }}" -eq "refs/heads/main"
+          $isTagged = [bool](git tag --points-at "${{ github.sha }}" 2>$null)
+          $isFork = "${{ github.event.repository.fork }}" -eq "true"
+          $isExpectedOwner = "${{ github.repository_owner }}" -eq "ktsu-dev"
+          $isOfficial = (-not $isFork) -and $isExpectedOwner
+          $shouldRelease = $isMain -and (-not $isTagged) -and $isOfficial
+          "should_release=$($shouldRelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
 
       - name: End SonarQube
-        if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.skipped_release != 'true'
+        if: env.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
@@ -169,7 +152,7 @@ jobs:
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
-        if: always() && steps.pipeline.outputs.skipped_release != 'true'
+        if: always()
         with:
           name: coverage-report
           path: |
@@ -179,7 +162,7 @@ jobs:
   winget:
     name: Update Winget Manifests
     needs: build
-    if: needs.build.outputs.should_release == 'true' && needs.build.outputs.skipped_release != 'true'
+    if: needs.build.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -197,14 +180,24 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
+      - name: Clone KtsuBuild (Latest Tag)
+        run: |
+          LATEST_TAG=$(git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' | sed 's/refs\/tags\///' | sort -V | tail -1 || true)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No version tags found, falling back to HEAD"
+            git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          else
+            echo "Cloning KtsuBuild at tag: $LATEST_TAG"
+            git clone --depth 1 --branch "$LATEST_TAG" https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          fi
+        shell: bash
+
       - name: Update Winget Manifests
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Use enhanced script with auto-detection capabilities
-          Write-Host "Updating winget manifests for version ${{ needs.build.outputs.version }}"
-          .\scripts\update-winget-manifests.ps1 -Version "${{ needs.build.outputs.version }}"
+          dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
         uses: actions/upload-artifact@v4
@@ -216,7 +209,7 @@ jobs:
   security:
     name: Security Scanning
     needs: build
-    if: needs.build.outputs.should_release == 'true' && needs.build.outputs.skipped_release != 'true'
+    if: needs.build.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
