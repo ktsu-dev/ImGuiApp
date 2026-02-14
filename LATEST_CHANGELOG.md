@@ -1,6 +1,4 @@
-## v2.3.3 (patch)
+## v2.3.3
 
-Changes since v2.3.2:
-
-- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
+No significant changes detected since v2.3.3.
 
