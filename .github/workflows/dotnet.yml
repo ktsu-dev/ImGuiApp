@@ -137,13 +137,13 @@ jobs:
           # Run the CI pipeline
           $versionBump = "${{ github.event.inputs.version-bump }}"
 
-          # Build the command - only add --version-bump if explicitly set (for backward compatibility during bootstrap)
-          $command = "ci --workspace `"${{ github.workspace }}`" --verbose"
+          # Build arguments array - only add --version-bump if explicitly set (for backward compatibility during bootstrap)
+          $args = @("ci", "--workspace", "${{ github.workspace }}", "--verbose")
           if (![string]::IsNullOrEmpty($versionBump) -and $versionBump -ne "auto") {
-            $command += " --version-bump $versionBump"
+            $args += @("--version-bump", $versionBump)
           }
 
-          dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- $command
+          & dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- @args
 
           # Set outputs for downstream jobs
           $version = (Get-Content "${{ github.workspace }}/VERSION.md" -Raw).Trim()
