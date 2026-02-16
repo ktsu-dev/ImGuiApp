@@ -43,7 +43,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 				ImGui.TextWrapped("ImGuizmo provides 3D manipulation gizmos for translate, rotate, and scale operations.");
 
 				// Gizmo controls
-				ImGui.SeparatorText("Gizmo Controls:.");
+				ImGui.SeparatorText("Gizmo Controls:");
 				ImGui.Checkbox("Enable Gizmo", ref gizmoEnabled);
 
 				// Operation selection
