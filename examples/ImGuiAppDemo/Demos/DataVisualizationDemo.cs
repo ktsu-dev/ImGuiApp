@@ -40,46 +40,50 @@ internal sealed class DataVisualizationDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.SeparatorText("Real-time Data Plots:");
-
-			// Line plot
-			if (plotValues.Count > 0)
+			if (ImGui.BeginChild("##content"))
 			{
-				float[] values = [.. plotValues];
-				ImGui.PlotLines("Random Values", ref values[0], values.Length, 0,
-					$"Current: {values[^1]:F2}", 0.0f, 1.0f, new Vector2(ImGui.GetContentRegionAvail().X, 100));
+				ImGui.SeparatorText("Real-time Data Plots:");
 
-				ImGui.PlotHistogram("Distribution", ref values[0], values.Length, 0,
-					"Histogram", 0.0f, 1.0f, new Vector2(ImGui.GetContentRegionAvail().X, 100));
+				// Line plot
+				if (plotValues.Count > 0)
+				{
+					float[] values = [.. plotValues];
+					ImGui.PlotLines("Random Values", ref values[0], values.Length, 0,
+						$"Current: {values[^1]:F2}", 0.0f, 1.0f, new Vector2(ImGui.GetContentRegionAvail().X, 100));
+
+					ImGui.PlotHistogram("Distribution", ref values[0], values.Length, 0,
+						"Histogram", 0.0f, 1.0f, new Vector2(ImGui.GetContentRegionAvail().X, 100));
+				}
+
+				// Performance note
+				ImGui.SeparatorText("Performance Metrics:");
+				ImGui.TextWrapped("Performance monitoring is now available in the Debug menu! Use 'Debug > Show Performance Monitor' to see real-time FPS graphs and throttling state.");
+
+				// Font demonstrations
+				ImGui.SeparatorText("Custom Font Rendering:");
+				using (new FontAppearance(nameof(Resources.CARDCHAR), 16))
+				{
+					ImGui.Text("Small custom font text");
+				}
+
+				using (new FontAppearance(nameof(Resources.CARDCHAR), 24))
+				{
+					ImGui.Text("Medium custom font text");
+				}
+
+				using (new FontAppearance(nameof(Resources.CARDCHAR), 32))
+				{
+					ImGui.Text("Large custom font text");
+				}
+
+				// Text formatting examples
+				ImGui.SeparatorText("Text Formatting:");
+				ImGui.TextColored(new Vector4(1, 0, 0, 1), "Red text");
+				ImGui.TextColored(new Vector4(0, 1, 0, 1), "Green text");
+				ImGui.TextColored(new Vector4(0, 0, 1, 1), "Blue text");
+				ImGui.TextWrapped("This is a long line of text that should wrap to multiple lines when the window is not wide enough to contain it all on a single line.");
 			}
-
-			// Performance note
-			ImGui.SeparatorText("Performance Metrics:");
-			ImGui.TextWrapped("Performance monitoring is now available in the Debug menu! Use 'Debug > Show Performance Monitor' to see real-time FPS graphs and throttling state.");
-
-			// Font demonstrations
-			ImGui.SeparatorText("Custom Font Rendering:");
-			using (new FontAppearance(nameof(Resources.CARDCHAR), 16))
-			{
-				ImGui.Text("Small custom font text");
-			}
-
-			using (new FontAppearance(nameof(Resources.CARDCHAR), 24))
-			{
-				ImGui.Text("Medium custom font text");
-			}
-
-			using (new FontAppearance(nameof(Resources.CARDCHAR), 32))
-			{
-				ImGui.Text("Large custom font text");
-			}
-
-			// Text formatting examples
-			ImGui.SeparatorText("Text Formatting:");
-			ImGui.TextColored(new Vector4(1, 0, 0, 1), "Red text");
-			ImGui.TextColored(new Vector4(0, 1, 0, 1), "Green text");
-			ImGui.TextColored(new Vector4(0, 0, 1, 1), "Blue text");
-			ImGui.TextWrapped("This is a long line of text that should wrap to multiple lines when the window is not wide enough to contain it all on a single line.");
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}

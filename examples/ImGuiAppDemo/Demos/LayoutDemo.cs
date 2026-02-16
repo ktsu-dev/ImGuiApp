@@ -47,8 +47,10 @@ internal sealed class LayoutDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			// Columns
-			ImGui.SeparatorText("Columns Layout:");
+			if (ImGui.BeginChild("##content"))
+			{
+				// Columns
+				ImGui.SeparatorText("Columns Layout:");
 			ImGui.Columns(3, "DemoColumns");
 			ImGui.Text("Column 1");
 			ImGui.NextColumn();
@@ -126,6 +128,8 @@ internal sealed class LayoutDemo : IDemoTab
 				{
 					ImGui.Text($"Scrollable line {i + 1}");
 				}
+			}
+			ImGui.EndChild();
 			}
 			ImGui.EndChild();
 

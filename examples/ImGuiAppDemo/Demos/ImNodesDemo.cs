@@ -757,10 +757,14 @@ internal sealed class ImNodesDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			RenderHeader();
-			RenderControls();
-			RenderNodeEditor();
-			HandleLinkEvents();
+			if (ImGui.BeginChild("##content"))
+			{
+				RenderHeader();
+				RenderControls();
+				RenderNodeEditor();
+				HandleLinkEvents();
+			}
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}

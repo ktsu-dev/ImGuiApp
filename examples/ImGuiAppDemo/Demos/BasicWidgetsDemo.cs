@@ -37,62 +37,66 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.TextWrapped("This tab demonstrates basic ImGui widgets and controls.");
-
-			// Buttons
-			ImGui.SeparatorText("Buttons:");
-			if (ImGui.Button("Regular Button"))
+			if (ImGui.BeginChild("##content"))
 			{
-				counter++;
+				ImGui.TextWrapped("This tab demonstrates basic ImGui widgets and controls.");
+
+				// Buttons
+				ImGui.SeparatorText("Buttons:");
+				if (ImGui.Button("Regular Button"))
+				{
+					counter++;
+				}
+
+				ImGui.SameLine();
+				if (ImGui.SmallButton("Small"))
+				{
+					counter++;
+				}
+
+				ImGui.SameLine();
+				if (ImGui.ArrowButton("##left", ImGuiDir.Left))
+				{
+					counter--;
+				}
+
+				ImGui.SameLine();
+				if (ImGui.ArrowButton("##right", ImGuiDir.Right))
+				{
+					counter++;
+				}
+
+				ImGui.SameLine();
+				ImGui.Text($"Counter: {counter}");
+
+				// Checkboxes and Radio buttons
+				ImGui.SeparatorText("Selection Controls");
+				ImGui.Checkbox("Checkbox", ref checkboxState);
+
+				ImGui.RadioButton("Option 1", ref radioSelection, 0);
+				ImGui.SameLine();
+				ImGui.RadioButton("Option 2", ref radioSelection, 1);
+				ImGui.SameLine();
+				ImGui.RadioButton("Option 3", ref radioSelection, 2);
+
+				// Sliders
+				ImGui.SeparatorText("Sliders");
+				ImGui.SliderFloat("Float Slider", ref sliderValue, 0.0f, 1.0f);
+				ImGui.SliderFloat("Angle", ref angle, 0.0f, 360.0f, "%.1f deg");
+				ImGui.SliderInt("Int Slider", ref dragInt, 0, 100);
+
+				// Input fields
+				ImGui.SeparatorText("Input Fields");
+				ImGui.InputText("Text Input", ref inputText, 100);
+				ImGui.InputFloat("Float Input", ref dragFloat);
+				ImGui.InputFloat3("Vector3 Input", ref dragVector);
+
+				// Combo boxes
+				ImGui.SeparatorText("Dropdowns");
+				ImGui.Combo("Combo Box", ref comboSelection, comboItems, comboItems.Length);
+				ImGui.ListBox("List Box", ref listboxSelection, listboxItems, listboxItems.Length, 4);
 			}
-
-			ImGui.SameLine();
-			if (ImGui.SmallButton("Small"))
-			{
-				counter++;
-			}
-
-			ImGui.SameLine();
-			if (ImGui.ArrowButton("##left", ImGuiDir.Left))
-			{
-				counter--;
-			}
-
-			ImGui.SameLine();
-			if (ImGui.ArrowButton("##right", ImGuiDir.Right))
-			{
-				counter++;
-			}
-
-			ImGui.SameLine();
-			ImGui.Text($"Counter: {counter}");
-
-			// Checkboxes and Radio buttons
-			ImGui.SeparatorText("Selection Controls");
-			ImGui.Checkbox("Checkbox", ref checkboxState);
-
-			ImGui.RadioButton("Option 1", ref radioSelection, 0);
-			ImGui.SameLine();
-			ImGui.RadioButton("Option 2", ref radioSelection, 1);
-			ImGui.SameLine();
-			ImGui.RadioButton("Option 3", ref radioSelection, 2);
-
-			// Sliders
-			ImGui.SeparatorText("Sliders");
-			ImGui.SliderFloat("Float Slider", ref sliderValue, 0.0f, 1.0f);
-			ImGui.SliderFloat("Angle", ref angle, 0.0f, 360.0f, "%.1f deg");
-			ImGui.SliderInt("Int Slider", ref dragInt, 0, 100);
-
-			// Input fields
-			ImGui.SeparatorText("Input Fields");
-			ImGui.InputText("Text Input", ref inputText, 100);
-			ImGui.InputFloat("Float Input", ref dragFloat);
-			ImGui.InputFloat3("Vector3 Input", ref dragVector);
-
-			// Combo boxes
-			ImGui.SeparatorText("Dropdowns");
-			ImGui.Combo("Combo Box", ref comboSelection, comboItems, comboItems.Length);
-			ImGui.ListBox("List Box", ref listboxSelection, listboxItems, listboxItems.Length, 4);
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}

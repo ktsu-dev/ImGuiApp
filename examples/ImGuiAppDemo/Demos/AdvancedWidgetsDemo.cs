@@ -24,6 +24,8 @@ internal sealed class AdvancedWidgetsDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
+			if (ImGui.BeginChild("##content"))
+			{
 			// Color controls
 			ImGui.SeparatorText("Color Controls:");
 			ImGui.ColorEdit3("Color RGB", ref colorPickerValue);
@@ -82,6 +84,9 @@ internal sealed class AdvancedWidgetsDemo : IDemoTab
 					ImGui.SameLine();
 				}
 			}
+
+			}
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}

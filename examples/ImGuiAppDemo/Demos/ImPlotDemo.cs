@@ -57,88 +57,92 @@ internal sealed class ImPlotDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.TextWrapped("ImPlot provides advanced plotting capabilities with various chart types.");
-			ImGui.Separator();
-
-			// Plot controls
-			if (ImGui.Button("Generate New Data"))
+			if (ImGui.BeginChild("##content"))
 			{
-				sinData.Clear();
-				cosData.Clear();
-				noiseData.Clear();
+				ImGui.TextWrapped("ImPlot provides advanced plotting capabilities with various chart types.");
+				ImGui.Separator();
 
-				for (int i = 0; i < 100; i++)
+				// Plot controls
+				if (ImGui.Button("Generate New Data"))
 				{
-					float x = i * 0.1f;
-					sinData.Add(MathF.Sin(x + plotTime));
-					cosData.Add(MathF.Cos(x + plotTime));
-					noiseData.Add((float)((plotRandom.NextDouble() * 2.0) - 1.0));
-				}
-			}
+					sinData.Clear();
+					cosData.Clear();
+					noiseData.Clear();
 
-			ImGui.Separator();
-
-			// Line plot
-			if (ImPlot.BeginPlot("Trigonometric Functions", new Vector2(-1, 200)))
-			{
-				unsafe
-				{
-					fixed (float* sinPtr = sinData.ToArray())
-					fixed (float* cosPtr = cosData.ToArray())
+					for (int i = 0; i < 100; i++)
 					{
-						ImPlot.PlotLine("sin(x)", sinPtr, sinData.Count);
-						ImPlot.PlotLine("cos(x)", cosPtr, cosData.Count);
+						float x = i * 0.1f;
+						sinData.Add(MathF.Sin(x + plotTime));
+						cosData.Add(MathF.Cos(x + plotTime));
+						noiseData.Add((float)((plotRandom.NextDouble() * 2.0) - 1.0));
 					}
 				}
-				ImPlot.EndPlot();
-			}
 
-			// Scatter plot
-			if (ImPlot.BeginPlot("Noise Data (Scatter)", new Vector2(-1, 200)))
-			{
-				unsafe
-				{
-					fixed (float* noisePtr = noiseData.ToArray())
-					{
-						ImPlot.PlotScatter("Random Noise", noisePtr, noiseData.Count);
-					}
-				}
-				ImPlot.EndPlot();
-			}
+				ImGui.Separator();
 
-			// Bar chart
-			if (ImPlot.BeginPlot("Sample Bar Chart", new Vector2(-1, 200)))
-			{
-				float[] barData = [1.0f, 2.5f, 3.2f, 1.8f, 4.1f, 2.9f, 3.6f];
-				unsafe
-				{
-					fixed (float* barPtr = barData)
-					{
-						ImPlot.PlotBars("Values", barPtr, barData.Length);
-					}
-				}
-				ImPlot.EndPlot();
-			}
-
-			// Real-time plot
-			if (ImPlot.BeginPlot("Real-time Data", new Vector2(-1, 200)))
-			{
-				// Update real-time data
-				if (plotValues.Count > 0)
+				// Line plot
+				if (ImPlot.BeginPlot("Trigonometric Functions", new Vector2(-1, 200)))
 				{
 					unsafe
 					{
-						fixed (float* plotPtr = plotValues.ToArray())
+						fixed (float* sinPtr = sinData.ToArray())
+						fixed (float* cosPtr = cosData.ToArray())
 						{
-							ImPlot.PlotLine("Live Data", plotPtr, plotValues.Count);
+							ImPlot.PlotLine("sin(x)", sinPtr, sinData.Count);
+							ImPlot.PlotLine("cos(x)", cosPtr, cosData.Count);
 						}
 					}
+					ImPlot.EndPlot();
 				}
-				ImPlot.EndPlot();
-			}
 
-			ImGui.Text($"Plot Time: {plotTime:F2}");
-			ImGui.Text($"Data Points: Sin({sinData.Count}), Cos({cosData.Count}), Noise({noiseData.Count})");
+				// Scatter plot
+				if (ImPlot.BeginPlot("Noise Data (Scatter)", new Vector2(-1, 200)))
+				{
+					unsafe
+					{
+						fixed (float* noisePtr = noiseData.ToArray())
+						{
+							ImPlot.PlotScatter("Random Noise", noisePtr, noiseData.Count);
+						}
+					}
+					ImPlot.EndPlot();
+				}
+
+				// Bar chart
+				if (ImPlot.BeginPlot("Sample Bar Chart", new Vector2(-1, 200)))
+				{
+					float[] barData = [1.0f, 2.5f, 3.2f, 1.8f, 4.1f, 2.9f, 3.6f];
+					unsafe
+					{
+						fixed (float* barPtr = barData)
+						{
+							ImPlot.PlotBars("Values", barPtr, barData.Length);
+						}
+					}
+					ImPlot.EndPlot();
+				}
+
+				// Real-time plot
+				if (ImPlot.BeginPlot("Real-time Data", new Vector2(-1, 200)))
+				{
+					// Update real-time data
+					if (plotValues.Count > 0)
+					{
+						unsafe
+						{
+							fixed (float* plotPtr = plotValues.ToArray())
+							{
+								ImPlot.PlotLine("Live Data", plotPtr, plotValues.Count);
+							}
+						}
+					}
+					ImPlot.EndPlot();
+				}
+
+				ImGui.Text($"Plot Time: {plotTime:F2}");
+				ImGui.Text($"Data Points: Sin({sinData.Count}), Cos({cosData.Count}), Noise({noiseData.Count})");
+			}
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}

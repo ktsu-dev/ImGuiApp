@@ -37,55 +37,59 @@ internal sealed class InputHandlingDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			ImGui.SeparatorText("Mouse Information:");
-			Vector2 mousePos = ImGui.GetMousePos();
-			Vector2 mouseDelta = ImGui.GetMouseDragDelta(ImGuiMouseButton.Left);
-			ImGui.Text($"Mouse Position: ({mousePos.X:F1}, {mousePos.Y:F1})");
-			ImGui.Text($"Mouse Delta: ({mouseDelta.X:F1}, {mouseDelta.Y:F1})");
-			ImGui.Text($"Left Button: {(ImGui.IsMouseDown(ImGuiMouseButton.Left) ? "DOWN" : "UP")}");
-			ImGui.Text($"Right Button: {(ImGui.IsMouseDown(ImGuiMouseButton.Right) ? "DOWN" : "UP")}");
-
-			// Simple drag demonstration
-			ImGui.SeparatorText("Drag & Drop:");
-			ImGui.Button("Drag Source", new Vector2(100, 50));
-			ImGui.SameLine();
-			ImGui.Button("Drop Target", new Vector2(100, 50));
-			ImGui.Text("(Drag and drop functionality would require more complex implementation)");
-
-			// Text editing
-			ImGui.SeparatorText("Multi-line Text Editor:");
-			ImGui.Checkbox("Word Wrap", ref wrapText);
-			ImGuiInputTextFlags textFlags = ImGuiInputTextFlags.AllowTabInput;
-			if (!wrapText)
+			if (ImGui.BeginChild("##content"))
 			{
-				textFlags |= ImGuiInputTextFlags.NoHorizontalScroll;
-			}
+				ImGui.SeparatorText("Mouse Information:");
+				Vector2 mousePos = ImGui.GetMousePos();
+				Vector2 mouseDelta = ImGui.GetMouseDragDelta(ImGuiMouseButton.Left);
+				ImGui.Text($"Mouse Position: ({mousePos.X:F1}, {mousePos.Y:F1})");
+				ImGui.Text($"Mouse Delta: ({mouseDelta.X:F1}, {mouseDelta.Y:F1})");
+				ImGui.Text($"Left Button: {(ImGui.IsMouseDown(ImGuiMouseButton.Left) ? "DOWN" : "UP")}");
+				ImGui.Text($"Right Button: {(ImGui.IsMouseDown(ImGuiMouseButton.Right) ? "DOWN" : "UP")}");
 
-			string textContent = textBuffer.ToString();
-			if (ImGui.InputTextMultiline("##TextEditor", ref textContent, 1024, new Vector2(-1, 150), textFlags))
-			{
-				textBuffer.Clear();
-				textBuffer.Append(textContent);
-			}
+				// Simple drag demonstration
+				ImGui.SeparatorText("Drag & Drop:");
+				ImGui.Button("Drag Source", new Vector2(100, 50));
+				ImGui.SameLine();
+				ImGui.Button("Drop Target", new Vector2(100, 50));
+				ImGui.Text("(Drag and drop functionality would require more complex implementation)");
 
-			// Popup and modal buttons
-			ImGui.SeparatorText("Popups and Modals:");
-			if (ImGui.Button("Show Modal"))
-			{
-				showModal = true;
-				modalResult = "";
-			}
+				// Text editing
+				ImGui.SeparatorText("Multi-line Text Editor:");
+				ImGui.Checkbox("Word Wrap", ref wrapText);
+				ImGuiInputTextFlags textFlags = ImGuiInputTextFlags.AllowTabInput;
+				if (!wrapText)
+				{
+					textFlags |= ImGuiInputTextFlags.NoHorizontalScroll;
+				}
 
-			ImGui.SameLine();
-			if (ImGui.Button("Show Popup"))
-			{
-				showPopup = true;
-			}
+				string textContent = textBuffer.ToString();
+				if (ImGui.InputTextMultiline("##TextEditor", ref textContent, 1024, new Vector2(-1, 150), textFlags))
+				{
+					textBuffer.Clear();
+					textBuffer.Append(textContent);
+				}
 
-			if (!string.IsNullOrEmpty(modalResult))
-			{
-				ImGui.Text($"Modal Result: {modalResult}");
+				// Popup and modal buttons
+				ImGui.SeparatorText("Popups and Modals:");
+				if (ImGui.Button("Show Modal"))
+				{
+					showModal = true;
+					modalResult = "";
+				}
+
+				ImGui.SameLine();
+				if (ImGui.Button("Show Popup"))
+				{
+					showPopup = true;
+				}
+
+				if (!string.IsNullOrEmpty(modalResult))
+				{
+					ImGui.Text($"Modal Result: {modalResult}");
+				}
 			}
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}
