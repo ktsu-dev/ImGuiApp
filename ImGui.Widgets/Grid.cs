@@ -443,7 +443,7 @@ public static partial class ImGuiWidgets
 					{
 						int rowIndex = itemIndex - itemBeginIndex;
 						bool isFirstRow = itemIndex == itemBeginIndex;
-						float previousCellHeight = isFirstRow ? 0f : itemDimensionsWithSpacing[rowIndex - 1].Y;
+						float previousCellHeight = isFirstRow ? 0f : gridLayout.RowHeights[rowIndex - 1];
 
 						float cellCursorX = cellTopLeft.X;
 						float cellCursorY = cellTopLeft.Y + previousCellHeight;
