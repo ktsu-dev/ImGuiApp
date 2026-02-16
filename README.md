@@ -1,7 +1,7 @@
 # ktsu ImGui Suite 🎨🖥️
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![.NET 9](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/9.0)
+[![.NET](https://img.shields.io/badge/.NET-10.0%20%7C%209.0%20%7C%208.0-blue.svg)](https://dotnet.microsoft.com)](https://dotnet.microsoft.com/download/dotnet/9.0)
 
 A comprehensive collection of .NET libraries for building modern, beautiful, and feature-rich applications with [Dear ImGui](https://github.com/ocornut/imgui). This suite provides everything you need from application scaffolding to advanced UI components and styling systems.
 
@@ -227,7 +227,7 @@ class Program
 - **⚡ High Performance**: PID-controlled frame limiting with auto-tuning capabilities
 - **🎯 Developer Friendly**: Clean APIs, comprehensive documentation, and extensive examples
 - **🔧 Production Ready**: Debug logging, error handling, and resource management
-- **🌐 Modern .NET**: Built for .NET 9+ with latest language features
+- **🌐 Modern .NET**: Multi-targeted for .NET 10, 9, 8, 7, 6, 5, and netstandard2.0/2.1 with latest language features
 
 ## 📚 Documentation
 
@@ -265,7 +265,7 @@ Each demo includes:
 
 ## 🛠️ Requirements
 
-- **.NET 9.0** or later
+- **.NET 10.0, 9.0, or 8.0** (multi-targeted libraries support .NET 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, and netstandard2.0/2.1)
 - **Windows, macOS, or Linux** (cross-platform support via Silk.NET)
 - **OpenGL 3.3** or higher (handled automatically)
 

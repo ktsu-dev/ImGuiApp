@@ -199,6 +199,88 @@ using (new Alignment.CenterWithin(contentSize, containerSize))
 
 ### 🔧 Advanced Styling
 
+#### Button Alignment
+
+Align button text within buttons:
+
+```csharp
+// Left-aligned button text
+using (Button.Alignment.Left())
+{
+    ImGui.Button("Left Aligned", new Vector2(200, 30));
+}
+
+// Center-aligned button text (default in most themes)
+using (Button.Alignment.Center())
+{
+    ImGui.Button("Center Aligned", new Vector2(200, 30));
+}
+```
+
+#### Text Colors
+
+Apply semantic text colors for consistent messaging:
+
+```csharp
+// Normal text
+using (Text.Color.Normal())
+{
+    ImGui.Text("This is normal text");
+}
+
+// Error messages
+using (Text.Color.Error())
+{
+    ImGui.Text("Error: Something went wrong!");
+}
+
+// Warning messages
+using (Text.Color.Warning())
+{
+    ImGui.Text("Warning: Please be careful");
+}
+
+// Info messages
+using (Text.Color.Info())
+{
+    ImGui.Text("Info: Here's some information");
+}
+
+// Success messages
+using (Text.Color.Success())
+{
+    ImGui.Text("Success: Operation completed!");
+}
+
+// Customize the color definitions globally
+Text.Color.Definitions.Error = Color.FromHex("#e74c3c");
+Text.Color.Definitions.Success = Color.FromHex("#2ecc71");
+```
+
+#### Indentation
+
+Create indented content blocks:
+
+```csharp
+// Default indent
+ImGui.Text("Normal text");
+using (Indent.ByDefault())
+{
+    ImGui.Text("Indented text");
+    using (Indent.ByDefault())
+    {
+        ImGui.Text("Double indented");
+    }
+}
+
+// Custom indent width
+ImGui.Text("Normal text");
+using (Indent.By(40.0f))
+{
+    ImGui.Text("Indented by 40 pixels");
+}
+```
+
 #### Scoped Style Variables
 ```csharp
 // Rounded buttons
@@ -292,6 +374,22 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - `new ScopedStyleVar(ImGuiStyleVar var, float value)` - Scoped style variable
 - `new ScopedTheme(string themeName)` - Scoped theme application
 - `new ScopedThemeColor(Color semanticColor)` - Scoped semantic color
+
+### Button Class
+- `Button.Alignment.Left()` - Left-align button text
+- `Button.Alignment.Center()` - Center-align button text
+
+### Text Class
+- `Text.Color.Normal()` - Apply normal text color
+- `Text.Color.Error()` - Apply error text color (red)
+- `Text.Color.Warning()` - Apply warning text color (yellow)
+- `Text.Color.Info()` - Apply info text color (cyan)
+- `Text.Color.Success()` - Apply success text color (green)
+- `Text.Color.Definitions` - Customize default colors
+
+### Indent Class
+- `Indent.ByDefault()` - Create default indent
+- `Indent.By(float width)` - Create indent with custom width
 
 ## 🎯 Demo Application
 

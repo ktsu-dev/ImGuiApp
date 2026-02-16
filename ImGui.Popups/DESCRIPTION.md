@@ -1,1 +1,1 @@
-A library for custom popups using ImGui.NET.
+A professional library for modal dialogs and popup components in ImGui.NET, providing message boxes, input prompts with validation (string, int, float), searchable selection lists with type-safe generics, and an advanced filesystem browser with open/save modes, directory navigation, and pattern filtering support.

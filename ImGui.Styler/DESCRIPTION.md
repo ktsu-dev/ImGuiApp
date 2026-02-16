@@ -1,1 +1,1 @@
-A library for expressively styling ImGui.NET interfaces.
+A powerful styling library for ImGui.NET interfaces featuring 50+ built-in themes (Catppuccin, Tokyo Night, Gruvbox, Dracula, Nord, and more), interactive theme browser, scoped styling system for colors and style variables, advanced color manipulation with hex support and accessibility features, automatic content alignment and centering, semantic text colors, button alignment, and indentation utilities.

@@ -20,7 +20,7 @@ public enum ImGuiRadialProgressBarOptions
 	/// </summary>
 	None = 0,
 	/// <summary>
-	/// Hides the percentage text in the center.
+	/// Hides the text in the center.
 	/// </summary>
 	NoText = 1 << 0,
 	/// <summary>
@@ -31,6 +31,25 @@ public enum ImGuiRadialProgressBarOptions
 	/// Starts the progress bar at the bottom instead of the top.
 	/// </summary>
 	StartAtBottom = 1 << 2,
+}
+
+/// <summary>
+/// Text display mode for the radial progress bar.
+/// </summary>
+public enum ImGuiRadialProgressBarTextMode
+{
+	/// <summary>
+	/// Display as percentage (0% - 100%).
+	/// </summary>
+	Percentage,
+	/// <summary>
+	/// Display as time in MM:SS format (or HH:MM:SS if >= 1 hour).
+	/// </summary>
+	Time,
+	/// <summary>
+	/// Display custom text provided by the user.
+	/// </summary>
+	Custom,
 }
 
 /// <summary>
@@ -46,12 +65,45 @@ public static partial class ImGuiWidgets
 	/// <param name="thickness">The thickness of the progress bar in pixels. If 0, uses radius * 0.2.</param>
 	/// <param name="segments">The number of segments to use for drawing the arc. More segments = smoother arc.</param>
 	/// <param name="options">Options for customizing the appearance.</param>
-	public static void RadialProgressBar(float progress, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None) =>
-		RadialProgressBarImpl.Draw(progress, radius, thickness, segments, options);
+	/// <param name="textMode">The text display mode (percentage, time, or custom).</param>
+	/// <param name="timeValue">The time value in seconds (used when textMode is Time).</param>
+	/// <param name="customText">Custom text to display (used when textMode is Custom).</param>
+	public static void RadialProgressBar(float progress, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None, ImGuiRadialProgressBarTextMode textMode = ImGuiRadialProgressBarTextMode.Percentage, float timeValue = 0, string? customText = null) =>
+		RadialProgressBarImpl.Draw(progress, radius, thickness, segments, options, textMode, timeValue, customText);
+
+	/// <summary>
+	/// Draws a radial countdown timer showing time remaining.
+	/// </summary>
+	/// <param name="currentTime">The current time in seconds.</param>
+	/// <param name="totalTime">The total duration in seconds.</param>
+	/// <param name="radius">The radius of the progress bar in pixels. If 0, uses line height * 2.</param>
+	/// <param name="thickness">The thickness of the progress bar in pixels. If 0, uses radius * 0.2.</param>
+	/// <param name="segments">The number of segments to use for drawing the arc. More segments = smoother arc.</param>
+	/// <param name="options">Options for customizing the appearance.</param>
+	public static void RadialCountdown(float currentTime, float totalTime, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None)
+	{
+		float progress = totalTime > 0 ? Math.Clamp(currentTime / totalTime, 0.0f, 1.0f) : 0.0f;
+		RadialProgressBarImpl.Draw(progress, radius, thickness, segments, options, ImGuiRadialProgressBarTextMode.Time, currentTime, null);
+	}
+
+	/// <summary>
+	/// Draws a radial count-up timer showing elapsed time.
+	/// </summary>
+	/// <param name="elapsedTime">The elapsed time in seconds.</param>
+	/// <param name="totalTime">The total duration in seconds (for progress calculation).</param>
+	/// <param name="radius">The radius of the progress bar in pixels. If 0, uses line height * 2.</param>
+	/// <param name="thickness">The thickness of the progress bar in pixels. If 0, uses radius * 0.2.</param>
+	/// <param name="segments">The number of segments to use for drawing the arc. More segments = smoother arc.</param>
+	/// <param name="options">Options for customizing the appearance.</param>
+	public static void RadialCountUp(float elapsedTime, float totalTime, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None)
+	{
+		float progress = totalTime > 0 ? Math.Clamp(elapsedTime / totalTime, 0.0f, 1.0f) : 0.0f;
+		RadialProgressBarImpl.Draw(progress, radius, thickness, segments, options, ImGuiRadialProgressBarTextMode.Time, elapsedTime, null);
+	}
 
 	internal static class RadialProgressBarImpl
 	{
-		public static void Draw(float progress, float radius, float thickness, int segments, ImGuiRadialProgressBarOptions options)
+		public static void Draw(float progress, float radius, float thickness, int segments, ImGuiRadialProgressBarOptions options, ImGuiRadialProgressBarTextMode textMode, float timeValue, string? customText)
 		{
 			// Validate input parameters
 			progress = Math.Clamp(progress, 0.0f, 1.0f);
@@ -106,15 +158,24 @@ public static partial class ImGuiWidgets
 				}
 			}
 
-			// Draw percentage text in center
+			// Draw text in center
 			if (!options.HasFlag(ImGuiRadialProgressBarOptions.NoText))
 			{
 				// Note: String allocation per frame is acceptable in immediate mode GUI
-				int percentage = (int)(progress * 100.0f);
-				string percentageText = $"{percentage}%";
-				Vector2 textSize = ImGui.CalcTextSize(percentageText);
-				Vector2 textPos = new(center.X - (textSize.X * 0.5f), center.Y - (textSize.Y * 0.5f));
-				drawList.AddText(textPos, ImGui.GetColorU32(ImGuiCol.Text), percentageText);
+				string displayText = textMode switch
+				{
+					ImGuiRadialProgressBarTextMode.Percentage => $"{(int)(progress * 100.0f)}%",
+					ImGuiRadialProgressBarTextMode.Time => FormatTime(timeValue),
+					ImGuiRadialProgressBarTextMode.Custom => customText ?? string.Empty,
+					_ => string.Empty
+				};
+
+				if (!string.IsNullOrEmpty(displayText))
+				{
+					Vector2 textSize = ImGui.CalcTextSize(displayText);
+					Vector2 textPos = new(center.X - (textSize.X * 0.5f), center.Y - (textSize.Y * 0.5f));
+					drawList.AddText(textPos, ImGui.GetColorU32(ImGuiCol.Text), displayText);
+				}
 			}
 		}
 
@@ -138,6 +199,34 @@ public static partial class ImGuiWidgets
 
 				drawList.AddLine(point0, point1, color, thickness);
 			}
+		}
+
+		/// <summary>
+		/// Formats a time value in seconds to a string in MM:SS or HH:MM:SS format.
+		/// </summary>
+		/// <param name="timeInSeconds">The time value in seconds.</param>
+		/// <returns>Formatted time string.</returns>
+		private static string FormatTime(float timeInSeconds)
+		{
+			// Handle negative times (count up from negative)
+			bool isNegative = timeInSeconds < 0;
+			int totalSeconds = (int)MathF.Abs(timeInSeconds);
+
+			int hours = totalSeconds / 3600;
+			int minutes = totalSeconds % 3600 / 60;
+			int seconds = totalSeconds % 60;
+
+			string formattedTime;
+			if (hours > 0)
+			{
+				formattedTime = $"{hours:D2}:{minutes:D2}:{seconds:D2}";
+			}
+			else
+			{
+				formattedTime = $"{minutes:D2}:{seconds:D2}";
+			}
+
+			return isNegative ? $"-{formattedTime}" : formattedTime;
 		}
 	}
 }

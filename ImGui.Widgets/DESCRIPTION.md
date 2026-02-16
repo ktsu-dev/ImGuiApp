@@ -1,1 +1,1 @@
-A library of custom widgets using ImGui.NET and utilities to enhance ImGui-based applications.
+A comprehensive library of custom widgets and UI components for ImGui.NET, featuring radial progress bars with countdown/count-up timers, tabbed interfaces with drag-and-drop support, type-safe combo boxes, resizable divider containers, powerful search boxes with fuzzy matching, icons with event handling, flexible grid layouts, and scoped utilities for IDs and disabling elements.

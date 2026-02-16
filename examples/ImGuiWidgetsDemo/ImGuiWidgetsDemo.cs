@@ -60,6 +60,12 @@ internal static class ImGuiWidgetsDemo
 	private static float progressValue = 0.65f;
 	private static bool progressAnimating;
 	private static float progressAnimationSpeed = 0.3f;
+	private static float countdownTime = 300.0f; // 5 minutes
+	private const float CountdownTotal = 300.0f;
+	private static bool countdownRunning;
+	private static float countupTime;
+	private const float CountupTotal = 180.0f; // 3 minutes
+	private static bool countupRunning;
 
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
 	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
@@ -585,6 +591,72 @@ internal static class ImGuiWidgetsDemo
 				progressValue = 1.0f;
 				progressAnimating = false;
 			}
+
+			ImGui.Separator();
+
+			// Countdown Timer Demo
+			ImGui.TextUnformatted("Countdown Timer:");
+			ImGui.Checkbox("Run Countdown", ref countdownRunning);
+			ImGui.SameLine();
+			if (ImGui.Button("Reset Countdown"))
+			{
+				countdownTime = CountdownTotal;
+				countdownRunning = false;
+			}
+
+			if (countdownRunning && countdownTime > 0.0f)
+			{
+				countdownTime -= ImGui.GetIO().DeltaTime;
+				if (countdownTime < 0.0f)
+				{
+					countdownTime = 0.0f;
+					countdownRunning = false;
+				}
+			}
+
+			ImGui.Columns(3, "CountdownColumns");
+			ImGuiWidgets.RadialCountdown(countdownTime, CountdownTotal, 50);
+			ImGui.TextUnformatted("Countdown (Top)");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialCountdown(countdownTime, CountdownTotal, 50, 0, 32, ImGuiRadialProgressBarOptions.CounterClockwise);
+			ImGui.TextUnformatted("Counter-Clockwise");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialCountdown(countdownTime, CountdownTotal, 50, 0, 32, ImGuiRadialProgressBarOptions.StartAtBottom);
+			ImGui.TextUnformatted("Start at Bottom");
+			ImGui.Columns(1);
+
+			ImGui.Separator();
+
+			// Count-Up Timer Demo
+			ImGui.TextUnformatted("Count-Up Timer:");
+			ImGui.Checkbox("Run Count-Up", ref countupRunning);
+			ImGui.SameLine();
+			if (ImGui.Button("Reset Count-Up"))
+			{
+				countupTime = 0.0f;
+				countupRunning = false;
+			}
+
+			if (countupRunning && countupTime < CountupTotal)
+			{
+				countupTime += ImGui.GetIO().DeltaTime;
+				if (countupTime > CountupTotal)
+				{
+					countupTime = CountupTotal;
+					countupRunning = false;
+				}
+			}
+
+			ImGui.Columns(2, "CountUpColumns");
+			ImGuiWidgets.RadialCountUp(countupTime, CountupTotal, 60);
+			ImGui.TextUnformatted("Count-Up");
+			ImGui.NextColumn();
+
+			ImGuiWidgets.RadialProgressBar(countupTime / CountupTotal, 60, 0, 32, ImGuiRadialProgressBarOptions.None, ImGuiRadialProgressBarTextMode.Custom, 0, $"{countupTime:F1}s");
+			ImGui.TextUnformatted("Custom Text");
+			ImGui.Columns(1);
 		}
 	}
 
