@@ -44,59 +44,63 @@ internal sealed class UtilityDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			// File operations
-			ImGui.SeparatorText("File Operations:");
-			ImGui.InputText("File Path", ref filePath, 256);
-			ImGui.SameLine();
-			if (ImGui.Button("Load") && !string.IsNullOrEmpty(filePath))
+			if (ImGui.BeginChild("##content"))
 			{
-				try
+				// File operations
+				ImGui.SeparatorText("File Operations:");
+				ImGui.InputText("File Path", ref filePath, 256);
+				ImGui.SameLine();
+				if (ImGui.Button("Load") && !string.IsNullOrEmpty(filePath))
 				{
-					fileContent = File.ReadAllText(filePath);
+					try
+					{
+						fileContent = File.ReadAllText(filePath);
+					}
+					catch (Exception ex) when (ex is FileNotFoundException or UnauthorizedAccessException)
+					{
+						// Handle file read errors gracefully
+						fileContent = $"Error loading file: {ex.Message}";
+					}
 				}
-				catch (Exception ex) when (ex is FileNotFoundException or UnauthorizedAccessException)
+
+				if (!string.IsNullOrEmpty(fileContent))
 				{
-					// Handle file read errors gracefully
-					fileContent = $"Error loading file: {ex.Message}";
+					ImGui.SeparatorText("File Content Preview:");
+					ImGui.TextWrapped(fileContent.Length > 500 ? fileContent[..500] + "..." : fileContent);
 				}
-			}
 
-			if (!string.IsNullOrEmpty(fileContent))
-			{
-				ImGui.SeparatorText("File Content Preview:");
-				ImGui.TextWrapped(fileContent.Length > 500 ? fileContent[..500] + "..." : fileContent);
-			}
-
-			// System information
-			ImGui.SeparatorText("System Information:");
-			unsafe
-			{
-				byte* ptr = ImGui.GetVersion();
-				int length = 0;
-				while (ptr[length] != 0)
+				// System information
+				ImGui.SeparatorText("System Information:");
+				unsafe
 				{
-					length++;
+					byte* ptr = ImGui.GetVersion();
+					int length = 0;
+					while (ptr[length] != 0)
+					{
+						length++;
+					}
+					ImGui.Text($"ImGui Version: {Encoding.UTF8.GetString(ptr, length)}");
 				}
-				ImGui.Text($"ImGui Version: {Encoding.UTF8.GetString(ptr, length)}");
-			}
-			ImGui.Text($"Display Size: {ImGui.GetIO().DisplaySize}");
+				ImGui.Text($"Display Size: {ImGui.GetIO().DisplaySize}");
 
-			// Debugging tools
-			ImGui.SeparatorText("Debug Tools:");
-			if (ImGui.Button("Show ImGui Demo"))
-			{
-				showImGuiDemo = !showImGuiDemo;
+				// Debugging tools
+				ImGui.SeparatorText("Debug Tools:");
+				if (ImGui.Button("Show ImGui Demo"))
+				{
+					showImGuiDemo = !showImGuiDemo;
+				}
+				ImGui.SameLine();
+				if (ImGui.Button("Show Style Editor"))
+				{
+					showStyleEditor = !showStyleEditor;
+				}
+				ImGui.SameLine();
+				if (ImGui.Button("Show Metrics"))
+				{
+					showMetrics = !showMetrics;
+				}
 			}
-			ImGui.SameLine();
-			if (ImGui.Button("Show Style Editor"))
-			{
-				showStyleEditor = !showStyleEditor;
-			}
-			ImGui.SameLine();
-			if (ImGui.Button("Show Metrics"))
-			{
-				showMetrics = !showMetrics;
-			}
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}

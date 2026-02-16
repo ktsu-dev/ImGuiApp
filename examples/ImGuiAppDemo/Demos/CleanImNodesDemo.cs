@@ -58,20 +58,24 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	{
 		if (ImGui.BeginTabItem(TabName))
 		{
-			// Create horizontal layout: editor on left, controls on right
-			ImGui.BeginTable("CleanNodeEditorLayout", 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV);
-			ImGui.TableSetupColumn("Editor", ImGuiTableColumnFlags.WidthStretch, 0.7f);
-			ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthStretch, 0.3f);
+			if (ImGui.BeginChild("##content"))
+			{
+				// Create horizontal layout: editor on left, controls on right
+				ImGui.BeginTable("CleanNodeEditorLayout", 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV);
+				ImGui.TableSetupColumn("Editor", ImGuiTableColumnFlags.WidthStretch, 0.7f);
+				ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthStretch, 0.3f);
 
-			// Editor column
-			ImGui.TableNextColumn();
-			RenderNodeEditor();
+				// Editor column
+				ImGui.TableNextColumn();
+				RenderNodeEditor();
 
-			// Controls column
-			ImGui.TableNextColumn();
-			RenderControlsPanel();
+				// Controls column
+				ImGui.TableNextColumn();
+				RenderControlsPanel();
 
-			ImGui.EndTable();
+				ImGui.EndTable();
+			}
+			ImGui.EndChild();
 
 			ImGui.EndTabItem();
 		}
