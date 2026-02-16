@@ -11,6 +11,17 @@ on:
   schedule:
     - cron: "0 23 * * *" # Daily at 11 PM UTC
   workflow_dispatch: # Allow manual triggers
+    inputs:
+      version-bump:
+        description: 'Version bump type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -124,7 +135,9 @@ jobs:
           EXPECTED_OWNER: ktsu-dev
         run: |
           # Run the CI pipeline
-          dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- ci --workspace "${{ github.workspace }}" --verbose
+          $versionBump = "${{ github.event.inputs.version-bump }}"
+          if ([string]::IsNullOrEmpty($versionBump)) { $versionBump = "auto" }
+          dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- ci --workspace "${{ github.workspace }}" --verbose --version-bump $versionBump
 
           # Set outputs for downstream jobs
           $version = (Get-Content "${{ github.workspace }}/VERSION.md" -Raw).Trim()
