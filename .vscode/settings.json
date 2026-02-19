@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "ktsu-dev",
+        "projectKey": "ktsu-dev_ImGuiApp"
+    }
+}
