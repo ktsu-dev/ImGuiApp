@@ -1,0 +1,1 @@
+.NET;C#;Dear ImGui;ImGui;GUI;desktop;UI;widgets;theming;popups;modal;node graph;node editor;immediate mode;cross-platform;OpenGL;windowing;Silk.NET;Hexa.NET;frame limiter;PID controller;DPI;font management;texture caching;scoped styling;RAII;tabs;search box;knob;radial progress;divider;grid;file browser;theme browser;color;accessibility

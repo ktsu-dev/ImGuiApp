@@ -1,321 +1,510 @@
-# ktsu ImGui Suite 🎨🖥️
+# ktsu.ImGuiApp
 
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![.NET](https://img.shields.io/badge/.NET-10.0%20%7C%209.0%20%7C%208.0-blue.svg)](https://dotnet.microsoft.com)](https://dotnet.microsoft.com/download/dotnet/9.0)
+> A comprehensive collection of .NET libraries for building modern, feature-rich desktop applications with Dear ImGui.
 
-A comprehensive collection of .NET libraries for building modern, beautiful, and feature-rich applications with [Dear ImGui](https://github.com/ocornut/imgui). This suite provides everything you need from application scaffolding to advanced UI components and styling systems.
+[![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg?label=License&logo=nuget)](LICENSE.md)
+[![NuGet Version](https://img.shields.io/nuget/v/ktsu.ImGuiApp?label=Stable&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
+[![NuGet Version](https://img.shields.io/nuget/vpre/ktsu.ImGuiApp?label=Latest&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.ImGuiApp?label=Downloads&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/ImGuiApp?label=Commits&logo=github)](https://github.com/ktsu-dev/ImGuiApp/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/ImGuiApp?label=Contributors&logo=github)](https://github.com/ktsu-dev/ImGuiApp/graphs/contributors)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/ImGuiApp/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/ImGuiApp/actions)
 
-## 📦 Libraries Overview
+## Introduction
 
-### 🖥️ [ImGui.App](ImGui.App/README.md) - Application Foundation
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
+`ktsu.ImGuiApp` is a suite of .NET libraries that provides everything you need to build desktop applications with [Dear ImGui](https://github.com/ocornut/imgui). The suite includes application scaffolding, custom widgets, modal dialogs, a theming system, and a node graph editor framework. Built on Hexa.NET.ImGui bindings and Silk.NET for cross-platform windowing, it supports .NET 10, 9, and 8.
 
-**Complete application scaffolding for Dear ImGui applications**
+## Features
 
-- **Simple API**: Create ImGui applications with minimal boilerplate
-- **Advanced Performance**: PID-controlled frame limiting with auto-tuning
-- **Font Management**: Unicode/emoji support with dynamic scaling
-- **Texture System**: Built-in texture management with caching
-- **DPI Awareness**: Full high-DPI display support
-- **Debug Tools**: Comprehensive logging and performance monitoring
+- **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, and DPI awareness via `ktsu.ImGuiApp`
+- **PID Frame Limiting**: High-precision PID-controlled frame rate limiting with auto-tuning and adaptive throttling for focused, unfocused, idle, and minimized states
+- **Custom Widgets**: Rich collection of UI components including TabPanel, Knob, SearchBox with fuzzy matching, RadialProgressBar with countdown/count-up timers, Grid layouts, DividerContainer with resizable sections, Combo, Tree, and Icons via `ktsu.ImGuiWidgets`
+- **Modal Dialogs**: Professional popup system with MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, and SearchableList via `ktsu.ImGuiPopups`
+- **Theming System**: 50+ built-in themes (Catppuccin, Tokyo Night, Gruvbox, Dracula, and more) with scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser via `ktsu.ImGuiStyler`
+- **Node Graph Framework**: Attribute-based node declaration system with UI-agnostic `ktsu.NodeGraph` metadata library and ImNodes-based visual editor `ktsu.ImGuiNodeEditor` with physics-based layout
+- **Font Management**: Unicode, emoji, and Nerd Font support with GPU memory management via `FontMemoryGuard` and dynamic font scaling
+- **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
+- **Color Utilities**: HSL/HSLA color creation, accessibility-focused contrast calculations, color manipulation extensions, and semantic color palettes
+
+## Libraries
+
+### ImGui.App - Application Foundation
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp?label=ktsu.ImGuiApp&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
+
+Complete application scaffolding for Dear ImGui applications with windowing, rendering, font/texture management, and performance tuning.
+
+### ImGui.Widgets - Custom UI Components
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiWidgets?label=ktsu.ImGuiWidgets&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiWidgets)
+
+Rich collection of custom widgets: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, and ScopedId.
+
+### ImGui.Popups - Modal Dialogs
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiPopups?label=ktsu.ImGuiPopups&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiPopups)
+
+Professional modal dialogs: MessageOK, Prompt, InputString/Int/Float with validation, FilesystemBrowser with glob filtering, and SearchableList with type-safe generics.
+
+### ImGui.Styler - Themes and Styling
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiStyler?label=ktsu.ImGuiStyler&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiStyler)
+
+Advanced theming system with 50+ built-in themes, scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser.
+
+### NodeGraph - Node Metadata (UI-Agnostic)
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.NodeGraph?label=ktsu.NodeGraph&logo=nuget)](https://nuget.org/packages/ktsu.NodeGraph)
+
+Generic attribute-based system for declaring node graphs. Decorate classes, structs, and methods with node metadata (pins, execution modes, visibility, deprecation) without coupling to a specific editor implementation.
+
+### ImGuiNodeEditor - Visual Node Editor
+
+Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine` for business logic, `AttributeBasedNodeFactory` for node creation from decorated types, physics-based layout simulation, and `NodeEditorRenderer`/`NodeEditorInputHandler` for rendering and interaction.
+
+## Installation
+
+### Package Manager Console
+
+```powershell
+Install-Package ktsu.ImGuiApp
+Install-Package ktsu.ImGuiWidgets
+Install-Package ktsu.ImGuiPopups
+Install-Package ktsu.ImGuiStyler
+Install-Package ktsu.NodeGraph
+```
+
+### .NET CLI
+
+```bash
+dotnet add package ktsu.ImGuiApp
+dotnet add package ktsu.ImGuiWidgets
+dotnet add package ktsu.ImGuiPopups
+dotnet add package ktsu.ImGuiStyler
+dotnet add package ktsu.NodeGraph
+```
+
+### Package Reference
+
+```xml
+<PackageReference Include="ktsu.ImGuiApp" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGuiWidgets" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGuiPopups" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGuiStyler" Version="x.y.z" />
+<PackageReference Include="ktsu.NodeGraph" Version="x.y.z" />
+```
+
+## Usage Examples
+
+### Basic Application
 
 ```csharp
-ImGuiApp.Start(new ImGuiAppConfig()
+using ktsu.ImGui.App;
+using Hexa.NET.ImGui;
+
+ImGuiApp.Start(new ImGuiAppConfig
 {
     Title = "My Application",
-    OnRender = delta => { ImGui.Text("Hello, ImGui!"); }
+    OnRender = delta =>
+    {
+        ImGui.Text("Hello, ImGui!");
+    }
 });
 ```
 
-### 🧩 [ImGui.Widgets](ImGui.Widgets/README.md) - Custom UI Components
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiWidgets.svg)](https://www.nuget.org/packages/ktsu.ImGuiWidgets/)
-
-**Rich collection of custom widgets and layout tools**
-
-- **Advanced Controls**: Knobs, SearchBox, TabPanel with drag-and-drop
-- **Layout Systems**: Resizable dividers, flexible Grid, Tree views
-- **Interactive Elements**: Icons with events, Color indicators
-- **Utilities**: Scoped IDs, alignment helpers, text formatting
+### Application with Menu and Performance Settings
 
 ```csharp
-// Tabbed interface with closable, reorderable tabs
-var tabPanel = new TabPanel("MyTabs", closable: true, reorderable: true);
+using ktsu.ImGui.App;
+using ktsu.ImGui.Styler;
+using Hexa.NET.ImGui;
+
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    Title = "Full Application",
+    OnStart = () =>
+    {
+        Theme.Apply("Tokyo Night");
+    },
+    OnRender = delta =>
+    {
+        ImGui.Text("Content goes here");
+    },
+    OnAppMenu = () =>
+    {
+        if (ImGui.BeginMenu("File"))
+        {
+            if (ImGui.MenuItem("Exit"))
+            {
+                ImGuiApp.Stop();
+            }
+            ImGui.EndMenu();
+        }
+    },
+    PerformanceSettings = new ImGuiAppPerformanceSettings
+    {
+        FocusedFps = 60.0,
+        UnfocusedFps = 10.0,
+        IdleTimeoutSeconds = 30.0
+    }
+});
+```
+
+### Widgets
+
+```csharp
+using ktsu.ImGui.Widgets;
+using Hexa.NET.ImGui;
+
+// Tabbed interface
+TabPanel tabPanel = new("MyTabs", closable: true, reorderable: true);
 tabPanel.AddTab("tab1", "First Tab", () => ImGui.Text("Content 1"));
+tabPanel.Draw();
 
-// Powerful search with multiple filter types
+// Search box with filtering
+string searchTerm = "";
+TextFilterType filterType = TextFilterType.Glob;
+TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;
 ImGuiWidgets.SearchBox("##Search", ref searchTerm, ref filterType, ref matchOptions);
+
+// Radial countdown timer
+float timeRemaining = 300.0f;
+ImGuiWidgets.RadialCountdown(timeRemaining, 300.0f);
+
+// Resizable divider layout
+DividerContainer divider = new("MySplit", DividerLayout.Columns);
+divider.Add("left", 200f, true, dt => ImGui.Text("Left pane"));
+divider.Add("right", 400f, true, dt => ImGui.Text("Right pane"));
+divider.Tick(deltaTime);
 ```
 
-### 🪟 [ImGui.Popups](ImGui.Popups/README.md) - Modal Dialogs & Popups
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiPopups.svg)](https://www.nuget.org/packages/ktsu.ImGuiPopups/)
-
-**Professional modal dialogs and popup components**
-
-- **Input Components**: String, Int, Float inputs with validation
-- **File Management**: Advanced filesystem browser with filtering
-- **Selection Tools**: Searchable lists with type-safe generics
-- **User Interaction**: Message dialogs, prompts, custom modals
+### Popups and Dialogs
 
 ```csharp
-// Get user input with validation
-var inputString = new ImGuiPopups.InputString();
+using ktsu.ImGui.Popups;
+
+// Message dialog
+ImGuiPopups.MessageOK messageOK = new();
+messageOK.Open("Hello!", "This is a message.");
+messageOK.ShowIfOpen();
+
+// String input dialog
+ImGuiPopups.InputString inputString = new();
 inputString.Open("Enter Name", "Name:", "Default", result => ProcessName(result));
+inputString.ShowIfOpen();
 
-// File browser with pattern filtering
-var browser = new ImGuiPopups.FilesystemBrowser();
-browser.Open("Open File", FilesystemBrowserMode.Open, 
-    FilesystemBrowserTarget.File, startPath, OpenFile, new[] { "*.txt", "*.md" });
+// File browser
+ImGuiPopups.FilesystemBrowser browser = new();
+browser.FileOpen("Open File", path => LoadFile(path), "*.txt");
+browser.ShowIfOpen();
+
+// Searchable list
+ImGuiPopups.SearchableList<string> list = new();
+list.Open("Select Item", "Choose:", items, item => OnSelected(item));
+list.ShowIfOpen();
 ```
 
-### 🎨 [ImGui.Styler](ImGui.Styler/README.md) - Themes & Styling
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiStyler.svg)](https://www.nuget.org/packages/ktsu.ImGuiStyler/)
-
-**Advanced theming system with 50+ built-in themes**
-
-- **Theme Library**: Catppuccin, Tokyo Night, Gruvbox, Dracula, and more
-- **Interactive Browser**: Visual theme selection with live preview
-- **Color Tools**: Hex support, accessibility-focused contrast
-- **Scoped Styling**: Apply styles to specific UI sections safely
+### Theming and Styling
 
 ```csharp
-// Apply global theme
+using ktsu.ImGui.Styler;
+using Hexa.NET.ImGui;
+
+// Apply a built-in theme
 Theme.Apply("Catppuccin.Mocha");
 
-// Scoped color styling
+// Show interactive theme browser
+Theme.ShowThemeSelector("Select Theme");
+
+// Scoped color styling (auto-restored after block)
 using (new ScopedColor(ImGuiCol.Text, Color.FromHex("#ff6b6b")))
 {
     ImGui.Text("This text is red!");
 }
 
-// Center content automatically
+// Semantic text colors
+using (Text.Color.Error())
+{
+    ImGui.Text("Error message");
+}
+
+using (Text.Color.Success())
+{
+    ImGui.Text("Success message");
+}
+
+// Center content
 using (new Alignment.Center(ImGui.CalcTextSize("Centered!")))
 {
     ImGui.Text("Centered!");
 }
+
+// Button text alignment
+using (Button.Alignment.Center())
+{
+    ImGui.Button("Centered text", new Vector2(200, 30));
+}
+
+// Scoped theme for a section
+using (new ScopedTheme(myTheme))
+{
+    ImGui.Text("This section uses a different theme");
+}
 ```
 
-## 🚀 Quick Start
-
-### Installation
-
-Add the libraries you need via NuGet Package Manager or CLI:
-
-```bash
-# Complete application foundation
-dotnet add package ktsu.ImGuiApp
-
-# Custom widgets and controls
-dotnet add package ktsu.ImGuiWidgets
-
-# Modal dialogs and popups
-dotnet add package ktsu.ImGuiPopups
-
-# Theming and styling system
-dotnet add package ktsu.ImGuiStyler
-```
-
-### Basic Application
-
-Here's a complete example using multiple libraries together:
+### Node Graph (Attribute-Based Declaration)
 
 ```csharp
-using ktsu.ImGuiApp;
-using ktsu.ImGuiStyler;
-using ktsu.ImGuiPopups;
-using ktsu.ImGuiWidgets;
-using Hexa.NET.ImGui;
+using ktsu.NodeGraph;
 
-class Program
+[Node("Math Add")]
+[NodeBehavior(NodeExecutionMode.OnInputChange, IsDeterministic = true)]
+public class AddNode
 {
-    private static readonly ImGuiPopups.MessageOK messageOK = new();
-    private static readonly TabPanel tabPanel = new("MainTabs", true, true);
-    private static string searchTerm = "";
-    private static TextFilterType filterType = TextFilterType.Glob;
-    private static TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;
+    [InputPin("A")]
+    public float A { get; set; }
 
-    static void Main()
-    {
-        ImGuiApp.Start(new ImGuiAppConfig
-        {
-            Title = "ImGui Suite Demo",
-            OnStart = OnStart,
-            OnRender = OnRender,
-            OnAppMenu = OnAppMenu,
-            PerformanceSettings = new()
-            {
-                FocusedFps = 60.0,
-                UnfocusedFps = 10.0
-            }
-        });
-    }
+    [InputPin("B")]
+    public float B { get; set; }
 
-    private static void OnStart()
-    {
-        // Apply a beautiful theme
-        Theme.Apply("Tokyo Night");
-        
-        // Setup tabs
-        tabPanel.AddTab("widgets", "Widgets", RenderWidgetsTab);
-        tabPanel.AddTab("styling", "Styling", RenderStylingTab);
-    }
+    [OutputPin("Result")]
+    public float Result { get; set; }
 
-    private static void OnRender(float deltaTime)
+    [NodeExecute]
+    public void Execute()
     {
-        // Main tabbed interface
-        tabPanel.Draw();
-        
-        // Render popups
-        messageOK.ShowIfOpen();
-    }
-
-    private static void RenderWidgetsTab()
-    {
-        ImGui.Text("Search Example:");
-        ImGuiWidgets.SearchBox("##Search", ref searchTerm, ref filterType, ref matchOptions);
-        
-        if (ImGui.Button("Show Message"))
-        {
-            messageOK.Open("Hello!", "This is a popup message from ImGuiPopups!");
-        }
-    }
-
-    private static void RenderStylingTab()
-    {
-        ImGui.Text("Theme Demo:");
-        
-        if (ImGui.Button("Choose Theme"))
-        {
-            Theme.ShowThemeSelector("Select Theme");
-        }
-        
-        using (new ScopedColor(ImGuiCol.Text, Color.FromHex("#ff6b6b")))
-        {
-            ImGui.Text("This text is styled red!");
-        }
-        
-        using (new Alignment.Center(ImGui.CalcTextSize("Centered Text")))
-        {
-            ImGui.Text("Centered Text");
-        }
-    }
-
-    private static void OnAppMenu()
-    {
-        if (ImGui.BeginMenu("File"))
-        {
-            if (ImGui.MenuItem("Exit"))
-                ImGuiApp.Stop();
-            ImGui.EndMenu();
-        }
-        
-        if (ImGui.BeginMenu("View"))
-        {
-            if (ImGui.MenuItem("Change Theme"))
-                Theme.ShowThemeSelector("Select Theme");
-            ImGui.EndMenu();
-        }
+        Result = A + B;
     }
 }
 ```
 
-## 🎯 Key Features
+### Visual Node Editor
 
-- **🖥️ Complete Application Framework**: Everything needed for production ImGui applications
-- **🎨 Professional Theming**: 50+ themes with interactive browser and accessibility features  
-- **🧩 Rich Widget Library**: Advanced controls like tabbed interfaces, search boxes, and knobs
-- **🪟 Modal System**: Type-safe popups, file browsers, and input validation
-- **⚡ High Performance**: PID-controlled frame limiting with auto-tuning capabilities
-- **🎯 Developer Friendly**: Clean APIs, comprehensive documentation, and extensive examples
-- **🔧 Production Ready**: Debug logging, error handling, and resource management
-- **🌐 Modern .NET**: Multi-targeted for .NET 10, 9, 8, 7, 6, 5, and netstandard2.0/2.1 with latest language features
+```csharp
+using ktsu.ImGuiNodeEditor;
 
-## 📚 Documentation
+// Create engine and factory
+NodeEditorEngine engine = new();
+AttributeBasedNodeFactory factory = new(engine);
 
-Each library has comprehensive documentation with examples:
+// Register node types
+factory.RegisterNodeType<AddNode>();
+factory.RegisterNodeTypesFromAssembly(typeof(AddNode).Assembly);
 
-- **[📖 ImGui.App Documentation](ImGui.App/README.md)** - Application scaffolding, performance tuning, font management
-- **[📖 ImGui.Widgets Documentation](ImGui.Widgets/README.md)** - Widget gallery, layout systems, interactive controls  
-- **[📖 ImGui.Popups Documentation](ImGui.Popups/README.md)** - Modal dialogs, file browsers, input validation
-- **[📖 ImGui.Styler Documentation](ImGui.Styler/README.md)** - Theme gallery, color tools, styling utilities
+// Create nodes
+Node nodeA = factory.CreateNode<AddNode>(new Vector2(100, 100));
 
-## 🎮 Demo Applications
+// Render in ImGui loop
+NodeEditorRenderer renderer = new();
+NodeEditorInputHandler inputHandler = new();
+renderer.Render(engine, editorSize);
+```
 
-The repository includes comprehensive demo applications showcasing all features:
+## API Reference
+
+### `ImGuiApp` (Static)
+
+Application lifecycle and utilities.
+
+#### Methods
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Start(ImGuiAppConfig)` | `void` | Initialize and run the application |
+| `Stop()` | `void` | Close the application window |
+| `SetGlobalScale(float)` | `void` | Set accessibility UI scale (0.5-3.0) |
+| `SetWindowIcon(string)` | `void` | Set window icon from image file |
+| `GetOrLoadTexture(AbsoluteFilePath)` | `ImGuiAppTextureInfo` | Load or retrieve cached GPU texture |
+| `DeleteTexture(uint)` | `void` | Remove texture from GPU |
+| `EmsToPx(float)` | `float` | Convert EMs to pixels |
+| `PtsToPx(int)` | `float` | Convert points to pixels |
+
+#### Properties
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `IsFocused` | `bool` | Whether the window has focus |
+| `IsVisible` | `bool` | Whether the window is visible |
+| `IsIdle` | `bool` | Whether the app is idle |
+| `ScaleFactor` | `float` | DPI-based scale factor |
+| `GlobalScale` | `float` | User-adjustable UI scale |
+| `Invoker` | `Invoker` | Delegate invocation for window thread |
+
+### `ImGuiAppConfig`
+
+Configuration for `ImGuiApp.Start()`.
+
+#### Configuration Properties
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `Title` | `string` | Window title (default: "ImGuiApp") |
+| `IconPath` | `string` | Path to window icon |
+| `OnStart` | `Action` | Initialization callback |
+| `OnUpdate` | `Action<float>` | Per-frame update callback |
+| `OnRender` | `Action<float>` | Per-frame render callback |
+| `OnAppMenu` | `Action` | Menu bar rendering callback |
+| `OnMoveOrResize` | `Action` | Window moved/resized callback |
+| `OnGlobalScaleChanged` | `Action<float>` | Scale changed callback |
+| `Fonts` | `Dictionary<string, byte[]>` | Custom fonts to load |
+| `EnableUnicodeSupport` | `bool` | Include extended Unicode ranges (default: true) |
+| `PerformanceSettings` | `ImGuiAppPerformanceSettings` | Throttling configuration |
+| `FontMemoryConfig` | `FontMemoryGuard.FontMemoryConfig` | Font memory limits |
+| `InitialWindowState` | `ImGuiAppWindowState` | Initial window size/position |
+
+### `ImGuiAppPerformanceSettings`
+
+Frame rate throttling configuration.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `EnableThrottledRendering` | `bool` | Enable adaptive frame limiting (default: true) |
+| `FocusedFps` | `double` | Target FPS when focused (default: 30) |
+| `UnfocusedFps` | `double` | Target FPS when unfocused (default: 5) |
+| `IdleFps` | `double` | Target FPS when idle (default: 10) |
+| `NotVisibleFps` | `double` | Target FPS when minimized (default: 2) |
+| `IdleTimeoutSeconds` | `double` | Seconds before idle state (default: 30) |
+
+### `ImGuiWidgets` (Static)
+
+Custom UI components.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `SearchBox(...)` | `bool` | Search box with Glob/Regex/Fuzzy filtering |
+| `SearchBox<T>(...)` | `IEnumerable<T>` | Filtered item selection |
+| `SearchBoxRanked<T>(...)` | `IEnumerable<T>` | Fuzzy-ranked item selection |
+| `Knob(...)` | `bool` | Rotary knob control (float or int) |
+| `RadialProgressBar(...)` | `void` | Radial progress indicator |
+| `RadialCountdown(...)` | `void` | Countdown timer display |
+| `RadialCountUp(...)` | `void` | Count-up timer display |
+| `Combo<TEnum>(...)` | `bool` | Enum selection combo |
+| `Combo<TString>(...)` | `bool` | String selection combo |
+| `Icon(...)` | `bool` | Icon with label and events |
+| `Image(...)` | `bool` | Clickable image display |
+| `ColorIndicator(...)` | `void` | Colored square indicator |
+| `RowMajorGrid<T>(...)` | `void` | Row-major grid layout |
+| `ColumnMajorGrid<T>(...)` | `void` | Column-major grid layout |
+
+### Widget Instance Classes
+
+| Class | Description |
+| ----- | ----------- |
+| `TabPanel` | Tabbed interface with closable, reorderable tabs |
+| `DividerContainer` | Resizable split pane layout (columns or rows) |
+| `ScopedDisable` | RAII wrapper to disable UI elements |
+| `ScopedId` | RAII wrapper to push ImGui IDs |
+| `Tree` | Tree view with nested children |
+
+### `ImGuiPopups` Classes
+
+| Class | Description |
+| ----- | ----------- |
+| `Modal` | Generic modal dialog |
+| `MessageOK` | Simple message with OK button |
+| `Prompt` | Multi-button prompt dialog |
+| `InputString` | String input with confirmation |
+| `InputInt` | Integer input with confirmation |
+| `InputFloat` | Float input with confirmation |
+| `FilesystemBrowser` | File/directory browser with glob filtering |
+| `SearchableList<T>` | Searchable item selection list |
+
+### `Theme` (Static)
+
+Theme management from ImGui.Styler.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Apply(string)` | `bool` | Apply a named theme |
+| `Apply(ISemanticTheme)` | `void` | Apply a theme instance |
+| `ResetToDefault()` | `void` | Reset to default ImGui theme |
+| `ShowThemeSelector(...)` | `void` | Show interactive theme browser |
+| `RenderMenu(...)` | `bool` | Render theme selection menu |
+| `FindTheme(string)` | `ThemeInfo?` | Look up theme by name |
+| `AllThemes` | `IReadOnlyList<ThemeInfo>` | All available themes |
+| `DarkThemes` | `IReadOnlyList<ThemeInfo>` | Dark themes only |
+| `LightThemes` | `IReadOnlyList<ThemeInfo>` | Light themes only |
+| `Families` | `IReadOnlyList<string>` | Theme family names |
+
+### Styling Utilities
+
+| Class | Description |
+| ----- | ----------- |
+| `ScopedColor` | RAII scoped ImGui color override |
+| `ScopedTextColor` | RAII scoped text color |
+| `ScopedStyleVar` | RAII scoped style variable |
+| `ScopedThemeColor` | RAII scoped theme-aware color |
+| `ScopedTheme` | RAII scoped full theme |
+| `FontAppearance` | RAII scoped font styling |
+| `UIScaler` | RAII scoped UI scaling |
+| `Alignment.Center` | RAII scoped content centering |
+| `Button.Alignment` | RAII scoped button text alignment |
+| `Text.Color` | Semantic text colors (Error, Warning, Info, Success) |
+| `Indent` | Scoped indentation utilities |
+| `Color` | Color creation (Hex, RGB, HSL) with palettes |
+
+### Color Extensions (on `ImColor`)
+
+| Name | Description |
+| ---- | ----------- |
+| `DesaturateBy(float)` | Reduce saturation |
+| `SaturateBy(float)` | Increase saturation |
+| `LightenBy(float)` | Increase luminance |
+| `DarkenBy(float)` | Decrease luminance |
+| `WithAlpha(float)` | Set alpha channel |
+| `ToGrayscale()` | Convert to grayscale |
+| `CalculateOptimalContrastingColor()` | Get best contrast text color |
+| `GetContrastRatioOver(ImColor)` | WCAG contrast ratio |
+
+### `NodeEditorEngine`
+
+Core node graph business logic.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `CreateNode(...)` | `Node` | Create a node with pins |
+| `RemoveNode(int)` | `bool` | Remove a node |
+| `TryCreateLink(int, int)` | `LinkCreationResult` | Create a link between pins |
+| `RemoveLink(int)` | `bool` | Remove a link |
+| `UpdatePhysics(float)` | `void` | Run physics simulation step |
+| `Clear()` | `void` | Remove all nodes and links |
+| `Nodes` | `IReadOnlyList<Node>` | All nodes |
+| `Links` | `IReadOnlyList<Link>` | All links |
+| `IsStable` | `bool` | Whether physics is stable |
+
+### Node Graph Attributes
+
+| Attribute | Target | Description |
+| --------- | ------ | ----------- |
+| `[Node]` | Class/Struct/Method | Marks type as a node |
+| `[NodeBehavior]` | Class/Struct | Specifies execution mode |
+| `[NodeExecute]` | Method | Marks execution method |
+| `[InputPin]` | Property/Field/Parameter | Declares an input pin |
+| `[OutputPin]` | Property/Field/Method | Declares an output pin |
+| `[ExecutionInput]` | Property/Field | Declares execution input flow |
+| `[ExecutionOutput]` | Property/Field | Declares execution output flow |
+| `[NodeDeprecated]` | Class/Struct | Marks node as deprecated |
+| `[NodeVisibility]` | Class/Struct | Controls menu visibility |
+| `[WildcardPin]` | Property/Field | Accepts wildcard connections |
+
+## Demo Applications
+
+The repository includes demo applications showcasing all features:
 
 ```bash
-# Clone the repository
-git clone https://github.com/ktsu-dev/ImGui.git
-cd ImGui
-
-# Run the main demo (showcases all libraries)
+# Run the main demo
 dotnet run --project examples/ImGuiAppDemo
 
 # Run individual library demos
 dotnet run --project examples/ImGuiWidgetsDemo
-dotnet run --project examples/ImGuiPopupsDemo  
+dotnet run --project examples/ImGuiPopupsDemo
 dotnet run --project examples/ImGuiStylerDemo
 ```
 
-Each demo includes:
-- **Interactive Examples**: Try all features with live code
-- **Performance Testing**: See PID frame limiting and throttling in action
-- **Theme Gallery**: Browse and apply all 50+ built-in themes
-- **Widget Showcase**: Complete widget and layout demonstrations
-- **Integration Examples**: How libraries work together
+## Contributing
 
-## 🛠️ Requirements
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
-- **.NET 10.0, 9.0, or 8.0** (multi-targeted libraries support .NET 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, and netstandard2.0/2.1)
-- **Windows, macOS, or Linux** (cross-platform support via Silk.NET)
-- **OpenGL 3.3** or higher (handled automatically)
+## License
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)  
-3. **Make** your changes with tests
-4. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-5. **Push** to the branch (`git push origin feature/amazing-feature`)
-6. **Open** a Pull Request
-
-### Development Setup
-
-```bash
-git clone https://github.com/ktsu-dev/ImGui.git
-cd ImGui
-dotnet restore
-dotnet build
-```
-
-Please ensure:
-- Code follows existing style conventions
-- All tests pass (`dotnet test`)  
-- Documentation is updated for new features
-- Examples demonstrate new functionality
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE.md](LICENSE.md) file for details.
-
-## 🙏 Acknowledgments
-
-- **[Dear ImGui](https://github.com/ocornut/imgui)** - The amazing immediate mode GUI library
-- **[Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui)** - Excellent .NET bindings for Dear ImGui  
-- **[Silk.NET](https://github.com/dotnet/Silk.NET)** - Cross-platform .NET OpenGL and windowing
-- **Theme Communities** - Catppuccin, Tokyo Night, Gruvbox creators and communities
-- **Contributors** - Everyone who has contributed code, themes, bug reports, and feedback
-
-## 🔗 Related Projects
-
-- **[ktsu.ThemeProvider](https://github.com/ktsu-dev/ThemeProvider)** - Semantic theming foundation
-- **[ktsu.Extensions](https://github.com/ktsu-dev/Extensions)** - Utility extension methods
-- **[ktsu.StrongPaths](https://github.com/ktsu-dev/StrongPaths)** - Type-safe path handling
-- **[ktsu.TextFilter](https://github.com/ktsu-dev/TextFilter)** - Advanced text filtering utilities
-
----
-
-**Made with ❤️ by the ktsu.dev team**
-
-*Build beautiful, performant desktop applications with the power of Dear ImGui and .NET*
+This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
