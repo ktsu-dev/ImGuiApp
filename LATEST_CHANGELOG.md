@@ -2,6 +2,8 @@
 
 Changes since v2.3.0:
 
+- Add DESCRIPTION.md and TAGS.md files; update README.md with comprehensive library details and usage examples ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add SonarLint configuration for connected mode ([@matt-edmondson](https://github.com/matt-edmondson))
 - feat(timers): Add countdown and count-up timer demos with radial progress indicators ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
 - Increase MaxForce values in PhysicsSettings and demo to enhance simulation capabilities ([@matt-edmondson](https://github.com/matt-edmondson))
