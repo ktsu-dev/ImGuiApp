@@ -333,18 +333,13 @@ internal static class MarkdownRenderer
 			_ => 0.9f,
 		};
 
-		float previousScale = ImGui.GetStyle().FontScaleMain;
-		ImGui.GetStyle().FontScaleMain = scale;
-		try
+		int scaledPointSize = (int)(14 * scale);
+		using (new FontAppearance(scaledPointSize))
 		{
 			if (heading.Inline is not null)
 			{
 				RenderInlines(heading.Inline, wrapWidth);
 			}
-		}
-		finally
-		{
-			ImGui.GetStyle().FontScaleMain = previousScale;
 		}
 
 		if (heading.Level <= 2)
@@ -366,35 +361,56 @@ internal static class MarkdownRenderer
 				continue;
 			}
 
-			float indent = (indentLevel + 1) * 20.0f;
+			float indent = indentLevel * 20.0f;
 			ImGui.Indent(indent);
 
-			string bullet = list.IsOrdered
-				? $"{itemIndex + 1}. "
-				: "\u2022 ";
-
-			bool firstInline = true;
-			RenderLiteralText(bullet, wrapWidth - indent, ref firstInline);
-
-			foreach (Block subBlock in listItem)
+			if (list.IsOrdered)
 			{
-				if (subBlock is ParagraphBlock paragraph && paragraph.Inline is not null)
+				bool firstInline = true;
+				RenderLiteralText($"{itemIndex + 1}. ", wrapWidth - indent, ref firstInline);
+
+				foreach (Block subBlock in listItem)
 				{
-					RenderInlines(paragraph.Inline, wrapWidth - indent, ref firstInline);
+					if (subBlock is ParagraphBlock paragraph && paragraph.Inline is not null)
+					{
+						RenderInlines(paragraph.Inline, wrapWidth - indent, ref firstInline);
+					}
+					else if (subBlock is ListBlock nestedList)
+					{
+						ImGui.NewLine();
+						RenderList(nestedList, wrapWidth, indentLevel + 1);
+					}
+					else
+					{
+						RenderBlock(subBlock, wrapWidth - indent, indentLevel + 1);
+					}
 				}
-				else if (subBlock is ListBlock nestedList)
+			}
+			else
+			{
+				ImGui.Bullet();
+				ImGui.SameLine();
+
+				bool firstInline = true;
+				foreach (Block subBlock in listItem)
 				{
-					ImGui.NewLine();
-					RenderList(nestedList, wrapWidth, indentLevel + 1);
-				}
-				else
-				{
-					RenderBlock(subBlock, wrapWidth - indent, indentLevel + 1);
+					if (subBlock is ParagraphBlock paragraph && paragraph.Inline is not null)
+					{
+						RenderInlines(paragraph.Inline, wrapWidth - indent, ref firstInline);
+					}
+					else if (subBlock is ListBlock nestedList)
+					{
+						ImGui.NewLine();
+						RenderList(nestedList, wrapWidth, indentLevel + 1);
+					}
+					else
+					{
+						RenderBlock(subBlock, wrapWidth - indent, indentLevel + 1);
+					}
 				}
 			}
 
 			ImGui.Unindent(indent);
-			ImGui.NewLine();
 			itemIndex++;
 		}
 	}
@@ -450,18 +466,27 @@ internal static class MarkdownRenderer
 		{
 			foreach (Block child in quote)
 			{
-				RenderBlock(child, wrapWidth - indent, 0);
+				if (child is ParagraphBlock paragraph && paragraph.Inline is not null)
+				{
+					RenderInlines(paragraph.Inline, wrapWidth - indent);
+				}
+				else
+				{
+					RenderBlock(child, wrapWidth - indent, 0);
+				}
 			}
 		}
 
+		// GetItemRectMax gives the bottom of the last rendered text item,
+		// excluding any trailing NewLine spacing.
+		float borderBottom = ImGui.GetItemRectMax().Y;
+		ImGui.NewLine();
 		ImGui.Unindent(indent);
-
-		Vector2 endPos = ImGui.GetCursorScreenPos();
 
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 		drawList.AddLine(
 			new Vector2(startPos.X + 4.0f, startPos.Y),
-			new Vector2(startPos.X + 4.0f, endPos.Y),
+			new Vector2(startPos.X + 4.0f, borderBottom),
 			ImGui.GetColorU32(Color.Palette.Neutral.Gray.Value),
 			borderThickness);
 	}

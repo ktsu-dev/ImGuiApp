@@ -6,8 +6,8 @@ namespace ktsu.ImGui.Examples.App.Demos;
 
 using System.Numerics;
 using Hexa.NET.ImGui;
-using ktsu.ImGui.App;
 using ktsu.ImGui.Examples.App.Properties;
+using ktsu.ImGui.Styler;
 
 /// <summary>
 /// Demo for data visualization features

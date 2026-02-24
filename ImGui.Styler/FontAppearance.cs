@@ -2,7 +2,9 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
-namespace ktsu.ImGui.App;
+namespace ktsu.ImGui.Styler;
+
+using System;
 
 using Hexa.NET.ImGui;
 
@@ -16,12 +18,19 @@ public class FontAppearance : ScopedAction
 	/// <summary>
 	/// The default font name.
 	/// </summary>
-	internal const string DefaultFontName = "default";
+	public const string DefaultFontName = "default";
 
 	/// <summary>
 	/// The default font point size.
 	/// </summary>
-	internal const int DefaultFontPointSize = 14;
+	public const int DefaultFontPointSize = 14;
+
+	/// <summary>
+	/// Gets or sets the font resolver used to find fonts by name and size.
+	/// When set, this resolver is used to look up fonts. When null, falls back to using the current ImGui font.
+	/// The function takes a font name and size in points, and returns the font pointer and size in pixels.
+	/// </summary>
+	public static Func<string, int, (ImFontPtr Font, float SizePixels)>? FontResolver { get; set; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="FontAppearance"/> class.
@@ -32,13 +41,19 @@ public class FontAppearance : ScopedAction
 	/// <param name="sizePixels">The size of the font in pixels.</param>
 	public FontAppearance(string name, int sizePoints, out float sizePixels)
 	{
-		// ImGui 1.92.0+ uses dynamic font scaling with PushFont(font, size)
-		// The font system handles glyph loading and scaling automatically
+		ImFontPtr font;
+		if (FontResolver is not null)
+		{
+			(font, sizePixels) = FontResolver(name, sizePoints);
+		}
+		else
+		{
+			font = ImGui.GetFont();
+			sizePixels = sizePoints;
+		}
 
-		ImFontPtr font = ImGuiApp.FindBestFontForAppearance(name, sizePoints, out sizePixels);
 		ImGui.PushFont(font, sizePixels);
-
-		OnClose = () => ImGuiApp.Invoker.Invoke(() => ImGui.PopFont());
+		OnClose = ImGui.PopFont;
 	}
 
 	/// <summary>

@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.App.Tests;
 
+using ktsu.ImGui.Styler;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

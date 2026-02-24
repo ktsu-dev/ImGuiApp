@@ -7,6 +7,7 @@
 namespace ktsu.ImGui.App.Tests;
 
 using System.Numerics;
+using ktsu.ImGui.Styler;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Core.Contexts;

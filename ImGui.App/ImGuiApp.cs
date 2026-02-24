@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
+using ktsu.ImGui.Styler;
 using ktsu.Invoker;
 using ktsu.ScopedAction;
 using ktsu.Semantics.Paths;
@@ -250,6 +251,11 @@ public static partial class ImGuiApp
 					UpdateDpiScale();
 					DebugLogger.Log("onConfigureIO: Initializing fonts");
 					InitFonts();
+					FontAppearance.FontResolver = (name, sizePoints) =>
+					{
+						ImFontPtr font = FindBestFontForAppearance(name, sizePoints, out float sizePixels);
+						return (font, sizePixels);
+					};
 					DebugLogger.Log("onConfigureIO: Calling user OnStart");
 					config.OnStart?.Invoke();
 					DebugLogger.Log("onConfigureIO: Configuration completed");
