@@ -158,6 +158,7 @@ internal static class ImGuiWidgetsDemo
 		ShowColorIndicatorDemo();
 		ShowComboDemo();
 		ShowTextDemo();
+		ShowMarkdownDemo();
 		ShowScopedWidgetsDemo();
 		ShowTreeDemo();
 	}
@@ -766,6 +767,72 @@ internal static class ImGuiWidgetsDemo
 			}
 			ImGuiWidgets.TextCenteredWithin(displayText, clipSize);
 			ImGui.SetCursorPosY(ImGui.GetCursorPosY() + clipSize.Y);
+		}
+	}
+
+	private const string MarkdownSample = """
+		# Markdown Widget Demo
+
+		This widget renders **markdown** using ImGui primitives with *color-based styling*.
+
+		## Text Formatting
+
+		You can use **bold text**, *italic text*, ***bold and italic***, and ~~strikethrough~~.
+		Inline `code` is also supported with a highlighted background.
+
+		## Lists
+
+		Unordered list:
+		- First item
+		- Second item with **bold**
+		- Third item
+		  - Nested item A
+		  - Nested item B
+
+		Ordered list:
+		1. Step one
+		2. Step two
+		3. Step three
+
+		## Code Blocks
+
+		```
+		// Example code block
+		ImGuiWidgets.Markdown(text);
+		ImGuiWidgets.Markdown(text, options);
+		```
+
+		## Blockquotes
+
+		> This is a blockquote with a left border.
+		> It supports **inline formatting** too.
+
+		## Links
+
+		Visit [ktsu.dev](https://ktsu.dev) for more information.
+
+		## Tables
+
+		| Feature | Status |
+		|---------|--------|
+		| Headers | Done |
+		| Bold/Italic | Done |
+		| Lists | Done |
+		| Tables | Done |
+
+		---
+
+		*End of markdown demo.*
+		""";
+
+	private static void ShowMarkdownDemo()
+	{
+		if (ImGui.CollapsingHeader("Markdown"))
+		{
+			ImGui.TextUnformatted("Renders formatted text from markdown strings:");
+			ImGui.Separator();
+
+			ImGuiWidgets.Markdown(MarkdownSample);
 		}
 	}
 

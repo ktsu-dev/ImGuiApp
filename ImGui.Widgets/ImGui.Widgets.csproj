@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.TextFilter" />
+    <PackageReference Include="Markdig" />
     <ProjectReference Include="..\ImGui.Styler\ImGui.Styler.csproj" />
     <PackageReference Include="Polyfill" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />
