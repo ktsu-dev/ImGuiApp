@@ -12,9 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.Widgets", "ImGui.Widgets\ImGui.Widgets.csproj", "{0BA81D84-EB0C-FDB5-8748-90F03AD17AC0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-	ProjectSection(SolutionItems) = preProject
-		examples\ImGuiPopupsDemo\ImGuiPopupsDemo.csproj = examples\ImGuiPopupsDemo\ImGuiPopupsDemo.csproj
-	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGuiPopupsDemo", "examples\ImGuiPopupsDemo\ImGuiPopupsDemo.csproj", "{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGuiAppDemo", "examples\ImGuiAppDemo\ImGuiAppDemo.csproj", "{D50ADE7F-2B62-EDB5-2F96-8E6E8D19B961}"
 EndProject
@@ -174,6 +173,18 @@ Global
 		{62349407-22D0-42A6-8F7B-B7E2303A5DB1}.Release|x64.Build.0 = Release|Any CPU
 		{62349407-22D0-42A6-8F7B-B7E2303A5DB1}.Release|x86.ActiveCfg = Release|Any CPU
 		{62349407-22D0-42A6-8F7B-B7E2303A5DB1}.Release|x86.Build.0 = Release|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Debug|x64.Build.0 = Debug|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Debug|x86.Build.0 = Debug|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Release|x64.ActiveCfg = Release|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Release|x64.Build.0 = Release|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Release|x86.ActiveCfg = Release|Any CPU
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -184,6 +195,7 @@ Global
 		{723D183E-B609-CD2B-CF5B-B6F81E9368B3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{D1B3E399-F4E4-D537-46FE-2585AF4E9262} = {5F0E6F1C-44C1-42B7-ADF4-770ABB471B40}
 		{14A700C3-85E0-4782-81C8-FBDA250F1886} = {5F0E6F1C-44C1-42B7-ADF4-770ABB471B40}
+		{6412743B-E3E7-4ADD-AB4D-CD9D03551E8D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {14515AC1-A74C-4CBB-98F2-9DA660E967EF}
