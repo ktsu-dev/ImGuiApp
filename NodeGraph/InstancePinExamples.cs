@@ -5,6 +5,7 @@
 // Examples demonstrating automatic instance pin behavior for classes and structs.
 
 namespace ktsu.NodeGraph.Examples;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

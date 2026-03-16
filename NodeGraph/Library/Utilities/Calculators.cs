@@ -5,6 +5,7 @@
 // Calculator utility nodes with instance methods.
 
 namespace ktsu.NodeGraph.Library.Utilities;
+
 using System.ComponentModel;
 
 /// <summary>

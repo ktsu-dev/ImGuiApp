@@ -4,8 +4,8 @@
 
 namespace ktsu.ImGui.App.Tests;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ktsu.ImGui.App.ImGuiController;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Tests for platform-specific functionality including DPI awareness, native methods, and GDI+ helpers.

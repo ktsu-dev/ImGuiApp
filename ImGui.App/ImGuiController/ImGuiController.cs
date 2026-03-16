@@ -7,15 +7,12 @@ namespace ktsu.ImGui.App.ImGuiController;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-
 using Hexa.NET.ImGui;
-
+using ktsu.ImGui.App;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-
-using ktsu.ImGui.App;
 
 internal sealed class ImGuiController : IDisposable
 {

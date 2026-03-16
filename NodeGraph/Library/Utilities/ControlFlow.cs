@@ -5,6 +5,7 @@
 // Control flow utility nodes.
 
 namespace ktsu.NodeGraph.Library.Utilities;
+
 using System.ComponentModel;
 
 /// <summary>

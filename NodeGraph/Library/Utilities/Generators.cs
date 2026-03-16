@@ -5,6 +5,7 @@
 // Data generator utility nodes.
 
 namespace ktsu.NodeGraph.Library.Utilities;
+
 using System;
 using System.ComponentModel;
 

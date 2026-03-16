@@ -7,8 +7,8 @@ namespace ktsu.ImGui.App.Tests;
 using System;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ktsu.Semantics.Paths;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Advanced tests targeting specific low-coverage areas including OpenGL functionality, shader management, and texture operations.

@@ -26,65 +26,64 @@ internal sealed class AdvancedWidgetsDemo : IDemoTab
 		{
 			if (ImGui.BeginChild("##content"))
 			{
-			// Color controls
-			ImGui.SeparatorText("Color Controls:");
-			ImGui.ColorEdit3("Color RGB", ref colorPickerValue);
-			ImGui.ColorEdit4("Color RGBA", ref color4Value);
-			ImGui.SetNextItemWidth(200.0f);
-			ImGui.ColorPicker3("Color Picker", ref colorPickerValue);
+				// Color controls
+				ImGui.SeparatorText("Color Controls:");
+				ImGui.ColorEdit3("Color RGB", ref colorPickerValue);
+				ImGui.ColorEdit4("Color RGBA", ref color4Value);
+				ImGui.SetNextItemWidth(200.0f);
+				ImGui.ColorPicker3("Color Picker", ref colorPickerValue);
 
-			// Tree view
-			ImGui.SeparatorText("Tree View:");
-			if (ImGui.TreeNode("Root Node"))
-			{
-				for (int i = 0; i < 5; i++)
+				// Tree view
+				ImGui.SeparatorText("Tree View:");
+				if (ImGui.TreeNode("Root Node"))
 				{
-					string nodeName = $"Child Node {i}";
-					bool nodeOpen = ImGui.TreeNode(nodeName);
-
-					if (i == 2 && nodeOpen)
+					for (int i = 0; i < 5; i++)
 					{
-						for (int j = 0; j < 3; j++)
+						string nodeName = $"Child Node {i}";
+						bool nodeOpen = ImGui.TreeNode(nodeName);
+
+						if (i == 2 && nodeOpen)
 						{
-							if (ImGui.TreeNode($"Grandchild {j}"))
+							for (int j = 0; j < 3; j++)
 							{
-								ImGui.Text($"Leaf item {j}");
-								ImGui.TreePop();
+								if (ImGui.TreeNode($"Grandchild {j}"))
+								{
+									ImGui.Text($"Leaf item {j}");
+									ImGui.TreePop();
+								}
 							}
 						}
-					}
-					else if (nodeOpen)
-					{
-						ImGui.Text($"Content of {nodeName}");
-					}
+						else if (nodeOpen)
+						{
+							ImGui.Text($"Content of {nodeName}");
+						}
 
-					if (nodeOpen)
-					{
-						ImGui.TreePop();
+						if (nodeOpen)
+						{
+							ImGui.TreePop();
+						}
 					}
+					ImGui.TreePop();
 				}
-				ImGui.TreePop();
-			}
 
-			// Progress bars and loading indicators
-			ImGui.SeparatorText("Progress Indicators:");
-			float progress = ((float)Math.Sin(animationTime * 2.0) * 0.5f) + 0.5f;
-			ImGui.ProgressBar(progress, new Vector2(-1, 0), $"{progress * 100:F1}%");
+				// Progress bars and loading indicators
+				ImGui.SeparatorText("Progress Indicators:");
+				float progress = ((float)Math.Sin(animationTime * 2.0) * 0.5f) + 0.5f;
+				ImGui.ProgressBar(progress, new Vector2(-1, 0), $"{progress * 100:F1}%");
 
-			// Spinner-like effect
-			ImGui.Text("Loading...");
-			ImGui.SameLine();
-			for (int i = 0; i < 8; i++)
-			{
-				float rotation = (animationTime * 5.0f) + (i * MathF.PI / 4.0f);
-				float alpha = (MathF.Sin(rotation) + 1.0f) * 0.5f;
-				ImGui.TextColored(new Vector4(1, 1, 1, alpha), "●");
-				if (i < 7)
+				// Spinner-like effect
+				ImGui.Text("Loading...");
+				ImGui.SameLine();
+				for (int i = 0; i < 8; i++)
 				{
-					ImGui.SameLine();
+					float rotation = (animationTime * 5.0f) + (i * MathF.PI / 4.0f);
+					float alpha = (MathF.Sin(rotation) + 1.0f) * 0.5f;
+					ImGui.TextColored(new Vector4(1, 1, 1, alpha), "●");
+					if (i < 7)
+					{
+						ImGui.SameLine();
+					}
 				}
-			}
-
 			}
 			ImGui.EndChild();
 

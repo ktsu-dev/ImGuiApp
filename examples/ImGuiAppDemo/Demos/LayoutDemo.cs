@@ -51,85 +51,85 @@ internal sealed class LayoutDemo : IDemoTab
 			{
 				// Columns
 				ImGui.SeparatorText("Columns Layout:");
-			ImGui.Columns(3, "DemoColumns");
-			ImGui.Text("Column 1");
-			ImGui.NextColumn();
-			ImGui.Text("Column 2");
-			ImGui.NextColumn();
-			ImGui.Text("Column 3");
-			ImGui.NextColumn();
-
-			for (int i = 0; i < 9; i++)
-			{
-				ImGui.Text($"Item {i + 1}");
+				ImGui.Columns(3, "DemoColumns");
+				ImGui.Text("Column 1");
 				ImGui.NextColumn();
-			}
+				ImGui.Text("Column 2");
+				ImGui.NextColumn();
+				ImGui.Text("Column 3");
+				ImGui.NextColumn();
 
-			ImGui.Columns(1);
+				for (int i = 0; i < 9; i++)
+				{
+					ImGui.Text($"Item {i + 1}");
+					ImGui.NextColumn();
+				}
 
-			// Tables
-			ImGui.SeparatorText("Advanced Tables:");
-			ImGui.Checkbox("Show Headers", ref showTableHeaders);
-			ImGui.SameLine();
-			ImGui.Checkbox("Show Borders", ref showTableBorders);
+				ImGui.Columns(1);
 
-			ImGuiTableFlags tableFlags = ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable;
-			if (showTableHeaders)
-			{
-				tableFlags |= ImGuiTableFlags.RowBg;
-			}
-			if (showTableBorders)
-			{
-				tableFlags |= ImGuiTableFlags.BordersOuter | ImGuiTableFlags.BordersV;
-			}
+				// Tables
+				ImGui.SeparatorText("Advanced Tables:");
+				ImGui.Checkbox("Show Headers", ref showTableHeaders);
+				ImGui.SameLine();
+				ImGui.Checkbox("Show Borders", ref showTableBorders);
 
-			if (ImGui.BeginTable("DemoTable", 5, tableFlags))
-			{
+				ImGuiTableFlags tableFlags = ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable;
 				if (showTableHeaders)
 				{
-					// Test flags without width parameters
-					ImGui.TableSetupColumn("ID", ImGuiTableColumnFlags.DefaultSort);
-					ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.None);
-					ImGui.TableSetupColumn("Category", ImGuiTableColumnFlags.None);
-					ImGui.TableSetupColumn("Value", ImGuiTableColumnFlags.None);
-					ImGui.TableSetupColumn("Active", ImGuiTableColumnFlags.None);
-					ImGui.TableHeadersRow();
+					tableFlags |= ImGuiTableFlags.RowBg;
 				}
-
-				for (int row = 0; row < Math.Min(tableData.Count, 10); row++)
+				if (showTableBorders)
 				{
-					DemoItem item = tableData[row];
-					ImGui.TableNextRow();
-
-					ImGui.TableSetColumnIndex(0);
-					ImGui.Text(item.Id.ToString());
-
-					ImGui.TableSetColumnIndex(1);
-					ImGui.Text(item.Name);
-
-					ImGui.TableSetColumnIndex(2);
-					ImGui.Text(item.Category);
-
-					ImGui.TableSetColumnIndex(3);
-					ImGui.Text($"{item.Value:F2}");
-
-					ImGui.TableSetColumnIndex(4);
-					ImGui.Text(item.Active ? "✓" : "✗");
+					tableFlags |= ImGuiTableFlags.BordersOuter | ImGuiTableFlags.BordersV;
 				}
 
-				ImGui.EndTable();
-			}
-
-			// Child windows
-			ImGui.SeparatorText("Child Windows:");
-			if (ImGui.BeginChild("ScrollableChild", new Vector2(0, 150)))
-			{
-				for (int i = 0; i < 50; i++)
+				if (ImGui.BeginTable("DemoTable", 5, tableFlags))
 				{
-					ImGui.Text($"Scrollable line {i + 1}");
+					if (showTableHeaders)
+					{
+						// Test flags without width parameters
+						ImGui.TableSetupColumn("ID", ImGuiTableColumnFlags.DefaultSort);
+						ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.None);
+						ImGui.TableSetupColumn("Category", ImGuiTableColumnFlags.None);
+						ImGui.TableSetupColumn("Value", ImGuiTableColumnFlags.None);
+						ImGui.TableSetupColumn("Active", ImGuiTableColumnFlags.None);
+						ImGui.TableHeadersRow();
+					}
+
+					for (int row = 0; row < Math.Min(tableData.Count, 10); row++)
+					{
+						DemoItem item = tableData[row];
+						ImGui.TableNextRow();
+
+						ImGui.TableSetColumnIndex(0);
+						ImGui.Text(item.Id.ToString());
+
+						ImGui.TableSetColumnIndex(1);
+						ImGui.Text(item.Name);
+
+						ImGui.TableSetColumnIndex(2);
+						ImGui.Text(item.Category);
+
+						ImGui.TableSetColumnIndex(3);
+						ImGui.Text($"{item.Value:F2}");
+
+						ImGui.TableSetColumnIndex(4);
+						ImGui.Text(item.Active ? "✓" : "✗");
+					}
+
+					ImGui.EndTable();
 				}
-			}
-			ImGui.EndChild();
+
+				// Child windows
+				ImGui.SeparatorText("Child Windows:");
+				if (ImGui.BeginChild("ScrollableChild", new Vector2(0, 150)))
+				{
+					for (int i = 0; i < 50; i++)
+					{
+						ImGui.Text($"Scrollable line {i + 1}");
+					}
+				}
+				ImGui.EndChild();
 			}
 			ImGui.EndChild();
 

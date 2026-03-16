@@ -5,6 +5,7 @@
 // String data types and their Make/Split/Set node implementations.
 
 namespace ktsu.NodeGraph.Library.Primitives;
+
 using System;
 using System.ComponentModel;
 

@@ -4,9 +4,8 @@
 
 namespace ktsu.ImGui.App.Tests;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 using ktsu.ImGui.App;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Tests for ImGuiExtensionManager covering initialization, availability detection, and lifecycle methods.

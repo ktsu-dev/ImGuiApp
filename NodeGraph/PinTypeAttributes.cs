@@ -3,6 +3,7 @@
 // Licensed under the MIT license.
 
 namespace ktsu.NodeGraph;
+
 using System;
 using System.Collections.Generic;
 

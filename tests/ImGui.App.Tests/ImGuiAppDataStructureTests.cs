@@ -5,10 +5,10 @@
 namespace ktsu.ImGui.App.Tests;
 
 using System.Numerics;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Silk.NET.Windowing;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Silk.NET.Windowing;
 
 /// <summary>
 /// Tests for ImGuiApp data structures including texture info, window state, configuration, and performance settings.
