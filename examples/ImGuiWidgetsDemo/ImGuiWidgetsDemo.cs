@@ -164,7 +164,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowAdvancedDemos(float size)
 	{
-		AbsoluteFilePath ktsuIconPath = Environment.CurrentDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>();
+		AbsoluteFilePath ktsuIconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>();
 		ImGuiAppTextureInfo ktsuTexture = ImGuiApp.GetOrLoadTexture(ktsuIconPath);
 
 		ImGui.TextUnformatted("Advanced Widget Demos");
