@@ -5,6 +5,7 @@
 // Logic operations including type conversions and comparisons.
 
 namespace ktsu.NodeGraph.Library.Operations;
+
 using System;
 using System.ComponentModel;
 

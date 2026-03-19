@@ -5,6 +5,7 @@
 // Date and time operations as static method nodes.
 
 namespace ktsu.NodeGraph.Library.Operations;
+
 using System;
 using System.ComponentModel;
 

@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Hexa.NET.ImGui;
-using ktsu.ThemeProvider;
 using ktsu.ImGui.Popups;
+using ktsu.ThemeProvider;
 
 /// <summary>
 /// A modal theme browser that allows users to select themes from a visual grid.

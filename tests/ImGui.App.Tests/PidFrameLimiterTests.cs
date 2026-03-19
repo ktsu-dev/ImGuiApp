@@ -4,9 +4,8 @@
 
 namespace ktsu.ImGui.App.Tests;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 using ktsu.ImGui.App;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Tests for PidFrameLimiter class covering frame rate limiting, PID controller logic, and auto-tuning functionality.

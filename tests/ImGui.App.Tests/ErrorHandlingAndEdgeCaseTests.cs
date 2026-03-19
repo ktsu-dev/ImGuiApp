@@ -6,8 +6,8 @@ namespace ktsu.ImGui.App.Tests;
 
 using System;
 using System.Collections.Generic;
-using ktsu.ImGui.App.ImGuiController;
 using ktsu.ImGui.App;
+using ktsu.ImGui.App.ImGuiController;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

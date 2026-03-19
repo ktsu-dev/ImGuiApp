@@ -5,11 +5,10 @@
 namespace ktsu.ImGui.App.Tests;
 
 using System.Numerics;
-
+using ktsu.Semantics.Paths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Silk.NET.Windowing;
-using ktsu.Semantics.Paths;
 
 /// <summary>
 /// Tests for ImGuiApp window management functionality including initialization, configuration validation, and event handling.

@@ -44,7 +44,7 @@ internal static class ImGuiAppDemo
 		// Note: EnableUnicodeSupport = true by default, so Unicode and emojis are automatically enabled!
 		Fonts = new Dictionary<string, byte[]>
 		{
-			{ nameof(ktsu.ImGui.Examples.App.Properties.Resources.CARDCHAR), ktsu.ImGui.Examples.App.Properties.Resources.CARDCHAR }
+			{ nameof(Properties.Resources.CARDCHAR), Properties.Resources.CARDCHAR }
 		},
 		// Example of configuring performance settings for throttled rendering
 		// Uses PID controller for accurate frame rate limiting instead of simple sleep-based approach

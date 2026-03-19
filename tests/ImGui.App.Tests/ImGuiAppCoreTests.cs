@@ -4,9 +4,9 @@
 
 namespace ktsu.ImGui.App.Tests;
 
+using System.Collections.Concurrent;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
-using System.Collections.Concurrent;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
