@@ -2,6 +2,11 @@
 
 Changes since v2.3.0:
 
+- Update base directory path ([@Damon3000s](https://github.com/Damon3000s))
+- Copy ktsu.png to output directory for ImGuiWidgetsDemo ([@Damon3000s](https://github.com/Damon3000s))
+- Fix ImGuiPopupsDemo csproj inclusion ([@Damon3000s](https://github.com/Damon3000s))
+- Missed file from dotnet format ([@Damon3000s](https://github.com/Damon3000s))
+- Results from dotnet format ([@Damon3000s](https://github.com/Damon3000s))
 - Add DESCRIPTION.md and TAGS.md files; update README.md with comprehensive library details and usage examples ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add SonarLint configuration for connected mode ([@matt-edmondson](https://github.com/matt-edmondson))
 - feat(timers): Add countdown and count-up timer demos with radial progress indicators ([@matt-edmondson](https://github.com/matt-edmondson))
