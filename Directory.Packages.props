@@ -31,6 +31,6 @@
     <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.2" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.102" />
     <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="10.0.102" />
-    <PackageVersion Include="Polyfill" Version="9.13.0" />
+    <PackageVersion Include="Polyfill" Version="10.7.0" />
   </ItemGroup>
 </Project>
