@@ -4,52 +4,89 @@
 
 namespace ktsu.ImGuiNodeEditor;
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using ktsu.ForceDirectedLayout;
 using ktsu.Semantics;
 
 /// <summary>
-/// Core business logic for the node editor - completely independent of ImNodes
+/// Core business logic for the node editor - completely independent of ImNodes.
+/// Force-directed physics is delegated to <see cref="ForceDirectedLayout{TBody, TEdge}"/>.
 /// </summary>
 public class NodeEditorEngine
 {
 	private readonly List<Node> nodes = [];
 	private readonly List<Link> links = [];
-	private readonly Dictionary<int, int> pinToNodeIndex = [];
+	private readonly Dictionary<int, int> pinIdToNodeId = [];
 	private readonly HashSet<int> draggedNodeIds = [];
 	private int nextNodeId = 1;
 	private int nextLinkId = 1;
 	private int nextPinId = 1;
 
+	private readonly ForceDirectedLayout<Node, Link> layout;
+
+	/// <summary>
+	/// Create a new node editor engine with default physics settings.
+	/// </summary>
+	public NodeEditorEngine()
+	{
+		BodyAccessor<Node> bodyAccessor = new(
+			GetId: n => n.Id,
+			GetPosition: n => n.Position,
+			GetDimensions: n => n.Dimensions,
+			GetVelocity: n => n.Velocity,
+			GetForce: n => n.Force,
+			GetIsPinned: n => n.IsPinned,
+			WithPhysicsState: (n, pos, vel, force) => n with { Position = pos, Velocity = vel, Force = force }
+		);
+
+		EdgeAccessor<Link> edgeAccessor = new(
+			GetSourceBodyId: l => pinIdToNodeId.TryGetValue(l.OutputPinId, out int id) ? id : -1,
+			GetTargetBodyId: l => pinIdToNodeId.TryGetValue(l.InputPinId, out int id) ? id : -1
+		);
+
+		layout = new ForceDirectedLayout<Node, Link>(bodyAccessor, edgeAccessor);
+	}
+
 	/// <inheritdoc/>
 	public IReadOnlyList<Node> Nodes => nodes.AsReadOnly();
 	/// <inheritdoc/>
 	public IReadOnlyList<Link> Links => links.AsReadOnly();
-	/// <inheritdoc/>
-	public PhysicsSettings PhysicsSettings { get; private set; } = new();
 
-	/// <summary>
-	/// Computed gravity target (blend of centroid and world origin), published for debug rendering.
-	/// </summary>
-	public Vector2 GravityCenter { get; set; } = Vector2.Zero;
+	/// <summary>Current physics simulation settings. Update via <see cref="UpdatePhysicsSettings"/>.</summary>
+	public PhysicsSettings PhysicsSettings => layout.Settings;
+
+	/// <summary>Computed gravity target (blend of centroid and world origin), published for debug rendering.</summary>
+	public Vector2 GravityCenter => layout.GravityCenter;
 
 	/// <summary>
 	/// World origin in node-position space. Tracks with uniform node shifts (panning)
 	/// so it stays in the same coordinate space as node positions.
 	/// </summary>
-	public Vector2 WorldOrigin { get; set; } = Vector2.Zero;
+	public Vector2 WorldOrigin
+	{
+		get => layout.WorldOrigin;
+		set => layout.WorldOrigin = value;
+	}
+
+	/// <summary>Current physics simulation info (for debugging).</summary>
+	public (int SubstepCount, float SubstepDeltaTime) LastPhysicsStepInfo => layout.LastStepInfo;
+
+	/// <summary>Total kinetic energy in the system (sum of velocity squared for all nodes).</summary>
+	public float TotalSystemEnergy => layout.TotalSystemEnergy;
+
+	/// <summary>Whether the physics simulation has settled (total energy below threshold).</summary>
+	public bool IsStable => layout.IsStable;
 
 	/// <summary>
-	/// Create a new node with the specified number of input and output pins
+	/// Create a new node with the specified number of input and output pins.
 	/// </summary>
 	public Node CreateNode(Vector2 position, string name, int inputPinCount, int outputPinCount)
 	{
 		List<string> inputPinNames = [];
 		List<string> outputPinNames = [];
 
-		// Generate generic pin names
 		for (int i = 0; i < inputPinCount; i++)
 		{
 			inputPinNames.Add($"In {i + 1}");
@@ -64,20 +101,18 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Create a new node with specified pin names
+	/// Create a new node with specified pin names.
 	/// </summary>
 	public Node CreateNode(Vector2 position, string name, List<string> inputPinNames, List<string> outputPinNames)
 	{
 		List<Pin> inputPins = [];
 		List<Pin> outputPins = [];
 
-		// Create input pins with specific names
 		foreach (string pinName in inputPinNames)
 		{
 			inputPins.Add(new Pin(nextPinId++, PinDirection.Input, $"In {inputPins.Count + 1}", pinName));
 		}
 
-		// Create output pins with specific names
 		foreach (string pinName in outputPinNames)
 		{
 			outputPins.Add(new Pin(nextPinId++, PinDirection.Output, $"Out {outputPins.Count + 1}", pinName));
@@ -89,7 +124,7 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Attempt to create a link between two pins
+	/// Attempt to create a link between two pins.
 	/// </summary>
 	public LinkCreationResult TryCreateLink(int fromPinId, int toPinId)
 	{
@@ -101,23 +136,20 @@ public class NodeEditorEngine
 			return new LinkCreationResult(false, "One or both pins not found");
 		}
 
-		// Ensure we have one input and one output
 		if (fromPin.Direction == toPin.Direction)
 		{
 			return new LinkCreationResult(false, $"Cannot connect {fromPin.Direction} to {toPin.Direction}");
 		}
 
-		// Ensure correct direction (output -> input)
 		Pin outputPin = fromPin.Direction == PinDirection.Output ? fromPin : toPin;
 		Pin inputPin = fromPin.Direction == PinDirection.Input ? fromPin : toPin;
 
-		// Check if input pin already has a connection (only one input connection allowed)
+		// Only one input connection per pin.
 		if (links.Any(l => l.InputPinId == inputPin.Id))
 		{
 			return new LinkCreationResult(false, "Input pin already connected");
 		}
 
-		// Check for cycles (basic check - can be enhanced)
 		Node? outputNode = FindNodeByPin(outputPin.Id);
 		Node? inputNode = FindNodeByPin(inputPin.Id);
 
@@ -126,7 +158,6 @@ public class NodeEditorEngine
 			return new LinkCreationResult(false, "Cannot connect node to itself");
 		}
 
-		// Create the link
 		Link link = new(nextLinkId++, outputPin.Id, inputPin.Id);
 		links.Add(link);
 
@@ -134,7 +165,7 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Remove a link by ID
+	/// Remove a link by ID.
 	/// </summary>
 	public bool RemoveLink(int linkId)
 	{
@@ -148,7 +179,7 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Remove a node and all its connected links
+	/// Remove a node and all its connected links.
 	/// </summary>
 	public bool RemoveNode(int nodeId)
 	{
@@ -158,7 +189,6 @@ public class NodeEditorEngine
 			return false;
 		}
 
-		// Remove all links connected to this node
 		List<Link> connectedLinks = [.. links.Where(l =>
 			node.InputPins.Any(p => p.Id == l.InputPinId) ||
 			node.OutputPins.Any(p => p.Id == l.OutputPinId))];
@@ -168,20 +198,18 @@ public class NodeEditorEngine
 			links.Remove(link);
 		}
 
-		// Remove the node
 		nodes.Remove(node);
 		return true;
 	}
 
 	/// <summary>
-	/// Update a node's position
+	/// Update a node's position.
 	/// </summary>
 	public void UpdateNodePosition(int nodeId, Vector2 newPosition)
 	{
 		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
 		if (node != null)
 		{
-			// Create updated node with new position
 			Node updatedNode = node with { Position = newPosition };
 			int index = nodes.IndexOf(node);
 			nodes[index] = updatedNode;
@@ -189,7 +217,7 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Update a node's dimensions
+	/// Update a node's dimensions.
 	/// </summary>
 	public void UpdateNodeDimensions(int nodeId, Vector2 newDimensions)
 	{
@@ -203,7 +231,7 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Get all links connected to a specific node
+	/// Get all links connected to a specific node.
 	/// </summary>
 	public IEnumerable<Link> GetNodeLinks(int nodeId)
 	{
@@ -219,7 +247,7 @@ public class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Calculate the distance between two connected nodes
+	/// Calculate the distance between two connected nodes.
 	/// </summary>
 	public float? GetLinkDistance(int linkId)
 	{
@@ -267,24 +295,10 @@ public class NodeEditorEngine
 	/// Set the world origin to the centroid of all current node positions.
 	/// Call after populating nodes so gravity doesn't immediately pull them toward (0,0).
 	/// </summary>
-	public void InitializeWorldOriginToCentroid()
-	{
-		if (nodes.Count == 0)
-		{
-			WorldOrigin = Vector2.Zero;
-			return;
-		}
-
-		Vector2 centroid = Vector2.Zero;
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			centroid += nodes[i].Position + (nodes[i].Dimensions * 0.5f);
-		}
-		WorldOrigin = centroid / nodes.Count;
-	}
+	public void InitializeWorldOriginToCentroid() => layout.InitializeWorldOriginToCentroid(nodes);
 
 	/// <summary>
-	/// Clear all nodes and links
+	/// Clear all nodes and links.
 	/// </summary>
 	public void Clear()
 	{
@@ -293,11 +307,11 @@ public class NodeEditorEngine
 		nextNodeId = 1;
 		nextLinkId = 1;
 		nextPinId = 1;
-		WorldOrigin = Vector2.Zero;
+		layout.WorldOrigin = Vector2.Zero;
 	}
 
 	/// <summary>
-	/// Toggle whether a node is pinned (frozen during physics simulation)
+	/// Toggle whether a node is pinned (frozen during physics simulation).
 	/// </summary>
 	public void ToggleNodePinned(int nodeId)
 	{
@@ -320,395 +334,46 @@ public class NodeEditorEngine
 		{
 			draggedNodeIds.Add(id);
 		}
+		layout.SetFrozenBodies(draggedNodeIds);
 	}
 
 	/// <summary>
-	/// Update physics settings
+	/// Replace the current physics settings.
 	/// </summary>
-	public void UpdatePhysicsSettings(PhysicsSettings newSettings) => PhysicsSettings = newSettings;
+	public void UpdatePhysicsSettings(PhysicsSettings newSettings) => layout.Settings = newSettings;
 
 	/// <summary>
-	/// Current physics simulation info (for debugging)
-	/// </summary>
-	public (int SubstepCount, float SubstepDeltaTime) LastPhysicsStepInfo { get; private set; }
-
-	/// <summary>
-	/// Total kinetic energy in the system (sum of velocity squared for all nodes)
-	/// </summary>
-	public float TotalSystemEnergy { get; private set; }
-
-	/// <summary>
-	/// Whether the physics simulation has settled (total energy below threshold)
-	/// </summary>
-	public bool IsStable { get; private set; }
-
-	/// <summary>
-	/// Update physics simulation for one frame with substeps for stability
+	/// Advance the force-directed layout simulation by one frame.
 	/// </summary>
 	public void UpdatePhysics(float deltaTime)
 	{
-		if (!PhysicsSettings.Enabled || nodes.Count == 0)
-		{
-			LastPhysicsStepInfo = (0, 0.0f);
-			return;
-		}
-
-		// Build pin-to-node index for O(1) lookups during force calculations
-		RebuildPinToNodeIndex();
-
-		// Calculate substeps to achieve target physics frequency using semantic types
-		Time<float> frameDeltaTime = Time<float>.FromSeconds(deltaTime);
-		Time<float> targetTimestep = 1.0f / PhysicsSettings.TargetPhysicsHz; // 1/frequency = period
-
-		int numberOfSubsteps = Math.Max(1, (int)Math.Ceiling(frameDeltaTime.In(Units.Second) / targetTimestep.In(Units.Second)));
-		Time<float> substepDeltaTime = Time<float>.FromSeconds(deltaTime / numberOfSubsteps);
-
-		// Store for debug info
-		LastPhysicsStepInfo = (numberOfSubsteps, substepDeltaTime.In(Units.Second));
-
-		// Run physics simulation for each substep
-		for (int substep = 0; substep < numberOfSubsteps; substep++)
-		{
-			// Reset forces
-			for (int i = 0; i < nodes.Count; i++)
-			{
-				nodes[i] = nodes[i] with { Force = Vector2.Zero };
-			}
-
-			// Calculate forces
-			CalculateRepulsionForces();
-			CalculateLinkForces();
-			CalculateDirectionalForces();
-			CalculateGravityForces();
-
-			// Update velocities and positions
-			UpdateNodePositions(substepDeltaTime);
-
-			// Apply hard directional constraints (position-based, bypasses MaxForce)
-			ApplyDirectionalConstraints();
-		}
-
-		// Calculate total system energy for stability detection
-		TotalSystemEnergy = 0.0f;
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			TotalSystemEnergy += nodes[i].Velocity.LengthSquared();
-		}
-		IsStable = TotalSystemEnergy < PhysicsSettings.StabilityThreshold;
-	}
-
-	/// <summary>
-	/// Calculate repulsion forces between nodes
-	/// </summary>
-	private void CalculateRepulsionForces()
-	{
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			for (int j = i + 1; j < nodes.Count; j++)
-			{
-				Node nodeA = nodes[i];
-				Node nodeB = nodes[j];
-
-				Vector2 nodeACenter = nodeA.Position + (nodeA.Dimensions * 0.5f);
-				Vector2 nodeBCenter = nodeB.Position + (nodeB.Dimensions * 0.5f);
-
-				Vector2 direction = nodeACenter - nodeBCenter;
-				float dist = direction.Length();
-
-				if (dist < 0.1f)
-				{
-					continue;
-				}
-
-				Vector2 normalizedDirection = direction / dist;
-
-				// Inverse square repulsion, clamped at minimum distance to prevent explosions
-				float minDist = PhysicsSettings.MinRepulsionDistance.In(Units.Meter);
-				float effectiveDist = MathF.Max(dist, minDist);
-				float repulsionMagnitude = PhysicsSettings.RepulsionStrength.In(Units.Newton) / (effectiveDist * effectiveDist);
-
-				Vector2 repulsionForce = normalizedDirection * repulsionMagnitude;
-
-				nodes[i] = nodes[i] with { Force = nodes[i].Force + repulsionForce };
-				nodes[j] = nodes[j] with { Force = nodes[j].Force - repulsionForce };
-			}
-		}
-	}
-
-	/// <summary>
-	/// Calculate spring forces for links
-	/// </summary>
-	private void CalculateLinkForces()
-	{
-		foreach (Link link in links)
-		{
-			if (!pinToNodeIndex.TryGetValue(link.OutputPinId, out int outputIndex) ||
-				!pinToNodeIndex.TryGetValue(link.InputPinId, out int inputIndex))
-			{
-				continue;
-			}
-
-			Node outputNode = nodes[outputIndex];
-			Node inputNode = nodes[inputIndex];
-
-			Vector2 outputCenter = outputNode.Position + (outputNode.Dimensions * 0.5f);
-			Vector2 inputCenter = inputNode.Position + (inputNode.Dimensions * 0.5f);
-
-			Vector2 direction = inputCenter - outputCenter;
-			Length<float> currentLength = Length<float>.FromMeters(direction.Length());
-
-			if (currentLength.In(Units.Meter) > 0.1f)
-			{
-				Vector2 normalizedDirection = direction / currentLength.In(Units.Meter);
-
-				// Calculate spring extension from rest length
-				Length<float> extension = currentLength - PhysicsSettings.RestLinkLength;
-
-				// Spring force (Hooke's law) - dimensionless spring constant * extension
-				float springForceMagnitude = PhysicsSettings.LinkSpringStrength * extension.In(Units.Meter);
-				Vector2 springForce = normalizedDirection * springForceMagnitude;
-
-				nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + springForce };
-				nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force - springForce };
-			}
-		}
-	}
-
-	/// <summary>
-	/// Calculate horizontal directional forces that bias links to flow left-to-right.
-	/// Only applies force when linked nodes overlap horizontally or are in the wrong order,
-	/// so middle-chain nodes don't receive conflicting pulls from correctly-ordered links.
-	/// </summary>
-	private void CalculateDirectionalForces()
-	{
-		float bias = PhysicsSettings.DirectionalBias;
-		if (bias <= 0)
+		if (nodes.Count == 0)
 		{
 			return;
 		}
 
-		foreach (Link link in links)
-		{
-			if (!pinToNodeIndex.TryGetValue(link.OutputPinId, out int outputIndex) ||
-				!pinToNodeIndex.TryGetValue(link.InputPinId, out int inputIndex))
-			{
-				continue;
-			}
+		// Rebuild pin -> node-id map so the edge accessor can resolve link endpoints to body ids.
+		RebuildPinIdToNodeIdMap();
 
-			Node outputNode = nodes[outputIndex];
-			Node inputNode = nodes[inputIndex];
-
-			float outputCenterX = outputNode.Position.X + (outputNode.Dimensions.X * 0.5f);
-			float inputCenterX = inputNode.Position.X + (inputNode.Dimensions.X * 0.5f);
-
-			// Minimum gap: output's right edge should clear input's left edge
-			float minGap = ((outputNode.Dimensions.X + inputNode.Dimensions.X) * 0.5f) + 20.0f;
-			float currentGap = inputCenterX - outputCenterX;
-			float violation = minGap - currentGap;
-
-			// Only apply force when nodes overlap horizontally or are in wrong order
-			if (violation > 0)
-			{
-				float forceX = bias * violation;
-
-				// Stronger boost when output is to the right of input (wrong direction)
-				if (currentGap < 0)
-				{
-					forceX *= 1.0f + (MathF.Abs(currentGap) / minGap);
-				}
-
-				nodes[outputIndex] = nodes[outputIndex] with { Force = nodes[outputIndex].Force + new Vector2(-forceX, 0) };
-				nodes[inputIndex] = nodes[inputIndex] with { Force = nodes[inputIndex].Force + new Vector2(forceX, 0) };
-			}
-		}
+		layout.Step(nodes, links, deltaTime);
 	}
 
-	/// <summary>
-	/// Position-based directional constraint applied after force integration.
-	/// Directly nudges wrong-order linked nodes, bypassing the MaxForce clamp
-	/// to guarantee left-to-right ordering converges even under strong repulsion.
-	/// </summary>
-	private void ApplyDirectionalConstraints()
+	private void RebuildPinIdToNodeIdMap()
 	{
-		float bias = PhysicsSettings.DirectionalBias;
-		if (bias <= 0)
+		pinIdToNodeId.Clear();
+		foreach (Node node in nodes)
 		{
-			return;
-		}
-
-		foreach (Link link in links)
-		{
-			if (!pinToNodeIndex.TryGetValue(link.OutputPinId, out int outputIndex) ||
-				!pinToNodeIndex.TryGetValue(link.InputPinId, out int inputIndex))
+			foreach (Pin pin in node.InputPins)
 			{
-				continue;
+				pinIdToNodeId[pin.Id] = node.Id;
 			}
-
-			Node outputNode = nodes[outputIndex];
-			Node inputNode = nodes[inputIndex];
-
-			float outputCenterX = outputNode.Position.X + (outputNode.Dimensions.X * 0.5f);
-			float inputCenterX = inputNode.Position.X + (inputNode.Dimensions.X * 0.5f);
-
-			// Only correct when output center is to the right of input center (wrong order)
-			if (outputCenterX > inputCenterX)
+			foreach (Pin pin in node.OutputPins)
 			{
-				float overlap = outputCenterX - inputCenterX;
-				float correction = overlap * bias * 0.05f;
-
-				bool outputMovable = !outputNode.IsPinned && !draggedNodeIds.Contains(outputNode.Id);
-				bool inputMovable = !inputNode.IsPinned && !draggedNodeIds.Contains(inputNode.Id);
-
-				if (outputMovable && inputMovable)
-				{
-					// Split correction between both nodes
-					nodes[outputIndex] = nodes[outputIndex] with
-					{
-						Position = nodes[outputIndex].Position + new Vector2(-correction, 0)
-					};
-					nodes[inputIndex] = nodes[inputIndex] with
-					{
-						Position = nodes[inputIndex].Position + new Vector2(correction, 0)
-					};
-				}
-				else if (outputMovable)
-				{
-					nodes[outputIndex] = nodes[outputIndex] with
-					{
-						Position = nodes[outputIndex].Position + new Vector2(-correction * 2.0f, 0)
-					};
-				}
-				else if (inputMovable)
-				{
-					nodes[inputIndex] = nodes[inputIndex] with
-					{
-						Position = nodes[inputIndex].Position + new Vector2(correction * 2.0f, 0)
-					};
-				}
+				pinIdToNodeId[pin.Id] = node.Id;
 			}
 		}
 	}
 
-	/// <summary>
-	/// Calculate gravity forces toward a blend of the node centroid and the world origin.
-	/// The centroid is recomputed each step from current node positions (same coordinate space),
-	/// then blended toward the world origin to anchor the cluster near (0,0).
-	/// </summary>
-	private void CalculateGravityForces()
-	{
-		// Compute centroid from current node centers
-		Vector2 centroid = Vector2.Zero;
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			centroid += nodes[i].Position + (nodes[i].Dimensions * 0.5f);
-		}
-		centroid /= nodes.Count;
-
-		// Blend centroid toward world origin: 0 = pure centroid, 1 = pure origin
-		Vector2 gravityTarget = Vector2.Lerp(centroid, WorldOrigin, PhysicsSettings.OriginAnchorWeight);
-
-		// Publish for debug rendering
-		GravityCenter = gravityTarget;
-
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			Node node = nodes[i];
-
-			Vector2 nodeCenter = node.Position + (node.Dimensions * 0.5f);
-			Vector2 directionToCenter = gravityTarget - nodeCenter;
-			float distance = directionToCenter.Length();
-
-			if (distance > 0.1f)
-			{
-				Vector2 normalizedDirection = directionToCenter / distance;
-
-				float gravityForceMagnitude = PhysicsSettings.GravityStrength.In(Units.Newton);
-				Vector2 gravityForce = normalizedDirection * gravityForceMagnitude;
-
-				nodes[i] = nodes[i] with { Force = nodes[i].Force + gravityForce };
-			}
-		}
-	}
-
-	/// <summary>
-	/// Update node positions based on forces and velocities
-	/// </summary>
-	private void UpdateNodePositions(Time<float> deltaTime)
-	{
-		float dt = deltaTime.In(Units.Second);
-
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			Node node = nodes[i];
-
-			// Skip pinned or dragged nodes - they still exert forces on others but don't move
-			if (node.IsPinned || draggedNodeIds.Contains(node.Id))
-			{
-				nodes[i] = node with { Velocity = Vector2.Zero, Force = Vector2.Zero };
-				continue;
-			}
-
-			// Clamp force using semantic type
-			Vector2 clampedForce = node.Force;
-			Force<float> forceMagnitude = Force<float>.FromNewtons(clampedForce.Length());
-
-			if (forceMagnitude > PhysicsSettings.MaxForce)
-			{
-				float maxForceMagnitude = PhysicsSettings.MaxForce.In(Units.Newton);
-				clampedForce = Vector2.Normalize(clampedForce) * maxForceMagnitude;
-			}
-
-			// Update velocity (F = ma, assume mass = 1 kg)
-			Vector2 newVelocity = node.Velocity + (clampedForce * dt);
-
-			// Apply damping (time-independent: DampingFactor is per-second retention)
-			float dampingPerSubstep = MathF.Pow(PhysicsSettings.DampingFactor, dt);
-			newVelocity *= dampingPerSubstep;
-
-			// Clamp velocity using semantic type
-			Velocity<float> velocityMagnitude = Velocity<float>.FromMetersPerSecond(newVelocity.Length());
-
-			if (velocityMagnitude > PhysicsSettings.MaxVelocity)
-			{
-				float maxVelocityMagnitude = PhysicsSettings.MaxVelocity.In(Units.MetersPerSecond);
-				newVelocity = Vector2.Normalize(newVelocity) * maxVelocityMagnitude;
-			}
-
-			// Update position
-			Vector2 newPosition = node.Position + (newVelocity * dt);
-
-			// Update node
-			nodes[i] = node with
-			{
-				Position = newPosition,
-				Velocity = newVelocity,
-				Force = clampedForce
-			};
-		}
-	}
-
-	/// <summary>
-	/// Rebuild the pin-to-node-index lookup for O(1) physics force lookups
-	/// </summary>
-	private void RebuildPinToNodeIndex()
-	{
-		pinToNodeIndex.Clear();
-		for (int i = 0; i < nodes.Count; i++)
-		{
-			foreach (Pin pin in nodes[i].InputPins)
-			{
-				pinToNodeIndex[pin.Id] = i;
-			}
-			foreach (Pin pin in nodes[i].OutputPins)
-			{
-				pinToNodeIndex[pin.Id] = i;
-			}
-		}
-	}
-
-	/// <summary>
-	/// Find a pin by ID across all nodes
-	/// </summary>
 	private Pin? FindPin(int pinId)
 	{
 		foreach (Node node in nodes)
@@ -723,9 +388,6 @@ public class NodeEditorEngine
 		return null;
 	}
 
-	/// <summary>
-	/// Find the node that contains the specified pin
-	/// </summary>
 	private Node? FindNodeByPin(int pinId)
 	{
 		return nodes.FirstOrDefault(node =>
@@ -735,6 +397,6 @@ public class NodeEditorEngine
 }
 
 /// <summary>
-/// Result of attempting to create a link
+/// Result of attempting to create a link.
 /// </summary>
 public record LinkCreationResult(bool Success, string Message, Link? Link = null);
