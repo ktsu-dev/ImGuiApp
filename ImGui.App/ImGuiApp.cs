@@ -1423,7 +1423,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="fontAtlasPtr">The built font atlas.</param>
 	/// <param name="fallbackStrategy">The applied fallback strategy.</param>
-	internal static unsafe void LogFontAtlasInfo(ImFontAtlasPtr fontAtlasPtr, FontMemoryGuard.FallbackStrategy fallbackStrategy)
+	internal static void LogFontAtlasInfo(ImFontAtlasPtr fontAtlasPtr, FontMemoryGuard.FallbackStrategy fallbackStrategy)
 	{
 		// Get atlas texture information using the correct API for Hexa.NET.ImGui
 		ImTextureDataPtr texData = fontAtlasPtr.TexData;

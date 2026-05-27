@@ -432,7 +432,7 @@ public static class FontMemoryGuard
 	/// </summary>
 	/// <param name="gl">OpenGL context for querying GPU information.</param>
 	/// <returns>True if GPU memory was successfully detected and configuration updated.</returns>
-	public static unsafe bool TryDetectAndConfigureGpuMemory(GL gl)
+	public static bool TryDetectAndConfigureGpuMemory(GL gl)
 	{
 		if (gl == null || !CurrentConfig.EnableGpuMemoryDetection)
 		{
