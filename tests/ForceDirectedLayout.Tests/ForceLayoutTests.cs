@@ -157,7 +157,7 @@ public class ForceLayoutTests
 			new() { Id = 2, Dimensions = new Vec2D(50, 50) },
 		]);
 
-		Assert.ThrowsException<ArgumentException>(() =>
+		Assert.ThrowsExactly<ArgumentException>(() =>
 		{
 			NodePosition[] tooSmall = new NodePosition[1];
 			layout.GetPositions(tooSmall);
@@ -194,8 +194,8 @@ public class ForceLayoutTests
 [TestClass]
 public class GenericFacadeTests
 {
-	private record TestBody(int Id, Vec2D Position, Vec2D Dimensions, Vec2D Velocity, Vec2D Force, bool IsPinned);
-	private record TestEdge(int SourceId, int TargetId);
+	private sealed record TestBody(int Id, Vec2D Position, Vec2D Dimensions, Vec2D Velocity, Vec2D Force, bool IsPinned);
+	private sealed record TestEdge(int SourceId, int TargetId);
 
 	private static ForceDirectedLayout<TestBody, TestEdge> CreateLayout(PhysicsSettings? settings = null)
 	{
@@ -351,7 +351,7 @@ public class GenericFacadeTests
 		];
 		List<TestEdge> edges = [];
 
-		layout.SetFrozenBodies(new HashSet<int> { 1 });
+		layout.SetFrozenBodies(new HashSet<int>([1]));
 		Vec2D frozenPosBefore = bodies[0].Position;
 
 		for (int i = 0; i < 20; i++)

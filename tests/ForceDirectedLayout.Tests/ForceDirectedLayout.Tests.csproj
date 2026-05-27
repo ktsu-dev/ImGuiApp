@@ -10,7 +10,7 @@
     <RootNamespace>ktsu.ForceDirectedLayout.Tests</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <EnableSourceLink>false</EnableSourceLink>
-    <NoWarn>CA1051;CA1062;CA1515;CA1707;CA1815;CA1819;CA1822;CA2227;CS8604;IDE0060;MSTEST0039</NoWarn>
+    <NoWarn>CA1051;CA1062;CA1515;CA1707;CA1815;CA1819;CA1822;CA2227;CS8604;IDE0060</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
