@@ -10,7 +10,6 @@ using System.Linq;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
-using ktsu.Semantics;
 
 /// <summary>
 /// Pure rendering class - only handles ImNodes display, no business logic
@@ -416,7 +415,7 @@ public class NodeEditorRenderer
 			}
 
 			// Render repulsion zone
-			float repulsionRadius = engine.PhysicsSettings.MinRepulsionDistance.In(Units.Meter);
+			float repulsionRadius = (float)engine.PhysicsSettings.MinRepulsionDistance;
 			uint repulsionZoneColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.5f, 0.0f, 0.2f)); // Orange, transparent
 			drawList.AddCircle(nodeCenterScreen, repulsionRadius, repulsionZoneColor, 32, 1.0f);
 		}

@@ -5,10 +5,11 @@
 namespace ktsu.ForceDirectedLayout;
 
 using System;
-using System.Numerics;
 
 /// <summary>
 /// Adapter that lets the layout engine read and write the physics state of an arbitrary body type.
+/// All vector quantities use double precision (<see cref="Vec2D"/>); callers using
+/// <see cref="System.Numerics.Vector2"/> at the consumer level should convert at the accessor boundary.
 /// </summary>
 /// <typeparam name="TBody">Caller-defined body type.</typeparam>
 /// <param name="GetId">Returns a stable integer id used to identify the body across frames and edges.</param>
@@ -20,10 +21,10 @@ using System.Numerics;
 /// <param name="WithPhysicsState">Returns a new (or mutated) body with the given position, velocity, and force applied.</param>
 public sealed record BodyAccessor<TBody>(
 	Func<TBody, int> GetId,
-	Func<TBody, Vector2> GetPosition,
-	Func<TBody, Vector2> GetDimensions,
-	Func<TBody, Vector2> GetVelocity,
-	Func<TBody, Vector2> GetForce,
+	Func<TBody, Vec2D> GetPosition,
+	Func<TBody, Vec2D> GetDimensions,
+	Func<TBody, Vec2D> GetVelocity,
+	Func<TBody, Vec2D> GetForce,
 	Func<TBody, bool> GetIsPinned,
-	Func<TBody, Vector2, Vector2, Vector2, TBody> WithPhysicsState
+	Func<TBody, Vec2D, Vec2D, Vec2D, TBody> WithPhysicsState
 );
