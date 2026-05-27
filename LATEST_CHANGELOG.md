@@ -2,6 +2,7 @@
 
 Changes since v2.3.0:
 
+- Add C ABI surface and AOT-friendly double-precision core ([@Claude](https://github.com/Claude))
 - Extract force-directed layout into ktsu.ForceDirectedLayout ([@Claude](https://github.com/Claude))
 - Update base directory path ([@Damon3000s](https://github.com/Damon3000s))
 - Copy ktsu.png to output directory for ImGuiWidgetsDemo ([@Damon3000s](https://github.com/Damon3000s))
