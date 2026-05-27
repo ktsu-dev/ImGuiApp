@@ -11,7 +11,6 @@ using ktsu.ImGuiNodeEditor;
 using ktsu.NodeGraph.Library.Operations;
 using ktsu.NodeGraph.Library.Primitives;
 using ktsu.NodeGraph.Library.Utilities;
-using ktsu.Semantics;
 
 /// <summary>
 /// Clean architecture ImNodes demo with proper separation of concerns
@@ -312,17 +311,17 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		// Repulsion settings
 		if (ImGui.CollapsingHeader("Repulsion Forces"))
 		{
-			float repulsionStrength = currentSettings.RepulsionStrength.In(Units.Newton);
+			float repulsionStrength = (float)currentSettings.RepulsionStrength;
 			if (ImGui.SliderFloat("Repulsion Strength (N)", ref repulsionStrength, 100_000.0f, 50_000_000.0f))
 			{
-				currentSettings = currentSettings with { RepulsionStrength = Force<float>.FromNewtons(repulsionStrength) };
+				currentSettings = currentSettings with { RepulsionStrength = repulsionStrength };
 				settingsChanged = true;
 			}
 
-			float minRepulsionDistance = currentSettings.MinRepulsionDistance.In(Units.Meter);
+			float minRepulsionDistance = (float)currentSettings.MinRepulsionDistance;
 			if (ImGui.SliderFloat("Min Repulsion Clamp (px)", ref minRepulsionDistance, 10.0f, 200.0f))
 			{
-				currentSettings = currentSettings with { MinRepulsionDistance = Length<float>.FromMeters(minRepulsionDistance) };
+				currentSettings = currentSettings with { MinRepulsionDistance = minRepulsionDistance };
 				settingsChanged = true;
 			}
 		}
@@ -330,21 +329,21 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		// Link spring settings
 		if (ImGui.CollapsingHeader("Link Springs"))
 		{
-			float linkSpringStrength = currentSettings.LinkSpringStrength;
+			float linkSpringStrength = (float)currentSettings.LinkSpringStrength;
 			if (ImGui.SliderFloat("Spring Strength (dimensionless)", ref linkSpringStrength, 0.1f, 2.0f))
 			{
 				currentSettings = currentSettings with { LinkSpringStrength = linkSpringStrength };
 				settingsChanged = true;
 			}
 
-			float restLinkLength = currentSettings.RestLinkLength.In(Units.Meter);
+			float restLinkLength = (float)currentSettings.RestLinkLength;
 			if (ImGui.SliderFloat("Rest Length (m)", ref restLinkLength, 100.0f, 400.0f))
 			{
-				currentSettings = currentSettings with { RestLinkLength = Length<float>.FromMeters(restLinkLength) };
+				currentSettings = currentSettings with { RestLinkLength = restLinkLength };
 				settingsChanged = true;
 			}
 
-			float directionalBias = currentSettings.DirectionalBias;
+			float directionalBias = (float)currentSettings.DirectionalBias;
 			if (ImGui.SliderFloat("Directional Bias (L→R)", ref directionalBias, 0.0f, 2.0f))
 			{
 				currentSettings = currentSettings with { DirectionalBias = directionalBias };
@@ -355,14 +354,14 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		// Gravity settings
 		if (ImGui.CollapsingHeader("Gravity"))
 		{
-			float gravityStrength = currentSettings.GravityStrength.In(Units.Newton);
+			float gravityStrength = (float)currentSettings.GravityStrength;
 			if (ImGui.SliderFloat("Gravity Strength (N)", ref gravityStrength, 0.0f, 200.0f))
 			{
-				currentSettings = currentSettings with { GravityStrength = Force<float>.FromNewtons(gravityStrength) };
+				currentSettings = currentSettings with { GravityStrength = gravityStrength };
 				settingsChanged = true;
 			}
 
-			float originAnchorWeight = currentSettings.OriginAnchorWeight;
+			float originAnchorWeight = (float)currentSettings.OriginAnchorWeight;
 			if (ImGui.SliderFloat("Origin Anchor Weight", ref originAnchorWeight, 0.0f, 1.0f))
 			{
 				currentSettings = currentSettings with { OriginAnchorWeight = originAnchorWeight };
@@ -379,17 +378,17 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			currentSettings = new PhysicsSettings
 			{
 				Enabled = true,
-				RepulsionStrength = Force<float>.FromNewtons(2_000_000.0f),
-				LinkSpringStrength = 0.3f,
-				DirectionalBias = 0.3f,
-				GravityStrength = Force<float>.FromNewtons(20.0f),
-				OriginAnchorWeight = 0.2f,
-				DampingFactor = 0.95f,
-				MinRepulsionDistance = Length<float>.FromMeters(50.0f),
-				RestLinkLength = Length<float>.FromMeters(250.0f),
-				MaxForce = Force<float>.FromNewtons(3000.0f),
-				MaxVelocity = Velocity<float>.FromMetersPerSecond(100.0f),
-				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
+				RepulsionStrength = 2_000_000.0,
+				LinkSpringStrength = 0.3,
+				DirectionalBias = 0.3,
+				GravityStrength = 20.0,
+				OriginAnchorWeight = 0.2,
+				DampingFactor = 0.95,
+				MinRepulsionDistance = 50.0,
+				RestLinkLength = 250.0,
+				MaxForce = 3000.0,
+				MaxVelocity = 100.0,
+				TargetPhysicsHz = 120.0,
 			};
 			settingsChanged = true;
 		}
@@ -400,17 +399,17 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			currentSettings = new PhysicsSettings
 			{
 				Enabled = true,
-				RepulsionStrength = Force<float>.FromNewtons(10_000_000.0f),
-				LinkSpringStrength = 1.0f,
-				DirectionalBias = 0.8f,
-				GravityStrength = Force<float>.FromNewtons(100.0f),
-				OriginAnchorWeight = 0.4f,
-				DampingFactor = 0.85f,
-				MinRepulsionDistance = Length<float>.FromMeters(30.0f),
-				RestLinkLength = Length<float>.FromMeters(200.0f),
-				MaxForce = Force<float>.FromNewtons(10000.0f),
-				MaxVelocity = Velocity<float>.FromMetersPerSecond(300.0f),
-				TargetPhysicsHz = Frequency<float>.FromHertz(120.0f)
+				RepulsionStrength = 10_000_000.0,
+				LinkSpringStrength = 1.0,
+				DirectionalBias = 0.8,
+				GravityStrength = 100.0,
+				OriginAnchorWeight = 0.4,
+				DampingFactor = 0.85,
+				MinRepulsionDistance = 30.0,
+				RestLinkLength = 200.0,
+				MaxForce = 10000.0,
+				MaxVelocity = 300.0,
+				TargetPhysicsHz = 120.0,
 			};
 			settingsChanged = true;
 		}
@@ -430,31 +429,31 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	{
 		if (ImGui.CollapsingHeader("Damping & Limits"))
 		{
-			float dampingFactor = currentSettings.DampingFactor;
+			float dampingFactor = (float)currentSettings.DampingFactor;
 			if (ImGui.SliderFloat("Damping Factor (dimensionless)", ref dampingFactor, 0.1f, 0.99f))
 			{
 				currentSettings = currentSettings with { DampingFactor = dampingFactor };
 				settingsChanged = true;
 			}
 
-			float maxForce = currentSettings.MaxForce.In(Units.Newton);
+			float maxForce = (float)currentSettings.MaxForce;
 			if (ImGui.SliderFloat("Max Force (N)", ref maxForce, 100.0f, 50000.0f))
 			{
-				currentSettings = currentSettings with { MaxForce = Force<float>.FromNewtons(maxForce) };
+				currentSettings = currentSettings with { MaxForce = maxForce };
 				settingsChanged = true;
 			}
 
-			float maxVelocity = currentSettings.MaxVelocity.In(Units.MetersPerSecond);
+			float maxVelocity = (float)currentSettings.MaxVelocity;
 			if (ImGui.SliderFloat("Max Velocity (m/s)", ref maxVelocity, 5.0f, 500.0f))
 			{
-				currentSettings = currentSettings with { MaxVelocity = Velocity<float>.FromMetersPerSecond(maxVelocity) };
+				currentSettings = currentSettings with { MaxVelocity = maxVelocity };
 				settingsChanged = true;
 			}
 
-			float targetPhysicsHz = currentSettings.TargetPhysicsHz.In(Units.Hertz);
+			float targetPhysicsHz = (float)currentSettings.TargetPhysicsHz;
 			if (ImGui.SliderFloat("Target Physics Hz", ref targetPhysicsHz, 60.0f, 240.0f))
 			{
-				currentSettings = currentSettings with { TargetPhysicsHz = Frequency<float>.FromHertz(targetPhysicsHz) };
+				currentSettings = currentSettings with { TargetPhysicsHz = targetPhysicsHz };
 				settingsChanged = true;
 			}
 
@@ -463,15 +462,13 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			{
 				ImGui.Separator();
 				ImGui.Text($"Actual Substeps: {lastSubstepCount}");
+				ImGui.Text($"Substep Δt: {lastSubstepDeltaTime * 1000.0f:F2}ms");
 
-				Time<float> substepTime = Time<float>.FromSeconds(lastSubstepDeltaTime);
-				ImGui.Text($"Substep Δt: {substepTime.In(Units.Millisecond):F2}ms");
-
-				Frequency<float> effectiveFrequency = Frequency<float>.FromHertz(1.0f / lastSubstepDeltaTime);
-				ImGui.Text($"Effective Hz: {effectiveFrequency.In(Units.Hertz):F1}");
+				float effectiveHz = 1.0f / lastSubstepDeltaTime;
+				ImGui.Text($"Effective Hz: {effectiveHz:F1}");
 
 				// Visual indicator of physics quality
-				bool targetAchieved = effectiveFrequency >= currentSettings.TargetPhysicsHz;
+				bool targetAchieved = effectiveHz >= currentSettings.TargetPhysicsHz;
 				Vector4 qualityColor = targetAchieved ?
 					new Vector4(0.0f, 1.0f, 0.0f, 1.0f) : // Green - target achieved
 					new Vector4(1.0f, 0.5f, 0.0f, 1.0f);   // Orange - below target

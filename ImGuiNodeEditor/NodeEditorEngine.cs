@@ -8,11 +8,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using ktsu.ForceDirectedLayout;
-using ktsu.Semantics;
 
 /// <summary>
 /// Core business logic for the node editor - completely independent of ImNodes.
-/// Force-directed physics is delegated to <see cref="ForceDirectedLayout{TBody, TEdge}"/>.
+/// Force-directed physics is delegated to <see cref="ForceDirectedLayout{TBody, TEdge}"/>,
+/// which operates in double precision. Node positions remain float-precision <see cref="Vector2"/>
+/// to match the surrounding ImGui/ImNodes ecosystem; conversion happens at the accessor boundary.
 /// </summary>
 public class NodeEditorEngine
 {
@@ -33,12 +34,17 @@ public class NodeEditorEngine
 	{
 		BodyAccessor<Node> bodyAccessor = new(
 			GetId: n => n.Id,
-			GetPosition: n => n.Position,
-			GetDimensions: n => n.Dimensions,
-			GetVelocity: n => n.Velocity,
-			GetForce: n => n.Force,
+			GetPosition: n => ToVec2D(n.Position),
+			GetDimensions: n => ToVec2D(n.Dimensions),
+			GetVelocity: n => ToVec2D(n.Velocity),
+			GetForce: n => ToVec2D(n.Force),
 			GetIsPinned: n => n.IsPinned,
-			WithPhysicsState: (n, pos, vel, force) => n with { Position = pos, Velocity = vel, Force = force }
+			WithPhysicsState: (n, pos, vel, force) => n with
+			{
+				Position = ToVector2(pos),
+				Velocity = ToVector2(vel),
+				Force = ToVector2(force),
+			}
 		);
 
 		EdgeAccessor<Link> edgeAccessor = new(
@@ -58,7 +64,7 @@ public class NodeEditorEngine
 	public PhysicsSettings PhysicsSettings => layout.Settings;
 
 	/// <summary>Computed gravity target (blend of centroid and world origin), published for debug rendering.</summary>
-	public Vector2 GravityCenter => layout.GravityCenter;
+	public Vector2 GravityCenter => ToVector2(layout.GravityCenter);
 
 	/// <summary>
 	/// World origin in node-position space. Tracks with uniform node shifts (panning)
@@ -66,15 +72,22 @@ public class NodeEditorEngine
 	/// </summary>
 	public Vector2 WorldOrigin
 	{
-		get => layout.WorldOrigin;
-		set => layout.WorldOrigin = value;
+		get => ToVector2(layout.WorldOrigin);
+		set => layout.WorldOrigin = ToVec2D(value);
 	}
 
 	/// <summary>Current physics simulation info (for debugging).</summary>
-	public (int SubstepCount, float SubstepDeltaTime) LastPhysicsStepInfo => layout.LastStepInfo;
+	public (int SubstepCount, float SubstepDeltaTime) LastPhysicsStepInfo
+	{
+		get
+		{
+			(int s, double dt) = layout.LastStepInfo;
+			return (s, (float)dt);
+		}
+	}
 
 	/// <summary>Total kinetic energy in the system (sum of velocity squared for all nodes).</summary>
-	public float TotalSystemEnergy => layout.TotalSystemEnergy;
+	public float TotalSystemEnergy => (float)layout.TotalSystemEnergy;
 
 	/// <summary>Whether the physics simulation has settled (total energy below threshold).</summary>
 	public bool IsStable => layout.IsStable;
@@ -164,9 +177,7 @@ public class NodeEditorEngine
 		return new LinkCreationResult(true, "Link created successfully", link);
 	}
 
-	/// <summary>
-	/// Remove a link by ID.
-	/// </summary>
+	/// <summary>Remove a link by ID.</summary>
 	public bool RemoveLink(int linkId)
 	{
 		Link? link = links.FirstOrDefault(l => l.Id == linkId);
@@ -178,9 +189,7 @@ public class NodeEditorEngine
 		return false;
 	}
 
-	/// <summary>
-	/// Remove a node and all its connected links.
-	/// </summary>
+	/// <summary>Remove a node and all its connected links.</summary>
 	public bool RemoveNode(int nodeId)
 	{
 		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
@@ -202,9 +211,7 @@ public class NodeEditorEngine
 		return true;
 	}
 
-	/// <summary>
-	/// Update a node's position.
-	/// </summary>
+	/// <summary>Update a node's position.</summary>
 	public void UpdateNodePosition(int nodeId, Vector2 newPosition)
 	{
 		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
@@ -216,9 +223,7 @@ public class NodeEditorEngine
 		}
 	}
 
-	/// <summary>
-	/// Update a node's dimensions.
-	/// </summary>
+	/// <summary>Update a node's dimensions.</summary>
 	public void UpdateNodeDimensions(int nodeId, Vector2 newDimensions)
 	{
 		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
@@ -230,9 +235,7 @@ public class NodeEditorEngine
 		}
 	}
 
-	/// <summary>
-	/// Get all links connected to a specific node.
-	/// </summary>
+	/// <summary>Get all links connected to a specific node.</summary>
 	public IEnumerable<Link> GetNodeLinks(int nodeId)
 	{
 		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
@@ -246,9 +249,7 @@ public class NodeEditorEngine
 			node.OutputPins.Any(p => p.Id == l.OutputPinId));
 	}
 
-	/// <summary>
-	/// Calculate the distance between two connected nodes.
-	/// </summary>
+	/// <summary>Calculate the distance between two connected nodes.</summary>
 	public float? GetLinkDistance(int linkId)
 	{
 		Link? link = links.FirstOrDefault(l => l.Id == linkId);
@@ -282,24 +283,19 @@ public class NodeEditorEngine
 			return null;
 		}
 
-		float restLength = PhysicsSettings.RestLinkLength.In(Units.Meter);
-		if (restLength < 0.1f)
+		double restLength = PhysicsSettings.RestLinkLength;
+		if (restLength < 0.1)
 		{
 			return null;
 		}
 
-		return (distance.Value - restLength) / restLength;
+		return (float)((distance.Value - restLength) / restLength);
 	}
 
-	/// <summary>
-	/// Set the world origin to the centroid of all current node positions.
-	/// Call after populating nodes so gravity doesn't immediately pull them toward (0,0).
-	/// </summary>
+	/// <summary>Set the world origin to the centroid of all current node positions.</summary>
 	public void InitializeWorldOriginToCentroid() => layout.InitializeWorldOriginToCentroid(nodes);
 
-	/// <summary>
-	/// Clear all nodes and links.
-	/// </summary>
+	/// <summary>Clear all nodes and links.</summary>
 	public void Clear()
 	{
 		nodes.Clear();
@@ -307,12 +303,10 @@ public class NodeEditorEngine
 		nextNodeId = 1;
 		nextLinkId = 1;
 		nextPinId = 1;
-		layout.WorldOrigin = Vector2.Zero;
+		layout.WorldOrigin = Vec2D.Zero;
 	}
 
-	/// <summary>
-	/// Toggle whether a node is pinned (frozen during physics simulation).
-	/// </summary>
+	/// <summary>Toggle whether a node is pinned (frozen during physics simulation).</summary>
 	public void ToggleNodePinned(int nodeId)
 	{
 		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
@@ -337,14 +331,10 @@ public class NodeEditorEngine
 		layout.SetFrozenBodies(draggedNodeIds);
 	}
 
-	/// <summary>
-	/// Replace the current physics settings.
-	/// </summary>
+	/// <summary>Replace the current physics settings.</summary>
 	public void UpdatePhysicsSettings(PhysicsSettings newSettings) => layout.Settings = newSettings;
 
-	/// <summary>
-	/// Advance the force-directed layout simulation by one frame.
-	/// </summary>
+	/// <summary>Advance the force-directed layout simulation by one frame.</summary>
 	public void UpdatePhysics(float deltaTime)
 	{
 		if (nodes.Count == 0)
@@ -352,9 +342,7 @@ public class NodeEditorEngine
 			return;
 		}
 
-		// Rebuild pin -> node-id map so the edge accessor can resolve link endpoints to body ids.
 		RebuildPinIdToNodeIdMap();
-
 		layout.Step(nodes, links, deltaTime);
 	}
 
@@ -394,9 +382,10 @@ public class NodeEditorEngine
 			node.InputPins.Any(p => p.Id == pinId) ||
 			node.OutputPins.Any(p => p.Id == pinId));
 	}
+
+	private static Vec2D ToVec2D(Vector2 v) => new(v.X, v.Y);
+	private static Vector2 ToVector2(Vec2D v) => new((float)v.X, (float)v.Y);
 }
 
-/// <summary>
-/// Result of attempting to create a link.
-/// </summary>
+/// <summary>Result of attempting to create a link.</summary>
 public record LinkCreationResult(bool Success, string Message, Link? Link = null);
