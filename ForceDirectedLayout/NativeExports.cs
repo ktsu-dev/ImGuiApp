@@ -131,7 +131,7 @@ public static unsafe class NativeExports
 			{
 				return LayoutResult.NullArgument;
 			}
-			ReadOnlySpan<NodeInit> span = new(nodes, count);
+			ReadOnlySpan<NodeInit> span = count == 0 ? [] : new ReadOnlySpan<NodeInit>(nodes, count);
 			layout.SetNodes(span);
 			return LayoutResult.Ok;
 		}
@@ -160,7 +160,7 @@ public static unsafe class NativeExports
 			{
 				return LayoutResult.NullArgument;
 			}
-			ReadOnlySpan<EdgeInit> span = new(edges, count);
+			ReadOnlySpan<EdgeInit> span = count == 0 ? [] : new ReadOnlySpan<EdgeInit>(edges, count);
 			layout.SetEdges(span);
 			return LayoutResult.Ok;
 		}
@@ -225,11 +225,15 @@ public static unsafe class NativeExports
 			{
 				return LayoutResult.InvalidHandle;
 			}
+			if (layout.NodeCount == 0)
+			{
+				return 0;
+			}
 			if (bufferLen < layout.NodeCount)
 			{
 				return LayoutResult.OutOfRange;
 			}
-			if (outBuffer == null && layout.NodeCount > 0)
+			if (outBuffer == null)
 			{
 				return LayoutResult.NullArgument;
 			}

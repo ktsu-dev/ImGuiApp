@@ -650,7 +650,7 @@ internal sealed class ImGuiController : IDisposable
 							// Bind texture, Draw
 							// In ImGui 1.92.0+, use GetTexID() method to get texture ID
 							// This method returns the texture ID compatible with OpenGL
-							uint textureId = (uint)cmdPtr.GetTexID();
+							uint textureId = (uint)(nuint)cmdPtr.GetTexID();
 							_gl.BindTexture(GLEnum.Texture2D, textureId);
 							_gl.CheckGlError("Texture");
 
@@ -810,7 +810,7 @@ internal sealed class ImGuiController : IDisposable
 	/// <summary>
 	/// Creates the texture used to render text.
 	/// </summary>
-	internal unsafe void RecreateFontDeviceTexture()
+	internal void RecreateFontDeviceTexture()
 	{
 		DebugLogger.Log("RecreateFontDeviceTexture: Starting");
 		if (_gl is null)

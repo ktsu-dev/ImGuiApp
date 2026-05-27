@@ -113,6 +113,8 @@ jobs:
           if [ "${{ github.event.repository.name }}" != "KtsuBuild" ]; then
             EXCLUSIONS="$EXCLUSIONS,**/KtsuBuild/**"
           fi
+          # NativeExports.cs is intentionally unsafe C ABI boundary code; exclude from all analysis.
+          EXCLUSIONS="$EXCLUSIONS,**/NativeExports.cs"
           echo "SONAR_EXCLUSIONS=$EXCLUSIONS" >> $GITHUB_ENV
 
       - name: Begin SonarQube
@@ -121,7 +123,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.exclusions="${{ env.SONAR_EXCLUSIONS }}"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.exclusions="${{ env.SONAR_EXCLUSIONS }}"
 
       - name: Clone KtsuBuild (Latest Tag)
         run: |
@@ -154,6 +156,7 @@ jobs:
           }
 
           & dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # Set outputs for downstream jobs
           $version = (Get-Content "${{ github.workspace }}/VERSION.md" -Raw).Trim()
