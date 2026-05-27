@@ -113,6 +113,8 @@ jobs:
           if [ "${{ github.event.repository.name }}" != "KtsuBuild" ]; then
             EXCLUSIONS="$EXCLUSIONS,**/KtsuBuild/**"
           fi
+          # NativeExports.cs is intentionally unsafe C ABI boundary code; exclude from all analysis.
+          EXCLUSIONS="$EXCLUSIONS,**/NativeExports.cs"
           echo "SONAR_EXCLUSIONS=$EXCLUSIONS" >> $GITHUB_ENV
 
       - name: Begin SonarQube
