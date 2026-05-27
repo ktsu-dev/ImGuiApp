@@ -55,10 +55,10 @@ public class ForceLayoutTests
 			new() { Id = 2, Position = new Vec2D(200, 0), Dimensions = new Vec2D(50, 50) },
 		];
 		layout.SetNodes(nodes);
-		layout.SetEdges(new EdgeInit[]
-		{
+		layout.SetEdges(
+		[
 			new() { SourceBodyId = 1, TargetBodyId = 2 },
-		});
+		]);
 
 		Assert.AreEqual(1, layout.EdgeCount);
 	}
@@ -67,11 +67,11 @@ public class ForceLayoutTests
 	public void Step_WithDisabled_IsNoOp()
 	{
 		ForceLayout layout = new(LayoutSettings.Defaults);
-		layout.SetNodes(new NodeInit[]
-		{
+		layout.SetNodes(
+		[
 			new() { Id = 1, Position = new Vec2D(100, 0), Dimensions = new Vec2D(50, 50) },
 			new() { Id = 2, Position = new Vec2D(101, 0), Dimensions = new Vec2D(50, 50) },
-		});
+		]);
 
 		layout.Step(0.016);
 
@@ -87,11 +87,11 @@ public class ForceLayoutTests
 	{
 		ForceLayout layout = new(EnabledDefaults());
 		// Two bodies stacked nearly on top of each other on the X axis.
-		layout.SetNodes(new NodeInit[]
-		{
+		layout.SetNodes(
+		[
 			new() { Id = 1, Position = new Vec2D(0, 0), Dimensions = new Vec2D(50, 50) },
 			new() { Id = 2, Position = new Vec2D(5, 0), Dimensions = new Vec2D(50, 50) },
-		});
+		]);
 
 		for (int i = 0; i < 60; i++)
 		{
@@ -110,11 +110,11 @@ public class ForceLayoutTests
 		LayoutSettings s = EnabledDefaults();
 		s.GravityStrength = 1000.0; // crank gravity so unpinned bodies definitely move
 		ForceLayout layout = new(s);
-		layout.SetNodes(new NodeInit[]
-		{
+		layout.SetNodes(
+		[
 			new() { Id = 1, Position = new Vec2D(0, 0), Dimensions = new Vec2D(50, 50), IsPinned = 1 },
 			new() { Id = 2, Position = new Vec2D(500, 500), Dimensions = new Vec2D(50, 50) },
-		});
+		]);
 
 		for (int i = 0; i < 30; i++)
 		{
@@ -131,15 +131,15 @@ public class ForceLayoutTests
 	public void Solve_ReachesStability_WithinIterationCap()
 	{
 		ForceLayout layout = new(EnabledDefaults());
-		layout.SetNodes(new NodeInit[]
-		{
+		layout.SetNodes(
+		[
 			new() { Id = 1, Position = new Vec2D(0, 0), Dimensions = new Vec2D(50, 50) },
 			new() { Id = 2, Position = new Vec2D(225, 0), Dimensions = new Vec2D(50, 50) },
-		});
-		layout.SetEdges(new EdgeInit[]
-		{
+		]);
+		layout.SetEdges(
+		[
 			new() { SourceBodyId = 1, TargetBodyId = 2 },
-		});
+		]);
 		layout.InitializeWorldOriginToCentroid();
 
 		int iterations = layout.Solve(maxIterations: 2000, tolerance: 0.5);
@@ -151,11 +151,11 @@ public class ForceLayoutTests
 	public void GetPositions_ThrowsOnUndersizedBuffer()
 	{
 		ForceLayout layout = new();
-		layout.SetNodes(new NodeInit[]
-		{
+		layout.SetNodes(
+		[
 			new() { Id = 1, Dimensions = new Vec2D(50, 50) },
 			new() { Id = 2, Dimensions = new Vec2D(50, 50) },
-		});
+		]);
 
 		Assert.ThrowsException<ArgumentException>(() =>
 		{
@@ -399,7 +399,7 @@ public class GenericFacadeTests
 	[TestMethod]
 	public void GenericFacade_GravityCenterAndEnergy_ArePublished()
 	{
-		PhysicsSettings enabled = new() { Enabled = true };
+		PhysicsSettings enabled = new() { Enabled = true, OriginAnchorWeight = 0 };
 		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(enabled);
 		List<TestBody> bodies =
 		[
