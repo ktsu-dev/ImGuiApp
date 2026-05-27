@@ -2,6 +2,15 @@
 
 Changes since v2.3.0:
 
+- fix: resolve IDE0221 and IDE0380 warnings treated as errors ([@Claude](https://github.com/Claude))
+- fix: downgrade SixLabors.ImageSharp from 4.0.0 to 3.1.12 ([@Claude](https://github.com/Claude))
+- fix: exclude NativeExports.cs from all SonarCloud analysis ([@Claude](https://github.com/Claude))
+- fix: add InternalsVisibleTo for test project (KTSU0002) ([@Claude](https://github.com/Claude))
+- fix: suppress CA1823 for intentional ABI struct padding fields ([@Claude](https://github.com/Claude))
+- fix: exclude NativeExports.cs from SonarCloud coverage analysis ([@Claude](https://github.com/Claude))
+- fix: address MSTest and code analysis violations in ForceDirectedLayout.Tests ([@Claude](https://github.com/Claude))
+- fix: convert array initializers to collection expressions in ForceLayoutTests ([@Claude](https://github.com/Claude))
+- Fix CI exit code propagation and SonarCloud quality gate failures ([@Claude](https://github.com/Claude))
 - Add C ABI surface and AOT-friendly double-precision core ([@Claude](https://github.com/Claude))
 - Extract force-directed layout into ktsu.ForceDirectedLayout ([@Claude](https://github.com/Claude))
 - Update base directory path ([@Damon3000s](https://github.com/Damon3000s))
