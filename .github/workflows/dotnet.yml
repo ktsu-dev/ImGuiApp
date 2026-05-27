@@ -154,6 +154,7 @@ jobs:
           }
 
           & dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # Set outputs for downstream jobs
           $version = (Get-Content "${{ github.workspace }}/VERSION.md" -Raw).Trim()
