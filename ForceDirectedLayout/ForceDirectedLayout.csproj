@@ -26,6 +26,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ktsu.ForceDirectedLayout.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Polyfill" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />
     <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
