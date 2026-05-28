@@ -221,18 +221,20 @@ jobs:
         # registration to "count" as installed).
         run: dotnet workload install ios
 
-      # The csproj cross-targets net10.0;net9.0;net8.0;net10.0-ios on macOS. Restoring the
-      # full set tries to pull Microsoft.NETCore.App.Runtime.Mono.{win,linux,osx}-* at
-      # version 10.0.0 from nuget.org, which Microsoft no longer publishes there in .NET 10
-      # (those packs are workload-delivered now, but a cross-platform Mono RID matrix in
-      # the SDK still asks for them via NuGet). The Windows job already covers the desktop
-      # TFMs; here we only need iOS. Overriding TargetFrameworks scopes the restore graph
-      # to net10.0-ios, whose pack IS resolved locally by the ios workload install above.
-      - name: Restore ImGui.App (net10.0-ios only)
-        run: dotnet restore ImGui.App/ImGui.App.csproj -p:TargetFrameworks=net10.0-ios
+      # The csproj cross-targets net10.0;net9.0;net8.0;net10.0-ios on macOS AND ktsu.Sdk
+      # forces RuntimeIdentifiers=win-x64;win-x86;win-arm64;osx-x64;osx-arm64;linux-x64;linux-arm64
+      # on every project. The combination asks NuGet for the matching
+      # Microsoft.NETCore.App.Runtime.Mono.<rid> pack at the SDK version — those packs are
+      # workload-delivered in .NET 10 and no longer on nuget.org, so restore 404s. Windows
+      # CI gets away with it because the Windows runner has the Mono packs bundled with
+      # its dotnet install; setup-dotnet on the Mac runner does not. Scoping the restore
+      # to net10.0-ios alone AND clearing the RID matrix sidesteps the issue — we're only
+      # compile-checking the IL, no RID-specific output needed.
+      - name: Restore ImGui.App (net10.0-ios, no RID matrix)
+        run: dotnet restore ImGui.App/ImGui.App.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers=
 
       - name: Build ImGui.App (net10.0-ios)
-        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios --no-restore
+        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= --no-restore
 
   winget:
     name: Update Winget Manifests
