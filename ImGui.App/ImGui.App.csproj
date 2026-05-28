@@ -9,6 +9,11 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,16 +25,30 @@
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="Silk.NET" />
     <PackageReference Include="Silk.NET.OpenGL" />
     <PackageReference Include="Silk.NET.Input" />
     <PackageReference Include="Silk.NET.Input.Sdl" />
     <PackageReference Include="Silk.NET.Windowing" />
     <PackageReference Include="Silk.NET.Windowing.Sdl" />
-    <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="Polyfill" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" />
-    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <Compile Remove="ImGuiApp.cs" />
+    <Compile Remove="ImGuiAppConfig.cs" />
+    <Compile Remove="ImGuiAppWindowState.cs" />
+    <Compile Remove="FontMemoryGuard.cs" />
+    <Compile Remove="ForceDpiAware.cs" />
+    <Compile Remove="GdiPlusHelper.cs" />
+    <Compile Remove="NativeMethods.cs" />
+    <Compile Remove="ImGuiController\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
