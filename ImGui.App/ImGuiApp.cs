@@ -23,7 +23,6 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Color = System.Drawing.Color;
-using Texture = ImGuiController.Texture;
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
@@ -1111,32 +1110,14 @@ public static partial class ImGuiApp
 	{
 		return Invoker.Invoke(() =>
 		{
-			if (gl is null)
+			if (controller is null)
 			{
-				throw new InvalidOperationException("OpenGL context is not initialized.");
+				throw new InvalidOperationException("Renderer backend is not initialized.");
 			}
 
-			// Upload texture to graphics system
-			gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
-
-			nint textureHandle = Marshal.AllocHGlobal(bytes.Length);
-			try
-			{
-				Marshal.Copy(bytes, 0, textureHandle, bytes.Length);
-				Texture texture = new(gl, width, height, textureHandle, pxFormat: PixelFormat.Rgba);
-				texture.Bind();
-				texture.SetMagFilter(TextureMagFilter.Linear);
-				texture.SetMinFilter(TextureMinFilter.Linear);
-
-				// Restore state
-				gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
-
-				return texture.GlTexture;
-			}
-			finally
-			{
-				Marshal.FreeHGlobal(textureHandle);
-			}
+			// The pooled buffer may be larger than the texture; only the first w*h*4 bytes are pixel data.
+			int pixelByteCount = width * height * 4;
+			return (uint)controller.CreateTexture(bytes.AsSpan(0, pixelByteCount), width, height);
 		});
 	}
 
@@ -1149,12 +1130,12 @@ public static partial class ImGuiApp
 	{
 		Invoker.Invoke(() =>
 		{
-			if (gl is null)
+			if (controller is null)
 			{
-				throw new InvalidOperationException("OpenGL context is not initialized.");
+				throw new InvalidOperationException("Renderer backend is not initialized.");
 			}
 
-			gl.DeleteTexture(textureId);
+			controller.DeleteTexture((nint)textureId);
 			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out ImGuiAppTextureInfo? _));
 		});
 	}
