@@ -27,8 +27,7 @@ public sealed class SpringTests
 	[TestMethod]
 	public void Update_NewTarget_BecomesActive()
 	{
-		Spring s = new(initial: 0.0f);
-		s.Target = 10.0f;
+		Spring s = new(initial: 0.0f) { Target = 10.0f };
 
 		s.Update(0.016f);
 
@@ -39,8 +38,7 @@ public sealed class SpringTests
 	[TestMethod]
 	public void Update_SettlesAtTarget_GivenEnoughTime()
 	{
-		Spring s = new(initial: 0.0f, stiffness: 170.0f, damping: 26.0f);
-		s.Target = 100.0f;
+		Spring s = new(initial: 0.0f, stiffness: 170.0f, damping: 26.0f) { Target = 100.0f };
 
 		// Advance for two seconds in 16ms ticks; nearly-critically-damped should settle.
 		for (int i = 0; i < 125; i++)
@@ -56,8 +54,7 @@ public sealed class SpringTests
 	public void Update_LargeDelta_StaysStable()
 	{
 		// A single huge dt would blow up a naive explicit Euler; sub-stepping should keep it bounded.
-		Spring s = new(initial: 0.0f, stiffness: 500.0f, damping: 10.0f);
-		s.Target = 100.0f;
+		Spring s = new(initial: 0.0f, stiffness: 500.0f, damping: 10.0f) { Target = 100.0f };
 
 		float result = s.Update(1.0f);
 
@@ -69,8 +66,7 @@ public sealed class SpringTests
 	[TestMethod]
 	public void Update_NegativeDelta_DoesNothing()
 	{
-		Spring s = new(initial: 0.0f);
-		s.Target = 10.0f;
+		Spring s = new(initial: 0.0f) { Target = 10.0f };
 		s.Update(0.016f);
 		float before = s.Value;
 
@@ -82,8 +78,7 @@ public sealed class SpringTests
 	[TestMethod]
 	public void SnapTo_ClearsVelocityAndRests()
 	{
-		Spring s = new(initial: 0.0f);
-		s.Target = 100.0f;
+		Spring s = new(initial: 0.0f) { Target = 100.0f };
 		s.Update(0.016f);
 		Assert.IsTrue(s.IsActive);
 
@@ -99,8 +94,7 @@ public sealed class SpringTests
 	public void Update_OverdampedSpring_DoesNotOvershoot()
 	{
 		// Heavily over-damped: damping > 2 sqrt(k) = 2 * sqrt(100) = 20
-		Spring s = new(initial: 0.0f, stiffness: 100.0f, damping: 100.0f);
-		s.Target = 10.0f;
+		Spring s = new(initial: 0.0f, stiffness: 100.0f, damping: 100.0f) { Target = 10.0f };
 
 		float maxObserved = 0.0f;
 		for (int i = 0; i < 300; i++)
