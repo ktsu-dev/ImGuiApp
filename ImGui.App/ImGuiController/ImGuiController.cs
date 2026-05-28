@@ -14,7 +14,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-internal sealed class ImGuiController : IDisposable
+internal sealed class ImGuiController : IDisposable, IRendererBackend
 {
 
 	internal GL? _gl;
@@ -248,9 +248,43 @@ internal sealed class ImGuiController : IDisposable
 		{
 			_frameBegun = false;
 			ImGui.Render();
-			RenderImDrawData(ImGui.GetDrawData());
+			RenderDrawData(ImGui.GetDrawData());
 		}
 	}
+
+	/// <inheritdoc />
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Reliability",
+		"CA2000:Dispose objects before losing scope",
+		Justification = "The Texture wrapper's resource is the GL texture; we hand its name back to ImGui, " +
+			"so disposing here would delete the very texture we're returning. Lifetime is owned by the caller.")]
+	public unsafe nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		if (_gl is null)
+		{
+			throw new InvalidOperationException("OpenGL context is not initialized.");
+		}
+
+		// Preserve whatever was bound — the caller may be mid-frame.
+		_gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
+
+		uint glTexture;
+		fixed (byte* pixelPtr = rgba)
+		{
+			Texture texture = new(_gl, width, height, (IntPtr)pixelPtr, pxFormat: PixelFormat.Rgba);
+			texture.Bind();
+			texture.SetMagFilter(TextureMagFilter.Linear);
+			texture.SetMinFilter(TextureMinFilter.Linear);
+			glTexture = texture.GlTexture;
+		}
+
+		_gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
+		return (nint)glTexture;
+	}
+
+	/// <inheritdoc />
+	// _gl can be null if the context has already been torn down; callers expect a no-op then.
+	public void DeleteTexture(nint id) => _gl?.DeleteTexture((uint)id);
 
 	/// <summary>
 	/// Updates ImGui input and IO configuration state.
@@ -546,7 +580,8 @@ internal sealed class ImGuiController : IDisposable
 		_gl.VertexAttribPointer((uint)_attribLocationVtxColor, 4, GLEnum.UnsignedByte, true, (uint)sizeof(ImDrawVert), (void*)16);
 	}
 
-	internal unsafe void RenderImDrawData(ImDrawDataPtr drawDataPtr)
+	/// <inheritdoc />
+	public unsafe void RenderDrawData(ImDrawDataPtr drawDataPtr)
 	{
 		if (_gl is null)
 		{
