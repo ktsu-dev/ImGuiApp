@@ -233,8 +233,13 @@ jobs:
       - name: Restore ImGui.App (net10.0-ios, no RID matrix)
         run: dotnet restore ImGui.App/ImGui.App.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers=
 
+      # EnforceCodeStyleInBuild=false bypasses the IDE0055 formatting analyser: the repo's
+      # working-tree files are LF, .editorconfig demands CRLF, and Windows checkouts get
+      # auto-converted to CRLF by git's core.autocrlf — macOS checkouts don't, so IDE0055
+      # fires here on baseline code that's untouched by this PR. The Windows job is the
+      # authoritative formatter; the macOS job is a compile-check.
       - name: Build ImGui.App (net10.0-ios)
-        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= --no-restore
+        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:EnforceCodeStyleInBuild=false --no-restore
 
   winget:
     name: Update Winget Manifests
