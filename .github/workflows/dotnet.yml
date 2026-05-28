@@ -191,6 +191,59 @@ jobs:
             ./coverage/*
           retention-days: 7
 
+  ios-build:
+    # Compile-only verification that the net10.0-ios stub keeps building on Mac.
+    # No tests — Apple Simulator boot from CI is a separate problem (see plan §5 Task 2).
+    # Runs in parallel with `build`; failure here is independent and does not gate release.
+    name: Build net10.0-ios (macOS)
+    runs-on: macos-14
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: true
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      # The ios workload pulls multi-hundred-MB of packs; cache them across runs so the
+      # common case is a few seconds, not minutes. Key includes the SDK major.minor so a
+      # SDK bump forces a fresh install (the workload version is pinned to the SDK).
+      - name: Cache iOS workload
+        id: cache-ios-workload
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet/sdk-manifests
+            ~/.dotnet/packs
+            ~/.dotnet/metadata
+            ~/.dotnet/library-packs
+          key: ${{ runner.os }}-dotnet-workload-ios-${{ env.DOTNET_VERSION }}
+
+      - name: Install iOS workload
+        if: steps.cache-ios-workload.outputs.cache-hit != 'true'
+        run: dotnet workload install ios
+
+      - name: Restore ImGui.App
+        run: dotnet restore ImGui.App/ImGui.App.csproj
+
+      - name: Build ImGui.App (net10.0-ios)
+        # Build-only — no test execution. Verifies the stub at
+        # ImGui.App/Platform/iOS/ImGuiApp.iOS.cs (and any iOS code that lands later)
+        # compiles end-to-end against the ios workload.
+        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -f net10.0-ios --no-restore
+
   winget:
     name: Update Winget Manifests
     needs: build
