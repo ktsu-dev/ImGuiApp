@@ -191,6 +191,56 @@ jobs:
             ./coverage/*
           retention-days: 7
 
+  ios-build:
+    # Compile-only verification that the net10.0-ios stub keeps building on Mac.
+    # No tests — Apple Simulator boot from CI is a separate problem (see plan §5 Task 2).
+    # Runs in parallel with `build`; failure here is independent and does not gate release.
+    name: Build net10.0-ios (macOS)
+    runs-on: macos-14
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: true
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Install iOS workload
+        # No caching yet — get the install path working first; caching workload manifests
+        # is a known-finicky follow-up (manifests need both the file tree and a metadata
+        # registration to "count" as installed).
+        run: dotnet workload install ios
+
+      # The csproj cross-targets net10.0;net9.0;net8.0;net10.0-ios on macOS AND ktsu.Sdk
+      # forces RuntimeIdentifiers=win-x64;win-x86;win-arm64;osx-x64;osx-arm64;linux-x64;linux-arm64
+      # on every project. The combination asks NuGet for the matching
+      # Microsoft.NETCore.App.Runtime.Mono.<rid> pack at the SDK version — those packs are
+      # workload-delivered in .NET 10 and no longer on nuget.org, so restore 404s. Windows
+      # CI gets away with it because the Windows runner has the Mono packs bundled with
+      # its dotnet install; setup-dotnet on the Mac runner does not. Scoping the restore
+      # to net10.0-ios alone AND clearing the RID matrix sidesteps the issue — we're only
+      # compile-checking the IL, no RID-specific output needed.
+      - name: Restore ImGui.App (net10.0-ios, no RID matrix)
+        run: dotnet restore ImGui.App/ImGui.App.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers=
+
+      # EnforceCodeStyleInBuild=false bypasses the IDE0055 formatting analyser: the repo's
+      # working-tree files are LF, .editorconfig demands CRLF, and Windows checkouts get
+      # auto-converted to CRLF by git's core.autocrlf — macOS checkouts don't, so IDE0055
+      # fires here on baseline code that's untouched by this PR. The Windows job is the
+      # authoritative formatter; the macOS job is a compile-check.
+      - name: Build ImGui.App (net10.0-ios)
+        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:EnforceCodeStyleInBuild=false --no-restore
+
   winget:
     name: Update Winget Manifests
     needs: build
