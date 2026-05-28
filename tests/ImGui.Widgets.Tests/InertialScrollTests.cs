@@ -193,8 +193,18 @@ public sealed class InertialScrollTests
 		int fastSteps = 0;
 		for (int i = 0; i < 600; i++)
 		{
-			if (slow.IsActive) { slow.Update(0.016f); slowSteps++; }
-			if (fast.IsActive) { fast.Update(0.016f); fastSteps++; }
+			if (slow.IsActive)
+			{
+				slow.Update(0.016f);
+				slowSteps++;
+			}
+
+			if (fast.IsActive)
+			{
+				fast.Update(0.016f);
+				fastSteps++;
+			}
+
 			if (!slow.IsActive && !fast.IsActive)
 			{
 				break;
