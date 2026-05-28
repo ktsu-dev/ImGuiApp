@@ -4,8 +4,6 @@
 
 namespace ktsu.ImGui.Widgets.Tests;
 
-using System;
-
 using ktsu.ImGui.Widgets.Scroll;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
