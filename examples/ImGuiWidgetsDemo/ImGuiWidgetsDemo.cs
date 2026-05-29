@@ -83,6 +83,11 @@ internal static class ImGuiWidgetsDemo
 	private static int notificationCount = 5;
 	private static int carouselPage;
 
+	// Mobile container / loader demo state
+	private static string pinValue = string.Empty;
+	private static string otpValue = string.Empty;
+	private static bool skeletonLoading = true;
+
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
 	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
 	private static ImGuiWidgets.TabPanel DemoTabPanel { get; } = new("DemoTabPanel", true, true);
@@ -178,6 +183,7 @@ internal static class ImGuiWidgetsDemo
 		ShowScopedWidgetsDemo();
 		ShowTreeDemo();
 		ShowMobileDecoratorsDemo();
+		ShowMobileContainersDemo();
 	}
 
 	private static void ShowAdvancedDemos(float size)
@@ -786,6 +792,53 @@ internal static class ImGuiWidgetsDemo
 			ImGui.TextUnformatted("Page indicator (click a dot):");
 			carouselPage = ImGuiWidgets.PageIndicator("Carousel", carouselPage, 5, interactive: true);
 			ImGui.TextUnformatted($"Page {carouselPage + 1} of 5");
+		}
+	}
+
+	private static void ShowMobileContainersDemo()
+	{
+		if (ImGui.CollapsingHeader("Mobile - Containers & Loaders"))
+		{
+			ImGui.TextUnformatted("Card (scoped, shadowed, elevated container):");
+			ImGui.Separator();
+
+			using (new ImGuiWidgets.Card(width: 280.0f))
+			{
+				ImGui.TextUnformatted("Card title");
+				ImGui.TextWrapped("Cards group related content on an elevated surface with a soft drop shadow. Padding and rounding scale with the theme.");
+				if (ImGui.Button("Action##cardAction"))
+				{
+					notificationCount++;
+				}
+			}
+
+			ImGui.Separator();
+			ImGui.TextUnformatted("PIN / OTP input (auto-advancing boxes):");
+			ImGuiWidgets.PinInput("Pin##pin", ref pinValue, length: 4);
+			ImGui.TextUnformatted($"PIN: {(pinValue.Length == 4 ? pinValue : "(incomplete)")}");
+
+			ImGui.TextUnformatted("Masked, 6 digits:");
+			ImGuiWidgets.PinInput("Otp##otp", ref otpValue, length: 6, masked: true);
+
+			ImGui.Separator();
+			ImGui.Checkbox("Loading##skeletonToggle", ref skeletonLoading);
+			ImGui.TextUnformatted("Skeleton loaders (shimmer placeholders):");
+			if (skeletonLoading)
+			{
+				ImGuiWidgets.SkeletonCircle("SkelAvatar");
+				ImGui.SameLine();
+				ImGui.BeginGroup();
+				ImGuiWidgets.SkeletonLine("SkelLine1", width: 180.0f);
+				ImGui.Spacing();
+				ImGuiWidgets.SkeletonLine("SkelLine2", width: 120.0f);
+				ImGui.EndGroup();
+				ImGui.Spacing();
+				ImGuiWidgets.SkeletonRect("SkelThumb", new Vector2(220.0f, 80.0f));
+			}
+			else
+			{
+				ImGui.TextUnformatted("Content loaded.");
+			}
 		}
 	}
 
