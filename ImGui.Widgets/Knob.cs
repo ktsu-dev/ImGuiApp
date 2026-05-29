@@ -215,13 +215,16 @@ public static partial class ImGuiWidgets
 			public KnobInternal(string label_, ImGuiDataType dataType, ref TDataType value, TDataType vMin, TDataType vMax, float speed, float radius_, string format, ImGuiKnobOptions flags)
 			{
 				Radius = radius_;
-				T = InverseLerp(vMin, vMax, value);
 				Vector2 screenPos = ImGui.GetCursorScreenPos();
 
 				// Handle dragging
 				ImGui.InvisibleButton(label_, new(Radius * 2.0f, Radius * 2.0f));
 
 				ValueChanged = DragBehavior(dataType, ref value, vMin, vMax, speed, format, flags);
+
+				// Compute the normalized value AFTER the drag so the indicator reflects
+				// the current value within the same frame rather than lagging behind.
+				T = InverseLerp(vMin, vMax, value);
 
 				AngleMin = MathF.PI * 0.75f;
 				AngleMax = MathF.PI * 2.25f;
@@ -272,17 +275,17 @@ public static partial class ImGuiWidgets
 					return false;
 				}
 
-				float newValue = floatValue + diff;
+				// Apply the full accumulated movement, not just this frame's delta, so
+				// sub-precision drags build up across frames instead of being discarded.
+				float newValue = floatValue + AccumulatedDiff;
 
-				// Round to user desired precision based on format string
-				if (isFloatingPoint)
+				// Round to user desired precision based on format string.
+				// decimalPrecision is 0 for integer types and negative for scientific
+				// notation formats (which must not be rounded).
+				if (decimalPrecision >= 0)
 				{
 					newValue = MathF.Round(newValue, decimalPrecision);
 				}
-
-				float appliedDiff = newValue - floatValue;
-				AccumulatedDiff -= appliedDiff;
-				AccumulatorDirty = false;
 
 				if (newValue == -0.0f)
 				{
@@ -290,18 +293,35 @@ public static partial class ImGuiWidgets
 				}
 
 				// Clamp values (+ handle overflow/wrap-around for integer types)
+				bool clamped = false;
 				if (newValue != floatValue && isClamped)
 				{
-					if (newValue < floatMin || (newValue > floatValue && diff < 0.0f && !isFloatingPoint))
+					if (newValue < floatMin || (newValue > floatValue && AccumulatedDiff < 0.0f && !isFloatingPoint))
 					{
 						newValue = floatMin;
+						clamped = true;
 					}
 
-					if (newValue > floatMax || (newValue < floatValue && diff > 0.0f && !isFloatingPoint))
+					if (newValue > floatMax || (newValue < floatValue && AccumulatedDiff > 0.0f && !isFloatingPoint))
 					{
 						newValue = floatMax;
+						clamped = true;
 					}
 				}
+
+				// Reduce the accumulator by the amount actually applied so the leftover
+				// fractional movement carries over. Reset it entirely when pinned to a
+				// bound so dragging back off the limit responds immediately.
+				if (clamped)
+				{
+					AccumulatedDiff = 0.0f;
+				}
+				else
+				{
+					AccumulatedDiff -= newValue - floatValue;
+				}
+
+				AccumulatorDirty = false;
 
 				if (newValue != floatValue)
 				{
@@ -559,7 +579,10 @@ public static partial class ImGuiWidgets
 						{
 							TDataType* pMin = &vMin;
 							TDataType* pMax = &vMax;
-							k.ValueChanged = ImGui.DragScalar("###knob_drag", dataType, pValue, speed, pMin, pMax, format);
+							// OR with the existing result so a drag on the knob body is still
+							// reported when the numeric input field is also present.
+							bool inputChanged = ImGui.DragScalar("###knob_drag", dataType, pValue, speed, pMin, pMax, format);
+							k.ValueChanged = k.ValueChanged || inputChanged;
 						}
 					}
 				}
