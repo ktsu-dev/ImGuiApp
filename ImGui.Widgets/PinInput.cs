@@ -4,7 +4,6 @@
 
 namespace ktsu.ImGui.Widgets;
 
-using System;
 using System.Collections.Generic;
 using System.Text;
 

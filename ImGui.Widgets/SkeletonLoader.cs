@@ -95,7 +95,11 @@ public static partial class ImGuiWidgets
 
 			float bandWidth = MathF.Max(size.X * BandFraction, 8.0f);
 			float travel = size.X + bandWidth;
-			float phase = ShimmerPhase(ImGui.GetTime(), SweepPeriod);
+
+			// Offset each placeholder's sweep by a stable amount derived from its id so a group of
+			// skeletons shimmers in a staggered wave rather than in lockstep.
+			double offsetSeconds = ImGui.GetID(id) % 1000u / 1000.0 * SweepPeriod;
+			float phase = ShimmerPhase(ImGui.GetTime() + offsetSeconds, SweepPeriod);
 			float center = min.X - (bandWidth * 0.5f) + (phase * travel);
 
 			float left = center - (bandWidth * 0.5f);
