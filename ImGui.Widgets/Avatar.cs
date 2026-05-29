@@ -157,7 +157,7 @@ public static partial class ImGuiWidgets
 				hash = (hash ^ c) * 16777619u;
 			}
 
-			float hue = (hash % 360u) / 360.0f;
+			float hue = hash % 360u / 360.0f;
 			return Color.FromHSL(hue, 0.55f, 0.55f).Value;
 		}
 
