@@ -67,6 +67,12 @@ internal static class ImGuiWidgetsDemo
 	private const float CountupTotal = 180.0f; // 3 minutes
 	private static bool countupRunning;
 
+	// Mobile decorator widget demo state
+	private static float ratingValue = 3.0f;
+	private static float halfRatingValue = 3.5f;
+	private static int notificationCount = 5;
+	private static int carouselPage;
+
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
 	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
 	private static ImGuiWidgets.TabPanel DemoTabPanel { get; } = new("DemoTabPanel", true, true);
@@ -160,6 +166,7 @@ internal static class ImGuiWidgetsDemo
 		ShowTextDemo();
 		ShowScopedWidgetsDemo();
 		ShowTreeDemo();
+		ShowMobileDecoratorsDemo();
 	}
 
 	private static void ShowAdvancedDemos(float size)
@@ -689,6 +696,52 @@ internal static class ImGuiWidgetsDemo
 			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, false);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Disabled");
+		}
+	}
+
+	private static void ShowMobileDecoratorsDemo()
+	{
+		if (ImGui.CollapsingHeader("Mobile - Decorators"))
+		{
+			AbsoluteFilePath ktsuIconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>();
+			ImGuiAppTextureInfo ktsuTexture = ImGuiApp.GetOrLoadTexture(ktsuIconPath);
+
+			ImGui.TextUnformatted("Avatars (circular image, initials fallback, presence dot):");
+			ImGui.Separator();
+			ImGuiWidgets.Avatar("AvatarImage", ktsuTexture.TextureId, status: AvatarStatus.Online);
+			ImGui.SameLine();
+			ImGuiWidgets.Avatar("AvatarJD", "John Doe", status: AvatarStatus.Away);
+			ImGui.SameLine();
+			ImGuiWidgets.Avatar("AvatarAB", "Ada Byron", status: AvatarStatus.Busy);
+			ImGui.SameLine();
+			ImGuiWidgets.Avatar("AvatarGrace", "Grace Hopper", status: AvatarStatus.Offline);
+
+			ImGui.Separator();
+			ImGui.TextUnformatted("Badges (overlay the previously drawn item):");
+			ImGui.Button("Inbox");
+			ImGuiWidgets.Badge(notificationCount);
+			ImGui.SameLine(0, 30);
+			ImGui.Button("Messages");
+			ImGuiWidgets.Badge(150);
+			ImGui.SameLine(0, 30);
+			ImGui.Button("Updates");
+			ImGuiWidgets.BadgeDot();
+			ImGui.SliderInt("Count", ref notificationCount, 0, 200);
+
+			ImGui.Separator();
+			ImGui.TextUnformatted("Rating (click to set):");
+			ImGuiWidgets.Rating("WholeRating", ref ratingValue);
+			ImGui.SameLine();
+			ImGui.TextUnformatted($"{ratingValue:0.#}");
+			ImGui.TextUnformatted("Half-step, read-only:");
+			ImGuiWidgets.Rating("HalfRating", ref halfRatingValue, allowHalf: true);
+			ImGui.SameLine();
+			ImGuiWidgets.Rating("ReadOnlyRating", ref halfRatingValue, allowHalf: true, readOnly: true);
+
+			ImGui.Separator();
+			ImGui.TextUnformatted("Page indicator (click a dot):");
+			carouselPage = ImGuiWidgets.PageIndicator("Carousel", carouselPage, 5, interactive: true);
+			ImGui.TextUnformatted($"Page {carouselPage + 1} of 5");
 		}
 	}
 
