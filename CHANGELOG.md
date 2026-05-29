@@ -2,6 +2,7 @@
 
 Changes since v2.3.0:
 
+- Remove version number from VERSION.md ([@matt-edmondson](https://github.com/matt-edmondson))
 - style: drop unused using and use id for skeleton shimmer offset ([@Claude](https://github.com/Claude))
 - [minor] Add hidden-start and hide-on-close window support ([@matt-edmondson](https://github.com/matt-edmondson))
 - feat: add Card, SkeletonLoader, and PinInput mobile widgets ([@Claude](https://github.com/Claude))
