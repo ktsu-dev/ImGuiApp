@@ -6,6 +6,14 @@ Date: 2026-05-28
 
 Expand `ImGui.Widgets` with common mobile UI patterns that Dear ImGui does not ship natively, while staying true to ImGui's immediate-mode philosophy and the library's existing conventions (static entry points, scoped RAII, primary constructors, tabs for indentation, file-scoped namespaces).
 
+## Progress
+
+- **Phase 0 — Foundational Infrastructure**: ✅ complete (`GestureDetector`, `Tween`/`Spring`/`Easing`, `InertialScroll`, `OverlayHost`).
+- **Phase 1 — High-value, low-risk widgets**: ✅ complete (`Switch`, `SegmentedControl`, `Chip`/`ChipGroup`, `Stepper`, `Avatar`, `Badge`, `Rating`, `RangeSlider`, `PageIndicator`, `Card`, `SkeletonLoader`, `PinInput`).
+- **Phase 2 — Gesture-dependent widgets**: ⬜ not started. Next up — start with `SwipeableListItem` (already have `GestureDetector`).
+- **Phase 3 — Overlays & navigation**: ⬜ not started (`OverlayHost` is ready; begin with `Toast`).
+- **Phase 4 — Polish**: ⬜ not started.
+
 ## Phase 0 — Foundational Infrastructure
 
 Most mobile widgets need shared plumbing. Build these first; everything else depends on them.
