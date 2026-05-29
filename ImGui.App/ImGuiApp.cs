@@ -81,9 +81,19 @@ public static partial class ImGuiApp
 	public static bool IsFocused { get; private set; } = true;
 
 	/// <summary>
+	/// Tracks whether the window has been hidden via <see cref="Hide"/>, <see cref="ImGuiAppConfig.StartHidden"/>,
+	/// or the close button under <see cref="ImGuiAppConfig.HideOnClose"/>. Used as the source of truth for
+	/// visibility because some windowing backends (e.g. SDL) do not reliably report it.
+	/// </summary>
+	internal static bool userHidden;
+
+	/// <summary>Set when <see cref="ImGuiAppConfig.StartHidden"/> is requested; applied on the first update tick once the native handle exists.</summary>
+	internal static bool startHiddenPending;
+
+	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is visible.
 	/// </summary>
-	public static bool IsVisible => (window?.WindowState != Silk.NET.Windowing.WindowState.Minimized) && (window?.IsVisible ?? false);
+	public static bool IsVisible => window is not null && !userHidden && window.WindowState != Silk.NET.Windowing.WindowState.Minimized;
 
 	/// <summary>
 	/// Gets a value indicating whether the application is currently idle (no user input for a specified time).
@@ -173,6 +183,7 @@ public static partial class ImGuiApp
 			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
 			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
 			WindowState = Silk.NET.Windowing.WindowState.Normal,
+			IsVisible = !config.StartHidden, // Tray apps can start hidden; the loop still runs
 			VSync = false, // Disable VSync to allow PID frame limiter to control frame rate
 			API = OperatingSystem.IsLinux() ?
 				new GraphicsAPI(
@@ -258,8 +269,107 @@ public static partial class ImGuiApp
 
 			ImGui.GetStyle().WindowRounding = 0;
 			window.WindowState = config.InitialWindowState.LayoutState;
+
+			if (config.HideOnClose)
+			{
+				InstallHideOnCloseHook();
+			}
+
+			// Defer hiding to the first update tick: the native window handle is not yet
+			// available during Load, and SDL shows the window as the loop starts. We drive
+			// visibility natively because Silk's SDL backend does not reliably honour IsVisible.
+			startHiddenPending = config.StartHidden;
+
 			DebugLogger.Log("Window.Load: Window load handler completed");
 		};
+	}
+
+	private static NativeMethods.WindowProc? hideOnCloseProc;
+	private static nint originalWindowProc;
+
+	/// <summary>Gets the native Win32 window handle, or zero if unavailable / not on Windows.</summary>
+	private static nint TryGetWindowHandle() =>
+		OperatingSystem.IsWindows() && window?.Native?.Win32 is { } win32 ? win32.Hwnd : 0;
+
+	/// <summary>Shows or hides the window via the native handle (Windows). No-op elsewhere.</summary>
+	private static void ApplyNativeVisibility(bool visible)
+	{
+		nint hwnd = TryGetWindowHandle();
+		if (hwnd == 0)
+		{
+			return;
+		}
+
+		if (visible)
+		{
+			NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
+			NativeMethods.SetForegroundWindow(hwnd);
+		}
+		else
+		{
+			NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
+		}
+	}
+
+	/// <summary>
+	/// Subclasses the native window so the close button hides the window instead of
+	/// destroying it. Windows-only; a no-op on other platforms or if the native handle
+	/// is unavailable.
+	/// </summary>
+	internal static void InstallHideOnCloseHook()
+	{
+		nint hwnd = TryGetWindowHandle();
+		if (hwnd == 0)
+		{
+			return;
+		}
+
+		try
+		{
+			// Keep the delegate referenced for the lifetime of the window so it isn't collected.
+			hideOnCloseProc = HideOnCloseWindowProc;
+			nint procPtr = Marshal.GetFunctionPointerForDelegate(hideOnCloseProc);
+			originalWindowProc = NativeMethods.SetWindowLongPtr(hwnd, NativeMethods.GWLP_WNDPROC, procPtr);
+		}
+		catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
+		{
+			// Older/32-bit Windows may not export SetWindowLongPtrW; fall back to normal close.
+			hideOnCloseProc = null;
+			DebugLogger.Log($"InstallHideOnCloseHook: hook not installed ({ex.Message}); close will exit normally.");
+		}
+	}
+
+	private static nint HideOnCloseWindowProc(nint hWnd, uint msg, nint wParam, nint lParam)
+	{
+		if (msg == NativeMethods.WM_CLOSE)
+		{
+			// Consume the close: hide instead of letting the windowing backend tear down.
+			userHidden = true;
+			NativeMethods.ShowWindow(hWnd, NativeMethods.SW_HIDE);
+			return 0;
+		}
+
+		return NativeMethods.CallWindowProc(originalWindowProc, hWnd, msg, wParam, lParam);
+	}
+
+	/// <summary>
+	/// Shows the application window, restoring it from a minimized or hidden state and
+	/// bringing it to the foreground. Safe to call from any thread.
+	/// </summary>
+	public static void Show()
+	{
+		userHidden = false;
+		ApplyNativeVisibility(true);
+	}
+
+	/// <summary>
+	/// Hides the application window without stopping the render loop, so it can be shown
+	/// again later with <see cref="Show"/>. Safe to call from any thread.
+	/// </summary>
+	public static void Hide()
+	{
+		userHidden = true;
+		ApplyNativeVisibility(false);
 	}
 
 	internal static void SetupWindowResizeHandler(ImGuiAppConfig config)
@@ -362,6 +472,28 @@ public static partial class ImGuiApp
 			if (!controller?.FontsConfigured ?? true)
 			{
 				throw new InvalidOperationException("Fonts are not configured before Update()");
+			}
+
+			// Enforce a deferred start-hidden request. SDL shows the window during
+			// initialization (over the first few frames), so re-hide each tick until the OS
+			// confirms it is hidden, then enable visibility throttling. Enforcement runs at
+			// the normal frame rate (userHidden stays false until confirmed) so any flash is
+			// at most a frame or two.
+			if (startHiddenPending)
+			{
+				nint h = TryGetWindowHandle();
+				if (h != 0)
+				{
+					if (NativeMethods.IsWindowVisible(h))
+					{
+						NativeMethods.ShowWindow(h, NativeMethods.SW_HIDE);
+					}
+					else
+					{
+						startHiddenPending = false;
+						userHidden = true;
+					}
+				}
 			}
 
 			EnsureWindowPositionIsValid();
@@ -1576,6 +1708,10 @@ public static partial class ImGuiApp
 		controller = null;
 		inputContext = null;
 		glProvider = null;
+		userHidden = false;
+		startHiddenPending = false;
+		hideOnCloseProc = null;
+		originalWindowProc = 0;
 		LastNormalWindowState = new();
 		FontIndices.Clear();
 		lastFontScaleFactor = 0;

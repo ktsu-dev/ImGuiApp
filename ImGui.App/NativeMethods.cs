@@ -17,6 +17,35 @@ internal static partial class NativeMethods
 	[return: MarshalAs(UnmanagedType.Bool)]
 	internal static partial bool ShowWindow(nint hWnd, int nCmdShow);
 
+	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool SetForegroundWindow(nint hWnd);
+
+	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool IsWindowVisible(nint hWnd);
+
+	/// <summary>Replaces the window procedure (GWLP_WNDPROC) so messages can be intercepted.</summary>
+	[LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	internal static partial nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+
+	/// <summary>Forwards a message to the previously installed window procedure.</summary>
+	[LibraryImport("user32.dll", EntryPoint = "CallWindowProcW")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	internal static partial nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, uint msg, nint wParam, nint lParam);
+
+	/// <summary>Delegate matching the Win32 window procedure signature.</summary>
+	internal delegate nint WindowProc(nint hWnd, uint msg, nint wParam, nint lParam);
+
+	internal const int GWLP_WNDPROC = -4;
+	internal const uint WM_CLOSE = 0x0010;
+	internal const int SW_HIDE = 0;
+	internal const int SW_SHOW = 5;
+	internal const int SW_RESTORE = 9;
+
 	/// <summary>
 	/// Sets the process as DPI-Aware on Windows.
 	/// </summary>

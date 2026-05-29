@@ -41,6 +41,21 @@ public class ImGuiAppConfig
 	public ImGuiAppWindowState InitialWindowState { get; init; } = new();
 
 	/// <summary>
+	/// Gets or sets a value indicating whether the window is created hidden.
+	/// When true, the window starts invisible and must be shown with <see cref="ImGuiApp.Show"/>
+	/// (typically from a system tray icon). The render loop still runs while hidden.
+	/// </summary>
+	public bool StartHidden { get; init; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether clicking the window's close button hides the
+	/// window instead of stopping the application. This keeps the render loop alive so the
+	/// window can be shown again via <see cref="ImGuiApp.Show"/>. Implemented on Windows;
+	/// on other platforms the window closes normally.
+	/// </summary>
+	public bool HideOnClose { get; init; }
+
+	/// <summary>
 	/// Gets or sets the action to be performed when the application starts.
 	/// </summary>
 	public Action OnStart { get; init; } = () => { };
