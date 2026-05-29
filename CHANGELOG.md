@@ -1,6 +1,6 @@
-## v2.4.0 (minor)
+## v2.5.0 (minor)
 
-Changes since v2.3.0:
+Changes since v2.4.0:
 
 - Remove version number from VERSION.md ([@matt-edmondson](https://github.com/matt-edmondson))
 - style: drop unused using and use id for skeleton shimmer offset ([@Claude](https://github.com/Claude))
@@ -49,6 +49,11 @@ Changes since v2.3.0:
 - Results from dotnet format ([@Damon3000s](https://github.com/Damon3000s))
 - Add DESCRIPTION.md and TAGS.md files; update README.md with comprehensive library details and usage examples ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add SonarLint configuration for connected mode ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v2.4.0 (minor)
+
+Changes since v2.3.0:
+
 - feat(timers): Add countdown and count-up timer demos with radial progress indicators ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
 - Increase MaxForce values in PhysicsSettings and demo to enhance simulation capabilities ([@matt-edmondson](https://github.com/matt-edmondson))
