@@ -124,7 +124,7 @@ public static partial class ImGuiWidgets
 			drawList.AddCircleFilled(new Vector2(lowerX2, trackY), grabRadius, grabColor, 24);
 			drawList.AddCircleFilled(new Vector2(upperX2, trackY), grabRadius, grabColor, 24);
 
-			if ((ImGui.IsItemHovered() || ImGui.IsItemActive()))
+			if (ImGui.IsItemHovered() || ImGui.IsItemActive())
 			{
 				ImGui.SetTooltip(string.Format(CultureInfo.CurrentCulture, "{0:0.###} – {1:0.###}", lower, upper));
 			}
