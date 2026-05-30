@@ -1,4 +1,4 @@
-# ktsu.ImGuiWidgets
+# ktsu.ImGui.Widgets
 
 ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provides a variety of widgets and utilities to enhance your ImGui-based applications.
 
@@ -24,15 +24,15 @@ ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provid
 To install ImGuiWidgets, you can add the library to your .NET project using the following command:
 
 ```bash
-dotnet add package ktsu.ImGuiWidgets
+dotnet add package ktsu.ImGui.Widgets
 ```
 
 ## Usage
 
-To use ImGuiWidgets, you need to include the `ktsu.ImGuiWidgets` namespace in your code:
+To use ImGuiWidgets, you need to include the `ktsu.ImGui.Widgets` namespace in your code:
 
 ```csharp
-using ktsu.ImGuiWidgets;
+using ktsu.ImGui.Widgets;
 ```
 
 Then, you can start using the widgets provided by ImGuiWidgets in your ImGui-based applications.
@@ -347,21 +347,22 @@ Icons can be used to display images with various alignment options and event del
 float iconWidthEms = 7.5f;
 float iconWidthPx = ImGuiApp.EmsToPx(iconWidthEms);
 
-uint textureId = ImGuiApp.GetOrLoadTexture("icon.png");
+// GetOrLoadTexture returns an ImGuiAppTextureInfo; use its TextureId
+ImGuiAppTextureInfo texture = ImGuiApp.GetOrLoadTexture("icon.png");
 
-ImGuiWidgets.Icon("Click Me", textureId, iconWidthPx, Color.White.Value, ImGuiWidgets.IconAlignment.Vertical, new ImGuiWidgets.IconDelegates()
+ImGuiWidgets.Icon("Click Me", texture.TextureId, iconWidthPx, ImGuiWidgets.IconAlignment.Vertical, new ImGuiWidgets.IconOptions()
 {
-    OnClick = () => MessageOK.Open("Click", "You clicked")
+    OnClick = () => Console.WriteLine("You clicked")
 });
 
 ImGui.SameLine();
-ImGuiWidgets.Icon("Double Click Me", textureId, iconWidthPx, Color.White.Value, ImGuiWidgets.IconAlignment.Vertical, new ImGuiWidgets.IconDelegates()
+ImGuiWidgets.Icon("Double Click Me", texture.TextureId, iconWidthPx, ImGuiWidgets.IconAlignment.Vertical, new ImGuiWidgets.IconOptions()
 {
-    OnDoubleClick = () => MessageOK.Open("Double Click", "You clicked twice")
+    OnDoubleClick = () => Console.WriteLine("You clicked twice")
 });
 
 ImGui.SameLine();
-ImGuiWidgets.Icon("Right Click Me", textureId, iconWidthPx, Color.White.Value, ImGuiWidgets.IconAlignment.Vertical, new ImGuiWidgets.IconDelegates()
+ImGuiWidgets.Icon("Right Click Me", texture.TextureId, iconWidthPx, ImGuiWidgets.IconAlignment.Vertical, new ImGuiWidgets.IconOptions()
 {
     OnContextMenu = () =>
     {
@@ -380,12 +381,17 @@ The grid layout allows you to display items in a flexible grid:
 float iconSizeEms = 7.5f;
 float iconSizePx = ImGuiApp.EmsToPx(iconSizeEms);
 
-uint textureId = ImGuiApp.GetOrLoadTexture("icon.png");
+ImGuiAppTextureInfo texture = ImGuiApp.GetOrLoadTexture("icon.png");
 
-ImGuiWidgets.Grid(items, i => ImGuiWidgets.CalcIconSize(i, iconSizePx), (item, cellSize, itemSize) =>
-{
-    ImGuiWidgets.Icon(item, textureId, iconSizePx, Color.White.Value);
-});
+// RowMajorGrid (or ColumnMajorGrid) takes an id, the items, a measure delegate, and a draw delegate
+ImGuiWidgets.RowMajorGrid(
+    "MyGrid",
+    items,
+    item => ImGuiWidgets.CalcIconSize(item, iconSizePx, ImGuiWidgets.IconAlignment.Vertical),
+    (item, cellSize, itemSize) =>
+    {
+        ImGuiWidgets.Icon(item, texture.TextureId, iconSizePx, ImGuiWidgets.IconAlignment.Vertical);
+    });
 ```
 
 ### Color Indicator
@@ -393,10 +399,11 @@ ImGuiWidgets.Grid(items, i => ImGuiWidgets.CalcIconSize(i, iconSizePx), (item, c
 The color indicator widget displays a color when enabled:
 
 ```csharp
+// color is a Hexa.NET.ImGui.ImColor (for example, from ktsu.ImGui.Styler's Color helpers)
+ImColor color = Color.FromHex("#ff0000");
 bool enabled = true;
-Color color = Color.Red;
 
-ImGuiWidgets.ColorIndicator("Color Indicator", enabled, color);
+ImGuiWidgets.ColorIndicator(color, enabled);
 ```
 
 ### Image
@@ -404,9 +411,9 @@ ImGuiWidgets.ColorIndicator("Color Indicator", enabled, color);
 The image widget allows you to display images with alignment options:
 
 ```csharp
-uint textureId = ImGuiApp.GetOrLoadTexture("image.png");
+ImGuiAppTextureInfo texture = ImGuiApp.GetOrLoadTexture("image.png");
 
-ImGuiWidgets.Image(textureId, new Vector2(100, 100));
+ImGuiWidgets.Image(texture.TextureId, new Vector2(100, 100));
 ```
 
 ### Text
@@ -508,7 +515,7 @@ if (ImGuiWidgets.Combo("Fruit", ref selectedFruit, fruits))
     Console.WriteLine($"Selected: {selectedFruit}");
 }
 
-// Strong string combo box (using ktsu.StrongStrings)
+// Strong string combo box (using ktsu.Semantics.Strings)
 using ktsu.Semantics.Strings;
 
 MyStrongString selected = new("Value1");
@@ -530,45 +537,45 @@ if (ImGuiWidgets.Combo("Option", ref selected, options))
 Create resizable layouts with draggable dividers between content regions:
 
 ```csharp
-// Create a horizontal divider container
+// Create a column-based divider container (side-by-side zones)
 var dividerContainer = new ImGuiWidgets.DividerContainer(
     "MyContainer",
-    ImGuiWidgets.DividerLayout.Horizontal
+    ImGuiWidgets.DividerLayout.Columns
 );
 
-// Add content regions
-dividerContainer.AddZone("Left Panel", () =>
+// Add zones with: id, initial size (relative weight), resizable, and a tick delegate (receives delta time)
+dividerContainer.Add("Left Panel", 0.33f, true, dt =>
 {
     ImGui.Text("Left side content");
     ImGui.Button("Left Button");
 });
 
-dividerContainer.AddZone("Right Panel", () =>
+dividerContainer.Add("Right Panel", 0.67f, true, dt =>
 {
     ImGui.Text("Right side content");
     ImGui.Button("Right Button");
 });
 
-// Draw the container in your render loop
-dividerContainer.Draw();
+// Tick the container each frame in your render loop
+dividerContainer.Tick(deltaTime);
 
-// For vertical layout:
-var verticalContainer = new ImGuiWidgets.DividerContainer(
-    "VerticalContainer",
-    ImGuiWidgets.DividerLayout.Vertical
+// For a stacked (top/bottom) layout, use DividerLayout.Rows:
+var stackedContainer = new ImGuiWidgets.DividerContainer(
+    "StackedContainer",
+    ImGuiWidgets.DividerLayout.Rows
 );
 
-verticalContainer.AddZone("Top Panel", () =>
+stackedContainer.Add("Top Panel", 0.5f, true, dt =>
 {
     ImGui.Text("Top content");
 });
 
-verticalContainer.AddZone("Bottom Panel", () =>
+stackedContainer.Add("Bottom Panel", 0.5f, true, dt =>
 {
     ImGui.Text("Bottom content");
 });
 
-verticalContainer.Draw();
+stackedContainer.Tick(deltaTime);
 ```
 
 The dividers can be dragged by the user to resize the content regions dynamically.

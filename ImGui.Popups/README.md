@@ -1,6 +1,6 @@
-# ImGuiPopups
+# ktsu.ImGui.Popups
 
-[![Version](https://img.shields.io/badge/version-1.3.5-blue.svg)](VERSION.md)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Popups?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Popups)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
 A comprehensive library for custom popup windows and modal dialogs using ImGui.NET, providing a rich set of UI components for interactive applications.
@@ -36,23 +36,23 @@ A comprehensive library for custom popup windows and modal dialogs using ImGui.N
 
 ### Package Manager Console
 ```powershell
-Install-Package ktsu.ImGuiPopups
+Install-Package ktsu.ImGui.Popups
 ```
 
 ### .NET CLI
 ```bash
-dotnet add package ktsu.ImGuiPopups
+dotnet add package ktsu.ImGui.Popups
 ```
 
 ### PackageReference
 ```xml
-<PackageReference Include="ktsu.ImGuiPopups" Version="1.3.5" />
+<PackageReference Include="ktsu.ImGui.Popups" Version="x.y.z" />
 ```
 
 ## Quick Start
 
 ```csharp
-using ktsu.ImGuiPopups;
+using ktsu.ImGui.Popups;
 
 // Create popup instances (typically as class members)
 private static readonly ImGuiPopups.MessageOK messageOK = new();
@@ -141,25 +141,22 @@ Advanced file and directory browser:
 ```csharp
 var browser = new ImGuiPopups.FilesystemBrowser();
 
-// Open file
-browser.Open(
-    title: "Open File",
-    mode: FilesystemBrowserMode.Open,
-    target: FilesystemBrowserTarget.File,
-    startPath: Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-    onConfirm: path => OpenFile(path),
-    patterns: new[] { "*.txt", "*.md" } // Optional file filters
-);
+// Open a file (the optional glob filters which files are shown)
+browser.FileOpen("Open File", path => OpenFile(path), glob: "*.txt");
 
-// Save file
-browser.Open(
-    title: "Save File",
-    mode: FilesystemBrowserMode.Save,
-    target: FilesystemBrowserTarget.File,
-    startPath: currentDirectory,
-    onConfirm: path => SaveFile(path)
-);
+// Save a file
+browser.FileSave("Save File", path => SaveFile(path), glob: "*.txt");
+
+// Choose a directory
+browser.ChooseDirectory("Select Folder", dir => UseDirectory(dir));
+
+// Render the browser each frame in your ImGui loop
+browser.ShowIfOpen();
 ```
+
+> File callbacks receive an `AbsoluteFilePath` and directory callbacks an `AbsoluteDirectoryPath`
+> (from `ktsu.Semantics.Paths`). Each `FileOpen`/`FileSave`/`ChooseDirectory` overload also
+> accepts a `Vector2 customSize`.
 
 ### Custom Modal
 Create custom modal dialogs:
@@ -219,9 +216,9 @@ inputInt.Open("Enter Age", "Age (1-120):", 25, result => {
 The repository includes a comprehensive demo application showcasing all components:
 
 ```bash
-git clone https://github.com/ktsu-dev/ImGuiPopups.git
-cd ImGuiPopups
-dotnet run --project ImGuiPopupsDemo
+git clone https://github.com/ktsu-dev/ImGuiApp.git
+cd ImGuiApp
+dotnet run --project examples/ImGuiPopupsDemo
 ```
 
 ## Dependencies
@@ -230,7 +227,8 @@ dotnet run --project ImGuiPopupsDemo
 - [ktsu.Extensions](https://www.nuget.org/packages/ktsu.Extensions/) - Utility extensions
 - [ktsu.CaseConverter](https://www.nuget.org/packages/ktsu.CaseConverter/) - String case conversion
 - [ktsu.ScopedAction](https://www.nuget.org/packages/ktsu.ScopedAction/) - RAII-style actions
-- [ktsu.StrongPaths](https://www.nuget.org/packages/ktsu.StrongPaths/) - Type-safe path handling
+- [ktsu.Semantics.Paths](https://www.nuget.org/packages/ktsu.Semantics.Paths/) - Type-safe path handling
+- [ktsu.Semantics.Strings](https://www.nuget.org/packages/ktsu.Semantics.Strings/) - Type-safe string wrappers
 - [ktsu.TextFilter](https://www.nuget.org/packages/ktsu.TextFilter/) - Text filtering utilities
 - [Microsoft.Extensions.FileSystemGlobbing](https://www.nuget.org/packages/Microsoft.Extensions.FileSystemGlobbing/) - File pattern matching
 

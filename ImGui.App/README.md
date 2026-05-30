@@ -1,10 +1,10 @@
-# ktsu.ImGuiApp
+# ktsu.ImGui.App
 
 > A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and Hexa.NET.ImGui.
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App.svg)](https://www.nuget.org/packages/ktsu.ImGui.App/)
 [![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE.md)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.ImGuiApp.svg)](https://www.nuget.org/packages/ktsu.ImGuiApp/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.ImGui.App.svg)](https://www.nuget.org/packages/ktsu.ImGui.App/)
 [![GitHub Stars](https://img.shields.io/github/stars/ktsu-dev/ImGuiApp?style=social)](https://github.com/ktsu-dev/ImGuiApp/stargazers)
 
 ## Introduction
@@ -27,33 +27,33 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
 - **Positioning Guards**: Offscreen positioning checks to keep windows visible
-- **Modern .NET**: Supports .NET 9 and newer
+- **Modern .NET**: Supports .NET 8, 9, and 10
 - **Active Development**: Open-source and actively maintained
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET 9.0 or later
+- .NET 8.0 or later
 
 ## Installation
 
 ### Package Manager Console
 
 ```powershell
-Install-Package ktsu.ImGuiApp
+Install-Package ktsu.ImGui.App
 ```
 
 ### .NET CLI
 
 ```bash
-dotnet add package ktsu.ImGuiApp
+dotnet add package ktsu.ImGui.App
 ```
 
 ### Package Reference
 
 ```xml
-<PackageReference Include="ktsu.ImGuiApp" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.App" Version="x.y.z" />
 ```
 
 ## Usage Examples
@@ -63,7 +63,7 @@ dotnet add package ktsu.ImGuiApp
 Create a new class and call `ImGuiApp.Start()` with your application config:
 
 ```csharp
-using ktsu.ImGuiApp;
+using ktsu.ImGui.App;
 using Hexa.NET.ImGui;
 
 static class Program
@@ -272,7 +272,7 @@ The system automatically:
 ### Full Application with Multiple Windows
 
 ```csharp
-using ktsu.ImGuiApp;
+using ktsu.ImGui.App;
 using Hexa.NET.ImGui;
 using System.Numerics;
 

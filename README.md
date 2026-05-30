@@ -3,9 +3,9 @@
 > A comprehensive collection of .NET libraries for building modern, feature-rich desktop applications with Dear ImGui.
 
 [![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg?label=License&logo=nuget)](LICENSE.md)
-[![NuGet Version](https://img.shields.io/nuget/v/ktsu.ImGuiApp?label=Stable&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
-[![NuGet Version](https://img.shields.io/nuget/vpre/ktsu.ImGuiApp?label=Latest&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.ImGuiApp?label=Downloads&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
+[![NuGet Version](https://img.shields.io/nuget/v/ktsu.ImGui.App?label=Stable&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
+[![NuGet Version](https://img.shields.io/nuget/vpre/ktsu.ImGui.App?label=Latest&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.ImGui.App?label=Downloads&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/ImGuiApp?label=Commits&logo=github)](https://github.com/ktsu-dev/ImGuiApp/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/ImGuiApp?label=Contributors&logo=github)](https://github.com/ktsu-dev/ImGuiApp/graphs/contributors)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/ImGuiApp/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/ImGuiApp/actions)
@@ -16,11 +16,11 @@
 
 ## Features
 
-- **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, and DPI awareness via `ktsu.ImGuiApp`
+- **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, and DPI awareness via `ktsu.ImGui.App`
 - **PID Frame Limiting**: High-precision PID-controlled frame rate limiting with auto-tuning and adaptive throttling for focused, unfocused, idle, and minimized states
-- **Custom Widgets**: Rich collection of UI components including TabPanel, Knob, SearchBox with fuzzy matching, RadialProgressBar with countdown/count-up timers, Grid layouts, DividerContainer with resizable sections, Combo, Tree, and Icons via `ktsu.ImGuiWidgets`
-- **Modal Dialogs**: Professional popup system with MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, and SearchableList via `ktsu.ImGuiPopups`
-- **Theming System**: 50+ built-in themes (Catppuccin, Tokyo Night, Gruvbox, Dracula, and more) with scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser via `ktsu.ImGuiStyler`
+- **Custom Widgets**: Rich collection of UI components including TabPanel, Knob, SearchBox with fuzzy matching, RadialProgressBar with countdown/count-up timers, Grid layouts, DividerContainer with resizable sections, Combo, Tree, and Icons via `ktsu.ImGui.Widgets`
+- **Modal Dialogs**: Professional popup system with MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, and SearchableList via `ktsu.ImGui.Popups`
+- **Theming System**: 50+ built-in themes (Catppuccin, Tokyo Night, Gruvbox, Dracula, and more) with scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser via `ktsu.ImGui.Styler`
 - **Node Graph Framework**: Attribute-based node declaration system with UI-agnostic `ktsu.NodeGraph` metadata library and ImNodes-based visual editor `ktsu.ImGuiNodeEditor` with physics-based layout
 - **Font Management**: Unicode, emoji, and Nerd Font support with GPU memory management via `FontMemoryGuard` and dynamic font scaling
 - **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
@@ -30,25 +30,25 @@
 
 ### ImGui.App - Application Foundation
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiApp?label=ktsu.ImGuiApp&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiApp)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App?label=ktsu.ImGui.App&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
 
 Complete application scaffolding for Dear ImGui applications with windowing, rendering, font/texture management, and performance tuning.
 
 ### ImGui.Widgets - Custom UI Components
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiWidgets?label=ktsu.ImGuiWidgets&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiWidgets)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Widgets?label=ktsu.ImGui.Widgets&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Widgets)
 
 Rich collection of custom widgets: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, and ScopedId.
 
 ### ImGui.Popups - Modal Dialogs
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiPopups?label=ktsu.ImGuiPopups&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiPopups)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Popups?label=ktsu.ImGui.Popups&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Popups)
 
 Professional modal dialogs: MessageOK, Prompt, InputString/Int/Float with validation, FilesystemBrowser with glob filtering, and SearchableList with type-safe generics.
 
 ### ImGui.Styler - Themes and Styling
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiStyler?label=ktsu.ImGuiStyler&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiStyler)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Styler?label=ktsu.ImGui.Styler&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Styler)
 
 Advanced theming system with 50+ built-in themes, scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser.
 
@@ -67,30 +67,30 @@ Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine
 ### Package Manager Console
 
 ```powershell
-Install-Package ktsu.ImGuiApp
-Install-Package ktsu.ImGuiWidgets
-Install-Package ktsu.ImGuiPopups
-Install-Package ktsu.ImGuiStyler
+Install-Package ktsu.ImGui.App
+Install-Package ktsu.ImGui.Widgets
+Install-Package ktsu.ImGui.Popups
+Install-Package ktsu.ImGui.Styler
 Install-Package ktsu.NodeGraph
 ```
 
 ### .NET CLI
 
 ```bash
-dotnet add package ktsu.ImGuiApp
-dotnet add package ktsu.ImGuiWidgets
-dotnet add package ktsu.ImGuiPopups
-dotnet add package ktsu.ImGuiStyler
+dotnet add package ktsu.ImGui.App
+dotnet add package ktsu.ImGui.Widgets
+dotnet add package ktsu.ImGui.Popups
+dotnet add package ktsu.ImGui.Styler
 dotnet add package ktsu.NodeGraph
 ```
 
 ### Package Reference
 
 ```xml
-<PackageReference Include="ktsu.ImGuiApp" Version="x.y.z" />
-<PackageReference Include="ktsu.ImGuiWidgets" Version="x.y.z" />
-<PackageReference Include="ktsu.ImGuiPopups" Version="x.y.z" />
-<PackageReference Include="ktsu.ImGuiStyler" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.App" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.Widgets" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.Popups" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.Styler" Version="x.y.z" />
 <PackageReference Include="ktsu.NodeGraph" Version="x.y.z" />
 ```
 
@@ -157,7 +157,7 @@ using ktsu.ImGui.Widgets;
 using Hexa.NET.ImGui;
 
 // Tabbed interface
-TabPanel tabPanel = new("MyTabs", closable: true, reorderable: true);
+ImGuiWidgets.TabPanel tabPanel = new("MyTabs", closable: true, reorderable: true);
 tabPanel.AddTab("tab1", "First Tab", () => ImGui.Text("Content 1"));
 tabPanel.Draw();
 
@@ -172,7 +172,7 @@ float timeRemaining = 300.0f;
 ImGuiWidgets.RadialCountdown(timeRemaining, 300.0f);
 
 // Resizable divider layout
-DividerContainer divider = new("MySplit", DividerLayout.Columns);
+ImGuiWidgets.DividerContainer divider = new("MySplit", ImGuiWidgets.DividerLayout.Columns);
 divider.Add("left", 200f, true, dt => ImGui.Text("Left pane"));
 divider.Add("right", 400f, true, dt => ImGui.Text("Right pane"));
 divider.Tick(deltaTime);
@@ -211,7 +211,7 @@ using ktsu.ImGui.Styler;
 using Hexa.NET.ImGui;
 
 // Apply a built-in theme
-Theme.Apply("Catppuccin.Mocha");
+Theme.Apply("Catppuccin Mocha");
 
 // Show interactive theme browser
 Theme.ShowThemeSelector("Select Theme");
@@ -316,8 +316,8 @@ Application lifecycle and utilities.
 | `SetWindowIcon(string)` | `void` | Set window icon from image file |
 | `GetOrLoadTexture(AbsoluteFilePath)` | `ImGuiAppTextureInfo` | Load or retrieve cached GPU texture |
 | `DeleteTexture(uint)` | `void` | Remove texture from GPU |
-| `EmsToPx(float)` | `float` | Convert EMs to pixels |
-| `PtsToPx(int)` | `float` | Convert points to pixels |
+| `EmsToPx(float)` | `int` | Convert EMs to pixels |
+| `PtsToPx(int)` | `int` | Convert points to pixels |
 
 #### Properties
 
