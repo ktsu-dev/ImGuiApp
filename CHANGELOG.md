@@ -1,6 +1,9 @@
-## v2.5.0
+## v2.5.1 (patch)
 
-No significant changes detected since v2.5.0.
+Changes since v2.5.0:
+
+- Fix typo in library name in README.md ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: correct package names and audit documentation ([@Claude](https://github.com/Claude))
 
 ## v2.5.0 (minor)
 
