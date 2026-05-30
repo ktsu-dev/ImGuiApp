@@ -12,7 +12,7 @@
 
 ## Introduction
 
-`ktsu.ImGuiApp` is a suite of .NET libraries that provides everything you need to build desktop applications with [Dear ImGui](https://github.com/ocornut/imgui). The suite includes application scaffolding, custom widgets, modal dialogs, a theming system, and a node graph editor framework. Built on Hexa.NET.ImGui bindings and Silk.NET for cross-platform windowing, it supports .NET 10, 9, and 8.
+`ktsu.ImGui.App` is a suite of .NET libraries that provides everything you need to build desktop applications with [Dear ImGui](https://github.com/ocornut/imgui). The suite includes application scaffolding, custom widgets, modal dialogs, a theming system, and a node graph editor framework. Built on Hexa.NET.ImGui bindings and Silk.NET for cross-platform windowing, it supports .NET 10, 9, and 8.
 
 ## Features
 
