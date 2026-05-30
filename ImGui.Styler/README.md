@@ -1,6 +1,6 @@
-# ImGuiStyler 🎨
+# ktsu.ImGui.Styler 🎨
 
-[![Version](https://img.shields.io/badge/version-1.3.10-blue.svg)](VERSION.md)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Styler?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Styler)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
 **A powerful, expressive styling library for ImGui.NET interfaces** that simplifies theme management, provides scoped styling utilities, and offers advanced color manipulation with accessibility features.
@@ -35,22 +35,22 @@
 Add ImGuiStyler to your project via NuGet:
 
 ```xml
-<PackageReference Include="ktsu.ImGuiStyler" Version="1.3.10" />
+<PackageReference Include="ktsu.ImGui.Styler" Version="x.y.z" />
 ```
 
 Or via Package Manager Console:
 ```powershell
-Install-Package ktsu.ImGuiStyler
+Install-Package ktsu.ImGui.Styler
 ```
 
 ## 🚀 Quick Start
 
 ```csharp
-using ktsu.ImGuiStyler;
+using ktsu.ImGui.Styler;
 using Hexa.NET.ImGui;
 
 // Apply a global theme
-Theme.Apply("TokyoNight");
+Theme.Apply("Tokyo Night");
 
 // Use scoped styling for specific elements
 using (new ScopedColor(ImGuiCol.Text, Color.FromHex("#ff6b6b")))
@@ -72,16 +72,15 @@ using (new Alignment.Center(ImGui.CalcTextSize("Centered!")))
 #### Applying Global Themes
 ```csharp
 // Apply any of the 50+ built-in themes
-Theme.Apply("Catppuccin.Mocha");
-Theme.Apply("Gruvbox.Dark");
+Theme.Apply("Catppuccin Mocha");
+Theme.Apply("Gruvbox Dark");
 Theme.Apply("Tokyo Night");
 
-// Get current theme information
+// Get the name of the currently applied theme
 string? currentTheme = Theme.CurrentThemeName;
-bool isCurrentThemeDark = Theme.IsCurrentThemeDark;
 
 // Reset to default ImGui theme
-Theme.Reset();
+Theme.ResetToDefault();
 ```
 
 #### Interactive Theme Browser
@@ -101,12 +100,16 @@ if (Theme.RenderThemeSelector())
 
 #### Scoped Theme Application
 ```csharp
-using (new ScopedTheme("Dracula"))
+// ScopedTheme takes an ISemanticTheme instance; resolve one by name from the registry
+ISemanticTheme dracula = Theme.FindTheme("Dracula")!.CreateInstance();
+ISemanticTheme nord = Theme.FindTheme("Nord")!.CreateInstance();
+
+using (new ScopedTheme(dracula))
 {
     ImGui.Text("This text uses Dracula theme");
     ImGui.Button("Themed button");
-    
-    using (new ScopedTheme("Nord"))
+
+    using (new ScopedTheme(nord))
     {
         ImGui.Text("Nested Nord theme");
     }
@@ -127,21 +130,26 @@ ImColor blueWithAlpha = Color.FromHex("#0066ffcc");
 ImColor green = Color.FromRGB(0, 255, 0);
 ImColor customColor = Color.FromRGBA(255, 128, 64, 200);
 
-// From HSV
-ImColor rainbow = Color.FromHSV(0.83f, 1.0f, 1.0f); // Purple
+// From HSL (hue, saturation, lightness)
+ImColor purple = Color.FromHSL(0.83f, 1.0f, 0.5f);
 ```
 
 #### Color Manipulation
+
+Color manipulation is provided as extension methods on `ImColor`:
+
 ```csharp
 ImColor baseColor = Color.FromHex("#3498db");
 
 // Adjust brightness
-ImColor lighter = Color.Lighten(baseColor, 0.3f);
-ImColor darker = Color.Darken(baseColor, 0.2f);
+ImColor lighter = baseColor.LightenBy(0.3f);
+ImColor darker = baseColor.DarkenBy(0.2f);
 
-// Accessibility-focused text colors
-ImColor optimalText = Color.GetOptimalTextColor(baseColor);
-ImColor contrastText = Color.GetContrastingTextColor(baseColor);
+// Accessibility-focused text color (best contrast over baseColor)
+ImColor optimalText = baseColor.CalculateOptimalContrastingColor();
+
+// WCAG contrast ratio between two colors
+float ratio = optimalText.GetContrastRatioOver(baseColor);
 ```
 
 #### Scoped Color Application
@@ -346,23 +354,29 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 ## 🛠️ API Reference
 
 ### Theme Class
-- `Theme.Apply(string themeName)` - Apply a global theme
+- `Theme.Apply(string themeName)` - Apply a global theme (returns `false` if not found)
 - `Theme.Apply(ISemanticTheme theme)` - Apply a semantic theme
-- `Theme.Reset()` - Reset to default ImGui theme
+- `Theme.ResetToDefault()` - Reset to default ImGui theme
 - `Theme.ShowThemeSelector(string title)` - Show theme browser modal
 - `Theme.RenderThemeSelector()` - Render theme browser (returns true if theme changed)
-- `Theme.AllThemes` - Get all available themes
+- `Theme.RenderMenu(string menuLabel)` - Render a theme selection menu
+- `Theme.FindTheme(string name)` - Look up a theme by name (returns `ThemeInfo?`)
+- `Theme.AllThemes` / `Theme.DarkThemes` / `Theme.LightThemes` - Available themes
 - `Theme.Families` - Get all theme families
 - `Theme.CurrentThemeName` - Get current theme name
-- `Theme.IsCurrentThemeDark` - Check if current theme is dark
 
 ### Color Class
 - `Color.FromHex(string hex)` - Create color from hex string
-- `Color.FromRGB(int r, int g, int b)` - Create color from RGB
-- `Color.FromRGBA(int r, int g, int b, int a)` - Create color from RGBA
-- `Color.GetOptimalTextColor(ImColor background)` - Get accessible text color
-- `Color.Lighten(ImColor color, float amount)` - Lighten color
-- `Color.Darken(ImColor color, float amount)` - Darken color
+- `Color.FromRGB(byte r, byte g, byte b)` - Create color from RGB
+- `Color.FromRGBA(byte r, byte g, byte b, byte a)` - Create color from RGBA
+- `Color.FromHSL(float h, float s, float l)` - Create color from HSL
+
+### Color Extension Methods (on `ImColor`)
+- `color.LightenBy(float amount)` - Lighten color
+- `color.DarkenBy(float amount)` - Darken color
+- `color.WithAlpha(float amount)` - Set alpha channel
+- `color.CalculateOptimalContrastingColor()` - Get accessible (max-contrast) text color
+- `color.GetContrastRatioOver(ImColor background)` - WCAG contrast ratio
 
 ### Alignment Classes
 - `new Alignment.Center(Vector2 contentSize)` - Center in available region
@@ -372,7 +386,7 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - `new ScopedColor(ImGuiCol col, ImColor color)` - Scoped color application
 - `new ScopedTextColor(ImColor color)` - Scoped text color
 - `new ScopedStyleVar(ImGuiStyleVar var, float value)` - Scoped style variable
-- `new ScopedTheme(string themeName)` - Scoped theme application
+- `new ScopedTheme(ISemanticTheme theme)` - Scoped theme application
 - `new ScopedThemeColor(Color semanticColor)` - Scoped semantic color
 
 ### Button Class
@@ -396,8 +410,7 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 The included demo application showcases all features:
 
 ```bash
-cd ImGuiStylerDemo
-dotnet run
+dotnet run --project examples/ImGuiStylerDemo
 ```
 
 Features demonstrated:
@@ -420,8 +433,8 @@ We welcome contributions! Please see our contributing guidelines:
 
 ### Development Setup
 ```bash
-git clone https://github.com/ktsu-dev/ImGuiStyler.git
-cd ImGuiStyler
+git clone https://github.com/ktsu-dev/ImGuiApp.git
+cd ImGuiApp
 dotnet restore
 dotnet build
 ```
@@ -440,8 +453,8 @@ This project is licensed under the **MIT License** - see the [LICENSE.md](LICENS
 ## 🔗 Related Projects
 
 - **[ktsu.ThemeProvider](https://github.com/ktsu-dev/ThemeProvider)** - Semantic theming foundation
-- **[ktsu.ImGuiPopups](https://github.com/ktsu-dev/ImGuiPopups)** - Modal and popup utilities
-- **[ktsu.Extensions](https://github.com/ktsu-dev/Extensions)** - Utility extensions
+- **[ktsu.ImGui.Popups](https://nuget.org/packages/ktsu.ImGui.Popups)** - Modal and popup utilities (part of this suite)
+- **[ktsu.ImGui.Widgets](https://nuget.org/packages/ktsu.ImGui.Widgets)** - Custom widgets (part of this suite)
 
 ---
 
