@@ -5,6 +5,7 @@
 namespace ktsu.ForceDirectedLayout;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -73,12 +74,14 @@ public struct Vec2D : IEquatable<Vec2D>
 	public static Vec2D operator -(Vec2D v) => new(-v.X, -v.Y);
 
 	/// <inheritdoc/>
+	[SuppressMessage("Major Code Smell", "S1244:Floating point numbers should not be tested for equality", Justification = "Value-equality for a blittable vector requires exact component comparison; a tolerance would break the Equals/GetHashCode contract. Use a range check at call sites that need approximate equality.")]
 	public static bool operator ==(Vec2D a, Vec2D b) => a.X == b.X && a.Y == b.Y;
 
 	/// <inheritdoc/>
 	public static bool operator !=(Vec2D a, Vec2D b) => !(a == b);
 
 	/// <inheritdoc/>
+	[SuppressMessage("Major Code Smell", "S1244:Floating point numbers should not be tested for equality", Justification = "Value-equality for a blittable vector requires exact component comparison; a tolerance would break the Equals/GetHashCode contract. Use a range check at call sites that need approximate equality.")]
 	public readonly bool Equals(Vec2D other) => X == other.X && Y == other.Y;
 
 	/// <inheritdoc/>

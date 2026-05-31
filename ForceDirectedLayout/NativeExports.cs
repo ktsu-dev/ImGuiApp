@@ -5,6 +5,7 @@
 namespace ktsu.ForceDirectedLayout;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -43,6 +44,14 @@ public static class LayoutResult
 ///
 /// All buffer parameters are caller-owned. The library writes into the buffer but never retains a pointer past the call return.
 /// </remarks>
+// Excluded from code coverage: these [UnmanagedCallersOnly] entry points are reachable only
+// through native function pointers, never from managed code, so managed tests cannot exercise
+// them. Excluding the type also keeps the coverage instrumenter away from UnmanagedCallersOnly
+// method bodies - instrumenting them crashes the dynamic code-coverage collector on .NET 10 CI
+// runners (the interprocess collector dies with "Pipe was disconnected" during report generation),
+// which is what failed the ForceDirectedLayout.Tests run.
+[ExcludeFromCodeCoverage(Justification = "C ABI boundary shim invoked only via native function pointers; uncoverable by managed tests and crashes the .NET 10 dynamic coverage collector when instrumented.")]
+[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "The C ABI surface marshals raw caller-owned pointers across the native boundary; every pointer argument is null- and range-checked before use and never retained past the call.")]
 public static unsafe class NativeExports
 {
 	[ThreadStatic]
