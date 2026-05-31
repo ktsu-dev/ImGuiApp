@@ -467,6 +467,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.AreEqual(5.0, settings.UnfocusedFps);
 		Assert.AreEqual(10.0, settings.IdleFps);
 		Assert.AreEqual(2.0, settings.NotVisibleFps);
+		Assert.AreEqual(30.0, settings.OverlayFps);
 		Assert.IsTrue(settings.EnableIdleDetection, "EnableIdleDetection should default to true");
 		Assert.AreEqual(30.0, settings.IdleTimeoutSeconds);
 	}
