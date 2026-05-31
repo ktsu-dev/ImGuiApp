@@ -60,12 +60,12 @@ internal static class ImGuiAppDemo
 		PerformanceSettings = new()
 		{
 			EnableThrottledRendering = true,
+			// Overlay mode keeps animating at 60 FPS even while unfocused (it's always-on-top
+			// and shows live content), bypassing the focus/idle/visibility throttling.
+			OverlayFps = 60.0,
 			// Using default values: Focused=30, Unfocused=5, Idle=10 FPS
 			// But with a shorter idle timeout for demo purposes
 			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds (default is 30)
-			// Overlay mode keeps animating at 60 FPS even while unfocused (it's always-on-top
-			// and shows live content), bypassing the focus/idle/visibility throttling above.
-			OverlayFps = 60.0,
 		},
 	});
 
