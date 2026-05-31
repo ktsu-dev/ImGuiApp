@@ -36,6 +36,15 @@ public class ImGuiAppPerformanceSettings
 	public double NotVisibleFps { get; init; } = 2.0;
 
 	/// <summary>
+	/// Gets or sets the target frame rate (FPS) used while the window is in overlay mode
+	/// (entered via <c>ImGuiApp.EnableOverlay</c>). Because an always-on-top overlay is usually
+	/// unfocused — and may even report as not visible — the normal focus/idle/visibility
+	/// throttling would make it sluggish despite showing live data. While overlay mode is
+	/// active this rate is used instead, bypassing those reductions. Defaults to 30 FPS.
+	/// </summary>
+	public double OverlayFps { get; init; } = 30.0;
+
+	/// <summary>
 	/// Gets or sets a value indicating whether idle detection is enabled.
 	/// When true, the application will detect when there's no user input and reduce frame rate further.
 	/// </summary>

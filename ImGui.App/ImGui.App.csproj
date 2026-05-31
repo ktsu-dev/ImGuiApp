@@ -48,6 +48,7 @@
     <Compile Remove="ForceDpiAware.cs" />
     <Compile Remove="GdiPlusHelper.cs" />
     <Compile Remove="NativeMethods.cs" />
+    <Compile Remove="OverlayWindow.cs" />
     <!-- Reflection-heavy; plan §2.7 explicitly skips extension auto-discovery on iOS
          because AOT-trim analysers reject Assembly.GetType(string). All call sites for
          this type live in ImGuiController/, which is also removed below. -->

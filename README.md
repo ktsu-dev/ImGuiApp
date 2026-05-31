@@ -150,6 +150,44 @@ ImGuiApp.Start(new ImGuiAppConfig
 });
 ```
 
+### Overlay Mode (Always-On-Top HUD)
+
+Overlay mode turns the application window into a borderless, always-on-top, translucent HUD
+with optional click-through — ideal for live status displays that sit over other apps. Drive
+it from your render callback; the calls are cheap to make every frame (the native window is
+only restyled when something actually changes). A dedicated `OverlayFps` keeps the overlay
+animating smoothly even while unfocused, bypassing the normal focus/idle/visibility throttling.
+
+```csharp
+bool overlayEnabled = true;
+
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    Title = "Status HUD",
+    PerformanceSettings = new ImGuiAppPerformanceSettings { OverlayFps = 60.0 },
+    OnRender = delta =>
+    {
+        if (overlayEnabled)
+        {
+            // opacity 0.2–1.0, plus optional click-through (mouse passes through to apps behind it).
+            ImGuiApp.EnableOverlay(opacity: 0.9f, clickThrough: false);
+            // Optional: lock it to a corner of the monitor work area (Windows).
+            ImGuiApp.SetOverlayGeometry(OverlayCorner.TopRight, offsetX: 24, offsetY: 24, width: 360, height: 280);
+        }
+        else
+        {
+            ImGuiApp.DisableOverlay(); // restores the decorated window
+        }
+
+        ImGui.Text("Live status…");
+    }
+});
+```
+
+Overlay window styling (borderless / topmost / translucency / click-through) is implemented on
+Windows. On other platforms `IsOverlayActive` and `OverlayFps` still apply, but the window is
+not restyled.
+
 ### Widgets
 
 ```csharp
@@ -312,6 +350,10 @@ Application lifecycle and utilities.
 | ---- | ----------- | ----------- |
 | `Start(ImGuiAppConfig)` | `void` | Initialize and run the application |
 | `Stop()` | `void` | Close the application window |
+| `Show()` / `Hide()` | `void` | Show or hide the window without stopping the render loop |
+| `EnableOverlay(float, bool)` | `void` | Enter overlay mode: borderless, always-on-top, translucent, optional click-through |
+| `SetOverlayGeometry(OverlayCorner, int, int, int, int)` | `void` | Lock the overlay to a work-area corner at an offset and size |
+| `DisableOverlay()` | `void` | Restore the decorated, non-topmost, opaque window |
 | `SetGlobalScale(float)` | `void` | Set accessibility UI scale (0.5-3.0) |
 | `SetWindowIcon(string)` | `void` | Set window icon from image file |
 | `GetOrLoadTexture(AbsoluteFilePath)` | `ImGuiAppTextureInfo` | Load or retrieve cached GPU texture |
@@ -326,6 +368,7 @@ Application lifecycle and utilities.
 | `IsFocused` | `bool` | Whether the window has focus |
 | `IsVisible` | `bool` | Whether the window is visible |
 | `IsIdle` | `bool` | Whether the app is idle |
+| `IsOverlayActive` | `bool` | Whether the window is in overlay mode |
 | `ScaleFactor` | `float` | DPI-based scale factor |
 | `GlobalScale` | `float` | User-adjustable UI scale |
 | `Invoker` | `Invoker` | Delegate invocation for window thread |
@@ -363,6 +406,7 @@ Frame rate throttling configuration.
 | `UnfocusedFps` | `double` | Target FPS when unfocused (default: 5) |
 | `IdleFps` | `double` | Target FPS when idle (default: 10) |
 | `NotVisibleFps` | `double` | Target FPS when minimized (default: 2) |
+| `OverlayFps` | `double` | Target FPS in overlay mode, bypassing focus/idle/visibility throttling (default: 30) |
 | `IdleTimeoutSeconds` | `double` | Seconds before idle state (default: 30) |
 
 ### `ImGuiWidgets` (Static)

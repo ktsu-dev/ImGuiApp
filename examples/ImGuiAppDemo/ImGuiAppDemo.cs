@@ -13,6 +13,13 @@ using ktsu.Semantics.Strings;
 internal static class ImGuiAppDemo
 {
 	private static bool showAbout;
+
+	// Overlay-mode demo state: a borderless, always-on-top, translucent window locked to a corner.
+	private static bool overlayEnabled;
+	private static float overlayOpacity = 0.9f;
+	private static bool overlayClickThrough;
+	private static OverlayCorner overlayCorner = OverlayCorner.TopRight;
+
 	private static readonly List<IDemoTab> demoTabs = [];
 
 	static ImGuiAppDemo()
@@ -56,24 +63,72 @@ internal static class ImGuiAppDemo
 			// Using default values: Focused=30, Unfocused=5, Idle=10 FPS
 			// But with a shorter idle timeout for demo purposes
 			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds (default is 30)
+			// Overlay mode keeps animating at 60 FPS even while unfocused (it's always-on-top
+			// and shows live content), bypassing the focus/idle/visibility throttling above.
+			OverlayFps = 60.0,
 		},
 	});
 
 	private static void OnRender(float dt)
 	{
+		// Keep the native window styling in sync with the overlay-demo toggle. Calling these
+		// every frame is cheap — the underlying window is only restyled when something changes.
+		if (overlayEnabled)
+		{
+			ImGuiApp.EnableOverlay(overlayOpacity, overlayClickThrough);
+			ImGuiApp.SetOverlayGeometry(overlayCorner, offsetX: 24, offsetY: 24, width: 380, height: 320);
+		}
+		else
+		{
+			ImGuiApp.DisableOverlay();
+		}
+
 		// Update all demo tabs
 		foreach (IDemoTab demo in demoTabs)
 		{
 			demo.Update(dt);
 		}
 
-		// Render main demo window
-		RenderMainDemoWindow();
+		// In overlay mode show a compact control strip instead of the full tabbed UI.
+		if (overlayEnabled)
+		{
+			RenderOverlayControls();
+		}
+		else
+		{
+			RenderMainDemoWindow();
+		}
 
 		// Show about window if requested
 		if (showAbout)
 		{
 			RenderAboutWindow();
+		}
+	}
+
+	// Demonstrates the canonical overlay API: toggle, opacity, click-through, and corner anchor.
+	private static void RenderOverlayControls()
+	{
+		ImGui.TextUnformatted("Overlay mode");
+		ImGui.Separator();
+
+		_ = ImGui.SliderFloat("Opacity", ref overlayOpacity, 0.2f, 1.0f, "%.2f");
+		_ = ImGui.Checkbox("Click-through", ref overlayClickThrough);
+
+		int corner = (int)overlayCorner;
+		if (ImGui.Combo("Corner", ref corner, "Top-left\0Top-right\0Bottom-left\0Bottom-right\0"))
+		{
+			overlayCorner = (OverlayCorner)corner;
+		}
+
+		if (overlayClickThrough)
+		{
+			ImGui.TextDisabled("Click-through is on — toggle it from the View menu to interact.");
+		}
+
+		if (ImGui.Button("Exit overlay"))
+		{
+			overlayEnabled = false;
 		}
 	}
 
@@ -118,6 +173,16 @@ internal static class ImGuiAppDemo
 
 	private static void OnAppMenu()
 	{
+		if (ImGui.BeginMenu("View"))
+		{
+			ImGui.MenuItem("Overlay mode", string.Empty, ref overlayEnabled);
+			if (overlayEnabled)
+			{
+				ImGui.MenuItem("Overlay click-through", string.Empty, ref overlayClickThrough);
+			}
+			ImGui.EndMenu();
+		}
+
 		if (ImGui.BeginMenu("Help"))
 		{
 			ImGui.MenuItem("About", string.Empty, ref showAbout);

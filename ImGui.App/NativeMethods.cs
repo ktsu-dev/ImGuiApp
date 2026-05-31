@@ -32,6 +32,54 @@ internal static partial class NativeMethods
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
+	/// <summary>Reads a window's style/extended-style word (used to enter and restore overlay mode).</summary>
+	[LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	internal static partial nint GetWindowLongPtr(nint hWnd, int nIndex);
+
+	/// <summary>Sets the per-pixel/whole-window alpha for a layered window (overlay translucency).</summary>
+	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool SetLayeredWindowAttributes(nint hWnd, uint crKey, byte bAlpha, uint dwFlags);
+
+	/// <summary>Changes a window's size, position, and Z-order (used to make the overlay topmost and corner-locked).</summary>
+	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+	/// <summary>Returns the monitor that contains (or is nearest to) the given window.</summary>
+	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	internal static partial nint MonitorFromWindow(nint hWnd, uint dwFlags);
+
+	/// <summary>Retrieves monitor geometry, including the work area excluding the taskbar.</summary>
+	[LibraryImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
+
+	/// <summary>A rectangle defined by its edges, matching the Win32 RECT structure.</summary>
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct RECT
+	{
+		public int Left;
+		public int Top;
+		public int Right;
+		public int Bottom;
+	}
+
+	/// <summary>Monitor geometry returned by <see cref="GetMonitorInfo"/>, matching the Win32 MONITORINFO structure.</summary>
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct MONITORINFO
+	{
+		public int cbSize;
+		public RECT rcMonitor;
+		public RECT rcWork;
+		public uint dwFlags;
+	}
+
 	/// <summary>Forwards a message to the previously installed window procedure.</summary>
 	[LibraryImport("user32.dll", EntryPoint = "CallWindowProcW")]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]

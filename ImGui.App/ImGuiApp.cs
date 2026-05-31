@@ -105,6 +105,16 @@ public static partial class ImGuiApp
 	internal static readonly PidFrameLimiter frameLimiter = new();
 	internal static double previousTargetFrameTimeMs = 1000.0 / 30.0;
 
+	/// <summary>Drives the native window styling that backs overlay mode (see <see cref="EnableOverlay"/>).</summary>
+	internal static readonly OverlayChrome overlayChrome = new();
+
+	/// <summary>
+	/// Gets a value indicating whether the window is currently in overlay mode (borderless,
+	/// always-on-top, and translucent). Toggled via <see cref="EnableOverlay"/> and
+	/// <see cref="DisableOverlay"/>.
+	/// </summary>
+	public static bool IsOverlayActive => overlayChrome.IsActive;
+
 	/// <summary>
 	/// Updates the last input time to the current time. Called by the input system when user input is detected.
 	/// </summary>
@@ -372,6 +382,43 @@ public static partial class ImGuiApp
 		ApplyNativeVisibility(false);
 	}
 
+	/// <summary>
+	/// Switches the window into overlay mode: borderless, always-on-top, and whole-window
+	/// translucent, with optional click-through. Safe to call every frame to keep the opacity
+	/// and click-through in sync with live settings; the underlying window styles are only
+	/// touched when something actually changes.
+	/// <para>
+	/// Overlay styling is implemented on Windows. On other platforms <see cref="IsOverlayActive"/>
+	/// still reflects the request (so overlay frame-rate throttling via
+	/// <see cref="ImGuiAppPerformanceSettings.OverlayFps"/> still applies) but the window is not
+	/// restyled. Call from the thread that owns the render window (e.g. from <see cref="ImGuiAppConfig.OnRender"/>).
+	/// </para>
+	/// </summary>
+	/// <param name="opacity">Whole-window opacity, clamped to 0.2 (faint) – 1.0 (opaque).</param>
+	/// <param name="clickThrough">When true, mouse input passes through to whatever is behind the overlay.</param>
+	public static void EnableOverlay(float opacity = 1.0f, bool clickThrough = false) =>
+		overlayChrome.Enable(TryGetWindowHandle(), opacity, clickThrough);
+
+	/// <summary>
+	/// Locks the overlay to a corner of the active monitor's work area at the given offset and
+	/// size. No-op unless overlay mode is active (see <see cref="EnableOverlay"/>). Re-applies
+	/// only when the geometry changes, so it is cheap to call every frame. Windows-only;
+	/// elsewhere the consumer is responsible for positioning.
+	/// </summary>
+	/// <param name="corner">Which work-area corner to anchor the overlay to.</param>
+	/// <param name="offsetX">Horizontal inset (px) from the anchored corner.</param>
+	/// <param name="offsetY">Vertical inset (px) from the anchored corner.</param>
+	/// <param name="width">Overlay width in pixels (minimum 200).</param>
+	/// <param name="height">Overlay height in pixels (minimum 140).</param>
+	public static void SetOverlayGeometry(OverlayCorner corner, int offsetX, int offsetY, int width, int height) =>
+		overlayChrome.SetGeometry(TryGetWindowHandle(), corner, offsetX, offsetY, width, height);
+
+	/// <summary>
+	/// Leaves overlay mode and restores the decorated, non-topmost, opaque window. Safe to call
+	/// repeatedly (including when overlay mode was never entered).
+	/// </summary>
+	public static void DisableOverlay() => overlayChrome.Disable();
+
 	internal static void SetupWindowResizeHandler(ImGuiAppConfig config)
 	{
 		window!.FramebufferResize += s =>
@@ -416,6 +463,18 @@ public static partial class ImGuiApp
 		(bool isTuningActive, _, _, _, _) = frameLimiter.GetTuningStatus();
 		if (isTuningActive)
 		{
+			return;
+		}
+
+		// Overlay mode runs at its own dedicated rate. An always-on-top overlay is usually
+		// unfocused and may report as "not visible" to some backends, which would otherwise
+		// throttle it to a crawl — yet it typically shows live, continuously-updating data.
+		// So while overlay mode is active we bypass the focus/idle/visibility reductions and
+		// use OverlayFps directly.
+		if (IsOverlayActive)
+		{
+			IsIdle = false;
+			targetFrameTimeMs = settings.OverlayFps > 0 ? (1000.0 / settings.OverlayFps) : 10000.0;
 			return;
 		}
 
@@ -1733,6 +1792,7 @@ public static partial class ImGuiApp
 		ScaleFactor = 1;
 		GlobalScale = 1.0f;
 		Textures.Clear();
+		overlayChrome.ResetState();
 		Config = new();
 	}
 

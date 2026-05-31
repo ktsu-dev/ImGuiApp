@@ -422,6 +422,98 @@ public sealed class ImGuiAppWindowManagementTests
 		}
 	}
 
+	[TestMethod]
+	public void UpdateWindowPerformance_WhenOverlayActive_UsesOverlayFps()
+	{
+		ImGuiAppConfig config = new()
+		{
+			Title = "Test",
+			InitialWindowState = new ImGuiAppWindowState
+			{
+				Size = new Vector2(800, 600),
+				Pos = new Vector2(100, 100),
+				LayoutState = WindowState.Normal
+			},
+			PerformanceSettings = new ImGuiAppPerformanceSettings
+			{
+				FocusedFps = 30.0,
+				OverlayFps = 60.0
+			}
+		};
+		ImGuiApp.Config = config;
+
+		// No native window in tests, but overlay mode is logically active regardless of platform.
+		ImGuiApp.EnableOverlay(opacity: 0.85f);
+		Assert.IsTrue(ImGuiApp.IsOverlayActive, "Overlay mode should be active after EnableOverlay.");
+
+		ImGuiApp.UpdateWindowPerformance();
+
+		Assert.AreEqual(1000.0 / 60.0, ImGuiApp.targetFrameTimeMs, 0.0001,
+			"Overlay mode should drive the frame rate from OverlayFps, bypassing focus/idle/visibility throttling.");
+
+		ImGuiApp.DisableOverlay();
+		Assert.IsFalse(ImGuiApp.IsOverlayActive, "Overlay mode should be inactive after DisableOverlay.");
+	}
+
+	[TestMethod]
+	public void UpdateWindowPerformance_WhenOverlayActive_ClearsIdleState()
+	{
+		ImGuiAppConfig config = new()
+		{
+			Title = "Test",
+			PerformanceSettings = new ImGuiAppPerformanceSettings
+			{
+				OverlayFps = 30.0,
+				EnableIdleDetection = true,
+				IdleTimeoutSeconds = 0.0
+			}
+		};
+		ImGuiApp.Config = config;
+		ImGuiApp.EnableOverlay();
+
+		ImGuiApp.UpdateWindowPerformance();
+
+		Assert.IsFalse(ImGuiApp.IsIdle, "Overlay mode shows live data, so it should not be throttled to the idle rate.");
+
+		ImGuiApp.DisableOverlay();
+	}
+
+	[TestMethod]
+	public void EnableOverlay_ThenDisableOverlay_TogglesIsOverlayActive()
+	{
+		Assert.IsFalse(ImGuiApp.IsOverlayActive, "Overlay mode should be inactive by default.");
+
+		ImGuiApp.EnableOverlay(opacity: 0.5f, clickThrough: true);
+		Assert.IsTrue(ImGuiApp.IsOverlayActive);
+
+		// Idempotent: re-enabling (e.g. every frame) keeps it active.
+		ImGuiApp.EnableOverlay(opacity: 0.9f, clickThrough: false);
+		Assert.IsTrue(ImGuiApp.IsOverlayActive);
+
+		ImGuiApp.DisableOverlay();
+		Assert.IsFalse(ImGuiApp.IsOverlayActive);
+
+		// Idempotent: disabling again is safe.
+		ImGuiApp.DisableOverlay();
+		Assert.IsFalse(ImGuiApp.IsOverlayActive);
+	}
+
+	[TestMethod]
+	public void SetOverlayGeometry_WhenOverlayInactive_DoesNotThrow()
+	{
+		try
+		{
+			// No overlay active and no native window: should be a safe no-op.
+			ImGuiApp.SetOverlayGeometry(OverlayCorner.TopRight, 24, 24, 460, 320);
+		}
+#pragma warning disable CA1031 // Do not catch general exception types
+		catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+		{
+			Assert.Fail($"Expected no exception, but got: {ex.Message}");
+		}
+	}
+
 	#endregion
 
 	#region Window Icon Tests
