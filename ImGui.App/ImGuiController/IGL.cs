@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.App.ImGuiController;
 
+using System.Diagnostics.CodeAnalysis;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Color = System.Drawing.Color;
@@ -88,5 +89,6 @@ public interface IGL : IDisposable
 	/// <summary>
 	/// Specifies a two-dimensional texture image.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native OpenGL interop; pointer is scoped to the call and not retained.")]
 	public unsafe void TexImage2D(GLEnum target, int level, int internalformat, uint width, uint height, int border, GLEnum format, GLEnum type, void* pixels);
 }

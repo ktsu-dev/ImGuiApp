@@ -6,6 +6,7 @@ namespace ktsu.ImGuiNodeEditor;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using Hexa.NET.ImGui;
@@ -162,6 +163,7 @@ public class NodeEditorRenderer
 	/// <summary>
 	/// Check for nodes that have been resized and return their new dimensions
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions.", Justification = "Explicit loop is clearer; the loop contains a continue and dictionary mutation that would not simplify cleanly.")]
 	public Dictionary<int, Vector2> GetNodeDimensionUpdates(NodeEditorEngine engine)
 	{
 		Dictionary<int, Vector2> updates = [];
@@ -234,7 +236,7 @@ public class NodeEditorRenderer
 		drawList.PushClipRect(editorAreaPos, editorAreaPos + editorAreaSize, true);
 
 		// Render canvas origin
-		RenderOrigin(drawList, editorAreaPos, editorAreaSize, engine);
+		RenderOrigin(drawList, engine);
 
 		// Render node debug info
 		RenderNodeDebugInfo(drawList, engine);
@@ -245,7 +247,7 @@ public class NodeEditorRenderer
 		// Render physics debug info
 		if (engine.PhysicsSettings.Enabled)
 		{
-			RenderPhysicsDebugInfo(drawList, engine, editorAreaPos, editorAreaSize);
+			RenderPhysicsDebugInfo(drawList, engine);
 		}
 
 		drawList.PopClipRect();
@@ -257,7 +259,7 @@ public class NodeEditorRenderer
 	private Vector2 EditorToScreen(Vector2 editorPos) =>
 		editorToScreenBase + editorPos;
 
-	private void RenderOrigin(ImDrawListPtr drawList, Vector2 editorAreaPos, Vector2 editorAreaSize, NodeEditorEngine engine)
+	private void RenderOrigin(ImDrawListPtr drawList, NodeEditorEngine engine)
 	{
 		if (!hasEditorTransform)
 		{
@@ -384,7 +386,7 @@ public class NodeEditorRenderer
 		}
 	}
 
-	private void RenderPhysicsDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine, Vector2 editorAreaPos, Vector2 editorAreaSize)
+	private void RenderPhysicsDebugInfo(ImDrawListPtr drawList, NodeEditorEngine engine)
 	{
 		if (!hasEditorTransform)
 		{

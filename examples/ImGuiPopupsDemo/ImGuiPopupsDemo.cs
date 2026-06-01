@@ -38,6 +38,8 @@ internal static class ImGuiPopupsDemo
 	private static string lastPromptResult = "None";
 	private static string lastCustomModalResult = "None";
 
+	private const string CancelLabel = "Cancel";
+
 	// Sample data
 	private static readonly string[] Friends = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry", "Ivy", "Jack"];
 	private static readonly string[] Colors = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Cyan", "Magenta", "Brown"];
@@ -63,6 +65,7 @@ internal static class ImGuiPopupsDemo
 
 	private static void OnStart()
 	{
+		// Method intentionally left empty; no startup initialization is required for this demo.
 	}
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]
@@ -152,7 +155,7 @@ internal static class ImGuiPopupsDemo
 					{ "Yes", () => lastPromptResult = "User clicked Yes" },
 					{ "No", () => lastPromptResult = "User clicked No" },
 					{ "Maybe", () => lastPromptResult = "User clicked Maybe" },
-					{ "Cancel", () => lastPromptResult = "User clicked Cancel" }
+					{ CancelLabel, () => lastPromptResult = "User clicked Cancel" }
 				};
 				popupPrompt.Open("Confirmation", "Do you want to proceed with this action?", buttons);
 			}
@@ -163,7 +166,7 @@ internal static class ImGuiPopupsDemo
 				Dictionary<string, Action?> buttons = new()
 				{
 					{ "Delete", () => lastPromptResult = "User confirmed deletion" },
-					{ "Cancel", () => lastPromptResult = "User cancelled deletion" }
+					{ CancelLabel, () => lastPromptResult = "User cancelled deletion" }
 				};
 				string warning = "⚠️ WARNING: This action cannot be undone!\n\nAre you sure you want to delete all selected files?";
 				popupPrompt.Open("Confirm Deletion", warning, buttons, ImGuiPopups.PromptTextLayoutType.Wrapped, new Vector2(400, 200));
@@ -396,7 +399,7 @@ internal static class ImGuiPopupsDemo
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Cancel"))
+		if (ImGui.Button(CancelLabel))
 		{
 			lastCustomModalResult = "User cancelled";
 			ImGui.CloseCurrentPopup();
@@ -423,7 +426,7 @@ internal static class ImGuiPopupsDemo
 							popupMessageOK.Open("Success", $"Invitation sent to {friend}!");
 						}
 					},
-					{ "Cancel", () => lastPromptResult = "Workflow cancelled" }
+					{ CancelLabel, () => lastPromptResult = "Workflow cancelled" }
 				};
 
 				popupPrompt.Open("Step 3: Confirm", $"{name}, send invitation to {friend}?", buttons);

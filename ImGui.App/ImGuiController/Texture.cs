@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.App.ImGuiController;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 using Silk.NET.OpenGL;
 
@@ -41,6 +42,7 @@ internal sealed class Texture : IDisposable
 
 	public const GLEnum MaxTextureMaxAnisotropy = (GLEnum)0x84FF;
 
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "MaxAniso is a lazily-initialized cache of a GPU capability query; it requires a GL context and cannot be readonly.")]
 	public static float? MaxAniso;
 	internal readonly GL _gl;
 	public readonly uint GlTexture;
@@ -49,6 +51,8 @@ internal sealed class Texture : IDisposable
 	public readonly SizedInternalFormat InternalFormat;
 	internal bool _disposed;
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for OpenGL texture upload via native pointer; pointer comes from caller-owned memory and is not retained.")]
+	[SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "MaxAniso is a one-time GPU capability cache that requires an active GL context; static initialization is not possible.")]
 	public unsafe Texture(GL gl, int width, int height, IntPtr data, bool generateMipmaps = false, bool srgb = false, PixelFormat pxFormat = PixelFormat.Bgra)
 	{
 		_gl = gl;

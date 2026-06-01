@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -85,6 +86,8 @@ public static partial class ImGuiWidgets
 		/// <param name="size">The size of the image.</param>
 		/// <param name="color">The color to apply to the image.</param>
 		/// <returns>True if the image is clicked; otherwise, false.</returns>
+		[SuppressMessage("Major Code Smell", "S3427:Method overloads with default parameter values should not overlap", Justification = "The no-arg overload intentionally uses Vector4.One as default, distinct from the default(Vector4) sentinel; both are needed for correct behavior.")]
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; pointers are scoped to the call and not retained.")]
 		internal static bool Show(uint textureId, Vector2 size, Vector4 color = default)
 		{
 			unsafe

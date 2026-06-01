@@ -57,6 +57,18 @@ public readonly struct ImGuiFontConfig : IEquatable<ImGuiFontConfig>
 	public override bool Equals(object? obj) => obj is ImGuiFontConfig config && Equals(config);
 
 	/// <summary>
+	/// Indicates whether the current object is equal to another object of the same type.
+	/// </summary>
+	/// <param name="other">An object to compare with this object.</param>
+	/// <returns>true if the current object is equal to the other parameter; otherwise, false.</returns>
+	public bool Equals(ImGuiFontConfig other)
+	{
+		return FontPath == other.FontPath
+		&& FontSize == other.FontSize
+		&& GetGlyphRange == other.GetGlyphRange;
+	}
+
+	/// <summary>
 	/// Serves as the default hash function.
 	/// </summary>
 	/// <returns>A hash code for the current object.</returns>
@@ -77,16 +89,4 @@ public readonly struct ImGuiFontConfig : IEquatable<ImGuiFontConfig>
 	/// <param name="right">The second <see cref="ImGuiFontConfig"/> to compare.</param>
 	/// <returns>true if the two <see cref="ImGuiFontConfig"/> instances are not equal; otherwise, false.</returns>
 	public static bool operator !=(ImGuiFontConfig left, ImGuiFontConfig right) => !(left == right);
-
-	/// <summary>
-	/// Indicates whether the current object is equal to another object of the same type.
-	/// </summary>
-	/// <param name="other">An object to compare with this object.</param>
-	/// <returns>true if the current object is equal to the other parameter; otherwise, false.</returns>
-	public bool Equals(ImGuiFontConfig other)
-	{
-		return FontPath == other.FontPath
-		&& FontSize == other.FontSize
-		&& GetGlyphRange == other.GetGlyphRange;
-	}
 }

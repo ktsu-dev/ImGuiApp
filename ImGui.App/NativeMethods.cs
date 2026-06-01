@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.App;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 internal static partial class NativeMethods
@@ -62,6 +63,7 @@ internal static partial class NativeMethods
 
 	/// <summary>A rectangle defined by its edges, matching the Win32 RECT structure.</summary>
 	[StructLayout(LayoutKind.Sequential)]
+	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 RECT structure for interop clarity.")]
 	internal struct RECT
 	{
 		public int Left;
@@ -72,6 +74,7 @@ internal static partial class NativeMethods
 
 	/// <summary>Monitor geometry returned by <see cref="GetMonitorInfo"/>, matching the Win32 MONITORINFO structure.</summary>
 	[StructLayout(LayoutKind.Sequential)]
+	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 MONITORINFO structure for interop clarity.")]
 	internal struct MONITORINFO
 	{
 		public int cbSize;

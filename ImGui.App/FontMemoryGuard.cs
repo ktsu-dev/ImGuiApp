@@ -6,6 +6,7 @@ namespace ktsu.ImGui.App;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Hexa.NET.ImGui;
 using Silk.NET.OpenGL;
@@ -175,11 +176,13 @@ public static class FontMemoryGuard
 	/// <summary>
 	/// Stores the reduced Unicode glyph ranges to prevent memory deallocation.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated lazily during initialization in GetReducedUnicodeRanges and cannot be readonly.")]
 	internal static ImVector<uint> reducedUnicodeRanges;
 
 	/// <summary>
 	/// Tracks whether the reduced Unicode ranges have been initialized.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated lazily during initialization in GetReducedUnicodeRanges and cannot be readonly.")]
 	internal static bool reducedUnicodeRangesInitialized;
 
 	/// <summary>
@@ -284,12 +287,6 @@ public static class FontMemoryGuard
 		public override readonly bool Equals(object? obj) => obj is FontMemoryEstimate estimate && Equals(estimate);
 
 		/// <summary>
-		/// Serves as the default hash function.
-		/// </summary>
-		/// <returns>A hash code for the current object.</returns>
-		public override readonly int GetHashCode() => HashCode.Combine(EstimatedBytes, EstimatedGlyphCount, ExceedsLimits, RecommendedMaxSizes, ShouldDisableEmojis, ShouldReduceUnicodeRanges);
-
-		/// <summary>
 		/// Indicates whether the current object is equal to another object of the same type.
 		/// </summary>
 		/// <param name="other">An object to compare with this object.</param>
@@ -301,6 +298,12 @@ public static class FontMemoryGuard
 			RecommendedMaxSizes == other.RecommendedMaxSizes &&
 			ShouldDisableEmojis == other.ShouldDisableEmojis &&
 			ShouldReduceUnicodeRanges == other.ShouldReduceUnicodeRanges;
+
+		/// <summary>
+		/// Serves as the default hash function.
+		/// </summary>
+		/// <returns>A hash code for the current object.</returns>
+		public override readonly int GetHashCode() => HashCode.Combine(EstimatedBytes, EstimatedGlyphCount, ExceedsLimits, RecommendedMaxSizes, ShouldDisableEmojis, ShouldReduceUnicodeRanges);
 
 		/// <summary>
 		/// Determines whether two specified instances of FontMemoryEstimate are equal.
@@ -384,11 +387,11 @@ public static class FontMemoryGuard
 		int baseGlyphCount = 128; // ASCII
 		if (includeExtendedUnicode)
 		{
-			baseGlyphCount += GetExtendedUnicodeGlyphCount();
+			baseGlyphCount += ExtendedUnicodeGlyphCount;
 		}
 		if (includeEmojis)
 		{
-			baseGlyphCount += GetEmojiGlyphCount();
+			baseGlyphCount += EmojiGlyphCount;
 		}
 
 		// Calculate total glyph count across all fonts and sizes
@@ -600,6 +603,7 @@ public static class FontMemoryGuard
 			recommendedMemory = GetIntelGpuMemoryLimit(renderer);
 			DebugLogger.Log($"FontMemoryGuard: Applied Intel integrated GPU heuristics: {recommendedMemory / (1024 * 1024)}MB limit");
 		}
+#pragma warning disable S2589 // Boolean expressions should not be gratuitous — Sonar cannot track that entry requires isIntegratedGpu || isIntelGpu; both branches remain reachable at runtime.
 		else if (isAmdGpu && isIntegratedGpu)
 		{
 			// AMD integrated GPU (APU) memory recommendations
@@ -612,6 +616,7 @@ public static class FontMemoryGuard
 			recommendedMemory = 32 * 1024 * 1024; // 32MB
 			DebugLogger.Log($"FontMemoryGuard: Applied generic integrated GPU heuristics: {recommendedMemory / (1024 * 1024)}MB limit");
 		}
+#pragma warning restore S2589
 
 		CurrentConfig.MaxAtlasMemoryBytes = recommendedMemory;
 
@@ -812,6 +817,7 @@ public static class FontMemoryGuard
 	/// </summary>
 	/// <param name="fontAtlasPtr">Font atlas for building ranges.</param>
 	/// <returns>Pointer to reduced glyph ranges.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; unsafe pointer is used only to pass the ranges vector address to the ImGui builder API.")]
 	public static unsafe uint* GetReducedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
 	{
 		// Only build ranges once and store them to prevent memory deallocation
@@ -886,15 +892,13 @@ public static class FontMemoryGuard
 
 	#region Private Helper Methods
 
-	private static int GetExtendedUnicodeGlyphCount() =>
-		// Estimate glyph count for extended Unicode ranges
-		// This is based on the ranges defined in FontHelper.AddSymbolRanges and AddNerdFontRanges
-		2000; // Conservative estimate
+	// Estimate glyph count for extended Unicode ranges.
+	// This is based on the ranges defined in FontHelper.AddSymbolRanges and AddNerdFontRanges.
+	private const int ExtendedUnicodeGlyphCount = 2000; // Conservative estimate
 
-	private static int GetEmojiGlyphCount() =>
-		// Estimate glyph count for emoji ranges
-		// This is based on the ranges defined in FontHelper.AddEmojiRanges
-		3000; // Conservative estimate
+	// Estimate glyph count for emoji ranges.
+	// This is based on the ranges defined in FontHelper.AddEmojiRanges.
+	private const int EmojiGlyphCount = 3000; // Conservative estimate
 
 	private static int CalculateRecommendedMaxSizes(int[] fontSizes, int glyphsPerSize, float scaleFactor)
 	{

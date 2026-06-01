@@ -18,35 +18,48 @@ public sealed class ImGuiExtensionManagerTests
 	{
 		// Initialize uses reflection to detect extensions - should not throw even without extensions loaded
 		ImGuiExtensionManager.Initialize();
+		// Without CreateExtensionContexts(), no contexts should be created
+		Assert.IsFalse(ImGuiExtensionManager.IsImNodesContextCreated);
 	}
 
 	[TestMethod]
 	public void Initialize_CalledTwice_DoesNotThrow()
 	{
 		ImGuiExtensionManager.Initialize();
+		bool firstAvailability = ImGuiExtensionManager.IsImGuizmoAvailable;
 		ImGuiExtensionManager.Initialize();
+		// Second call should be idempotent - availability should not change
+		Assert.AreEqual(firstAvailability, ImGuiExtensionManager.IsImGuizmoAvailable);
 	}
 
 	[TestMethod]
 	public void IsImGuizmoAvailable_ReturnsBoolean()
 	{
 		ImGuiExtensionManager.Initialize();
-		// Should return true or false without throwing
-		_ = ImGuiExtensionManager.IsImGuizmoAvailable;
+		bool firstRead = ImGuiExtensionManager.IsImGuizmoAvailable;
+		bool secondRead = ImGuiExtensionManager.IsImGuizmoAvailable;
+		// Property should return a stable value on repeated reads
+		Assert.AreEqual(firstRead, secondRead);
 	}
 
 	[TestMethod]
 	public void IsImNodesAvailable_ReturnsBoolean()
 	{
 		ImGuiExtensionManager.Initialize();
-		_ = ImGuiExtensionManager.IsImNodesAvailable;
+		bool firstRead = ImGuiExtensionManager.IsImNodesAvailable;
+		bool secondRead = ImGuiExtensionManager.IsImNodesAvailable;
+		// Property should return a stable value on repeated reads
+		Assert.AreEqual(firstRead, secondRead);
 	}
 
 	[TestMethod]
 	public void IsImPlotAvailable_ReturnsBoolean()
 	{
 		ImGuiExtensionManager.Initialize();
-		_ = ImGuiExtensionManager.IsImPlotAvailable;
+		bool firstRead = ImGuiExtensionManager.IsImPlotAvailable;
+		bool secondRead = ImGuiExtensionManager.IsImPlotAvailable;
+		// Property should return a stable value on repeated reads
+		Assert.AreEqual(firstRead, secondRead);
 	}
 
 	[TestMethod]
@@ -67,6 +80,8 @@ public sealed class ImGuiExtensionManagerTests
 	{
 		// BeginFrame should gracefully handle the case where no extensions are available
 		ImGuiExtensionManager.BeginFrame();
+		// No contexts should have been created by a standalone BeginFrame call
+		Assert.IsFalse(ImGuiExtensionManager.IsImNodesContextCreated);
 	}
 
 	[TestMethod]
@@ -74,6 +89,8 @@ public sealed class ImGuiExtensionManagerTests
 	{
 		// Cleanup should be safe to call even if no contexts were created
 		ImGuiExtensionManager.Cleanup();
+		// After cleanup, context-created flags should remain false
+		Assert.IsFalse(ImGuiExtensionManager.IsImNodesContextCreated);
 	}
 
 	[TestMethod]
@@ -81,5 +98,7 @@ public sealed class ImGuiExtensionManagerTests
 	{
 		ImGuiExtensionManager.Initialize();
 		ImGuiExtensionManager.Cleanup();
+		// After cleanup, context-created flags should be false
+		Assert.IsFalse(ImGuiExtensionManager.IsImNodesContextCreated);
 	}
 }

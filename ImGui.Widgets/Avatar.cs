@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -88,6 +89,7 @@ public static partial class ImGuiWidgets
 
 	internal static class AvatarImpl
 	{
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
 		internal static bool Draw(string id, uint textureId, string? displayName, float diameter, AvatarStatus status)
 		{
 			float resolvedDiameter = diameter > 0f ? diameter : ImGui.GetFrameHeight() * 2.0f;

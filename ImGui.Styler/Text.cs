@@ -19,6 +19,7 @@ public static partial class Text
 		/// <summary>
 		/// Contains predefined color definitions for text.
 		/// </summary>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3218:Rename this property to not shadow the outer class' member with the same name.", Justification = "Property names intentionally mirror the outer class methods (Normal/Error/Warning/Info/Success) as they are the definition counterparts; public API stability.")]
 		public static class Definitions
 		{
 			/// <summary>

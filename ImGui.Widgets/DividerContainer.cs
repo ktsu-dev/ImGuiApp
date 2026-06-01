@@ -98,6 +98,7 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <param name="dt">The delta time since the last tick.</param>
 		/// <exception cref="NotImplementedException">Thrown if the layout direction is not supported.</exception>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (detecting whether resize actually changed the zone's size value); a tolerance would suppress legitimate resize callbacks.")]
 		public void Tick(float dt)
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
@@ -148,7 +149,7 @@ public static partial class ImGuiWidgets
 			foreach ((DividerZone z, int i) in Zones.WithIndex())
 			{
 				//draw the grab handle if we're not the last zone
-				if (z != Zones.Last())
+				if (z != Zones[^1])
 				{
 					Vector2 zoneSize = CalculateZoneSize(z, windowPadding, containerSize, layoutMask, layoutMaskInverse);
 					Vector2 lineA = advance + (zoneSize * layoutMask) + (windowPadding * 0.5f * layoutMask);
@@ -180,8 +181,8 @@ public static partial class ImGuiWidgets
 						{
 							Vector2 mousePosLocal = mousePos - advance;
 
-							DividerZone first = Zones.First();
-							DividerZone last = Zones.Last();
+							DividerZone first = Zones[0];
+							DividerZone last = Zones[^1];
 							if (first != last && z != first)
 							{
 								mousePosLocal += windowPadding * 0.5f * layoutMask;
@@ -201,8 +202,19 @@ public static partial class ImGuiWidgets
 						}
 					}
 
-					Vector4 lineColor = DragIndex == i ? new Vector4(1, 1, 1, 0.7f) : handleHovered ? new Vector4(1, 1, 1, 0.5f) : new Vector4(1, 1, 1, 0.3f);
-					//drawList.AddRectFilled(grabMin, grabMax, ImGui.ColorConvertFloat4ToU32(new Vector4(1, 1, 1, 0.3f)));
+					Vector4 lineColor;
+					if (DragIndex == i)
+					{
+						lineColor = new Vector4(1, 1, 1, 0.7f);
+					}
+					else if (handleHovered)
+					{
+						lineColor = new Vector4(1, 1, 1, 0.5f);
+					}
+					else
+					{
+						lineColor = new Vector4(1, 1, 1, 0.3f);
+					}
 					drawList.AddLine(lineA, lineB, ImGui.ColorConvertFloat4ToU32(lineColor), lineWidth);
 
 					if (handleHovered || DragIndex == i)
@@ -251,8 +263,8 @@ public static partial class ImGuiWidgets
 		{
 			Vector2 zoneSize = (containerSize * z.Size * layoutMask) + (containerSize * layoutMaskInverse);
 
-			DividerZone first = Zones.First();
-			DividerZone last = Zones.Last();
+			DividerZone first = Zones[0];
+			DividerZone last = Zones[^1];
 			if (first != last)
 			{
 				if (z == first || z == last)
@@ -272,8 +284,8 @@ public static partial class ImGuiWidgets
 		{
 			Vector2 advance = containerSize * z.Size * layoutMask;
 
-			DividerZone first = Zones.First();
-			DividerZone last = Zones.Last();
+			DividerZone first = Zones[0];
+			DividerZone last = Zones[^1];
 			if (first != last && z == first)
 			{
 				advance += windowPadding * 0.5f * layoutMask;
@@ -365,7 +377,7 @@ public static partial class ImGuiWidgets
 		/// <exception cref="ArgumentException"></exception>
 		public void SetSizesFromList(ICollection<float> sizes)
 		{
-			Ensure.NotNull(sizes, nameof(sizes));
+			Ensure.NotNull(sizes);
 
 			if (sizes.Count != Zones.Count)
 			{

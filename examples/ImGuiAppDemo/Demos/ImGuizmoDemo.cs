@@ -16,7 +16,6 @@ internal sealed class ImGuizmoDemo : IDemoTab
 {
 	private Matrix4x4 gizmoTransform = Matrix4x4.Identity;
 	private Matrix4x4 gizmoView = Matrix4x4.CreateLookAt(new Vector3(0, 0, 5), Vector3.Zero, Vector3.UnitY);
-	private Matrix4x4 gizmoProjection;
 	private ImGuizmoOperation gizmoOperation = ImGuizmoOperation.Translate;
 	private ImGuizmoMode gizmoMode = ImGuizmoMode.Local;
 	private bool gizmoEnabled = true;
@@ -85,7 +84,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 
 				// Update projection matrix based on gizmo size
 				float aspectRatio = gizmoSize.Y > 0 ? gizmoSize.X / gizmoSize.Y : 1.0f;
-				gizmoProjection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 4f, aspectRatio, 0.1f, 100f);
+				Matrix4x4 gizmoProjection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 4f, aspectRatio, 0.1f, 100f);
 
 				// Set up ImGuizmo for this viewport
 				if (gizmoEnabled)

@@ -139,7 +139,8 @@ public static partial class ImGuiWidgets
 		private static int SafeAdd(int value, int delta)
 		{
 			long result = (long)value + delta;
-			return result > int.MaxValue ? int.MaxValue : result < int.MinValue ? int.MinValue : (int)result;
+			int clampedResult = result < int.MinValue ? int.MinValue : (int)result;
+			return result > int.MaxValue ? int.MaxValue : clampedResult;
 		}
 	}
 }

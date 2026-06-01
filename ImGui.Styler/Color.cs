@@ -32,7 +32,7 @@ public static class Color
 	/// <exception cref="ArgumentException">Thrown when the <paramref name="hex"/> is not in the correct format.</exception>
 	public static ImColor FromHex(string hex)
 	{
-		Ensure.NotNull(hex, nameof(hex));
+		Ensure.NotNull(hex);
 
 		if (hex.StartsWith('#'))
 		{
@@ -70,6 +70,18 @@ public static class Color
 	};
 
 	/// <summary>
+	/// Creates an <see cref="ImColor"/> object from RGB float values.
+	/// </summary>
+	/// <param name="r">The red component value (0-1).</param>
+	/// <param name="g">The green component value (0-1).</param>
+	/// <param name="b">The blue component value (0-1).</param>
+	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
+	public static ImColor FromRGB(float r, float g, float b) => new()
+	{
+		Value = new Vector4(r, g, b, 1f)
+	};
+
+	/// <summary>
 	/// Creates an <see cref="ImColor"/> object from RGBA byte values.
 	/// </summary>
 	/// <param name="r">The red component value (0-255).</param>
@@ -80,18 +92,6 @@ public static class Color
 	public static ImColor FromRGBA(byte r, byte g, byte b, byte a) => new()
 	{
 		Value = new Vector4(r / 255f, g / 255f, b / 255f, a / 255f)
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from RGB float values.
-	/// </summary>
-	/// <param name="r">The red component value (0-1).</param>
-	/// <param name="g">The green component value (0-1).</param>
-	/// <param name="b">The blue component value (0-1).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromRGB(float r, float g, float b) => new()
-	{
-		Value = new Vector4(r, g, b, 1f)
 	};
 
 	/// <summary>
@@ -135,13 +135,6 @@ public static class Color
 	public static ImColor FromHSL(Vector3 vector) => FromHSLA(vector.X, vector.Y, vector.Z, 1);
 
 	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from HSLA values.
-	/// </summary>
-	/// <param name="vector">The vector containing HSLA values.</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromHSLA(Vector4 vector) => FromHSLA(vector.X, vector.Y, vector.Z, vector.W);
-
-	/// <summary>
 	/// Creates an <see cref="ImColor"/> object from HSL values.
 	/// </summary>
 	/// <param name="h">The hue component value (0-1).</param>
@@ -153,11 +146,19 @@ public static class Color
 	/// <summary>
 	/// Creates an <see cref="ImColor"/> object from HSLA values.
 	/// </summary>
+	/// <param name="vector">The vector containing HSLA values.</param>
+	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
+	public static ImColor FromHSLA(Vector4 vector) => FromHSLA(vector.X, vector.Y, vector.Z, vector.W);
+
+	/// <summary>
+	/// Creates an <see cref="ImColor"/> object from HSLA values.
+	/// </summary>
 	/// <param name="h">The hue component value (0-1).</param>
 	/// <param name="s">The saturation component value (0-1).</param>
 	/// <param name="l">The lightness component value (0-1).</param>
 	/// <param name="a">The alpha component value (0-1).</param>
 	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (sentinel check for achromatic color); a tolerance would change behavior.")]
 	public static ImColor FromHSLA(float h, float s, float l, float a)
 	{
 		float r, g, b;
@@ -239,6 +240,7 @@ public static class Color
 	/// <param name="priority">The priority level for the color.</param>
 	/// <param name="fallbackColor">The fallback color to use if no theme is applied.</param>
 	/// <returns>An ImColor from the current theme or the fallback color.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3398:Move this method inside 'Semantic'.", Justification = "Helper is shared across multiple nested types (Semantic, Palette); moving it into a single nested type would break cohesion.")]
 	private static ImColor GetSemanticColor(SemanticMeaning meaning, Priority priority, ImColor fallbackColor)
 	{
 		// Check if a theme is currently applied
@@ -278,6 +280,7 @@ public static class Color
 	/// </summary>
 	/// <param name="fallbackColor">The default hardcoded color to find a close match for.</param>
 	/// <returns>An ImColor that's close to the fallback color within the current theme, or the fallback color itself.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3398:Move this method inside 'Palette'.", Justification = "Helper is shared across multiple nested types (Basic, Neutral, Natural, Vibrant, Pastel); moving it into a single nested type would break cohesion.")]
 	private static ImColor GetThemeColor(ImColor fallbackColor)
 	{
 		// Check if a theme is currently applied and get its complete palette

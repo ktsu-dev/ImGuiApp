@@ -8,6 +8,7 @@ namespace ktsu.NodeGraph.Library.Operations;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Date and time operations.
@@ -36,6 +37,7 @@ public static class DateTimeOperations
 
 	[Node("Parse Date")]
 	[Description("Parses a string as date")]
+	[SuppressMessage("Major Code Smell", "S6580:Use a format provider when parsing date and time.", Justification = "Public API; supplying a format provider or DateTimeStyles would change parse behavior for non-invariant cultures.")]
 	public static DateTime ParseDate(string dateString) =>
 		DateTime.TryParse(dateString, out DateTime result) ? result : DateTime.MinValue;
 

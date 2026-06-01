@@ -155,6 +155,7 @@ public static class ColorExtensions
 	/// <param name="color">The original color.</param>
 	/// <returns>A <see cref="Vector4"/> representing the color in HSLA format.</returns>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0045:Convert to conditional expression", Justification = "Clarity over brevity")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead.", Justification = "Exact comparisons are intentional here (identity checks against max/min values computed in the same statement); a tolerance would change the HSL conversion behavior.")]
 	public static Vector4 ToHSLA(this ImColor color)
 	{
 		float r = color.Value.X;

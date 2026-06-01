@@ -215,94 +215,85 @@ public partial class ImGuiPopups
 		/// </summary>
 		private void ShowContent()
 		{
-			if (Drives.Count != 0)
+			if (Drives.Count != 0 && ImGui.BeginCombo("##Drives", Drives[0]))
 			{
-				if (ImGui.BeginCombo("##Drives", Drives[0]))
+				StringBuilder currentDriveStringBuilder = new();
+				currentDriveStringBuilder.Append(CurrentDirectory.Split(Path.VolumeSeparatorChar).Current);
+				currentDriveStringBuilder.Append(Path.VolumeSeparatorChar);
+				currentDriveStringBuilder.Append(Path.DirectorySeparatorChar);
+				string currentDrive = currentDriveStringBuilder.ToString();
+
+#pragma warning disable S3267 // Explicit loop is clearer; LINQ rewrite would add unnecessary allocation and complicate ImGui immediate-mode usage.
+				foreach (string drive in Drives)
 				{
-					StringBuilder currentDriveStringBuilder = new();
-					currentDriveStringBuilder.Append(CurrentDirectory.Split(Path.VolumeSeparatorChar).Current);
-					currentDriveStringBuilder.Append(Path.VolumeSeparatorChar);
-					currentDriveStringBuilder.Append(Path.DirectorySeparatorChar);
-					string currentDrive = currentDriveStringBuilder.ToString();
-
-					foreach (string drive in Drives)
+					if (ImGui.Selectable(drive, drive == currentDrive))
 					{
-						if (ImGui.Selectable(drive, drive == currentDrive))
-						{
-							CurrentDirectory = drive.As<AbsoluteDirectoryPath>();
-							RefreshContents();
-						}
+						CurrentDirectory = drive.As<AbsoluteDirectoryPath>();
+						RefreshContents();
 					}
-
-					ImGui.EndCombo();
 				}
+#pragma warning restore S3267
+
+				ImGui.EndCombo();
 			}
 
 			ImGui.TextUnformatted($"{CurrentDirectory}{Path.DirectorySeparatorChar}{Glob}");
-			if (ImGui.BeginChild("FilesystemBrowser", new(500, 400), ImGuiChildFlags.None))
+			if (ImGui.BeginChild("FilesystemBrowser", new(500, 400), ImGuiChildFlags.None) && ImGui.BeginTable(nameof(FilesystemBrowser), 1, ImGuiTableFlags.Borders))
 			{
-				if (ImGui.BeginTable(nameof(FilesystemBrowser), 1, ImGuiTableFlags.Borders))
-				{
-					ImGui.TableSetupColumn("Path", ImGuiTableColumnFlags.WidthStretch, 40);
-					//ImGui.TableSetupColumn("Size", ImGuiTableColumnFlags.None, 3);
-					//ImGui.TableSetupColumn("Modified", ImGuiTableColumnFlags.None, 3);
-					ImGui.TableHeadersRow();
+				ImGui.TableSetupColumn("Path", ImGuiTableColumnFlags.WidthStretch, 40);
+				ImGui.TableHeadersRow();
 
-					ImGuiSelectableFlags flags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowDoubleClick | ImGuiSelectableFlags.NoAutoClosePopups;
+				ImGuiSelectableFlags flags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowDoubleClick | ImGuiSelectableFlags.NoAutoClosePopups;
+				ImGui.TableNextRow();
+				ImGui.TableNextColumn();
+				if (ImGui.Selectable("..", false, flags) && ImGui.IsMouseDoubleClicked(0))
+				{
+					string? newPath = Path.GetDirectoryName(CurrentDirectory.WeakString.Trim(Path.DirectorySeparatorChar));
+					if (newPath is not null)
+					{
+						CurrentDirectory = newPath.As<AbsoluteDirectoryPath>();
+						RefreshContents();
+					}
+				}
+
+				foreach (IAbsolutePath? path in CurrentContents.OrderBy(p => p is not AbsoluteDirectoryPath).ThenBy(p => p).ToCollection())
+				{
 					ImGui.TableNextRow();
 					ImGui.TableNextColumn();
-					if (ImGui.Selectable("..", false, flags))
+					AbsoluteDirectoryPath? directory = path as AbsoluteDirectoryPath;
+					AbsoluteFilePath? file = path as AbsoluteFilePath;
+					string displayPath = directory?.WeakString ?? file?.WeakString ?? string.Empty;
+					displayPath = displayPath.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
+
+					if (directory is not null)
 					{
-						if (ImGui.IsMouseDoubleClicked(0))
+						displayPath += Path.DirectorySeparatorChar;
+					}
+
+					if (ImGui.Selectable(displayPath, ChosenItem == path, flags))
+					{
+						if (directory is not null)
 						{
-							string? newPath = Path.GetDirectoryName(CurrentDirectory.WeakString.Trim(Path.DirectorySeparatorChar));
-							if (newPath is not null)
+							ChosenItem = directory;
+							if (ImGui.IsMouseDoubleClicked(0))
 							{
-								CurrentDirectory = newPath.As<AbsoluteDirectoryPath>();
+								CurrentDirectory = directory;
 								RefreshContents();
 							}
 						}
-					}
-
-					foreach (IAbsolutePath? path in CurrentContents.OrderBy(p => p is not AbsoluteDirectoryPath).ThenBy(p => p).ToCollection())
-					{
-						ImGui.TableNextRow();
-						ImGui.TableNextColumn();
-						AbsoluteDirectoryPath? directory = path as AbsoluteDirectoryPath;
-						AbsoluteFilePath? file = path as AbsoluteFilePath;
-						string displayPath = directory?.WeakString ?? file?.WeakString ?? string.Empty;
-						displayPath = displayPath.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
-
-						if (directory is not null)
+						else if (file is not null)
 						{
-							displayPath += Path.DirectorySeparatorChar;
-						}
-
-						if (ImGui.Selectable(displayPath, ChosenItem == path, flags))
-						{
-							if (directory is not null)
+							ChosenItem = file;
+							FileName = file.FileName;
+							if (ImGui.IsMouseDoubleClicked(0))
 							{
-								ChosenItem = directory;
-								if (ImGui.IsMouseDoubleClicked(0))
-								{
-									CurrentDirectory = directory;
-									RefreshContents();
-								}
-							}
-							else if (file is not null)
-							{
-								ChosenItem = file;
-								FileName = file.FileName;
-								if (ImGui.IsMouseDoubleClicked(0))
-								{
-									ChooseItem();
-								}
+								ChooseItem();
 							}
 						}
 					}
-
-					ImGui.EndTable();
 				}
+
+				ImGui.EndTable();
 			}
 
 			ImGui.EndChild();

@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.App;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Hexa.NET.ImGui;
 
@@ -83,6 +84,7 @@ public static class ImGuiExtensionManager
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S2589:Boolean expressions should not be gratuitous", Justification = "Null checks guard reflection results that may be null at runtime; static analysis cannot determine this.")]
 	private static void InitializeImNodes()
 	{
 		try
@@ -132,6 +134,7 @@ public static class ImGuiExtensionManager
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S2589:Boolean expressions should not be gratuitous", Justification = "Null checks guard reflection results that may be null at runtime; static analysis cannot determine this.")]
 	private static void InitializeImPlot()
 	{
 		try
