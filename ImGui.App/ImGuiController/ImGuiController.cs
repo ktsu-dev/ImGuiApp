@@ -74,6 +74,12 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 		Init(gl, view, input);
 		DebugLogger.Log("ImGuiController: Init completed");
 
+		// Register as the renderer backend now that the GL context is live. This must happen
+		// before onConfigureIO runs: user OnStart code (invoked from there) may load textures,
+		// and that path resolves the backend via ImGuiApp.renderer. The ImGuiApp.controller
+		// field is not assigned until this constructor returns, so it cannot be relied on here.
+		ImGuiApp.renderer = this;
+
 		ImGuiIOPtr io = ImGui.GetIO();
 		if (imGuiFontConfig is not null)
 		{
