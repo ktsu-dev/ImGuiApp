@@ -6,6 +6,7 @@ namespace ktsu.ImGui.Styler;
 
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ThemeProvider;
@@ -32,6 +33,7 @@ public static class Theme
 	/// Applies a semantic theme to ImGui using ThemeProvider's color mapping system.
 	/// </summary>
 	/// <param name="theme">The semantic theme to apply.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop to access style colors array; pointers are scoped to the call and not retained.")]
 	public static void Apply(ISemanticTheme theme)
 	{
 		Ensure.NotNull(theme);
@@ -48,18 +50,6 @@ public static class Theme
 				style.Colors[(int)imguiCol] = color;
 			}
 		}
-	}
-
-	/// <summary>
-	/// Gets the color mapping for a semantic theme without applying it.
-	/// This is useful for temporary theme application via scoped actions.
-	/// </summary>
-	/// <param name="theme">The semantic theme to get the color mapping for.</param>
-	/// <returns>A dictionary mapping ImGui colors to their theme-based values.</returns>
-	public static IReadOnlyDictionary<ImGuiCol, Vector4> GetColorMapping(ISemanticTheme theme)
-	{
-		Ensure.NotNull(theme);
-		return paletteMapper.MapTheme(theme);
 	}
 
 	/// <summary>
@@ -81,6 +71,18 @@ public static class Theme
 		// Clear palette cache when theme changes
 		ClearPaletteCache();
 		return true;
+	}
+
+	/// <summary>
+	/// Gets the color mapping for a semantic theme without applying it.
+	/// This is useful for temporary theme application via scoped actions.
+	/// </summary>
+	/// <param name="theme">The semantic theme to get the color mapping for.</param>
+	/// <returns>A dictionary mapping ImGui colors to their theme-based values.</returns>
+	public static IReadOnlyDictionary<ImGuiCol, Vector4> GetColorMapping(ISemanticTheme theme)
+	{
+		Ensure.NotNull(theme);
+		return paletteMapper.MapTheme(theme);
 	}
 
 	/// <summary>
@@ -143,13 +145,10 @@ public static class Theme
 		{
 			// Reset option at the top
 			bool isReset = currentThemeName is null;
-			if (ImGui.MenuItem("Reset to Default", "", isReset))
+			if (ImGui.MenuItem("Reset to Default", "", isReset) && !isReset)
 			{
-				if (!isReset)
-				{
-					ResetToDefault();
-					themeChanged = true;
-				}
+				ResetToDefault();
+				themeChanged = true;
 			}
 
 			if (ImGui.IsItemHovered())
@@ -170,12 +169,9 @@ public static class Theme
 					ThemeRegistry.ThemeInfo theme = themes[0];
 					bool isSelected = currentThemeName == theme.Name;
 
-					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected))
+					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected) && !isSelected && Apply(theme.Name))
 					{
-						if (!isSelected && Apply(theme.Name))
-						{
-							themeChanged = true;
-						}
+						themeChanged = true;
 					}
 				}
 				else
@@ -230,12 +226,9 @@ public static class Theme
 						bool isSelected = currentThemeName == theme.Name;
 						string displayName = theme.Variant ?? theme.Name;
 
-						if (RenderThemeMenuItemWithDialogSwatches(theme, displayName, isSelected))
+						if (RenderThemeMenuItemWithDialogSwatches(theme, displayName, isSelected) && !isSelected && Apply(theme.Name))
 						{
-							if (!isSelected && Apply(theme.Name))
-							{
-								themeChanged = true;
-							}
+							themeChanged = true;
 						}
 					}
 				}
@@ -277,12 +270,9 @@ public static class Theme
 				bool isSelected = currentThemeName == theme.Name;
 				string displayName = theme.Variant ?? theme.Name;
 
-				if (RenderThemeMenuItemWithDialogSwatches(theme, displayName, isSelected))
+				if (RenderThemeMenuItemWithDialogSwatches(theme, displayName, isSelected) && !isSelected && Apply(theme.Name))
 				{
-					if (!isSelected && Apply(theme.Name))
-					{
-						themeChanged = true;
-					}
+					themeChanged = true;
 				}
 			}
 		}
@@ -303,13 +293,10 @@ public static class Theme
 		{
 			// Reset option at the top
 			bool isReset = currentThemeName is null;
-			if (ImGui.MenuItem("Reset to Default", "", isReset))
+			if (ImGui.MenuItem("Reset to Default", "", isReset) && !isReset)
 			{
-				if (!isReset)
-				{
-					ResetToDefault();
-					themeChanged = true;
-				}
+				ResetToDefault();
+				themeChanged = true;
 			}
 
 			if (ImGui.IsItemHovered())
@@ -332,12 +319,9 @@ public static class Theme
 				{
 					bool isSelected = currentThemeName == theme.Name;
 
-					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected))
+					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected) && !isSelected && Apply(theme.Name))
 					{
-						if (!isSelected && Apply(theme.Name))
-						{
-							themeChanged = true;
-						}
+						themeChanged = true;
 					}
 				}
 
@@ -359,12 +343,9 @@ public static class Theme
 				{
 					bool isSelected = currentThemeName == theme.Name;
 
-					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected))
+					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected) && !isSelected && Apply(theme.Name))
 					{
-						if (!isSelected && Apply(theme.Name))
-						{
-							themeChanged = true;
-						}
+						themeChanged = true;
 					}
 				}
 			}
@@ -378,126 +359,6 @@ public static class Theme
 	#endregion
 
 	#region Theme Menu Helpers
-
-	/// <summary>
-	/// Renders a theme menu item with color preview swatches
-	/// </summary>
-	/// <param name="theme">The theme to render.</param>
-	/// <param name="displayName">The display name for the theme.</param>
-	/// <param name="isSelected">Whether this theme is currently selected.</param>
-	/// <returns>True if the theme was clicked, false otherwise.</returns>
-#pragma warning disable IDE0051 // Remove unused private members - preserved for reference
-	private static bool RenderThemeMenuItemWithSwatches(ThemeRegistry.ThemeInfo theme, string displayName, bool isSelected)
-	{
-		bool clicked = false;
-
-		// Create a unique ID for this menu item
-		ImGui.PushID(theme.Name);
-
-		try
-		{
-			// Get the theme's complete palette for color preview
-			IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(theme.CreateInstance());
-
-			// Define the colors we want to show: primary, alternate, medium neutral, low neutral
-			SemanticColorRequest[] colorRequests = [
-				new SemanticColorRequest(SemanticMeaning.Primary, Priority.High),
-				new SemanticColorRequest(SemanticMeaning.Alternate, Priority.High),
-				new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium),
-				new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low)
-			];
-
-			// Use Selectable instead of MenuItem so we can draw custom content
-			if (ImGui.Selectable($"##theme_{theme.Name}", isSelected, ImGuiSelectableFlags.None))
-			{
-				clicked = true;
-			}
-
-			// Draw color swatches and theme name on top of the selectable
-			Vector2 itemMin = ImGui.GetItemRectMin();
-			Vector2 itemMax = ImGui.GetItemRectMax();
-			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-
-			float swatchSize = 12.0f;
-			float swatchSpacing = 2.0f;
-			float textOffset = (colorRequests.Length * (swatchSize + swatchSpacing)) + 8.0f;
-
-			// Draw color swatches
-			for (int i = 0; i < colorRequests.Length; i++)
-			{
-				if (completePalette.TryGetValue(colorRequests[i], out PerceptualColor color))
-				{
-					ImColor imColor = Color.FromPerceptualColor(color);
-					Vector2 swatchPos = new(
-						itemMin.X + 4.0f + (i * (swatchSize + swatchSpacing)),
-						itemMin.Y + ((itemMax.Y - itemMin.Y - swatchSize) * 0.5f)
-					);
-
-					// Draw swatch background (slightly larger for border effect)
-					drawList.AddRectFilled(
-						swatchPos - Vector2.One,
-						swatchPos + new Vector2(swatchSize + 1, swatchSize + 1),
-						ImGui.ColorConvertFloat4ToU32(new Vector4(0.2f, 0.2f, 0.2f, 1.0f))
-					);
-
-					// Draw color swatch
-					drawList.AddRectFilled(
-						swatchPos,
-						swatchPos + new Vector2(swatchSize, swatchSize),
-						ImGui.ColorConvertFloat4ToU32(imColor.Value)
-					);
-				}
-			}
-
-			// Draw theme name text
-			Vector2 textPos = new(itemMin.X + textOffset, itemMin.Y + ((itemMax.Y - itemMin.Y - ImGui.GetTextLineHeight()) * 0.5f));
-			uint textColor = isSelected ?
-				ImGui.ColorConvertFloat4ToU32(ImGui.GetStyle().Colors[(int)ImGuiCol.Text]) :
-				ImGui.ColorConvertFloat4ToU32(ImGui.GetStyle().Colors[(int)ImGuiCol.Text]);
-
-			drawList.AddText(textPos, textColor, displayName);
-
-			// Add tooltip with theme description if hovered
-			if (ImGui.IsItemHovered())
-			{
-				ImGui.SetTooltip($"{theme.Description}\n\nColors shown: Primary, Alternate, Neutral (Med), Neutral (Low)");
-			}
-		}
-		catch (ArgumentException)
-		{
-			// Fallback to simple menu item if color extraction fails
-			clicked = ImGui.MenuItem(displayName, "", isSelected);
-			if (ImGui.IsItemHovered())
-			{
-				ImGui.SetTooltip(theme.Description);
-			}
-		}
-		catch (InvalidOperationException)
-		{
-			// Fallback to simple menu item if color extraction fails
-			clicked = ImGui.MenuItem(displayName, "", isSelected);
-			if (ImGui.IsItemHovered())
-			{
-				ImGui.SetTooltip(theme.Description);
-			}
-		}
-		catch (System.Reflection.TargetInvocationException)
-		{
-			// Fallback to simple menu item if reflection call fails
-			clicked = ImGui.MenuItem(displayName, "", isSelected);
-			if (ImGui.IsItemHovered())
-			{
-				ImGui.SetTooltip(theme.Description);
-			}
-		}
-		finally
-		{
-			ImGui.PopID();
-		}
-
-		return clicked;
-	}
-#pragma warning restore IDE0051 // Remove unused private members
 
 	/// <summary>
 	/// Renders a theme menu item styled like a mini dialog window with title bar and content area.
@@ -1081,6 +942,22 @@ public static class Theme
 	}
 
 	/// <summary>
+	/// Gets the complete palette for a theme by name.
+	/// </summary>
+	/// <param name="themeName">The name of the theme to get the palette for.</param>
+	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if theme not found.</returns>
+	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? GetCompletePalette(string themeName)
+	{
+		ThemeRegistry.ThemeInfo? themeInfo = FindTheme(themeName);
+		if (themeInfo is null)
+		{
+			return null;
+		}
+
+		return GetCompletePalette(themeInfo.CreateInstance());
+	}
+
+	/// <summary>
 	/// Generates the complete palette without caching using the MakeCompletePalette API.
 	/// </summary>
 	/// <param name="theme">The theme to generate the palette from.</param>
@@ -1123,22 +1000,6 @@ public static class Theme
 		{
 			paletteCache.Clear();
 		}
-	}
-
-	/// <summary>
-	/// Gets the complete palette for a theme by name.
-	/// </summary>
-	/// <param name="themeName">The name of the theme to get the palette for.</param>
-	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if theme not found.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? GetCompletePalette(string themeName)
-	{
-		ThemeRegistry.ThemeInfo? themeInfo = FindTheme(themeName);
-		if (themeInfo is null)
-		{
-			return null;
-		}
-
-		return GetCompletePalette(themeInfo.CreateInstance());
 	}
 
 	/// <summary>
@@ -1264,13 +1125,10 @@ public static class Theme
 			ImGui.Separator();
 
 			// Quick reset option
-			if (ImGui.MenuItem("Reset to Default", "", currentThemeName is null))
+			if (ImGui.MenuItem("Reset to Default", "", currentThemeName is null) && currentThemeName is not null)
 			{
-				if (currentThemeName is not null)
-				{
-					ResetToDefault();
-					themeChanged = true;
-				}
+				ResetToDefault();
+				themeChanged = true;
 			}
 
 			if (ImGui.IsItemHovered())

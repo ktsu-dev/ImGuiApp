@@ -383,13 +383,4 @@ public sealed class OutputPinAttribute : PinAttribute
 	{
 	}
 
-	/// <summary>
-	/// Validates output pin specific constraints.
-	/// Output pins can be applied to methods to represent their return value.
-	/// </summary>
-	/// <param name="member">The member to validate.</param>
-	protected override void ValidatePinConstraints(object member) =>
-		// Output pins on methods represent the return value, which is valid
-		// even if the method has parameters (which would have their own input pins)
-		base.ValidatePinConstraints(member);
 }

@@ -7,6 +7,7 @@
 namespace ktsu.ImGui.App;
 
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -18,6 +19,7 @@ public static partial class ForceDpiAware
 {
 	internal const double StandardDpiScale = 96.0;
 	internal const double MaxScaleFactor = 10.25;
+	private const string PowerShellExecutable = "powershell.exe";
 
 	/// <summary>
 	/// Marks the application as DPI-Aware when running on the Windows operating system.
@@ -77,64 +79,56 @@ public static partial class ForceDpiAware
 	{
 		double userDpiScale;
 
-		try
+		if (OperatingSystem.IsWindows())
 		{
-			if (OperatingSystem.IsWindows())
+			userDpiScale = GdiPlusHelper.GetDpiX(IntPtr.Zero);
+		}
+		else
+		{
+			string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
+
+			if (xdgSessionType is null or "x11")
 			{
-				userDpiScale = GdiPlusHelper.GetDpiX(IntPtr.Zero);
-			}
-			else
-			{
-				string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
-
-				if (xdgSessionType is null or "x11")
-				{
-					nint display = NativeMethods.XOpenDisplay(null!);
-					if (display == IntPtr.Zero)
-					{
-						userDpiScale = GetWaylandDpiScale();
-					}
-					else
-					{
-						string? dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
-
-						if (dpiString == null || !double.TryParse(dpiString, NumberStyles.Any, CultureInfo.InvariantCulture, out userDpiScale))
-						{
-							int width = NativeMethods.XDisplayWidth(display, 0);
-							int widthMM = NativeMethods.XDisplayWidthMM(display, 0);
-							userDpiScale = width * 25.4 / widthMM;
-						}
-
-						if (NativeMethods.XCloseDisplay(display) != 0)
-						{
-							throw new InvalidOperationException("Failed to close X11 display connection");
-						}
-
-						// If X11 gives us standard DPI, try WSL-specific detection
-						if (Math.Abs(userDpiScale - StandardDpiScale) < 1.0)
-						{
-							double wslScale = GetWaylandDpiScale(); // This includes WSL host detection
-							if (Math.Abs(wslScale - StandardDpiScale) > 1.0)
-							{
-								userDpiScale = wslScale;
-							}
-						}
-					}
-				}
-				else if (xdgSessionType == "wayland")
+				nint display = NativeMethods.XOpenDisplay(null!);
+				if (display == IntPtr.Zero)
 				{
 					userDpiScale = GetWaylandDpiScale();
 				}
 				else
 				{
-					userDpiScale = GetWaylandDpiScale();
+					string? dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
+
+					if (dpiString == null || !double.TryParse(dpiString, NumberStyles.Any, CultureInfo.InvariantCulture, out userDpiScale))
+					{
+						int width = NativeMethods.XDisplayWidth(display, 0);
+						int widthMM = NativeMethods.XDisplayWidthMM(display, 0);
+						userDpiScale = width * 25.4 / widthMM;
+					}
+
+					if (NativeMethods.XCloseDisplay(display) != 0)
+					{
+						throw new InvalidOperationException("Failed to close X11 display connection");
+					}
+
+					// If X11 gives us standard DPI, try WSL-specific detection
+					if (Math.Abs(userDpiScale - StandardDpiScale) < 1.0)
+					{
+						double wslScale = GetWaylandDpiScale(); // This includes WSL host detection
+						if (Math.Abs(wslScale - StandardDpiScale) > 1.0)
+						{
+							userDpiScale = wslScale;
+						}
+					}
 				}
 			}
-		}
-		catch (Exception)
-		{
-			//Logger.Warning?.Print(LogClass.Application, $"Couldn't determine monitor DPI: {e.Message}");
-			throw;
+			else if (xdgSessionType == "wayland")
+			{
+				userDpiScale = GetWaylandDpiScale();
+			}
+			else
+			{
+				userDpiScale = GetWaylandDpiScale();
+			}
 		}
 
 		return userDpiScale;
@@ -235,6 +229,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The scale factor if found.</param>
 	/// <returns>True if a scale factor was found, false otherwise.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate system tools (gsettings) for DPI detection, not used as a security boundary; this is a diagnostic tool call only.")]
 	internal static bool TryGetGnomeScale(out double scale)
 	{
 		scale = 1.0;
@@ -294,6 +289,8 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The scale factor if found.</param>
 	/// <returns>True if a scale factor was found, false otherwise.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate system tools (xrdb) for DPI detection, not used as a security boundary; this is a diagnostic tool call only.")]
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method", Justification = "Explicit loop with early return is clearer and avoids unnecessary LINQ allocations in this diagnostic path.")]
 	internal static bool TryGetWslgScale(out double scale)
 	{
 		scale = 1.0;
@@ -443,6 +440,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate PowerShell for DPI detection, not used as a security boundary; this is a diagnostic tool call only.")]
 	internal static bool TryGetSystemDpiFromPowerShell(out double scale)
 	{
 		scale = 1.0;
@@ -451,7 +449,7 @@ public static partial class ForceDpiAware
 		{
 			// Use PowerShell to get system DPI directly
 			using System.Diagnostics.Process process = new();
-			process.StartInfo.FileName = "powershell.exe";
+			process.StartInfo.FileName = PowerShellExecutable;
 			process.StartInfo.Arguments = "-Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width; [System.Windows.Forms.SystemInformation]::WorkingArea.Width; [System.Drawing.Graphics]::FromHwnd([System.IntPtr]::Zero).DpiX\"";
 			process.StartInfo.UseShellExecute = false;
 			process.StartInfo.RedirectStandardOutput = true;
@@ -460,7 +458,7 @@ public static partial class ForceDpiAware
 
 			process.Start();
 			string output = process.StandardOutput.ReadToEnd().Trim();
-			string errorOutput = process.StandardError.ReadToEnd().Trim();
+			_ = process.StandardError.ReadToEnd();
 			process.WaitForExit();
 
 			if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
@@ -480,15 +478,15 @@ public static partial class ForceDpiAware
 		}
 		catch (Win32Exception)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"Win32Exception in system DPI detection: {ex.Message}");
+			// Process execution failed
 		}
 		catch (IOException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"IOException in system DPI detection: {ex.Message}");
+			// IO error
 		}
 		catch (InvalidOperationException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"InvalidOperationException in system DPI detection: {ex.Message}");
+			// Process operation failed
 		}
 
 		return false;
@@ -499,6 +497,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if LogPixels was found.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate PowerShell for reading Windows registry DPI settings, not used as a security boundary; this is a diagnostic tool call only.")]
 	internal static bool TryGetLogPixelsFromRegistry(out double scale)
 	{
 		scale = 1.0;
@@ -515,7 +514,7 @@ public static partial class ForceDpiAware
 			foreach (string command in registryCommands)
 			{
 				using System.Diagnostics.Process process = new();
-				process.StartInfo.FileName = "powershell.exe";
+				process.StartInfo.FileName = PowerShellExecutable;
 				process.StartInfo.Arguments = $"-Command \"{command}\"";
 				process.StartInfo.UseShellExecute = false;
 				process.StartInfo.RedirectStandardOutput = true;
@@ -535,15 +534,15 @@ public static partial class ForceDpiAware
 		}
 		catch (Win32Exception)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"Win32Exception in registry LogPixels detection: {ex.Message}");
+			// Process execution failed
 		}
 		catch (IOException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"IOException in registry LogPixels detection: {ex.Message}");
+			// IO error
 		}
 		catch (InvalidOperationException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"InvalidOperationException in registry LogPixels detection: {ex.Message}");
+			// Process operation failed
 		}
 
 		return false;
@@ -554,6 +553,7 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate PowerShell for DPI detection via system metrics, not used as a security boundary; this is a diagnostic tool call only.")]
 	internal static bool TryGetDpiFromSystemMetrics(out double scale)
 	{
 		scale = 1.0;
@@ -562,7 +562,7 @@ public static partial class ForceDpiAware
 		{
 			// Try to get system DPI using GetDeviceCaps equivalent
 			using System.Diagnostics.Process process = new();
-			process.StartInfo.FileName = "powershell.exe";
+			process.StartInfo.FileName = PowerShellExecutable;
 			process.StartInfo.Arguments = "-Command \"Add-Type -Name Win32 -Namespace System -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern IntPtr GetDC(IntPtr hwnd); [DllImport(\\\"gdi32.dll\\\")] public static extern int GetDeviceCaps(IntPtr hdc, int nIndex); [DllImport(\\\"user32.dll\\\")] public static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);'; $hdc = [System.Win32]::GetDC([System.IntPtr]::Zero); $dpi = [System.Win32]::GetDeviceCaps($hdc, 88); [System.Win32]::ReleaseDC([System.IntPtr]::Zero, $hdc); $dpi\"";
 			process.StartInfo.UseShellExecute = false;
 			process.StartInfo.RedirectStandardOutput = true;
@@ -571,7 +571,7 @@ public static partial class ForceDpiAware
 
 			process.Start();
 			string output = process.StandardOutput.ReadToEnd().Trim();
-			string errorOutput = process.StandardError.ReadToEnd().Trim();
+			_ = process.StandardError.ReadToEnd();
 			process.WaitForExit();
 
 			if (process.ExitCode == 0 && int.TryParse(output, out int dpi) && dpi > 0)
@@ -583,15 +583,15 @@ public static partial class ForceDpiAware
 		}
 		catch (Win32Exception)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"Win32Exception in system metrics detection: {ex.Message}");
+			// Process execution failed
 		}
 		catch (IOException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"IOException in system metrics detection: {ex.Message}");
+			// IO error
 		}
 		catch (InvalidOperationException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"InvalidOperationException in system metrics detection: {ex.Message}");
+			// Process operation failed
 		}
 
 		return false;
@@ -602,6 +602,8 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if DPI was detected.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate PowerShell for WSLg DPI detection, not used as a security boundary; this is a diagnostic tool call only.")]
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method", Justification = "Explicit loop with early return is clearer and avoids unnecessary LINQ allocations in this diagnostic path.")]
 	internal static bool TryGetWslgWindowsDpi(out double scale)
 	{
 		scale = 1.0;
@@ -610,7 +612,7 @@ public static partial class ForceDpiAware
 		{
 			// Try to get system DPI via Windows interop using PowerShell (wmic is deprecated)
 			using System.Diagnostics.Process process = new();
-			process.StartInfo.FileName = "powershell.exe";
+			process.StartInfo.FileName = PowerShellExecutable;
 			process.StartInfo.Arguments = "-Command \"Get-WmiObject -Class Win32_DesktopMonitor | Select-Object PixelsPerXLogicalInch | Format-List\"";
 			process.StartInfo.UseShellExecute = false;
 			process.StartInfo.RedirectStandardOutput = true;
@@ -619,7 +621,7 @@ public static partial class ForceDpiAware
 
 			process.Start();
 			string output = process.StandardOutput.ReadToEnd();
-			string errorOutput = process.StandardError.ReadToEnd().Trim();
+			_ = process.StandardError.ReadToEnd();
 			process.WaitForExit();
 
 			if (process.ExitCode == 0)
@@ -647,7 +649,7 @@ public static partial class ForceDpiAware
 			process.StartInfo.Arguments = "-Command \"Get-CimInstance -Class Win32_DesktopMonitor | Select-Object PixelsPerXLogicalInch | Format-List\"";
 			process.Start();
 			output = process.StandardOutput.ReadToEnd();
-			errorOutput = process.StandardError.ReadToEnd().Trim();
+			_ = process.StandardError.ReadToEnd();
 			process.WaitForExit();
 
 			if (process.ExitCode == 0)
@@ -673,15 +675,15 @@ public static partial class ForceDpiAware
 		}
 		catch (Win32Exception)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"Win32Exception in WSLg detection: {ex.Message}");
+			// Process execution failed
 		}
 		catch (IOException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"IOException in WSLg detection: {ex.Message}");
+			// IO error
 		}
 		catch (InvalidOperationException)
 		{
-			// Logger.Warning?.Print(LogClass.Application, $"InvalidOperationException in WSLg detection: {ex.Message}");
+			// Process operation failed
 		}
 
 		return false;
@@ -692,6 +694,8 @@ public static partial class ForceDpiAware
 	/// </summary>
 	/// <param name="scale">The detected scale factor.</param>
 	/// <returns>True if a high-DPI display was detected.</returns>
+	[SuppressMessage("Security Hotspot", "S4036:Make sure the \"PATH\" variable only contains fixed, unwriteable directories", Justification = "PATH is read to locate xrandr for display heuristics, not used as a security boundary; this is a diagnostic tool call only.")]
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method", Justification = "Explicit nested loops with early return are clearer and avoid unnecessary LINQ allocations in this diagnostic path.")]
 	internal static bool TryDetectHighDpiDisplay(out double scale)
 	{
 		scale = 1.0;
@@ -726,15 +730,13 @@ public static partial class ForceDpiAware
 								string[] dimensions = part.Split('x');
 								if (dimensions.Length == 2 &&
 									int.TryParse(dimensions[0], out int width) &&
-									int.TryParse(dimensions[1], out int height))
+									int.TryParse(dimensions[1], out int height) &&
+									((width >= 2560 && height >= 1440) ||  // 1440p+
+									(width >= 1920 && height >= 1080 && (width > 1920 || height > 1080)))) // >1080p
 								{
 									// Common high-DPI resolutions that typically use 125% scaling
-									if ((width >= 2560 && height >= 1440) ||  // 1440p+
-										(width >= 1920 && height >= 1080 && (width > 1920 || height > 1080))) // >1080p
-									{
-										scale = 1.25; // 125% scaling is common for these resolutions
-										return true;
-									}
+									scale = 1.25; // 125% scaling is common for these resolutions
+									return true;
 								}
 							}
 						}

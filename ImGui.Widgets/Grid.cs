@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Numerics;
 
@@ -77,6 +78,7 @@ public static partial class ImGuiWidgets
 	/// <typeparam name="T">The type of the item.</typeparam>
 	/// <param name="item">The item to measure.</param>
 	/// <returns>The size of the item.</returns>
+	[SuppressMessage("Major Code Smell", "S3246:Generic type parameters should be co/contravariant when possible.", Justification = "Public API; adding 'in' variance would be a breaking change.")]
 	public delegate Vector2 MeasureGridCell<T>(T item);
 
 	/// <summary>
@@ -86,6 +88,7 @@ public static partial class ImGuiWidgets
 	/// <param name="item">The item to draw.</param>
 	/// <param name="cellSize">The calculated size of the grid cell.</param>
 	/// <param name="itemSize">The calculated size of the item.</param>
+	[SuppressMessage("Major Code Smell", "S3246:Generic type parameters should be co/contravariant when possible.", Justification = "Public API; adding 'in' variance would be a breaking change.")]
 	public delegate void DrawGridCell<T>(T item, Vector2 cellSize, Vector2 itemSize);
 
 	/// <summary>

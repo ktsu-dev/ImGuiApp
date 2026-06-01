@@ -140,7 +140,6 @@ public class ThemeBrowser
 			{
 				themeChanged = true; // Set flag when theme is successfully applied
 				onThemeSelectedCallback?.Invoke(selectedTheme.Name);
-				//ImGui.CloseCurrentPopup();
 			}
 		}, cardSize);
 
@@ -161,7 +160,6 @@ public class ThemeBrowser
 				Theme.ResetToDefault();
 				themeChanged = true; // Set flag when default is applied
 				onDefaultRequestedCallback?.Invoke();
-				//ImGui.CloseCurrentPopup();
 			}
 		}
 

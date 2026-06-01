@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Examples.App.Demos;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImPlot;
@@ -53,6 +54,7 @@ internal sealed class ImPlotDemo : IDemoTab
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImPlot interop; pointers are scoped to fixed blocks and not retained.")]
 	public void Render()
 	{
 		if (ImGui.BeginTabItem(TabName))

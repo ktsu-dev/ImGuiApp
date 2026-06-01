@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.App;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
 
@@ -22,21 +23,25 @@ public static class FontHelper
 	/// <summary>
 	/// Stores the extended Unicode glyph ranges to prevent memory deallocation.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated during lazy initialization and cannot be made readonly.")]
 	internal static ImVector<uint> extendedUnicodeRanges;
 
 	/// <summary>
 	/// Stores the emoji glyph ranges to prevent memory deallocation.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated during lazy initialization and cannot be made readonly.")]
 	internal static ImVector<uint> emojiRanges;
 
 	/// <summary>
 	/// Tracks whether the extended Unicode ranges have been initialized.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated to track initialization state and cannot be made readonly.")]
 	internal static bool extendedUnicodeRangesInitialized;
 
 	/// <summary>
 	/// Tracks whether the emoji ranges have been initialized.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated to track initialization state and cannot be made readonly.")]
 	internal static bool emojiRangesInitialized;
 
 	/// <summary>
@@ -84,6 +89,7 @@ public static class FontHelper
 	/// </summary>
 	/// <param name="fontAtlasPtr">The font atlas to use for building ranges.</param>
 	/// <returns>Pointer to the extended Unicode glyph ranges for main fonts.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; pointers are scoped to the call and not retained.")]
 	public static unsafe uint* GetExtendedUnicodeRanges(ImFontAtlasPtr fontAtlasPtr)
 	{
 		// Only build ranges once and store them to prevent memory deallocation
@@ -157,6 +163,7 @@ public static class FontHelper
 	/// Includes only true emoji ranges (1F*** blocks) plus ASCII and variation selectors.
 	/// </summary>
 	/// <returns>Pointer to the emoji glyph ranges.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; pointers are scoped to the call and not retained.")]
 	public static unsafe uint* GetEmojiRanges()
 	{
 		// Only build ranges once and store them to prevent memory deallocation
@@ -230,6 +237,8 @@ public static class FontHelper
 		}
 	}
 
+	private const string PowerlineExtraDescription = "Powerline Extra";
+
 	/// <summary>
 	/// Adds Nerd Font icon ranges to the glyph ranges builder.
 	/// Includes Font Awesome, Material Design Icons, Octicons, Weather Icons, and other common icon sets.
@@ -245,11 +254,11 @@ public static class FontHelper
 			// Pomicons
 			(0xE000, 0xE00D, "Pomicons"),
 			// Powerline Extra Symbols
-			(0xE0A3, 0xE0A3, "Powerline Extra"),
-			(0xE0B4, 0xE0C8, "Powerline Extra"),
-			(0xE0CA, 0xE0CA, "Powerline Extra"),
-			(0xE0CC, 0xE0D2, "Powerline Extra"),
-			(0xE0D4, 0xE0D4, "Powerline Extra"),
+			(0xE0A3, 0xE0A3, PowerlineExtraDescription),
+			(0xE0B4, 0xE0C8, PowerlineExtraDescription),
+			(0xE0CA, 0xE0CA, PowerlineExtraDescription),
+			(0xE0CC, 0xE0D2, PowerlineExtraDescription),
+			(0xE0D4, 0xE0D4, PowerlineExtraDescription),
 			// Weather Icons
 			(0xE300, 0xE3EB, "Weather Icons"),
 			// Font Awesome Extension
@@ -294,6 +303,7 @@ public static class FontHelper
 	/// <param name="glyphRanges">The glyph ranges to include, or null for default ASCII.</param>
 	/// <param name="mergeWithPrevious">Whether to merge this font with the previously added font.</param>
 	/// <returns>The ImFont pointer for the added font, or null if failed.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; pointers are scoped to the call and not retained.")]
 	public static unsafe ImFontPtr? AddCustomFont(ImGuiIOPtr io, byte[] fontData, float fontSize, uint* glyphRanges = null, bool mergeWithPrevious = false)
 	{
 		Ensure.NotNull(fontData);

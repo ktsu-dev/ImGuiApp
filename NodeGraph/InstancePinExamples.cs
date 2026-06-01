@@ -9,6 +9,7 @@ namespace ktsu.NodeGraph.Examples;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -70,6 +71,7 @@ public struct Point : IEquatable<Point>
 	public float OffsetX { get; set; }
 	public float OffsetY { get; set; }
 
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values", Justification = "Exact comparison is intentional here (value-type equality/identity check); a tolerance would change behavior.")]
 	public readonly bool Equals(Point other) => X == other.X && Y == other.Y && OffsetX == other.OffsetX && OffsetY == other.OffsetY;
 	public override readonly bool Equals(object? obj) => obj is Point other && Equals(other);
 	public override readonly int GetHashCode() => HashCode.Combine(X, Y, OffsetX, OffsetY);
@@ -154,6 +156,7 @@ public struct Color : IEquatable<Color>
 
 	[OutputPin]
 	[Description("Color with adjusted brightness")]
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values", Justification = "Exact comparison is intentional here (zero sentinel check); a tolerance would change behavior.")]
 	public Color WithBrightness
 	{
 		get
@@ -186,6 +189,7 @@ public struct Color : IEquatable<Color>
 	/// </summary>
 	public Color() => BrightnessAdjustment = 1.0f;
 
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values", Justification = "Exact comparison is intentional here (value-type equality/identity check); a tolerance would change behavior.")]
 	public readonly bool Equals(Color other) => R == other.R && G == other.G && B == other.B && BrightnessAdjustment == other.BrightnessAdjustment;
 	public override readonly bool Equals(object? obj) => obj is Color other && Equals(other);
 	public override readonly int GetHashCode() => HashCode.Combine(R, G, B, BrightnessAdjustment);

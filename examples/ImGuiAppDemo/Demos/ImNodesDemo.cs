@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Examples.App.Demos;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
@@ -77,6 +78,7 @@ internal sealed class ImNodesDemo : IDemoTab
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions.", Justification = "Explicit loop is clearer; loop body contains dictionary mutation that would not simplify cleanly.")]
 	private void UpdatePhysicsSimulation(float deltaTime)
 	{
 		// Initialize forces and velocities for new nodes
@@ -241,6 +243,7 @@ internal sealed class ImNodesDemo : IDemoTab
 		ImGui.Text($"Total Links: {links.Count}");
 	}
 
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (sentinel/identity check against 0.0f); a tolerance would change behavior.")]
 	private static void RenderCanvasDebugInfo(Vector2 canvasPanning)
 	{
 		// Canvas panning info (flip Y for intuitive display)
@@ -449,14 +452,11 @@ internal sealed class ImNodesDemo : IDemoTab
 			ImGui.SeparatorText("Link Fix Results:");
 			ImGui.TextColored(new Vector4(0.0f, 1.0f, 0.0f, 1.0f), linkFixSummary);
 
-			if (linkFixLog.Count > 0)
+			if (linkFixLog.Count > 0 && ImGui.CollapsingHeader("Fix Details"))
 			{
-				if (ImGui.CollapsingHeader("Fix Details"))
+				foreach (string logEntry in linkFixLog)
 				{
-					foreach (string logEntry in linkFixLog)
-					{
-						ImGui.Text(logEntry);
-					}
+					ImGui.Text(logEntry);
 				}
 			}
 		}
@@ -519,6 +519,8 @@ internal sealed class ImNodesDemo : IDemoTab
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S1871:Two branches in a conditional structure should not have exactly the same implementation.", Justification = "Branches are structurally identical but serve distinct semantic roles; merging would obscure the intent.")]
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (sentinel/identity check against 0.0f); a tolerance would change behavior.")]
 	private void RenderAllDebugOverlays(Vector2 editorAreaPos, Vector2 editorAreaSize)
 	{
 		// Get window draw list for screen space drawing
@@ -709,7 +711,7 @@ internal sealed class ImNodesDemo : IDemoTab
 
 				// Draw distance text at midpoint
 				Vector2 midpointScreen = (startScreen + endScreen) * 0.5f;
-				string distanceText = automaticLayout ? $"{distance:F0}px" : $"{distance:F0}px";
+				string distanceText = $"{distance:F0}px";
 				drawList.AddText(midpointScreen, lineColor, distanceText);
 			}
 		}
@@ -1120,32 +1122,29 @@ internal sealed class ImNodesDemo : IDemoTab
 			ImGui.SetTooltip("Pan the canvas so origin (0,0) is visible");
 		}
 
-		if (ImGui.Button("Center Canvas on Nodes"))
+		if (ImGui.Button("Center Canvas on Nodes") && nodes.Count > 0)
 		{
 			// Calculate area-weighted center of mass of all nodes using cached dimensions
-			if (nodes.Count > 0)
+			Vector2 weightedCenterSum = Vector2.Zero;
+			float totalArea = 0.0f;
+
+			foreach (SimpleNode node in nodes)
 			{
-				Vector2 weightedCenterSum = Vector2.Zero;
-				float totalArea = 0.0f;
+				// Use cached position and dimensions for efficient calculation
+				Vector2 nodePos = node.Position;
+				Vector2 nodeDims = node.Dimensions;
 
-				foreach (SimpleNode node in nodes)
-				{
-					// Use cached position and dimensions for efficient calculation
-					Vector2 nodePos = node.Position;
-					Vector2 nodeDims = node.Dimensions;
-
-					// Calculate area-weighted center (center of each node weighted by its area)
-					Vector2 nodeCenter = nodePos + (nodeDims * 0.5f);
-					float nodeArea = nodeDims.X * nodeDims.Y;
-					weightedCenterSum += nodeCenter * nodeArea;
-					totalArea += nodeArea;
-				}
-
-				Vector2 centerOfMass = totalArea > 0 ? weightedCenterSum / totalArea : Vector2.Zero;
-
-				// Pan canvas to center the area-weighted center of mass
-				ImNodes.EditorContextResetPanning(centerOfMass);
+				// Calculate area-weighted center (center of each node weighted by its area)
+				Vector2 nodeCenter = nodePos + (nodeDims * 0.5f);
+				float nodeArea = nodeDims.X * nodeDims.Y;
+				weightedCenterSum += nodeCenter * nodeArea;
+				totalArea += nodeArea;
 			}
+
+			Vector2 centerOfMass = totalArea > 0 ? weightedCenterSum / totalArea : Vector2.Zero;
+
+			// Pan canvas to center the area-weighted center of mass
+			ImNodes.EditorContextResetPanning(centerOfMass);
 		}
 		if (ImGui.IsItemHovered())
 		{
@@ -1308,6 +1307,7 @@ internal sealed class ImNodesDemo : IDemoTab
 		ImGui.Text($"System Energy: {totalEnergy:F2}");
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; pointers are scoped to the call and not retained.")]
 	private void HandleLinkEvents()
 	{
 		// Handle new links

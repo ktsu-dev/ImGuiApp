@@ -5,6 +5,7 @@
 namespace ktsu.ImGuiNodeEditor;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Hexa.NET.ImNodes;
 
 /// <summary>
@@ -15,6 +16,7 @@ public class NodeEditorInputHandler
 	/// <summary>
 	/// Process all input events and return the actions that should be taken
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2325:Make 'ProcessInput' a static method.", Justification = "Public instance method; making it static would be a breaking API change.")]
 	public InputEvents ProcessInput()
 	{
 		InputEvents events = new();
@@ -28,6 +30,7 @@ public class NodeEditorInputHandler
 		return events;
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; pointers are scoped to the call and not retained.")]
 	private static void ProcessLinkCreation(InputEvents events)
 	{
 		int startPin = 0;
@@ -45,6 +48,7 @@ public class NodeEditorInputHandler
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; pointers are scoped to the call and not retained.")]
 	private static void ProcessLinkDeletion(InputEvents events)
 	{
 		int linkId = 0;

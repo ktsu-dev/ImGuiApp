@@ -271,6 +271,7 @@ public sealed class WildcardPinAttribute : Attribute
 		}
 
 		// Check if type matches any constraint exactly
+#pragma warning disable S3267 // Explicit loop is clearer and avoids unnecessary LINQ allocation for type equality checking.
 		foreach (Type constraintType in TypeConstraints)
 		{
 			if (type == constraintType)
@@ -278,6 +279,7 @@ public sealed class WildcardPinAttribute : Attribute
 				return true;
 			}
 		}
+#pragma warning restore S3267
 
 		return false;
 	}

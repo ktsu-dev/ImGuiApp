@@ -5,7 +5,9 @@
 namespace ktsu.ImGui.Examples.Widgets;
 
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Text;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Popups;
@@ -130,6 +132,7 @@ internal static class ImGuiWidgetsDemo
 	private static TextFilterMatchOptions RegexMatchOptions = TextFilterMatchOptions.ByWholeString;
 
 #pragma warning disable CA5394 //Do not use insecure randomness
+	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
 	private static void OnStart()
 	{
 		// Create main layout with dedicated demo sections
@@ -144,14 +147,16 @@ internal static class ImGuiWidgetsDemo
 		// Generate test data for grid demos
 		for (int i = 0; i < InitialGridItemCount; i++)
 		{
-			string randomString = $"{i}:";
+			StringBuilder randomStringBuilder = new();
+			randomStringBuilder.Append(i);
+			randomStringBuilder.Append(':');
 			int randomAmount = new Random().Next(2, 32);
 			for (int j = 0; j < randomAmount; j++)
 			{
-				randomString += (char)new Random().Next(32, 127);
+				randomStringBuilder.Append((char)new Random().Next(32, 127));
 			}
 
-			GridStrings.Add(randomString);
+			GridStrings.Add(randomStringBuilder.ToString());
 		}
 	}
 #pragma warning restore CA5394 //Do not use insecure randomness

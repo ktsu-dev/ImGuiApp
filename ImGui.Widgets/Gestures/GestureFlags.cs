@@ -17,6 +17,10 @@ using System.Diagnostics.CodeAnalysis;
 	"Naming",
 	"CA1711:Identifiers should not have incorrect suffix",
 	Justification = "The 'Flags' suffix is intentional and accurately describes a [Flags] enum used as a result bitmask; the alternatives (GestureKind/GestureType) would imply a single-value classification.")]
+[SuppressMessage(
+	"Minor Code Smell",
+	"S2344:Enumeration type names should not have 'Flags' or 'Enum' suffixes",
+	Justification = "Public API: renaming would be a breaking change. The 'Flags' suffix accurately describes this [Flags] bitmask enum.")]
 public enum GestureFlags
 {
 	/// <summary>No gesture fired this frame.</summary>

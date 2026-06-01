@@ -8,6 +8,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
@@ -30,17 +31,24 @@ using Color = System.Drawing.Color;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
 public static partial class ImGuiApp
 {
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static IWindow? window;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static GL? gl;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static ImGuiController.ImGuiController? controller;
 
 	// The GPU texture/draw backend. Registered by the backend itself as soon as its GL
 	// context is ready (early in the ImGuiController constructor), so texture operations
 	// invoked from OnStart — which runs mid-construction, before `controller` is assigned —
 	// have a usable backend. See ImGuiController..ctor.
+  [SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static IRendererBackend? renderer;
+  [SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static IInputContext? inputContext;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static OpenGLProvider? glProvider;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static IntPtr currentGLContextHandle; // Track the current GL context handle
 
 	internal static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
@@ -63,6 +71,7 @@ public static partial class ImGuiApp
 	}
 
 	internal static ConcurrentDictionary<string, int> FontIndices { get; } = [];
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static float lastFontScaleFactor;
 	internal static readonly List<GCHandle> currentPinnedFontData = [];
 
@@ -91,9 +100,11 @@ public static partial class ImGuiApp
 	/// or the close button under <see cref="ImGuiAppConfig.HideOnClose"/>. Used as the source of truth for
 	/// visibility because some windowing backends (e.g. SDL) do not reliably report it.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static bool userHidden;
 
 	/// <summary>Set when <see cref="ImGuiAppConfig.StartHidden"/> is requested; applied on the first update tick once the native handle exists.</summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static bool startHiddenPending;
 
 	/// <summary>
@@ -106,9 +117,12 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static bool IsIdle { get; private set; }
 
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static DateTime lastInputTime = DateTime.UtcNow;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static double targetFrameTimeMs = 1000.0 / 30.0; // Default to 30 FPS (33.33ms per frame)
 	internal static readonly PidFrameLimiter frameLimiter = new();
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static double previousTargetFrameTimeMs = 1000.0 / 30.0;
 
 	/// <summary>Drives the native window styling that backs overlay mode (see <see cref="EnableOverlay"/>).</summary>
@@ -126,15 +140,21 @@ public static partial class ImGuiApp
 	/// </summary>
 	internal static void OnUserInput() => lastInputTime = DateTime.UtcNow;
 
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static bool showImGuiMetrics;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static bool showImGuiDemo;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static bool showPerformanceMonitor;
 
 	// Performance monitoring data structures
 	internal static readonly Queue<float> performanceFrameTimes = new();
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static float performanceFrameTimeSum;
 	internal static readonly Queue<float> performanceFpsHistory = new();
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static float performanceLastFpsUpdateTime;
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static int performanceFrameCount;
 
 	/// <summary>
@@ -222,6 +242,7 @@ public static partial class ImGuiApp
 		window = Window.Create(silkWindowOptions);
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop to retrieve the current context handle; pointer is not retained.")]
 	internal static void SetupWindowLoadHandler(ImGuiAppConfig config)
 	{
 		window!.Load += () =>
@@ -733,14 +754,6 @@ public static partial class ImGuiApp
 
 		if (!config.TestMode)
 		{
-			// Temporarily keep console window visible for debugging
-			// if (OperatingSystem.IsWindows())
-			// {
-			//     DebugLogger.Log("ImGuiApp.Start: Hiding console window");
-			//     nint handle = NativeMethods.GetConsoleWindow();
-			//     NativeMethods.ShowWindow(handle, SW_HIDE);
-			// }
-
 			DebugLogger.Log("ImGuiApp.Start: Starting window run loop");
 			window.Run();
 			DebugLogger.Log("ImGuiApp.Start: Window run loop completed");
@@ -876,6 +889,7 @@ public static partial class ImGuiApp
 	/// Ensures the window is positioned on a visible monitor. This method provides improved
 	/// multi-monitor support, better visibility detection, and performance optimizations.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S1696:\"NullReferenceException\" should not be caught", Justification = "Deliberate defensive guard around Silk.NET monitor API which can throw NRE during window state transitions.")]
 	internal static void EnsureWindowPositionIsValid()
 	{
 		// Early exit for invalid states
@@ -937,6 +951,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Gets all available monitors from the windowing system.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S1696:\"NullReferenceException\" should not be caught", Justification = "Deliberate defensive guard around Silk.NET monitor API which can throw NRE during window state transitions.")]
 	private static IMonitor[] GetAvailableMonitors()
 	{
 		try
@@ -1089,72 +1104,69 @@ public static partial class ImGuiApp
 	/// <param name="menuDelegate">The delegate to render the menu.</param>
 	internal static void RenderAppMenu(Action? menuDelegate)
 	{
-		if (menuDelegate is not null)
+		if (menuDelegate is not null && ImGui.BeginMainMenuBar())
 		{
-			if (ImGui.BeginMainMenuBar())
+			menuDelegate();
+
+			if (ImGui.BeginMenu("Accessibility"))
 			{
-				menuDelegate();
+				ImGui.Text("UI Scale:");
+				ImGui.Separator();
 
-				if (ImGui.BeginMenu("Accessibility"))
+				if (ImGui.MenuItem("75%", "", Math.Abs(GlobalScale - 0.75f) < 0.01f))
 				{
-					ImGui.Text("UI Scale:");
-					ImGui.Separator();
-
-					if (ImGui.MenuItem("75%", "", Math.Abs(GlobalScale - 0.75f) < 0.01f))
-					{
-						SetGlobalScale(0.75f);
-					}
-
-					if (ImGui.MenuItem("100%", "", Math.Abs(GlobalScale - 1.0f) < 0.01f))
-					{
-						SetGlobalScale(1.0f);
-					}
-
-					if (ImGui.MenuItem("125%", "", Math.Abs(GlobalScale - 1.25f) < 0.01f))
-					{
-						SetGlobalScale(1.25f);
-					}
-
-					if (ImGui.MenuItem("150%", "", Math.Abs(GlobalScale - 1.5f) < 0.01f))
-					{
-						SetGlobalScale(1.5f);
-					}
-
-					if (ImGui.MenuItem("175%", "", Math.Abs(GlobalScale - 1.75f) < 0.01f))
-					{
-						SetGlobalScale(1.75f);
-					}
-
-					if (ImGui.MenuItem("200%", "", Math.Abs(GlobalScale - 2.0f) < 0.01f))
-					{
-						SetGlobalScale(2.0f);
-					}
-
-					ImGui.EndMenu();
+					SetGlobalScale(0.75f);
 				}
 
-				if (ImGui.BeginMenu("Debug"))
+				if (ImGui.MenuItem("100%", "", Math.Abs(GlobalScale - 1.0f) < 0.01f))
 				{
-					if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
-					{
-						showImGuiDemo = !showImGuiDemo;
-					}
-
-					if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
-					{
-						showImGuiMetrics = !showImGuiMetrics;
-					}
-
-					if (ImGui.MenuItem("Show Performance Monitor", "", showPerformanceMonitor))
-					{
-						showPerformanceMonitor = !showPerformanceMonitor;
-					}
-
-					ImGui.EndMenu();
+					SetGlobalScale(1.0f);
 				}
 
-				ImGui.EndMainMenuBar();
+				if (ImGui.MenuItem("125%", "", Math.Abs(GlobalScale - 1.25f) < 0.01f))
+				{
+					SetGlobalScale(1.25f);
+				}
+
+				if (ImGui.MenuItem("150%", "", Math.Abs(GlobalScale - 1.5f) < 0.01f))
+				{
+					SetGlobalScale(1.5f);
+				}
+
+				if (ImGui.MenuItem("175%", "", Math.Abs(GlobalScale - 1.75f) < 0.01f))
+				{
+					SetGlobalScale(1.75f);
+				}
+
+				if (ImGui.MenuItem("200%", "", Math.Abs(GlobalScale - 2.0f) < 0.01f))
+				{
+					SetGlobalScale(2.0f);
+				}
+
+				ImGui.EndMenu();
 			}
+
+			if (ImGui.BeginMenu("Debug"))
+			{
+				if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
+				{
+					showImGuiDemo = !showImGuiDemo;
+				}
+
+				if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
+				{
+					showImGuiMetrics = !showImGuiMetrics;
+				}
+
+				if (ImGui.MenuItem("Show Performance Monitor", "", showPerformanceMonitor))
+				{
+					showPerformanceMonitor = !showPerformanceMonitor;
+				}
+
+				ImGui.EndMenu();
+			}
+
+			ImGui.EndMainMenuBar();
 		}
 	}
 
@@ -1225,6 +1237,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Gets or loads a texture from the specified file path with optimized memory usage.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop; pointer is scoped to the call and not retained.")]
 	public static ImGuiAppTextureInfo GetOrLoadTexture(AbsoluteFilePath path)
 	{
 		// Check if the texture is already loaded
@@ -1367,6 +1380,7 @@ public static partial class ImGuiApp
 
 	// Using the new ImGui 1.92.0 dynamic font system with memory guards
 	// Fonts can now be rendered at any size dynamically, but we limit memory usage for small GPUs
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font atlas interop; pointers are scoped to atlas-building calls and not retained.")]
 	internal static unsafe void InitFonts()
 	{
 		DebugLogger.Log("InitFonts: Starting font initialization with memory guards");
@@ -1470,13 +1484,8 @@ public static partial class ImGuiApp
 				// Prioritize DefaultFonts over custom Fonts for setting the default font
 				if (size == FontAppearance.DefaultFontPointSize)
 				{
-					// If this is from DefaultFonts, use it as the default font
-					if (Config.DefaultFonts.ContainsKey(name))
-					{
-						defaultFontIndex = FontIndices[$"{name}_{size}"];
-					}
-					// If no DefaultFonts font has been set yet, use the first custom font as fallback
-					else if (defaultFontIndex == -1)
+					// Use this font as the default if it is from DefaultFonts (preferred) or if no default has been set yet (fallback)
+					if (Config.DefaultFonts.ContainsKey(name) || defaultFontIndex == -1)
 					{
 						defaultFontIndex = FontIndices[$"{name}_{size}"];
 					}
@@ -1581,6 +1590,7 @@ public static partial class ImGuiApp
 	/// <param name="fontAtlasPtr">The font atlas for building ranges.</param>
 	/// <param name="useReducedUnicode">Whether to use reduced Unicode ranges.</param>
 	/// <returns>Pointer to the appropriate glyph ranges.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui glyph range interop; pointer is returned from ImGui-owned memory and not retained independently.")]
 	internal static unsafe uint* GetConstrainedGlyphRanges(ImFontAtlasPtr fontAtlasPtr, bool useReducedUnicode)
 	{
 		if (useReducedUnicode)
@@ -1638,6 +1648,7 @@ public static partial class ImGuiApp
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="pointSize">The point size for the font.</param>
 	/// <param name="glyphRanges">Custom glyph ranges, or null for default ranges.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL font loading from pre-allocated memory; pointers are scoped to the atlas call and not retained.")]
 	internal static unsafe void LoadFontFromMemory(string name, nint fontHandle, int fontLength, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges = null)
 	{
 		// Calculate optimal pixel size for the font
@@ -1649,7 +1660,19 @@ public static partial class ImGuiApp
 		fontConfig.PixelSnapH = true;
 
 		// Use custom glyph ranges if provided, otherwise use extended Unicode ranges if enabled
-		uint* ranges = glyphRanges != null ? glyphRanges : (Config.EnableUnicodeSupport ? FontHelper.GetExtendedUnicodeRanges(fontAtlasPtr) : fontAtlasPtr.GetGlyphRangesDefault());
+		uint* ranges;
+		if (glyphRanges != null)
+		{
+			ranges = glyphRanges;
+		}
+		else if (Config.EnableUnicodeSupport)
+		{
+			ranges = FontHelper.GetExtendedUnicodeRanges(fontAtlasPtr);
+		}
+		else
+		{
+			ranges = fontAtlasPtr.GetGlyphRangesDefault();
+		}
 
 		// Add font to atlas using pre-allocated memory
 		int fontIndex = fontAtlasPtr.Fonts.Size;
@@ -1667,6 +1690,7 @@ public static partial class ImGuiApp
 	/// <param name="emojiLength">The length of the emoji font data in bytes.</param>
 	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
 	/// <param name="size">The font size to load emoji font for.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui emoji font loading from pre-allocated memory; pointers are scoped to the atlas call and not retained.")]
 	internal static unsafe void LoadEmojiFontFromMemory(nint emojiHandle, int emojiLength, ImFontAtlasPtr fontAtlasPtr, int size)
 	{
 		// Get emoji-specific ranges (separate from main font to avoid conflicts)
@@ -1807,6 +1831,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Checks if the OpenGL context has changed and handles texture reloading if needed
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop to detect context handle changes; pointer is not retained.")]
 	internal static void CheckAndHandleContextChange()
 	{
 		if (gl == null)
@@ -1832,6 +1857,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Reloads all previously loaded textures in the new context
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop on context change; pointer is scoped to the call and not retained.")]
 	internal static void ReloadAllTextures()
 	{
 		if (gl == null)
@@ -1853,8 +1879,6 @@ public static partial class ImGuiApp
 				if (File.Exists(path))
 				{
 					using Image<Rgba32> image = Image.Load<Rgba32>(path);
-					uint oldTextureId = oldInfo.TextureId;
-
 					// Upload new texture
 					UseImageBytes(image, bytes =>
 					{
@@ -1870,6 +1894,10 @@ public static partial class ImGuiApp
 			}
 			catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException)
 			{
+				// Intentionally swallowed: if a texture file is missing or unreadable during a context
+				// change, we skip it and continue reloading the remaining textures. The old context
+				// handle is already gone so there is nothing further to clean up.
+				DebugLogger.Log($"ReloadAllTextures: Skipping texture due to error - {ex.Message}");
 			}
 		}
 	}
@@ -1994,7 +2022,7 @@ public static partial class ImGuiApp
 				}
 
 				// Show current throttling state
-				string currentState = "Unknown";
+				string currentState;
 				if (isTuningActive)
 				{
 					currentState = "Throttling Disabled (PID Tuning Active)";

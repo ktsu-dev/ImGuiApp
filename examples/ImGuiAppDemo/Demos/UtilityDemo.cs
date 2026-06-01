@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Examples.App.Demos;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Hexa.NET.ImGui;
 
@@ -40,6 +41,7 @@ internal sealed class UtilityDemo : IDemoTab
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the pointer is read-only and scoped to the fixed block.")]
 	public void Render()
 	{
 		if (ImGui.BeginTabItem(TabName))

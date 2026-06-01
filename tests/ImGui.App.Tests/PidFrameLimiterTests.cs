@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.App.Tests;
 
+using System.Diagnostics.CodeAnalysis;
 using ktsu.ImGui.App;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -60,6 +61,7 @@ public sealed class PidFrameLimiterTests
 	#region Basic Functionality Tests
 
 	[TestMethod]
+	[SuppressMessage("Tests", "S2925:Do not use 'Thread.Sleep()' in a test.", Justification = "Test exercises real time-based behavior; sleep is intentional to simulate frame processing.")]
 	public void Reset_ClearsInternalState()
 	{
 		Assert.IsNotNull(_frameLimiter);
@@ -397,6 +399,7 @@ public sealed class PidFrameLimiterTests
 	#region Integration Tests
 
 	[TestMethod]
+	[SuppressMessage("Tests", "S2925:Do not use 'Thread.Sleep()' in a test.", Justification = "Test exercises real time-based behavior of the PID frame limiter; sleep is intentional to simulate frame processing time.")]
 	public void FrameLimiter_ConsecutiveCalls_MaintainsStableState()
 	{
 		Assert.IsNotNull(_frameLimiter);
@@ -423,6 +426,7 @@ public sealed class PidFrameLimiterTests
 	}
 
 	[TestMethod]
+	[SuppressMessage("Tests", "S2925:Do not use 'Thread.Sleep()' in a test.", Justification = "Test exercises real time-based behavior of the PID frame limiter; sleep is intentional to simulate different frame rates.")]
 	public void FrameLimiter_ChangingTargetFrameRate_AdaptsCorrectly()
 	{
 		Assert.IsNotNull(_frameLimiter);

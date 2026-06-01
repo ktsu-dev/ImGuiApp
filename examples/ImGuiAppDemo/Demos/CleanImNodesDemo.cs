@@ -99,6 +99,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		renderer.RenderDebugOverlays(engine, editorAreaPos, editorAreaSize, showDebugVisualization);
 	}
 
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "Loop body has side effects (engine.TryCreateLink, field writes); a Where rewrite would not be equivalent.")]
 	private void ProcessInputEvents()
 	{
 		InputEvents events = inputHandler.ProcessInput();

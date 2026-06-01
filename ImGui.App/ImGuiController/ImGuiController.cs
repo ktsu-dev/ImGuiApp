@@ -6,6 +6,7 @@ namespace ktsu.ImGui.App.ImGuiController;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
@@ -14,7 +15,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-internal sealed class ImGuiController : IDisposable, IRendererBackend
+internal sealed class ImGuiController : IRendererBackend
 {
 
 	internal GL? _gl;
@@ -68,6 +69,8 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 	/// <summary>
 	/// Constructs a new ImGuiController with font configuration and onConfigure Action.
 	/// </summary>
+	[SuppressMessage("Minor Code Smell", "S3427:Method overloads with default parameter values should not overlap", Justification = "Overlapping overloads are by design to support multiple calling conventions; the explicit 3-param overload delegates here.")]
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font-loading interop; unsafe pointer is pinned within a fixed block and not retained.")]
 	public ImGuiController(GL gl, IView view, IInputContext input, ImGuiFontConfig? imGuiFontConfig = null, Action? onConfigureIO = null)
 	{
 		DebugLogger.Log("ImGuiController: Starting initialization");
@@ -208,7 +211,7 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 		// Auxiliary buttons (Button4-Button12, Unknown) are ignored
 	}
 
-	internal void OnMouseMove(IMouse _, Vector2 position)
+	internal static void OnMouseMove(IMouse _, Vector2 position)
 	{
 		ImGuiApp.OnUserInput();
 		ImGuiIOPtr io = ImGui.GetIO();
@@ -264,6 +267,7 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 		"CA2000:Dispose objects before losing scope",
 		Justification = "The Texture wrapper's resource is the GL texture; we hand its name back to ImGui, " +
 			"so disposing here would delete the very texture we're returning. Lifetime is owned by the caller.")]
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; pointer is pinned within a fixed block and not retained.")]
 	public unsafe nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 	{
 		if (_gl is null)
@@ -524,6 +528,7 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 		};
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for OpenGL vertex attribute pointer setup using ImGui draw vertex layout; pointers are local and not retained.")]
 	internal unsafe void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
 	{
 		if (_gl is null || _shader is null)
@@ -587,6 +592,8 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 	}
 
 	/// <inheritdoc />
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
+	[SuppressMessage("Major Code Smell", "S927:Parameter names should match base declaration and other partial definitions", Justification = "Parameter name 'drawDataPtr' is used consistently in this implementation; renaming could break existing callers using named arguments.")]
 	public unsafe void RenderDrawData(ImDrawDataPtr drawDataPtr)
 	{
 		if (_gl is null)
@@ -851,6 +858,7 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 	/// <summary>
 	/// Creates the texture used to render text.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font atlas texture upload; unsafe pointer is read-only access to ImGui-owned texture pixels.")]
 	internal void RecreateFontDeviceTexture()
 	{
 		DebugLogger.Log("RecreateFontDeviceTexture: Starting");
@@ -954,30 +962,27 @@ internal sealed class ImGuiController : IDisposable, IRendererBackend
 			return;
 		}
 
-		if (disposing)
+		if (disposing && _gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _fontTexture is not null && _shader is not null)
 		{
 			// Dispose managed resources
-			if (_gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _fontTexture is not null && _shader is not null)
-			{
-				_view.Resize -= WindowResized;
-				_keyboard.KeyDown -= OnKeyDown;
-				_keyboard.KeyUp -= OnKeyUp;
-				_keyboard.KeyChar -= OnKeyChar;
-				_mouse.MouseDown -= OnMouseDown;
-				_mouse.MouseUp -= OnMouseUp;
-				_mouse.MouseMove -= OnMouseMove;
-				_mouse.Scroll -= OnMouseScroll;
+			_view.Resize -= WindowResized;
+			_keyboard.KeyDown -= OnKeyDown;
+			_keyboard.KeyUp -= OnKeyUp;
+			_keyboard.KeyChar -= OnKeyChar;
+			_mouse.MouseDown -= OnMouseDown;
+			_mouse.MouseUp -= OnMouseUp;
+			_mouse.MouseMove -= OnMouseMove;
+			_mouse.Scroll -= OnMouseScroll;
 
-				_gl.DeleteBuffer(_vboHandle);
-				_gl.DeleteBuffer(_elementsHandle);
-				_gl.DeleteVertexArray(_vertexArrayObject);
+			_gl.DeleteBuffer(_vboHandle);
+			_gl.DeleteBuffer(_elementsHandle);
+			_gl.DeleteVertexArray(_vertexArrayObject);
 
-				_fontTexture.Dispose();
-				_shader.Dispose();
+			_fontTexture.Dispose();
+			_shader.Dispose();
 
-				ImGuiExtensionManager.Cleanup();
-				ImGui.DestroyContext();
-			}
+			ImGuiExtensionManager.Cleanup();
+			ImGui.DestroyContext();
 		}
 
 		// Mark as disposed

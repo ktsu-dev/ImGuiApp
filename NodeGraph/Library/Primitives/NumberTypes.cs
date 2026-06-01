@@ -8,6 +8,7 @@ namespace ktsu.NodeGraph.Library.Primitives;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Number data structure.
@@ -16,6 +17,7 @@ public struct NumberData : IEquatable<NumberData>
 {
 	public double Value { get; set; }
 
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead", Justification = "Exact equality is required for IEquatable<T> value-identity semantics; a tolerance would break equality contracts.")]
 	public readonly bool Equals(NumberData other) => Value == other.Value;
 	public override readonly bool Equals(object? obj) => obj is NumberData other && Equals(other);
 	public override readonly int GetHashCode() => Value.GetHashCode();

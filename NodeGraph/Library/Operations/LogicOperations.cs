@@ -8,6 +8,7 @@ namespace ktsu.NodeGraph.Library.Operations;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Type conversion operations as static method nodes.
@@ -48,6 +49,7 @@ public static class TypeConversions
 
 	[Node("To Bool")]
 	[Description("Converts value to boolean")]
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values", Justification = "Exact comparison is intentional here (zero sentinel check for truthiness conversion); a tolerance would change behavior.")]
 	public static bool ToBool(object value)
 	{
 		return value switch
