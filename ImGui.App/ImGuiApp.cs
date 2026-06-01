@@ -54,6 +54,14 @@ public static partial class ImGuiApp
 	internal static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
 	/// <summary>
+	/// Window size, position, and layout state captured when overlay mode was entered, so the
+	/// window can be restored exactly when overlay mode is disabled. Null while overlay mode is
+	/// inactive (see <see cref="EnableOverlay"/> / <see cref="DisableOverlay"/>).
+	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
+	internal static ImGuiAppWindowState? preOverlayWindowState;
+
+	/// <summary>
 	/// Gets the current state of the ImGui application window.
 	/// </summary>
 	/// <value>
@@ -423,8 +431,31 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="opacity">Whole-window opacity, clamped to 0.2 (faint) – 1.0 (opaque).</param>
 	/// <param name="clickThrough">When true, mouse input passes through to whatever is behind the overlay.</param>
-	public static void EnableOverlay(float opacity = 1.0f, bool clickThrough = false) =>
+	public static void EnableOverlay(float opacity = 1.0f, bool clickThrough = false)
+	{
+		bool wasActive = overlayChrome.IsActive;
+
+		// Snapshot the window on the transition into overlay (EnableOverlay is safe to call every
+		// frame, so only the first call records it) so DisableOverlay can restore it exactly.
+		if (!wasActive && window is not null)
+		{
+			preOverlayWindowState = new()
+			{
+				Size = new(window.Size.X, window.Size.Y),
+				Pos = new(window.Position.X, window.Position.Y),
+				LayoutState = window.WindowState,
+			};
+		}
+
 		overlayChrome.Enable(TryGetWindowHandle(), opacity, clickThrough);
+
+		// Dropping the title bar/border changes the client area; remap the canvas so the viewport
+		// and consumer layout track the new drawable surface. Only needed on the initial transition.
+		if (!wasActive)
+		{
+			RemapCanvas(Config);
+		}
+	}
 
 	/// <summary>
 	/// Locks the overlay to a corner of the active monitor's work area at the given offset and
@@ -441,25 +472,83 @@ public static partial class ImGuiApp
 		overlayChrome.SetGeometry(TryGetWindowHandle(), corner, offsetX, offsetY, width, height);
 
 	/// <summary>
-	/// Leaves overlay mode and restores the decorated, non-topmost, opaque window. Safe to call
-	/// repeatedly (including when overlay mode was never entered).
+	/// Leaves overlay mode and restores the decorated, non-topmost, opaque window — including the
+	/// size, position, and layout state it had before <see cref="EnableOverlay"/> was called — then
+	/// remaps the canvas to the restored surface. Safe to call repeatedly (including when overlay
+	/// mode was never entered).
 	/// </summary>
-	public static void DisableOverlay() => overlayChrome.Disable();
-
-	internal static void SetupWindowResizeHandler(ImGuiAppConfig config)
+	public static void DisableOverlay()
 	{
-		window!.FramebufferResize += s =>
+		bool wasActive = overlayChrome.IsActive;
+
+		overlayChrome.Disable();
+
+		if (wasActive)
 		{
-			gl?.Viewport(s);
-			CaptureWindowNormalState();
-			UpdateDpiScale();
-			CheckAndHandleContextChange();
+			// Put the window back the way it was before overlay mode, then remap the canvas so the
+			// viewport and consumer layout track the restored drawable surface.
+			RestorePreOverlayWindowState();
+			RemapCanvas(Config);
+		}
+	}
 
-			// Force validation on next update cycle since window size changed
-			ForceWindowPositionValidation();
+	/// <summary>
+	/// Restores the window to the size, position, and layout state captured when overlay mode was
+	/// last entered (see <see cref="EnableOverlay"/>). No-op if nothing was captured or the window
+	/// is unavailable.
+	/// </summary>
+	private static void RestorePreOverlayWindowState()
+	{
+		if (window is null || preOverlayWindowState is null)
+		{
+			return;
+		}
 
-			config.OnMoveOrResize?.Invoke();
-		};
+		ImGuiAppWindowState state = preOverlayWindowState;
+		preOverlayWindowState = null;
+
+		window.WindowState = state.LayoutState;
+
+		// Size and position only matter for a normal window; a maximized/fullscreen layout state
+		// already dictates the geometry.
+		if (state.LayoutState == Silk.NET.Windowing.WindowState.Normal)
+		{
+			window.Size = new((int)state.Size.X, (int)state.Size.Y);
+			window.Position = new((int)state.Pos.X, (int)state.Pos.Y);
+		}
+	}
+
+	internal static void SetupWindowResizeHandler(ImGuiAppConfig config) =>
+		window!.FramebufferResize += _ => RemapCanvas(config);
+
+	/// <summary>
+	/// Re-syncs the renderer and consumer layout to the window's current drawable surface:
+	/// updates the GL viewport, captures the normal-window geometry, refreshes the DPI scale,
+	/// handles any GL context change, schedules a position-validation pass, and notifies the
+	/// consumer via <see cref="ImGuiAppConfig.OnMoveOrResize"/>.
+	/// <para>
+	/// Shared by the framebuffer-resize event and by overlay enter/exit
+	/// (<see cref="EnableOverlay"/> / <see cref="DisableOverlay"/>), since toggling the borderless
+	/// overlay chrome changes the client area out from under the renderer just like a user resize.
+	/// No-op when the window is unavailable (e.g. before it is created, or in tests).
+	/// </para>
+	/// </summary>
+	internal static void RemapCanvas(ImGuiAppConfig config)
+	{
+		if (window is null)
+		{
+			return;
+		}
+
+		gl?.Viewport(window.FramebufferSize);
+		CaptureWindowNormalState();
+		UpdateDpiScale();
+		CheckAndHandleContextChange();
+
+		// Force validation on next update cycle since the drawable surface changed.
+		ForceWindowPositionValidation();
+
+		config.OnMoveOrResize?.Invoke();
 	}
 
 	internal static void SetupWindowMoveHandler(ImGuiAppConfig config)
@@ -811,7 +900,10 @@ public static partial class ImGuiApp
 
 	internal static void CaptureWindowNormalState()
 	{
-		if (window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
+		// While overlay mode is active the window is borderless and corner-locked; that geometry is
+		// not the user's "normal" window, so it must not overwrite the saved normal state (which is
+		// what DisableOverlay restores to).
+		if (!IsOverlayActive && window?.WindowState == Silk.NET.Windowing.WindowState.Normal)
 		{
 			LastNormalWindowState = new()
 			{
@@ -1804,6 +1896,7 @@ public static partial class ImGuiApp
 		hideOnCloseProc = null;
 		originalWindowProc = 0;
 		LastNormalWindowState = new();
+		preOverlayWindowState = null;
 		FontIndices.Clear();
 		lastFontScaleFactor = 0;
 		currentPinnedFontData.Clear();
