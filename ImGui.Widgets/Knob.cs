@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Numerics;
 
@@ -46,6 +47,7 @@ public enum ImGuiKnobOptions
 /// Variants for customizing the visual appearance of the knob widget.
 /// </summary>
 [Flags]
+[SuppressMessage("Minor Code Smell", "S2342:Enumeration types should comply with a naming convention", Justification = "Name matches the native ImGui convention; renaming would be a breaking public API change.")]
 public enum ImGuiKnobVariant
 {
 	/// <summary>
@@ -207,7 +209,9 @@ public static partial class ImGuiWidgets
 			public float AngleCos { get; set; }
 			public float AngleSin { get; set; }
 
+			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic accumulator state is intentional; each TDataType has its own accumulator.")]
 			private static float AccumulatedDiff { get; set; }
+			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic accumulator state is intentional; each TDataType has its own accumulator.")]
 			private static bool AccumulatorDirty { get; set; }
 
 			private static float InverseLerp(TDataType min, TDataType max, TDataType value) => float.CreateSaturating(value - min) / float.CreateSaturating(max - min);
@@ -234,6 +238,7 @@ public static partial class ImGuiWidgets
 				AngleSin = MathF.Sin(Angle);
 			}
 
+			[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead", Justification = "Exact comparisons are intentional sentinel/identity checks; a tolerance would change drag-accumulation behavior.")]
 			private bool DragBehavior(ImGuiDataType dataType, ref TDataType v, TDataType vMin, TDataType vMax, float speed, string format, ImGuiKnobOptions flags)
 			{
 				float floatValue = float.CreateSaturating(v);
@@ -400,12 +405,16 @@ public static partial class ImGuiWidgets
 				return fmtSpan;
 			}
 
+			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic constant step table is intentional; identical across closed types but separation is harmless.")]
 			private static readonly List<float> MinSteps = [1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f];
 			private static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
 			{
-				return decimal_precision < 0
-					? float.MinValue
-					: (decimal_precision < MinSteps.Count) ? MinSteps[decimal_precision] : MathF.Pow(10.0f, -decimal_precision);
+				if (decimal_precision < 0)
+				{
+					return float.MinValue;
+				}
+
+				return (decimal_precision < MinSteps.Count) ? MinSteps[decimal_precision] : MathF.Pow(10.0f, -decimal_precision);
 			}
 
 			private void DrawDot(float size, float radius, float angle, KnobColors color, int segments)
@@ -413,10 +422,11 @@ public static partial class ImGuiWidgets
 				float dotSize = size * Radius;
 				float dotRadius = radius * Radius;
 
+				ImColor dotColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
 				ImGui.GetWindowDrawList().AddCircleFilled(
 							new(Center[0] + (MathF.Cos(angle) * dotRadius), Center[1] + (MathF.Sin(angle) * dotRadius)),
 							dotSize,
-							ImGui.GetColorU32((IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base)).Value),
+							ImGui.GetColorU32(dotColor.Value),
 							segments);
 			}
 
@@ -427,11 +437,12 @@ public static partial class ImGuiWidgets
 				float angleCos = MathF.Cos(angle);
 				float angleSin = MathF.Sin(angle);
 
+				ImColor tickColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
 				ImGui.GetWindowDrawList().AddLine(
 
 					new(Center[0] + (angleCos * tickEnd), Center[1] + (angleSin * tickEnd)),
 					new(Center[0] + (angleCos * tickStart), Center[1] + (angleSin * tickStart)),
-					ImGui.GetColorU32((IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base)).Value),
+					ImGui.GetColorU32(tickColor.Value),
 					width * Radius);
 			}
 
@@ -439,25 +450,28 @@ public static partial class ImGuiWidgets
 			{
 				float circleRadius = size * Radius;
 
+				ImColor circleColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
 				ImGui.GetWindowDrawList().AddCircleFilled(
 						Center,
 						circleRadius,
-						ImGui.GetColorU32((IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base)).Value),
+						ImGui.GetColorU32(circleColor.Value),
 						segments);
 			}
 
+			[SuppressMessage("Major Code Smell", "S3218:Members of a type should not shadow outer class members with the same name", Justification = "Private instance wrapper around the outer static; different signature (no center/radius params). Renaming would reduce readability.")]
 			private void DrawArc(float radius, float size, float startAngle, float endAngle, KnobColors color, int segments, int bezierCount)
 			{
 				float trackRadius = radius * Radius;
 				float trackSize = (size * Radius * 0.5f) + 0.0001f;
 
+				ImColor arcColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
 				KnobImpl.DrawArc(
 						Center,
 						trackRadius,
 						startAngle,
 						endAngle,
 						trackSize,
-						IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base),
+						arcColor,
 						segments,
 						bezierCount);
 			}
@@ -521,6 +535,8 @@ public static partial class ImGuiWidgets
 				return lines;
 			}
 
+			[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead", Justification = "Exact zero comparisons are intentional sentinel checks for default/unset values; a tolerance would change behavior.")]
+			[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui DragScalar interop; pointers are scoped to the call and not retained.")]
 			public static KnobInternal<TDataType> KnobWithDrag(string label, ImGuiDataType dataType, ref TDataType value, TDataType vMin, TDataType vMax, float speed, string format, float? size, ImGuiKnobOptions flags)
 			{
 				speed = speed == 0 ? float.CreateSaturating(vMax - vMin) / 250.0f : speed;
@@ -550,7 +566,6 @@ public static partial class ImGuiWidgets
 
 				// There's an issue with `SameLine` and Groups, see https://github.com/ocornut/imgui/issues/4190.
 				// This is probably not the best solution, but seems to work for now
-				//ImGui.GetCurrentWindow().DC.CurrLineTextBaseOffset = 0;
 
 				if (!flags.HasFlag(ImGuiKnobOptions.TitleBelow))
 				{
@@ -697,6 +712,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
+		[SuppressMessage("Major Code Smell", "S3398:Consider making this method private and moving it inside the nested type 'KnobInternal'", Justification = "Helper methods are used by multiple nested paths; moving them inside the generic type would duplicate or complicate access.")]
 		private static KnobColors GetPrimaryColorSet()
 		{
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
@@ -709,6 +725,7 @@ public static partial class ImGuiWidgets
 			};
 		}
 
+		[SuppressMessage("Major Code Smell", "S3398:Consider making this method private and moving it inside the nested type 'KnobInternal'", Justification = "Helper methods are used by multiple nested paths; moving them inside the generic type would duplicate or complicate access.")]
 		private static KnobColors GetSecondaryColorSet()
 		{
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
@@ -735,6 +752,7 @@ public static partial class ImGuiWidgets
 			};
 		}
 
+		[SuppressMessage("Major Code Smell", "S3398:Consider making this method private and moving it inside the nested type 'KnobInternal'", Justification = "Helper methods are used by multiple nested paths; moving them inside the generic type would duplicate or complicate access.")]
 		private static KnobColors GetTrackColorSet()
 		{
 			Span<Vector4> colors = ImGui.GetStyle().Colors;

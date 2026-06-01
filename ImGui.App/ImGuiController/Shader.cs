@@ -58,14 +58,11 @@ internal sealed class Shader : IDisposable
 			return;
 		}
 
-		if (disposing)
+		if (disposing && _initialized)
 		{
 			// Dispose managed resources
-			if (_initialized)
-			{
-				_gl.DeleteProgram(Program);
-				_initialized = false;
-			}
+			_gl.DeleteProgram(Program);
+			_initialized = false;
 		}
 
 		// Mark as disposed

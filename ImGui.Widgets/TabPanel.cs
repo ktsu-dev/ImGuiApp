@@ -6,6 +6,7 @@ namespace ktsu.ImGui.Widgets;
 
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using Hexa.NET.ImGui;
 
 /// <summary>
@@ -437,7 +438,9 @@ public static partial class ImGuiWidgets
 					if (Closable && !tabOpen)
 					{
 						RemoveTab(i);
-						i--; // Adjust index since we removed an item
+#pragma warning disable S127 // Do not update the stop condition variable 'i' in the body of the for loop
+						i--; // Adjust index since we removed an item; intentional in-loop removal pattern
+#pragma warning restore S127
 					}
 				}
 
@@ -449,6 +452,7 @@ public static partial class ImGuiWidgets
 	/// <summary>
 	/// Represents a single tab within a TabPanel.
 	/// </summary>
+	[SuppressMessage("Major Code Smell", "S3010:Remove this assignment of 'nextId' or initialize it statically", Justification = "nextId is a mutable counter incremented at construction time; static initialization cannot express the incrementing assignment.")]
 	public class Tab
 	{
 		private static int nextId = 1;

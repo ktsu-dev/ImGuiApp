@@ -8,6 +8,7 @@ namespace ktsu.NodeGraph.Library.Operations;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Basic mathematical operations as static method nodes.
@@ -28,6 +29,7 @@ public static class MathOperations
 
 	[Node("Divide")]
 	[Description("Divides first number by second")]
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead", Justification = "Exact zero comparison is intentional here as a sentinel/identity guard; a tolerance would change behavior (e.g., very small b would produce huge results rather than NaN).")]
 	public static double Divide(double a, double b) => b != 0 ? a / b : double.NaN;
 
 	[Node("Power")]

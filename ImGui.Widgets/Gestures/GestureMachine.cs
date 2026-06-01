@@ -150,10 +150,11 @@ public sealed class GestureMachine(GestureSettings? settings = null)
 			_pressDuration = 0.0f;
 		}
 
+		Vector2 startPosResult = (!IsPressed && fired == GestureFlags.None) ? Vector2.Zero : _startPos;
 		return new GestureResult(
 			Gestures: fired,
 			IsPressed: IsPressed,
-			StartPos: IsPressed ? _startPos : (fired != GestureFlags.None ? _startPos : Vector2.Zero),
+			StartPos: startPosResult,
 			CurrentPos: _currentPos,
 			Delta: _currentPos - _startPos,
 			Velocity: _velocity,

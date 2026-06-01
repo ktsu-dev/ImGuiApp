@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -103,6 +104,7 @@ public static partial class ImGuiWidgets
 
 	internal static class RadialProgressBarImpl
 	{
+		[SuppressMessage("Major Code Smell", "S2234:Parameters to 'DrawArc' have the same names but not the same order as the method arguments.", Justification = "Angle arguments intentionally swapped for counter-clockwise sweep; reordering would invert the arc direction.")]
 		public static void Draw(float progress, float radius, float thickness, int segments, ImGuiRadialProgressBarOptions options, ImGuiRadialProgressBarTextMode textMode, float timeValue, string? customText)
 		{
 			// Validate input parameters

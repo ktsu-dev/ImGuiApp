@@ -8,6 +8,7 @@ namespace ktsu.NodeGraph.Library.Primitives;
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// 2D Vector data structure.
@@ -17,6 +18,7 @@ public struct Vector2Data : IEquatable<Vector2Data>
 	public float X { get; set; }
 	public float Y { get; set; }
 
+	[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead", Justification = "Exact equality is required for IEquatable<T> value-identity semantics; a tolerance would break equality contracts.")]
 	public readonly bool Equals(Vector2Data other) => X == other.X && Y == other.Y;
 	public override readonly bool Equals(object? obj) => obj is Vector2Data other && Equals(other);
 	public override readonly int GetHashCode() => HashCode.Combine(X, Y);

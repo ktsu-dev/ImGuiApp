@@ -6,6 +6,7 @@ namespace ktsu.ImGui.Widgets;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Numerics;
 
@@ -36,6 +37,7 @@ public static partial class ImGuiWidgets
 		// Per-ID active handle: 0 = lower, 1 = upper, -1 = none.
 		private static readonly Dictionary<uint, int> ActiveHandle = [];
 
+		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (sentinel/identity check); a tolerance would change behavior.")]
 		public static bool Draw(string label, ref float lower, ref float upper, float min, float max, float minGap)
 		{
 			if (min > max)

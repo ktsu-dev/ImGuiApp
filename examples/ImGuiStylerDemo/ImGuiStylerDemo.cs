@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.Examples.Styler;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 
@@ -49,9 +50,9 @@ internal sealed class ImGuiStylerDemo
 		ImGuiApp.Start(new()
 		{
 			Title = "ImGuiStyler Demo - Comprehensive Theme & Color Showcase",
-			OnAppMenu = demo.OnAppMenu,
+			OnAppMenu = ImGuiStylerDemo.OnAppMenu,
 			OnMoveOrResize = demo.OnMoveOrResize,
-			OnRender = demo.OnRender,
+			OnRender = ImGuiStylerDemo.OnRender,
 			OnStart = demo.OnStart,
 			FrameWrapperFactory = () => currentSelectedTheme is null ? null : new ScopedTheme(currentSelectedTheme.CreateInstance()),
 			SaveIniSettings = false,
@@ -64,7 +65,7 @@ internal sealed class ImGuiStylerDemo
 		// currentSelectedTheme starts as null, so we'll show default styling
 	}
 
-	private void OnRender(float dt)
+	private static void OnRender(float dt)
 	{
 		// Header with current theme info
 		if (currentSelectedTheme is not null)
@@ -211,6 +212,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.EndChild();
 	}
 
+	[SuppressMessage("Major Code Smell", "S2589:Change this condition so that it does not always evaluate to 'True'.", Justification = "Kept for defensive clarity; DefaultIfEmpty() guarantees a value is returned but the explicit HasValue check makes the intent clear.")]
 	private static void ShowCompleteThemePalette()
 	{
 		ImGui.TextUnformatted("🔍 Complete Theme Palette");
@@ -473,6 +475,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Text(name);
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui PlotLines interop; pointer is stack-allocated via fixed and not retained beyond the call.")]
 	private static void ShowWidgetShowcase()
 	{
 		ImGui.TextUnformatted("🖱️ Comprehensive Widget Showcase");
@@ -805,13 +808,12 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Separator();
 	}
 
-	private void OnAppMenu()
+	private static void OnAppMenu()
 	{
 		// Use the library's improved theme selector menu
 		if (Theme.RenderThemeSelectorMenu())
 		{
 			// Theme changed - this is where you would save the current theme to settings
-			// For example: Settings.Theme = Theme.CurrentThemeName;
 			if (Theme.CurrentThemeName is null)
 			{
 				Console.WriteLine("Theme reset to default");
