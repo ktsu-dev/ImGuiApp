@@ -41,6 +41,17 @@ internal sealed class GraphicsDemo : IDemoTab
 				ImGui.SameLine();
 				ImGui.Image(iconTexture.TextureRef, new Vector2(16, 16));
 
+				// Two texture-loading paths, side by side. The eager set was uploaded from OnStart
+				// (mid-construction); these GetOrLoadTexture calls are cache hits. The lazy set is
+				// uploaded here on first render — the normal in-loop path.
+				ImGui.SeparatorText("Texture Loading Paths:");
+
+				ImGui.Text("Eagerly loaded in OnStart (mid-construction):");
+				RenderImageRow(DemoImages.EagerlyLoaded);
+
+				ImGui.Text("Lazily loaded on first render:");
+				RenderImageRow(DemoImages.LazilyLoaded);
+
 				// Custom drawing with ImDrawList
 				ImGui.SeparatorText("Custom Drawing Canvas:");
 				ImGui.ColorEdit4("Draw Color", ref drawColor);
@@ -96,6 +107,20 @@ internal sealed class GraphicsDemo : IDemoTab
 			ImGui.EndChild();
 
 			ImGui.EndTabItem();
+		}
+	}
+
+	// Renders a horizontal row of demo images, loading (or returning cached) textures by path.
+	private static void RenderImageRow(string[] fileNames)
+	{
+		for (int i = 0; i < fileNames.Length; i++)
+		{
+			ImGuiAppTextureInfo texture = ImGuiApp.GetOrLoadTexture(DemoImages.Path(fileNames[i]));
+			ImGui.Image(texture.TextureRef, new Vector2(64, 64));
+			if (i < fileNames.Length - 1)
+			{
+				ImGui.SameLine();
+			}
 		}
 	}
 }

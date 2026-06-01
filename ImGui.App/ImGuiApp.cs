@@ -37,7 +37,14 @@ public static partial class ImGuiApp
 	internal static GL? gl;
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static ImGuiController.ImGuiController? controller;
-	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
+
+	// The GPU texture/draw backend. Registered by the backend itself as soon as its GL
+	// context is ready (early in the ImGuiController constructor), so texture operations
+	// invoked from OnStart — which runs mid-construction, before `controller` is assigned —
+	// have a usable backend. See ImGuiController..ctor.
+  [SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
+	internal static IRendererBackend? renderer;
+  [SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static IInputContext? inputContext;
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static OpenGLProvider? glProvider;
@@ -689,6 +696,7 @@ public static partial class ImGuiApp
 	{
 		controller?.Dispose();
 		controller = null;
+		renderer = null;
 	}
 
 	internal static void CleanupInputContext()
@@ -1313,14 +1321,14 @@ public static partial class ImGuiApp
 	{
 		return Invoker.Invoke(() =>
 		{
-			if (controller is null)
+			if (renderer is null)
 			{
 				throw new InvalidOperationException("Renderer backend is not initialized.");
 			}
 
 			// The pooled buffer may be larger than the texture; only the first w*h*4 bytes are pixel data.
 			int pixelByteCount = width * height * 4;
-			return (uint)controller.CreateTexture(bytes.AsSpan(0, pixelByteCount), width, height);
+			return (uint)renderer.CreateTexture(bytes.AsSpan(0, pixelByteCount), width, height);
 		});
 	}
 
@@ -1333,12 +1341,12 @@ public static partial class ImGuiApp
 	{
 		Invoker.Invoke(() =>
 		{
-			if (controller is null)
+			if (renderer is null)
 			{
 				throw new InvalidOperationException("Renderer backend is not initialized.");
 			}
 
-			controller.DeleteTexture((nint)textureId);
+			renderer.DeleteTexture((nint)textureId);
 			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out ImGuiAppTextureInfo? _));
 		});
 	}
@@ -1788,6 +1796,7 @@ public static partial class ImGuiApp
 		window = null;
 		gl = null;
 		controller = null;
+		renderer = null;
 		inputContext = null;
 		glProvider = null;
 		userHidden = false;
