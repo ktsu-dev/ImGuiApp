@@ -455,6 +455,57 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.AreNotEqual(firstTextureInfo.TextureId, reloadedTexture.TextureId, "Reloaded texture should have a different ID");
 	}
 
+	// Minimal IRendererBackend stand-in: records calls without touching a real GL context.
+	private sealed class FakeRendererBackend : IRendererBackend
+	{
+		public int CreateTextureCallCount { get; private set; }
+		public int DeleteTextureCallCount { get; private set; }
+		public nint NextHandle { get; init; }
+
+		public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
+		{
+			CreateTextureCallCount++;
+			return NextHandle;
+		}
+
+		public void DeleteTexture(nint id) => DeleteTextureCallCount++;
+		public void RenderDrawData(Hexa.NET.ImGui.ImDrawDataPtr drawData) { }
+		public void Dispose() { }
+	}
+
+	[TestMethod]
+	public void UploadTextureRGBA_WithBackendRegisteredButControllerUnset_UploadsViaBackend()
+	{
+		// Reproduces the OnStart-during-construction case (regression from d2b7e72):
+		// the renderer backend is registered early in the ImGuiController constructor,
+		// but ImGuiApp.controller has not been assigned yet because we are still inside
+		// `controller = new(...)`. Texture upload must succeed via the backend regardless.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 7 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		uint id = ImGuiApp.UploadTextureRGBA(new byte[2 * 2 * 4], 2, 2);
+
+		Assert.AreEqual(1, backend.CreateTextureCallCount, "Upload should route through the registered backend");
+		Assert.AreEqual(7u, id, "Returned texture id should come from the backend");
+	}
+
+	[TestMethod]
+	public void DeleteTexture_WithBackendRegisteredButControllerUnset_DeletesViaBackend()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new();
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		ImGuiApp.DeleteTexture(123u);
+
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "Delete should route through the registered backend");
+	}
+
 	[TestMethod]
 	public void PerformanceSettings_DefaultValues_AreCorrect()
 	{

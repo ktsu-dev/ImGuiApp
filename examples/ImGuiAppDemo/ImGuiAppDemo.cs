@@ -45,6 +45,7 @@ internal static class ImGuiAppDemo
 	{
 		Title = "ImGuiApp Demo",
 		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
+		OnStart = OnStart,
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
 		SaveIniSettings = false,
@@ -68,6 +69,18 @@ internal static class ImGuiAppDemo
 			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds (default is 30)
 		},
 	});
+
+	// Loading textures from OnStart exercises the texture-upload path while the renderer backend
+	// is still being constructed (OnStart runs inside the ImGuiController ctor, before the
+	// controller field is assigned). This guards against the "Renderer backend is not
+	// initialized" regression: if it returns, the demo crashes here on launch. GraphicsDemo
+	// loads a disjoint set lazily in the render loop to cover the other path.
+	private static void OnStart()
+	{
+		AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
+		_ = ImGuiApp.GetOrLoadTexture(iconPath);
+		DemoImages.LoadEager();
+	}
 
 	private static void OnRender(float dt)
 	{
