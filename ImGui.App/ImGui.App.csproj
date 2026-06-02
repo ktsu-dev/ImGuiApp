@@ -42,6 +42,9 @@
 
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
     <Compile Remove="ImGuiApp.cs" />
+    <!-- Per-region blend modes drive the desktop OpenGL renderer (ImGuiController.SetBlendMode);
+         the iOS stub has no such backend, so this partial is excluded like ImGuiApp.cs above. -->
+    <Compile Remove="ImGuiAppBlend.cs" />
     <Compile Remove="ImGuiAppConfig.cs" />
     <Compile Remove="ImGuiAppWindowState.cs" />
     <Compile Remove="FontMemoryGuard.cs" />
