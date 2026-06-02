@@ -1,7 +1,4 @@
-## v2.9.0 (minor)
+## v2.9.0
 
-Changes since v2.8.0:
-
-- Exclude ImGuiAppBlend.cs from the iOS build ([@Claude](https://github.com/Claude))
-- Honor ImGui draw-command callbacks; add per-region blend modes ([@Claude](https://github.com/Claude))
+No significant changes detected since v2.9.0.
 
