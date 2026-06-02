@@ -102,7 +102,26 @@ internal sealed class GraphicsDemo : IDemoTab
 				Vector2 rectPos = shapeStart + new Vector2(200 + (MathF.Sin(t) * 30), 30);
 				drawList.AddRectFilled(rectPos, rectPos + new Vector2(40, 40), ImGui.ColorConvertFloat4ToU32(new Vector4(0, 1, 0, 0.7f)));
 
-				ImGui.Dummy(new Vector2(400, 100)); // Reserve space
+				// Blend-mode comparison: the same three overlapping translucent circles drawn with
+				// the default alpha-over compositing (left) and with additive blending (right).
+				// Additive makes the overlaps accumulate toward white for a neon/glow look.
+				uint red = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.2f, 0.2f, 0.5f));
+				uint green = ImGui.ColorConvertFloat4ToU32(new Vector4(0.2f, 1.0f, 0.2f, 0.5f));
+				uint blue = ImGui.ColorConvertFloat4ToU32(new Vector4(0.2f, 0.4f, 1.0f, 0.5f));
+
+				Vector2 alphaCenter = shapeStart + new Vector2(80, 150);
+				drawList.AddCircleFilled(alphaCenter + new Vector2(-15, 0), 30, red, 32);
+				drawList.AddCircleFilled(alphaCenter + new Vector2(15, 0), 30, green, 32);
+				drawList.AddCircleFilled(alphaCenter + new Vector2(0, 22), 30, blue, 32);
+
+				Vector2 additiveCenter = shapeStart + new Vector2(260, 150);
+				ImGuiApp.SetDrawBlendMode(drawList, ImGuiAppBlendMode.Additive);
+				drawList.AddCircleFilled(additiveCenter + new Vector2(-15, 0), 30, red, 32);
+				drawList.AddCircleFilled(additiveCenter + new Vector2(15, 0), 30, green, 32);
+				drawList.AddCircleFilled(additiveCenter + new Vector2(0, 22), 30, blue, 32);
+				ImGuiApp.SetDrawBlendMode(drawList, ImGuiAppBlendMode.AlphaBlend); // restore for the rest of the frame
+
+				ImGui.Dummy(new Vector2(400, 230)); // Reserve space
 			}
 			ImGui.EndChild();
 
