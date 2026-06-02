@@ -591,6 +591,37 @@ internal sealed class ImGuiController : IRendererBackend
 		_gl.VertexAttribPointer((uint)_attribLocationVtxColor, 4, GLEnum.UnsignedByte, true, (uint)sizeof(ImDrawVert), (void*)16);
 	}
 
+	/// <summary>
+	/// Switches the OpenGL blend function for the remainder of the current draw pass.
+	/// Invoked from a draw-command callback (see <see cref="ImGuiApp.SetDrawBlendMode"/>) so the
+	/// change applies only to the primitives recorded after it, until another blend-mode callback
+	/// or the <c>ImDrawCallback_ResetRenderState</c> sentinel restores the default state.
+	/// </summary>
+	/// <param name="mode">The blend mode to activate.</param>
+	internal void SetBlendMode(ImGuiAppBlendMode mode)
+	{
+		if (_gl is null)
+		{
+			return;
+		}
+
+		_gl.BlendEquation(GLEnum.FuncAdd);
+		switch (mode)
+		{
+			case ImGuiAppBlendMode.Additive:
+				// src*srcAlpha + dst*1: overlapping translucent shapes accumulate toward white
+				// instead of compositing alpha-over, giving a neon/glow look.
+				_gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.One, GLEnum.One, GLEnum.One);
+				break;
+
+			case ImGuiAppBlendMode.AlphaBlend:
+			default:
+				// Matches the default established in SetupRenderState.
+				_gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.OneMinusSrcAlpha, GLEnum.One, GLEnum.OneMinusSrcAlpha);
+				break;
+		}
+	}
+
 	/// <inheritdoc />
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
 	[SuppressMessage("Major Code Smell", "S927:Parameter names should match base declaration and other partial definitions", Justification = "Parameter name 'drawDataPtr' is used consistently in this implementation; renaming could break existing callers using named arguments.")]
@@ -673,7 +704,20 @@ internal sealed class ImGuiController : IRendererBackend
 				{
 					if (cmdPtr.UserCallback != null)
 					{
-						throw new NotImplementedException();
+						// Honor draw-command callbacks the way the stock imgui_impl_opengl3 backend
+						// does. The ImDrawCallback_ResetRenderState sentinel asks the backend to
+						// restore its own pipeline state (used after a callback changes GL state, e.g.
+						// a per-region blend-mode switch). Any other value is a real user callback —
+						// invoke it with this command's draw list and command rather than crashing.
+						if ((nint)cmdPtr.UserCallback == ImGui.ImDrawCallbackResetRenderState)
+						{
+							SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
+						}
+						else
+						{
+							ImDrawCmd localCmd = cmdPtr;
+							((delegate* unmanaged[Cdecl]<ImDrawList*, ImDrawCmd*, void>)cmdPtr.UserCallback)(cmdListPtr.Handle, &localCmd);
+						}
 					}
 					else
 					{
