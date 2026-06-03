@@ -1,6 +1,8 @@
-## v2.9.0
+## v2.9.1 (patch)
 
-No significant changes detected since v2.9.0.
+Changes since v2.9.0:
+
+- Bump Polyfill from 10.7.0 to 10.8.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
 ## v2.9.0 (minor)
 
