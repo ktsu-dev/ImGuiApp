@@ -251,12 +251,10 @@ jobs:
     # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
     runs-on: macos-26
     timeout-minutes: 30
-    # NON-BLOCKING (safety net): native linking on this image hits the known .NET 10 + Xcode 26
-    # symlinked-developer-dir bug (`xcodebuild -find` -> errno=Invalid argument; see the Xcode
-    # resolve step below and dotnet/macios#21762). The resolve step works around it, but Xcode 26
-    # also has documented first-launch flakiness, so keep this job from gating the PR until the
-    # workaround proves consistently green. The compile-only `Build net10.0-ios` job is the hard gate.
-    continue-on-error: true
+    # HARD GATE: the .NET 10 + Xcode 26 symlinked-developer-dir bug that broke native linking
+    # (`xcodebuild -find` -> errno=Invalid argument) is worked around by the "Resolve and pin the
+    # real Xcode" step below (readlink -f + xcode-select/DEVELOPER_DIR pin; dotnet/macios#21762), so
+    # this runtime smoke test now reliably passes and gates the PR like any other required check.
     permissions:
       contents: read
 
