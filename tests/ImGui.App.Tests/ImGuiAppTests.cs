@@ -426,7 +426,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		bool textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out ImGuiAppTextureInfo? retrievedTexture);
 		Assert.IsTrue(textureExists, "Texture should exist after adding");
 		Assert.IsNotNull(retrievedTexture, "Retrieved texture should not be null");
-		Assert.AreEqual((nint)1001, retrievedTexture!.TextureId, "Texture ID should match");
+		Assert.AreEqual(1001, retrievedTexture!.TextureId, "Texture ID should match");
 
 		// Remove the texture to simulate deletion
 		texturesDict.TryRemove(mockTexturePath, out _);
@@ -451,7 +451,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		textureExists = ImGuiApp.TryGetTexture(mockTexturePath, out ImGuiAppTextureInfo? reloadedTexture);
 		Assert.IsTrue(textureExists, "Texture should exist after reloading");
 		Assert.IsNotNull(reloadedTexture, "Reloaded texture should not be null");
-		Assert.AreEqual((nint)1002, reloadedTexture!.TextureId, "New texture ID should match");
+		Assert.AreEqual(1002, reloadedTexture!.TextureId, "New texture ID should match");
 		Assert.AreNotEqual(firstTextureInfo.TextureId, reloadedTexture.TextureId, "Reloaded texture should have a different ID");
 	}
 
@@ -489,7 +489,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		nint id = ImGuiApp.UploadTextureRGBA(new byte[2 * 2 * 4], 2, 2);
 
 		Assert.AreEqual(1, backend.CreateTextureCallCount, "Upload should route through the registered backend");
-		Assert.AreEqual((nint)7, id, "Returned texture id should come from the backend");
+		Assert.AreEqual(7, id, "Returned texture id should come from the backend");
 	}
 
 	[TestMethod]
@@ -501,7 +501,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		ImGuiApp.renderer = backend;
 		ImGuiApp.controller = null;
 
-		ImGuiApp.DeleteTexture((nint)123);
+		ImGuiApp.DeleteTexture(123);
 
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "Delete should route through the registered backend");
 	}
