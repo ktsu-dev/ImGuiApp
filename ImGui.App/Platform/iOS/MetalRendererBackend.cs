@@ -58,7 +58,7 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 	/// <param name="layer">The Metal layer whose drawables this backend renders into.</param>
 	public MetalRendererBackend(CAMetalLayer layer)
 	{
-		ArgumentNullException.ThrowIfNull(layer);
+		Ensure.NotNull(layer);
 		this.layer = layer;
 
 		device = layer.Device
@@ -79,7 +79,7 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 	/// <inheritdoc />
 	public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 	{
-		MTLTextureDescriptor descriptor = MTLTextureDescriptor.CreateTexture2DDescriptor(
+		using MTLTextureDescriptor descriptor = MTLTextureDescriptor.CreateTexture2DDescriptor(
 			MTLPixelFormat.RGBA8Unorm, (nuint)width, (nuint)height, mipmapped: false);
 
 		IMTLTexture texture = device.CreateTexture(descriptor)
@@ -268,9 +268,12 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 		string source = LoadShaderSource();
 		using MTLCompileOptions options = new();
 		IMTLLibrary library = device.CreateLibrary(source, options, out NSError error);
-		return error is not null || library is null
-			? throw new InvalidOperationException($"Failed to compile the ImGui Metal shader: {error?.LocalizedDescription ?? "unknown error"}.")
-			: library;
+		using (error)
+		{
+			return error is not null || library is null
+				? throw new InvalidOperationException($"Failed to compile the ImGui Metal shader: {error?.LocalizedDescription ?? "unknown error"}.")
+				: library;
+		}
 	}
 
 	private static string LoadShaderSource()
@@ -320,9 +323,12 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 		colorAttachment.DestinationAlphaBlendFactor = MTLBlendFactor.OneMinusSourceAlpha;
 
 		IMTLRenderPipelineState state = device.CreateRenderPipelineState(descriptor, out NSError error);
-		return error is not null || state is null
-			? throw new InvalidOperationException($"Failed to create the ImGui Metal pipeline state: {error?.LocalizedDescription ?? "unknown error"}.")
-			: state;
+		using (error)
+		{
+			return error is not null || state is null
+				? throw new InvalidOperationException($"Failed to create the ImGui Metal pipeline state: {error?.LocalizedDescription ?? "unknown error"}.")
+				: state;
+		}
 	}
 
 	private static IMTLSamplerState CreateSamplerState(IMTLDevice device)
