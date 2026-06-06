@@ -246,7 +246,9 @@ jobs:
     # launch it, and assert the lifecycle ticks (the app prints a marker and exits after N frames
     # via the IMGUIAPP_IOS_SMOKE_FRAMES hook). Runs in parallel; does not gate release.
     name: iOS Simulator Smoke Test
-    runs-on: macos-14
+    # macos-15 (Sequoia) is required: the .NET 10 iOS workload is Xcode-26-era, and producing a
+    # runnable .app invokes Xcode (unlike the compile-only ios-build job, which works on macos-14).
+    runs-on: macos-15
     timeout-minutes: 30
     permissions:
       contents: read
@@ -278,6 +280,8 @@ jobs:
           echo "--- installed packs ---"
           ls -1 "$HOME/.dotnet/packs" 2>/dev/null | grep -i ios || true
           ls -1 /usr/local/share/dotnet/packs 2>/dev/null | grep -i ios || true
+          echo "--- installed Xcodes ---"
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
           echo "--- xcode / sdk ---"
           xcodebuild -version || true
           xcrun --sdk iphonesimulator --show-sdk-version || true
@@ -286,6 +290,15 @@ jobs:
           echo "--- simulator runtimes ---"
           xcrun simctl list runtimes || true
         continue-on-error: true
+
+      # The .NET 10 iOS workload (26.5) requires a matching Xcode. Select the newest Xcode installed
+      # on the runner so the native .app build/link step is satisfied.
+      - name: Select latest Xcode
+        run: |
+          set -euxo pipefail
+          LATEST_XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$LATEST_XCODE"
+          xcodebuild -version
 
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
