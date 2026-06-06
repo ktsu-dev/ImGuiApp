@@ -151,12 +151,12 @@ public class ErrorHandlingAndEdgeCaseTests
 	{
 		ImGuiAppTextureInfo textureInfo = new()
 		{
-			TextureId = uint.MaxValue,
+			TextureId = unchecked((nint)uint.MaxValue),
 			Width = int.MaxValue,
 			Height = int.MaxValue
 		};
 
-		Assert.AreEqual(uint.MaxValue, textureInfo.TextureId);
+		Assert.AreEqual(unchecked((nint)uint.MaxValue), textureInfo.TextureId);
 		Assert.AreEqual(int.MaxValue, textureInfo.Width);
 		Assert.AreEqual(int.MaxValue, textureInfo.Height);
 	}
@@ -166,12 +166,12 @@ public class ErrorHandlingAndEdgeCaseTests
 	{
 		ImGuiAppTextureInfo textureInfo = new()
 		{
-			TextureId = uint.MinValue,
+			TextureId = (nint)uint.MinValue,
 			Width = int.MinValue,
 			Height = int.MinValue
 		};
 
-		Assert.AreEqual(uint.MinValue, textureInfo.TextureId);
+		Assert.AreEqual((nint)uint.MinValue, textureInfo.TextureId);
 		Assert.AreEqual(int.MinValue, textureInfo.Width);
 		Assert.AreEqual(int.MinValue, textureInfo.Height);
 	}

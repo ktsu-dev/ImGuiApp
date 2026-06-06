@@ -1409,7 +1409,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Uploads a texture to the GPU using the specified RGBA byte array, width, and height.
 	/// </summary>
-	internal static uint UploadTextureRGBA(byte[] bytes, int width, int height)
+	internal static nint UploadTextureRGBA(byte[] bytes, int width, int height)
 	{
 		return Invoker.Invoke(() =>
 		{
@@ -1420,16 +1420,16 @@ public static partial class ImGuiApp
 
 			// The pooled buffer may be larger than the texture; only the first w*h*4 bytes are pixel data.
 			int pixelByteCount = width * height * 4;
-			return (uint)renderer.CreateTexture(bytes.AsSpan(0, pixelByteCount), width, height);
+			return renderer.CreateTexture(bytes.AsSpan(0, pixelByteCount), width, height);
 		});
 	}
 
 	/// <summary>
 	/// Deletes the specified texture from the GPU.
 	/// </summary>
-	/// <param name="textureId">The OpenGL texture ID to delete.</param>
-	/// <exception cref="InvalidOperationException">Thrown if the OpenGL context is not initialized.</exception>
-	public static void DeleteTexture(uint textureId)
+	/// <param name="textureId">The GPU texture handle to delete (see <see cref="ImGuiAppTextureInfo.TextureId"/>).</param>
+	/// <exception cref="InvalidOperationException">Thrown if the renderer backend is not initialized.</exception>
+	public static void DeleteTexture(nint textureId)
 	{
 		Invoker.Invoke(() =>
 		{
@@ -1438,7 +1438,7 @@ public static partial class ImGuiApp
 				throw new InvalidOperationException("Renderer backend is not initialized.");
 			}
 
-			renderer.DeleteTexture((nint)textureId);
+			renderer.DeleteTexture(textureId);
 			Textures.Where(x => x.Value.TextureId == textureId).ToList().ForEach(x => Textures.Remove(x.Key, out ImGuiAppTextureInfo? _));
 		});
 	}

@@ -30,7 +30,7 @@ public class ImGuiAppDataStructureTests
 		ImGuiAppTextureInfo textureInfo = new();
 
 		Assert.AreEqual(new AbsoluteFilePath(), textureInfo.Path);
-		Assert.AreEqual(0u, textureInfo.TextureId);
+		Assert.AreEqual(0, textureInfo.TextureId);
 		Assert.AreEqual(0, textureInfo.Width);
 		Assert.AreEqual(0, textureInfo.Height);
 	}
@@ -42,12 +42,12 @@ public class ImGuiAppDataStructureTests
 		AbsoluteFilePath testPath = Path.GetFullPath("test_texture.png").As<AbsoluteFilePath>();
 
 		textureInfo.Path = testPath;
-		textureInfo.TextureId = 123u;
+		textureInfo.TextureId = 123;
 		textureInfo.Width = 256;
 		textureInfo.Height = 512;
 
 		Assert.AreEqual(testPath, textureInfo.Path);
-		Assert.AreEqual(123u, textureInfo.TextureId);
+		Assert.AreEqual(123, textureInfo.TextureId);
 		Assert.AreEqual(256, textureInfo.Width);
 		Assert.AreEqual(512, textureInfo.Height);
 	}

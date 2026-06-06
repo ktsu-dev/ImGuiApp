@@ -18,9 +18,11 @@ public class ImGuiAppTextureInfo
 	public AbsoluteFilePath Path { get; set; } = new();
 
 	/// <summary>
-	/// Gets or sets the OpenGL texture ID.
+	/// Gets or sets the GPU texture handle. This is a pointer-sized, platform-agnostic value: on the
+	/// desktop OpenGL backend it is the GL texture name; on the iOS Metal backend it is the
+	/// <c>id&lt;MTLTexture&gt;</c> handle.
 	/// </summary>
-	public uint TextureId { get; set; }
+	public nint TextureId { get; set; }
 
 	/// <summary>
 	/// Gets or sets the ImGui texture reference for ImGui 1.92+ texture system.

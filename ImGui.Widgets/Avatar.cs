@@ -42,7 +42,7 @@ public static partial class ImGuiWidgets
 	/// <param name="diameter">Avatar diameter in pixels. When 0, defaults to twice the frame height so it scales with DPI.</param>
 	/// <param name="status">Presence status drawn as a dot at the bottom-right.</param>
 	/// <returns>True if the avatar was clicked.</returns>
-	public static bool Avatar(string id, uint textureId, float diameter = 0f, AvatarStatus status = AvatarStatus.None) =>
+	public static bool Avatar(string id, nint textureId, float diameter = 0f, AvatarStatus status = AvatarStatus.None) =>
 		AvatarImpl.Draw(id, textureId, null, diameter, status);
 
 	/// <summary>
@@ -90,7 +90,7 @@ public static partial class ImGuiWidgets
 	internal static class AvatarImpl
 	{
 		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-		internal static bool Draw(string id, uint textureId, string? displayName, float diameter, AvatarStatus status)
+		internal static bool Draw(string id, nint textureId, string? displayName, float diameter, AvatarStatus status)
 		{
 			float resolvedDiameter = diameter > 0f ? diameter : ImGui.GetFrameHeight() * 2.0f;
 			float radius = resolvedDiameter * 0.5f;
