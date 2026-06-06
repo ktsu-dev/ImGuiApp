@@ -246,9 +246,10 @@ jobs:
     # launch it, and assert the lifecycle ticks (the app prints a marker and exits after N frames
     # via the IMGUIAPP_IOS_SMOKE_FRAMES hook). Runs in parallel; does not gate release.
     name: iOS Simulator Smoke Test
-    # macos-15 (Sequoia) is required: the .NET 10 iOS workload is Xcode-26-era, and producing a
-    # runnable .app invokes Xcode (unlike the compile-only ios-build job, which works on macos-14).
-    runs-on: macos-15
+    # The .NET 10 iOS workload (Microsoft.iOS 26.5) requires Xcode 26.5 to build a runnable .app.
+    # macos-15 only carries up to Xcode 26.3; macos-26 (Tahoe) ships the matching Xcode 26.5+.
+    # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
+    runs-on: macos-26
     timeout-minutes: 30
     permissions:
       contents: read
