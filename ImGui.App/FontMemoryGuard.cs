@@ -431,13 +431,13 @@ public static class FontMemoryGuard
 		};
 	}
 
+#if !IOS
 	/// <summary>
 	/// Attempts to detect available GPU memory and update configuration accordingly.
 	/// Special handling for Intel and AMD integrated GPUs which are primary targets for memory constraints.
 	/// </summary>
 	/// <param name="gl">OpenGL context for querying GPU information.</param>
 	/// <returns>True if GPU memory was successfully detected and configuration updated.</returns>
-#if !IOS
 	public static bool TryDetectAndConfigureGpuMemory(GL gl)
 	{
 		if (gl == null || !CurrentConfig.EnableGpuMemoryDetection)

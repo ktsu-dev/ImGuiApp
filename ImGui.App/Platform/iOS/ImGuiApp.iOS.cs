@@ -36,7 +36,7 @@ public static class ImGuiApp
 	/// <exception cref="PlatformNotSupportedException">Always thrown on iOS until the platform layer lands.</exception>
 	public static void Start(ImGuiAppConfig config)
 	{
-		ArgumentNullException.ThrowIfNull(config);
+		Ensure.NotNull(config);
 		Config = config;
 		throw new PlatformNotSupportedException(NotImplementedMessage);
 	}
