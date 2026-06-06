@@ -299,7 +299,13 @@ jobs:
           set -euxo pipefail
           LATEST_XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
           sudo xcode-select -s "$LATEST_XCODE"
+          # A freshly-selected Xcode may not have its SDKs / command-line tools provisioned yet
+          # ("SDK MacOSX.sdk cannot be located", "install_name_tool not found"); runFirstLaunch
+          # installs the missing components.
+          sudo xcodebuild -runFirstLaunch
           xcodebuild -version
+          xcrun --sdk macosx --show-sdk-path || true
+          xcrun --find install_name_tool || true
 
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
