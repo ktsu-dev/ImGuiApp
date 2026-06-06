@@ -10,9 +10,11 @@ using Hexa.NET.ImGui;
 using ktsu.Invoker;
 
 /// <summary>
-/// Scaffolding stub for the iOS build of ImGuiApp. The UIKit/Metal platform layer is under
-/// active development; this type exists so the library compiles for net10.0-ios. Calling
-/// <see cref="Start"/> currently throws.
+/// Scaffolding for the iOS build of ImGuiApp. The UIKit/Metal platform layer is under active
+/// development; this type exposes the same public surface as the desktop build so cross-platform
+/// callers compile against <c>net10.0-ios</c>, but the render loop is not wired up yet. Calling
+/// <see cref="Start"/> currently throws — the next chunk lands the <c>UIApplicationDelegate</c> +
+/// <c>CADisplayLink</c> lifecycle. Track progress in docs/plans/2026-05-28-ios-platform-port.md.
 /// </summary>
 public static class ImGuiApp
 {
@@ -20,16 +22,56 @@ public static class ImGuiApp
 		"ImGuiApp iOS backend is not yet implemented. Track progress in docs/plans/2026-05-28-ios-platform-port.md.";
 
 	/// <summary>
-	/// Placeholder entry point. Throws until the iOS platform layer (UIKit + Metal) lands.
+	/// Gets the active application configuration. Populated by <see cref="Start"/> so the rest of
+	/// the (forthcoming) iOS platform layer can read lifecycle callbacks, fonts, and settings.
 	/// </summary>
-	/// <exception cref="PlatformNotSupportedException">Always thrown on iOS for now.</exception>
-	public static void Start() => throw new PlatformNotSupportedException(NotImplementedMessage);
+	internal static ImGuiAppConfig Config { get; set; } = new();
+
+	/// <summary>
+	/// Bootstraps the iOS application. Mirrors the desktop <c>Start(ImGuiAppConfig)</c> signature so
+	/// cross-platform code compiles unchanged; the UIKit + Metal lifecycle is not yet implemented, so
+	/// this currently records the configuration and throws.
+	/// </summary>
+	/// <param name="config">The application configuration (lifecycle callbacks, fonts, settings).</param>
+	/// <exception cref="PlatformNotSupportedException">Always thrown on iOS until the platform layer lands.</exception>
+	public static void Start(ImGuiAppConfig config)
+	{
+		ArgumentNullException.ThrowIfNull(config);
+		Config = config;
+		throw new PlatformNotSupportedException(NotImplementedMessage);
+	}
 
 	/// <summary>
 	/// Placeholder. Throws until the iOS platform layer lands.
 	/// </summary>
 	/// <exception cref="PlatformNotSupportedException">Always thrown on iOS for now.</exception>
 	public static void Stop() => throw new PlatformNotSupportedException(NotImplementedMessage);
+
+	/// <summary>
+	/// Gets the DPI scale factor for the application. On iOS this will initialise from
+	/// <c>UIScreen.MainScreen.Scale</c> once the platform layer lands; until then it reports 1.
+	/// </summary>
+	public static float ScaleFactor { get; private set; } = 1.0f;
+
+	/// <summary>
+	/// Gets the user-controlled global UI scale factor for accessibility. Identical semantics to desktop.
+	/// </summary>
+	public static float GlobalScale { get; private set; } = 1.0f;
+
+	/// <summary>
+	/// Converts a measurement in ems to pixels. Until the ImGui frame is wired up on iOS there is no
+	/// active font, so this mirrors the desktop uninitialised fallback of ems times the default point size.
+	/// </summary>
+	/// <param name="ems">The measurement in ems.</param>
+	/// <returns>The equivalent measurement in pixels.</returns>
+	public static int EmsToPx(float ems) => (int)(ems * FontAppearance.DefaultFontPointSize);
+
+	/// <summary>
+	/// Converts a measurement in points to pixels using the current scale factor. Matches desktop semantics.
+	/// </summary>
+	/// <param name="pts">The measurement in points.</param>
+	/// <returns>The equivalent measurement in pixels.</returns>
+	public static int PtsToPx(int pts) => (int)(pts * ScaleFactor);
 
 	// Below: symbol-compatibility stubs so the platform-neutral helpers in the same assembly
 	// (UIScaler, FontAppearance) link successfully against the iOS TFM. Because Start()

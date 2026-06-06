@@ -45,9 +45,9 @@
     <!-- Per-region blend modes drive the desktop OpenGL renderer (ImGuiController.SetBlendMode);
          the iOS stub has no such backend, so this partial is excluded like ImGuiApp.cs above. -->
     <Compile Remove="ImGuiAppBlend.cs" />
-    <Compile Remove="ImGuiAppConfig.cs" />
-    <Compile Remove="ImGuiAppWindowState.cs" />
-    <Compile Remove="FontMemoryGuard.cs" />
+    <!-- ImGuiAppConfig.cs, ImGuiAppWindowState.cs, and FontMemoryGuard.cs are platform-neutral
+         and now compile for net10.0-ios: their Silk.NET-coupled members are gated behind #if !IOS
+         so the shared ImGuiAppConfig surface (and Start(ImGuiAppConfig)) is available on iOS. -->
     <Compile Remove="ForceDpiAware.cs" />
     <Compile Remove="GdiPlusHelper.cs" />
     <Compile Remove="NativeMethods.cs" />

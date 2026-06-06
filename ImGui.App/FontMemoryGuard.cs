@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Hexa.NET.ImGui;
+#if !IOS
 using Silk.NET.OpenGL;
+#endif
 
 /// <summary>
 /// Provides memory guards and limits for font loading to prevent excessive texture memory allocation
@@ -435,6 +437,7 @@ public static class FontMemoryGuard
 	/// </summary>
 	/// <param name="gl">OpenGL context for querying GPU information.</param>
 	/// <returns>True if GPU memory was successfully detected and configuration updated.</returns>
+#if !IOS
 	public static bool TryDetectAndConfigureGpuMemory(GL gl)
 	{
 		if (gl == null || !CurrentConfig.EnableGpuMemoryDetection)
@@ -537,6 +540,7 @@ public static class FontMemoryGuard
 
 		return false;
 	}
+#endif
 
 	/// <summary>
 	/// Determines if a GPU is integrated based on renderer string analysis.

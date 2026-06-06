@@ -6,7 +6,9 @@ namespace ktsu.ImGui.App;
 
 using System.Resources;
 using ktsu.ScopedAction;
+#if !IOS
 using Silk.NET.Windowing;
+#endif
 
 /// <summary>
 /// Represents the configuration settings for the ImGui application.
@@ -19,11 +21,17 @@ public class ImGuiAppConfig
 	/// </summary>
 	public bool TestMode { get; init; }
 
+#if !IOS
 	/// <summary>
 	/// Gets or sets the test window to use when TestMode is true.
 	/// This must be set when TestMode is true.
 	/// </summary>
+	/// <remarks>
+	/// Backed by the desktop windowing layer (Silk.NET) and consumed only by the desktop render
+	/// loop, so it is excluded from the <c>net10.0-ios</c> build.
+	/// </remarks>
 	internal IWindow? TestWindow { get; init; }
+#endif
 
 	/// <summary>
 	/// Gets or sets the title of the application window.
