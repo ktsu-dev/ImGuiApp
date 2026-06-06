@@ -6,9 +6,9 @@
 
 namespace ktsu.ImGui.App;
 
-using CoreAnimation;
+using System.Diagnostics.CodeAnalysis;
 
-using CoreGraphics;
+using CoreAnimation;
 
 using Foundation;
 
@@ -20,6 +20,7 @@ using UIKit;
 /// each tick to <see cref="ImGuiApp.Tick(float)"/>. Until the Metal backend lands, the view is a
 /// solid colour with a centred title label so the lifecycle can be verified in isolation.
 /// </summary>
+[SuppressMessage("Design", "CA1010:Generic interface should also be provided", Justification = "Inherited non-generic IEnumerable comes from the UIKit base type UIViewController; a generic counterpart cannot be added to a framework base class.")]
 public class ImGuiAppViewController : UIViewController
 {
 	private CADisplayLink? displayLink;
@@ -45,9 +46,10 @@ public class ImGuiAppViewController : UIViewController
 		};
 		view.AddSubview(titleLabel);
 
-		int fps = Math.Max(1, (int)ImGuiApp.Config.PerformanceSettings.FocusedFps);
+		float fps = Math.Max(1, (float)ImGuiApp.Config.PerformanceSettings.FocusedFps);
 		displayLink = CADisplayLink.Create(OnDisplayLink);
-		displayLink.PreferredFramesPerSecond = fps;
+		// PreferredFramesPerSecond is obsolete from iOS 15; CAFrameRateRange is the supported control.
+		displayLink.PreferredFrameRateRange = CAFrameRateRange.Create(fps, fps, fps);
 		displayLink.AddToRunLoop(NSRunLoop.Main, NSRunLoopMode.Common);
 		displayLink.Paused = true; // resumed in ViewWillAppear / on activation
 	}

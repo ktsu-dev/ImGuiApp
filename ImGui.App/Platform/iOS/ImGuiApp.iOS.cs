@@ -6,6 +6,7 @@
 
 namespace ktsu.ImGui.App;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -117,6 +118,7 @@ public static class ImGuiApp
 	/// Requests application shutdown. iOS applications are not meant to self-terminate (the OS owns
 	/// the lifecycle), so this logs a warning, pauses rendering, and asks UIKit to exit.
 	/// </summary>
+	[SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Best-effort termination via a private selector; any failure must be logged and swallowed so Stop never throws back into consumer code.")]
 	public static void Stop()
 	{
 		DebugLogger.Log("ImGuiApp.Stop() called on iOS. iOS applications should not terminate themselves; " +
