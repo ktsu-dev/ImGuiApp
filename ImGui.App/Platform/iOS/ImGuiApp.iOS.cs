@@ -30,7 +30,7 @@ using UIKit;
 /// stand up an ImGui frame or submit draw data — the Metal backend is the next chunk. See
 /// docs/plans/2026-05-28-ios-platform-port.md.
 /// </remarks>
-public static class ImGuiApp
+public static partial class ImGuiApp
 {
 	private const string NotImplementedMessage =
 		"This ImGuiApp feature is not yet implemented on iOS. Track progress in docs/plans/2026-05-28-ios-platform-port.md.";
@@ -192,18 +192,27 @@ public static class ImGuiApp
 	}
 
 	/// <summary>
-	/// Advances the application by one frame. Mirrors the desktop ordering: update the consumer, drain
-	/// queued main-thread work, then run the render callback. ImGui frame construction and GPU
-	/// submission are intentionally absent until the Metal backend lands.
+	/// Advances the application by one frame. Mirrors the desktop ordering: begin the ImGui frame,
+	/// update the consumer, drain queued main-thread work, run the render callback, then submit the
+	/// built draw data to the Metal backend. When the renderer is not yet initialised (the first
+	/// ticks before the Metal layer exists, or the headless <see cref="ImGuiAppConfig.TestMode"/>
+	/// path) the lifecycle callbacks still fire so consumers and the smoke harness keep ticking.
 	/// </summary>
 	/// <param name="deltaSeconds">Elapsed wall-clock time since the previous frame, in seconds.</param>
 	internal static void Tick(float deltaSeconds)
 	{
 		UpdateIdleState();
 
+		bool frameBegun = TryBeginImGuiFrame(deltaSeconds);
+
 		Config.OnUpdate?.Invoke(deltaSeconds);
 		Invoker?.DoInvokes();
 		Config.OnRender?.Invoke(deltaSeconds);
+
+		if (frameBegun)
+		{
+			EndImGuiFrameAndRender();
+		}
 	}
 
 	/// <summary>Recomputes <see cref="IsIdle"/> from the configured idle timeout and last input time.</summary>
