@@ -7,11 +7,15 @@
 > **Progress log:**
 > - ✅ **Task 1** — `IRendererBackend` seam introduced; desktop routes through it (`IRendererBackend.cs`).
 > - ✅ **Task 2** — `macos-14` CI job compile-checks `net10.0-ios` (`.github/workflows/dotnet.yml`).
-> - 🚧 **Task 3 groundwork** — the platform-neutral public surface (`ImGuiAppConfig`,
->   `ImGuiAppWindowState`, `FontMemoryGuard.FontMemoryConfig`) now compiles for `net10.0-ios`
+> - ✅ **Task 3 groundwork** — the platform-neutral public surface (`ImGuiAppConfig`,
+>   `ImGuiAppWindowState`, `FontMemoryGuard.FontMemoryConfig`) compiles for `net10.0-ios`
 >   (Silk.NET-coupled members gated behind `#if !IOS`), and the iOS entry point exposes the
->   cross-platform `Start(ImGuiAppConfig)` signature. The `UIApplicationDelegate` + `CADisplayLink`
->   lifecycle (the rest of Task 3) is the next chunk; `Start` still throws until it lands.
+>   cross-platform `Start(ImGuiAppConfig)` signature.
+> - 🚧 **Task 3 lifecycle** — native UIKit plumbing landed: `ImGuiAppDelegate`
+>   (`UIApplicationDelegate`, window + focus lifecycle), `ImGuiAppViewController` (`CADisplayLink`
+>   frame pump + visibility), and `ImGuiApp.Start` now runs `UIApplication.Main` and ticks
+>   `OnStart`/`OnUpdate`/`OnRender`. No ImGui frame or GPU submission yet — that's Task 4 (Metal).
+>   **Compiles on the macOS CI job but is not yet runtime-verified on a device/simulator.**
 
 **Goal:** Make `ImGuiApp.Start(config)` actually run a Dear ImGui application on iOS (iPhone + iPad, iOS 15+) with parity for the OnStart / OnUpdate / OnRender / OnAppMenu lifecycle, fonts, textures, and DPI scaling.
 
