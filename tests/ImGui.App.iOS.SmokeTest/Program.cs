@@ -15,6 +15,12 @@ using ktsu.ImGui.App;
 ImGuiApp.Start(new ImGuiAppConfig
 {
 	Title = "ImGuiApp iOS Smoke Test",
+
+	// Logs the native Dear ImGui version once the renderer (and statically-linked cimgui) is up. CI
+	// greps this to confirm the native ABI matches the managed Hexa.NET.ImGui bindings (1.92.2); a
+	// mismatch would mean the cimgui build drifted from the version Hexa expects.
+	OnStart = () => Console.WriteLine($"IMGUIAPP_IOS_IMGUI_VERSION={ImGui.GetVersion()}"),
+
 	OnRender = _ =>
 	{
 		ImGui.Begin("Smoke");

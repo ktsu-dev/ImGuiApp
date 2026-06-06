@@ -8,10 +8,13 @@ namespace ktsu.ImGui.App;
 
 using System;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using CoreGraphics;
 
 using Hexa.NET.ImGui;
+
+using HexaGen.Runtime;
 
 /// <summary>
 /// iOS renderer orchestration for <see cref="ImGuiApp"/>: stands up the Dear ImGui context and font
@@ -26,6 +29,34 @@ public static partial class ImGuiApp
 
 	/// <summary>The Metal-backed view, used to read the logical display size and pixel scale each frame.</summary>
 	internal static MetalView? RenderView { get; private set; }
+
+	/// <summary>Guards one-time installation of the native-library resolver hook.</summary>
+	private static bool nativeResolverInstalled;
+
+	/// <summary>
+	/// Routes Hexa.NET native library loads to the app's own program image. Hexa.NET.ImGui ships no
+	/// native cimgui for iOS, so we statically link it into the app instead (Dear ImGui 1.92.2b, built
+	/// by <c>scripts/build-cimgui-ios.sh</c> and linked via the <c>libcimgui-sim.a</c> NativeReference).
+	/// HexaGen normally resolves each native symbol from a handle returned by <c>dlopen</c>; on iOS that
+	/// fails because there is no on-disk <c>cimgui.dylib</c>. Returning
+	/// <see cref="NativeLibrary.GetMainProgramHandle"/> makes HexaGen's function table resolve the
+	/// statically-linked exports (<c>igGetVersion</c>, <c>igBegin</c>, …) via <c>TryGetExport</c> — the
+	/// managed equivalent of <c>DllImport("__Internal")</c>. Must run before any ImGui call.
+	/// </summary>
+	private static void EnsureNativeLibraryResolver()
+	{
+		if (nativeResolverInstalled)
+		{
+			return;
+		}
+
+		nativeResolverInstalled = true;
+		LibraryLoader.InterceptLibraryLoad += static (string libraryName, out nint pointer) =>
+		{
+			pointer = NativeLibrary.GetMainProgramHandle();
+			return true;
+		};
+	}
 
 	/// <summary>
 	/// Creates the ImGui context, configures IO, builds the font atlas, and constructs the Metal
@@ -43,6 +74,9 @@ public static partial class ImGuiApp
 
 		RenderView = view;
 		ScaleFactor = view.Scale;
+
+		// Point Hexa's native loader at the statically-linked cimgui before the first ImGui call.
+		EnsureNativeLibraryResolver();
 
 		ImGui.CreateContext();
 		ImGui.StyleColorsDark();

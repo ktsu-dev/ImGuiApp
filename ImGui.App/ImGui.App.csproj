@@ -71,6 +71,22 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <!-- Hexa.NET.ImGui ships no native cimgui for iOS. scripts/build-cimgui-ios.sh compiles it
+       (Dear ImGui 1.92.2b, matching Hexa 2.2.9) into a simulator static lib that we statically link
+       here; ImGuiApp.iOS's EnsureNativeLibraryResolver points HexaGen's function table at the main
+       program image so the symbols resolve (the managed equivalent of DllImport("__Internal")).
+       Conditioned on Exists so the compile-only net10.0-ios CI job (which does not build the native
+       lib) still builds the managed library. ForceLoad + SmartLink=false keep the symbols from being
+       dead-stripped, since nothing references them statically — they are resolved via TryGetExport. -->
+  <ItemGroup Condition="$(TargetFramework.Contains('-ios')) And Exists('$(MSBuildThisFileDirectory)Platform/iOS/native/libcimgui-sim.a')">
+    <NativeReference Include="$(MSBuildThisFileDirectory)Platform/iOS/native/libcimgui-sim.a">
+      <Kind>Static</Kind>
+      <ForceLoad>True</ForceLoad>
+      <IsCxx>True</IsCxx>
+      <SmartLink>False</SmartLink>
+    </NativeReference>
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Update="Resources\Resources.Designer.cs">
       <DesignTime>True</DesignTime>

@@ -319,6 +319,20 @@ jobs:
           # Informational: confirm the host link tool now resolves through the real path.
           xcrun --find install_name_tool || echo "WARN: install_name_tool did not resolve via $XC"
 
+      # Hexa.NET.ImGui ships no native cimgui for iOS, so build it from source (Dear ImGui 1.92.2b,
+      # matching Hexa 2.2.9) into a simulator static lib that ImGui.App statically links via a
+      # NativeReference. Cached by the build script's hash so it only rebuilds when the recipe changes.
+      # Runs after the Xcode pin so xcrun resolves the toolchain; before the build so the
+      # NativeReference's Exists() condition is satisfied when ImGui.App compiles.
+      - name: Cache native cimgui (iOS simulator)
+        uses: actions/cache@v4
+        with:
+          path: ImGui.App/Platform/iOS/native
+          key: cimgui-sim-arm64-imgui1.92.2b-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
+
+      - name: Build native cimgui for the simulator
+        run: bash scripts/build-cimgui-ios.sh
+
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
       # Clearing RuntimeIdentifiers and pinning the single simulator RID sidesteps that while still
