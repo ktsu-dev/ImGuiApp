@@ -301,11 +301,16 @@ jobs:
       # latest _26.5 packs are) — hence NU1102 on ImGui.App.csproj. UseFloatingTargetPlatformVersion
       # makes the library use the latest platform version (26.5) like the executable, aligning both
       # on the installed runtime packs. See https://learn.microsoft.com/dotnet/ios/building-apps/build-properties#usefloatingtargetplatformversion
+      # ktsu.Sdk pins RuntimeFrameworkVersion=10.0.0 (for the desktop .NETCore.App runtime). On iOS
+      # that bogus version is inherited by the Apple runtime pack (Microsoft.iOS.Runtime.*, actually
+      # versioned 26.5.x), causing NU1102. Clearing RuntimeFrameworkVersion lets the iOS workload
+      # resolve the real pack version. Combined with UseFloatingTargetPlatformVersion (library ->
+      # latest _26.5 packs, which are the ones installed on the runner).
       - name: Restore smoke app (net10.0-ios, simulator RID)
-        run: dotnet restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:UseFloatingTargetPlatformVersion=true -r iossimulator-arm64
+        run: dotnet restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -r iossimulator-arm64
 
       - name: Build smoke app (.app for simulator)
-        run: dotnet build tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -c Release -f net10.0-ios -r iossimulator-arm64 -p:RuntimeIdentifiers= -p:UseFloatingTargetPlatformVersion=true -p:EnforceCodeStyleInBuild=false --no-restore
+        run: dotnet build tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -c Release -f net10.0-ios -r iossimulator-arm64 -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -p:EnforceCodeStyleInBuild=false --no-restore
 
       - name: Locate built .app bundle
         id: findapp
