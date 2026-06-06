@@ -81,7 +81,7 @@ public static partial class ImGuiWidgets
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, uint textureId, float imageSize, IconAlignment iconAlignment) =>
+	public static bool Icon(string label, nint textureId, float imageSize, IconAlignment iconAlignment) =>
 		IconImpl.Show(label, textureId, new(imageSize, imageSize), iconAlignment, new());
 
 	/// <summary>
@@ -92,7 +92,7 @@ public static partial class ImGuiWidgets
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, uint textureId, Vector2 imageSize, IconAlignment iconAlignment) =>
+	public static bool Icon(string label, nint textureId, Vector2 imageSize, IconAlignment iconAlignment) =>
 		IconImpl.Show(label, textureId, imageSize, iconAlignment, new());
 
 	/// <summary>
@@ -104,7 +104,7 @@ public static partial class ImGuiWidgets
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <param name="options">Additional options</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, uint textureId, float imageSize, IconAlignment iconAlignment, IconOptions options) =>
+	public static bool Icon(string label, nint textureId, float imageSize, IconAlignment iconAlignment, IconOptions options) =>
 		IconImpl.Show(label, textureId, new(imageSize, imageSize), iconAlignment, options);
 
 	/// <summary>
@@ -116,7 +116,7 @@ public static partial class ImGuiWidgets
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <param name="options">Additional options</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, uint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options) =>
+	public static bool Icon(string label, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options) =>
 		IconImpl.Show(label, textureId, imageSize, iconAlignment, options);
 
 	/// <summary>
@@ -170,7 +170,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal static class IconImpl
 	{
-		internal static bool Show(string label, uint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
+		internal static bool Show(string label, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
 		{
 			Ensure.NotNull(label);
 			Ensure.NotNull(options);
@@ -257,7 +257,7 @@ public static partial class ImGuiWidgets
 		}
 
 		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-		private static void VerticalLayout(string label, uint textureId, Vector2 imageSize, Vector2 labelSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+		private static void VerticalLayout(string label, nint textureId, Vector2 imageSize, Vector2 labelSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2((boundingBoxSize.X - imageSize.X) / 2, 0);
 			ImGui.SetCursorScreenPos(imageTopLeft);
@@ -280,7 +280,7 @@ public static partial class ImGuiWidgets
 		}
 
 		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-		private static void HorizontalLayout(string label, uint textureId, Vector2 imageSize, Vector2 labelSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+		private static void HorizontalLayout(string label, nint textureId, Vector2 imageSize, Vector2 labelSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
 		{
 			unsafe
 			{
