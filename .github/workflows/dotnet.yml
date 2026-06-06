@@ -292,35 +292,33 @@ jobs:
           xcrun simctl list runtimes || true
         continue-on-error: true
 
-      # The .NET 10 iOS workload (26.5) requires a matching Xcode. Some Xcodes on the runner are only
-      # partially provisioned (e.g. Xcode_26.5.0 has clang but no macOS platform SDK, so the native
-      # build's `xcrun -sdk MacOSX.sdk -find install_name_tool` fails). Print a full inventory, then
-      # select the NEWEST Xcode that has BOTH a clang toolchain AND the macOS platform SDK.
-      - name: Select a fully-provisioned Xcode
+      # The .NET 10 iOS workload (26.5) binds to a matching Xcode. The runner ships TWO Xcode 26.5
+      # installs - Xcode_26.5.0.app and Xcode_26.5.app - and the former is runtime-broken: its
+      # `xcodebuild -find` returns errno=Invalid argument, so `xcrun --find clang++/install_name_tool`
+      # fail and the native link dies (exit 72). The files exist on disk, so a file-existence check
+      # can't tell them apart - probe each Xcode at RUNTIME and select the newest one whose xcrun can
+      # actually resolve the host link tools. (sort -Vr ranks 26.5.0 above 26.5, hence the probe.)
+      - name: Select a working Xcode (runtime-probed)
         run: |
-          set -euxo pipefail
-          echo "--- Xcode inventory (version | clang | macOS SDK | iphonesimulator SDK) ---"
-          for x in $(ls -d /Applications/Xcode*.app | sort -Vr); do
-            ver=$("$x/Contents/Developer/usr/bin/xcodebuild" -version 2>/dev/null | head -1 || echo '?')
-            c=no; [ -x "$x/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" ] && c=yes
-            m=no; [ -d "$x/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ] && m=yes
-            s=no; ls -d "$x/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator"*.sdk >/dev/null 2>&1 && s=yes
-            echo "$x | $ver | clang=$c macsdk=$m simsdk=$s"
-          done
+          set -uxo pipefail
           selected=""
           for x in $(ls -d /Applications/Xcode*.app | sort -Vr); do
-            if [ -x "$x/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" ] \
-               && [ -d "$x/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
-              selected="$x"
-              break
+            dev="$x/Contents/Developer"
+            ver=$("$dev/usr/bin/xcodebuild" -version 2>/dev/null | head -1 || echo '?')
+            if DEVELOPER_DIR="$dev" xcrun --find clang++ >/dev/null 2>&1 \
+               && DEVELOPER_DIR="$dev" xcrun --find install_name_tool >/dev/null 2>&1; then
+              echo "OK   $x ($ver) - host tools resolve"
+              [ -z "$selected" ] && selected="$x"
+            else
+              echo "SKIP $x ($ver) - host tools do NOT resolve"
             fi
           done
           test -n "$selected"
           echo "Selecting Xcode: $selected"
           sudo xcode-select -s "$selected"
           xcodebuild -version
+          xcrun --find clang++
           xcrun --find install_name_tool
-          xcrun --find clang
 
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
