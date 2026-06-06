@@ -258,11 +258,13 @@ After Task 2 lands, the Mac job catches compile regressions automatically; manua
 
 ---
 
-## 7. Open Questions
+## 7. Open Questions — RESOLVED (2026-06-06)
 
-1. **`uint TextureId` → `nint TextureId`** is a public-API breaking change for anyone storing the raw handle. Acceptable in a feature release, but flag in CHANGELOG. Alternative: keep `uint` and lose the top 32 bits of the Metal handle (risky on 64-bit pointer comparison).
-2. **Do we ship `.metallib` source-compiled at consumer build time, or precompiled in our NuGet?** Precompiled is simpler but locks shader to one Metal version. Source-compiled requires consumers to have the iOS workload, which they already need to consume the iOS TFM, so probably fine.
-3. **AOT trimming budget.** Hexa.NET.ImGui's P/Invoke surface is large; we may need `<IsTrimmable>false</IsTrimmable>` for v1 and tighten later. Costs binary size.
-4. **iPad Stage Manager / multi-window.** Single-scene is fine for v1; document the limitation.
+1. **`uint TextureId` → `nint TextureId`.** **Decision: change to `nint`.** One pointer-sized handle holds both GL names and `id<MTLTexture>`. Public-API breaking change for anyone reading the raw id — flag in CHANGELOG and bump accordingly.
+2. **`.metallib` packaging.** **Decision: source-compile at consumer build time** via an MSBuild target invoking `xcrun metal`. Consumers already need the iOS workload (which ships the Metal toolchain), so the shader always matches their Metal version.
+3. **AOT trimming budget.** **Decision: trim-correct from the start.** Annotate / root the necessary types (`TrimmerRootDescriptor`, `DynamicDependency`) rather than disabling trimming. Expect Mac/CI round-trips chasing linker strips.
+4. **iPad Stage Manager / multi-window.** Single-scene is fine for v1; document the limitation. (Unchanged — still deferred.)
 
-Answer these before starting Task 4 (Metal renderer); the others can wait.
+**Verification path (decided):** invest in an automated **iOS-simulator CI job first**, before writing the native Metal renderer, so runtime behaviour (launch, tick, render, exit) is caught in CI rather than relying on ad-hoc Mac smoke tests. This re-orders the plan: the simulator harness + CI job is the immediate next chunk, ahead of Task 4.
+
+**Renderer bindings (decided, no external dep):** use the `Metal` / `CoreAnimation` bindings built into the Microsoft.iOS SDK (`MTLDevice`, `MTLCommandQueue`, `CAMetalLayer`, …) rather than a third-party NuGet or hand-rolled P/Invoke.
