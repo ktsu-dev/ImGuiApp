@@ -328,7 +328,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ImGui.App/Platform/iOS/native
-          key: cimgui-sim-arm64-imgui1.92.2b-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
+          key: cimgui-sim-arm64-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
 
       - name: Build native cimgui for the simulator
         run: bash scripts/build-cimgui-ios.sh

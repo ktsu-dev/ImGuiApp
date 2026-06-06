@@ -19,8 +19,14 @@
 set -euo pipefail
 
 CIMGUI_REPO="${CIMGUI_REPO:-https://github.com/cimgui/cimgui.git}"
-CIMGUI_REF="${CIMGUI_REF:-docking_inter}"
-IMGUI_TAG="${IMGUI_TAG:-v1.92.2b}"
+CIMGUI_BRANCH="${CIMGUI_BRANCH:-docking_inter}"
+# Hexa.NET.ImGui 2.2.9 binds Dear ImGui 1.92.2b, but cimgui/cimgui skipped 1.92.2 (it went 1.92.1 ->
+# 1.92.3). We pin the 1.92.3 docking commit — a clean, internally-consistent release adjacent to
+# 1.92.2b; the structs this port touches (ImGuiIO / ImDrawData / ImDrawVert / ImFontAtlas /
+# ImTextureData) are stable across these patches, and the smoke run verifies it at runtime. Override
+# CIMGUI_COMMIT=d61baef... + EXPECTED_IMGUI=1.92.1 to fall back to 1.92.1 if the ABI ever disagrees.
+CIMGUI_COMMIT="${CIMGUI_COMMIT:-207fca2d361179c349f3c9d1893b8274f4bbfebf}"
+EXPECTED_IMGUI="${EXPECTED_IMGUI:-1.92.3}"
 OUT_DIR="${1:-ImGui.App/Platform/iOS/native}"
 OUT_LIB="$OUT_DIR/libcimgui-sim.a"
 
@@ -32,19 +38,28 @@ fi
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-echo "Cloning cimgui ($CIMGUI_REF) ..."
-git clone --branch "$CIMGUI_REF" --recursive "$CIMGUI_REPO" "$WORK/cimgui"
+echo "Cloning cimgui ($CIMGUI_BRANCH @ $CIMGUI_COMMIT) ..."
+# Clone the branch (full history so the pinned commit is reachable), check it out, THEN init the
+# imgui submodule — so imgui lands on the commit's pointer, not the branch HEAD's. cimgui's generated
+# cimgui.h must match its OWN bundled Dear ImGui (it references docking/viewport types that only exist
+# in that submodule), so the commit + its submodule are built as a consistent pair.
+git clone --branch "$CIMGUI_BRANCH" "$CIMGUI_REPO" "$WORK/cimgui"
 cd "$WORK/cimgui"
+git checkout -q "$CIMGUI_COMMIT"
+git submodule update --init --recursive
 
-# Pin the bundled Dear ImGui to the exact version Hexa 2.2.9 was generated against. Best-effort:
-# if the tag can't be fetched, fall back to cimgui's submodule pointer and rely on the runtime
-# version assertion to flag a mismatch.
-if ( cd imgui && git fetch --depth 1 origin tag "$IMGUI_TAG" 2>/dev/null && git checkout -q "$IMGUI_TAG" 2>/dev/null ); then
-	echo "Pinned Dear ImGui to $IMGUI_TAG."
-else
-	echo "WARN: could not pin Dear ImGui to $IMGUI_TAG; using cimgui's submodule pointer."
-fi
-echo "Building cimgui against: $(grep -E '#define IMGUI_VERSION ' imgui/imgui.h)"
+# Assert the bundled Dear ImGui version is the one we expect, so an upstream cimgui change can never
+# silently swap the ABI out from under the managed Hexa.NET.ImGui bindings.
+BUILT_VER="$(sed -nE 's/^#define IMGUI_VERSION[[:space:]]+"([^"]+)".*/\1/p' imgui/imgui.h)"
+echo "cimgui @ $CIMGUI_COMMIT bundles Dear ImGui $BUILT_VER"
+case "$BUILT_VER" in
+	"$EXPECTED_IMGUI"*) : ;;
+	*)
+		echo "ERROR: cimgui @ $CIMGUI_COMMIT bundles Dear ImGui $BUILT_VER, expected $EXPECTED_IMGUI." >&2
+		echo "       Pin CIMGUI_COMMIT to a cimgui commit whose imgui submodule is $EXPECTED_IMGUI (docking)." >&2
+		exit 1
+		;;
+esac
 
 SDK=iphonesimulator
 SYSROOT="$(xcrun --sdk "$SDK" --show-sdk-path)"
