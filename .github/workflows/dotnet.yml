@@ -292,20 +292,25 @@ jobs:
           xcrun simctl list runtimes || true
         continue-on-error: true
 
-      # The .NET 10 iOS workload (26.5) requires a matching Xcode. Select the newest Xcode installed
-      # on the runner so the native .app build/link step is satisfied.
-      - name: Select latest Xcode
+      # The .NET 10 iOS workload (26.5) requires a matching Xcode. The runner may carry a newer
+      # Xcode that isn't fully provisioned (missing clang/SDKs), so select the NEWEST Xcode that
+      # actually contains a working clang toolchain rather than blindly the highest version.
+      - name: Select newest fully-provisioned Xcode
         run: |
           set -euxo pipefail
-          LATEST_XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
-          sudo xcode-select -s "$LATEST_XCODE"
-          # A freshly-selected Xcode may not have its SDKs / command-line tools provisioned yet
-          # ("SDK MacOSX.sdk cannot be located", "install_name_tool not found"); runFirstLaunch
-          # installs the missing components.
-          sudo xcodebuild -runFirstLaunch
+          selected=""
+          for x in $(ls -d /Applications/Xcode*.app | sort -Vr); do
+            if [ -x "$x/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" ]; then
+              selected="$x"
+              break
+            fi
+          done
+          test -n "$selected"
+          echo "Selecting Xcode: $selected"
+          sudo xcode-select -s "$selected"
           xcodebuild -version
-          xcrun --sdk macosx --show-sdk-path || true
-          xcrun --find install_name_tool || true
+          xcrun --find clang
+          xcrun --sdk iphonesimulator --show-sdk-path
 
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
