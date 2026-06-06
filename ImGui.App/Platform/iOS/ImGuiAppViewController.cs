@@ -27,6 +27,14 @@ public class ImGuiAppViewController : UIViewController
 	private UILabel? titleLabel;
 	private double lastTimestamp;
 
+	// CI smoke-test harness: when the IMGUIAPP_IOS_SMOKE_FRAMES environment variable is a positive
+	// integer (set via simctl's SIMCTL_CHILD_ prefix), the app runs that many frames, prints a
+	// success marker, and exits cleanly. This lets the iOS-simulator CI job verify the lifecycle
+	// actually launches and ticks. It is a no-op in normal runs.
+	private const string SmokeFramesEnvVar = "IMGUIAPP_IOS_SMOKE_FRAMES";
+	private const string SmokeSuccessMarker = "IMGUIAPP_IOS_SMOKE_OK";
+	private int smokeFramesRemaining;
+
 	/// <summary>
 	/// Builds the view contents and the display link. Called once by UIKit after the view loads.
 	/// </summary>
@@ -52,6 +60,12 @@ public class ImGuiAppViewController : UIViewController
 		displayLink.PreferredFrameRateRange = CAFrameRateRange.Create(fps, fps, fps);
 		displayLink.AddToRunLoop(NSRunLoop.Main, NSRunLoopMode.Common);
 		displayLink.Paused = true; // resumed in ViewWillAppear / on activation
+
+		if (int.TryParse(Environment.GetEnvironmentVariable(SmokeFramesEnvVar), out int frames) && frames > 0)
+		{
+			smokeFramesRemaining = frames;
+			Console.WriteLine($"IMGUIAPP_IOS_SMOKE_BEGIN frames={frames}");
+		}
 	}
 
 	/// <summary>Marks the app visible, runs one-time startup, and resumes the frame loop.</summary>
@@ -113,6 +127,18 @@ public class ImGuiAppViewController : UIViewController
 		lastTimestamp = timestamp;
 
 		ImGuiApp.Tick(delta);
+
+		if (smokeFramesRemaining > 0)
+		{
+			smokeFramesRemaining--;
+			if (smokeFramesRemaining == 0)
+			{
+				// Lifecycle ticked successfully for the requested number of frames; report and exit.
+				Console.WriteLine(SmokeSuccessMarker);
+				Console.Out.Flush();
+				Environment.Exit(0);
+			}
+		}
 	}
 
 	/// <summary>Tears down the display link.</summary>

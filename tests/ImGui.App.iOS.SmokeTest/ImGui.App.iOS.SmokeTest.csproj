@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <EnableSourceLink>false</EnableSourceLink>
+    <RootNamespace>ktsu.ImGui.App.iOS.SmokeTest</RootNamespace>
+    <AssemblyName>ImGuiAppiOSSmokeTest</AssemblyName>
+
+    <!-- This project is an iOS application only on macOS (where the iOS workload exists). On any
+         other OS it degrades to a plain net10.0 console exe so the Windows CI pipeline can still
+         restore/build it without the iOS workload. The simulator job always builds -f net10.0-ios. -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('OSX'))">net10.0-ios</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('OSX'))">net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <ApplicationTitle>ImGuiApp iOS Smoke</ApplicationTitle>
+    <ApplicationId>dev.ktsu.imguiapp.smoketest</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+  </ItemGroup>
+
+</Project>
