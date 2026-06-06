@@ -15,16 +15,15 @@ using Foundation;
 using UIKit;
 
 /// <summary>
-/// The root view controller for an ImGuiApp iOS process. Hosts the rendering view and drives the
-/// frame loop via a <see cref="CADisplayLink"/> synchronised to the display's refresh, forwarding
-/// each tick to <see cref="ImGuiApp.Tick(float)"/>. Until the Metal backend lands, the view is a
-/// solid colour with a centred title label so the lifecycle can be verified in isolation.
+/// The root view controller for an ImGuiApp iOS process. Hosts the Metal-backed <see cref="MetalView"/>
+/// and drives the frame loop via a <see cref="CADisplayLink"/> synchronised to the display's refresh,
+/// forwarding each tick to <see cref="ImGuiApp.Tick(float)"/> which builds and submits an ImGui frame
+/// through the Metal renderer.
 /// </summary>
 [SuppressMessage("Design", "CA1010:Generic interface should also be provided", Justification = "Inherited non-generic IEnumerable comes from the UIKit base type UIViewController; a generic counterpart cannot be added to a framework base class.")]
 public class ImGuiAppViewController : UIViewController
 {
 	private CADisplayLink? displayLink;
-	private UILabel? titleLabel;
 	private double lastTimestamp;
 
 	// CI smoke-test harness: when the IMGUIAPP_IOS_SMOKE_FRAMES environment variable is a positive
@@ -35,24 +34,18 @@ public class ImGuiAppViewController : UIViewController
 	private const string SmokeSuccessMarker = "IMGUIAPP_IOS_SMOKE_OK";
 	private int smokeFramesRemaining;
 
+	/// <summary>Installs the Metal-backed view as the controller's root view before it loads.</summary>
+	public override void LoadView() => View = new MetalView(UIScreen.MainScreen.Bounds);
+
 	/// <summary>
-	/// Builds the view contents and the display link. Called once by UIKit after the view loads.
+	/// Initialises the renderer against the Metal view and builds the display link. Called once by
+	/// UIKit after the view loads.
 	/// </summary>
 	public override void ViewDidLoad()
 	{
 		base.ViewDidLoad();
 
-		UIView view = View!;
-		view.BackgroundColor = UIColor.FromRGB((byte)115, (byte)140, (byte)153); // matches the desktop clear colour
-
-		titleLabel = new UILabel(view.Bounds)
-		{
-			Text = ImGuiApp.Config.Title,
-			TextAlignment = UITextAlignment.Center,
-			TextColor = UIColor.White,
-			AutoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight,
-		};
-		view.AddSubview(titleLabel);
+		ImGuiApp.InitializeRenderer((MetalView)View!);
 
 		float fps = Math.Max(1, (float)ImGuiApp.Config.PerformanceSettings.FocusedFps);
 		displayLink = CADisplayLink.Create(OnDisplayLink);
@@ -150,8 +143,6 @@ public class ImGuiAppViewController : UIViewController
 			displayLink?.Invalidate();
 			displayLink?.Dispose();
 			displayLink = null;
-			titleLabel?.Dispose();
-			titleLabel = null;
 		}
 
 		base.Dispose(disposing);

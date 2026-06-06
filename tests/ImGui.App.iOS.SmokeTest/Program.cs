@@ -2,15 +2,24 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 
-// Minimal headless smoke test for the iOS lifecycle. On iOS, ImGuiApp.Start hands control to
-// UIApplication.Main; the view controller's IMGUIAPP_IOS_SMOKE_FRAMES hook runs a few frames,
-// prints a success marker, and exits cleanly so the simulator CI job can assert the app launched
-// and ticked. The render callback is intentionally empty — no ImGui drawing exists until the
-// Metal backend lands (this verifies lifecycle plumbing only).
+// Headless smoke test for the iOS lifecycle + Metal renderer. On iOS, ImGuiApp.Start hands control
+// to UIApplication.Main; each frame now builds a real ImGui frame and submits it through the Metal
+// backend. The render callback draws a small window so the simulator CI job exercises the full
+// textured path (font-atlas glyphs + filled shapes), not just an empty frame. The view controller's
+// IMGUIAPP_IOS_SMOKE_FRAMES hook runs a few frames, prints a success marker, and exits cleanly so CI
+// can assert the app launched, rendered, and ticked without crashing in the Metal pipeline.
 ImGuiApp.Start(new ImGuiAppConfig
 {
 	Title = "ImGuiApp iOS Smoke Test",
-	OnRender = _ => { },
+	OnRender = _ =>
+	{
+		ImGui.Begin("Smoke");
+		ImGui.Text("iOS Metal renderer smoke test");
+		ImGui.Button("Tap");
+		ImGui.End();
+	},
 });
