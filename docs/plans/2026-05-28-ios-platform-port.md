@@ -7,11 +7,15 @@
 > **Progress log:**
 > - ✅ **Task 1** — `IRendererBackend` seam introduced; desktop routes through it (`IRendererBackend.cs`).
 > - ✅ **Task 2** — `macos-14` CI job compile-checks `net10.0-ios` (`.github/workflows/dotnet.yml`).
-> - 🚧 **Task 3 groundwork** — the platform-neutral public surface (`ImGuiAppConfig`,
->   `ImGuiAppWindowState`, `FontMemoryGuard.FontMemoryConfig`) now compiles for `net10.0-ios`
+> - ✅ **Task 3 groundwork** — the platform-neutral public surface (`ImGuiAppConfig`,
+>   `ImGuiAppWindowState`, `FontMemoryGuard.FontMemoryConfig`) compiles for `net10.0-ios`
 >   (Silk.NET-coupled members gated behind `#if !IOS`), and the iOS entry point exposes the
->   cross-platform `Start(ImGuiAppConfig)` signature. The `UIApplicationDelegate` + `CADisplayLink`
->   lifecycle (the rest of Task 3) is the next chunk; `Start` still throws until it lands.
+>   cross-platform `Start(ImGuiAppConfig)` signature.
+> - 🚧 **Task 3 lifecycle** — native UIKit plumbing landed: `ImGuiAppDelegate`
+>   (`UIApplicationDelegate`, window + focus lifecycle), `ImGuiAppViewController` (`CADisplayLink`
+>   frame pump + visibility), and `ImGuiApp.Start` now runs `UIApplication.Main` and ticks
+>   `OnStart`/`OnUpdate`/`OnRender`. No ImGui frame or GPU submission yet — that's Task 4 (Metal).
+>   **Compiles on the macOS CI job but is not yet runtime-verified on a device/simulator.**
 
 **Goal:** Make `ImGuiApp.Start(config)` actually run a Dear ImGui application on iOS (iPhone + iPad, iOS 15+) with parity for the OnStart / OnUpdate / OnRender / OnAppMenu lifecycle, fonts, textures, and DPI scaling.
 
@@ -254,11 +258,13 @@ After Task 2 lands, the Mac job catches compile regressions automatically; manua
 
 ---
 
-## 7. Open Questions
+## 7. Open Questions — RESOLVED (2026-06-06)
 
-1. **`uint TextureId` → `nint TextureId`** is a public-API breaking change for anyone storing the raw handle. Acceptable in a feature release, but flag in CHANGELOG. Alternative: keep `uint` and lose the top 32 bits of the Metal handle (risky on 64-bit pointer comparison).
-2. **Do we ship `.metallib` source-compiled at consumer build time, or precompiled in our NuGet?** Precompiled is simpler but locks shader to one Metal version. Source-compiled requires consumers to have the iOS workload, which they already need to consume the iOS TFM, so probably fine.
-3. **AOT trimming budget.** Hexa.NET.ImGui's P/Invoke surface is large; we may need `<IsTrimmable>false</IsTrimmable>` for v1 and tighten later. Costs binary size.
-4. **iPad Stage Manager / multi-window.** Single-scene is fine for v1; document the limitation.
+1. **`uint TextureId` → `nint TextureId`.** **Decision: change to `nint`.** One pointer-sized handle holds both GL names and `id<MTLTexture>`. Public-API breaking change for anyone reading the raw id — flag in CHANGELOG and bump accordingly.
+2. **`.metallib` packaging.** **Decision: source-compile at consumer build time** via an MSBuild target invoking `xcrun metal`. Consumers already need the iOS workload (which ships the Metal toolchain), so the shader always matches their Metal version.
+3. **AOT trimming budget.** **Decision: trim-correct from the start.** Annotate / root the necessary types (`TrimmerRootDescriptor`, `DynamicDependency`) rather than disabling trimming. Expect Mac/CI round-trips chasing linker strips.
+4. **iPad Stage Manager / multi-window.** Single-scene is fine for v1; document the limitation. (Unchanged — still deferred.)
 
-Answer these before starting Task 4 (Metal renderer); the others can wait.
+**Verification path (decided):** invest in an automated **iOS-simulator CI job first**, before writing the native Metal renderer, so runtime behaviour (launch, tick, render, exit) is caught in CI rather than relying on ad-hoc Mac smoke tests. This re-orders the plan: the simulator harness + CI job is the immediate next chunk, ahead of Task 4.
+
+**Renderer bindings (decided, no external dep):** use the `Metal` / `CoreAnimation` bindings built into the Microsoft.iOS SDK (`MTLDevice`, `MTLCommandQueue`, `CAMetalLayer`, …) rather than a third-party NuGet or hand-rolled P/Invoke.
