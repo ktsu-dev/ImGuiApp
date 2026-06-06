@@ -6,7 +6,9 @@ namespace ktsu.ImGui.App;
 
 using System.Resources;
 using ktsu.ScopedAction;
+#if !IOS
 using Silk.NET.Windowing;
+#endif
 
 /// <summary>
 /// Represents the configuration settings for the ImGui application.
@@ -19,11 +21,17 @@ public class ImGuiAppConfig
 	/// </summary>
 	public bool TestMode { get; init; }
 
+#if !IOS
 	/// <summary>
 	/// Gets or sets the test window to use when TestMode is true.
 	/// This must be set when TestMode is true.
 	/// </summary>
+	/// <remarks>
+	/// Backed by the desktop windowing layer (Silk.NET) and consumed only by the desktop render
+	/// loop, so it is excluded from the <c>net10.0-ios</c> build.
+	/// </remarks>
 	internal IWindow? TestWindow { get; init; }
+#endif
 
 	/// <summary>
 	/// Gets or sets the title of the application window.
@@ -42,7 +50,7 @@ public class ImGuiAppConfig
 
 	/// <summary>
 	/// Gets or sets a value indicating whether the window is created hidden.
-	/// When true, the window starts invisible and must be shown with <see cref="ImGuiApp.Show"/>
+	/// When true, the window starts invisible and must be shown with <c>ImGuiApp.Show</c>
 	/// (typically from a system tray icon). The render loop still runs while hidden.
 	/// </summary>
 	public bool StartHidden { get; init; }
@@ -50,7 +58,7 @@ public class ImGuiAppConfig
 	/// <summary>
 	/// Gets or sets a value indicating whether clicking the window's close button hides the
 	/// window instead of stopping the application. This keeps the render loop alive so the
-	/// window can be shown again via <see cref="ImGuiApp.Show"/>. Implemented on Windows;
+	/// window can be shown again via <c>ImGuiApp.Show</c>. Implemented on Windows;
 	/// on other platforms the window closes normally.
 	/// </summary>
 	public bool HideOnClose { get; init; }

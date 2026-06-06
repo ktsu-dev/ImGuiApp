@@ -6,7 +6,9 @@ namespace ktsu.ImGui.App;
 
 using System.Numerics;
 
+#if !IOS
 using Silk.NET.Windowing;
+#endif
 
 /// <summary>
 /// Represents the state of the ImGui application window, including size, position, and layout state.
@@ -23,8 +25,14 @@ public class ImGuiAppWindowState
 	/// </summary>
 	public Vector2 Pos { get; set; } = new(-short.MinValue, -short.MinValue);
 
+#if !IOS
 	/// <summary>
 	/// Gets or sets the layout state of the window.
 	/// </summary>
+	/// <remarks>
+	/// Backed by the desktop windowing layer (Silk.NET). iOS controls window sizing itself, so
+	/// this member is excluded from the <c>net10.0-ios</c> build; see the iOS platform port plan.
+	/// </remarks>
 	public WindowState LayoutState { get; set; }
+#endif
 }

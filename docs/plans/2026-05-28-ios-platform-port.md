@@ -1,8 +1,17 @@
 # iOS Platform Port for ImGui.App
 
-> **Status:** Design — not yet under implementation. Each task below is a separate PR-sized chunk.
-> **Owner:** TBD (Mac required for verification — Linux container cannot build `net10.0-ios`).
+> **Status:** In progress. Each task below is a separate PR-sized chunk.
+> **Owner:** TBD (Mac required for runtime verification — Linux container cannot build `net10.0-ios`).
 > **Predecessor:** PR #180 landed the `net10.0-ios` TFM and a throwing stub at `ImGui.App/Platform/iOS/ImGuiApp.iOS.cs`.
+>
+> **Progress log:**
+> - ✅ **Task 1** — `IRendererBackend` seam introduced; desktop routes through it (`IRendererBackend.cs`).
+> - ✅ **Task 2** — `macos-14` CI job compile-checks `net10.0-ios` (`.github/workflows/dotnet.yml`).
+> - 🚧 **Task 3 groundwork** — the platform-neutral public surface (`ImGuiAppConfig`,
+>   `ImGuiAppWindowState`, `FontMemoryGuard.FontMemoryConfig`) now compiles for `net10.0-ios`
+>   (Silk.NET-coupled members gated behind `#if !IOS`), and the iOS entry point exposes the
+>   cross-platform `Start(ImGuiAppConfig)` signature. The `UIApplicationDelegate` + `CADisplayLink`
+>   lifecycle (the rest of Task 3) is the next chunk; `Start` still throws until it lands.
 
 **Goal:** Make `ImGuiApp.Start(config)` actually run a Dear ImGui application on iOS (iPhone + iPad, iOS 15+) with parity for the OnStart / OnUpdate / OnRender / OnAppMenu lifecycle, fonts, textures, and DPI scaling.
 
