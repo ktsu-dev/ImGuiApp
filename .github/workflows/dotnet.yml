@@ -251,11 +251,11 @@ jobs:
     # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
     runs-on: macos-26
     timeout-minutes: 30
-    # NON-BLOCKING: GitHub's macos-26 image currently ships a DEFECTIVE Xcode_26.5.0.app (its macOS
-    # platform SDK is missing/broken, so the .NET native-link's `xcrun -sdk .../MacOSX.sdk -find`
-    # fails), and the .NET 10 Microsoft.iOS 26.5 workload binds to that 26.5 Xcode. Until the image
-    # is fixed, this runtime smoke job is informational only and must not gate the PR/release. The
-    # compile-only `Build net10.0-ios` job remains the real iOS gate.
+    # NON-BLOCKING (safety net): native linking on this image hits the known .NET 10 + Xcode 26
+    # symlinked-developer-dir bug (`xcodebuild -find` -> errno=Invalid argument; see the Xcode
+    # resolve step below and dotnet/macios#21762). The resolve step works around it, but Xcode 26
+    # also has documented first-launch flakiness, so keep this job from gating the PR until the
+    # workaround proves consistently green. The compile-only `Build net10.0-ios` job is the hard gate.
     continue-on-error: true
     permissions:
       contents: read
@@ -298,29 +298,28 @@ jobs:
           xcrun simctl list runtimes || true
         continue-on-error: true
 
-      # Deterministically target Xcode_26.5.app - the canonical 26.5 install - and AVOID the sibling
-      # Xcode_26.5.0.app, whose macOS platform SDK is defective (the native-link's `xcrun -sdk
-      # .../MacOSX.sdk -find install_name_tool` fails with it). Runtime PROBES proved unreliable:
-      # `xcodebuild -find clang` exits 0 on the broken Xcode (clang lives in the SDK-independent
-      # toolchain) even though the same call fails inside the build, so probing kept false-positive
-      # selecting 26.5.0. Pin the sibling by path via DEVELOPER_DIR instead; the sanity line below is
-      # informational (the job is non-blocking, so an image defect here won't gate the PR).
-      - name: Select Xcode 26.5 (deterministic; avoid defective Xcode_26.5.0.app)
+      # ROOT CAUSE: the hosted Xcode_26.5.0.app is a SYMLINK, and on .NET 10 + Xcode 26 hosted runners
+      # `xcodebuild -find` intermittently fails to resolve the toolchain through a symlinked developer
+      # dir - dying with `errno=Invalid argument` (NOT "No such file or directory"; the SDK exists).
+      # The managed build and IL strip never call `xcrun -find` so they pass, but native clang linking
+      # (and `-find actool`) do, so they die with clang exit 72. Fix: resolve the .app symlink to its
+      # REAL path with `readlink -f` and pin BOTH xcode-select and DEVELOPER_DIR to it. `readlink -f`
+      # is a no-op on an already-real path, so this is safe either way; writing DEVELOPER_DIR to
+      # $GITHUB_ENV overrides any workflow/job-level value for later steps.
+      # Refs: dotnet/macios#21762, actions/runner-images#13347.
+      - name: Resolve and pin the real Xcode 26.5 path (symlink workaround)
         run: |
           set -uxo pipefail
           XC=/Applications/Xcode_26.5.app
-          if [ ! -d "$XC" ]; then
-            echo "Xcode_26.5.app not present; using xcode-select default"
-            XC="$(dirname "$(dirname "$(xcode-select -p)")")"
-          fi
-          echo "Using Xcode: $XC"
-          sudo xcode-select -s "$XC"
+          [ -d "$XC" ] || XC=/Applications/Xcode_26.5.0.app
+          [ -d "$XC" ] || XC="$(dirname "$(dirname "$(xcode-select -p)")")"
+          XC="$(readlink -f "$XC")"
+          echo "Resolved real Xcode: $XC"
+          sudo xcode-select -switch "$XC/Contents/Developer"
           echo "DEVELOPER_DIR=$XC/Contents/Developer" >> "$GITHUB_ENV"
           xcodebuild -version
-          # Informational: does this Xcode's explicit MacOSX.sdk resolve the host link tool?
-          "$XC/Contents/Developer/usr/bin/xcodebuild" \
-            -sdk "$XC/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" \
-            -find install_name_tool || echo "WARN: install_name_tool did not resolve via $XC"
+          # Informational: confirm the host link tool now resolves through the real path.
+          xcrun --find install_name_tool || echo "WARN: install_name_tool did not resolve via $XC"
 
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
