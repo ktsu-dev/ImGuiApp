@@ -1,11 +1,8 @@
-## v2.10.0 (minor)
+## v2.11.0 (minor)
 
-Changes since v2.9.0:
+Changes since v2.10.0:
 
-- iOS: satisfy analyzers/nullability in the UIKit lifecycle ([@Claude](https://github.com/Claude))
-- docs: record resolved iOS-port design decisions ([@Claude](https://github.com/Claude))
-- iOS: native UIKit lifecycle (UIApplicationDelegate + CADisplayLink) ([@Claude](https://github.com/Claude))
-- ci: re-trigger workflow (flaky unrelated tests) ([@Claude](https://github.com/Claude))
-- iOS: fix net10.0-ios compile errors from the config decoupling ([@Claude](https://github.com/Claude))
-- iOS: make the config surface platform-neutral and align Start signature ([@Claude](https://github.com/Claude))
+- ci: re-trigger (flaky ForceDirectedLayout test-host abort) ([@Claude](https://github.com/Claude))
+- test: drop redundant (nint) casts on int literals (IDE0004) ([@Claude](https://github.com/Claude))
+- [minor] Make GPU texture handles nint end-to-end for the Metal backend ([@Claude](https://github.com/Claude))
 
