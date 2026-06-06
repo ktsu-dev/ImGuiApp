@@ -296,11 +296,16 @@ jobs:
         run: dotnet workload restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj
         continue-on-error: true
 
+      # The referenced ImGui.App is a *library*; in .NET 10 libraries default to the OLDEST iOS
+      # platform version (_26.0), whose runtime packs aren't installed on the runner (only the
+      # latest _26.5 packs are) — hence NU1102 on ImGui.App.csproj. UseFloatingTargetPlatformVersion
+      # makes the library use the latest platform version (26.5) like the executable, aligning both
+      # on the installed runtime packs. See https://learn.microsoft.com/dotnet/ios/building-apps/build-properties#usefloatingtargetplatformversion
       - name: Restore smoke app (net10.0-ios, simulator RID)
-        run: dotnet restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -r iossimulator-x64
+        run: dotnet restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:UseFloatingTargetPlatformVersion=true -r iossimulator-arm64
 
       - name: Build smoke app (.app for simulator)
-        run: dotnet build tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -c Release -f net10.0-ios -r iossimulator-x64 -p:RuntimeIdentifiers= -p:EnforceCodeStyleInBuild=false --no-restore
+        run: dotnet build tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -c Release -f net10.0-ios -r iossimulator-arm64 -p:RuntimeIdentifiers= -p:UseFloatingTargetPlatformVersion=true -p:EnforceCodeStyleInBuild=false --no-restore
 
       - name: Locate built .app bundle
         id: findapp
