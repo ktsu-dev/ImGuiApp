@@ -32,7 +32,11 @@ ImGuiApp.Start(new ImGuiAppConfig
 		ImGui.Begin("Smoke");
 		Console.WriteLine("IMGUIAPP_IOS_OR after-begin");
 		Console.Out.Flush();
-		ImGui.Text("iOS Metal renderer smoke test");
+		// Use TextUnformatted, not Text: ImGui.Text maps to the variadic igText(fmt, ...), and calling
+		// a variadic C function through HexaGen's fixed function-pointer signature crashes on the Apple
+		// ARM64 ABI (varargs are passed on the stack; the callee walks a bogus va_list).
+		// TextUnformatted maps to the non-variadic igTextUnformatted and is safe.
+		ImGui.TextUnformatted("iOS Metal renderer smoke test");
 		Console.WriteLine("IMGUIAPP_IOS_OR after-text");
 		Console.Out.Flush();
 		ImGui.Button("Tap");
