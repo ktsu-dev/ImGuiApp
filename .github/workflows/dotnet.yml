@@ -366,6 +366,25 @@ jobs:
           test -n "$APP"
           echo "app=$APP" >> "$GITHUB_OUTPUT"
 
+      # Diagnostic: confirm whether the statically-linked cimgui symbols are (a) present in the app
+      # executable at all (NativeReference linked) and (b) in its dynamic export table (so HexaGen's
+      # dlsym-based loader can resolve them). The runtime probe reported NOT FOUND; this disambiguates
+      # a missing link from a missing export. Never fails the job.
+      - name: Inspect app binary for cimgui symbols
+        run: |
+          set -uxo pipefail
+          APP="${{ steps.findapp.outputs.app }}"
+          BIN="$APP/$(basename "$APP" .app)"
+          echo "executable: $BIN"
+          file "$BIN" || true
+          echo "--- igGetVersion in full symbol table (is cimgui linked at all?) ---"
+          nm "$BIN" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT in symbol table (cimgui not linked)"
+          echo "--- igGetVersion in external/exported symbols (nm -gU) ---"
+          nm -gU "$BIN" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT external/exported"
+          echo "--- igGetVersion in dyld export trie (dlsym-visible?) ---"
+          xcrun dyld_info -exports "$BIN" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT in dyld export trie"
+        continue-on-error: true
+
       - name: Boot simulator
         run: |
           set -euxo pipefail
