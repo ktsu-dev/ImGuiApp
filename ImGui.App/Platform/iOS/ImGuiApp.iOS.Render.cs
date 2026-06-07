@@ -33,6 +33,24 @@ public static partial class ImGuiApp
 	/// <summary>The Metal-backed view, used to read the logical display size and pixel scale each frame.</summary>
 	internal static MetalView? RenderView { get; private set; }
 
+	/// <summary>Frame counter used to gate the per-frame diagnostic logging to the first few frames.</summary>
+	internal static int DiagFrame { get; set; }
+
+	/// <summary>
+	/// CI-only stage tracer for the first few frames: the simulator smoke run crashes with an
+	/// unsymbolicated SIGSEGV somewhere in the frame loop, so these markers localise the exact native
+	/// call that faults (ImGui NewFrame/Render vs. the Metal draw submission). Removed once green.
+	/// </summary>
+	/// <param name="stage">A short label identifying the point reached in the frame.</param>
+	internal static void DiagLog(string stage)
+	{
+		if (DiagFrame < 3)
+		{
+			Console.WriteLine($"IMGUIAPP_IOS_FRAME {stage}");
+			Console.Out.Flush();
+		}
+	}
+
 	/// <summary>Guards one-time installation of the native-library resolver hook.</summary>
 	private static bool nativeResolverInstalled;
 
@@ -188,15 +206,23 @@ public static partial class ImGuiApp
 
 		RenderView.MetalLayer.DrawableSize = new CGSize(bounds.Width * scale, bounds.Height * scale);
 
+		DiagLog("newframe");
 		ImGui.NewFrame();
+		DiagLog("newframe-ok");
 		return true;
 	}
 
 	/// <summary>Ends the ImGui frame and submits the built draw data to the Metal backend.</summary>
 	internal static void EndImGuiFrameAndRender()
 	{
+		DiagLog("render");
 		ImGui.Render();
-		Renderer!.RenderDrawData(ImGui.GetDrawData());
+		DiagLog("render-ok");
+		ImDrawDataPtr drawData = ImGui.GetDrawData();
+		DiagLog("rdd");
+		Renderer!.RenderDrawData(drawData);
+		DiagLog("rdd-ok");
+		DiagFrame++;
 	}
 }
 

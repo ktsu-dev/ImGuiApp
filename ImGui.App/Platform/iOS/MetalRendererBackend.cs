@@ -108,13 +108,16 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 	/// <inheritdoc />
 	public void RenderDrawData(ImDrawDataPtr drawData)
 	{
+		ImGuiApp.DiagLog("rd:start");
 		int framebufferWidth = (int)(drawData.DisplaySize.X * drawData.FramebufferScale.X);
 		int framebufferHeight = (int)(drawData.DisplaySize.Y * drawData.FramebufferScale.Y);
 		if (framebufferWidth <= 0 || framebufferHeight <= 0 || drawData.CmdListsCount == 0)
 		{
+			ImGuiApp.DiagLog("rd:earlyout");
 			return;
 		}
 
+		ImGuiApp.DiagLog("rd:predrawable");
 		ICAMetalDrawable? drawable = layer.NextDrawable();
 		if (drawable is null)
 		{
@@ -156,7 +159,9 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 			(right + left) / (left - right), (top + bottom) / (bottom - top), 0f, 1f,
 		];
 
+		ImGuiApp.DiagLog("rd:encoder");
 		SetupRenderState(encoder, framebufferWidth, framebufferHeight, projection);
+		ImGuiApp.DiagLog("rd:state");
 
 		Vector2 clipOff = drawData.DisplayPos;
 		Vector2 clipScale = drawData.FramebufferScale;
@@ -175,10 +180,20 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 				continue;
 			}
 
+			if (n == 0)
+			{
+				ImGuiApp.DiagLog("rd:list0");
+			}
+
 			IMTLBuffer vertexBuffer = device.CreateBuffer((nint)cmdList.VtxBuffer.Data, (nuint)vertexBytes, MTLResourceOptions.StorageModeShared)!;
 			IMTLBuffer indexBuffer = device.CreateBuffer((nint)cmdList.IdxBuffer.Data, (nuint)indexBytes, MTLResourceOptions.StorageModeShared)!;
 			transientBuffers.Add(vertexBuffer);
 			transientBuffers.Add(indexBuffer);
+
+			if (n == 0)
+			{
+				ImGuiApp.DiagLog("rd:buffers0");
+			}
 
 			encoder.SetVertexBuffer(vertexBuffer, 0, VertexBufferIndex);
 
@@ -224,6 +239,11 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 					encoder.SetFragmentTexture(texture, 0);
 				}
 
+				if (n == 0 && cmdIndex == 0)
+				{
+					ImGuiApp.DiagLog("rd:draw0");
+				}
+
 				encoder.DrawIndexedPrimitives(
 					MTLPrimitiveType.Triangle,
 					cmd.ElemCount,
@@ -236,8 +256,10 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 			}
 		}
 
+		ImGuiApp.DiagLog("rd:endencoding");
 		encoder.EndEncoding();
 		commandBuffer.PresentDrawable(drawable);
+		ImGuiApp.DiagLog("rd:present");
 		commandBuffer.AddCompletedHandler(_ =>
 		{
 			foreach (IMTLBuffer buffer in transientBuffers)
@@ -248,6 +270,7 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 			drawable.Dispose();
 		});
 		commandBuffer.Commit();
+		ImGuiApp.DiagLog("rd:commit");
 	}
 
 	/// <summary>Applies the frame-invariant pipeline state: pipeline, sampler, viewport, projection.</summary>
