@@ -28,11 +28,14 @@ CIMGUI_BRANCH="${CIMGUI_BRANCH:-docking_inter}"
 CIMGUI_COMMIT="${CIMGUI_COMMIT:-207fca2d361179c349f3c9d1893b8274f4bbfebf}"
 EXPECTED_IMGUI="${EXPECTED_IMGUI:-1.92.3}"
 OUT_DIR="${1:-ImGui.App/Platform/iOS/native}"
-# Build a dynamic library, not a static archive: a .dylib is a real load dependency (always linked,
-# no -force_load needed) and its symbols are exported in the dynamic table, so HexaGen's dlsym-based
-# loader can resolve them. A statically-linked .a left the symbols absent/unexported in the app
-# executable (the binary-inspection diagnostic showed igGetVersion NOT in the symbol table). Named
-# "cimgui.dylib" with an @rpath install name so the .NET iOS NativeReference embeds + loads it.
+# Absolutize OUT_DIR up front: the build cd's into a temp clone, so a relative output path would land
+# (and be deleted by the EXIT trap) inside that temp dir instead of the repo. This bug made the dylib
+# never reach the repo, so every downstream NativeReference/dlopen saw a missing file.
+mkdir -p "$OUT_DIR"
+OUT_DIR="$(cd "$OUT_DIR" && pwd)"
+# Build a dynamic library (not a static archive): a .dylib's symbols are exported in the dynamic
+# table, so HexaGen's dlsym-based loader can resolve them after we copy it into the .app and dlopen
+# it by absolute bundle path. "cimgui.dylib" with an @rpath install name.
 OUT_LIB="$OUT_DIR/cimgui.dylib"
 
 if [ -f "$OUT_LIB" ]; then
