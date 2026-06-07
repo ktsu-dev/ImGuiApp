@@ -28,10 +28,15 @@ CIMGUI_BRANCH="${CIMGUI_BRANCH:-docking_inter}"
 CIMGUI_COMMIT="${CIMGUI_COMMIT:-207fca2d361179c349f3c9d1893b8274f4bbfebf}"
 EXPECTED_IMGUI="${EXPECTED_IMGUI:-1.92.3}"
 OUT_DIR="${1:-ImGui.App/Platform/iOS/native}"
-OUT_LIB="$OUT_DIR/libcimgui-sim.a"
+# Build a dynamic library, not a static archive: a .dylib is a real load dependency (always linked,
+# no -force_load needed) and its symbols are exported in the dynamic table, so HexaGen's dlsym-based
+# loader can resolve them. A statically-linked .a left the symbols absent/unexported in the app
+# executable (the binary-inspection diagnostic showed igGetVersion NOT in the symbol table). Named
+# "cimgui.dylib" with an @rpath install name so the .NET iOS NativeReference embeds + loads it.
+OUT_LIB="$OUT_DIR/cimgui.dylib"
 
 if [ -f "$OUT_LIB" ]; then
-	echo "cimgui static lib already present: $OUT_LIB; skipping build (cache hit)."
+	echo "cimgui dylib already present: $OUT_LIB; skipping build (cache hit)."
 	exit 0
 fi
 
@@ -74,16 +79,20 @@ OBJS=()
 for s in "${SRCS[@]}"; do
 	o="$WORK/$(echo "$s" | tr '/.' '__').o"
 	echo "  CXX $s"
-	xcrun --sdk "$SDK" clang++ -O2 -std=c++17 -arch "$ARCH" -isysroot "$SYSROOT" "$MIN" \
+	# -fvisibility=default keeps the cimgui C exports in the dylib's dynamic export table.
+	xcrun --sdk "$SDK" clang++ -O2 -std=c++17 -fvisibility=default -arch "$ARCH" -isysroot "$SYSROOT" "$MIN" \
 		-I. -Iimgui -c "$s" -o "$o"
 	OBJS+=("$o")
 done
 
 mkdir -p "$OUT_DIR"
-xcrun --sdk "$SDK" libtool -static -o "$OUT_LIB" "${OBJS[@]}"
+# Link a dynamic library. -install_name @rpath/cimgui.dylib lets the app load it from its embedded
+# location via the rpath the .NET iOS NativeReference sets up. clang++ links the C++ runtime.
+xcrun --sdk "$SDK" clang++ -dynamiclib -arch "$ARCH" -isysroot "$SYSROOT" "$MIN" \
+	-install_name @rpath/cimgui.dylib -o "$OUT_LIB" "${OBJS[@]}"
 echo "Built $OUT_LIB"
 
-# Sanity: confirm the key C exports are present (Mach-O prefixes symbols with an underscore).
+# Sanity: confirm the key C exports are present and exported (Mach-O prefixes symbols with '_').
 echo "--- key exported symbols ---"
 xcrun --sdk "$SDK" nm -gU "$OUT_LIB" | grep -E ' _(igGetVersion|igNewFrame|igRender|igGetDrawData)$' || {
 	echo "ERROR: expected cimgui C exports missing from $OUT_LIB" >&2

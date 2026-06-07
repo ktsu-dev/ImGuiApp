@@ -328,7 +328,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ImGui.App/Platform/iOS/native
-          key: cimgui-sim-arm64-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
+          key: cimgui-sim-arm64-dylib-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
 
       - name: Build native cimgui for the simulator
         run: bash scripts/build-cimgui-ios.sh
@@ -366,23 +366,26 @@ jobs:
           test -n "$APP"
           echo "app=$APP" >> "$GITHUB_OUTPUT"
 
-      # Diagnostic: confirm whether the statically-linked cimgui symbols are (a) present in the app
-      # executable at all (NativeReference linked) and (b) in its dynamic export table (so HexaGen's
-      # dlsym-based loader can resolve them). The runtime probe reported NOT FOUND; this disambiguates
-      # a missing link from a missing export. Never fails the job.
-      - name: Inspect app binary for cimgui symbols
+      # Diagnostic: confirm the cimgui dylib was embedded in the .app and wired as a load dependency
+      # of the executable, and that it exports the cimgui symbols. The runtime IMGUIAPP_IOS_DLOPEN /
+      # IMGUIAPP_IOS_SYM markers report whether dlopen + resolution then succeed. Never fails the job.
+      - name: Inspect app for embedded cimgui dylib
         run: |
           set -uxo pipefail
           APP="${{ steps.findapp.outputs.app }}"
           BIN="$APP/$(basename "$APP" .app)"
-          echo "executable: $BIN"
-          file "$BIN" || true
-          echo "--- igGetVersion in full symbol table (is cimgui linked at all?) ---"
-          nm "$BIN" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT in symbol table (cimgui not linked)"
-          echo "--- igGetVersion in external/exported symbols (nm -gU) ---"
-          nm -gU "$BIN" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT external/exported"
-          echo "--- igGetVersion in dyld export trie (dlsym-visible?) ---"
-          xcrun dyld_info -exports "$BIN" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT in dyld export trie"
+          echo "--- dylibs bundled in the .app ---"
+          find "$APP" -name '*.dylib' | sed "s#$APP/##"
+          DYLIB=$(find "$APP" -name 'cimgui.dylib' | head -1)
+          echo "cimgui.dylib: ${DYLIB:-MISSING from bundle}"
+          if [ -n "${DYLIB:-}" ]; then
+            echo "--- igGetVersion exported by the dylib ---"
+            nm -gU "$DYLIB" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT exported by dylib"
+          fi
+          echo "--- executable load commands referencing cimgui ---"
+          otool -L "$BIN" 2>/dev/null | grep -i cimgui || echo "cimgui: NOT a load dependency of the executable"
+          echo "--- executable LC_RPATH entries ---"
+          otool -l "$BIN" 2>/dev/null | grep -A2 LC_RPATH | grep path || echo "(no LC_RPATH)"
         continue-on-error: true
 
       - name: Boot simulator

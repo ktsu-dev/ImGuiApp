@@ -22,30 +22,22 @@
     <ApplicationId>dev.ktsu.imguiapp.smoketest</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-
-    <!-- The statically-linked cimgui symbols (force-loaded via the NativeReference below) live in the
-         executable but NOT in its dynamic symbol table, so HexaGen's dlsym-based loader
-         (NativeLibrary.TryGetExport against the main program image) cannot find them — the diagnostic
-         probe reported every cimgui symbol as NOT FOUND. -export_dynamic publishes the executable's
-         global symbols to the dynamic table so dlsym can resolve igGetVersion/igCreateContext/etc. -->
-    <MtouchExtraArgs>$(MtouchExtraArgs) -gcc_flags "-Wl,-export_dynamic"</MtouchExtraArgs>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
   </ItemGroup>
 
-  <!-- Link the CI-built cimgui static lib (scripts/build-cimgui-ios.sh) directly into the app so its
-       C symbols are force-loaded into the executable. Lives on the app (not the library) so the link
-       and the -export_dynamic flag above act on the same binary. ForceLoad keeps the objects (nothing
-       references them statically); -export_dynamic makes them dlsym-visible. Exists-gated so the
+  <!-- Embed the CI-built cimgui dynamic library (scripts/build-cimgui-ios.sh) into the app. As a
+       Kind=Dynamic NativeReference it becomes a real load dependency: the .NET iOS build copies it
+       into the .app, adds the rpath/load command, and its exported symbols are dlsym-visible, so
+       HexaGen's loader resolves igGetVersion/igCreateContext/etc. (A statically-linked .a left the
+       symbols absent from the executable — see the binary-inspection diagnostic.) Exists-gated so the
        non-iOS degradation and any build without the prebuilt lib still restore. -->
-  <ItemGroup Condition="$(TargetFramework.Contains('-ios')) And Exists('$(MSBuildThisFileDirectory)../../ImGui.App/Platform/iOS/native/libcimgui-sim.a')">
-    <NativeReference Include="$(MSBuildThisFileDirectory)../../ImGui.App/Platform/iOS/native/libcimgui-sim.a">
-      <Kind>Static</Kind>
-      <ForceLoad>True</ForceLoad>
+  <ItemGroup Condition="$(TargetFramework.Contains('-ios')) And Exists('$(MSBuildThisFileDirectory)../../ImGui.App/Platform/iOS/native/cimgui.dylib')">
+    <NativeReference Include="$(MSBuildThisFileDirectory)../../ImGui.App/Platform/iOS/native/cimgui.dylib">
+      <Kind>Dynamic</Kind>
       <IsCxx>True</IsCxx>
-      <SmartLink>False</SmartLink>
     </NativeReference>
   </ItemGroup>
 

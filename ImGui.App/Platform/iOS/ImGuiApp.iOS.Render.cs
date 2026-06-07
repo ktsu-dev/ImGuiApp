@@ -7,10 +7,13 @@
 namespace ktsu.ImGui.App;
 
 using System;
+using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
 using CoreGraphics;
+
+using Foundation;
 
 using Hexa.NET.ImGui;
 
@@ -34,14 +37,15 @@ public static partial class ImGuiApp
 	private static bool nativeResolverInstalled;
 
 	/// <summary>
-	/// Routes Hexa.NET native library loads to the app's own program image. Hexa.NET.ImGui ships no
-	/// native cimgui for iOS, so we statically link it into the app instead (Dear ImGui 1.92.2b, built
-	/// by <c>scripts/build-cimgui-ios.sh</c> and linked via the <c>libcimgui-sim.a</c> NativeReference).
-	/// HexaGen normally resolves each native symbol from a handle returned by <c>dlopen</c>; on iOS that
-	/// fails because there is no on-disk <c>cimgui.dylib</c>. Returning
-	/// <see cref="NativeLibrary.GetMainProgramHandle"/> makes HexaGen's function table resolve the
-	/// statically-linked exports (<c>igGetVersion</c>, <c>igBegin</c>, …) via <c>TryGetExport</c> — the
-	/// managed equivalent of <c>DllImport("__Internal")</c>. Must run before any ImGui call.
+	/// Points HexaGen's native loader at the embedded cimgui dynamic library. Hexa.NET.ImGui ships no
+	/// native cimgui for iOS, so we build our own (Dear ImGui 1.92.3 docking, via
+	/// <c>scripts/build-cimgui-ios.sh</c>) and embed it as <c>cimgui.dylib</c> through a
+	/// <c>Kind=Dynamic</c> NativeReference. HexaGen resolves each native symbol through a function
+	/// table built from a library handle; its default <c>dlopen("cimgui")</c> fails on iOS, so we
+	/// <c>dlopen</c> the embedded dylib ourselves and feed that handle to every Hexa library load.
+	/// A dynamic library (vs. a static archive) is a real load dependency whose exports are
+	/// dlsym-visible — static linking left the symbols absent from the executable. Must run before
+	/// any ImGui call.
 	/// </summary>
 	private static void EnsureNativeLibraryResolver()
 	{
@@ -51,21 +55,46 @@ public static partial class ImGuiApp
 		}
 
 		nativeResolverInstalled = true;
-		LibraryLoader.InterceptLibraryLoad += static (string libraryName, out nint pointer) =>
+
+		// The dylib is embedded and loaded as an app dependency; dlopen it (via its @rpath install
+		// name, leaf, or bundle path) to obtain a handle for the function table. Log which path wins
+		// so the candidate list can be trimmed later.
+		string bundle = NSBundle.MainBundle.BundlePath;
+		string[] candidates =
+		[
+			"@rpath/cimgui.dylib",
+			"cimgui.dylib",
+			Path.Combine(bundle, "cimgui.dylib"),
+			Path.Combine(bundle, "Frameworks", "cimgui.dylib"),
+		];
+
+		nint cimguiHandle = 0;
+		foreach (string candidate in candidates)
 		{
-			pointer = NativeLibrary.GetMainProgramHandle();
+			if (NativeLibrary.TryLoad(candidate, out nint handle))
+			{
+				cimguiHandle = handle;
+				Console.WriteLine($"IMGUIAPP_IOS_DLOPEN ok={candidate}");
+				break;
+			}
+
+			Console.WriteLine($"IMGUIAPP_IOS_DLOPEN fail={candidate}");
+		}
+
+		nint resolved = cimguiHandle != 0 ? cimguiHandle : NativeLibrary.GetMainProgramHandle();
+		LibraryLoader.InterceptLibraryLoad += (string libraryName, out nint pointer) =>
+		{
+			pointer = resolved;
 			return true;
 		};
 
-		// Diagnostic (CI-only signal): confirm the statically-linked cimgui exports are actually
-		// reachable from the main program image before the first ImGui call. If these print
-		// "NOT FOUND", the symbols were dead-stripped / the NativeReference did not link them (a
-		// resolution problem); if they print addresses but ImGui.CreateContext still crashes, the
-		// fault is an ABI/struct mismatch instead. Flushed so the markers survive a follow-on crash.
-		nint mainHandle = NativeLibrary.GetMainProgramHandle();
+		// Diagnostic (CI-only signal): confirm the cimgui exports resolve from the chosen handle
+		// before the first ImGui call. "NOT FOUND" means the dylib didn't load / isn't exporting;
+		// addresses mean resolution works and any later crash is an ABI matter. Flushed so the
+		// markers survive a follow-on crash.
 		foreach (string symbol in new[] { "igGetVersion", "igCreateContext", "igGetIO", "igGetDrawData" })
 		{
-			bool found = NativeLibrary.TryGetExport(mainHandle, symbol, out nint address);
+			bool found = NativeLibrary.TryGetExport(resolved, symbol, out nint address);
 			Console.WriteLine($"IMGUIAPP_IOS_SYM {symbol}={(found ? "0x" + address.ToString("x") : "NOT FOUND")}");
 		}
 
