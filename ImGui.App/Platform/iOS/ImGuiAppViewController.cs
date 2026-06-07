@@ -7,8 +7,12 @@
 namespace ktsu.ImGui.App;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
+using System.Text;
 
 using CoreAnimation;
+
+using CoreGraphics;
 
 using Foundation;
 
@@ -25,6 +29,14 @@ public class ImGuiAppViewController : UIViewController
 {
 	private CADisplayLink? displayLink;
 	private double lastTimestamp;
+
+	// Input state. The primary touch drives the single ImGui mouse (additional fingers are ignored
+	// for v1); the soft keyboard is an invisible first-responder presented while ImGui wants text.
+	private UITouch? primaryTouch;
+	private SoftKeyboardView? softKeyboard;
+
+	/// <summary>The controller becomes first responder so hardware key presses reach <c>PressesBegan</c>.</summary>
+	public override bool CanBecomeFirstResponder => true;
 
 	// CI smoke-test harness: when the IMGUIAPP_IOS_SMOKE_FRAMES environment variable is a positive
 	// integer (set via simctl's SIMCTL_CHILD_ prefix), the app runs that many frames, prints a
@@ -46,6 +58,11 @@ public class ImGuiAppViewController : UIViewController
 		base.ViewDidLoad();
 
 		ImGuiApp.InitializeRenderer((MetalView)View!);
+
+		// Invisible, zero-sized soft-keyboard responder. Zero frame means it never intercepts touches;
+		// it only matters as a first responder when ImGui wants text input.
+		softKeyboard = new SoftKeyboardView { Frame = CGRect.Empty };
+		View!.AddSubview(softKeyboard);
 
 		float fps = Math.Max(1, (float)ImGuiApp.Config.PerformanceSettings.FocusedFps);
 		displayLink = CADisplayLink.Create(OnDisplayLink);
@@ -69,6 +86,14 @@ public class ImGuiAppViewController : UIViewController
 		ImGuiApp.IsVisible = true;
 		ImGuiApp.RaiseStart();
 		ResumeRendering();
+	}
+
+	/// <summary>Takes first-responder status so a hardware keyboard reaches the press handlers.</summary>
+	/// <param name="animated">Whether the appearance is animated.</param>
+	public override void ViewDidAppear(bool animated)
+	{
+		base.ViewDidAppear(animated);
+		BecomeFirstResponder();
 	}
 
 	/// <summary>Marks the app not visible and pauses the frame loop.</summary>
@@ -120,6 +145,7 @@ public class ImGuiAppViewController : UIViewController
 		lastTimestamp = timestamp;
 
 		ImGuiApp.Tick(delta);
+		UpdateSoftKeyboard();
 
 		if (smokeFramesRemaining > 0)
 		{
@@ -134,7 +160,149 @@ public class ImGuiAppViewController : UIViewController
 		}
 	}
 
-	/// <summary>Tears down the display link.</summary>
+	/// <summary>Begins tracking the first finger as the ImGui mouse and presses the left button.</summary>
+	/// <param name="touches">The touches that began.</param>
+	/// <param name="evt">The owning UIKit event.</param>
+	public override void TouchesBegan(NSSet touches, UIEvent? evt)
+	{
+		base.TouchesBegan(touches, evt);
+		if (primaryTouch is null && touches.AnyObject is UITouch touch)
+		{
+			primaryTouch = touch;
+			ImGuiApp.OnPointerMoved(LocationOf(touch));
+			ImGuiApp.OnPointerButton(down: true);
+		}
+	}
+
+	/// <summary>Tracks the primary finger's movement as ImGui mouse motion.</summary>
+	/// <param name="touches">The touches that moved.</param>
+	/// <param name="evt">The owning UIKit event.</param>
+	public override void TouchesMoved(NSSet touches, UIEvent? evt)
+	{
+		base.TouchesMoved(touches, evt);
+		if (primaryTouch is not null && touches.Contains(primaryTouch))
+		{
+			ImGuiApp.OnPointerMoved(LocationOf(primaryTouch));
+		}
+	}
+
+	/// <summary>Releases the ImGui mouse button when the primary finger lifts.</summary>
+	/// <param name="touches">The touches that ended.</param>
+	/// <param name="evt">The owning UIKit event.</param>
+	public override void TouchesEnded(NSSet touches, UIEvent? evt)
+	{
+		base.TouchesEnded(touches, evt);
+		EndPrimaryTouch(touches);
+	}
+
+	/// <summary>Releases the ImGui mouse button when the primary touch is cancelled.</summary>
+	/// <param name="touches">The touches that were cancelled.</param>
+	/// <param name="evt">The owning UIKit event.</param>
+	public override void TouchesCancelled(NSSet touches, UIEvent? evt)
+	{
+		base.TouchesCancelled(touches, evt);
+		EndPrimaryTouch(touches);
+	}
+
+	/// <summary>Forwards hardware key-down events (key, modifiers, typed characters) to ImGui.</summary>
+	/// <param name="presses">The presses that began.</param>
+	/// <param name="evt">The owning UIKit presses event.</param>
+	public override void PressesBegan(NSSet<UIPress> presses, UIPressesEvent? evt)
+	{
+		if (!HandlePresses(presses, down: true))
+		{
+			base.PressesBegan(presses, evt);
+		}
+	}
+
+	/// <summary>Forwards hardware key-up events to ImGui.</summary>
+	/// <param name="presses">The presses that ended.</param>
+	/// <param name="evt">The owning UIKit presses event.</param>
+	public override void PressesEnded(NSSet<UIPress> presses, UIPressesEvent? evt)
+	{
+		if (!HandlePresses(presses, down: false))
+		{
+			base.PressesEnded(presses, evt);
+		}
+	}
+
+	private void EndPrimaryTouch(NSSet touches)
+	{
+		if (primaryTouch is not null && touches.Contains(primaryTouch))
+		{
+			ImGuiApp.OnPointerMoved(LocationOf(primaryTouch));
+			ImGuiApp.OnPointerButton(down: false);
+			primaryTouch = null;
+		}
+	}
+
+	private Vector2 LocationOf(UITouch touch)
+	{
+		CGPoint point = touch.LocationInView(View);
+		return new Vector2((float)point.X, (float)point.Y);
+	}
+
+	private bool HandlePresses(NSSet<UIPress> presses, bool down)
+	{
+		bool handled = false;
+		foreach (UIPress press in presses)
+		{
+			if (press.Key is not UIKey key)
+			{
+				continue;
+			}
+
+			UIKeyModifierFlags mods = key.ModifierFlags;
+			ImGuiApp.OnModifiers(
+				mods.HasFlag(UIKeyModifierFlags.Control),
+				mods.HasFlag(UIKeyModifierFlags.Shift),
+				mods.HasFlag(UIKeyModifierFlags.Alternate),
+				mods.HasFlag(UIKeyModifierFlags.Command));
+			ImGuiApp.OnKey(IOSKeyMap.Map(key.KeyCode), down);
+
+			// Hardware-typed characters, but only when the soft keyboard isn't also capturing them
+			// (otherwise iPad-with-Magic-Keyboard would deliver each character twice).
+			if (down && softKeyboard?.IsFirstResponder != true)
+			{
+				foreach (Rune rune in (key.Characters ?? string.Empty).EnumerateRunes())
+				{
+					if (rune.Value >= 0x20 && rune.Value != 0x7f)
+					{
+						ImGuiApp.OnTextInput((uint)rune.Value);
+					}
+				}
+			}
+
+			handled = true;
+		}
+
+		return handled;
+	}
+
+	/// <summary>
+	/// Presents or dismisses the soft keyboard to match ImGui's text-input intent. Called each frame
+	/// after <see cref="ImGuiApp.Tick(float)"/> so a freshly focused input field raises the keyboard.
+	/// </summary>
+	private void UpdateSoftKeyboard()
+	{
+		if (softKeyboard is null)
+		{
+			return;
+		}
+
+		bool want = ImGuiApp.WantsTextInput;
+		if (want && !softKeyboard.IsFirstResponder)
+		{
+			softKeyboard.BecomeFirstResponder();
+		}
+		else if (!want && softKeyboard.IsFirstResponder)
+		{
+			softKeyboard.ResignFirstResponder();
+			BecomeFirstResponder(); // restore hardware-key capture to the controller
+		}
+	}
+
+	/// <summary>Tears down the display link and input responder.</summary>
 	/// <param name="disposing"><see langword="true"/> when called from <see cref="IDisposable.Dispose"/>.</param>
 	protected override void Dispose(bool disposing)
 	{
@@ -143,6 +311,8 @@ public class ImGuiAppViewController : UIViewController
 			displayLink?.Invalidate();
 			displayLink?.Dispose();
 			displayLink = null;
+			softKeyboard?.Dispose();
+			softKeyboard = null;
 		}
 
 		base.Dispose(disposing);
