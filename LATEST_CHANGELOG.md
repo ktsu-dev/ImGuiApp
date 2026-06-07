@@ -1,6 +1,6 @@
-## v2.13.2 (patch)
+## v2.13.3 (patch)
 
-Changes since v2.13.1:
+Changes since v2.13.2:
 
-- feat(ios): font parity + imgui.ini redirect (Task 6) (#209) ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(ios): app menu (iPad) + Stop() semantics + no-op surface (Task 7) (#210) ([@matt-edmondson](https://github.com/matt-edmondson))
 
