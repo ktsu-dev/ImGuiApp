@@ -19,7 +19,7 @@
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.10" />
     <PackageVersion Include="ktsu.FuzzySearch" Version="1.2.2" />
     <PackageVersion Include="ktsu.TextFilter" Version="1.5.9" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.3.2" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.6.2" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Silk.NET" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.OpenGL" Version="2.23.0" />
