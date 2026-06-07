@@ -159,7 +159,7 @@ public static partial class ImGuiApp
 	/// (no <c>RendererHasTextures</c>): add fonts, build with <c>ImFontAtlasBuildMain</c>, upload the
 	/// RGBA32 pixels, hand the texture id back to ImGui with <c>SetTexID</c>, then free the CPU copy.
 	/// Glyphs are rasterized at the physical pixel size for the display scale and rendered back down via
-	/// <c>FontGlobalScale</c>, so text is crisp on a 2x/3x screen rather than an upscaled low-res atlas.
+	/// <c>style.FontScaleMain</c>, so text is crisp on a 2x/3x screen rather than an upscaled low-res atlas.
 	/// </summary>
 	/// <param name="io">The ImGui IO whose font atlas to build.</param>
 	private static unsafe void BuildFontAtlas(ImGuiIOPtr io)
@@ -198,7 +198,10 @@ public static partial class ImGuiApp
 			io.Fonts.AddFontDefault();
 		}
 
-		io.FontGlobalScale = 1f / ScaleFactor;
+		// FontScaleMain is the 1.92 replacement for the removed io.FontGlobalScale: a global multiplier
+		// on rendered font size. The atlas is rasterised at pointSize * scale, so scaling by 1/scale lays
+		// text out at the logical point size while keeping it pixel-crisp on the high-DPI framebuffer.
+		ImGui.GetStyle().FontScaleMain = 1f / ScaleFactor;
 
 		if (!io.Fonts.TexIsBuilt)
 		{
