@@ -331,7 +331,13 @@ jobs:
           key: cimgui-sim-arm64-dylib-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
 
       - name: Build native cimgui for the simulator
-        run: bash scripts/build-cimgui-ios.sh
+        run: |
+          set -euxo pipefail
+          bash scripts/build-cimgui-ios.sh
+          # Stash the dylib outside the repo tree: the in-tree native/ dir is gitignored and gets
+          # wiped (by ktsu.Sdk/dotnet cleaning untracked files) before the embed step runs, so the
+          # embed step copies from this stable location instead.
+          cp ImGui.App/Platform/iOS/native/cimgui.dylib "$RUNNER_TEMP/cimgui.dylib"
 
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
@@ -373,7 +379,7 @@ jobs:
       - name: Embed cimgui.dylib into the .app bundle
         run: |
           set -euxo pipefail
-          cp ImGui.App/Platform/iOS/native/cimgui.dylib "${{ steps.findapp.outputs.app }}/cimgui.dylib"
+          cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.findapp.outputs.app }}/cimgui.dylib"
           ls -la "${{ steps.findapp.outputs.app }}/cimgui.dylib"
 
       # Diagnostic: confirm the cimgui dylib was embedded in the .app and wired as a load dependency
