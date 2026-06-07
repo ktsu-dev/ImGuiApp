@@ -33,37 +33,17 @@ public static partial class ImGuiApp
 	/// <summary>The Metal-backed view, used to read the logical display size and pixel scale each frame.</summary>
 	internal static MetalView? RenderView { get; private set; }
 
-	/// <summary>Frame counter used to gate the per-frame diagnostic logging to the first few frames.</summary>
-	internal static int DiagFrame { get; set; }
-
-	/// <summary>
-	/// CI-only stage tracer for the first few frames: the simulator smoke run crashes with an
-	/// unsymbolicated SIGSEGV somewhere in the frame loop, so these markers localise the exact native
-	/// call that faults (ImGui NewFrame/Render vs. the Metal draw submission). Removed once green.
-	/// </summary>
-	/// <param name="stage">A short label identifying the point reached in the frame.</param>
-	internal static void DiagLog(string stage)
-	{
-		if (DiagFrame < 3)
-		{
-			Console.WriteLine($"IMGUIAPP_IOS_FRAME {stage}");
-			Console.Out.Flush();
-		}
-	}
-
 	/// <summary>Guards one-time installation of the native-library resolver hook.</summary>
 	private static bool nativeResolverInstalled;
 
 	/// <summary>
 	/// Points HexaGen's native loader at the embedded cimgui dynamic library. Hexa.NET.ImGui ships no
 	/// native cimgui for iOS, so we build our own (Dear ImGui 1.92.3 docking, via
-	/// <c>scripts/build-cimgui-ios.sh</c>) and embed it as <c>cimgui.dylib</c> through a
-	/// <c>Kind=Dynamic</c> NativeReference. HexaGen resolves each native symbol through a function
-	/// table built from a library handle; its default <c>dlopen("cimgui")</c> fails on iOS, so we
-	/// <c>dlopen</c> the embedded dylib ourselves and feed that handle to every Hexa library load.
-	/// A dynamic library (vs. a static archive) is a real load dependency whose exports are
-	/// dlsym-visible — static linking left the symbols absent from the executable. Must run before
-	/// any ImGui call.
+	/// <c>scripts/build-cimgui-ios.sh</c>) and embed <c>cimgui.dylib</c> in the app bundle. HexaGen
+	/// resolves each native symbol through a function table built from a library handle; its default
+	/// <c>dlopen("cimgui")</c> fails on iOS, so we <c>dlopen</c> the embedded dylib ourselves and feed
+	/// that handle to every Hexa library load. A dynamic library (vs. a static archive) is a real load
+	/// dependency whose exports are dlsym-visible. Must run before any ImGui call.
 	/// </summary>
 	private static void EnsureNativeLibraryResolver()
 	{
@@ -74,9 +54,8 @@ public static partial class ImGuiApp
 
 		nativeResolverInstalled = true;
 
-		// The dylib is embedded and loaded as an app dependency; dlopen it (via its @rpath install
-		// name, leaf, or bundle path) to obtain a handle for the function table. Log which path wins
-		// so the candidate list can be trimmed later.
+		// The dylib is embedded as an app load dependency; dlopen it (via its @rpath install name, the
+		// leaf, or the absolute bundle path) to obtain a handle for the function table.
 		string bundle = NSBundle.MainBundle.BundlePath;
 		string[] candidates =
 		[
@@ -92,11 +71,8 @@ public static partial class ImGuiApp
 			if (NativeLibrary.TryLoad(candidate, out nint handle))
 			{
 				cimguiHandle = handle;
-				Console.WriteLine($"IMGUIAPP_IOS_DLOPEN ok={candidate}");
 				break;
 			}
-
-			Console.WriteLine($"IMGUIAPP_IOS_DLOPEN fail={candidate}");
 		}
 
 		nint resolved = cimguiHandle != 0 ? cimguiHandle : NativeLibrary.GetMainProgramHandle();
@@ -105,18 +81,6 @@ public static partial class ImGuiApp
 			pointer = resolved;
 			return true;
 		};
-
-		// Diagnostic (CI-only signal): confirm the cimgui exports resolve from the chosen handle
-		// before the first ImGui call. "NOT FOUND" means the dylib didn't load / isn't exporting;
-		// addresses mean resolution works and any later crash is an ABI matter. Flushed so the
-		// markers survive a follow-on crash.
-		foreach (string symbol in new[] { "igGetVersion", "igCreateContext", "igGetIO", "igGetDrawData" })
-		{
-			bool found = NativeLibrary.TryGetExport(resolved, symbol, out nint address);
-			Console.WriteLine($"IMGUIAPP_IOS_SYM {symbol}={(found ? "0x" + address.ToString("x") : "NOT FOUND")}");
-		}
-
-		Console.Out.Flush();
 	}
 
 	/// <summary>
@@ -170,12 +134,6 @@ public static partial class ImGuiApp
 		}
 
 		ImTextureDataPtr texData = io.Fonts.TexData;
-
-		// Diagnostic: sane width/height/font-count confirm the 1.92.3 native font structs line up with
-		// the managed 1.92.2b bindings; garbage values would point at a font-struct ABI mismatch.
-		Console.WriteLine($"IMGUIAPP_IOS_ATLAS w={texData.Width} h={texData.Height} fonts={io.Fonts.Fonts.Size} pixels={(texData.Pixels is null ? "null" : "ok")}");
-		Console.Out.Flush();
-
 		if (texData.Pixels is null || texData.Width <= 0 || texData.Height <= 0)
 		{
 			return;
@@ -184,8 +142,6 @@ public static partial class ImGuiApp
 		ReadOnlySpan<byte> pixels = new(texData.Pixels, texData.Width * texData.Height * 4);
 		nint textureId = Renderer!.CreateTexture(pixels, texData.Width, texData.Height);
 		texData.SetTexID(textureId);
-		Console.WriteLine($"IMGUIAPP_IOS_ATLAS texid=0x{textureId:x}");
-		Console.Out.Flush();
 
 		// The atlas pixels now live on the GPU; drop the CPU copy to save memory (matches desktop).
 		io.Fonts.ClearTexData();
@@ -214,23 +170,15 @@ public static partial class ImGuiApp
 
 		RenderView.MetalLayer.DrawableSize = new CGSize(bounds.Width * scale, bounds.Height * scale);
 
-		DiagLog("newframe");
 		ImGui.NewFrame();
-		DiagLog("newframe-ok");
 		return true;
 	}
 
 	/// <summary>Ends the ImGui frame and submits the built draw data to the Metal backend.</summary>
 	internal static void EndImGuiFrameAndRender()
 	{
-		DiagLog("render");
 		ImGui.Render();
-		DiagLog("render-ok");
-		ImDrawDataPtr drawData = ImGui.GetDrawData();
-		DiagLog("rdd");
-		Renderer!.RenderDrawData(drawData);
-		DiagLog("rdd-ok");
-		DiagFrame++;
+		Renderer!.RenderDrawData(ImGui.GetDrawData());
 	}
 }
 

@@ -372,37 +372,12 @@ jobs:
           test -n "$APP"
           echo "app=$APP" >> "$GITHUB_OUTPUT"
 
-      # Embed cimgui.dylib into the .app by hand. The NativeReference route did not work for this
-      # Microsoft.NET.Sdk app (the dylib never made it into the bundle), so copy it in directly; the
-      # runtime resolver dlopens it by absolute bundle path (NSBundle.MainBundle.BundlePath +
-      # /cimgui.dylib). The simulator does not enforce code signing, so an unsigned dylib loads.
+      # Embed cimgui.dylib into the built .app. Hexa.NET.ImGui ships no native cimgui for iOS, and a
+      # NativeReference did not link it into this Microsoft.NET.Sdk app, so copy the dylib into the
+      # bundle directly; the runtime resolver dlopens it by bundle path. The simulator does not enforce
+      # code signing, so an unsigned bundled dylib loads.
       - name: Embed cimgui.dylib into the .app bundle
-        run: |
-          set -euxo pipefail
-          cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.findapp.outputs.app }}/cimgui.dylib"
-          ls -la "${{ steps.findapp.outputs.app }}/cimgui.dylib"
-
-      # Diagnostic: confirm the cimgui dylib was embedded in the .app and wired as a load dependency
-      # of the executable, and that it exports the cimgui symbols. The runtime IMGUIAPP_IOS_DLOPEN /
-      # IMGUIAPP_IOS_SYM markers report whether dlopen + resolution then succeed. Never fails the job.
-      - name: Inspect app for embedded cimgui dylib
-        run: |
-          set -uxo pipefail
-          APP="${{ steps.findapp.outputs.app }}"
-          BIN="$APP/$(basename "$APP" .app)"
-          echo "--- dylibs bundled in the .app ---"
-          find "$APP" -name '*.dylib' | sed "s#$APP/##"
-          DYLIB=$(find "$APP" -name 'cimgui.dylib' | head -1)
-          echo "cimgui.dylib: ${DYLIB:-MISSING from bundle}"
-          if [ -n "${DYLIB:-}" ]; then
-            echo "--- igGetVersion exported by the dylib ---"
-            nm -gU "$DYLIB" 2>/dev/null | grep -i igGetVersion || echo "igGetVersion: NOT exported by dylib"
-          fi
-          echo "--- executable load commands referencing cimgui ---"
-          otool -L "$BIN" 2>/dev/null | grep -i cimgui || echo "cimgui: NOT a load dependency of the executable"
-          echo "--- executable LC_RPATH entries ---"
-          otool -l "$BIN" 2>/dev/null | grep -A2 LC_RPATH | grep path || echo "(no LC_RPATH)"
-        continue-on-error: true
+        run: cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.findapp.outputs.app }}/cimgui.dylib"
 
       - name: Boot simulator
         run: |
