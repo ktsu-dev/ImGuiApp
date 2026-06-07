@@ -59,6 +59,18 @@
     <Compile Remove="ImGuiController\**\*.cs" />
   </ItemGroup>
 
+  <!-- The Metal renderer compiles its shader from source at runtime (IMTLDevice.CreateLibrary), so
+       the .metal is shipped as an embedded resource rather than precompiled into default.metallib.
+       LogicalName fixes the manifest name the backend looks up; the Metal Remove keeps the iOS SDK
+       from also auto-compiling it into the app's default.metallib (it would be unused there). -->
+  <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <Metal Remove="Platform/iOS/Shaders/ImGui.metal" />
+    <None Remove="Platform/iOS/Shaders/ImGui.metal" />
+    <EmbeddedResource Include="Platform/iOS/Shaders/ImGui.metal">
+      <LogicalName>ImGui.metal</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Update="Resources\Resources.Designer.cs">
       <DesignTime>True</DesignTime>

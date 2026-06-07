@@ -28,4 +28,10 @@
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
   </ItemGroup>
 
+  <!-- Note: the cimgui dynamic library is NOT linked via a NativeReference — that item was silently
+       ignored by this Microsoft.NET.Sdk app (the dylib never landed in the .app, see CI inspection).
+       Instead the simulator CI job copies cimgui.dylib into the built .app bundle and the runtime
+       resolver (ImGuiApp.iOS EnsureNativeLibraryResolver) dlopens it by absolute bundle path. The
+       simulator does not enforce code signing, so an unsigned dylib in the bundle loads fine. -->
+
 </Project>

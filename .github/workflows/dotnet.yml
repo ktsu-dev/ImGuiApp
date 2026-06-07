@@ -319,6 +319,26 @@ jobs:
           # Informational: confirm the host link tool now resolves through the real path.
           xcrun --find install_name_tool || echo "WARN: install_name_tool did not resolve via $XC"
 
+      # Hexa.NET.ImGui ships no native cimgui for iOS, so build it from source (Dear ImGui 1.92.2b,
+      # matching Hexa 2.2.9) into a simulator static lib that ImGui.App statically links via a
+      # NativeReference. Cached by the build script's hash so it only rebuilds when the recipe changes.
+      # Runs after the Xcode pin so xcrun resolves the toolchain; before the build so the
+      # NativeReference's Exists() condition is satisfied when ImGui.App compiles.
+      - name: Cache native cimgui (iOS simulator)
+        uses: actions/cache@v4
+        with:
+          path: ImGui.App/Platform/iOS/native
+          key: cimgui-sim-arm64-dylib-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
+
+      - name: Build native cimgui for the simulator
+        run: |
+          set -euxo pipefail
+          bash scripts/build-cimgui-ios.sh
+          # Stash the dylib outside the repo tree: the in-tree native/ dir is gitignored and gets
+          # wiped (by ktsu.Sdk/dotnet cleaning untracked files) before the embed step runs, so the
+          # embed step copies from this stable location instead.
+          cp ImGui.App/Platform/iOS/native/cimgui.dylib "$RUNNER_TEMP/cimgui.dylib"
+
       # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
       # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
       # Clearing RuntimeIdentifiers and pinning the single simulator RID sidesteps that while still
@@ -351,6 +371,13 @@ jobs:
           APP=$(find tests/ImGui.App.iOS.SmokeTest/bin -type d -name "*.app" | head -1)
           test -n "$APP"
           echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      # Embed cimgui.dylib into the built .app. Hexa.NET.ImGui ships no native cimgui for iOS, and a
+      # NativeReference did not link it into this Microsoft.NET.Sdk app, so copy the dylib into the
+      # bundle directly; the runtime resolver dlopens it by bundle path. The simulator does not enforce
+      # code signing, so an unsigned bundled dylib loads.
+      - name: Embed cimgui.dylib into the .app bundle
+        run: cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.findapp.outputs.app }}/cimgui.dylib"
 
       - name: Boot simulator
         run: |

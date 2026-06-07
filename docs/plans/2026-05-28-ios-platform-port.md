@@ -11,11 +11,34 @@
 >   `ImGuiAppWindowState`, `FontMemoryGuard.FontMemoryConfig`) compiles for `net10.0-ios`
 >   (Silk.NET-coupled members gated behind `#if !IOS`), and the iOS entry point exposes the
 >   cross-platform `Start(ImGuiAppConfig)` signature.
-> - 🚧 **Task 3 lifecycle** — native UIKit plumbing landed: `ImGuiAppDelegate`
+> - ✅ **Task 3 lifecycle** — native UIKit plumbing landed: `ImGuiAppDelegate`
 >   (`UIApplicationDelegate`, window + focus lifecycle), `ImGuiAppViewController` (`CADisplayLink`
->   frame pump + visibility), and `ImGuiApp.Start` now runs `UIApplication.Main` and ticks
->   `OnStart`/`OnUpdate`/`OnRender`. No ImGui frame or GPU submission yet — that's Task 4 (Metal).
->   **Compiles on the macOS CI job but is not yet runtime-verified on a device/simulator.**
+>   frame pump + visibility), and `ImGuiApp.Start` runs `UIApplication.Main` and ticks
+>   `OnStart`/`OnUpdate`/`OnRender`. Runtime-verified by the iOS-simulator smoke CI job (below).
+> - ✅ **Verification harness** — an iOS-simulator CI job (`ios-simulator` in
+>   `.github/workflows/dotnet.yml`) builds a headless smoke app, boots a simulator, launches it, runs
+>   N frames via the `IMGUIAPP_IOS_SMOKE_FRAMES` hook, and asserts `IMGUIAPP_IOS_SMOKE_OK`. Worked
+>   around the .NET 10 + Xcode 26 symlinked-developer-dir native-link bug (`readlink -f` Xcode pin).
+>   This is a **hard gate**, so all iOS runtime behaviour below is verified in CI.
+> - ✅ **Task 4 — Metal renderer** — `MetalRendererBackend` (`IRendererBackend` via Metal:
+>   `CAMetalLayer`, command queue, per-frame `MTLBuffer`s, `MTLTexture` atlas/user textures, a single
+>   `MTLRenderPipelineState`, runtime-compiled `ImGui.metal` shader), wired into
+>   `ImGuiAppViewController` through a `MetalView` (`CAMetalLayer`-backed `UIView`) and the
+>   `Tick` → NewFrame/OnRender/Render/RenderDrawData loop. The simulator smoke run renders a live
+>   ImGui window (window + text + button) through the full Metal path end-to-end.
+>
+>   **Native cimgui (the plan's missing prerequisite):** Hexa.NET.ImGui ships native cimgui for
+>   desktop + Android but **not iOS**, so Dear ImGui could not load at all. Resolved by building
+>   cimgui from source for the iOS simulator (`scripts/build-cimgui-ios.sh`, Dear ImGui 1.92.3 docking
+>   — cimgui skipped 1.92.2 — matching Hexa 2.2.9's 1.92.2b ABI; the version gap proved harmless),
+>   embedding `cimgui.dylib` in the `.app`, and `dlopen`-ing it via a `HexaGen.Runtime.LibraryLoader`
+>   interceptor (`EnsureNativeLibraryResolver`). A dynamic library (not a static `.a`) was required so
+>   the symbols are dlsym-visible to HexaGen's function table.
+>
+>   **Known iOS gotchas (documented for consumers):** `ImGui.Text` maps to the variadic `igText`,
+>   which crashes on the Apple ARM64 ABI when called through HexaGen's fixed function-pointer — use
+>   `ImGui.TextUnformatted`. On-device arm64 slices / an `xcframework` and a productized native-cimgui
+>   distribution (vs. the CI build-and-embed) remain follow-ups for shipping to real hardware.
 
 **Goal:** Make `ImGuiApp.Start(config)` actually run a Dear ImGui application on iOS (iPhone + iPad, iOS 15+) with parity for the OnStart / OnUpdate / OnRender / OnAppMenu lifecycle, fonts, textures, and DPI scaling.
 
