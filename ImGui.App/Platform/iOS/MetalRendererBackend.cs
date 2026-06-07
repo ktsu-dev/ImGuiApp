@@ -299,7 +299,10 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 		vertexDescriptor.Attributes[1].Format = MTLVertexFormat.Float2;
 		vertexDescriptor.Attributes[1].Offset = 8;
 		vertexDescriptor.Attributes[1].BufferIndex = VertexBufferIndex;
-		vertexDescriptor.Attributes[2].Format = MTLVertexFormat.UChar4Normalized;
+		// Non-normalized UChar4: the shader reads uchar4 and divides by 255 itself (matching upstream
+		// imgui_impl_metal). A Normalized format is rejected because the shader attribute is uchar4,
+		// not float4.
+		vertexDescriptor.Attributes[2].Format = MTLVertexFormat.UChar4;
 		vertexDescriptor.Attributes[2].Offset = 16;
 		vertexDescriptor.Attributes[2].BufferIndex = VertexBufferIndex;
 		vertexDescriptor.Layouts[0].Stride = (nuint)sizeof(ImDrawVert);
