@@ -56,6 +56,20 @@ public static partial class ImGuiApp
 			pointer = NativeLibrary.GetMainProgramHandle();
 			return true;
 		};
+
+		// Diagnostic (CI-only signal): confirm the statically-linked cimgui exports are actually
+		// reachable from the main program image before the first ImGui call. If these print
+		// "NOT FOUND", the symbols were dead-stripped / the NativeReference did not link them (a
+		// resolution problem); if they print addresses but ImGui.CreateContext still crashes, the
+		// fault is an ABI/struct mismatch instead. Flushed so the markers survive a follow-on crash.
+		nint mainHandle = NativeLibrary.GetMainProgramHandle();
+		foreach (string symbol in new[] { "igGetVersion", "igCreateContext", "igGetIO", "igGetDrawData" })
+		{
+			bool found = NativeLibrary.TryGetExport(mainHandle, symbol, out nint address);
+			Console.WriteLine($"IMGUIAPP_IOS_SYM {symbol}={(found ? "0x" + address.ToString("x") : "NOT FOUND")}");
+		}
+
+		Console.Out.Flush();
 	}
 
 	/// <summary>
