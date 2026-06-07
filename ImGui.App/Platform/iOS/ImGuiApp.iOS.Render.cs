@@ -198,10 +198,9 @@ public static partial class ImGuiApp
 			io.Fonts.AddFontDefault();
 		}
 
-		// FontScaleMain is the 1.92 replacement for the removed io.FontGlobalScale: a global multiplier
-		// on rendered font size. The atlas is rasterised at pointSize * scale, so scaling by 1/scale lays
-		// text out at the logical point size while keeping it pixel-crisp on the high-DPI framebuffer.
-		ImGui.GetStyle().FontScaleMain = 1f / ScaleFactor;
+		// FontScaleMain (the 1.92 successor to io.FontGlobalScale) is applied per-frame in
+		// TryBeginImGuiFrame so it tracks the user's GlobalScale; the atlas itself is just rasterised at
+		// pointSize * ScaleFactor here.
 
 		if (!io.Fonts.TexIsBuilt)
 		{
@@ -242,6 +241,12 @@ public static partial class ImGuiApp
 		io.DisplaySize = new Vector2((float)bounds.Width, (float)bounds.Height);
 		io.DisplayFramebufferScale = new Vector2(scale, scale);
 		io.DeltaTime = deltaSeconds > 0f ? deltaSeconds : 1f / 60f;
+
+		// The atlas is rasterised at pointSize * ScaleFactor; FontScaleMain renders it back down to the
+		// logical point size (1/ScaleFactor) and folds in the user's accessibility GlobalScale, so text is
+		// pixel-crisp at the default scale and grows with the Accessibility menu. GlobalScale defaults to
+		// 1, so this is exactly 1/ScaleFactor (the crisp default) unless the user changes it.
+		ImGui.GetStyle().FontScaleMain = GlobalScale / scale;
 
 		RenderView.MetalLayer.DrawableSize = new CGSize(bounds.Width * scale, bounds.Height * scale);
 

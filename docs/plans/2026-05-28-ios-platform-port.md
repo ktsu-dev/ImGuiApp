@@ -51,6 +51,13 @@
 >   for crisp text on 2x/3x screens; `imgui.ini` redirects to `Library/Application Support/<bundleId>/`
 >   (or disabled when `SaveIniSettings` is false). The smoke run builds/uploads the real atlas and draws
 >   Unicode + emoji glyphs; crispness and `.ini` persistence-across-relaunch still need on-device checks.
+> - ✅ **Task 7 — app menu, Stop(), no-op surface** (§2.3) — `Tick` renders `Config.OnAppMenu` in a main
+>   menu bar on iPad (with an accessibility UI-scale submenu wired to `GlobalScale` → per-frame
+>   `FontScaleMain`); iPhone is a no-op (no menu-bar paradigm). `Stop()` already logs the "iOS apps
+>   shouldn't self-terminate" warning before requesting exit. Desktop window APIs with no iOS meaning
+>   (`Show`/`Hide`/`SetWindowIcon`) are kept on the public surface as one-time-warning no-ops so
+>   cross-platform code compiles; the overlay API stays desktop-only (its `OverlayCorner` type lives in
+>   the iOS-excluded `OverlayWindow.cs`). The smoke run exercises the menu-bar ImGui calls for ABI safety.
 
 **Goal:** Make `ImGuiApp.Start(config)` actually run a Dear ImGui application on iOS (iPhone + iPad, iOS 15+) with parity for the OnStart / OnUpdate / OnRender / OnAppMenu lifecycle, fonts, textures, and DPI scaling.
 
