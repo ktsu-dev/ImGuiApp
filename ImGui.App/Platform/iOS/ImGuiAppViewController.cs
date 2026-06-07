@@ -165,6 +165,7 @@ public class ImGuiAppViewController : UIViewController
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesBegan(NSSet touches, UIEvent? evt)
 	{
+		Ensure.NotNull(touches);
 		base.TouchesBegan(touches, evt);
 		if (primaryTouch is null && touches.AnyObject is UITouch touch)
 		{
@@ -179,6 +180,7 @@ public class ImGuiAppViewController : UIViewController
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesMoved(NSSet touches, UIEvent? evt)
 	{
+		Ensure.NotNull(touches);
 		base.TouchesMoved(touches, evt);
 		if (primaryTouch is not null && touches.Contains(primaryTouch))
 		{
@@ -191,6 +193,7 @@ public class ImGuiAppViewController : UIViewController
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesEnded(NSSet touches, UIEvent? evt)
 	{
+		Ensure.NotNull(touches);
 		base.TouchesEnded(touches, evt);
 		EndPrimaryTouch(touches);
 	}
@@ -200,6 +203,7 @@ public class ImGuiAppViewController : UIViewController
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesCancelled(NSSet touches, UIEvent? evt)
 	{
+		Ensure.NotNull(touches);
 		base.TouchesCancelled(touches, evt);
 		EndPrimaryTouch(touches);
 	}
@@ -207,8 +211,9 @@ public class ImGuiAppViewController : UIViewController
 	/// <summary>Forwards hardware key-down events (key, modifiers, typed characters) to ImGui.</summary>
 	/// <param name="presses">The presses that began.</param>
 	/// <param name="evt">The owning UIKit presses event.</param>
-	public override void PressesBegan(NSSet<UIPress> presses, UIPressesEvent? evt)
+	public override void PressesBegan(NSSet<UIPress> presses, UIPressesEvent evt)
 	{
+		Ensure.NotNull(presses);
 		if (!HandlePresses(presses, down: true))
 		{
 			base.PressesBegan(presses, evt);
@@ -218,8 +223,9 @@ public class ImGuiAppViewController : UIViewController
 	/// <summary>Forwards hardware key-up events to ImGui.</summary>
 	/// <param name="presses">The presses that ended.</param>
 	/// <param name="evt">The owning UIKit presses event.</param>
-	public override void PressesEnded(NSSet<UIPress> presses, UIPressesEvent? evt)
+	public override void PressesEnded(NSSet<UIPress> presses, UIPressesEvent evt)
 	{
+		Ensure.NotNull(presses);
 		if (!HandlePresses(presses, down: false))
 		{
 			base.PressesEnded(presses, evt);
