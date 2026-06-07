@@ -25,6 +25,10 @@ ImGuiApp.Start(new ImGuiAppConfig
 		// ARM64 ABI (varargs are passed on the stack; the callee walks a bogus va_list).
 		// TextUnformatted maps to the non-variadic igTextUnformatted and is safe.
 		ImGui.TextUnformatted("iOS Metal renderer smoke test");
+		// Exercise the merged font atlas draw path: an accented Latin glyph (extended Unicode range)
+		// and an emoji glyph (merged NotoEmoji range). Missing glyphs are skipped, not fatal, so this
+		// can't fail the smoke on its own — its value is that building/uploading the real atlas didn't.
+		ImGui.TextUnformatted("Unicode café é ü ñ  emoji \U0001F600 \U0001F389");
 		ImGui.Button("Tap");
 		ImGui.End();
 

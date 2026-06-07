@@ -83,7 +83,12 @@ for s in "${SRCS[@]}"; do
 	o="$WORK/$(echo "$s" | tr '/.' '__').o"
 	echo "  CXX $s"
 	# -fvisibility=default keeps the cimgui C exports in the dylib's dynamic export table.
-	xcrun --sdk "$SDK" clang++ -O2 -std=c++17 -fvisibility=default -arch "$ARCH" -isysroot "$SYSROOT" "$MIN" \
+	# -DIMGUI_USE_WCHAR32 makes ImWchar 32-bit, matching Hexa.NET.ImGui's bindings (which pass uint
+	# codepoints) AND sizing ImFontGlyphRangesBuilder's bitset for the full Unicode range. Without it
+	# ImWchar defaults to 16-bit (max 0xFFFF), so AddChar() for emoji codepoints (0x1F300+) indexes the
+	# builder's UsedChars vector out of bounds and aborts (imgui.h operator[] assertion). Must be applied
+	# to every translation unit so imgui + cimgui agree on the ImWchar ABI.
+	xcrun --sdk "$SDK" clang++ -O2 -std=c++17 -fvisibility=default -DIMGUI_USE_WCHAR32 -arch "$ARCH" -isysroot "$SYSROOT" "$MIN" \
 		-I. -Iimgui -c "$s" -o "$o"
 	OBJS+=("$o")
 done

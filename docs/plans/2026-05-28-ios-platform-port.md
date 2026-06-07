@@ -39,6 +39,18 @@
 >   which crashes on the Apple ARM64 ABI when called through HexaGen's fixed function-pointer — use
 >   `ImGui.TextUnformatted`. On-device arm64 slices / an `xcframework` and a productized native-cimgui
 >   distribution (vs. the CI build-and-embed) remain follow-ups for shipping to real hardware.
+> - ✅ **Task 5 — touch + keyboard input** — `ImGuiAppViewController` `Touches*` overrides drive the
+>   single ImGui mouse (primary finger → `AddMousePosEvent`/`AddMouseButtonEvent`); `PressesBegan/Ended`
+>   map `UIKeyboardHidUsage` → `ImGuiKey` (`IOSKeyMap`) with modifiers + typed characters; a hidden
+>   `IUIKeyInput` first-responder (`SoftKeyboardView`) toggled by `io.WantTextInput` feeds the soft
+>   keyboard. `ImGuiApp.iOS.Input` bridges into ImGui IO. The smoke run exercises the input IO calls so
+>   their Apple-ARM64-ABI safety is CI-checked; touch/key *behaviour* still needs on-device verification.
+> - ✅ **Task 6 — DPI, fonts, ini redirect** (§2.4–2.6) — `ScaleFactor` from `UIScreen.Scale` (Task 4);
+>   the iOS font atlas now loads the bundled Nerd Font + merged NotoEmoji + extended Unicode ranges
+>   (shared `FontHelper`) rasterized at `pointSize × ScaleFactor` with `FontGlobalScale = 1/ScaleFactor`
+>   for crisp text on 2x/3x screens; `imgui.ini` redirects to `Library/Application Support/<bundleId>/`
+>   (or disabled when `SaveIniSettings` is false). The smoke run builds/uploads the real atlas and draws
+>   Unicode + emoji glyphs; crispness and `.ini` persistence-across-relaunch still need on-device checks.
 
 **Goal:** Make `ImGuiApp.Start(config)` actually run a Dear ImGui application on iOS (iPhone + iPad, iOS 15+) with parity for the OnStart / OnUpdate / OnRender / OnAppMenu lifecycle, fonts, textures, and DPI scaling.
 
