@@ -24,9 +24,22 @@ ImGuiApp.Start(new ImGuiAppConfig
 
 	OnRender = _ =>
 	{
+		// Stage tracing: the frame loop SIGSEGVs inside this callback (between the NewFrame and Render
+		// markers), so pinpoint which ImGui draw call faults. Crashes on the first frame, so this logs
+		// once. Remove once green.
+		Console.WriteLine("IMGUIAPP_IOS_OR begin");
+		Console.Out.Flush();
 		ImGui.Begin("Smoke");
+		Console.WriteLine("IMGUIAPP_IOS_OR after-begin");
+		Console.Out.Flush();
 		ImGui.Text("iOS Metal renderer smoke test");
+		Console.WriteLine("IMGUIAPP_IOS_OR after-text");
+		Console.Out.Flush();
 		ImGui.Button("Tap");
+		Console.WriteLine("IMGUIAPP_IOS_OR after-button");
+		Console.Out.Flush();
 		ImGui.End();
+		Console.WriteLine("IMGUIAPP_IOS_OR after-end");
+		Console.Out.Flush();
 	},
 });

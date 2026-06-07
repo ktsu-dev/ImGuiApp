@@ -170,6 +170,12 @@ public static partial class ImGuiApp
 		}
 
 		ImTextureDataPtr texData = io.Fonts.TexData;
+
+		// Diagnostic: sane width/height/font-count confirm the 1.92.3 native font structs line up with
+		// the managed 1.92.2b bindings; garbage values would point at a font-struct ABI mismatch.
+		Console.WriteLine($"IMGUIAPP_IOS_ATLAS w={texData.Width} h={texData.Height} fonts={io.Fonts.Fonts.Size} pixels={(texData.Pixels is null ? "null" : "ok")}");
+		Console.Out.Flush();
+
 		if (texData.Pixels is null || texData.Width <= 0 || texData.Height <= 0)
 		{
 			return;
@@ -178,6 +184,8 @@ public static partial class ImGuiApp
 		ReadOnlySpan<byte> pixels = new(texData.Pixels, texData.Width * texData.Height * 4);
 		nint textureId = Renderer!.CreateTexture(pixels, texData.Width, texData.Height);
 		texData.SetTexID(textureId);
+		Console.WriteLine($"IMGUIAPP_IOS_ATLAS texid=0x{textureId:x}");
+		Console.Out.Flush();
 
 		// The atlas pixels now live on the GPU; drop the CPU copy to save memory (matches desktop).
 		io.Fonts.ClearTexData();
