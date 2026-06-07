@@ -1,6 +1,6 @@
-## v2.13.1 (patch)
+## v2.13.2 (patch)
 
-Changes since v2.13.0:
+Changes since v2.13.1:
 
-- ci: fix intermittent coverage broken-pipe flake (exit code 7) (#208) ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(ios): font parity + imgui.ini redirect (Task 6) (#209) ([@matt-edmondson](https://github.com/matt-edmondson))
 
