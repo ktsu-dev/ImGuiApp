@@ -32,6 +32,20 @@ ImGuiApp.Start(new ImGuiAppConfig
 		ImGui.Button("Tap");
 		ImGui.End();
 
+		// Exercise the app-menu draw path (BeginMainMenuBar/BeginMenu/MenuItem) so its ImGui calls are
+		// CI-checked on the Apple ARM64 ABI. ImGuiApp.RenderAppMenu only renders on iPad, and the smoke
+		// sim is an iPhone, so call these directly here rather than relying on that path.
+		if (ImGui.BeginMainMenuBar())
+		{
+			if (ImGui.BeginMenu("Smoke"))
+			{
+				ImGui.MenuItem("Item", string.Empty, false);
+				ImGui.EndMenu();
+			}
+
+			ImGui.EndMainMenuBar();
+		}
+
 		// CI can't inject real touches/keys into the headless simulator, so exercise the ImGui input
 		// IO calls the iOS input bridge makes (pointer, button, key, modifier, text, wheel). This
 		// verifies they don't crash on the Apple ARM64 ABI the way the variadic igText did.

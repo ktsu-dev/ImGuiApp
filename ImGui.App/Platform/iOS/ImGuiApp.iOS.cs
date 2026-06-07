@@ -207,11 +207,63 @@ public static partial class ImGuiApp
 
 		Config.OnUpdate?.Invoke(deltaSeconds);
 		Invoker?.DoInvokes();
+
+		if (frameBegun)
+		{
+			RenderAppMenu();
+		}
+
 		Config.OnRender?.Invoke(deltaSeconds);
 
 		if (frameBegun)
 		{
 			EndImGuiFrameAndRender();
+		}
+	}
+
+	/// <summary>The discrete accessibility UI-scale steps offered in the app menu (75%–200%).</summary>
+	private static readonly float[] AccessibilityScales = [0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f];
+
+	/// <summary>
+	/// Renders the application menu bar. On iPad this shows the consumer's
+	/// <see cref="ImGuiAppConfig.OnAppMenu"/> plus an accessibility UI-scale submenu, mirroring the
+	/// desktop main menu bar. iPhone has no main-menu-bar paradigm and little vertical space, so this is
+	/// a no-op there (§2.3 of the port plan). Must be called inside an active ImGui frame.
+	/// </summary>
+	private static void RenderAppMenu()
+	{
+		if (UIDevice.CurrentDevice.UserInterfaceIdiom != UIUserInterfaceIdiom.Pad)
+		{
+			return; // iPhone: no app menu bar.
+		}
+
+		if (ImGui.BeginMainMenuBar())
+		{
+			Config.OnAppMenu?.Invoke();
+			RenderAccessibilityMenu();
+			ImGui.EndMainMenuBar();
+		}
+	}
+
+	/// <summary>Renders the accessibility UI-scale submenu, driving <see cref="SetGlobalScale"/>.</summary>
+	private static void RenderAccessibilityMenu()
+	{
+		if (ImGui.BeginMenu("Accessibility"))
+		{
+			// TextUnformatted, not Text: ImGui.Text is the variadic igText, which crashes on the Apple
+			// ARM64 ABI through HexaGen's fixed function-pointer.
+			ImGui.TextUnformatted("UI Scale:");
+			ImGui.Separator();
+
+			foreach (float scale in AccessibilityScales)
+			{
+				if (ImGui.MenuItem($"{(int)(scale * 100)}%", "", Math.Abs(GlobalScale - scale) < 0.01f))
+				{
+					SetGlobalScale(scale);
+				}
+			}
+
+			ImGui.EndMenu();
 		}
 	}
 
