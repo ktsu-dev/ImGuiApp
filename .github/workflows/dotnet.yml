@@ -366,6 +366,16 @@ jobs:
           test -n "$APP"
           echo "app=$APP" >> "$GITHUB_OUTPUT"
 
+      # Embed cimgui.dylib into the .app by hand. The NativeReference route did not work for this
+      # Microsoft.NET.Sdk app (the dylib never made it into the bundle), so copy it in directly; the
+      # runtime resolver dlopens it by absolute bundle path (NSBundle.MainBundle.BundlePath +
+      # /cimgui.dylib). The simulator does not enforce code signing, so an unsigned dylib loads.
+      - name: Embed cimgui.dylib into the .app bundle
+        run: |
+          set -euxo pipefail
+          cp ImGui.App/Platform/iOS/native/cimgui.dylib "${{ steps.findapp.outputs.app }}/cimgui.dylib"
+          ls -la "${{ steps.findapp.outputs.app }}/cimgui.dylib"
+
       # Diagnostic: confirm the cimgui dylib was embedded in the .app and wired as a load dependency
       # of the executable, and that it exports the cimgui symbols. The runtime IMGUIAPP_IOS_DLOPEN /
       # IMGUIAPP_IOS_SYM markers report whether dlopen + resolution then succeed. Never fails the job.
