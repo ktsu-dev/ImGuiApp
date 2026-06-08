@@ -1,6 +1,7 @@
-## v2.14.2 (patch)
+## v2.14.3 (patch)
 
-Changes since v2.14.1:
+Changes since v2.14.2:
 
-- feat(ios): curated ImGuiAppDemo.iOS showcase + simulator CI (Task 8, part 3) (#213) ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump Polyfill from 10.8.0 to 10.8.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
