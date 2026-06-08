@@ -397,6 +397,39 @@ jobs:
             xcrun simctl launch --console-pty --terminate-running-process "$SIM_UDID" dev.ktsu.imguiapp.smoketest 2>&1 | tee /tmp/smoke.log
           grep -q "IMGUIAPP_IOS_SMOKE_OK" /tmp/smoke.log
 
+      # --- Curated iOS demo (examples/ImGuiAppDemo.iOS) ---
+      # A richer showcase than the headless smoke app: widgets, Unicode/emoji, a GPU texture, animation,
+      # and the input/IO surface, all using the iOS-safe non-variadic ImGui subset. It reuses this job's
+      # booted simulator, cimgui dylib, and the IMGUIAPP_IOS_SMOKE_FRAMES hook (baked into ImGui.App's
+      # view controller), so the same minimal SDK + restore flags as the smoke app apply.
+      - name: Restore demo app (net10.0-ios, simulator RID)
+        run: dotnet restore examples/ImGuiAppDemo.iOS/ImGuiAppDemo.iOS.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -r iossimulator-arm64
+
+      - name: Build demo app (.app for simulator)
+        run: dotnet build examples/ImGuiAppDemo.iOS/ImGuiAppDemo.iOS.csproj -c Release -f net10.0-ios -r iossimulator-arm64 -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -p:EnforceCodeStyleInBuild=false --no-restore
+
+      - name: Locate built demo .app bundle
+        id: finddemo
+        run: |
+          set -euxo pipefail
+          APP=$(find examples/ImGuiAppDemo.iOS/bin -type d -name "*.app" | head -1)
+          test -n "$APP"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Embed cimgui.dylib into the demo .app bundle
+        run: cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.finddemo.outputs.app }}/cimgui.dylib"
+
+      - name: Install, launch, and assert the demo ticked + uploaded its texture
+        run: |
+          set -euxo pipefail
+          xcrun simctl install "$SIM_UDID" "${{ steps.finddemo.outputs.app }}"
+          SIMCTL_CHILD_IMGUIAPP_IOS_SMOKE_FRAMES=30 \
+            xcrun simctl launch --console-pty --terminate-running-process "$SIM_UDID" dev.ktsu.imguiapp.demo 2>&1 | tee /tmp/demo.log
+          # The lifecycle ticked N frames without crashing in the Metal pipeline...
+          grep -q "IMGUIAPP_IOS_SMOKE_OK" /tmp/demo.log
+          # ...and the bundled image decoded (ImageSharp) + uploaded on Metal — PR-2 textures end-to-end.
+          grep -q "IMGUIAPP_DEMO logo loaded" /tmp/demo.log
+
       - name: Cleanup simulator
         if: always()
         run: xcrun simctl delete "${SIM_UDID:-imguiapp-smoke}" || true
