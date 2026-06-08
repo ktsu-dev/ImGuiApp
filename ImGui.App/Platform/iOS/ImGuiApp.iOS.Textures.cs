@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using Hexa.NET.ImGui;
 
 using ktsu.Semantics.Paths;
+using ktsu.Semantics.Strings;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
