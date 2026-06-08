@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <EnableSourceLink>false</EnableSourceLink>
+    <RootNamespace>ktsu.ImGui.Examples.App.iOS</RootNamespace>
+    <AssemblyName>ImGuiAppDemoiOS</AssemblyName>
+
+    <!-- Like the smoke app: this is an iOS application only on macOS (where the iOS workload exists).
+         On any other OS it degrades to a plain net10.0 console exe so the Windows CI pipeline can still
+         restore/build it without the iOS workload. The simulator job always builds -f net10.0-ios.
+         We deliberately use the plain Microsoft.NET.Sdk (not ktsu.Sdk.App) because the desktop-app SDK
+         forces a RID matrix that fights the iOS build; the smoke app proved this minimal SDK works. -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('OSX'))">net10.0-ios</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('OSX'))">net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <ApplicationTitle>ImGuiApp iOS Demo</ApplicationTitle>
+    <ApplicationId>dev.ktsu.imguiapp.demo</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <!-- For string.As<AbsoluteFilePath>() when resolving the bundled image path at runtime. -->
+    <PackageReference Include="ktsu.Semantics.Paths" />
+    <PackageReference Include="ktsu.Semantics.Strings" />
+  </ItemGroup>
+
+  <!-- The texture showcase loads this image at runtime via ImGuiApp.GetOrLoadTexture. On iOS a
+       BundleResource lands in the .app root, which is AppContext.BaseDirectory, so the same path
+       resolution the desktop demo uses works here. On other OSes copy it next to the exe. -->
+  <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <BundleResource Include="icon.png" />
+  </ItemGroup>
+  <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">
+    <Content Include="icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Note: as with the smoke app, the cimgui dylib is NOT linked via a NativeReference (silently
+       ignored by Microsoft.NET.Sdk apps). The simulator CI job copies cimgui.dylib into the built
+       .app bundle and the iOS native-library resolver dlopens it by absolute bundle path. -->
+
+</Project>
