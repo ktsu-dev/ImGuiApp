@@ -1,9 +1,7 @@
-## v2.14.0 (minor)
+## v2.14.1 (patch)
 
-Changes since v2.13.0:
+Changes since v2.14.0:
 
-- feat(ios): AutoDiscoverExtensions flag (Task 8, part 1) (#211) ([@matt-edmondson](https://github.com/matt-edmondson))
-- feat(ios): app menu (iPad) + Stop() semantics + no-op surface (Task 7) (#210) ([@matt-edmondson](https://github.com/matt-edmondson))
-- feat(ios): font parity + imgui.ini redirect (Task 6) (#209) ([@matt-edmondson](https://github.com/matt-edmondson))
-- ci: fix intermittent coverage broken-pipe flake (exit code 7) (#208) ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(ios): import ktsu.Semantics.Strings for string.As<AbsoluteFilePath> ([@Claude](https://github.com/Claude))
+- feat(ios): public texture loading via the Metal backend (Task 8, part 2) ([@Claude](https://github.com/Claude))
 
