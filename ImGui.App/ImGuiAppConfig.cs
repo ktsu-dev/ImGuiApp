@@ -124,6 +124,17 @@ public class ImGuiAppConfig
 	public bool SaveIniSettings { get; init; } = true;
 
 	/// <summary>
+	/// Gets or sets a value indicating whether to auto-discover ImGui extensions (ImGuizmo, ImNodes,
+	/// ImPlot) by reflecting over loaded assemblies at startup. Default is true.
+	/// <para>
+	/// On iOS this is effectively always off: reflective assembly scanning is unfriendly to the AOT
+	/// trimmer, so the iOS build excludes the extension manager entirely and never auto-discovers,
+	/// regardless of this value. iOS consumers that want an extension must wire it up manually.
+	/// </para>
+	/// </summary>
+	public bool AutoDiscoverExtensions { get; init; } = true;
+
+	/// <summary>
 	/// Gets or sets the performance settings for throttled rendering.
 	/// </summary>
 	public ImGuiAppPerformanceSettings PerformanceSettings { get; init; } = new();

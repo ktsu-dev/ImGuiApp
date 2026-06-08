@@ -127,9 +127,15 @@ internal sealed class ImGuiController : IRendererBackend
 
 		ImGui.StyleColorsDark();
 
-		ImGuiExtensionManager.Initialize();
-		ImGuiExtensionManager.SetImGuiContext();
-		ImGuiExtensionManager.CreateExtensionContexts();
+		// Auto-discovery reflects over loaded assemblies to find ImGuizmo/ImNodes/ImPlot; consumers can
+		// opt out via AutoDiscoverExtensions. When off, the per-frame BeginFrame and Cleanup calls below
+		// are harmless no-ops (their delegates stay null).
+		if (ImGuiApp.Config.AutoDiscoverExtensions)
+		{
+			ImGuiExtensionManager.Initialize();
+			ImGuiExtensionManager.SetImGuiContext();
+			ImGuiExtensionManager.CreateExtensionContexts();
+		}
 	}
 
 	internal void BeginFrame()
