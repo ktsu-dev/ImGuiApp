@@ -242,15 +242,17 @@ jobs:
         run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:EnforceCodeStyleInBuild=false --no-restore
 
   ios-simulator:
-    # Runtime verification: build the headless smoke app for the iOS simulator, boot a sim,
-    # launch it, and assert the lifecycle ticks (the app prints a marker and exits after N frames
-    # via the IMGUIAPP_IOS_SMOKE_FRAMES hook). Runs in parallel; does not gate release.
+    # Runtime verification: build the headless smoke app AND the curated ImGuiAppDemo.iOS for the
+    # simulator, boot a sim, launch each, and assert the lifecycle ticks (the app prints a marker and
+    # exits after N frames via the IMGUIAPP_IOS_SMOKE_FRAMES hook). Runs in parallel; does not gate
+    # release. Building+launching two apps after a cold cimgui cache approaches the old 30-min cap, so
+    # the budget is 50 min (a warm-cache run is ~20).
     name: iOS Simulator Smoke Test
     # The .NET 10 iOS workload (Microsoft.iOS 26.5) requires Xcode 26.5 to build a runnable .app.
     # macos-15 only carries up to Xcode 26.3; macos-26 (Tahoe) ships the matching Xcode 26.5+.
     # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 50
     # HARD GATE: the .NET 10 + Xcode 26 symlinked-developer-dir bug that broke native linking
     # (`xcodebuild -find` -> errno=Invalid argument) is worked around by the "Resolve and pin the
     # real Xcode" step below (readlink -f + xcode-select/DEVELOPER_DIR pin; dotnet/macios#21762), so
