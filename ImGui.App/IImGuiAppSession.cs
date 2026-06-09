@@ -22,22 +22,22 @@ public interface IImGuiAppSession : IDisposable
 	/// </summary>
 	/// <param name="width">The new width, in pixels.</param>
 	/// <param name="height">The new height, in pixels.</param>
-	void Resize(int width, int height);
+	public void Resize(int width, int height);
 
 	/// <summary>
 	/// Forwards a focus change from the host.
 	/// </summary>
 	/// <param name="focused"><see langword="true"/> if the host gave the editor focus; otherwise <see langword="false"/>.</param>
-	void Focus(bool focused);
+	public void Focus(bool focused);
 
 	/// <summary>
 	/// Gets the native handle of the session's own window (the child reparented under the host), or
 	/// <c>0</c> if it has not been created yet.
 	/// </summary>
-	nint NativeHandle { get; }
+	public nint NativeHandle { get; }
 
 	/// <summary>
 	/// Gets a value indicating whether the session's render loop is currently running.
 	/// </summary>
-	bool IsRunning { get; }
+	public bool IsRunning { get; }
 }

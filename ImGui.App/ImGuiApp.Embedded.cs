@@ -140,10 +140,13 @@ public static partial class ImGuiApp
 
 			_ = Invoker?.InvokeAsync(() =>
 			{
-				if (window != null)
+				IWindow? target = window;
+				if (target is null)
 				{
-					window.Size = new(width, height);
+					return;
 				}
+
+				target.Size = new(width, height);
 			});
 		}
 

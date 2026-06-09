@@ -27,6 +27,7 @@ public static partial class ImGuiWidgets
 	/// </remarks>
 	public static void Scope(string label, ReadOnlySpan<float> samples, Vector2 size, float amplitude = 1.0f)
 	{
+		ImGui.PushID(label);
 		float lineHeight = ImGui.GetTextLineHeight();
 		Vector2 scopeSize = new(
 			size.X > 0 ? size.X : lineHeight * 12.0f,
@@ -64,5 +65,6 @@ public static partial class ImGuiWidgets
 		}
 
 		drawList.AddRect(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.Border]));
+		ImGui.PopID();
 	}
 }

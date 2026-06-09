@@ -29,6 +29,7 @@ public static partial class ImGuiWidgets
 	/// </remarks>
 	public static void DbMeter(string label, float db, Vector2 size, float minDb = -60f, float maxDb = 6f, float peakDb = float.NegativeInfinity)
 	{
+		ImGui.PushID(label);
 		float lineHeight = ImGui.GetTextLineHeight();
 		Vector2 meterSize = new(
 			size.X > 0 ? size.X : lineHeight * 1.5f,
@@ -63,6 +64,7 @@ public static partial class ImGuiWidgets
 		}
 
 		drawList.AddRect(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.Border]));
+		ImGui.PopID();
 	}
 
 	/// <summary>
