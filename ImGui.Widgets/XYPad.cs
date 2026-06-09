@@ -41,16 +41,11 @@ public static partial class ImGuiWidgets
 		if (ImGui.IsItemActive() && padSize.X > 0 && padSize.Y > 0)
 		{
 			Vector2 mouse = ImGui.GetMousePos();
-			float nx = Math.Clamp((mouse.X - cursorPos.X) / padSize.X, 0.0f, 1.0f);
-			// Screen Y grows downward; invert so the value increases upward.
-			float ny = Math.Clamp(1.0f - ((mouse.Y - cursorPos.Y) / padSize.Y), 0.0f, 1.0f);
-
-			if (nx != x || ny != y)
-			{
-				x = nx;
-				y = ny;
-				changed = true;
-			}
+			// While the pad is being dragged, track the pointer and report an edit each frame, matching
+			// how immediate-mode sliders behave. Screen Y grows downward, so invert it for an upward axis.
+			x = Math.Clamp((mouse.X - cursorPos.X) / padSize.X, 0.0f, 1.0f);
+			y = Math.Clamp(1.0f - ((mouse.Y - cursorPos.Y) / padSize.Y), 0.0f, 1.0f);
+			changed = true;
 		}
 
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
