@@ -61,6 +61,11 @@ internal static partial class NativeMethods
 	[return: MarshalAs(UnmanagedType.Bool)]
 	internal static partial bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
 
+	/// <summary>Changes the parent of a child window (used to embed our window under a host editor window).</summary>
+	[LibraryImport("user32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	internal static partial nint SetParent(nint hWndChild, nint hWndNewParent);
+
 	/// <summary>A rectangle defined by its edges, matching the Win32 RECT structure.</summary>
 	[StructLayout(LayoutKind.Sequential)]
 	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 RECT structure for interop clarity.")]
@@ -96,6 +101,20 @@ internal static partial class NativeMethods
 	internal const int SW_HIDE = 0;
 	internal const int SW_SHOW = 5;
 	internal const int SW_RESTORE = 9;
+
+	// Window style manipulation used when reparenting our window into a host (embedded editor) window.
+	internal const int GWL_STYLE = -16;
+	internal const long WS_CHILD = 0x40000000L;
+	internal const long WS_POPUP = 0x80000000L;
+	internal const long WS_CAPTION = 0x00C00000L;
+	internal const long WS_THICKFRAME = 0x00040000L;
+	internal const long WS_SYSMENU = 0x00080000L;
+
+	// SetWindowPos flags.
+	internal const uint SWP_NOZORDER = 0x0004;
+	internal const uint SWP_NOACTIVATE = 0x0010;
+	internal const uint SWP_FRAMECHANGED = 0x0020;
+	internal const uint SWP_SHOWWINDOW = 0x0040;
 
 	/// <summary>
 	/// Sets the process as DPI-Aware on Windows.
