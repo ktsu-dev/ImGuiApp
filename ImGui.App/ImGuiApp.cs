@@ -244,6 +244,18 @@ public static partial class ImGuiApp
 			PreferredStencilBufferBits = 8
 		};
 
+		if (config.WindowHost == ImGuiAppWindowHost.EmbeddedChild)
+		{
+			// Embedded editors render into a borderless window that is reparented under the host once
+			// it has been created (see ReparentToHost). Position at the origin of the eventual parent.
+			silkWindowOptions = silkWindowOptions with
+			{
+				WindowBorder = WindowBorder.Hidden,
+				Position = new(0, 0),
+				IsVisible = true,
+			};
+		}
+
 		LastNormalWindowState = config.InitialWindowState;
 		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 

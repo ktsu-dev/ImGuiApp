@@ -42,6 +42,9 @@
 
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
     <Compile Remove="ImGuiApp.cs" />
+    <!-- Embedded/non-blocking hosting reparents a Silk.NET window via Win32 NativeMethods; the iOS
+         stub (ImGuiApp.iOS.cs) provides a throwing StartEmbedded instead, so this partial is excluded. -->
+    <Compile Remove="ImGuiApp.Embedded.cs" />
     <!-- Per-region blend modes drive the desktop OpenGL renderer (ImGuiController.SetBlendMode);
          the iOS stub has no such backend, so this partial is excluded like ImGuiApp.cs above. -->
     <Compile Remove="ImGuiAppBlend.cs" />

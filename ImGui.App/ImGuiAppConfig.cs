@@ -39,6 +39,28 @@ public class ImGuiAppConfig
 	public string Title { get; init; } = nameof(ImGuiApp);
 
 	/// <summary>
+	/// Gets or sets how the application window is hosted.
+	/// </summary>
+	/// <remarks>
+	/// Defaults to <see cref="ImGuiAppWindowHost.Standalone"/>, which preserves the classic behaviour of
+	/// <see cref="ImGuiApp.Start(ImGuiAppConfig)"/> (a top-level window owning a blocking loop). Set this to
+	/// <see cref="ImGuiAppWindowHost.EmbeddedChild"/> together with <see cref="ParentWindowHandle"/> and
+	/// start via <see cref="ImGuiApp.StartEmbedded(ImGuiAppConfig)"/> to render as a child of a
+	/// host-provided window (for example a VST3 plugin editor).
+	/// </remarks>
+	public ImGuiAppWindowHost WindowHost { get; init; } = ImGuiAppWindowHost.Standalone;
+
+	/// <summary>
+	/// Gets or sets the native handle of the parent window to embed into.
+	/// </summary>
+	/// <remarks>
+	/// Only consulted when <see cref="WindowHost"/> is <see cref="ImGuiAppWindowHost.EmbeddedChild"/>. The
+	/// value is a platform-native window handle: an <c>HWND</c> on Windows, an <c>NSView*</c> on macOS, or
+	/// an X11 <c>Window</c> on Linux.
+	/// </remarks>
+	public nint ParentWindowHandle { get; init; }
+
+	/// <summary>
 	/// Gets or sets the file path to the application window icon.
 	/// </summary>
 	public string IconPath { get; init; } = string.Empty;

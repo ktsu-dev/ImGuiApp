@@ -115,6 +115,17 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
+	/// Not supported on iOS. The embedded / non-blocking host model reparents a desktop window under a
+	/// foreign native handle, which has no analogue in the iOS application lifecycle (UIKit owns the
+	/// window). Present iOS UI through the standard <see cref="Start(ImGuiAppConfig)"/> path instead.
+	/// </summary>
+	/// <param name="config">The application configuration. Ignored.</param>
+	/// <returns>This method never returns; it always throws.</returns>
+	/// <exception cref="PlatformNotSupportedException">Always thrown on iOS.</exception>
+	public static IImGuiAppSession StartEmbedded(ImGuiAppConfig config) =>
+		throw new PlatformNotSupportedException("Embedded window hosting is not available on iOS; use Start(ImGuiAppConfig).");
+
+	/// <summary>
 	/// Requests application shutdown. iOS applications are not meant to self-terminate (the OS owns
 	/// the lifecycle), so this logs a warning, pauses rendering, and asks UIKit to exit.
 	/// </summary>
