@@ -1,11 +1,7 @@
-## v2.15.0 (minor)
+## v2.15.1 (patch)
 
-Changes since v2.14.0:
+Changes since v2.15.0:
 
-- Fix floating-point equality reliability issue in XYPad ([@Claude](https://github.com/Claude))
-- Fix analyzer errors in embedded hosting and audio widgets ([@Claude](https://github.com/Claude))
-- Add embedded-window hosting and audio widgets ([@Claude](https://github.com/Claude))
-- feat(ios): curated ImGuiAppDemo.iOS showcase + simulator CI (Task 8, part 3) (#213) ([@matt-edmondson](https://github.com/matt-edmondson))
-- fix(ios): import ktsu.Semantics.Strings for string.As<AbsoluteFilePath> ([@Claude](https://github.com/Claude))
-- feat(ios): public texture loading via the Metal backend (Task 8, part 2) ([@Claude](https://github.com/Claude))
+- Bump SixLabors.ImageSharp from 3.1.12 to 4.0.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the microsoft group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
