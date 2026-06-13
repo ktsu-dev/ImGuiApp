@@ -358,17 +358,18 @@ public partial class ImGuiPopups
 			CurrentContents.Clear();
 			CurrentDirectory.GetContents().ForEach(p =>
 			{
-				if (BrowserTarget == FilesystemBrowserTarget.File || (BrowserTarget == FilesystemBrowserTarget.Directory && p is AbsoluteDirectoryPath))
+				switch (p)
 				{
-					if (p is not AbsolutePath absolutePath)
-					{
-						throw new InvalidOperationException("Path is not an absolute path.");
-					}
+					case AbsoluteDirectoryPath directory:
+						CurrentContents.Add(directory);
+						break;
 
-					if (absolutePath.IsDirectory || Matcher.Match(Path.GetFileName(absolutePath.WeakString)).HasMatches)
-					{
-						CurrentContents.Add(absolutePath);
-					}
+					case AbsoluteFilePath file when BrowserTarget == FilesystemBrowserTarget.File && Matcher.Match(file.FileName).HasMatches:
+						CurrentContents.Add(file);
+						break;
+
+					default:
+						break;
 				}
 			});
 		}
