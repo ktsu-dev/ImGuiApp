@@ -1,0 +1,280 @@
+name: iOS Workflow
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      ["**.md", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
+  pull_request:
+    paths-ignore:
+      ["**.md", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
+  schedule:
+    - cron: "0 23 * * *" # Daily at 11 PM UTC
+  workflow_dispatch: # Allow manual triggers
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default permissions
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0" # Only needed for actions/setup-dotnet
+
+jobs:
+  ios-build:
+    # Compile-only verification that the net10.0-ios stub keeps building on Mac.
+    # No tests — Apple Simulator boot from CI is a separate problem (see plan §5 Task 2).
+    # Runs independently; failure here does not gate release.
+    name: Build net10.0-ios (macOS)
+    runs-on: macos-14
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    env:
+      # ImGui.App directly references SixLabors.ImageSharp 4.0 on net10.0-ios too,
+      # so this compile-only job needs the license key as well.
+      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: true
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Install iOS workload
+        # No caching yet — get the install path working first; caching workload manifests
+        # is a known-finicky follow-up (manifests need both the file tree and a metadata
+        # registration to "count" as installed).
+        run: dotnet workload install ios
+
+      # The csproj cross-targets net10.0;net9.0;net8.0;net10.0-ios on macOS AND ktsu.Sdk
+      # forces RuntimeIdentifiers=win-x64;win-x86;win-arm64;osx-x64;osx-arm64;linux-x64;linux-arm64
+      # on every project. The combination asks NuGet for the matching
+      # Microsoft.NETCore.App.Runtime.Mono.<rid> pack at the SDK version — those packs are
+      # workload-delivered in .NET 10 and no longer on nuget.org, so restore 404s. Windows
+      # CI gets away with it because the Windows runner has the Mono packs bundled with
+      # its dotnet install; setup-dotnet on the Mac runner does not. Scoping the restore
+      # to net10.0-ios alone AND clearing the RID matrix sidesteps the issue — we're only
+      # compile-checking the IL, no RID-specific output needed.
+      - name: Restore ImGui.App (net10.0-ios, no RID matrix)
+        run: dotnet restore ImGui.App/ImGui.App.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers=
+
+      # EnforceCodeStyleInBuild=false bypasses the IDE0055 formatting analyser: the repo's
+      # working-tree files are LF, .editorconfig demands CRLF, and Windows checkouts get
+      # auto-converted to CRLF by git's core.autocrlf — macOS checkouts don't, so IDE0055
+      # fires here on baseline code that's untouched by this PR. The Windows job is the
+      # authoritative formatter; the macOS job is a compile-check.
+      - name: Build ImGui.App (net10.0-ios)
+        run: dotnet build ImGui.App/ImGui.App.csproj -c Release -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:EnforceCodeStyleInBuild=false --no-restore
+
+  ios-simulator:
+    # Runtime verification: build the headless smoke app AND the curated ImGuiAppDemo.iOS for the
+    # simulator, boot a sim, launch each, and assert the lifecycle ticks (the app prints a marker and
+    # exits after N frames via the IMGUIAPP_IOS_SMOKE_FRAMES hook). Runs independently; does not gate
+    # release. Building+launching two apps after a cold cimgui cache approaches the old 30-min cap, so
+    # the budget is 50 min (a warm-cache run is ~20).
+    name: iOS Simulator Smoke Test
+    # The .NET 10 iOS workload (Microsoft.iOS 26.5) requires Xcode 26.5 to build a runnable .app.
+    # macos-15 only carries up to Xcode 26.3; macos-26 (Tahoe) ships the matching Xcode 26.5+.
+    # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
+    runs-on: macos-26
+    timeout-minutes: 50
+    # HARD GATE: the .NET 10 + Xcode 26 symlinked-developer-dir bug that broke native linking
+    # (`xcodebuild -find` -> errno=Invalid argument) is worked around by the "Resolve and pin the
+    # real Xcode" step below (readlink -f + xcode-select/DEVELOPER_DIR pin; dotnet/macios#21762), so
+    # this runtime smoke test now reliably passes and gates the PR like any other required check.
+    permissions:
+      contents: read
+
+    env:
+      # The smoke app and ImGuiAppDemo.iOS build ImGui.App (a direct SixLabors.ImageSharp
+      # 4.0 dependency) and decode an image via ImageSharp, so this job needs the key too.
+      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: true
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Install iOS workload
+        run: dotnet workload install ios
+
+      # Diagnostics: this job can only be debugged from CI (no local Mac), so dump the runner's
+      # actual SDK, workload, iOS runtime-pack, Xcode, and simulator state up front. Never fails.
+      - name: iOS toolchain diagnostics
+        run: |
+          set -x
+          dotnet --info || true
+          dotnet workload list || true
+          echo "--- installed packs ---"
+          ls -1 "$HOME/.dotnet/packs" 2>/dev/null | grep -i ios || true
+          ls -1 /usr/local/share/dotnet/packs 2>/dev/null | grep -i ios || true
+          echo "--- installed Xcodes ---"
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          echo "--- xcode / sdk ---"
+          xcodebuild -version || true
+          xcrun --sdk iphonesimulator --show-sdk-version || true
+          echo "--- simulator device types ---"
+          xcrun simctl list devicetypes | grep -i iphone || true
+          echo "--- simulator runtimes ---"
+          xcrun simctl list runtimes || true
+        continue-on-error: true
+
+      # ROOT CAUSE: the hosted Xcode_26.5.0.app is a SYMLINK, and on .NET 10 + Xcode 26 hosted runners
+      # `xcodebuild -find` intermittently fails to resolve the toolchain through a symlinked developer
+      # dir - dying with `errno=Invalid argument` (NOT "No such file or directory"; the SDK exists).
+      # The managed build and IL strip never call `xcrun -find` so they pass, but native clang linking
+      # (and `-find actool`) do, so they die with clang exit 72. Fix: resolve the .app symlink to its
+      # REAL path with `readlink -f` and pin BOTH xcode-select and DEVELOPER_DIR to it. `readlink -f`
+      # is a no-op on an already-real path, so this is safe either way; writing DEVELOPER_DIR to
+      # $GITHUB_ENV overrides any workflow/job-level value for later steps.
+      # Refs: dotnet/macios#21762, actions/runner-images#13347.
+      - name: Resolve and pin the real Xcode 26.5 path (symlink workaround)
+        run: |
+          set -uxo pipefail
+          XC=/Applications/Xcode_26.5.app
+          [ -d "$XC" ] || XC=/Applications/Xcode_26.5.0.app
+          [ -d "$XC" ] || XC="$(dirname "$(dirname "$(xcode-select -p)")")"
+          XC="$(readlink -f "$XC")"
+          echo "Resolved real Xcode: $XC"
+          sudo xcode-select -switch "$XC/Contents/Developer"
+          echo "DEVELOPER_DIR=$XC/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+          # Informational: confirm the host link tool now resolves through the real path.
+          xcrun --find install_name_tool || echo "WARN: install_name_tool did not resolve via $XC"
+
+      # Hexa.NET.ImGui ships no native cimgui for iOS, so build it from source (Dear ImGui 1.92.2b,
+      # matching Hexa 2.2.9) into a simulator static lib that ImGui.App statically links via a
+      # NativeReference. Cached by the build script's hash so it only rebuilds when the recipe changes.
+      # Runs after the Xcode pin so xcrun resolves the toolchain; before the build so the
+      # NativeReference's Exists() condition is satisfied when ImGui.App compiles.
+      - name: Cache native cimgui (iOS simulator)
+        uses: actions/cache@v4
+        with:
+          path: ImGui.App/Platform/iOS/native
+          key: cimgui-sim-arm64-dylib-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}
+
+      - name: Build native cimgui for the simulator
+        run: |
+          set -euxo pipefail
+          bash scripts/build-cimgui-ios.sh
+          # Stash the dylib outside the repo tree: the in-tree native/ dir is gitignored and gets
+          # wiped (by ktsu.Sdk/dotnet cleaning untracked files) before the embed step runs, so the
+          # embed step copies from this stable location instead.
+          cp ImGui.App/Platform/iOS/native/cimgui.dylib "$RUNNER_TEMP/cimgui.dylib"
+
+      # The smoke app is Microsoft.NET.Sdk, but it references ImGui.App (ktsu.Sdk), which forces a
+      # desktop RuntimeIdentifiers matrix whose Mono RID packs 404 on macOS (see the ios-build job).
+      # Clearing RuntimeIdentifiers and pinning the single simulator RID sidesteps that while still
+      # producing a runnable .app bundle. The install step provisions the iossimulator-x64 Mono
+      # runtime, so we target that RID; workload restore pulls the matching Microsoft.iOS runtime pack.
+      - name: Restore iOS workload packs for the smoke app
+        run: dotnet workload restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj
+        continue-on-error: true
+
+      # The referenced ImGui.App is a *library*; in .NET 10 libraries default to the OLDEST iOS
+      # platform version (_26.0), whose runtime packs aren't installed on the runner (only the
+      # latest _26.5 packs are) — hence NU1102 on ImGui.App.csproj. UseFloatingTargetPlatformVersion
+      # makes the library use the latest platform version (26.5) like the executable, aligning both
+      # on the installed runtime packs. See https://learn.microsoft.com/dotnet/ios/building-apps/build-properties#usefloatingtargetplatformversion
+      # ktsu.Sdk pins RuntimeFrameworkVersion=10.0.0 (for the desktop .NETCore.App runtime). On iOS
+      # that bogus version is inherited by the Apple runtime pack (Microsoft.iOS.Runtime.*, actually
+      # versioned 26.5.x), causing NU1102. Clearing RuntimeFrameworkVersion lets the iOS workload
+      # resolve the real pack version. Combined with UseFloatingTargetPlatformVersion (library ->
+      # latest _26.5 packs, which are the ones installed on the runner).
+      - name: Restore smoke app (net10.0-ios, simulator RID)
+        run: dotnet restore tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -r iossimulator-arm64
+
+      - name: Build smoke app (.app for simulator)
+        run: dotnet build tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj -c Release -f net10.0-ios -r iossimulator-arm64 -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -p:EnforceCodeStyleInBuild=false --no-restore
+
+      - name: Locate built .app bundle
+        id: findapp
+        run: |
+          set -euxo pipefail
+          APP=$(find tests/ImGui.App.iOS.SmokeTest/bin -type d -name "*.app" | head -1)
+          test -n "$APP"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      # Embed cimgui.dylib into the built .app. Hexa.NET.ImGui ships no native cimgui for iOS, and a
+      # NativeReference did not link it into this Microsoft.NET.Sdk app, so copy the dylib into the
+      # bundle directly; the runtime resolver dlopens it by bundle path. The simulator does not enforce
+      # code signing, so an unsigned bundled dylib loads.
+      - name: Embed cimgui.dylib into the .app bundle
+        run: cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.findapp.outputs.app }}/cimgui.dylib"
+
+      - name: Boot simulator
+        run: |
+          set -euxo pipefail
+          UDID=$(xcrun simctl create imguiapp-smoke "iPhone 15" 2>/dev/null \
+            || xcrun simctl create imguiapp-smoke com.apple.CoreSimulator.SimDeviceType.iPhone-15)
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Install, launch, and assert lifecycle ticked
+        run: |
+          set -euxo pipefail
+          xcrun simctl install "$SIM_UDID" "${{ steps.findapp.outputs.app }}"
+          # simctl forwards SIMCTL_CHILD_* env vars (prefix stripped) to the launched app.
+          SIMCTL_CHILD_IMGUIAPP_IOS_SMOKE_FRAMES=30 \
+            xcrun simctl launch --console-pty --terminate-running-process "$SIM_UDID" dev.ktsu.imguiapp.smoketest 2>&1 | tee /tmp/smoke.log
+          grep -q "IMGUIAPP_IOS_SMOKE_OK" /tmp/smoke.log
+
+      # --- Curated iOS demo (examples/ImGuiAppDemo.iOS) ---
+      # A richer showcase than the headless smoke app: widgets, Unicode/emoji, a GPU texture, animation,
+      # and the input/IO surface, all using the iOS-safe non-variadic ImGui subset. It reuses this job's
+      # booted simulator, cimgui dylib, and the IMGUIAPP_IOS_SMOKE_FRAMES hook (baked into ImGui.App's
+      # view controller), so the same minimal SDK + restore flags as the smoke app apply.
+      - name: Restore demo app (net10.0-ios, simulator RID)
+        run: dotnet restore examples/ImGuiAppDemo.iOS/ImGuiAppDemo.iOS.csproj -p:TargetFrameworks=net10.0-ios -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -r iossimulator-arm64
+
+      - name: Build demo app (.app for simulator)
+        run: dotnet build examples/ImGuiAppDemo.iOS/ImGuiAppDemo.iOS.csproj -c Release -f net10.0-ios -r iossimulator-arm64 -p:RuntimeIdentifiers= -p:RuntimeFrameworkVersion= -p:UseFloatingTargetPlatformVersion=true -p:EnforceCodeStyleInBuild=false --no-restore
+
+      - name: Locate built demo .app bundle
+        id: finddemo
+        run: |
+          set -euxo pipefail
+          APP=$(find examples/ImGuiAppDemo.iOS/bin -type d -name "*.app" | head -1)
+          test -n "$APP"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Embed cimgui.dylib into the demo .app bundle
+        run: cp "$RUNNER_TEMP/cimgui.dylib" "${{ steps.finddemo.outputs.app }}/cimgui.dylib"
+
+      - name: Install, launch, and assert the demo ticked + uploaded its texture
+        run: |
+          set -euxo pipefail
+          xcrun simctl install "$SIM_UDID" "${{ steps.finddemo.outputs.app }}"
+          SIMCTL_CHILD_IMGUIAPP_IOS_SMOKE_FRAMES=30 \
+            xcrun simctl launch --console-pty --terminate-running-process "$SIM_UDID" dev.ktsu.imguiapp.demo 2>&1 | tee /tmp/demo.log
+          # The lifecycle ticked N frames without crashing in the Metal pipeline...
+          grep -q "IMGUIAPP_IOS_SMOKE_OK" /tmp/demo.log
+          # ...and the bundled image decoded (ImageSharp) + uploaded on Metal — PR-2 textures end-to-end.
+          grep -q "IMGUIAPP_DEMO logo loaded" /tmp/demo.log
+
+      - name: Cleanup simulator
+        if: always()
+        run: xcrun simctl delete "${SIM_UDID:-imguiapp-smoke}" || true
