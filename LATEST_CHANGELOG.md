@@ -1,6 +1,6 @@
-## v2.15.1 (patch)
+## v2.15.2 (patch)
 
-Changes since v2.15.0:
+Changes since v2.15.1:
 
-- ci: supply SixLabors.ImageSharp 4 license key via SIXLABORS_LICENSE_KEY ([@Claude](https://github.com/Claude))
+- [patch] Fix FilesystemBrowser crash on open ([@matt-edmondson](https://github.com/matt-edmondson))
 
