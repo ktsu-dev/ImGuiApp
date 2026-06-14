@@ -33,10 +33,14 @@
 
   <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="Silk.NET" />
+    <PackageReference Include="Silk.NET.Core" />
+    <PackageReference Include="Silk.NET.Maths" />
     <PackageReference Include="Silk.NET.OpenGL" />
     <PackageReference Include="Silk.NET.Input" />
+    <PackageReference Include="Silk.NET.Input.Common" />
     <PackageReference Include="Silk.NET.Input.Sdl" />
     <PackageReference Include="Silk.NET.Windowing" />
+    <PackageReference Include="Silk.NET.Windowing.Common" />
     <PackageReference Include="Silk.NET.Windowing.Sdl" />
   </ItemGroup>
 
