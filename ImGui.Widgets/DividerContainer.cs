@@ -104,7 +104,9 @@ public static partial class ImGuiWidgets
 			ImGuiStylePtr style = ImGui.GetStyle();
 			Vector2 windowPadding = style.WindowPadding;
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-			Vector2 containerSize = ImGui.GetWindowSize() - (windowPadding * 2.0f);
+			//lay the container out from the current draw cursor using the remaining content
+			//region, so it respects anything drawn before it instead of always filling the window
+			Vector2 containerSize = ImGui.GetContentRegionAvail();
 
 			Vector2 layoutMask = layout switch
 			{
@@ -120,8 +122,8 @@ public static partial class ImGuiWidgets
 				_ => throw new NotImplementedException(),
 			};
 
-			Vector2 windowPos = ImGui.GetWindowPos();
-			Vector2 advance = windowPos + windowPadding;
+			Vector2 cursorScreenPos = ImGui.GetCursorScreenPos();
+			Vector2 advance = cursorScreenPos;
 
 			ImGui.SetNextWindowPos(advance);
 			ImGui.BeginChild(Id, containerSize, ImGuiChildFlags.None, ImGuiWindowFlags.NoSavedSettings);
@@ -142,7 +144,7 @@ public static partial class ImGuiWidgets
 			//render the handles last otherwise they'll be covered by the other zones windows and wont receive hover events
 
 			//reset the advance to the top left of the container
-			advance = windowPos + windowPadding;
+			advance = cursorScreenPos;
 			float resize = 0;
 			Vector2 mousePos = ImGui.GetMousePos();
 			bool resetSize = false;
