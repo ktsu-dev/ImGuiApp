@@ -2,6 +2,7 @@
 
 Changes since v2.15.2:
 
+- Remove stale files ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add direct PackageReferences to example projects ([@Claude](https://github.com/Claude))
 - Add direct PackageReferences for directly-used transitive packages ([@Claude](https://github.com/Claude))
 - Remove unused package versions from Directory.Packages.props ([@Claude](https://github.com/Claude))
