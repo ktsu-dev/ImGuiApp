@@ -3,9 +3,9 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="ktsu.Extensions" Version="1.5.15" />
-    <PackageVersion Include="ktsu.ThemeProvider" Version="1.0.18" />
-    <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="1.0.18" />
+    <PackageVersion Include="ktsu.Extensions" Version="1.5.16" />
+    <PackageVersion Include="ktsu.ThemeProvider" Version="1.0.19" />
+    <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="1.0.19" />
     <PackageVersion Include="ktsu.Semantics.Paths" Version="1.1.1" />
     <PackageVersion Include="ktsu.Semantics.Strings" Version="1.1.1" />
     <PackageVersion Include="ktsu.Semantics.Quantities" Version="1.1.1" />
@@ -14,9 +14,9 @@
     <PackageVersion Include="Hexa.NET.ImGuizmo" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImNodes" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImPlot" Version="2.2.9" />
-    <PackageVersion Include="ktsu.Invoker" Version="1.2.2" />
-    <PackageVersion Include="ktsu.ScopedAction" Version="1.1.11" />
-    <PackageVersion Include="ktsu.TextFilter" Version="1.5.10" />
+    <PackageVersion Include="ktsu.Invoker" Version="1.2.3" />
+    <PackageVersion Include="ktsu.ScopedAction" Version="1.1.12" />
+    <PackageVersion Include="ktsu.TextFilter" Version="1.5.11" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Silk.NET" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Core" Version="2.23.0" />

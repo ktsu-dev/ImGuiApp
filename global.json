@@ -5,14 +5,14 @@
   },
   "msbuild-sdks": {
     "MSTest.Sdk": "4.2.3",
-    "ktsu.Sdk": "2.9.0",
-    "ktsu.Sdk.ConsoleApp": "2.9.0",
-    "ktsu.Sdk.App": "2.9.0",
-    "ktsu.Sdk.Windows": "2.9.0",
-    "ktsu.Sdk.Linux": "2.9.0",
-    "ktsu.Sdk.macOS": "2.9.0",
-    "ktsu.Sdk.iOS": "2.9.0",
-    "ktsu.Sdk.Android": "2.9.0"
+    "ktsu.Sdk": "2.10.0",
+    "ktsu.Sdk.ConsoleApp": "2.10.0",
+    "ktsu.Sdk.App": "2.10.0",
+    "ktsu.Sdk.Windows": "2.10.0",
+    "ktsu.Sdk.Linux": "2.10.0",
+    "ktsu.Sdk.macOS": "2.10.0",
+    "ktsu.Sdk.iOS": "2.10.0",
+    "ktsu.Sdk.Android": "2.10.0"
   },
   "test": {
     "runner": "Microsoft.Testing.Platform"
