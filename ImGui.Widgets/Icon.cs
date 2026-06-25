@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
@@ -145,24 +146,49 @@ public static partial class ImGuiWidgets
 	/// <returns>The calculated size of the widget.</returns>
 	public static Vector2 CalcIconSize(string label, Vector2 imageSize, IconAlignment iconAlignment)
 	{
+		Ensure.NotNull(label);
+
+#pragma warning disable IDE0305
+		string[] lines = label.Trim().Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
+#pragma warning restore IDE0305
+
 		ImGuiStylePtr style = ImGui.GetStyle();
 		Vector2 framePadding = style.FramePadding;
 		Vector2 itemSpacing = style.ItemSpacing;
-		Vector2 labelSize = ImGui.CalcTextSize(label);
-		if (iconAlignment == IconAlignment.Horizontal)
+
+		Vector2 totalLabelSize = Vector2.Zero;
+		for (int labelIndex = 0; labelIndex < lines.Length; labelIndex++)
 		{
-			Vector2 boundingBoxSize = imageSize + new Vector2(labelSize.X + itemSpacing.X, 0);
-			boundingBoxSize.Y = Math.Max(boundingBoxSize.Y, labelSize.Y);
-			return boundingBoxSize + (framePadding * 2);
-		}
-		else if (iconAlignment == IconAlignment.Vertical)
-		{
-			Vector2 boundingBoxSize = imageSize + new Vector2(0, labelSize.Y + itemSpacing.Y);
-			boundingBoxSize.X = Math.Max(boundingBoxSize.X, labelSize.X);
-			return boundingBoxSize + (framePadding * 2);
+			string line = lines[labelIndex];
+			Vector2 thisLabelSize = ImGui.CalcTextSize(line);
+
+			totalLabelSize.X = Math.Max(totalLabelSize.X, thisLabelSize.X);
+			totalLabelSize.Y += thisLabelSize.Y;
+
+			bool isLastIndex = labelIndex == lines.Length - 1;
+			if (!isLastIndex)
+			{
+				totalLabelSize.Y += itemSpacing.Y;
+			}
 		}
 
-		return imageSize;
+		switch (iconAlignment)
+		{
+			case IconAlignment.Horizontal:
+			{
+				Vector2 boundingBoxSize = imageSize + new Vector2(totalLabelSize.X + itemSpacing.X, 0);
+				boundingBoxSize.Y = Math.Max(boundingBoxSize.Y, totalLabelSize.Y);
+				return boundingBoxSize + (framePadding * 2);
+			}
+			case IconAlignment.Vertical:
+			{
+				Vector2 boundingBoxSize = imageSize + new Vector2(0, totalLabelSize.Y + itemSpacing.Y);
+				boundingBoxSize.X = Math.Max(boundingBoxSize.X, totalLabelSize.X);
+				return boundingBoxSize + (framePadding * 2);
+			}
+			default:
+				throw new NotImplementedException($"CalcIconSize is not implemented for IconAlignment {iconAlignment}");
+		}
 	}
 
 	/// <summary>
@@ -170,10 +196,14 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal static class IconImpl
 	{
-		internal static bool Show(string label, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
+		internal static bool Show(string text, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
 		{
-			Ensure.NotNull(label);
+			Ensure.NotNull(text);
 			Ensure.NotNull(options);
+
+#pragma warning disable IDE0305
+			string[] lines = text.Trim().Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+#pragma warning restore IDE0305
 
 			bool wasClicked = false;
 
@@ -181,21 +211,26 @@ public static partial class ImGuiWidgets
 			Vector2 framePadding = style.FramePadding;
 			Vector2 itemSpacing = style.ItemSpacing;
 
-			ImGui.PushID(label);
+			ImGui.PushID(text);
 
 			Vector2 cursorStartPos = ImGui.GetCursorScreenPos();
-			Vector2 labelSize = ImGui.CalcTextSize(label);// TODO, maybe pass this to an internal overload of CalcIconSize to save recalculating
-			Vector2 boundingBoxSize = CalcIconSize(label, imageSize, iconAlignment);
+
+			Collection<Vector2> labelSizes = [];
+			Vector2 boundingBoxSize = CalcIconSize(text, imageSize, iconAlignment);
+			foreach (string line in lines)
+			{
+				labelSizes.Add(ImGui.CalcTextSize(line));// TODO, maybe pass this to an internal overload of CalcIconSize to save recalculating
+			}
 
 			ImGui.SetCursorScreenPos(cursorStartPos + framePadding);
 
 			switch (iconAlignment)
 			{
 				case IconAlignment.Horizontal:
-					HorizontalLayout(label, textureId, imageSize, labelSize, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
+					HorizontalLayout(lines, textureId, imageSize, labelSizes, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
 					break;
 				case IconAlignment.Vertical:
-					VerticalLayout(label, textureId, imageSize, labelSize, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
+					VerticalLayout(lines, textureId, imageSize, labelSizes, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
 					break;
 				default:
 					throw new NotImplementedException();
@@ -241,11 +276,11 @@ public static partial class ImGuiWidgets
 
 				if (isRightMouseReleased && options.OnContextMenu is not null)
 				{
-					ImGui.OpenPopup($"{label}_Context");
+					ImGui.OpenPopup($"{text}_Context");
 				}
 			}
 
-			if (ImGui.BeginPopup($"{label}_Context"))
+			if (ImGui.BeginPopup($"{text}_Context"))
 			{
 				options.OnContextMenu?.Invoke();
 				ImGui.EndPopup();
@@ -257,7 +292,9 @@ public static partial class ImGuiWidgets
 		}
 
 		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-		private static void VerticalLayout(string label, nint textureId, Vector2 imageSize, Vector2 labelSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+#pragma warning disable IDE0060
+		private static void VerticalLayout(string[] lines, nint textureId, Vector2 imageSize, Collection<Vector2> labelSizes, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+#pragma warning restore IDE0060
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2((boundingBoxSize.X - imageSize.X) / 2, 0);
 			ImGui.SetCursorScreenPos(imageTopLeft);
@@ -274,14 +311,29 @@ public static partial class ImGuiWidgets
 				}
 			}
 
-			Vector2 labelTopLeft = cursorStartPos + new Vector2((boundingBoxSize.X - labelSize.X) / 2, imageSize.Y + itemSpacing.Y);
-			ImGui.SetCursorScreenPos(labelTopLeft);
-			ImGui.TextUnformatted(label);
+			for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+			{
+				string label = lines[lineIndex];
+				Vector2 labelSize = labelSizes[lineIndex];
+
+				Vector2 textCursorPos = new(cursorStartPos.X, ImGui.GetCursorScreenPos().Y);
+				ImGui.SetCursorScreenPos(textCursorPos);
+
+				using (new Alignment.CenterWithin(labelSize, new Vector2(boundingBoxSize.X, labelSize.Y)))
+				{
+					ImGui.TextUnformatted(label);
+				}
+			}
 		}
 
 		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-		private static void HorizontalLayout(string label, nint textureId, Vector2 imageSize, Vector2 labelSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+#pragma warning disable IDE0060
+		private static void HorizontalLayout(string[] labels, nint textureId, Vector2 imageSize, Collection<Vector2> labelSizes, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+#pragma warning restore IDE0060
 		{
+			Vector2 imageTopLeft = cursorStartPos + new Vector2(0, (boundingBoxSize.Y - imageSize.Y) / 2);
+			ImGui.SetCursorScreenPos(imageTopLeft);
+
 			unsafe
 			{
 				if (color != default)
@@ -294,11 +346,26 @@ public static partial class ImGuiWidgets
 					ImGui.Image(new ImTextureRef(texId: textureId), imageSize);
 				}
 			}
-			Vector2 leftAlign = new(labelSize.X, boundingBoxSize.Y);
-			ImGui.SetCursorScreenPos(cursorStartPos + new Vector2(imageSize.X + itemSpacing.X, 0));
-			using (new Alignment.CenterWithin(labelSize, leftAlign))
+
+			float textBlockHeight = 0.0f;
+			for (int labelIndex = 0; labelIndex < labels.Length; labelIndex++)
 			{
-				ImGui.TextUnformatted(label);
+				textBlockHeight += labelSizes[labelIndex].Y;
+				if (labelIndex < labels.Length - 1)
+				{
+					textBlockHeight += itemSpacing.Y;
+				}
+			}
+
+			float textStartX = cursorStartPos.X + imageSize.X + itemSpacing.X;
+			float textStartY = cursorStartPos.Y + ((boundingBoxSize.Y - textBlockHeight) / 2.0f);
+			ImGui.SetCursorScreenPos(new Vector2(textStartX, textStartY));
+
+			for (int labelIndex = 0; labelIndex < labels.Length; labelIndex++)
+			{
+				float currentY = ImGui.GetCursorScreenPos().Y;
+				ImGui.SetCursorScreenPos(new Vector2(textStartX, currentY));
+				ImGui.TextUnformatted(labels[labelIndex]);
 			}
 		}
 	}
