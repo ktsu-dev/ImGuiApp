@@ -2,6 +2,7 @@
 
 Changes since v2.15.2:
 
+- [patch] Revert SixLabors.ImageSharp to 3.1.12 to avoid license key ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove stale files ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add direct PackageReferences to example projects ([@Claude](https://github.com/Claude))
 - Add direct PackageReferences for directly-used transitive packages ([@Claude](https://github.com/Claude))
