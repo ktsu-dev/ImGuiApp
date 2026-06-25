@@ -148,9 +148,7 @@ public static partial class ImGuiWidgets
 	{
 		Ensure.NotNull(label);
 
-#pragma warning disable IDE0305
-		string[] lines = label.Trim().Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
-#pragma warning restore IDE0305
+		string[] lines = [.. label.Trim().Split('\n').Where(l => !string.IsNullOrWhiteSpace(l))];
 
 		ImGuiStylePtr style = ImGui.GetStyle();
 		Vector2 framePadding = style.FramePadding;
@@ -201,9 +199,7 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(text);
 			Ensure.NotNull(options);
 
-#pragma warning disable IDE0305
-			string[] lines = text.Trim().Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
-#pragma warning restore IDE0305
+			string[] lines = [.. text.Trim().Split('\n').Where(line => !string.IsNullOrWhiteSpace(line))];
 
 			bool wasClicked = false;
 
