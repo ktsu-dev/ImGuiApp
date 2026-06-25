@@ -103,7 +103,6 @@ internal static class ImGuiWidgetsDemo
 	private static ImGuiWidgets.GridOrder GridOrder { get; set; } = ImGuiWidgets.GridOrder.RowMajor;
 	private static ImGuiWidgets.IconAlignment GridIconAlignment { get; set; } = ImGuiWidgets.IconAlignment.Vertical;
 	private static bool GridIconSizeBig { get; set; } = true;
-	private static bool GridIconCenterWithinCell { get; set; } = true;
 	private static bool GridFitToContents { get; set; }
 	private static EnumValues selectedEnumValue = EnumValues.Value1;
 	private static string selectedStringValue = "Hello";
@@ -409,12 +408,6 @@ internal static class ImGuiWidgetsDemo
 				GridIconSizeBig = gridIconSizeBig;
 			}
 
-			bool gridIconCenterWithinCell = GridIconCenterWithinCell;
-			if (ImGui.Checkbox("Center in Cell", ref gridIconCenterWithinCell))
-			{
-				GridIconCenterWithinCell = gridIconCenterWithinCell;
-			}
-
 			bool gridFitToContents = GridFitToContents;
 			if (ImGui.Checkbox("Fit to Contents", ref gridFitToContents))
 			{
@@ -460,14 +453,9 @@ internal static class ImGuiWidgetsDemo
 			Vector2 MeasureGridSize(string item) => ImGuiWidgets.CalcIconSize(item, gridIconSize, GridIconAlignment);
 			void DrawGridCell(string item, Vector2 cellSize, Vector2 itemSize)
 			{
-				if (GridIconCenterWithinCell)
-				{
-					using (new Alignment.CenterWithin(itemSize, cellSize))
-					{
-						ImGuiWidgets.Icon(item, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
-					}
-				}
-				else
+				float containerSizeX = GridIconAlignment == ImGuiWidgets.IconAlignment.Vertical ? cellSize.X : itemSize.X;
+				float containerSizeY = GridIconAlignment == ImGuiWidgets.IconAlignment.Vertical ? itemSize.Y : cellSize.Y;
+				using (new Alignment.CenterWithin(itemSize, new(containerSizeX, containerSizeY)))
 				{
 					ImGuiWidgets.Icon(item, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
 				}
