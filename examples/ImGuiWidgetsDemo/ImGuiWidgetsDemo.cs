@@ -145,15 +145,26 @@ internal static class ImGuiWidgetsDemo
 		TabIds["tab3"] = DemoTabPanel.AddTab("tab3", "Tab 3", ShowTab3Content);
 
 		// Generate test data for grid demos
+		Random random = new();
 		for (int i = 0; i < InitialGridItemCount; i++)
 		{
 			StringBuilder randomStringBuilder = new();
 			randomStringBuilder.Append(i);
 			randomStringBuilder.Append(':');
-			int randomAmount = new Random().Next(2, 32);
-			for (int j = 0; j < randomAmount; j++)
+
+			int lineCount = 1 + (i % 5);
+			for (int j = 0; j < lineCount; j++)
 			{
-				randomStringBuilder.Append((char)new Random().Next(32, 127));
+				int randomAmount = random.Next(2, 32);
+				for (int k = 0; k < randomAmount; k++)
+				{
+					randomStringBuilder.Append((char)random.Next(32, 127));
+				}
+
+				if (j != lineCount - 1)
+				{
+					randomStringBuilder.Append('\n');
+				}
 			}
 
 			GridStrings.Add(randomStringBuilder.ToString());
