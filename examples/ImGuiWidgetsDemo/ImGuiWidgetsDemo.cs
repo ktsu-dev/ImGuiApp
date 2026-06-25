@@ -103,7 +103,6 @@ internal static class ImGuiWidgetsDemo
 	private static ImGuiWidgets.GridOrder GridOrder { get; set; } = ImGuiWidgets.GridOrder.RowMajor;
 	private static ImGuiWidgets.IconAlignment GridIconAlignment { get; set; } = ImGuiWidgets.IconAlignment.Vertical;
 	private static bool GridIconSizeBig { get; set; } = true;
-	private static bool GridIconCenterWithinCell { get; set; } = true;
 	private static bool GridFitToContents { get; set; }
 	private static EnumValues selectedEnumValue = EnumValues.Value1;
 	private static string selectedStringValue = "Hello";
@@ -145,15 +144,26 @@ internal static class ImGuiWidgetsDemo
 		TabIds["tab3"] = DemoTabPanel.AddTab("tab3", "Tab 3", ShowTab3Content);
 
 		// Generate test data for grid demos
+		Random random = new();
 		for (int i = 0; i < InitialGridItemCount; i++)
 		{
 			StringBuilder randomStringBuilder = new();
 			randomStringBuilder.Append(i);
 			randomStringBuilder.Append(':');
-			int randomAmount = new Random().Next(2, 32);
-			for (int j = 0; j < randomAmount; j++)
+
+			int lineCount = 1 + (i % 5);
+			for (int j = 0; j < lineCount; j++)
 			{
-				randomStringBuilder.Append((char)new Random().Next(32, 127));
+				int randomAmount = random.Next(2, 32);
+				for (int k = 0; k < randomAmount; k++)
+				{
+					randomStringBuilder.Append((char)random.Next(32, 127));
+				}
+
+				if (j != lineCount - 1)
+				{
+					randomStringBuilder.Append('\n');
+				}
 			}
 
 			GridStrings.Add(randomStringBuilder.ToString());
@@ -398,12 +408,6 @@ internal static class ImGuiWidgetsDemo
 				GridIconSizeBig = gridIconSizeBig;
 			}
 
-			bool gridIconCenterWithinCell = GridIconCenterWithinCell;
-			if (ImGui.Checkbox("Center in Cell", ref gridIconCenterWithinCell))
-			{
-				GridIconCenterWithinCell = gridIconCenterWithinCell;
-			}
-
 			bool gridFitToContents = GridFitToContents;
 			if (ImGui.Checkbox("Fit to Contents", ref gridFitToContents))
 			{
@@ -449,14 +453,9 @@ internal static class ImGuiWidgetsDemo
 			Vector2 MeasureGridSize(string item) => ImGuiWidgets.CalcIconSize(item, gridIconSize, GridIconAlignment);
 			void DrawGridCell(string item, Vector2 cellSize, Vector2 itemSize)
 			{
-				if (GridIconCenterWithinCell)
-				{
-					using (new Alignment.CenterWithin(itemSize, cellSize))
-					{
-						ImGuiWidgets.Icon(item, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
-					}
-				}
-				else
+				float containerSizeX = GridIconAlignment == ImGuiWidgets.IconAlignment.Vertical ? cellSize.X : itemSize.X;
+				float containerSizeY = GridIconAlignment == ImGuiWidgets.IconAlignment.Vertical ? itemSize.Y : cellSize.Y;
+				using (new Alignment.CenterWithin(itemSize, new(containerSizeX, containerSizeY)))
 				{
 					ImGuiWidgets.Icon(item, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
 				}

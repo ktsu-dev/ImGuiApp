@@ -33,5 +33,6 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
     <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="10.0.300" />
     <PackageVersion Include="Polyfill" Version="10.11.0" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.9" />
   </ItemGroup>
 </Project>
