@@ -34,11 +34,6 @@ jobs:
     permissions:
       contents: read
 
-    env:
-      # ImGui.App directly references SixLabors.ImageSharp 4.0 on net10.0-ios too,
-      # so this compile-only job needs the license key as well.
-      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -97,11 +92,6 @@ jobs:
     # this runtime smoke test now reliably passes and gates the PR like any other required check.
     permissions:
       contents: read
-
-    env:
-      # The smoke app and ImGuiAppDemo.iOS build ImGui.App (a direct SixLabors.ImageSharp
-      # 4.0 dependency) and decode an image via ImageSharp, so this job needs the key too.
-      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
 
     steps:
       - name: Checkout Repository

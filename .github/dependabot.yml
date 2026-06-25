@@ -4,6 +4,12 @@ updates:
   directory: "/"
   schedule:
     interval: "daily"
+  ignore:
+    # SixLabors.ImageSharp 4.0 enforces a build-time license key, which breaks
+    # local builds and forks that lack the SIXLABORS_LICENSE_KEY secret. Stay on
+    # 3.x (the last license-key-free line); still allow 3.1.x patch/minor bumps.
+    - dependency-name: "SixLabors.ImageSharp"
+      update-types: ["version-update:semver-major"]
   groups:
     ktsu:
       patterns:

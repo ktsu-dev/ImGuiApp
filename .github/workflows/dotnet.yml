@@ -48,12 +48,6 @@ jobs:
       release_hash: ${{ steps.pipeline.outputs.release_hash }}
       should_release: ${{ steps.pipeline.outputs.should_release }}
 
-    env:
-      # SixLabors.ImageSharp 4.0 requires a build-time license key (ImGui.App is a
-      # direct dependency). Directory.Build.props maps this into the
-      # SixLaborsLicenseKey MSBuild property. Set the SIXLABORS_LICENSE_KEY repo secret.
-      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-
     steps:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
