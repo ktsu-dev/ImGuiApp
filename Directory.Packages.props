@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="ktsu.Extensions" Version="1.5.18" />
+    <PackageVersion Include="ktsu.Extensions" Version="1.5.19" />
     <PackageVersion Include="ktsu.ThemeProvider" Version="1.0.21" />
     <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="1.0.21" />
     <PackageVersion Include="ktsu.Semantics.Paths" Version="1.1.2" />
