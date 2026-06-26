@@ -651,6 +651,3 @@ Temporary Items
 
 # ImGui.ini files
 imgui.ini
-
-# CI-built native cimgui for iOS (scripts/build-cimgui-ios.sh)
-ImGui.App/Platform/iOS/native/
