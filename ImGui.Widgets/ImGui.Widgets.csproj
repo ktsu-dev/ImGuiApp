@@ -7,6 +7,9 @@
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="ktsu.ImGui.Widgets.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.ScopedAction" />
