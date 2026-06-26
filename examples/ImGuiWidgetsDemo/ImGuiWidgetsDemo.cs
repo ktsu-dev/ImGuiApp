@@ -103,7 +103,6 @@ internal static class ImGuiWidgetsDemo
 	private static ImGuiWidgets.GridOrder GridOrder { get; set; } = ImGuiWidgets.GridOrder.RowMajor;
 	private static ImGuiWidgets.IconAlignment GridIconAlignment { get; set; } = ImGuiWidgets.IconAlignment.Vertical;
 	private static bool GridIconSizeBig { get; set; } = true;
-	private static bool GridIconCenterWithinCell { get; set; } = true;
 	private static bool GridFitToContents { get; set; }
 	private static EnumValues selectedEnumValue = EnumValues.Value1;
 	private static string selectedStringValue = "Hello";
@@ -131,7 +130,7 @@ internal static class ImGuiWidgetsDemo
 	private static TextFilterType RegexFilterType = TextFilterType.Regex;
 	private static TextFilterMatchOptions RegexMatchOptions = TextFilterMatchOptions.ByWholeString;
 
-#pragma warning disable CA5394 //Do not use insecure randomness
+#pragma warning disable CA5394 //Do not use insecure randomness - Random is used only for generating visual demo data; no security or cryptographic use.
 	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
 	private static void OnStart()
 	{
@@ -145,15 +144,26 @@ internal static class ImGuiWidgetsDemo
 		TabIds["tab3"] = DemoTabPanel.AddTab("tab3", "Tab 3", ShowTab3Content);
 
 		// Generate test data for grid demos
+		Random random = new();
 		for (int i = 0; i < InitialGridItemCount; i++)
 		{
 			StringBuilder randomStringBuilder = new();
 			randomStringBuilder.Append(i);
 			randomStringBuilder.Append(':');
-			int randomAmount = new Random().Next(2, 32);
-			for (int j = 0; j < randomAmount; j++)
+
+			int lineCount = 1 + (i % 5);
+			for (int j = 0; j < lineCount; j++)
 			{
-				randomStringBuilder.Append((char)new Random().Next(32, 127));
+				int randomAmount = random.Next(2, 32);
+				for (int k = 0; k < randomAmount; k++)
+				{
+					randomStringBuilder.Append((char)random.Next(32, 127));
+				}
+
+				if (j != lineCount - 1)
+				{
+					randomStringBuilder.Append('\n');
+				}
 			}
 
 			GridStrings.Add(randomStringBuilder.ToString());
@@ -173,7 +183,6 @@ internal static class ImGuiWidgetsDemo
 		// Method intentionally left empty.
 	}
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "<Pending>")]
 	private static void ShowWidgetDemos(float size)
 	{
 		ImGui.TextUnformatted("ImGuiWidgets Library - Comprehensive Demo");
@@ -267,8 +276,8 @@ internal static class ImGuiWidgetsDemo
 			List<string> filteredResults = [.. ImGuiWidgets.SearchBox(
 				"##FilteredSearch",
 				ref FilteredSearchTerm,
-				GridStrings,
-				s => s,
+				items: GridStrings,
+				selector: s => s,
 				ref FilteredFilterType,
 				ref FilteredMatchOptions)];
 
@@ -292,8 +301,8 @@ internal static class ImGuiWidgetsDemo
 
 			List<string> rankedResults = [.. ImGuiWidgets.SearchBoxRanked("##RankedSearch",
 				ref RankedSearchTerm,
-				GridStrings,
-				s => s)];
+				items: GridStrings,
+				selector: s => s)];
 
 			if (!string.IsNullOrEmpty(RankedSearchTerm))
 			{
@@ -318,8 +327,8 @@ internal static class ImGuiWidgetsDemo
 			ImGui.TextUnformatted("Glob Pattern (*,?):");
 			List<string> globResults = [.. ImGuiWidgets.SearchBox("##GlobSearch",
 				ref GlobSearchTerm,
-				GridStrings,
-				s => s,
+				items: GridStrings,
+				selector: s => s,
 				ref GlobFilterType,
 				ref GlobMatchOptions)];
 
@@ -343,8 +352,8 @@ internal static class ImGuiWidgetsDemo
 			ImGui.TextUnformatted("Regex Pattern:");
 			List<string> regexResults = [.. ImGuiWidgets.SearchBox("##RegexSearch",
 				ref RegexSearchTerm,
-				GridStrings,
-				s => s,
+				items: GridStrings,
+				selector: s => s,
 				ref RegexFilterType,
 				ref RegexMatchOptions)];
 
@@ -371,6 +380,10 @@ internal static class ImGuiWidgetsDemo
 	{
 		if (ImGui.CollapsingHeader("Grid Layout"))
 		{
+			ImGuiStylePtr style = ImGui.GetStyle();
+			Vector2 itemSpacing = style.ItemSpacing;
+			Vector2 framePadding = style.FramePadding;
+
 			ImGui.TextUnformatted("Flexible grid layouts with automatic sizing:");
 			ImGui.Separator();
 
@@ -396,12 +409,6 @@ internal static class ImGuiWidgetsDemo
 			if (ImGui.Checkbox("Big Icons", ref gridIconSizeBig))
 			{
 				GridIconSizeBig = gridIconSizeBig;
-			}
-
-			bool gridIconCenterWithinCell = GridIconCenterWithinCell;
-			if (ImGui.Checkbox("Center in Cell", ref gridIconCenterWithinCell))
-			{
-				GridIconCenterWithinCell = gridIconCenterWithinCell;
 			}
 
 			bool gridFitToContents = GridFitToContents;
@@ -446,19 +453,14 @@ internal static class ImGuiWidgetsDemo
 			float bigIconSizePx = iconSizePx * 2;
 			float gridIconSize = GridIconSizeBig ? bigIconSizePx : iconSizePx;
 
-			Vector2 MeasureGridSize(string item) => ImGuiWidgets.CalcIconSize(item, gridIconSize, GridIconAlignment);
-			void DrawGridCell(string item, Vector2 cellSize, Vector2 itemSize)
+			Vector2 MeasureGridSize(string textBlock) => ImGuiWidgets.CalcIconSize(textBlock, gridIconSize, GridIconAlignment, itemSpacing, framePadding);
+			void DrawGridCell(string textBlock, Vector2 cellSize, Vector2 itemSize)
 			{
-				if (GridIconCenterWithinCell)
+				float containerSizeX = GridIconAlignment == ImGuiWidgets.IconAlignment.Vertical ? cellSize.X : itemSize.X;
+				float containerSizeY = GridIconAlignment == ImGuiWidgets.IconAlignment.Vertical ? itemSize.Y : cellSize.Y;
+				using (new Alignment.CenterWithin(itemSize, new(containerSizeX, containerSizeY)))
 				{
-					using (new Alignment.CenterWithin(itemSize, cellSize))
-					{
-						ImGuiWidgets.Icon(item, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
-					}
-				}
-				else
-				{
-					ImGuiWidgets.Icon(item, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
+					ImGuiWidgets.Icon(textBlock, ktsuTexture.TextureId, gridIconSize, GridIconAlignment);
 				}
 			}
 
