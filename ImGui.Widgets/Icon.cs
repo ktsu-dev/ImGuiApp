@@ -5,7 +5,6 @@
 namespace ktsu.ImGui.Widgets;
 
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -77,111 +76,105 @@ public static partial class ImGuiWidgets
 	/// <summary>
 	/// Renders an icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlock">The text of the icon.</param>
 	/// <param name="textureId">The texture ID of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, nint textureId, float imageSize, IconAlignment iconAlignment) =>
-		IconImpl.Show(label, textureId, new(imageSize, imageSize), iconAlignment, new());
+	public static bool Icon(string textBlock, nint textureId, float imageSize, IconAlignment iconAlignment) =>
+		IconImpl.Show(textBlock, textureId, new(imageSize, imageSize), iconAlignment, new());
 
 	/// <summary>
 	/// Renders an icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlock">The text of the icon.</param>
 	/// <param name="textureId">The texture ID of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, nint textureId, Vector2 imageSize, IconAlignment iconAlignment) =>
-		IconImpl.Show(label, textureId, imageSize, iconAlignment, new());
+	public static bool Icon(string textBlock, nint textureId, Vector2 imageSize, IconAlignment iconAlignment) =>
+		IconImpl.Show(textBlock, textureId, imageSize, iconAlignment, new());
 
 	/// <summary>
 	/// Renders an icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlock">The text of the icon.</param>
 	/// <param name="textureId">The texture ID of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <param name="options">Additional options</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, nint textureId, float imageSize, IconAlignment iconAlignment, IconOptions options) =>
-		IconImpl.Show(label, textureId, new(imageSize, imageSize), iconAlignment, options);
+	public static bool Icon(string textBlock, nint textureId, float imageSize, IconAlignment iconAlignment, IconOptions options) =>
+		IconImpl.Show(textBlock, textureId, new(imageSize, imageSize), iconAlignment, options);
 
 	/// <summary>
 	/// Renders an icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlock">The text of the icon.</param>
 	/// <param name="textureId">The texture ID of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
 	/// <param name="options">Additional options</param>
 	/// <returns>Was the icon bounds clicked</returns>
-	public static bool Icon(string label, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options) =>
-		IconImpl.Show(label, textureId, imageSize, iconAlignment, options);
+	public static bool Icon(string textBlock, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options) =>
+		IconImpl.Show(textBlock, textureId, imageSize, iconAlignment, options);
 
 	/// <summary>
 	/// Calculates the size of the icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlock">The text of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
 	/// <param name="iconAlignment">The alignment of the icon.</param>
+	/// <param name="itemSpacing">The spacing between items.</param>
+	/// <param name="framePadding">The padding of the frame.</param>
 	/// <returns>The calculated size of the icon.</returns>
-	public static Vector2 CalcIconSize(string label, float imageSize, IconAlignment iconAlignment) => CalcIconSize(label, new Vector2(imageSize), iconAlignment);
+	public static Vector2 CalcIconSize(string textBlock, float imageSize, IconAlignment iconAlignment, Vector2 itemSpacing, Vector2 framePadding) =>
+		CalcIconSize(CalcTextBlockSize(textBlock, itemSpacing), new Vector2(imageSize), iconAlignment, itemSpacing, framePadding);
 
 	/// <summary>
 	/// Calculates the size of the icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlockSize">The size of the text block of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
+	/// <param name="iconAlignment">The alignment of the icon.</param>
+	/// <param name="itemSpacing">The spacing between items.</param>
+	/// <param name="framePadding">The padding of the frame.</param>
 	/// <returns>The calculated size of the icon.</returns>
-	public static Vector2 CalcIconSize(string label, Vector2 imageSize) => CalcIconSize(label, imageSize, IconAlignment.Horizontal);
+	public static Vector2 CalcIconSize(Vector2 textBlockSize, float imageSize, IconAlignment iconAlignment, Vector2 itemSpacing, Vector2 framePadding) => CalcIconSize(textBlockSize, new Vector2(imageSize), iconAlignment, itemSpacing, framePadding);
 
 	/// <summary>
 	/// Calculates the size of the icon with the specified parameters.
 	/// </summary>
-	/// <param name="label">The label of the icon.</param>
+	/// <param name="textBlockSize">The size of the text block of the icon.</param>
 	/// <param name="imageSize">The size of the image.</param>
-	/// <param name="iconAlignment">The alignment of the image and label with respect to each other.</param>
+	/// <param name="itemSpacing">The spacing between items.</param>
+	/// <param name="framePadding">The padding of the frame.</param>
+	/// <returns>The calculated size of the icon.</returns>
+	public static Vector2 CalcIconSize(Vector2 textBlockSize, Vector2 imageSize, Vector2 itemSpacing, Vector2 framePadding) => CalcIconSize(textBlockSize, imageSize, IconAlignment.Horizontal, itemSpacing, framePadding);
+
+	/// <summary>
+	/// Calculates the size of the icon with the specified parameters.
+	/// </summary>
+	/// <param name="textBlockSize">The size of the text block of the icon.</param>
+	/// <param name="imageSize">The size of the image.</param>
+	/// <param name="iconAlignment">The alignment of the image and text block with respect to each other.</param>
+	/// <param name="itemSpacing">The spacing between items.</param>
+	/// <param name="framePadding">The padding of the frame.</param>
 	/// <returns>The calculated size of the widget.</returns>
-	public static Vector2 CalcIconSize(string label, Vector2 imageSize, IconAlignment iconAlignment)
+	public static Vector2 CalcIconSize(Vector2 textBlockSize, Vector2 imageSize, IconAlignment iconAlignment, Vector2 itemSpacing, Vector2 framePadding)
 	{
-		Ensure.NotNull(label);
-
-		string[] lines = [.. label.Trim().Split('\n').Where(l => !string.IsNullOrWhiteSpace(l))];
-
-		ImGuiStylePtr style = ImGui.GetStyle();
-		Vector2 framePadding = style.FramePadding;
-		Vector2 itemSpacing = style.ItemSpacing;
-
-		Vector2 totalLabelSize = Vector2.Zero;
-		for (int labelIndex = 0; labelIndex < lines.Length; labelIndex++)
-		{
-			string line = lines[labelIndex];
-			Vector2 thisLabelSize = ImGui.CalcTextSize(line);
-
-			totalLabelSize.X = Math.Max(totalLabelSize.X, thisLabelSize.X);
-			totalLabelSize.Y += thisLabelSize.Y;
-
-			bool isLastIndex = labelIndex == lines.Length - 1;
-			if (!isLastIndex)
-			{
-				totalLabelSize.Y += itemSpacing.Y;
-			}
-		}
-
 		switch (iconAlignment)
 		{
 			case IconAlignment.Horizontal:
 			{
-				Vector2 boundingBoxSize = imageSize + new Vector2(totalLabelSize.X + itemSpacing.X, 0);
-				boundingBoxSize.Y = Math.Max(boundingBoxSize.Y, totalLabelSize.Y);
+				Vector2 boundingBoxSize = imageSize + new Vector2(textBlockSize.X + itemSpacing.X, 0);
+				boundingBoxSize.Y = Math.Max(boundingBoxSize.Y, textBlockSize.Y);
 				return boundingBoxSize + (framePadding * 2);
 			}
 			case IconAlignment.Vertical:
 			{
-				Vector2 boundingBoxSize = imageSize + new Vector2(0, totalLabelSize.Y + itemSpacing.Y);
-				boundingBoxSize.X = Math.Max(boundingBoxSize.X, totalLabelSize.X);
+				Vector2 boundingBoxSize = imageSize + new Vector2(0, textBlockSize.Y + itemSpacing.Y);
+				boundingBoxSize.X = Math.Max(boundingBoxSize.X, textBlockSize.X);
 				return boundingBoxSize + (framePadding * 2);
 			}
 			default:
@@ -189,44 +182,70 @@ public static partial class ImGuiWidgets
 		}
 	}
 
+	internal static IEnumerable<(string, Vector2)> GetLinesWithSizes(string textBlock) =>
+		textBlock
+		.Trim().Split('\n')
+		.Where(line => !string.IsNullOrWhiteSpace(line))
+		.Select(line => (line, ImGui.CalcTextSize(line)));
+
+	internal static Vector2 CalcTextBlockSize(string textBlock, Vector2 itemSpacing) =>
+		CalcTextBlockSize(GetLinesWithSizes(textBlock), itemSpacing);
+
+	internal static Vector2 CalcTextBlockSize(IEnumerable<(string, Vector2)> linesWithSizes, Vector2 itemSpacing)
+	{
+		float textBlockWidth = 0.0f;
+		float textBlockHeight = 0.0f;
+		float postTextYOffset = 0.0f; // Initialized to zero and only populated if there are lines
+		foreach ((string line, Vector2 lineSize) in linesWithSizes)
+		{
+			textBlockWidth = Math.Max(textBlockWidth, lineSize.X);
+			textBlockHeight += lineSize.Y;
+			postTextYOffset = itemSpacing.Y;
+			textBlockHeight += postTextYOffset;
+		}
+
+		// if there are lines, remove the last spacing
+		// if there are no lines, we never added any spacing so theres nothing to remove
+		textBlockHeight -= postTextYOffset;
+
+		return new(textBlockWidth, textBlockHeight);
+	}
+
 	/// <summary>
 	/// Contains the implementation details for rendering icons.
 	/// </summary>
 	internal static class IconImpl
 	{
-		internal static bool Show(string text, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
+		internal static bool Show(string textBlock, nint textureId, Vector2 imageSize, IconAlignment iconAlignment, IconOptions options)
 		{
-			Ensure.NotNull(text);
+			Ensure.NotNull(textBlock);
 			Ensure.NotNull(options);
 
-			string[] lines = [.. text.Trim().Split('\n').Where(line => !string.IsNullOrWhiteSpace(line))];
+			IEnumerable<(string, Vector2)> linesWithSizes = GetLinesWithSizes(textBlock);
 
 			bool wasClicked = false;
 
 			ImGuiStylePtr style = ImGui.GetStyle();
 			Vector2 framePadding = style.FramePadding;
 			Vector2 itemSpacing = style.ItemSpacing;
+			Vector2 textBlockSize = CalcTextBlockSize(linesWithSizes, itemSpacing);
 
-			ImGui.PushID(text);
+			ImGui.PushID(textBlock);
 
 			Vector2 cursorStartPos = ImGui.GetCursorScreenPos();
 
 			Collection<Vector2> labelSizes = [];
-			Vector2 boundingBoxSize = CalcIconSize(text, imageSize, iconAlignment);
-			foreach (string line in lines)
-			{
-				labelSizes.Add(ImGui.CalcTextSize(line));// TODO, maybe pass this to an internal overload of CalcIconSize to save recalculating
-			}
+			Vector2 boundingBoxSize = CalcIconSize(textBlockSize, imageSize, iconAlignment, itemSpacing, framePadding);
 
 			ImGui.SetCursorScreenPos(cursorStartPos + framePadding);
 
 			switch (iconAlignment)
 			{
 				case IconAlignment.Horizontal:
-					HorizontalLayout(lines, textureId, imageSize, labelSizes, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
+					HorizontalLayout(linesWithSizes, textureId, imageSize, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
 					break;
 				case IconAlignment.Vertical:
-					VerticalLayout(lines, textureId, imageSize, labelSizes, boundingBoxSize, itemSpacing, options.Color, cursorStartPos);
+					VerticalLayout(linesWithSizes, textureId, imageSize, boundingBoxSize, options.Color, cursorStartPos);
 					break;
 				default:
 					throw new NotImplementedException();
@@ -272,11 +291,11 @@ public static partial class ImGuiWidgets
 
 				if (isRightMouseReleased && options.OnContextMenu is not null)
 				{
-					ImGui.OpenPopup($"{text}_Context");
+					ImGui.OpenPopup($"{textBlock}_Context");
 				}
 			}
 
-			if (ImGui.BeginPopup($"{text}_Context"))
+			if (ImGui.BeginPopup($"{textBlock}_Context"))
 			{
 				options.OnContextMenu?.Invoke();
 				ImGui.EndPopup();
@@ -287,10 +306,7 @@ public static partial class ImGuiWidgets
 			return wasClicked;
 		}
 
-		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-#pragma warning disable IDE0060
-		private static void VerticalLayout(string[] lines, nint textureId, Vector2 imageSize, Collection<Vector2> labelSizes, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
-#pragma warning restore IDE0060
+		private static void VerticalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, Vector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2((boundingBoxSize.X - imageSize.X) / 2, 0);
 			ImGui.SetCursorScreenPos(imageTopLeft);
@@ -307,25 +323,19 @@ public static partial class ImGuiWidgets
 				}
 			}
 
-			for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+			foreach ((string line, Vector2 lineSize) in linesWithSizes)
 			{
-				string label = lines[lineIndex];
-				Vector2 labelSize = labelSizes[lineIndex];
-
 				Vector2 textCursorPos = new(cursorStartPos.X, ImGui.GetCursorScreenPos().Y);
 				ImGui.SetCursorScreenPos(textCursorPos);
 
-				using (new Alignment.CenterWithin(labelSize, new Vector2(boundingBoxSize.X, labelSize.Y)))
+				using (new Alignment.CenterWithin(lineSize, new Vector2(boundingBoxSize.X, lineSize.Y)))
 				{
-					ImGui.TextUnformatted(label);
+					ImGui.TextUnformatted(line);
 				}
 			}
 		}
 
-		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui interop; pointer is scoped to the call and not retained.")]
-#pragma warning disable IDE0060
-		private static void HorizontalLayout(string[] labels, nint textureId, Vector2 imageSize, Collection<Vector2> labelSizes, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
-#pragma warning restore IDE0060
+		private static void HorizontalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2(0, (boundingBoxSize.Y - imageSize.Y) / 2);
 			ImGui.SetCursorScreenPos(imageTopLeft);
@@ -343,25 +353,17 @@ public static partial class ImGuiWidgets
 				}
 			}
 
-			float textBlockHeight = 0.0f;
-			for (int labelIndex = 0; labelIndex < labels.Length; labelIndex++)
-			{
-				textBlockHeight += labelSizes[labelIndex].Y;
-				if (labelIndex < labels.Length - 1)
-				{
-					textBlockHeight += itemSpacing.Y;
-				}
-			}
+			Vector2 textBlockSize = CalcTextBlockSize(linesWithSizes, itemSpacing);
 
 			float textStartX = cursorStartPos.X + imageSize.X + itemSpacing.X;
-			float textStartY = cursorStartPos.Y + ((boundingBoxSize.Y - textBlockHeight) / 2.0f);
+			float textStartY = cursorStartPos.Y + ((boundingBoxSize.Y - textBlockSize.Y) / 2.0f);
 			ImGui.SetCursorScreenPos(new Vector2(textStartX, textStartY));
 
-			for (int labelIndex = 0; labelIndex < labels.Length; labelIndex++)
+			foreach ((string line, Vector2 lineSize) in linesWithSizes)
 			{
 				float currentY = ImGui.GetCursorScreenPos().Y;
 				ImGui.SetCursorScreenPos(new Vector2(textStartX, currentY));
-				ImGui.TextUnformatted(labels[labelIndex]);
+				ImGui.TextUnformatted(line);
 			}
 		}
 	}
