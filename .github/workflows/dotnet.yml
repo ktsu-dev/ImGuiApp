@@ -190,6 +190,7 @@ jobs:
           path: |
             ./coverage/*
           retention-days: 7
+          if-no-files-found: ignore
 
   winget:
     name: Update Winget Manifests
