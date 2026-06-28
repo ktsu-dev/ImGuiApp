@@ -13,8 +13,6 @@
     <PackageReference Include="ktsu.ThemeProvider.ImGui" />
     <ProjectReference Include="..\ImGui.Popups\ImGui.Popups.csproj" />
     <PackageReference Include="Polyfill" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" />
-    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 
 </Project>

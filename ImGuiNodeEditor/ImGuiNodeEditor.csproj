@@ -15,8 +15,6 @@
     <PackageReference Include="Hexa.NET.ImNodes" />
     <PackageReference Include="ktsu.Semantics.Quantities" />
     <PackageReference Include="Polyfill" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" />
-    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 
   <ItemGroup>

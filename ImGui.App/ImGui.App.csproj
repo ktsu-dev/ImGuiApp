@@ -27,8 +27,6 @@
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="Polyfill" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" />
-    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">
