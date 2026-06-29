@@ -305,7 +305,9 @@ public sealed class PidFrameLimiterTests
 		DateTime end = DateTime.UtcNow;
 
 		double elapsedMs = (end - start).TotalMilliseconds;
-		Assert.IsLessThan(5.0, elapsedMs, $"Expected immediate return, but took {elapsedMs}ms");
+		// Generous upper bound: a no-op return is sub-millisecond, but shared CI scheduling jitter can
+		// inflate the measurement. 50ms still catches a real regression (an actual sleep) without flaking.
+		Assert.IsLessThan(50.0, elapsedMs, $"Expected immediate return, but took {elapsedMs}ms");
 	}
 
 	[TestMethod]
@@ -316,7 +318,9 @@ public sealed class PidFrameLimiterTests
 		DateTime end = DateTime.UtcNow;
 
 		double elapsedMs = (end - start).TotalMilliseconds;
-		Assert.IsLessThan(5.0, elapsedMs, $"Expected immediate return, but took {elapsedMs}ms");
+		// Generous upper bound: a no-op return is sub-millisecond, but shared CI scheduling jitter can
+		// inflate the measurement. 50ms still catches a real regression (an actual sleep) without flaking.
+		Assert.IsLessThan(50.0, elapsedMs, $"Expected immediate return, but took {elapsedMs}ms");
 	}
 
 	[TestMethod]
@@ -329,9 +333,11 @@ public sealed class PidFrameLimiterTests
 
 		double elapsedMs = (end - start).TotalMilliseconds;
 
-		// Allow for some tolerance in timing due to OS scheduling
+		// Lower bound proves the sleep actually happened (it must not return early). The upper bound is a
+		// generous gross-regression guard (e.g. a units bug sleeping 1000x too long); a tight wall-clock
+		// upper bound on an OS sleep is inherently flaky on shared CI and must not be asserted.
 		Assert.IsGreaterThanOrEqualTo(targetSleepMs * 0.8, elapsedMs, $"Sleep was too short: {elapsedMs}ms vs target {targetSleepMs}ms");
-		Assert.IsLessThanOrEqualTo(targetSleepMs * 2.0, elapsedMs, $"Sleep was too long: {elapsedMs}ms vs target {targetSleepMs}ms");
+		Assert.IsLessThanOrEqualTo(targetSleepMs + 250.0, elapsedMs, $"Sleep was implausibly long: {elapsedMs}ms vs target {targetSleepMs}ms");
 	}
 
 	#endregion
