@@ -11,6 +11,8 @@ using Hexa.NET.ImGui;
 
 using ktsu.ThemeProvider;
 
+using SemanticColor = ktsu.Semantics.Color.Color;
+
 /// <summary>
 /// Provides methods for creating and manipulating colors in ImGui.
 /// </summary>
@@ -180,15 +182,11 @@ public static class Color
 	}
 
 	/// <summary>
-	/// Converts a PerceptualColor from ThemeProvider to an ImColor.
+	/// Converts a semantic <see cref="SemanticColor"/> (ktsu.Semantics.Color) to an ImColor.
 	/// </summary>
-	/// <param name="color">The PerceptualColor to convert.</param>
-	/// <returns>An ImColor representing the same color.</returns>
-	public static ImColor FromPerceptualColor(PerceptualColor color)
-	{
-		RgbColor rgb = color.RgbValue;
-		return FromRGBA(rgb.R, rgb.G, rgb.B, 1f);
-	}
+	/// <param name="color">The semantic color to convert.</param>
+	/// <returns>An ImColor representing the same color (sRGB-encoded for ImGui).</returns>
+	public static ImColor FromSemanticColor(SemanticColor color) => FromVector(color.ToSrgbVector4());
 
 	#endregion
 
@@ -252,11 +250,11 @@ public static class Color
 				SemanticColorRequest request = new(meaning, priority);
 
 				// Use SemanticColorMapper to get the color from the current theme
-				IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> colorMapping = SemanticColorMapper.MapColors([request], Theme.CurrentTheme.CreateInstance());
+				IReadOnlyDictionary<SemanticColorRequest, SemanticColor> colorMapping = SemanticColorMapper.MapColors([request], Theme.CurrentTheme.CreateInstance());
 
-				if (colorMapping.TryGetValue(request, out PerceptualColor perceptualColor))
+				if (colorMapping.TryGetValue(request, out SemanticColor semanticColor))
 				{
-					return FromPerceptualColor(perceptualColor);
+					return FromSemanticColor(semanticColor);
 				}
 			}
 			catch (ArgumentException)
@@ -284,23 +282,23 @@ public static class Color
 	private static ImColor GetThemeColor(ImColor fallbackColor)
 	{
 		// Check if a theme is currently applied and get its complete palette
-		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
 		if (completePalette is not null)
 		{
 			try
 			{
-				// Convert the fallback color to PerceptualColor for comparison
-				RgbColor fallbackRgb = new(fallbackColor.Value.X, fallbackColor.Value.Y, fallbackColor.Value.Z);
-				PerceptualColor targetColor = new(fallbackRgb);
+				// Convert the fallback color (sRGB, as shown in ImGui) to a semantic color for comparison
+				Vector4 fallbackVec = fallbackColor.Value;
+				SemanticColor targetColor = SemanticColor.FromSrgb(fallbackVec.X, fallbackVec.Y, fallbackVec.Z, fallbackVec.W);
 
-				PerceptualColor? closestColor = null;
-				float closestDistance = float.MaxValue;
+				SemanticColor? closestColor = null;
+				double closestDistance = double.MaxValue;
 
 				// Search through the complete palette to find the closest match
 				// This is much more efficient than nested loops through semantic mappings
-				foreach (PerceptualColor color in completePalette.Values)
+				foreach (SemanticColor color in completePalette.Values)
 				{
-					float distance = targetColor.SemanticDistanceTo(color);
+					double distance = targetColor.DistanceTo(color);
 					if (distance < closestDistance)
 					{
 						closestDistance = distance;
@@ -309,9 +307,9 @@ public static class Color
 				}
 
 				// If we found a reasonably close color, use it
-				if (closestColor.HasValue && closestDistance < 0.3f) // Reasonable similarity threshold
+				if (closestColor.HasValue && closestDistance < 0.3) // Reasonable similarity threshold
 				{
-					return FromPerceptualColor(closestColor.Value);
+					return FromSemanticColor(closestColor.Value);
 				}
 			}
 			catch (ArgumentException)

@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.ScopedAction" />
+    <PackageReference Include="ktsu.Semantics.Color" />
     <PackageReference Include="ktsu.ThemeProvider" />
     <PackageReference Include="ktsu.ThemeProvider.ImGui" />
     <ProjectReference Include="..\ImGui.Popups\ImGui.Popups.csproj" />

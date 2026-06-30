@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
     <ProjectReference Include="..\..\ImGui.Styler\ImGui.Styler.csproj" />
     <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Semantics.Color" />
     <PackageReference Include="ktsu.ThemeProvider" />
     <PackageReference Include="Polyfill" />
   </ItemGroup>
