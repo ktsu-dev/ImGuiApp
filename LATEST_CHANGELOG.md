@@ -1,7 +1,7 @@
-## v2.15.4 (patch)
+## v2.16.1 (patch)
 
-Changes since v2.15.3:
+Changes since v2.16.0:
 
-- chore: remove unused SourceLink package versions ([@matt-edmondson](https://github.com/matt-edmondson))
-- chore: remove redundant SourceLink package references ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump Polyfill from 10.11.0 to 10.11.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 18 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
