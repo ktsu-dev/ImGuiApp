@@ -1,6 +1,7 @@
-## v2.16.2 (patch)
+## v2.16.3 (patch)
 
-Changes since v2.16.1:
+Changes since v2.16.2:
 
-- feat(color)!: migrate ImGui.Styler to ktsu.Semantics.Color via ThemeProvider 2.0 ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump Polyfill from 10.11.1 to 10.11.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
