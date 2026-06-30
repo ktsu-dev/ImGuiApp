@@ -14,6 +14,7 @@ using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Styler;
 using ktsu.ThemeProvider;
+using SemanticColor = ktsu.Semantics.Color.Color;
 
 /// <summary>
 /// Comprehensive demonstration of the ImGuiStyler library capabilities.
@@ -220,7 +221,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Separator();
 
 		// Check if a theme is active
-		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
 		if (completePalette is null)
 		{
 			ImGui.TextWrapped("No theme is currently active. Select a theme from the Theme Gallery tab to see its complete palette.");
@@ -254,9 +255,9 @@ internal sealed class ImGuiStylerDemo
 
 		ImColor? neutralIconColor = null;
 		if (highestNeutralPriority.HasValue &&
-			completePalette.TryGetValue(new(SemanticMeaning.Neutral, highestNeutralPriority.Value), out PerceptualColor neutralColor))
+			completePalette.TryGetValue(new(SemanticMeaning.Neutral, highestNeutralPriority.Value), out SemanticColor neutralColor))
 		{
-			neutralIconColor = Color.FromPerceptualColor(neutralColor);
+			neutralIconColor = Color.FromSemanticColor(neutralColor);
 		}
 
 		// Create table with semantic meanings as rows and priorities as columns
@@ -294,9 +295,9 @@ internal sealed class ImGuiStylerDemo
 					ImGui.TableSetColumnIndex(colIndex + 1); // +1 because column 0 is semantic name
 
 					SemanticColorRequest request = new(meaning, priority);
-					if (completePalette.TryGetValue(request, out PerceptualColor color))
+					if (completePalette.TryGetValue(request, out SemanticColor color))
 					{
-						ImColor imColor = Color.FromPerceptualColor(color);
+						ImColor imColor = Color.FromSemanticColor(color);
 
 						// Color swatch button
 						Vector2 swatchButtonSize = new(swatchWidth, swatchHeight);
@@ -946,7 +947,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "var primaryHigh = new SemanticColorRequest(SemanticMeaning.Primary, Priority.High);");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "if (palette?.TryGetValue(primaryHigh, out var color) == true)");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "{");
-		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "    ImColor myColor = Color.FromPerceptualColor(color);");
+		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "    ImColor myColor = Color.FromSemanticColor(color);");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "}");
 		ImGui.TextUnformatted("");
 

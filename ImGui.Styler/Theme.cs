@@ -11,6 +11,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ThemeProvider;
 using ktsu.ThemeProvider.ImGui;
+using SemanticColor = ktsu.Semantics.Color.Color;
 
 /// <summary>
 /// Provides methods and properties to manage and apply themes for ImGui elements using ThemeProvider.
@@ -21,7 +22,7 @@ public static class Theme
 	private static string? currentThemeName;
 
 	// Cache for complete palettes to avoid recalculating them every frame
-	private static readonly Dictionary<string, IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>> paletteCache = [];
+	private static readonly Dictionary<string, IReadOnlyDictionary<SemanticColorRequest, SemanticColor>> paletteCache = [];
 	private static readonly Lock paletteCacheLock = new();
 
 	// ThemeBrowser modal instance
@@ -377,24 +378,24 @@ public static class Theme
 		try
 		{
 			// Get the theme's complete palette for color preview
-			IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(theme.CreateInstance());
+			IReadOnlyDictionary<SemanticColorRequest, SemanticColor> completePalette = GetCompletePalette(theme.CreateInstance());
 
 			// Get primary color for title bar and surface color for background
 			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
 			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
 
-			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out PerceptualColor primary))
+			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 			{
-				primaryColor = Color.FromPerceptualColor(primary);
+				primaryColor = Color.FromSemanticColor(primary);
 			}
 
-			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out PerceptualColor surface))
+			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 			{
-				surfaceColor = Color.FromPerceptualColor(surface);
+				surfaceColor = Color.FromSemanticColor(surface);
 			}
-			else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out PerceptualColor surfaceMed))
+			else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 			{
-				surfaceColor = Color.FromPerceptualColor(surfaceMed);
+				surfaceColor = Color.FromSemanticColor(surfaceMed);
 			}
 
 			// Calculate required width for the dialog window
@@ -548,22 +549,22 @@ public static class Theme
 				try
 				{
 					// Use the complete palette for efficient color extraction
-					IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+					IReadOnlyDictionary<SemanticColorRequest, SemanticColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
 
 					// Get primary color for title bar
-					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out PerceptualColor primary))
+					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 					{
-						primaryColor = Color.FromPerceptualColor(primary);
+						primaryColor = Color.FromSemanticColor(primary);
 					}
 
 					// Get surface color for background
-					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out PerceptualColor surface))
+					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 					{
-						surfaceColor = Color.FromPerceptualColor(surface);
+						surfaceColor = Color.FromSemanticColor(surface);
 					}
-					else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out PerceptualColor surfaceMed))
+					else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 					{
-						surfaceColor = Color.FromPerceptualColor(surfaceMed);
+						surfaceColor = Color.FromSemanticColor(surfaceMed);
 					}
 				}
 				catch (ArgumentException)
@@ -712,22 +713,22 @@ public static class Theme
 			try
 			{
 				// Use the complete palette for efficient color extraction
-				IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+				IReadOnlyDictionary<SemanticColorRequest, SemanticColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
 
 				// Get primary color for title bar
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out PerceptualColor primary))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 				{
-					primaryColor = Color.FromPerceptualColor(primary);
+					primaryColor = Color.FromSemanticColor(primary);
 				}
 
 				// Get surface color for background
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out PerceptualColor surface))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 				{
-					surfaceColor = Color.FromPerceptualColor(surface);
+					surfaceColor = Color.FromSemanticColor(surface);
 				}
-				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out PerceptualColor surfaceMed))
+				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 				{
-					surfaceColor = Color.FromPerceptualColor(surfaceMed);
+					surfaceColor = Color.FromSemanticColor(surfaceMed);
 				}
 			}
 			catch (ArgumentException)
@@ -887,7 +888,7 @@ public static class Theme
 	/// This provides every color that can be requested from the theme, useful for theme exploration and previews.
 	/// </summary>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if no theme is active.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? GetCurrentThemeCompletePalette()
+	public static IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? GetCurrentThemeCompletePalette()
 	{
 		ThemeRegistry.ThemeInfo? currentTheme = CurrentTheme;
 		if (currentTheme is null)
@@ -905,7 +906,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The semantic theme to generate the complete palette from.</param>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> GetCompletePalette(ISemanticTheme theme)
+	public static IReadOnlyDictionary<SemanticColorRequest, SemanticColor> GetCompletePalette(ISemanticTheme theme)
 	{
 		Ensure.NotNull(theme);
 
@@ -915,14 +916,14 @@ public static class Theme
 		// Check cache first
 		using (paletteCacheLock.EnterScope())
 		{
-			if (paletteCache.TryGetValue(cacheKey, out IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? cachedPalette))
+			if (paletteCache.TryGetValue(cacheKey, out IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? cachedPalette))
 			{
 				return cachedPalette;
 			}
 		}
 
 		// Generate the palette
-		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> palette = GeneratePaletteUncached(theme);
+		IReadOnlyDictionary<SemanticColorRequest, SemanticColor> palette = GeneratePaletteUncached(theme);
 
 		// Cache the result
 		using (paletteCacheLock.EnterScope())
@@ -946,7 +947,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="themeName">The name of the theme to get the palette for.</param>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if theme not found.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? GetCompletePalette(string themeName)
+	public static IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? GetCompletePalette(string themeName)
 	{
 		ThemeRegistry.ThemeInfo? themeInfo = FindTheme(themeName);
 		if (themeInfo is null)
@@ -962,7 +963,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The theme to generate the palette from.</param>
 	/// <returns>The complete palette dictionary.</returns>
-	private static IReadOnlyDictionary<SemanticColorRequest, PerceptualColor> GeneratePaletteUncached(ISemanticTheme theme) =>
+	private static IReadOnlyDictionary<SemanticColorRequest, SemanticColor> GeneratePaletteUncached(ISemanticTheme theme) =>
 		SemanticColorMapper.MakeCompletePalette(theme);
 
 	/// <summary>
@@ -980,7 +981,7 @@ public static class Theme
 		keyBuilder.Append('_');
 
 		// Add a simple hash of the semantic mappings
-		foreach (KeyValuePair<SemanticMeaning, Collection<PerceptualColor>> mapping in theme.SemanticMapping.OrderBy(kvp => kvp.Key))
+		foreach (KeyValuePair<SemanticMeaning, Collection<SemanticColor>> mapping in theme.SemanticMapping.OrderBy(kvp => kvp.Key))
 		{
 			keyBuilder.Append(mapping.Key);
 			keyBuilder.Append(':');
@@ -1009,7 +1010,7 @@ public static class Theme
 	/// <returns>An array of all available semantic color requests, or empty array if no theme is active.</returns>
 	public static ImmutableArray<SemanticColorRequest> GetCurrentThemeAvailableColorRequests()
 	{
-		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? palette = GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? palette = GetCurrentThemeCompletePalette();
 		return palette?.Keys.ToImmutableArray() ?? [];
 	}
 
@@ -1020,9 +1021,9 @@ public static class Theme
 	/// <param name="request">The semantic color request specifying the color to retrieve.</param>
 	/// <param name="color">The retrieved color if found.</param>
 	/// <returns>True if the color was found, false otherwise.</returns>
-	public static bool TryGetColor(SemanticColorRequest request, out PerceptualColor color)
+	public static bool TryGetColor(SemanticColorRequest request, out SemanticColor color)
 	{
-		IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? palette = GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? palette = GetCurrentThemeCompletePalette();
 		if (palette is not null && palette.TryGetValue(request, out color))
 		{
 			return true;
@@ -1038,8 +1039,8 @@ public static class Theme
 	/// </summary>
 	/// <param name="request">The semantic color request specifying the color to retrieve.</param>
 	/// <returns>The color if found, null otherwise.</returns>
-	public static PerceptualColor? GetColor(SemanticColorRequest request) =>
-		TryGetColor(request, out PerceptualColor color) ? color : null;
+	public static SemanticColor? GetColor(SemanticColorRequest request) =>
+		TryGetColor(request, out SemanticColor color) ? color : null;
 
 	#endregion
 

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ThemeProvider;
+using SemanticColor = ktsu.Semantics.Color.Color;
 
 /// <summary>
 /// Provides theme preview card widgets for displaying theme information in a dialog window style.
@@ -88,7 +89,7 @@ public static class ThemeCard
 			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
 			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
 			ImColor textColor = Color.Palette.Neutral.White; // Fallback
-			IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette = null;
+			IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette = null;
 
 			try
 			{
@@ -96,29 +97,29 @@ public static class ThemeCard
 				completePalette = Theme.GetCompletePalette(theme.CreateInstance());
 
 				// Get primary color for title bar
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out PerceptualColor primary))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 				{
-					primaryColor = Color.FromPerceptualColor(primary);
+					primaryColor = Color.FromSemanticColor(primary);
 				}
 
 				// Get surface color for background
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out PerceptualColor surface))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 				{
-					surfaceColor = Color.FromPerceptualColor(surface);
+					surfaceColor = Color.FromSemanticColor(surface);
 				}
-				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out PerceptualColor surfaceMed))
+				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 				{
-					surfaceColor = Color.FromPerceptualColor(surfaceMed);
+					surfaceColor = Color.FromSemanticColor(surfaceMed);
 				}
 
 				// Get highest priority neutral for text
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.VeryHigh), out PerceptualColor textVeryHigh))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.VeryHigh), out SemanticColor textVeryHigh))
 				{
-					textColor = Color.FromPerceptualColor(textVeryHigh);
+					textColor = Color.FromSemanticColor(textVeryHigh);
 				}
-				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.High), out PerceptualColor textHigh))
+				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.High), out SemanticColor textHigh))
 				{
-					textColor = Color.FromPerceptualColor(textHigh);
+					textColor = Color.FromSemanticColor(textHigh);
 				}
 			}
 			catch (ArgumentException)
@@ -320,7 +321,7 @@ public static class ThemeCard
 	/// <param name="completePalette">The complete color palette for the theme.</param>
 	/// <param name="dialogMax">The bottom-right corner of the dialog area.</param>
 	/// <param name="margin">The margin from the dialog edge.</param>
-	private static void DrawSemanticSwatches(ImDrawListPtr drawList, IReadOnlyDictionary<SemanticColorRequest, PerceptualColor>? completePalette, Vector2 dialogMax, float margin)
+	private static void DrawSemanticSwatches(ImDrawListPtr drawList, IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette, Vector2 dialogMax, float margin)
 	{
 		// Skip drawing swatches if palette is not available
 		if (completePalette is null)
@@ -354,9 +355,9 @@ public static class ThemeCard
 			SemanticColorRequest colorRequest = new(swatchMeanings[i], Priority.High);
 
 			// Try to get the color from the complete palette
-			if (completePalette.TryGetValue(colorRequest, out PerceptualColor semanticColor))
+			if (completePalette.TryGetValue(colorRequest, out SemanticColor semanticColor))
 			{
-				ImColor swatchColor = Color.FromPerceptualColor(semanticColor);
+				ImColor swatchColor = Color.FromSemanticColor(semanticColor);
 
 				Vector2 swatchMin = new(
 					startPos.X + (i * (swatchSize + swatchSpacing)),
