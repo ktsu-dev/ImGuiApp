@@ -127,7 +127,7 @@ public static partial class ImGuiWidgets
 
 		if (string.IsNullOrWhiteSpace(filterText))
 		{
-			return [];
+			return items;
 		}
 
 		Dictionary<string, T> keyedItems = items.ToDictionary(selector, item => item);
