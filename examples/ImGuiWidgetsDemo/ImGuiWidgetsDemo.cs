@@ -112,6 +112,8 @@ internal static class ImGuiWidgetsDemo
 		 "Strong World".As<StrongStringExample>(), "Strong Goodbye".As<StrongStringExample>()];
 
 	// Static fields for SearchBox filter persistence
+	private static bool SearchBoxFullWidth { get; set; }
+
 	private static string BasicSearchTerm = string.Empty;
 	private static TextFilterType BasicFilterType = TextFilterType.Glob;
 	private static TextFilterMatchOptions BasicMatchOptions = TextFilterMatchOptions.ByWholeString;
@@ -263,10 +265,17 @@ internal static class ImGuiWidgetsDemo
 		if (ImGui.CollapsingHeader("SearchBox"))
 		{
 			ImGui.TextUnformatted("Powerful search functionality with multiple filter types:");
+
+			bool searchBoxFullWidth = SearchBoxFullWidth;
+			if (ImGui.Checkbox("Full Width", ref searchBoxFullWidth))
+			{
+				SearchBoxFullWidth = searchBoxFullWidth;
+			}
+
 			ImGui.Separator();
 
 			ImGui.TextUnformatted("Basic SearchBox (UI only):");
-			ImGuiWidgets.SearchBox("##BasicSearch", ref BasicSearchTerm, ref BasicFilterType, ref BasicMatchOptions);
+			ImGuiWidgets.SearchBox("##BasicSearch", ref BasicSearchTerm, ref BasicFilterType, ref BasicMatchOptions, fullWidth: SearchBoxFullWidth);
 			ImGui.TextUnformatted($"Search term: '{BasicSearchTerm}' | Type: {BasicFilterType} | Match: {BasicMatchOptions}");
 
 			ImGui.Separator();
@@ -279,7 +288,8 @@ internal static class ImGuiWidgetsDemo
 				items: GridStrings,
 				selector: s => s,
 				ref FilteredFilterType,
-				ref FilteredMatchOptions)];
+				ref FilteredMatchOptions,
+				SearchBoxFullWidth)];
 
 			if (!string.IsNullOrEmpty(FilteredSearchTerm))
 			{
@@ -302,7 +312,8 @@ internal static class ImGuiWidgetsDemo
 			List<string> rankedResults = [.. ImGuiWidgets.SearchBoxRanked("##RankedSearch",
 				ref RankedSearchTerm,
 				items: GridStrings,
-				selector: s => s)];
+				selector: s => s,
+				SearchBoxFullWidth)];
 
 			if (!string.IsNullOrEmpty(RankedSearchTerm))
 			{
@@ -330,7 +341,8 @@ internal static class ImGuiWidgetsDemo
 				items: GridStrings,
 				selector: s => s,
 				ref GlobFilterType,
-				ref GlobMatchOptions)];
+				ref GlobMatchOptions,
+				SearchBoxFullWidth)];
 
 			if (!string.IsNullOrEmpty(GlobSearchTerm))
 			{
@@ -355,7 +367,8 @@ internal static class ImGuiWidgetsDemo
 				items: GridStrings,
 				selector: s => s,
 				ref RegexFilterType,
-				ref RegexMatchOptions)];
+				ref RegexMatchOptions,
+				SearchBoxFullWidth)];
 
 			if (!string.IsNullOrEmpty(RegexSearchTerm))
 			{

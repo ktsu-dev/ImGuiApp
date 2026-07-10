@@ -21,22 +21,29 @@ public static partial class ImGuiWidgets
 	/// <param name="filterText">Current filter text.</param>
 	/// <param name="matchOptions">How to match the filter text (default: WholeString).</param>
 	/// <param name="filterType">Type of filter to use (default: Glob).</param>
+	/// <param name="fullWidth">Whether the search box should take the full width (default: false).</param>
 	/// <returns>True if the filter text changed, otherwise false.</returns>
 	public static bool SearchBox(
 		string label,
 		ref string filterText,
 		ref TextFilterType filterType,
-		ref TextFilterMatchOptions matchOptions
+		ref TextFilterMatchOptions matchOptions,
+		bool fullWidth = false
 	)
 	{
 		string hint = TextFilter.GetHint(filterType) + "\nRight-click for options";
 
 		// Only show hint if there's enough width to display it fully
 		// The tooltip covers this case when the hint doesn't fit
-		float availableWidth = ImGui.CalcItemWidth();
+		float availableWidth = fullWidth ? ImGui.GetContentRegionAvail().X : ImGui.CalcItemWidth();
 		float hintWidth = ImGui.CalcTextSize(hint).X;
 		float framePadding = ImGui.GetStyle().FramePadding.X * 2;
 		string displayHint = (hintWidth + framePadding) <= availableWidth ? hint : string.Empty;
+
+		if (fullWidth)
+		{
+			ImGui.SetNextItemWidth(-1.0f);
+		}
 
 		bool changed = ImGui.InputTextWithHint(label, displayHint, ref filterText, 256);
 		bool isHovered = ImGui.IsItemHovered();
@@ -110,6 +117,7 @@ public static partial class ImGuiWidgets
 	/// <param name="selector">Function to extract the string to match against from each item.</param>
 	/// <param name="matchOptions">How to match the filter text (default: WholeString).</param>
 	/// <param name="filterType">Type of filter to use (default: Glob).</param>
+	/// <param name="fullWidth">Whether the search box should take the full width of the available space.</param>
 	/// <returns>Filtered collection of items.</returns>
 	public static IEnumerable<T> SearchBox<T>(
 		string label,
@@ -117,13 +125,14 @@ public static partial class ImGuiWidgets
 		IEnumerable<T> items,
 		Func<T, string> selector,
 		ref TextFilterType filterType,
-		ref TextFilterMatchOptions matchOptions
+		ref TextFilterMatchOptions matchOptions,
+		bool fullWidth = false
 	)
 	{
 		Ensure.NotNull(items);
 		Ensure.NotNull(selector);
 
-		SearchBox(label, ref filterText, ref filterType, ref matchOptions);
+		SearchBox(label, ref filterText, ref filterType, ref matchOptions, fullWidth: fullWidth);
 
 		if (string.IsNullOrWhiteSpace(filterText))
 		{
@@ -144,12 +153,14 @@ public static partial class ImGuiWidgets
 	/// <param name="filterText">Current filter text.</param>
 	/// <param name="items">Collection of items to rank.</param>
 	/// <param name="selector">Function to extract the string to match against from each item.</param>
+	/// <param name="fullWidth"></param>
 	/// <returns>Ranked collection of items.</returns>
 	public static IEnumerable<T> SearchBoxRanked<T>(
 		string label,
 		ref string filterText,
 		IEnumerable<T> items,
-		Func<T, string> selector
+		Func<T, string> selector,
+		bool fullWidth = false
 	)
 	{
 		Ensure.NotNull(items);
@@ -157,7 +168,7 @@ public static partial class ImGuiWidgets
 
 		TextFilterType filterType = TextFilterType.Fuzzy;
 		TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;
-		SearchBox(label, ref filterText, ref filterType, ref matchOptions);
+		SearchBox(label, ref filterText, ref filterType, ref matchOptions, fullWidth: fullWidth);
 
 		if (string.IsNullOrWhiteSpace(filterText))
 		{
