@@ -19,14 +19,18 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="label">Label for display and id.</param>
 	/// <param name="filterText">Current filter text.</param>
-	/// <param name="matchOptions">How to match the filter text (default: WholeString).</param>
 	/// <param name="filterType">Type of filter to use (default: Glob).</param>
+	/// <param name="matchOptions">How to match the filter text (default: WholeString).</param>
+	/// <param name="canChangeFilterType">Whether the filter type can be changed (default: true).</param>
+	/// <param name="canChangeMatchOptions">Whether the match options can be changed (default: true).</param>
 	/// <returns>True if the filter text changed, otherwise false.</returns>
 	public static bool SearchBox(
 		string label,
 		ref string filterText,
 		ref TextFilterType filterType,
-		ref TextFilterMatchOptions matchOptions
+		ref TextFilterMatchOptions matchOptions,
+		bool canChangeFilterType = true,
+		bool canChangeMatchOptions = true
 	)
 	{
 		string hint = TextFilter.GetHint(filterType) + "\nRight-click for options";
@@ -62,34 +66,34 @@ public static partial class ImGuiWidgets
 			bool isAllWord = matchOptions == TextFilterMatchOptions.ByWordAll;
 			bool isAnyWord = matchOptions == TextFilterMatchOptions.ByWordAny;
 
-			if (ImGui.MenuItem("Glob", "", ref isGlob))
+			if (ImGui.MenuItem("Glob", "", ref isGlob, canChangeFilterType))
 			{
 				filterType = TextFilterType.Glob;
 			}
 
-			if (ImGui.MenuItem("Regex", "", ref isRegex))
+			if (ImGui.MenuItem("Regex", "", ref isRegex, canChangeFilterType))
 			{
 				filterType = TextFilterType.Regex;
 			}
 
-			if (ImGui.MenuItem("Fuzzy", "", ref isFuzzy))
+			if (ImGui.MenuItem("Fuzzy", "", ref isFuzzy, canChangeFilterType))
 			{
 				filterType = TextFilterType.Fuzzy;
 			}
 
 			ImGui.Separator();
 
-			if (ImGui.MenuItem("Whole String", "", ref isWholeString))
+			if (ImGui.MenuItem("Whole String", "", ref isWholeString, canChangeMatchOptions))
 			{
 				matchOptions = TextFilterMatchOptions.ByWholeString;
 			}
 
-			if (ImGui.MenuItem("All Words", "", ref isAllWord))
+			if (ImGui.MenuItem("All Words", "", ref isAllWord, canChangeMatchOptions))
 			{
 				matchOptions = TextFilterMatchOptions.ByWordAll;
 			}
 
-			if (ImGui.MenuItem("Any Word", "", ref isAnyWord))
+			if (ImGui.MenuItem("Any Word", "", ref isAnyWord, canChangeMatchOptions))
 			{
 				matchOptions = TextFilterMatchOptions.ByWordAny;
 			}
@@ -157,7 +161,7 @@ public static partial class ImGuiWidgets
 
 		TextFilterType filterType = TextFilterType.Fuzzy;
 		TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;
-		SearchBox(label, ref filterText, ref filterType, ref matchOptions);
+		SearchBox(label, ref filterText, ref filterType, ref matchOptions, canChangeFilterType: false, canChangeMatchOptions: false);
 
 		if (string.IsNullOrWhiteSpace(filterText))
 		{
