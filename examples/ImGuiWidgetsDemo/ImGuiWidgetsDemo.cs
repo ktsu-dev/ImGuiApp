@@ -113,22 +113,19 @@ internal static class ImGuiWidgetsDemo
 
 	// Static fields for SearchBox filter persistence
 	private static string BasicSearchTerm = string.Empty;
-	private static TextFilterType BasicFilterType = TextFilterType.Glob;
-	private static TextFilterMatchOptions BasicMatchOptions = TextFilterMatchOptions.ByWholeString;
+	private static SearchBoxOptions BasicSearchOptions = new(Label: "##BasicSearch");
 
 	private static string FilteredSearchTerm = string.Empty;
-	private static TextFilterType FilteredFilterType = TextFilterType.Glob;
-	private static TextFilterMatchOptions FilteredMatchOptions = TextFilterMatchOptions.ByWholeString;
+	private static SearchBoxOptions FilteredSearchOptions = new(Label: "##FilteredSearch");
 
 	private static string RankedSearchTerm = string.Empty;
+	private static SearchBoxRankedOptions RankedSearchOptions = new(Label: "##RankedSearch");
 
 	private static string GlobSearchTerm = string.Empty;
-	private static TextFilterType GlobFilterType = TextFilterType.Glob;
-	private static TextFilterMatchOptions GlobMatchOptions = TextFilterMatchOptions.ByWholeString;
+	private static SearchBoxOptions GlobSearchOptions = new(Label: "##GlobSearch", FilterType: TextFilterType.Glob);
 
 	private static string RegexSearchTerm = string.Empty;
-	private static TextFilterType RegexFilterType = TextFilterType.Regex;
-	private static TextFilterMatchOptions RegexMatchOptions = TextFilterMatchOptions.ByWholeString;
+	private static SearchBoxOptions RegexSearchOptions = new(Label: "##RegexSearch", FilterType: TextFilterType.Regex);
 
 #pragma warning disable CA5394 //Do not use insecure randomness - Random is used only for generating visual demo data; no security or cryptographic use.
 	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
@@ -266,20 +263,18 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 
 			ImGui.TextUnformatted("Basic SearchBox (UI only):");
-			ImGuiWidgets.SearchBox("##BasicSearch", ref BasicSearchTerm, ref BasicFilterType, ref BasicMatchOptions);
-			ImGui.TextUnformatted($"Search term: '{BasicSearchTerm}' | Type: {BasicFilterType} | Match: {BasicMatchOptions}");
+			ImGuiWidgets.SearchBox(ref BasicSearchOptions, ref BasicSearchTerm);
+			ImGui.TextUnformatted($"Search term: '{BasicSearchTerm}' | Type: {BasicSearchOptions.FilterType} | Match: {BasicSearchOptions.MatchOptions}");
 
 			ImGui.Separator();
 			ImGui.TextUnformatted("SearchBox with Filtering:");
 
 			// Using the SearchBox that returns filtered results
 			List<string> filteredResults = [.. ImGuiWidgets.SearchBox(
-				"##FilteredSearch",
+				ref FilteredSearchOptions,
 				ref FilteredSearchTerm,
 				items: GridStrings,
-				selector: s => s,
-				ref FilteredFilterType,
-				ref FilteredMatchOptions)];
+				selector: s => s)];
 
 			if (!string.IsNullOrEmpty(FilteredSearchTerm))
 			{
@@ -299,7 +294,8 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 			ImGui.TextUnformatted("Ranked SearchBox (Fuzzy Matching):");
 
-			List<string> rankedResults = [.. ImGuiWidgets.SearchBoxRanked("##RankedSearch",
+			List<string> rankedResults = [.. ImGuiWidgets.SearchBoxRanked(
+				ref RankedSearchOptions,
 				ref RankedSearchTerm,
 				items: GridStrings,
 				selector: s => s)];
@@ -325,12 +321,11 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Columns(2, "SearchComparison");
 
 			ImGui.TextUnformatted("Glob Pattern (*,?):");
-			List<string> globResults = [.. ImGuiWidgets.SearchBox("##GlobSearch",
+			List<string> globResults = [.. ImGuiWidgets.SearchBox(
+				ref GlobSearchOptions,
 				ref GlobSearchTerm,
 				items: GridStrings,
-				selector: s => s,
-				ref GlobFilterType,
-				ref GlobMatchOptions)];
+				selector: s => s)];
 
 			if (!string.IsNullOrEmpty(GlobSearchTerm))
 			{
@@ -350,12 +345,11 @@ internal static class ImGuiWidgetsDemo
 			ImGui.NextColumn();
 
 			ImGui.TextUnformatted("Regex Pattern:");
-			List<string> regexResults = [.. ImGuiWidgets.SearchBox("##RegexSearch",
+			List<string> regexResults = [.. ImGuiWidgets.SearchBox(
+				ref RegexSearchOptions,
 				ref RegexSearchTerm,
 				items: GridStrings,
-				selector: s => s,
-				ref RegexFilterType,
-				ref RegexMatchOptions)];
+				selector: s => s)];
 
 			if (!string.IsNullOrEmpty(RegexSearchTerm))
 			{

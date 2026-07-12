@@ -29,7 +29,7 @@ public class ImGuiAppDataStructureTests
 	{
 		ImGuiAppTextureInfo textureInfo = new();
 
-		Assert.AreEqual(new AbsoluteFilePath(), textureInfo.Path);
+		Assert.AreEqual(new AbsoluteFilePath().ToString(), textureInfo.Path.ToString());
 		Assert.AreEqual(0, textureInfo.TextureId);
 		Assert.AreEqual(0, textureInfo.Width);
 		Assert.AreEqual(0, textureInfo.Height);
@@ -46,7 +46,7 @@ public class ImGuiAppDataStructureTests
 		textureInfo.Width = 256;
 		textureInfo.Height = 512;
 
-		Assert.AreEqual(testPath, textureInfo.Path);
+		Assert.AreEqual(testPath.ToString(), textureInfo.Path.ToString());
 		Assert.AreEqual(123, textureInfo.TextureId);
 		Assert.AreEqual(256, textureInfo.Width);
 		Assert.AreEqual(512, textureInfo.Height);

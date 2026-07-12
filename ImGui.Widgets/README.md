@@ -260,16 +260,18 @@ ImGui.Columns(1);
 The SearchBox widget provides a powerful search interface with multiple filter type options:
 
 ```csharp
-// Static fields to maintain filter state between renders
+// Static fields to maintain filter state between renders.
+// The options record carries the label, filter type, match options,
+// and hint/tooltip/context-menu toggles. Right-click updates it in place.
 private static string searchTerm = string.Empty;
-private static TextFilterType filterType = TextFilterType.Glob;
-private static TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;
+private static SearchBoxOptions searchOptions = new(Label: "##BasicSearch", FilterType: TextFilterType.Glob);
+private static SearchBoxRankedOptions rankedOptions = new(Label: "##RankedSearch");
 
 // List of items to search
 var items = new List<string> { "Apple", "Banana", "Cherry", "Date", "Elderberry" };
 
 // Basic search box with right-click context menu for filter options
-ImGuiWidgets.SearchBox("##BasicSearch", ref searchTerm, ref filterType, ref matchOptions);
+ImGuiWidgets.SearchBox(ref searchOptions, ref searchTerm);
 
 // Display results
 if (!string.IsNullOrEmpty(searchTerm))
@@ -279,16 +281,14 @@ if (!string.IsNullOrEmpty(searchTerm))
 
 // Search box that returns filtered results directly
 var filteredResults = ImGuiWidgets.SearchBox(
-    "##FilteredSearch",
+    ref searchOptions,
     ref searchTerm,
     items,                  // Collection to filter
-    item => item,           // Selector function to extract string from each item
-    ref filterType,
-    ref matchOptions).ToList();
+    item => item).ToList();  // Selector function to extract string from each item
 
 // Ranked search box for fuzzy matching and ranked results
 var rankedResults = ImGuiWidgets.SearchBoxRanked(
-    "##RankedSearch",
+    ref rankedOptions,
     ref searchTerm,
     items,
     item => item).ToList();

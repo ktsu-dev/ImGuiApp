@@ -201,9 +201,8 @@ tabPanel.Draw();
 
 // Search box with filtering
 string searchTerm = "";
-TextFilterType filterType = TextFilterType.Glob;
-TextFilterMatchOptions matchOptions = TextFilterMatchOptions.ByWholeString;
-ImGuiWidgets.SearchBox("##Search", ref searchTerm, ref filterType, ref matchOptions);
+SearchBoxOptions searchOptions = new(Label: "##Search", FilterType: TextFilterType.Glob);
+ImGuiWidgets.SearchBox(ref searchOptions, ref searchTerm);
 
 // Radial countdown timer
 float timeRemaining = 300.0f;
