@@ -23,6 +23,7 @@ using ktsu.TextFilter;
 /// <param name="ShowTooltip">Whether to show a tooltip describing the filter when hovered.</param>
 /// <param name="ShowContextMenu">Whether to show the right-click context menu for changing filter options.</param>
 /// <param name="ReturnAllWhenEmpty">When the filter text is empty, whether the filtering overload returns all items (<see langword="true"/>) or none (<see langword="false"/>).</param>
+/// <param name="FullWidth">Whether to stretch the text input to the full available content width.</param>
 public record class SearchBoxOptions(
 	string Label = "",
 	string? Hint = null,
@@ -31,7 +32,8 @@ public record class SearchBoxOptions(
 	bool ShowHint = true,
 	bool ShowTooltip = true,
 	bool ShowContextMenu = true,
-	bool ReturnAllWhenEmpty = false
+	bool ReturnAllWhenEmpty = false,
+	bool FullWidth = false
 );
 
 /// <summary>
@@ -41,12 +43,14 @@ public record class SearchBoxOptions(
 /// <param name="Hint">Hint text to display; when <see langword="null"/> a hint is derived from the fuzzy filter.</param>
 /// <param name="ShowHint">Whether to show the hint text when the input is empty and it fits.</param>
 /// <param name="ShowTooltip">Whether to show a tooltip describing the filter when hovered.</param>
+/// <param name="FullWidth">Whether to stretch the text input to the full available content width.</param>
 public record class SearchBoxRankedOptions(
 	string Label = "",
 	string? Hint = null,
 	bool ShowHint = true,
-	bool ShowTooltip = true
-) : SearchBoxOptions(Label, Hint, TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, ShowHint, ShowTooltip, ShowContextMenu: false, ReturnAllWhenEmpty: true);
+	bool ShowTooltip = true,
+	bool FullWidth = false
+) : SearchBoxOptions(Label, Hint, TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, ShowHint, ShowTooltip, ShowContextMenu: false, ReturnAllWhenEmpty: true, FullWidth: FullWidth);
 
 public static partial class ImGuiWidgets
 {
@@ -61,6 +65,11 @@ public static partial class ImGuiWidgets
 		Ensure.NotNull(options);
 
 		string hint = options.Hint ?? (TextFilter.GetHint(options.FilterType) + (options.ShowContextMenu ? "\nRight-click for options" : ""));
+
+		if (options.FullWidth)
+		{
+			ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+		}
 
 		// Only show hint if there's enough width to display it fully
 		// The tooltip covers this case when the hint doesn't fit

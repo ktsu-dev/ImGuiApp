@@ -276,6 +276,13 @@ internal static class ImGuiWidgetsDemo
 				FilteredSearchOptions = FilteredSearchOptions with { ReturnAllWhenEmpty = returnAllWhenEmpty };
 			}
 
+			// Toggle whether the input stretches to the full available content width
+			bool fullWidth = FilteredSearchOptions.FullWidth;
+			if (ImGui.Checkbox("Stretch input to full content width", ref fullWidth))
+			{
+				FilteredSearchOptions = FilteredSearchOptions with { FullWidth = fullWidth };
+			}
+
 			// Using the SearchBox that returns filtered results
 			List<string> filteredResults = [.. ImGuiWidgets.SearchBox(
 				ref FilteredSearchOptions,
