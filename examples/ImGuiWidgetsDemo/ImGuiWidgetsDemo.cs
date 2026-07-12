@@ -269,6 +269,13 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 			ImGui.TextUnformatted("SearchBox with Filtering:");
 
+			// Toggle whether an empty filter returns all items or none
+			bool returnAllWhenEmpty = FilteredSearchOptions.ReturnAllWhenEmpty;
+			if (ImGui.Checkbox("Return all items when the filter is empty", ref returnAllWhenEmpty))
+			{
+				FilteredSearchOptions = FilteredSearchOptions with { ReturnAllWhenEmpty = returnAllWhenEmpty };
+			}
+
 			// Using the SearchBox that returns filtered results
 			List<string> filteredResults = [.. ImGuiWidgets.SearchBox(
 				ref FilteredSearchOptions,
@@ -276,9 +283,10 @@ internal static class ImGuiWidgetsDemo
 				items: GridStrings,
 				selector: s => s)];
 
-			if (!string.IsNullOrEmpty(FilteredSearchTerm))
+			if (filteredResults.Count > 0)
 			{
-				ImGui.TextUnformatted($"Results: {filteredResults.Count} matches for '{FilteredSearchTerm}'");
+				string forText = string.IsNullOrEmpty(FilteredSearchTerm) ? "empty filter" : $"'{FilteredSearchTerm}'";
+				ImGui.TextUnformatted($"Results: {filteredResults.Count} matches for {forText}");
 				ImGui.BeginChild("FilteredResults", new Vector2(0, 100), ImGuiChildFlags.Borders);
 				foreach (string item in filteredResults.Take(20))
 				{

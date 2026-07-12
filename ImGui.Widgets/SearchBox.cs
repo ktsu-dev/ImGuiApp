@@ -22,6 +22,7 @@ using ktsu.TextFilter;
 /// <param name="ShowHint">Whether to show the hint text when the input is empty and it fits.</param>
 /// <param name="ShowTooltip">Whether to show a tooltip describing the filter when hovered.</param>
 /// <param name="ShowContextMenu">Whether to show the right-click context menu for changing filter options.</param>
+/// <param name="ReturnAllWhenEmpty">When the filter text is empty, whether the filtering overload returns all items (<see langword="true"/>) or none (<see langword="false"/>).</param>
 public record class SearchBoxOptions(
 	string Label = "",
 	string? Hint = null,
@@ -29,7 +30,8 @@ public record class SearchBoxOptions(
 	TextFilterMatchOptions MatchOptions = TextFilterMatchOptions.ByWholeString,
 	bool ShowHint = true,
 	bool ShowTooltip = true,
-	bool ShowContextMenu = true
+	bool ShowContextMenu = true,
+	bool ReturnAllWhenEmpty = false
 );
 
 /// <summary>
@@ -44,7 +46,7 @@ public record class SearchBoxRankedOptions(
 	string? Hint = null,
 	bool ShowHint = true,
 	bool ShowTooltip = true
-) : SearchBoxOptions(Label, Hint, TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, ShowHint, ShowTooltip, ShowContextMenu: false);
+) : SearchBoxOptions(Label, Hint, TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, ShowHint, ShowTooltip, ShowContextMenu: false, ReturnAllWhenEmpty: true);
 
 public static partial class ImGuiWidgets
 {
@@ -137,7 +139,7 @@ public static partial class ImGuiWidgets
 	/// <param name="filterText">Current filter text.</param>
 	/// <param name="items">Collection of items to filter.</param>
 	/// <param name="selector">Function to extract the string to match against from each item.</param>
-	/// <returns>Filtered collection of items.</returns>
+	/// <returns>Filtered collection of items. When the filter text is empty, returns all items or none depending on <see cref="SearchBoxOptions.ReturnAllWhenEmpty"/>.</returns>
 	public static IEnumerable<T> SearchBox<T>(
 		ref SearchBoxOptions options,
 		ref string filterText,
@@ -153,7 +155,7 @@ public static partial class ImGuiWidgets
 
 		if (string.IsNullOrWhiteSpace(filterText))
 		{
-			return [];
+			return options.ReturnAllWhenEmpty ? items : [];
 		}
 
 		Dictionary<string, T> keyedItems = items.ToDictionary(selector, item => item);
