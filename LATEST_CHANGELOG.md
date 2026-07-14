@@ -1,7 +1,6 @@
-## v2.17.1 (patch)
+## v2.17.2 (patch)
 
-Changes since v2.17.0:
+Changes since v2.17.1:
 
-- Bump MSTest.Sdk from 4.3.0 to 4.3.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Renormalize icon LFS pointers ([@matt-edmondson](https://github.com/matt-edmondson))
 
