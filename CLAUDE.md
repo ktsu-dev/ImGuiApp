@@ -29,7 +29,8 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness
 - **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
-- **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, color palettes, and interactive theme browser
+- **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Conversions (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`), `ImColors` factories (`FromHex`, `FromRgb`, `FromRgba`, `FromVector`, `FromHsl`), and `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`.
+- **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Color.Palette`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
 - **ImGuiNodeEditor** (`ktsu.ImGuiNodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`
 
@@ -56,6 +57,10 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
+- `ImGui.Color/ColorImGuiExtensions.cs` - SemanticColor ↔ ImColor/ImU32/Vector4 conversions
+- `ImGui.Color/ImColors.cs` - ImColor factory methods (hex, RGB, HSL, vector)
+- `ImGui.Color/ImColorExtensions.cs` - ImColor adjustment, analysis, and contrast operations
+- `ImGui.Styler/Color.cs` - Theme-aware color palette (`Color.Palette`) and theme color lookups
 - `ImGui.Styler/Theme.cs` - Theme management, browser, and selector
 - `ImGui.Styler/ScopedColor.cs` - RAII-pattern color styling
 - `NodeGraph/NodeAttribute.cs` - Core node attributes
@@ -76,6 +81,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ktsu.FuzzySearch** (1.2.2) - Fuzzy search matching
 - **ktsu.Extensions** (1.5.9) - Collection extension methods
 - **ktsu.CaseConverter** (1.3.6) - String case conversion
+- **ktsu.Semantics.Color** (2.7.0) - Physically-grounded color type (linear RGB, Oklab, HSL/HSV, WCAG accessibility, adjustment operations); backs `ImGui.Color`
 - **ktsu.Semantics.Paths** (1.0.28) - Type-safe path handling
 - **ktsu.Semantics.Strings** (1.0.28) - Type-safe string wrappers
 - **ktsu.Semantics.Quantities** (1.0.29) - Typed quantity calculations

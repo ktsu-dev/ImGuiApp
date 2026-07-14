@@ -44,4 +44,43 @@ public static class ColorImGuiExtensions
 	/// <returns>The semantic color.</returns>
 	public static SemanticColor FromImGuiVector4(Vector4 srgb) =>
 		SemanticColor.FromSrgb(srgb.X, srgb.Y, srgb.Z, srgb.W);
+
+	/// <summary>
+	/// Converts a color to ImGui's packed 32-bit <c>ImU32</c> representation (sRGB-encoded), using the default
+	/// <c>IM_COL32</c> byte layout of <c>0xAABBGGRR</c> (red in the low byte, alpha in the high byte).
+	/// </summary>
+	/// <param name="color">The color to convert.</param>
+	/// <returns>The packed <c>ImU32</c> value, matching <c>ImGui.ColorConvertFloat4ToU32</c>.</returns>
+	public static uint ToImGuiU32(this SemanticColor color)
+	{
+		Vector4 srgb = color.ToSrgbVector4();
+		uint r = ToByte(srgb.X);
+		uint g = ToByte(srgb.Y);
+		uint b = ToByte(srgb.Z);
+		uint a = ToByte(srgb.W);
+		return r | (g << 8) | (b << 16) | (a << 24);
+	}
+
+	/// <summary>
+	/// Creates a color from ImGui's packed 32-bit <c>ImU32</c> representation, interpreting its channels as sRGB.
+	/// Assumes the default <c>IM_COL32</c> byte layout of <c>0xAABBGGRR</c>.
+	/// </summary>
+	/// <param name="packed">The packed <c>ImU32</c> value (as produced by <c>ImGui.ColorConvertFloat4ToU32</c>).</param>
+	/// <returns>The semantic color.</returns>
+	public static SemanticColor FromImGuiU32(uint packed)
+	{
+		const float scale = 1f / 255f;
+		float r = (packed & 0xFF) * scale;
+		float g = ((packed >> 8) & 0xFF) * scale;
+		float b = ((packed >> 16) & 0xFF) * scale;
+		float a = ((packed >> 24) & 0xFF) * scale;
+		return SemanticColor.FromSrgb(r, g, b, a);
+	}
+
+	/// <summary>Saturates a normalized channel to [0, 1] and rounds to a byte, matching ImGui's <c>IM_F32_TO_INT8_SAT</c>.</summary>
+	private static uint ToByte(float value)
+	{
+		float saturated = value < 0f ? 0f : value > 1f ? 1f : value;
+		return (uint)((saturated * 255f) + 0.5f);
+	}
 }

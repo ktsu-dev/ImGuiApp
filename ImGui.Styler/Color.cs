@@ -4,231 +4,24 @@
 
 namespace ktsu.ImGui.Styler;
 
-using System.Globalization;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ThemeProvider;
 
 using SemanticColor = ktsu.Semantics.Color.Color;
 
 /// <summary>
-/// Provides methods for creating and manipulating colors in ImGui.
+/// Theme-aware color palette. Colors are sourced from the current <see cref="Theme"/>: semantic
+/// entries map to their semantic meaning, and the rest snap to the nearest theme color while
+/// preserving the intended hue. Color construction and manipulation live in the
+/// <c>ktsu.ImGui.Color</c> adapter (<see cref="ImColors"/> and <see cref="ImColorExtensions"/>).
 /// </summary>
 public static class Color
 {
-	/// <summary>
-	/// Represents the optimal text contrast ratio for accessibility.
-	/// </summary>
-	public const float OptimalTextContrastRatio = 4.5f;
-
-	#region Color Creation Methods
-
-	/// <summary>
-	/// Converts a hexadecimal color string to an <see cref="ImColor"/> object.
-	/// </summary>
-	/// <param name="hex">The hexadecimal color string in the format #RRGGBB or #RRGGBBAA.</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="hex"/> is null.</exception>
-	/// <exception cref="ArgumentException">Thrown when the <paramref name="hex"/> is not in the correct format.</exception>
-	public static ImColor FromHex(string hex)
-	{
-		Ensure.NotNull(hex);
-
-		if (hex.StartsWith('#'))
-		{
-			hex = hex[1..];
-		}
-
-		if (hex.Length == 6)
-		{
-			hex += "FF";
-		}
-
-		if (hex.Length != 8)
-		{
-			throw new ArgumentException("Hex color must be in the format #RRGGBB or #RRGGBBAA", nameof(hex));
-		}
-
-		byte r = byte.Parse(hex.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-		byte g = byte.Parse(hex.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-		byte b = byte.Parse(hex.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-		byte a = byte.Parse(hex.AsSpan(6, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-
-		return FromRGBA(r, g, b, a);
-	}
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from RGB byte values.
-	/// </summary>
-	/// <param name="r">The red component value (0-255).</param>
-	/// <param name="g">The green component value (0-255).</param>
-	/// <param name="b">The blue component value (0-255).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromRGB(byte r, byte g, byte b) => new()
-	{
-		Value = new Vector4(r / 255f, g / 255f, b / 255f, 1f)
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from RGB float values.
-	/// </summary>
-	/// <param name="r">The red component value (0-1).</param>
-	/// <param name="g">The green component value (0-1).</param>
-	/// <param name="b">The blue component value (0-1).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromRGB(float r, float g, float b) => new()
-	{
-		Value = new Vector4(r, g, b, 1f)
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from RGBA byte values.
-	/// </summary>
-	/// <param name="r">The red component value (0-255).</param>
-	/// <param name="g">The green component value (0-255).</param>
-	/// <param name="b">The blue component value (0-255).</param>
-	/// <param name="a">The alpha component value (0-255).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromRGBA(byte r, byte g, byte b, byte a) => new()
-	{
-		Value = new Vector4(r / 255f, g / 255f, b / 255f, a / 255f)
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from RGBA float values.
-	/// </summary>
-	/// <param name="r">The red component value (0-1).</param>
-	/// <param name="g">The green component value (0-1).</param>
-	/// <param name="b">The blue component value (0-1).</param>
-	/// <param name="a">The alpha component value (0-1).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromRGBA(float r, float g, float b, float a) => new()
-	{
-		Value = new Vector4(r, g, b, a)
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from a <see cref="Vector3"/>.
-	/// </summary>
-	/// <param name="vector">The vector containing RGB values.</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromVector(Vector3 vector) => new()
-	{
-		Value = new Vector4(vector.X, vector.Y, vector.Z, 1f)
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from a <see cref="Vector4"/>.
-	/// </summary>
-	/// <param name="vector">The vector containing RGBA values.</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromVector(Vector4 vector) => new()
-	{
-		Value = vector
-	};
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from HSL values.
-	/// </summary>
-	/// <param name="vector">The vector containing HSL values.</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromHSL(Vector3 vector) => FromHSLA(vector.X, vector.Y, vector.Z, 1);
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from HSL values.
-	/// </summary>
-	/// <param name="h">The hue component value (0-1).</param>
-	/// <param name="s">The saturation component value (0-1).</param>
-	/// <param name="l">The lightness component value (0-1).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromHSL(float h, float s, float l) => FromHSLA(h, s, l, 1);
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from HSLA values.
-	/// </summary>
-	/// <param name="vector">The vector containing HSLA values.</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	public static ImColor FromHSLA(Vector4 vector) => FromHSLA(vector.X, vector.Y, vector.Z, vector.W);
-
-	/// <summary>
-	/// Creates an <see cref="ImColor"/> object from HSLA values.
-	/// </summary>
-	/// <param name="h">The hue component value (0-1).</param>
-	/// <param name="s">The saturation component value (0-1).</param>
-	/// <param name="l">The lightness component value (0-1).</param>
-	/// <param name="a">The alpha component value (0-1).</param>
-	/// <returns>An <see cref="ImColor"/> object representing the color.</returns>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (sentinel check for achromatic color); a tolerance would change behavior.")]
-	public static ImColor FromHSLA(float h, float s, float l, float a)
-	{
-		float r, g, b;
-
-		if (s == 0)
-		{
-			r = g = b = l;
-		}
-		else
-		{
-			float q = l < 0.5f ? l * (1f + s) : l + s - (l * s);
-			float p = (2f * l) - q;
-			r = HueToRGB(p, q, h + (1f / 3f));
-			g = HueToRGB(p, q, h);
-			b = HueToRGB(p, q, h - (1f / 3f));
-		}
-
-		return FromRGBA(r, g, b, a);
-	}
-
-	/// <summary>
-	/// Converts a semantic <see cref="SemanticColor"/> (ktsu.Semantics.Color) to an ImColor.
-	/// </summary>
-	/// <param name="color">The semantic color to convert.</param>
-	/// <returns>An ImColor representing the same color (sRGB-encoded for ImGui).</returns>
-	public static ImColor FromSemanticColor(SemanticColor color) => FromVector(color.ToSrgbVector4());
-
-	#endregion
-
 	#region Private Helper Methods
-
-	/// <summary>
-	/// Converts a hue to an RGB component.
-	/// </summary>
-	/// <param name="p">The first parameter for the conversion.</param>
-	/// <param name="q">The second parameter for the conversion.</param>
-	/// <param name="t">The hue value.</param>
-	/// <returns>The RGB component value.</returns>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0046:Convert to conditional expression", Justification = "Clarity over brevity")]
-	private static float HueToRGB(float p, float q, float t)
-	{
-		if (t < 0)
-		{
-			t += 1;
-		}
-
-		if (t > 1)
-		{
-			t -= 1;
-		}
-
-		if (t < 1f / 6f)
-		{
-			return p + ((q - p) * 6f * t);
-		}
-
-		if (t < 1f / 2f)
-		{
-			return q;
-		}
-
-		if (t < 2f / 3f)
-		{
-			return p + ((q - p) * ((2f / 3f) - t) * 6f);
-		}
-
-		return p;
-	}
 
 	/// <summary>
 	/// Gets a semantic color from the current theme, or a fallback color if no theme is applied.
@@ -254,7 +47,7 @@ public static class Color
 
 				if (colorMapping.TryGetValue(request, out SemanticColor semanticColor))
 				{
-					return FromSemanticColor(semanticColor);
+					return semanticColor.ToImColor();
 				}
 			}
 			catch (ArgumentException)
@@ -309,7 +102,7 @@ public static class Color
 				// If we found a reasonably close color, use it
 				if (closestColor.HasValue && closestDistance < 0.3) // Reasonable similarity threshold
 				{
-					return FromSemanticColor(closestColor.Value);
+					return closestColor.Value.ToImColor();
 				}
 			}
 			catch (ArgumentException)
@@ -342,16 +135,16 @@ public static class Color
 		public static class Basic
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Red => GetThemeColor(FromHex("#ff4a49"));
-			public static ImColor Green => GetThemeColor(FromHex("#49ff4a"));
-			public static ImColor Blue => GetThemeColor(FromHex("#49a3ff"));
-			public static ImColor Yellow => GetThemeColor(FromHex("#ecff49"));
-			public static ImColor Cyan => GetThemeColor(FromHex("#49feff"));
-			public static ImColor Magenta => GetThemeColor(FromHex("#ff49fe"));
-			public static ImColor Orange => GetThemeColor(FromHex("#ffa549"));
-			public static ImColor Pink => GetThemeColor(FromHex("#ff49a3"));
-			public static ImColor Lime => GetThemeColor(FromHex("#a3ff49"));
-			public static ImColor Purple => GetThemeColor(FromHex("#c949ff"));
+			public static ImColor Red => GetThemeColor(ImColors.FromHex("#ff4a49"));
+			public static ImColor Green => GetThemeColor(ImColors.FromHex("#49ff4a"));
+			public static ImColor Blue => GetThemeColor(ImColors.FromHex("#49a3ff"));
+			public static ImColor Yellow => GetThemeColor(ImColors.FromHex("#ecff49"));
+			public static ImColor Cyan => GetThemeColor(ImColors.FromHex("#49feff"));
+			public static ImColor Magenta => GetThemeColor(ImColors.FromHex("#ff49fe"));
+			public static ImColor Orange => GetThemeColor(ImColors.FromHex("#ffa549"));
+			public static ImColor Pink => GetThemeColor(ImColors.FromHex("#ff49a3"));
+			public static ImColor Lime => GetThemeColor(ImColors.FromHex("#a3ff49"));
+			public static ImColor Purple => GetThemeColor(ImColors.FromHex("#c949ff"));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -362,12 +155,12 @@ public static class Color
 		public static class Neutral
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor White => GetThemeColor(FromHex("#ffffff"));
-			public static ImColor Black => GetThemeColor(FromHex("#000000"));
-			public static ImColor Gray => GetThemeColor(FromHex("#808080"));
-			public static ImColor LightGray => GetThemeColor(FromHex("#c0c0c0"));
-			public static ImColor DarkGray => GetThemeColor(FromHex("#404040"));
-			public static ImColor Transparent => FromHex("#00000000"); // Always transparent
+			public static ImColor White => GetThemeColor(ImColors.FromHex("#ffffff"));
+			public static ImColor Black => GetThemeColor(ImColors.FromHex("#000000"));
+			public static ImColor Gray => GetThemeColor(ImColors.FromHex("#808080"));
+			public static ImColor LightGray => GetThemeColor(ImColors.FromHex("#c0c0c0"));
+			public static ImColor DarkGray => GetThemeColor(ImColors.FromHex("#404040"));
+			public static ImColor Transparent => ImColors.FromHex("#00000000"); // Always transparent
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -394,12 +187,12 @@ public static class Color
 		public static class Natural
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Brown => GetThemeColor(FromRGB(165, 42, 42));
-			public static ImColor Olive => GetThemeColor(FromRGB(128, 128, 0));
-			public static ImColor Maroon => GetThemeColor(FromRGB(128, 0, 0));
-			public static ImColor Navy => GetThemeColor(FromRGB(0, 0, 128));
-			public static ImColor Teal => GetThemeColor(FromRGB(0, 128, 128));
-			public static ImColor Indigo => GetThemeColor(FromRGB(75, 0, 130));
+			public static ImColor Brown => GetThemeColor(ImColors.FromRgb(165, 42, 42));
+			public static ImColor Olive => GetThemeColor(ImColors.FromRgb(128, 128, 0));
+			public static ImColor Maroon => GetThemeColor(ImColors.FromRgb(128, 0, 0));
+			public static ImColor Navy => GetThemeColor(ImColors.FromRgb(0, 0, 128));
+			public static ImColor Teal => GetThemeColor(ImColors.FromRgb(0, 128, 128));
+			public static ImColor Indigo => GetThemeColor(ImColors.FromRgb(75, 0, 130));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -410,12 +203,12 @@ public static class Color
 		public static class Vibrant
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Coral => GetThemeColor(FromRGB(255, 127, 80));
-			public static ImColor Salmon => GetThemeColor(FromRGB(250, 128, 114));
-			public static ImColor Turquoise => GetThemeColor(FromRGB(64, 224, 208));
-			public static ImColor Violet => GetThemeColor(FromRGB(238, 130, 238));
-			public static ImColor Gold => GetThemeColor(FromRGB(255, 215, 0));
-			public static ImColor Silver => GetThemeColor(FromRGB(192, 192, 192));
+			public static ImColor Coral => GetThemeColor(ImColors.FromRgb(255, 127, 80));
+			public static ImColor Salmon => GetThemeColor(ImColors.FromRgb(250, 128, 114));
+			public static ImColor Turquoise => GetThemeColor(ImColors.FromRgb(64, 224, 208));
+			public static ImColor Violet => GetThemeColor(ImColors.FromRgb(238, 130, 238));
+			public static ImColor Gold => GetThemeColor(ImColors.FromRgb(255, 215, 0));
+			public static ImColor Silver => GetThemeColor(ImColors.FromRgb(192, 192, 192));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -426,12 +219,12 @@ public static class Color
 		public static class Pastel
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Beige => GetThemeColor(FromRGB(245, 245, 220));
-			public static ImColor Peach => GetThemeColor(FromRGB(255, 218, 185));
-			public static ImColor Mint => GetThemeColor(FromRGB(189, 252, 201));
-			public static ImColor Lavender => GetThemeColor(FromRGB(230, 230, 250));
-			public static ImColor Khaki => GetThemeColor(FromRGB(240, 230, 140));
-			public static ImColor Plum => GetThemeColor(FromRGB(221, 160, 221));
+			public static ImColor Beige => GetThemeColor(ImColors.FromRgb(245, 245, 220));
+			public static ImColor Peach => GetThemeColor(ImColors.FromRgb(255, 218, 185));
+			public static ImColor Mint => GetThemeColor(ImColors.FromRgb(189, 252, 201));
+			public static ImColor Lavender => GetThemeColor(ImColors.FromRgb(230, 230, 250));
+			public static ImColor Khaki => GetThemeColor(ImColors.FromRgb(240, 230, 140));
+			public static ImColor Plum => GetThemeColor(ImColors.FromRgb(221, 160, 221));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 	}

@@ -61,4 +61,47 @@ public class ColorImGuiAdapterTests
 		Assert.AreEqual(0.0, color.R, 1e-9);
 		Assert.AreEqual(1.0, color.A, 1e-9);
 	}
+
+	[TestMethod]
+	public void ToImGuiU32_PacksChannelsInImGuiByteOrder()
+	{
+		// Opaque pure red: R=255, G=0, B=0, A=255 → default IM_COL32 layout 0xAABBGGRR = 0xFF0000FF.
+		SemanticColor red = SemanticColor.FromSrgb(1.0, 0.0, 0.0, 1.0);
+		Assert.AreEqual(0xFF0000FFu, red.ToImGuiU32());
+
+		// Opaque pure blue lands in the third byte: 0xFFFF0000.
+		SemanticColor blue = SemanticColor.FromSrgb(0.0, 0.0, 1.0, 1.0);
+		Assert.AreEqual(0xFFFF0000u, blue.ToImGuiU32());
+	}
+
+	[TestMethod]
+	public void ToImGuiU32_EmitsSrgbEncodedValue()
+	{
+		// sRGB 0.5 must pack to ~128, not the linear ~55.
+		SemanticColor color = SemanticColor.FromSrgb(0.5, 0.5, 0.5, 1.0);
+		uint packed = color.ToImGuiU32();
+		Assert.AreEqual(128u, packed & 0xFF);
+		Assert.AreEqual(255u, (packed >> 24) & 0xFF);
+	}
+
+	[TestMethod]
+	public void ImGuiU32RoundTrip_IsStableWithinByteQuantization()
+	{
+		SemanticColor original = SemanticColor.FromSrgb(0.2, 0.6, 0.9, 0.8);
+		SemanticColor roundTripped = ColorImGuiExtensions.FromImGuiU32(original.ToImGuiU32());
+		// A single byte per channel means ~1/255 tolerance.
+		Assert.AreEqual(original.R, roundTripped.R, 2.0 / 255.0);
+		Assert.AreEqual(original.G, roundTripped.G, 2.0 / 255.0);
+		Assert.AreEqual(original.B, roundTripped.B, 2.0 / 255.0);
+		Assert.AreEqual(original.A, roundTripped.A, 2.0 / 255.0);
+	}
+
+	[TestMethod]
+	public void ToImGuiU32_MatchesImGuiConversion()
+	{
+		SemanticColor color = SemanticColor.FromSrgb(0.3, 0.7, 0.4, 0.9);
+		uint ours = color.ToImGuiU32();
+		uint imgui = Hexa.NET.ImGui.ImGui.ColorConvertFloat4ToU32(color.ToSrgbVector4());
+		Assert.AreEqual(imgui, ours);
+	}
 }

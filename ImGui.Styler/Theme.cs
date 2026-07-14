@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
+using ktsu.ImGui.Color;
 using ktsu.ThemeProvider;
 using ktsu.ThemeProvider.ImGui;
 using SemanticColor = ktsu.Semantics.Color.Color;
@@ -386,16 +387,16 @@ public static class Theme
 
 			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 			{
-				primaryColor = Color.FromSemanticColor(primary);
+				primaryColor = primary.ToImColor();
 			}
 
 			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 			{
-				surfaceColor = Color.FromSemanticColor(surface);
+				surfaceColor = surface.ToImColor();
 			}
 			else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 			{
-				surfaceColor = Color.FromSemanticColor(surfaceMed);
+				surfaceColor = surfaceMed.ToImColor();
 			}
 
 			// Calculate required width for the dialog window
@@ -554,17 +555,17 @@ public static class Theme
 					// Get primary color for title bar
 					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 					{
-						primaryColor = Color.FromSemanticColor(primary);
+						primaryColor = primary.ToImColor();
 					}
 
 					// Get surface color for background
 					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 					{
-						surfaceColor = Color.FromSemanticColor(surface);
+						surfaceColor = surface.ToImColor();
 					}
 					else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 					{
-						surfaceColor = Color.FromSemanticColor(surfaceMed);
+						surfaceColor = surfaceMed.ToImColor();
 					}
 				}
 				catch (ArgumentException)
@@ -718,17 +719,17 @@ public static class Theme
 				// Get primary color for title bar
 				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 				{
-					primaryColor = Color.FromSemanticColor(primary);
+					primaryColor = primary.ToImColor();
 				}
 
 				// Get surface color for background
 				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 				{
-					surfaceColor = Color.FromSemanticColor(surface);
+					surfaceColor = surface.ToImColor();
 				}
 				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 				{
-					surfaceColor = Color.FromSemanticColor(surfaceMed);
+					surfaceColor = surfaceMed.ToImColor();
 				}
 			}
 			catch (ArgumentException)

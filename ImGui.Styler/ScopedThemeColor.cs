@@ -5,6 +5,7 @@
 namespace ktsu.ImGui.Styler;
 
 using Hexa.NET.ImGui;
+using ktsu.ImGui.Color;
 using ktsu.ScopedAction;
 
 /// <summary>
@@ -22,10 +23,10 @@ public class ScopedThemeColor : ScopedAction
 	{
 		// Simple color adjustments for basic theming
 		ImColor primaryColor = enabled ? baseColor : baseColor.MultiplySaturation(0.3f);
-		ImColor hoveredColor = primaryColor.MultiplyLuminance(1.2f);
-		ImColor activeColor = primaryColor.MultiplyLuminance(0.8f);
-		ImColor textColor = primaryColor.CalculateOptimalContrastingColor();
-		ImColor backgroundColor = primaryColor.MultiplyLuminance(0.1f).MultiplySaturation(0.1f);
+		ImColor hoveredColor = primaryColor.MultiplyLightness(1.2f);
+		ImColor activeColor = primaryColor.MultiplyLightness(0.8f);
+		ImColor textColor = primaryColor.MostReadableTextColor();
+		ImColor backgroundColor = primaryColor.MultiplyLightness(0.1f).MultiplySaturation(0.1f);
 
 		int numStyles = 0;
 		PushStyleAndCount(ImGuiCol.Text, textColor, ref numStyles);

@@ -12,6 +12,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 using ktsu.ThemeProvider;
 using SemanticColor = ktsu.Semantics.Color.Color;
@@ -257,7 +258,7 @@ internal sealed class ImGuiStylerDemo
 		if (highestNeutralPriority.HasValue &&
 			completePalette.TryGetValue(new(SemanticMeaning.Neutral, highestNeutralPriority.Value), out SemanticColor neutralColor))
 		{
-			neutralIconColor = Color.FromSemanticColor(neutralColor);
+			neutralIconColor = neutralColor.ToImColor();
 		}
 
 		// Create table with semantic meanings as rows and priorities as columns
@@ -297,7 +298,7 @@ internal sealed class ImGuiStylerDemo
 					SemanticColorRequest request = new(meaning, priority);
 					if (completePalette.TryGetValue(request, out SemanticColor color))
 					{
-						ImColor imColor = Color.FromSemanticColor(color);
+						ImColor imColor = color.ToImColor();
 
 						// Color swatch button
 						Vector2 swatchButtonSize = new(swatchWidth, swatchHeight);
@@ -435,13 +436,13 @@ internal sealed class ImGuiStylerDemo
 		ImGui.ColorEdit4("Custom Color", ref colorValue[0]);
 
 		// Show color variations
-		ImColor baseColor = Color.FromRGBA(colorValue[0], colorValue[1], colorValue[2], colorValue[3]);
+		ImColor baseColor = ImColors.FromRgba(colorValue[0], colorValue[1], colorValue[2], colorValue[3]);
 		ImGui.Text("Color Variations:");
 
 		ImGui.BeginGroup();
 		RenderColorSwatch("Original", baseColor);
-		RenderColorSwatch("Darker", baseColor.MultiplyLuminance(0.7f));
-		RenderColorSwatch("Lighter", baseColor.MultiplyLuminance(1.3f));
+		RenderColorSwatch("Darker", baseColor.MultiplyLightness(0.7f));
+		RenderColorSwatch("Lighter", baseColor.MultiplyLightness(1.3f));
 		RenderColorSwatch("Desaturated", baseColor.MultiplySaturation(0.5f));
 		RenderColorSwatch("Saturated", baseColor.MultiplySaturation(1.5f));
 		ImGui.EndGroup();
@@ -947,7 +948,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "var primaryHigh = new SemanticColorRequest(SemanticMeaning.Primary, Priority.High);");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "if (palette?.TryGetValue(primaryHigh, out var color) == true)");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "{");
-		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "    ImColor myColor = Color.FromSemanticColor(color);");
+		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "    ImColor myColor = color.ToImColor();");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "}");
 		ImGui.TextUnformatted("");
 

@@ -10,6 +10,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -159,8 +160,8 @@ public static partial class ImGuiWidgets
 				hash = (hash ^ c) * 16777619u;
 			}
 
-			float hue = hash % 360u / 360.0f;
-			return Color.FromHSL(hue, 0.55f, 0.55f).Value;
+			float hueDegrees = hash % 360u;
+			return ImColors.FromHsl(hueDegrees, 0.55f, 0.55f).Value;
 		}
 
 		private static float Luminance(Vector4 color) => (0.2126f * color.X) + (0.7152f * color.Y) + (0.0722f * color.Z);

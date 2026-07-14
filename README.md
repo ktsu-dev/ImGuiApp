@@ -46,11 +46,17 @@ Rich collection of custom widgets: TabPanel, Knob, SearchBox, RadialProgressBar,
 
 Professional modal dialogs: MessageOK, Prompt, InputString/Int/Float with validation, FilesystemBrowser with glob filtering, and SearchableList with type-safe generics.
 
+### ImGui.Color - Color Adapter
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Color?label=ktsu.ImGui.Color&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Color)
+
+Bridges the physically-grounded [`ktsu.Semantics.Color`](https://github.com/ktsu-dev/Semantics) type and ImGui's `ImColor`/`ImU32`/`Vector4`. Provides conversions, `ImColors` factories (`FromHex`, `FromRgb`, `FromHsl`), and `ImColor` extension operations for adjustment (lighten/darken, saturate, hue, invert), analysis (relative luminance, contrast ratio, perceptual distance), and readable text-color selection. All color math delegates to `ktsu.Semantics.Color`, so results are correct across the sRGB/linear boundary.
+
 ### ImGui.Styler - Themes and Styling
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Styler?label=ktsu.ImGui.Styler&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Styler)
 
-Advanced theming system with 50+ built-in themes, scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser.
+Advanced theming system with 50+ built-in themes, scoped styling, semantic text colors, button alignment, a theme-aware color palette, and an interactive theme browser. Color construction and manipulation are provided by `ImGui.Color`.
 
 ### NodeGraph - Node Metadata (UI-Agnostic)
 

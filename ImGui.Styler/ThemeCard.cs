@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Hexa.NET.ImGui;
+using ktsu.ImGui.Color;
 using ktsu.ThemeProvider;
 using SemanticColor = ktsu.Semantics.Color.Color;
 
@@ -99,27 +100,27 @@ public static class ThemeCard
 				// Get primary color for title bar
 				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
 				{
-					primaryColor = Color.FromSemanticColor(primary);
+					primaryColor = primary.ToImColor();
 				}
 
 				// Get surface color for background
 				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
 				{
-					surfaceColor = Color.FromSemanticColor(surface);
+					surfaceColor = surface.ToImColor();
 				}
 				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
 				{
-					surfaceColor = Color.FromSemanticColor(surfaceMed);
+					surfaceColor = surfaceMed.ToImColor();
 				}
 
 				// Get highest priority neutral for text
 				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.VeryHigh), out SemanticColor textVeryHigh))
 				{
-					textColor = Color.FromSemanticColor(textVeryHigh);
+					textColor = textVeryHigh.ToImColor();
 				}
 				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.High), out SemanticColor textHigh))
 				{
-					textColor = Color.FromSemanticColor(textHigh);
+					textColor = textHigh.ToImColor();
 				}
 			}
 			catch (ArgumentException)
@@ -357,7 +358,7 @@ public static class ThemeCard
 			// Try to get the color from the complete palette
 			if (completePalette.TryGetValue(colorRequest, out SemanticColor semanticColor))
 			{
-				ImColor swatchColor = Color.FromSemanticColor(semanticColor);
+				ImColor swatchColor = semanticColor.ToImColor();
 
 				Vector2 swatchMin = new(
 					startPos.X + (i * (swatchSize + swatchSpacing)),

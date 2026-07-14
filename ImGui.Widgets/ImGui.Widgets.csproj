@@ -15,6 +15,7 @@
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.TextFilter" />
+    <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
     <ProjectReference Include="..\ImGui.Styler\ImGui.Styler.csproj" />
     <PackageReference Include="Polyfill" />
   </ItemGroup>
