@@ -157,7 +157,7 @@ public static class ThemeCard
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, shadowOpacity).ToImGuiU32(),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(shadowOpacity),
 				3.0f
 			);
 
@@ -185,7 +185,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.3f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.3f),
 					2.5f,
 					ImDrawFlags.None,
 					1.0f
@@ -195,7 +195,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin + new Vector2(2.0f, 2.0f),
 					dialogMax - new Vector2(2.0f, 2.0f),
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.15f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.15f),
 					2.0f,
 					ImDrawFlags.None,
 					0.5f
@@ -208,7 +208,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin,
 					dialogMax,
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.6f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.6f),
 					3.0f,
 					ImDrawFlags.None,
 					1.5f
@@ -221,7 +221,7 @@ public static class ThemeCard
 				drawList.AddRectFilled(
 					dialogMin,
 					dialogMax,
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.1f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.1f),
 					3.0f
 				);
 			}

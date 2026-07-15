@@ -10,6 +10,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -76,8 +77,8 @@ public static partial class ImGuiWidgets
 	/// <returns>Green below -6 dB, amber up to 0 dB, otherwise red.</returns>
 	private static ImColor ZoneColor(float db) => db switch
 	{
-		> 0.0f => ImColors.FromRgba(0.90f, 0.20f, 0.20f, 1.0f),
-		> -6.0f => ImColors.FromRgba(0.90f, 0.78f, 0.20f, 1.0f),
-		_ => ImColors.FromRgba(0.25f, 0.80f, 0.35f, 1.0f),
+		> 0.0f => new Srgb(0.90f, 0.20f, 0.20f).ToImColor(1.0f),
+		> -6.0f => new Srgb(0.90f, 0.78f, 0.20f).ToImColor(1.0f),
+		_ => new Srgb(0.25f, 0.80f, 0.35f).ToImColor(1.0f),
 	};
 }

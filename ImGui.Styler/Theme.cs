@@ -430,7 +430,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, 0.3f).ToImGuiU32(),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(0.3f),
 				2.0f
 			);
 
@@ -458,7 +458,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.4f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.4f),
 					2.0f,
 					ImDrawFlags.None,
 					1.0f
@@ -471,7 +471,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin,
 					dialogMax,
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.4f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.4f),
 					2.0f,
 					ImDrawFlags.None,
 					1.0f
@@ -482,8 +482,8 @@ public static class Theme
 			Vector4 surfaceVec = surfaceColor.Value;
 			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
 			uint textColor = luminance > 0.5f ?
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, 1.0f).ToImGuiU32() : // Dark text on light surface
-				ImColors.FromRgba(1.0f, 1.0f, 1.0f, 1.0f).ToImGuiU32();   // Light text on dark surface
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
+				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
 
 			// Draw theme name text over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -590,10 +590,10 @@ public static class Theme
 			ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(ImGui.GetStyle().ItemSpacing.X, 4.0f)); // Ensure proper vertical spacing
 
 			// Now use the standard BeginMenu with transparent styling to handle menu behavior
-			ImGui.PushStyleColor(ImGuiCol.Header, ImColors.FromRgba(0f, 0f, 0f, 0f).Value); // Transparent
-			ImGui.PushStyleColor(ImGuiCol.HeaderHovered, ImColors.FromRgba(1f, 1f, 1f, 0.1f).Value); // Subtle hover
-			ImGui.PushStyleColor(ImGuiCol.HeaderActive, ImColors.FromRgba(1f, 1f, 1f, 0.2f).Value); // Subtle active
-			ImGui.PushStyleColor(ImGuiCol.Text, ImColors.FromRgba(0f, 0f, 0f, 0f).Value); // Hide text (we drew our own)
+			ImGui.PushStyleColor(ImGuiCol.Header, new Srgb(0f, 0f, 0f).ToImColor(0f).Value); // Transparent
+			ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Srgb(1f, 1f, 1f).ToImColor(0.1f).Value); // Subtle hover
+			ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Srgb(1f, 1f, 1f).ToImColor(0.2f).Value); // Subtle active
+			ImGui.PushStyleColor(ImGuiCol.Text, new Srgb(0f, 0f, 0f).ToImColor(0f).Value); // Hide text (we drew our own)
 
 			// Use a dummy selectable to reserve the exact space we want, then use BeginMenu
 			Vector2 desiredSize = new(desiredWidth, 34.0f); // 34px height to match our dialog design
@@ -622,7 +622,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, 0.3f).ToImGuiU32(),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(0.3f),
 				2.0f
 			);
 
@@ -650,7 +650,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.3f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.3f),
 					2.0f,
 					ImDrawFlags.None,
 					1.0f
@@ -661,8 +661,8 @@ public static class Theme
 			Vector4 surfaceVec = surfaceColor.Value;
 			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
 			uint textColor = luminance > 0.5f ?
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, 1.0f).ToImGuiU32() : // Dark text on light surface
-				ImColors.FromRgba(1.0f, 1.0f, 1.0f, 1.0f).ToImGuiU32();   // Light text on dark surface
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
+				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
 
 			// Draw family name text over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -768,7 +768,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, 0.2f).ToImGuiU32(),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(0.2f),
 				1.5f
 			);
 
@@ -796,7 +796,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin + new Vector2(0.5f, 0.5f),
 					dialogMax - new Vector2(0.5f, 0.5f),
-					ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.25f).ToImGuiU32(),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.25f),
 					1.5f,
 					ImDrawFlags.None,
 					0.8f
@@ -807,8 +807,8 @@ public static class Theme
 			Vector4 surfaceVec = surfaceColor.Value;
 			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
 			uint textColor = luminance > 0.5f ?
-				ImColors.FromRgba(0.0f, 0.0f, 0.0f, 1.0f).ToImGuiU32() : // Dark text on light surface
-				ImColors.FromRgba(1.0f, 1.0f, 1.0f, 1.0f).ToImGuiU32();   // Light text on dark surface
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
+				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
 
 			// Draw group name text centered over the surface area (below title bar)
 			Vector2 textPos = new(

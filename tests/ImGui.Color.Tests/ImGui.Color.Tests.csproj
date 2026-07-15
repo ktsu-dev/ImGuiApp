@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ktsu.Semantics.Color" />
     <ProjectReference Include="..\..\ImGui.Color\ImGui.Color.csproj" />
   </ItemGroup>
 </Project>

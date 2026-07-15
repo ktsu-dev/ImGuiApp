@@ -13,6 +13,7 @@ using Extensions;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -209,15 +210,15 @@ public static partial class ImGuiWidgets
 					ImColor lineColor;
 					if (DragIndex == i)
 					{
-						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.7f);
+						lineColor = new Srgb(1f, 1f, 1f).ToImColor(0.7f);
 					}
 					else if (handleHovered)
 					{
-						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.5f);
+						lineColor = new Srgb(1f, 1f, 1f).ToImColor(0.5f);
 					}
 					else
 					{
-						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.3f);
+						lineColor = new Srgb(1f, 1f, 1f).ToImColor(0.3f);
 					}
 					drawList.AddLine(lineA, lineB, lineColor.ToImGuiU32(), lineWidth);
 

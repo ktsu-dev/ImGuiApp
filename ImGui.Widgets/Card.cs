@@ -10,6 +10,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -145,7 +146,7 @@ public static partial class ImGuiWidgets
 		private static void DrawShadow(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 shadowColor)
 		{
 			// Fall back to a soft black shadow when the theme supplies a fully-transparent shadow colour.
-			ImColor baseColor = shadowColor.W > 0.01f ? new ImColor { Value = shadowColor } : ImColors.FromRgba(0f, 0f, 0f, 0.25f);
+			ImColor baseColor = shadowColor.W > 0.01f ? new ImColor { Value = shadowColor } : new Srgb(0f, 0f, 0f).ToImColor(0.25f);
 			float baseAlpha = baseColor.Value.W;
 
 			const int layers = 4;

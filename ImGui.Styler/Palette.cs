@@ -14,7 +14,7 @@ using ktsu.ThemeProvider;
 /// Theme-aware color palette. Colors are sourced from the current <see cref="Theme"/>: semantic
 /// entries map to their semantic meaning, and the rest snap to the nearest theme color while
 /// preserving the intended hue. Color construction and manipulation live in the
-/// <c>ktsu.ImGui.Color</c> adapter (<see cref="ImColors"/> and <see cref="ImColorExtensions"/>).
+/// <c>ktsu.ImGui.Color</c> adapter (<see cref="ColorImGuiExtensions"/>, <see cref="SrgbImGuiExtensions"/>, and <see cref="ImColorExtensions"/>).
 /// </summary>
 public static class Palette
 {

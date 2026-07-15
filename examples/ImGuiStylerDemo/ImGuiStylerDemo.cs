@@ -436,7 +436,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.ColorEdit4("Custom Color", ref colorValue[0]);
 
 		// Show color variations
-		ImColor baseColor = ImColors.FromRgba(colorValue[0], colorValue[1], colorValue[2], colorValue[3]);
+		ImColor baseColor = new Srgb(colorValue[0], colorValue[1], colorValue[2]).ToImColor(colorValue[3]);
 		ImGui.Text("Color Variations:");
 
 		ImGui.BeginGroup();
