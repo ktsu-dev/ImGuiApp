@@ -42,7 +42,7 @@ public static partial class ImGuiWidgets
 		private readonly Vector2 padding;
 		private readonly float rounding;
 		private readonly float width;
-		private readonly Vector4? background;
+		private readonly ImGuiVector4? background;
 		private readonly bool border;
 		private readonly bool wrapPushed;
 		private bool disposed;
@@ -55,7 +55,7 @@ public static partial class ImGuiWidgets
 		/// <param name="rounding">Corner radius in pixels. When negative a value derived from the style's frame rounding is used.</param>
 		/// <param name="background">Explicit fill colour. When <see langword="null"/> an elevated surface colour is resolved from the active theme.</param>
 		/// <param name="border">Whether to stroke a one-pixel border in the theme's border colour.</param>
-		public Card(float width = 0f, float padding = -1f, float rounding = -1f, Vector4? background = null, bool border = true)
+		public Card(float width = 0f, float padding = -1f, float rounding = -1f, ImGuiVector4? background = null, bool border = true)
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
 			this.padding = padding >= 0f ? new Vector2(padding, padding) : style.WindowPadding;
@@ -114,7 +114,7 @@ public static partial class ImGuiWidgets
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
 			DrawShadow(drawList, cardMin, cardMax, rounding, colors[(int)ImGuiCol.BorderShadow]);
 
-			Vector4 fill = background ?? ResolveSurface(colors);
+			Vector4 fill = background?.ToVector4() ?? ResolveSurface(colors);
 			drawList.AddRectFilled(cardMin, cardMax, ImGui.GetColorU32(fill), rounding);
 
 			if (border)

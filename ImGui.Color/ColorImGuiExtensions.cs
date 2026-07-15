@@ -20,7 +20,7 @@ public static class ColorImGuiExtensions
 	/// <summary>Converts a color to an ImGui <see cref="ImColor"/> (sRGB-encoded).</summary>
 	/// <param name="color">The color to convert.</param>
 	/// <returns>The ImGui color.</returns>
-	public static ImColor ToImColor(this Color color) => new() { Value = color.ToSrgbVector4() };
+	public static ImColor ToImColor(this Color color) => new() { Value = color.ToImGuiVector4() };
 
 	/// <summary>Creates a color from an ImGui <see cref="ImColor"/>, interpreting its channels as sRGB.</summary>
 	/// <param name="color">The ImGui color.</param>
@@ -53,7 +53,7 @@ public static class ColorImGuiExtensions
 	/// <returns>The packed <c>ImU32</c> value, matching <c>ImGui.ColorConvertFloat4ToU32</c>.</returns>
 	public static uint ToImGuiU32(this Color color)
 	{
-		Vector4 srgb = color.ToSrgbVector4();
+		ImGuiVector4 srgb = color.ToImGuiVector4();
 		uint r = ToByte(srgb.X);
 		uint g = ToByte(srgb.Y);
 		uint b = ToByte(srgb.Z);

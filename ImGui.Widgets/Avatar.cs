@@ -107,7 +107,7 @@ public static partial class ImGuiWidgets
 			{
 				unsafe
 				{
-					drawList.AddImageRounded(new ImTextureRef(texId: textureId), origin, origin + new Vector2(resolvedDiameter, resolvedDiameter), Vector2.Zero, Vector2.One, ImGui.GetColorU32(Vector4.One), radius);
+					drawList.AddImageRounded(new ImTextureRef(texId: textureId), origin, origin + new Vector2(resolvedDiameter, resolvedDiameter), Vector2.Zero, Vector2.One, ImGui.GetColorU32(ImGuiVector4.One), radius);
 				}
 			}
 			else

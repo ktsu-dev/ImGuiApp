@@ -383,8 +383,8 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - `new Alignment.CenterWithin(Vector2 contentSize, Vector2 containerSize)` - Center in container
 
 ### Scoped Classes
-- `new ScopedColor(ImGuiCol col, ImColor color)` - Scoped color application
-- `new ScopedTextColor(ImColor color)` - Scoped text color
+- `new ScopedColor(ImGuiCol col, ImColor color)` - Scoped color application (also accepts a semantic `Color` or `Srgb`)
+- `new ScopedTextColor(ImColor color)` - Scoped text color (also accepts a semantic `Color` or `Srgb`)
 - `new ScopedStyleVar(ImGuiStyleVar var, float value)` - Scoped style variable
 - `new ScopedTheme(ISemanticTheme theme)` - Scoped theme application
 - `new ScopedThemeColor(Color semanticColor)` - Scoped semantic color

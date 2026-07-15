@@ -10,6 +10,7 @@ using System.Numerics;
 using System.Text;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Popups;
 using ktsu.ImGui.Styler;
 using ktsu.ImGui.Widgets;
@@ -1016,7 +1017,7 @@ internal static class ImGuiWidgetsDemo
 
 			// Image demo with color tinting
 			ImGui.TextUnformatted("Clickable Image (with alpha-preserved tinting):");
-			Vector4 tintColor = new(1.0f, 0.8f, 0.8f, 1.0f); // Light red tint
+			ImGuiVector4 tintColor = new(1.0f, 0.8f, 0.8f, 1.0f); // Light red tint
 			if (ImGuiWidgets.Image(ktsuTexture.TextureId, new Vector2(64, 64), tintColor))
 			{
 				MessageOK.Open("Image Clicked", "You clicked the tinted image!");

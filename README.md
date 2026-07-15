@@ -50,7 +50,7 @@ Professional modal dialogs: MessageOK, Prompt, InputString/Int/Float with valida
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Color?label=ktsu.ImGui.Color&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Color)
 
-Bridges the physically-grounded [`ktsu.Semantics.Color`](https://github.com/ktsu-dev/Semantics) type and ImGui's `ImColor`/`ImU32`/`Vector4`. Provides conversions, `ImColors` factories (`FromHex`, `FromRgb`, `FromHsl`), and `ImColor` extension operations for adjustment (lighten/darken, saturate, hue, invert), analysis (relative luminance, contrast ratio, perceptual distance), and readable text-color selection. All color math delegates to `ktsu.Semantics.Color`, so results are correct across the sRGB/linear boundary.
+Bridges the physically-grounded [`ktsu.Semantics.Color`](https://github.com/ktsu-dev/Semantics) type and ImGui's `ImColor`/`ImU32`/`Vector4`. Colors are constructed from the semantic `Color`/`Srgb` types and converted at the ImGui seam — `ColorImGuiExtensions` for the linear `Color`, and `SrgbImGuiExtensions` for direct `Srgb` packing with no linear round-trip — plus `ImColor` extension operations for adjustment (lighten/darken, saturate, hue, invert), analysis (relative luminance, contrast ratio, perceptual distance), and readable text-color selection. All color math delegates to `ktsu.Semantics.Color`, so results are correct across the sRGB/linear boundary.
 
 ### ImGui.Styler - Themes and Styling
 
