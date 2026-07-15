@@ -1,6 +1,6 @@
-## v3.1.1 (patch)
+## v3.1.2 (patch)
 
-Changes since v3.1.0:
+Changes since v3.1.1:
 
-- Refactor color conversion methods to use ToSrgb; add new ToHsl and ToImGuiVector4 methods ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Fix CI annotations: package validation, workflow deprecations, code smells ([@matt-edmondson](https://github.com/matt-edmondson))
 
