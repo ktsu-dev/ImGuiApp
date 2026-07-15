@@ -215,6 +215,28 @@ public partial class ImGuiPopups
 		/// </summary>
 		private void ShowContent()
 		{
+			DrawDrivesCombo();
+
+			ImGui.TextUnformatted($"{CurrentDirectory}{Path.DirectorySeparatorChar}{Glob}");
+			DrawFileTable();
+
+			if (BrowserMode == FilesystemBrowserMode.Save)
+			{
+				string fileName = FileName;
+				ImGui.InputText("##SaveAs", ref fileName, 256);
+				FileName = fileName.As<FileName>();
+			}
+
+			DrawConfirmButtons();
+
+			PopupMessageOK.ShowIfOpen();
+		}
+
+		/// <summary>
+		/// Draws the drive selection combo box for switching between logical drives.
+		/// </summary>
+		private void DrawDrivesCombo()
+		{
 			if (Drives.Count != 0 && ImGui.BeginCombo("##Drives", Drives[0]))
 			{
 				StringBuilder currentDriveStringBuilder = new();
@@ -236,75 +258,98 @@ public partial class ImGuiPopups
 
 				ImGui.EndCombo();
 			}
+		}
 
-			ImGui.TextUnformatted($"{CurrentDirectory}{Path.DirectorySeparatorChar}{Glob}");
+		/// <summary>
+		/// Draws the table listing the parent directory entry and the current directory contents.
+		/// </summary>
+		private void DrawFileTable()
+		{
 			if (ImGui.BeginChild("FilesystemBrowser", new(500, 400), ImGuiChildFlags.None) && ImGui.BeginTable(nameof(FilesystemBrowser), 1, ImGuiTableFlags.Borders))
 			{
 				ImGui.TableSetupColumn("Path", ImGuiTableColumnFlags.WidthStretch, 40);
 				ImGui.TableHeadersRow();
 
 				ImGuiSelectableFlags flags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowDoubleClick | ImGuiSelectableFlags.NoAutoClosePopups;
-				ImGui.TableNextRow();
-				ImGui.TableNextColumn();
-				if (ImGui.Selectable("..", false, flags) && ImGui.IsMouseDoubleClicked(0))
-				{
-					string? newPath = Path.GetDirectoryName(CurrentDirectory.WeakString.Trim(Path.DirectorySeparatorChar));
-					if (newPath is not null)
-					{
-						CurrentDirectory = newPath.As<AbsoluteDirectoryPath>();
-						RefreshContents();
-					}
-				}
+				DrawParentDirectoryRow(flags);
 
 				foreach (IAbsolutePath? path in CurrentContents.OrderBy(p => p is not AbsoluteDirectoryPath).ThenBy(p => p).ToCollection())
 				{
-					ImGui.TableNextRow();
-					ImGui.TableNextColumn();
-					AbsoluteDirectoryPath? directory = path as AbsoluteDirectoryPath;
-					AbsoluteFilePath? file = path as AbsoluteFilePath;
-					string displayPath = directory?.WeakString ?? file?.WeakString ?? string.Empty;
-					displayPath = displayPath.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
-
-					if (directory is not null)
-					{
-						displayPath += Path.DirectorySeparatorChar;
-					}
-
-					if (ImGui.Selectable(displayPath, ChosenItem == path, flags))
-					{
-						if (directory is not null)
-						{
-							ChosenItem = directory;
-							if (ImGui.IsMouseDoubleClicked(0))
-							{
-								CurrentDirectory = directory;
-								RefreshContents();
-							}
-						}
-						else if (file is not null)
-						{
-							ChosenItem = file;
-							FileName = file.FileName;
-							if (ImGui.IsMouseDoubleClicked(0))
-							{
-								ChooseItem();
-							}
-						}
-					}
+					DrawContentRow(path, flags);
 				}
 
 				ImGui.EndTable();
 			}
 
 			ImGui.EndChild();
+		}
 
-			if (BrowserMode == FilesystemBrowserMode.Save)
+		/// <summary>
+		/// Draws the ".." row that navigates to the parent directory.
+		/// </summary>
+		/// <param name="flags">The selectable flags to apply to the row.</param>
+		private void DrawParentDirectoryRow(ImGuiSelectableFlags flags)
+		{
+			ImGui.TableNextRow();
+			ImGui.TableNextColumn();
+			if (ImGui.Selectable("..", false, flags) && ImGui.IsMouseDoubleClicked(0))
 			{
-				string fileName = FileName;
-				ImGui.InputText("##SaveAs", ref fileName, 256);
-				FileName = fileName.As<FileName>();
+				string? newPath = Path.GetDirectoryName(CurrentDirectory.WeakString.Trim(Path.DirectorySeparatorChar));
+				if (newPath is not null)
+				{
+					CurrentDirectory = newPath.As<AbsoluteDirectoryPath>();
+					RefreshContents();
+				}
+			}
+		}
+
+		/// <summary>
+		/// Draws a single filesystem entry row and handles its selection.
+		/// </summary>
+		/// <param name="path">The path represented by the row.</param>
+		/// <param name="flags">The selectable flags to apply to the row.</param>
+		private void DrawContentRow(IAbsolutePath path, ImGuiSelectableFlags flags)
+		{
+			ImGui.TableNextRow();
+			ImGui.TableNextColumn();
+			AbsoluteDirectoryPath? directory = path as AbsoluteDirectoryPath;
+			AbsoluteFilePath? file = path as AbsoluteFilePath;
+			string displayPath = directory?.WeakString ?? file?.WeakString ?? string.Empty;
+			displayPath = displayPath.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
+
+			if (directory is not null)
+			{
+				displayPath += Path.DirectorySeparatorChar;
 			}
 
+			if (ImGui.Selectable(displayPath, ChosenItem == path, flags))
+			{
+				if (directory is not null)
+				{
+					ChosenItem = directory;
+					if (ImGui.IsMouseDoubleClicked(0))
+					{
+						CurrentDirectory = directory;
+						RefreshContents();
+					}
+				}
+				else if (file is not null)
+				{
+					ChosenItem = file;
+					FileName = file.FileName;
+					if (ImGui.IsMouseDoubleClicked(0))
+					{
+						ChooseItem();
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Draws the confirm and cancel buttons for the browser.
+		/// </summary>
+		private void DrawConfirmButtons()
+		{
 			string confirmText = BrowserMode switch
 			{
 				FilesystemBrowserMode.Open => "Open",
@@ -321,8 +366,6 @@ public partial class ImGuiPopups
 			{
 				ImGui.CloseCurrentPopup();
 			}
-
-			PopupMessageOK.ShowIfOpen();
 		}
 
 		/// <summary>

@@ -90,7 +90,7 @@ public static partial class ImGuiWidgets
 			Vector2 thumbCenter = new(thumbX, origin.Y + radius);
 			drawList.AddCircleFilled(thumbCenter, thumbRadius, new Srgb(1f, 1f, 1f).ToImGuiU32(1f), 32);
 
-			// Visible label to the right of the switch (text before ## only).
+			// Draw the visible portion of the label to the right of the switch, excluding the ImGui id suffix.
 			string visible = VisibleLabel(label);
 			if (visible.Length > 0)
 			{

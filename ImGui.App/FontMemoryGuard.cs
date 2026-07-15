@@ -459,61 +459,15 @@ public static class FontMemoryGuard
 			DebugLogger.Log($"FontMemoryGuard: GPU Classification - Intel: {isIntelGpu}, AMD: {isAmdGpu}, NVIDIA: {isNvidiaGpu}, Integrated: {isIntegratedGpu}");
 
 			// Try to get GPU memory information using OpenGL extensions
-			bool memoryDetected = false;
-			long availableMemoryKB = 0;
-
-			// Try NVIDIA extension first (works on discrete NVIDIA GPUs)
-			// Note: NVIDIA memory extensions typically aren't available as TryGetExtension in Silk.NET
-			// We'll use direct OpenGL calls instead
-			if (isNvidiaGpu && gl.IsExtensionPresent("GL_NVX_gpu_memory_info"))
-			{
-				gl.GetInteger((GLEnum)0x9048, out int totalMemKB); // GL_GPU_MEMORY_TOTAL_AVAILABLE_MEMORY_NVX
-				gl.GetInteger((GLEnum)0x9049, out int currentMemKB); // GL_GPU_MEMORY_CURRENT_AVAILABLE_MEMORY_NVX
-				availableMemoryKB = currentMemKB;
-				memoryDetected = true;
-				DebugLogger.Log($"FontMemoryGuard: NVIDIA GPU memory: {totalMemKB}KB total, {currentMemKB}KB available");
-			}
-			// Try ATI extension (works on AMD discrete and some integrated GPUs)
-			else if (isAmdGpu && gl.IsExtensionPresent("GL_ATI_meminfo"))
-			{
-				Span<int> memInfo = stackalloc int[4];
-				gl.GetInteger((GLEnum)0x87FC, memInfo); // GL_TEXTURE_FREE_MEMORY_ATI
-				availableMemoryKB = memInfo[0];
-				memoryDetected = true;
-				DebugLogger.Log($"FontMemoryGuard: AMD GPU texture memory: {availableMemoryKB}KB available");
-			}
+			long availableMemoryKB = TryQueryGpuMemory(gl, isNvidiaGpu, isAmdGpu);
 
 			// Apply memory-based configuration if detected
-			if (memoryDetected && availableMemoryKB > 0)
+			if (availableMemoryKB > 0)
 			{
 				long recommendedFontMemory = CalculateRecommendedMemoryFromDetection(availableMemoryKB, isIntegratedGpu);
 				CurrentConfig.MaxAtlasMemoryBytes = recommendedFontMemory;
 
-				// Set atlas size based on GPU type and memory
-				if (isIntegratedGpu)
-				{
-					// Integrated GPUs: use smaller atlas to reduce memory pressure
-					CurrentConfig.RecommendedAtlasSize = MinAtlasTextureDimension; // 2048
-					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for integrated GPU");
-				}
-				else if (availableMemoryKB > 8 * 1024 * 1024) // > 8GB VRAM
-				{
-					// High-end discrete GPUs: use maximum atlas size
-					CurrentConfig.RecommendedAtlasSize = MaxAtlasTextureDimension; // 8192
-					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for high-end discrete GPU");
-				}
-				else if (availableMemoryKB > 4 * 1024 * 1024) // > 4GB VRAM
-				{
-					// Mid-range discrete GPUs: use larger than default atlas
-					CurrentConfig.RecommendedAtlasSize = 6144; // 6144
-					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for mid-range discrete GPU");
-				}
-				else
-				{
-					// Low-end discrete GPUs: use default atlas size
-					CurrentConfig.RecommendedAtlasSize = DefaultAtlasTextureDimension; // 4096
-					DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for low-end discrete GPU");
-				}
+				ConfigureRecommendedAtlasSize(availableMemoryKB, isIntegratedGpu);
 
 				DebugLogger.Log($"FontMemoryGuard: Set font memory limit to {recommendedFontMemory / (1024 * 1024)}MB based on GPU memory detection");
 				return true;
@@ -539,6 +493,73 @@ public static class FontMemoryGuard
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Queries GPU memory using vendor-specific OpenGL extensions.
+	/// </summary>
+	/// <param name="gl">OpenGL context for querying GPU information.</param>
+	/// <param name="isNvidiaGpu">Whether this is an NVIDIA GPU.</param>
+	/// <param name="isAmdGpu">Whether this is an AMD GPU.</param>
+	/// <returns>Available GPU memory in kilobytes, or 0 if it could not be detected.</returns>
+	private static long TryQueryGpuMemory(GL gl, bool isNvidiaGpu, bool isAmdGpu)
+	{
+		// Try NVIDIA extension first (works on discrete NVIDIA GPUs)
+		// Note: NVIDIA memory extensions typically aren't available as TryGetExtension in Silk.NET
+		// We'll use direct OpenGL calls instead
+		if (isNvidiaGpu && gl.IsExtensionPresent("GL_NVX_gpu_memory_info"))
+		{
+			gl.GetInteger((GLEnum)0x9048, out int totalMemKB); // GL_GPU_MEMORY_TOTAL_AVAILABLE_MEMORY_NVX
+			gl.GetInteger((GLEnum)0x9049, out int currentMemKB); // GL_GPU_MEMORY_CURRENT_AVAILABLE_MEMORY_NVX
+			DebugLogger.Log($"FontMemoryGuard: NVIDIA GPU memory: {totalMemKB}KB total, {currentMemKB}KB available");
+			return currentMemKB;
+		}
+
+		// Try ATI extension (works on AMD discrete and some integrated GPUs)
+		if (isAmdGpu && gl.IsExtensionPresent("GL_ATI_meminfo"))
+		{
+			Span<int> memInfo = stackalloc int[4];
+			gl.GetInteger((GLEnum)0x87FC, memInfo); // GL_TEXTURE_FREE_MEMORY_ATI
+			long availableMemoryKB = memInfo[0];
+			DebugLogger.Log($"FontMemoryGuard: AMD GPU texture memory: {availableMemoryKB}KB available");
+			return availableMemoryKB;
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Selects the recommended atlas texture size based on GPU type and available memory.
+	/// </summary>
+	/// <param name="availableMemoryKB">Detected available GPU memory in kilobytes.</param>
+	/// <param name="isIntegratedGpu">Whether this appears to be integrated graphics.</param>
+	private static void ConfigureRecommendedAtlasSize(long availableMemoryKB, bool isIntegratedGpu)
+	{
+		// Set atlas size based on GPU type and memory
+		if (isIntegratedGpu)
+		{
+			// Integrated GPUs: use smaller atlas to reduce memory pressure
+			CurrentConfig.RecommendedAtlasSize = MinAtlasTextureDimension; // 2048
+			DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for integrated GPU");
+		}
+		else if (availableMemoryKB > 8 * 1024 * 1024) // > 8GB VRAM
+		{
+			// High-end discrete GPUs: use maximum atlas size
+			CurrentConfig.RecommendedAtlasSize = MaxAtlasTextureDimension; // 8192
+			DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for high-end discrete GPU");
+		}
+		else if (availableMemoryKB > 4 * 1024 * 1024) // > 4GB VRAM
+		{
+			// Mid-range discrete GPUs: use larger than default atlas
+			CurrentConfig.RecommendedAtlasSize = 6144; // 6144
+			DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for mid-range discrete GPU");
+		}
+		else
+		{
+			// Low-end discrete GPUs: use default atlas size
+			CurrentConfig.RecommendedAtlasSize = DefaultAtlasTextureDimension; // 4096
+			DebugLogger.Log($"FontMemoryGuard: Set atlas size to {CurrentConfig.RecommendedAtlasSize} for low-end discrete GPU");
+		}
 	}
 #endif
 

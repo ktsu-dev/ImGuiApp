@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.App;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Silk.NET.Windowing;
 
@@ -122,6 +123,7 @@ public static partial class ImGuiApp
 		/// <summary>
 		/// Starts the UI thread and waits until the window has been created (or creation has failed).
 		/// </summary>
+		[SuppressMessage("Major Code Smell", "S3218:Inner class members should not shadow outer class \"static\" or type members", Justification = "This instance method starts an embedded session's UI thread and is distinct from the outer ImGuiApp.Start() static entry point; call sites are unambiguous and the name is intentional.")]
 		internal void Start()
 		{
 			uiThread.Start();
@@ -181,6 +183,7 @@ public static partial class ImGuiApp
 			GC.SuppressFinalize(this);
 		}
 
+		[SuppressMessage("Major Code Smell", "S2696:Instance members should not write to \"static\" fields", Justification = "ImGuiApp is a static singleton owning a single global window; the embedded session drives that window's lifecycle and clears the shared field on teardown by design.")]
 		private void RunLoop()
 		{
 			try

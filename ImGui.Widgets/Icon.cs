@@ -4,7 +4,7 @@
 
 namespace ktsu.ImGui.Widgets;
 
-using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -197,7 +197,7 @@ public static partial class ImGuiWidgets
 		float textBlockWidth = 0.0f;
 		float textBlockHeight = 0.0f;
 		float postTextYOffset = 0.0f; // Initialized to zero and only populated if there are lines
-		foreach ((string line, Vector2 lineSize) in linesWithSizes)
+		foreach ((_, Vector2 lineSize) in linesWithSizes)
 		{
 			textBlockWidth = Math.Max(textBlockWidth, lineSize.X);
 			textBlockHeight += lineSize.Y;
@@ -235,7 +235,6 @@ public static partial class ImGuiWidgets
 
 			Vector2 cursorStartPos = ImGui.GetCursorScreenPos();
 
-			Collection<Vector2> labelSizes = [];
 			Vector2 boundingBoxSize = CalcIconSize(textBlockSize, imageSize, iconAlignment, itemSpacing, framePadding);
 
 			ImGui.SetCursorScreenPos(cursorStartPos + framePadding);
@@ -307,6 +306,7 @@ public static partial class ImGuiWidgets
 			return wasClicked;
 		}
 
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native Hexa.NET.ImGui image interop (ImGui.Image / ImageWithBg); the block is scoped to the draw call and retains no pointers.")]
 		private static void VerticalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, ImGuiVector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2((boundingBoxSize.X - imageSize.X) / 2, 0);
@@ -336,6 +336,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native Hexa.NET.ImGui image interop (ImGui.Image / ImageWithBg); the block is scoped to the draw call and retains no pointers.")]
 		private static void HorizontalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, Vector2 itemSpacing, ImGuiVector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2(0, (boundingBoxSize.Y - imageSize.Y) / 2);
@@ -360,7 +361,7 @@ public static partial class ImGuiWidgets
 			float textStartY = cursorStartPos.Y + ((boundingBoxSize.Y - textBlockSize.Y) / 2.0f);
 			ImGui.SetCursorScreenPos(new Vector2(textStartX, textStartY));
 
-			foreach ((string line, Vector2 lineSize) in linesWithSizes)
+			foreach ((string line, _) in linesWithSizes)
 			{
 				float currentY = ImGui.GetCursorScreenPos().Y;
 				ImGui.SetCursorScreenPos(new Vector2(textStartX, currentY));

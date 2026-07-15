@@ -92,50 +92,7 @@ public static partial class ImGuiWidgets
 			ImGui.OpenPopup(options.Label + "##context");
 		}
 
-		if (options.ShowContextMenu && ImGui.BeginPopup(options.Label + "##context"))
-		{
-			bool isGlob = options.FilterType == TextFilterType.Glob;
-			bool isRegex = options.FilterType == TextFilterType.Regex;
-			bool isFuzzy = options.FilterType == TextFilterType.Fuzzy;
-
-			bool isWholeString = options.MatchOptions == TextFilterMatchOptions.ByWholeString;
-			bool isAllWord = options.MatchOptions == TextFilterMatchOptions.ByWordAll;
-			bool isAnyWord = options.MatchOptions == TextFilterMatchOptions.ByWordAny;
-
-			if (ImGui.MenuItem("Glob", "", ref isGlob))
-			{
-				options = options with { FilterType = TextFilterType.Glob };
-			}
-
-			if (ImGui.MenuItem("Regex", "", ref isRegex))
-			{
-				options = options with { FilterType = TextFilterType.Regex };
-			}
-
-			if (ImGui.MenuItem("Fuzzy", "", ref isFuzzy))
-			{
-				options = options with { FilterType = TextFilterType.Fuzzy };
-			}
-
-			ImGui.Separator();
-
-			if (ImGui.MenuItem("Whole String", "", ref isWholeString))
-			{
-				options = options with { MatchOptions = TextFilterMatchOptions.ByWholeString };
-			}
-
-			if (ImGui.MenuItem("All Words", "", ref isAllWord))
-			{
-				options = options with { MatchOptions = TextFilterMatchOptions.ByWordAll };
-			}
-
-			if (ImGui.MenuItem("Any Word", "", ref isAnyWord))
-			{
-				options = options with { MatchOptions = TextFilterMatchOptions.ByWordAny };
-			}
-
-			ImGui.EndPopup();
-		}
+		DrawSearchBoxContextMenu(ref options);
 
 		return changed;
 	}
@@ -206,5 +163,55 @@ public static partial class ImGuiWidgets
 		Dictionary<string, T> keyedItems = items.ToDictionary(selector, item => item);
 		return TextFilter.Rank(keyedItems.Keys, filterText)
 				.Select(x => keyedItems[x]);
+	}
+
+	private static void DrawSearchBoxContextMenu(ref SearchBoxOptions options)
+	{
+		if (!options.ShowContextMenu || !ImGui.BeginPopup(options.Label + "##context"))
+		{
+			return;
+		}
+
+		bool isGlob = options.FilterType == TextFilterType.Glob;
+		bool isRegex = options.FilterType == TextFilterType.Regex;
+		bool isFuzzy = options.FilterType == TextFilterType.Fuzzy;
+
+		bool isWholeString = options.MatchOptions == TextFilterMatchOptions.ByWholeString;
+		bool isAllWord = options.MatchOptions == TextFilterMatchOptions.ByWordAll;
+		bool isAnyWord = options.MatchOptions == TextFilterMatchOptions.ByWordAny;
+
+		if (ImGui.MenuItem("Glob", "", ref isGlob))
+		{
+			options = options with { FilterType = TextFilterType.Glob };
+		}
+
+		if (ImGui.MenuItem("Regex", "", ref isRegex))
+		{
+			options = options with { FilterType = TextFilterType.Regex };
+		}
+
+		if (ImGui.MenuItem("Fuzzy", "", ref isFuzzy))
+		{
+			options = options with { FilterType = TextFilterType.Fuzzy };
+		}
+
+		ImGui.Separator();
+
+		if (ImGui.MenuItem("Whole String", "", ref isWholeString))
+		{
+			options = options with { MatchOptions = TextFilterMatchOptions.ByWholeString };
+		}
+
+		if (ImGui.MenuItem("All Words", "", ref isAllWord))
+		{
+			options = options with { MatchOptions = TextFilterMatchOptions.ByWordAll };
+		}
+
+		if (ImGui.MenuItem("Any Word", "", ref isAnyWord))
+		{
+			options = options with { MatchOptions = TextFilterMatchOptions.ByWordAny };
+		}
+
+		ImGui.EndPopup();
 	}
 }

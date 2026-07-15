@@ -1212,65 +1212,80 @@ public static partial class ImGuiApp
 		{
 			menuDelegate();
 
-			if (ImGui.BeginMenu("Accessibility"))
-			{
-				ImGui.Text("UI Scale:");
-				ImGui.Separator();
-
-				if (ImGui.MenuItem("75%", "", Math.Abs(GlobalScale - 0.75f) < 0.01f))
-				{
-					SetGlobalScale(0.75f);
-				}
-
-				if (ImGui.MenuItem("100%", "", Math.Abs(GlobalScale - 1.0f) < 0.01f))
-				{
-					SetGlobalScale(1.0f);
-				}
-
-				if (ImGui.MenuItem("125%", "", Math.Abs(GlobalScale - 1.25f) < 0.01f))
-				{
-					SetGlobalScale(1.25f);
-				}
-
-				if (ImGui.MenuItem("150%", "", Math.Abs(GlobalScale - 1.5f) < 0.01f))
-				{
-					SetGlobalScale(1.5f);
-				}
-
-				if (ImGui.MenuItem("175%", "", Math.Abs(GlobalScale - 1.75f) < 0.01f))
-				{
-					SetGlobalScale(1.75f);
-				}
-
-				if (ImGui.MenuItem("200%", "", Math.Abs(GlobalScale - 2.0f) < 0.01f))
-				{
-					SetGlobalScale(2.0f);
-				}
-
-				ImGui.EndMenu();
-			}
-
-			if (ImGui.BeginMenu("Debug"))
-			{
-				if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
-				{
-					showImGuiDemo = !showImGuiDemo;
-				}
-
-				if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
-				{
-					showImGuiMetrics = !showImGuiMetrics;
-				}
-
-				if (ImGui.MenuItem("Show Performance Monitor", "", showPerformanceMonitor))
-				{
-					showPerformanceMonitor = !showPerformanceMonitor;
-				}
-
-				ImGui.EndMenu();
-			}
+			RenderAccessibilityMenu();
+			RenderDebugMenu();
 
 			ImGui.EndMainMenuBar();
+		}
+	}
+
+	/// <summary>
+	/// Renders the Accessibility submenu with UI scale options.
+	/// </summary>
+	private static void RenderAccessibilityMenu()
+	{
+		if (ImGui.BeginMenu("Accessibility"))
+		{
+			ImGui.Text("UI Scale:");
+			ImGui.Separator();
+
+			if (ImGui.MenuItem("75%", "", Math.Abs(GlobalScale - 0.75f) < 0.01f))
+			{
+				SetGlobalScale(0.75f);
+			}
+
+			if (ImGui.MenuItem("100%", "", Math.Abs(GlobalScale - 1.0f) < 0.01f))
+			{
+				SetGlobalScale(1.0f);
+			}
+
+			if (ImGui.MenuItem("125%", "", Math.Abs(GlobalScale - 1.25f) < 0.01f))
+			{
+				SetGlobalScale(1.25f);
+			}
+
+			if (ImGui.MenuItem("150%", "", Math.Abs(GlobalScale - 1.5f) < 0.01f))
+			{
+				SetGlobalScale(1.5f);
+			}
+
+			if (ImGui.MenuItem("175%", "", Math.Abs(GlobalScale - 1.75f) < 0.01f))
+			{
+				SetGlobalScale(1.75f);
+			}
+
+			if (ImGui.MenuItem("200%", "", Math.Abs(GlobalScale - 2.0f) < 0.01f))
+			{
+				SetGlobalScale(2.0f);
+			}
+
+			ImGui.EndMenu();
+		}
+	}
+
+	/// <summary>
+	/// Renders the Debug submenu with diagnostic window toggles.
+	/// </summary>
+	private static void RenderDebugMenu()
+	{
+		if (ImGui.BeginMenu("Debug"))
+		{
+			if (ImGui.MenuItem("Show ImGui Demo", "", showImGuiDemo))
+			{
+				showImGuiDemo = !showImGuiDemo;
+			}
+
+			if (ImGui.MenuItem("Show ImGui Metrics", "", showImGuiMetrics))
+			{
+				showImGuiMetrics = !showImGuiMetrics;
+			}
+
+			if (ImGui.MenuItem("Show Performance Monitor", "", showPerformanceMonitor))
+			{
+				showPerformanceMonitor = !showPerformanceMonitor;
+			}
+
+			ImGui.EndMenu();
 		}
 	}
 
@@ -1551,8 +1566,6 @@ public static partial class ImGuiApp
 		// Track fonts that need disposal after rebuilding the atlas
 		List<GCHandle> fontPinnedData = [];
 
-		int defaultFontIndex = -1;
-
 		// Pre-allocate emoji font memory if needed
 		nint emojiHandle = IntPtr.Zero;
 		int emojiLength = 0;
@@ -1565,37 +1578,7 @@ public static partial class ImGuiApp
 		}
 
 		// Load fonts with memory constraints applied
-		foreach ((string name, byte[] fontBytes) in fontsToLoad)
-		{
-			// Pre-allocate main font memory outside the size loop for reuse
-			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
-			currentFontMemoryHandles.Add(fontHandle);
-			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
-
-			foreach (int size in fontSizesToLoad)
-			{
-				// Determine glyph ranges based on constraints
-				uint* glyphRanges = GetConstrainedGlyphRanges(fontAtlasPtr, shouldUseReducedUnicode);
-
-				LoadFontFromMemory($"{name}_{size}", fontHandle, fontBytes.Length, fontAtlasPtr, size, glyphRanges);
-
-				// Load and merge emoji font immediately after main font for proper merging
-				if (shouldLoadEmojis && emojiHandle != IntPtr.Zero)
-				{
-					LoadEmojiFontFromMemory(emojiHandle, emojiLength, fontAtlasPtr, size);
-				}
-
-				// Prioritize DefaultFonts over custom Fonts for setting the default font
-				if (size == FontAppearance.DefaultFontPointSize)
-				{
-					// Use this font as the default if it is from DefaultFonts (preferred) or if no default has been set yet (fallback)
-					if (Config.DefaultFonts.ContainsKey(name) || defaultFontIndex == -1)
-					{
-						defaultFontIndex = FontIndices[$"{name}_{size}"];
-					}
-				}
-			}
-		}
+		int defaultFontIndex = LoadConfiguredFonts(fontsToLoad, fontAtlasPtr, fontSizesToLoad, shouldUseReducedUnicode, shouldLoadEmojis, emojiHandle, emojiLength);
 
 		// Set the font indices for the default font
 		if (defaultFontIndex != -1)
@@ -1630,6 +1613,55 @@ public static partial class ImGuiApp
 		// Store the pinned font data for later cleanup
 		StorePinnedFontData(fontPinnedData);
 		DebugLogger.Log("InitFonts: Font initialization completed with memory guards applied");
+	}
+
+	/// <summary>
+	/// Loads all configured fonts at the requested sizes, merging emoji glyphs where enabled.
+	/// </summary>
+	/// <param name="fontsToLoad">The fonts to load (custom fonts followed by default fonts).</param>
+	/// <param name="fontAtlasPtr">The font atlas being built.</param>
+	/// <param name="fontSizesToLoad">The point sizes to load each font at.</param>
+	/// <param name="shouldUseReducedUnicode">Whether to constrain glyph ranges to reduce memory.</param>
+	/// <param name="shouldLoadEmojis">Whether emoji glyphs should be merged in.</param>
+	/// <param name="emojiHandle">The pre-allocated emoji font memory, or <see cref="IntPtr.Zero"/>.</param>
+	/// <param name="emojiLength">The length of the emoji font memory.</param>
+	/// <returns>The index of the default font, or -1 if none was designated.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font atlas interop; pointers are scoped to atlas-building calls and not retained.")]
+	internal static unsafe int LoadConfiguredFonts(IEnumerable<KeyValuePair<string, byte[]>> fontsToLoad, ImFontAtlasPtr fontAtlasPtr, int[] fontSizesToLoad, bool shouldUseReducedUnicode, bool shouldLoadEmojis, nint emojiHandle, int emojiLength)
+	{
+		int defaultFontIndex = -1;
+
+		foreach ((string name, byte[] fontBytes) in fontsToLoad)
+		{
+			// Pre-allocate main font memory outside the size loop for reuse
+			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
+			currentFontMemoryHandles.Add(fontHandle);
+			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
+
+			foreach (int size in fontSizesToLoad)
+			{
+				// Determine glyph ranges based on constraints
+				uint* glyphRanges = GetConstrainedGlyphRanges(fontAtlasPtr, shouldUseReducedUnicode);
+
+				LoadFontFromMemory($"{name}_{size}", fontHandle, fontBytes.Length, fontAtlasPtr, size, glyphRanges);
+
+				// Load and merge emoji font immediately after main font for proper merging
+				if (shouldLoadEmojis && emojiHandle != IntPtr.Zero)
+				{
+					LoadEmojiFontFromMemory(emojiHandle, emojiLength, fontAtlasPtr, size);
+				}
+
+				// Prioritize DefaultFonts over custom Fonts for setting the default font.
+				// Use this font as the default if it is from DefaultFonts (preferred) or if no default has been set yet (fallback)
+				if (size == FontAppearance.DefaultFontPointSize &&
+					(Config.DefaultFonts.ContainsKey(name) || defaultFontIndex == -1))
+				{
+					defaultFontIndex = FontIndices[$"{name}_{size}"];
+				}
+			}
+		}
+
+		return defaultFontIndex;
 	}
 
 	/// <summary>
@@ -2092,66 +2124,10 @@ public static partial class ImGuiApp
 
 				(bool isTuningActive, int currentStep, int totalSteps, double progressPercent, PidFrameLimiter.TuningResult? bestResult, string phase) = frameLimiter.GetTuningStatusDetailed();
 
-				if (isTuningActive)
-				{
-					ImGui.Text($"Phase: {phase}");
-					ImGui.Text($"Progress: Step {currentStep}/{totalSteps} ({progressPercent:F1}%)");
-					ImGui.ProgressBar((float)(progressPercent / 100.0), new System.Numerics.Vector2(300, 0));
-					ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.8f, 0.4f, 1.0f), "⚠️ Throttling disabled during tuning for consistent results");
-					ImGui.TextWrapped("Comprehensive tuning: Coarse (8s/test) → Fine (12s/test) → Precision (15s/test)");
-
-					if (ImGui.Button("Stop Auto-Tuning"))
-					{
-						frameLimiter.StopAutoTuning();
-					}
-				}
-				else
-				{
-					ImGui.TextWrapped("Comprehensive auto-tuning tests different PID parameter combinations across multiple phases to find optimal settings for maximum accuracy. Throttling is automatically disabled during tuning for consistent results.");
-					ImGui.TextWrapped("• Phase 1: Coarse tuning (8s per test, 24 parameters)");
-					ImGui.TextWrapped("• Phase 2: Fine tuning (12s per test, 25 parameters around best result)");
-					ImGui.TextWrapped("• Phase 3: Precision tuning (15s per test, 9 parameters for final optimization)");
-					ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.6f, 0.6f, 1.0f), "⏱️ Total time: ~12-15 minutes for maximum accuracy");
-
-					if (ImGui.Button("Start Comprehensive Auto-Tuning"))
-					{
-						frameLimiter.StartAutoTuning();
-					}
-
-					if (bestResult.HasValue)
-					{
-						ImGui.Text("Best tuned parameters:");
-						ImGui.Text($"  Kp: {bestResult.Value.Kp:F3}, Ki: {bestResult.Value.Ki:F3}, Kd: {bestResult.Value.Kd:F3}");
-						ImGui.Text($"  Score: {bestResult.Value.Score:F3} (Avg Error: {bestResult.Value.AverageError:F2}ms)");
-					}
-				}
+				RenderPidAutoTuningSection(isTuningActive, currentStep, totalSteps, progressPercent, bestResult, phase);
 
 				// Show current throttling state
-				string currentState;
-				if (isTuningActive)
-				{
-					currentState = "Throttling Disabled (PID Tuning Active)";
-				}
-				else if (!IsVisible)
-				{
-					currentState = "Not Visible (2 FPS target)";
-				}
-				else if (!IsFocused && IsIdle)
-				{
-					currentState = "Unfocused + Idle (5 FPS target)";
-				}
-				else if (!IsFocused)
-				{
-					currentState = "Unfocused (5 FPS target)";
-				}
-				else if (IsIdle)
-				{
-					currentState = "Idle (10 FPS target)";
-				}
-				else
-				{
-					currentState = "Focused (30 FPS target)";
-				}
+				string currentState = GetCurrentThrottlingStateDescription(isTuningActive);
 
 				ImGui.Text($"Current State: {currentState}");
 
@@ -2175,5 +2151,86 @@ public static partial class ImGuiApp
 		}
 
 		ImGui.End();
+	}
+
+	/// <summary>
+	/// Renders the PID auto-tuning controls and status for the performance monitor.
+	/// </summary>
+	/// <param name="isTuningActive">Whether auto-tuning is currently running.</param>
+	/// <param name="currentStep">The current tuning step.</param>
+	/// <param name="totalSteps">The total number of tuning steps.</param>
+	/// <param name="progressPercent">The tuning progress as a percentage.</param>
+	/// <param name="bestResult">The best tuning result found so far, if any.</param>
+	/// <param name="phase">The current tuning phase description.</param>
+	private static void RenderPidAutoTuningSection(bool isTuningActive, int currentStep, int totalSteps, double progressPercent, PidFrameLimiter.TuningResult? bestResult, string phase)
+	{
+		if (isTuningActive)
+		{
+			ImGui.Text($"Phase: {phase}");
+			ImGui.Text($"Progress: Step {currentStep}/{totalSteps} ({progressPercent:F1}%)");
+			ImGui.ProgressBar((float)(progressPercent / 100.0), new System.Numerics.Vector2(300, 0));
+			ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.8f, 0.4f, 1.0f), "⚠️ Throttling disabled during tuning for consistent results");
+			ImGui.TextWrapped("Comprehensive tuning: Coarse (8s/test) → Fine (12s/test) → Precision (15s/test)");
+
+			if (ImGui.Button("Stop Auto-Tuning"))
+			{
+				frameLimiter.StopAutoTuning();
+			}
+		}
+		else
+		{
+			ImGui.TextWrapped("Comprehensive auto-tuning tests different PID parameter combinations across multiple phases to find optimal settings for maximum accuracy. Throttling is automatically disabled during tuning for consistent results.");
+			ImGui.TextWrapped("• Phase 1: Coarse tuning (8s per test, 24 parameters)");
+			ImGui.TextWrapped("• Phase 2: Fine tuning (12s per test, 25 parameters around best result)");
+			ImGui.TextWrapped("• Phase 3: Precision tuning (15s per test, 9 parameters for final optimization)");
+			ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.6f, 0.6f, 1.0f), "⏱️ Total time: ~12-15 minutes for maximum accuracy");
+
+			if (ImGui.Button("Start Comprehensive Auto-Tuning"))
+			{
+				frameLimiter.StartAutoTuning();
+			}
+
+			if (bestResult.HasValue)
+			{
+				ImGui.Text("Best tuned parameters:");
+				ImGui.Text($"  Kp: {bestResult.Value.Kp:F3}, Ki: {bestResult.Value.Ki:F3}, Kd: {bestResult.Value.Kd:F3}");
+				ImGui.Text($"  Score: {bestResult.Value.Score:F3} (Avg Error: {bestResult.Value.AverageError:F2}ms)");
+			}
+		}
+	}
+
+	/// <summary>
+	/// Determines the human-readable description of the current frame-rate throttling state.
+	/// </summary>
+	/// <param name="isTuningActive">Whether auto-tuning is currently running.</param>
+	/// <returns>A description of the current throttling state.</returns>
+	private static string GetCurrentThrottlingStateDescription(bool isTuningActive)
+	{
+		if (isTuningActive)
+		{
+			return "Throttling Disabled (PID Tuning Active)";
+		}
+
+		if (!IsVisible)
+		{
+			return "Not Visible (2 FPS target)";
+		}
+
+		if (!IsFocused && IsIdle)
+		{
+			return "Unfocused + Idle (5 FPS target)";
+		}
+
+		if (!IsFocused)
+		{
+			return "Unfocused (5 FPS target)";
+		}
+
+		if (IsIdle)
+		{
+			return "Idle (10 FPS target)";
+		}
+
+		return "Focused (30 FPS target)";
 	}
 }

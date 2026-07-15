@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
           lfs: true
@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
@@ -95,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
           lfs: true
@@ -103,7 +103,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
@@ -160,7 +160,7 @@ jobs:
       # Runs after the Xcode pin so xcrun resolves the toolchain; before the build so the
       # NativeReference's Exists() condition is satisfied when ImGui.App compiles.
       - name: Cache native cimgui (iOS simulator)
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ImGui.App/Platform/iOS/native
           key: cimgui-sim-arm64-dylib-imgui1.92.3-${{ hashFiles('scripts/build-cimgui-ios.sh') }}

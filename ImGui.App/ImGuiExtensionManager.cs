@@ -283,15 +283,7 @@ public static class ImGuiExtensionManager
 				{
 					imNodesSetCurrentContext.Invoke(null, [nodesContext]);
 
-					// Apply dark style if available
-					if (imNodesStyleColorsDark != null && imNodesGetStyle != null)
-					{
-						object? style = imNodesGetStyle.Invoke(null, null);
-						if (style != null)
-						{
-							imNodesStyleColorsDark.Invoke(null, [style]);
-						}
-					}
+					ApplyExtensionDarkStyle(imNodesStyleColorsDark, imNodesGetStyle);
 
 					DebugLogger.Log("ImGuiExtensionManager: ImNodes context created and dark style applied");
 				}
@@ -312,15 +304,7 @@ public static class ImGuiExtensionManager
 				{
 					imPlotSetCurrentContext.Invoke(null, [plotContext]);
 
-					// Apply dark style if available
-					if (imPlotStyleColorsDark != null && imPlotGetStyle != null)
-					{
-						object? style = imPlotGetStyle.Invoke(null, null);
-						if (style != null)
-						{
-							imPlotStyleColorsDark.Invoke(null, [style]);
-						}
-					}
+					ApplyExtensionDarkStyle(imPlotStyleColorsDark, imPlotGetStyle);
 
 					DebugLogger.Log("ImGuiExtensionManager: ImPlot context created and dark style applied");
 				}
@@ -328,6 +312,24 @@ public static class ImGuiExtensionManager
 			catch (TargetInvocationException ex)
 			{
 				DebugLogger.Log($"ImGuiExtensionManager: Error creating ImPlot context: {ex.InnerException?.Message ?? ex.Message}");
+			}
+		}
+	}
+
+	/// <summary>
+	/// Applies the extension's dark color style when both style methods are available.
+	/// </summary>
+	/// <param name="styleColorsDark">The extension's StyleColorsDark method, if available.</param>
+	/// <param name="getStyle">The extension's GetStyle method, if available.</param>
+	private static void ApplyExtensionDarkStyle(MethodInfo? styleColorsDark, MethodInfo? getStyle)
+	{
+		// Apply dark style if available
+		if (styleColorsDark != null && getStyle != null)
+		{
+			object? style = getStyle.Invoke(null, null);
+			if (style != null)
+			{
+				styleColorsDark.Invoke(null, [style]);
 			}
 		}
 	}

@@ -101,6 +101,7 @@ public static partial class ImGuiWidgets
 	/// <param name="flags">The options for the knob.</param>
 	/// <param name="steps">The number of steps for the knob.</param>
 	/// <returns>True if the value was changed, otherwise false.</returns>
+	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Widget mirrors Dear ImGui's parameter-rich immediate-mode knob API; the parameter list matches the established widget convention and cannot be reduced without a breaking API change.")]
 	public static bool Knob(string label, ref float value, float vMin, float vMax, float speed = 0, string? format = null, ImGuiKnobVariant variant = ImGuiKnobVariant.Tick, float size = 0, ImGuiKnobOptions flags = ImGuiKnobOptions.None, int steps = 10) =>
 		KnobImpl.Draw(label, ref value, vMin, vMax, speed, format, variant, size, flags, steps);
 
@@ -118,6 +119,7 @@ public static partial class ImGuiWidgets
 	/// <param name="flags">The options for the knob.</param>
 	/// <param name="steps">The number of steps for the knob.</param>
 	/// <returns>True if the value was changed, otherwise false.</returns>
+	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Widget mirrors Dear ImGui's parameter-rich immediate-mode knob API; the parameter list matches the established widget convention and cannot be reduced without a breaking API change.")]
 	public static bool Knob(string label, ref int value, int vMin, int vMax, float speed = 0, string? format = null, ImGuiKnobVariant variant = ImGuiKnobVariant.Tick, float size = 0, ImGuiKnobOptions flags = ImGuiKnobOptions.None, int steps = 10) =>
 		KnobImpl.Draw(label, ref value, vMin, vMax, speed, format, variant, size, flags, steps);
 	/// <summary>
@@ -141,12 +143,14 @@ public static partial class ImGuiWidgets
 			}
 		}
 
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich public Knob widget API; a pass-through of the same values.")]
 		public static bool Draw(string label, ref float value, float vMin, float vMax, float speed = 0, string? format = null, ImGuiKnobVariant variant = ImGuiKnobVariant.Tick, float? size = null, ImGuiKnobOptions flags = ImGuiKnobOptions.None, int steps = 10)
 		{
 			format ??= "%.3f";
 			return KnobInternal<float>.BaseKnob(label, ImGuiDataType.Float, ref value, vMin, vMax, speed, format, variant, size, flags, steps);
 		}
 
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich public Knob widget API; a pass-through of the same values.")]
 		public static bool Draw(string label, ref int value, int vMin, int vMax, float speed = 0, string? format = null, ImGuiKnobVariant variant = ImGuiKnobVariant.Tick, float? size = null, ImGuiKnobOptions flags = ImGuiKnobOptions.None, int steps = 10)
 		{
 			format ??= "%if";
@@ -179,6 +183,7 @@ public static partial class ImGuiWidgets
 			drawlist.AddBezierCubic(start, arc1, arc2, end, color.ToImGuiU32(), thickness, numSegments);
 		}
 
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Arc drawing primitive parameterized by geometry; grouping would obscure the trigonometric call sites.")]
 		internal static void DrawArc(Vector2 center, float radius, float startAngle, float endAngle, float thickness, ImColor color, int numSegments, int bezierCount)
 		{
 			// Overlap and angle of ends of bezier curves needs work, only looks good when not transperant
@@ -218,6 +223,7 @@ public static partial class ImGuiWidgets
 
 			private static float InverseLerp(TDataType min, TDataType max, TDataType value) => float.CreateSaturating(value - min) / float.CreateSaturating(max - min);
 
+			[SuppressMessage("Major Code Smell", "S107:Constructors should not have too many parameters", Justification = "Captures the knob's ImGui drag state (value, range, speed, radius, format, flags) in one construction step; mirrors the widget API.")]
 			public KnobInternal(string label_, ImGuiDataType dataType, ref TDataType value, TDataType vMin, TDataType vMax, float speed, float radius_, string format, ImGuiKnobOptions flags)
 			{
 				Radius = radius_;
@@ -300,21 +306,7 @@ public static partial class ImGuiWidgets
 				}
 
 				// Clamp values (+ handle overflow/wrap-around for integer types)
-				bool clamped = false;
-				if (newValue != floatValue && isClamped)
-				{
-					if (newValue < floatMin || (newValue > floatValue && AccumulatedDiff < 0.0f && !isFloatingPoint))
-					{
-						newValue = floatMin;
-						clamped = true;
-					}
-
-					if (newValue > floatMax || (newValue < floatValue && AccumulatedDiff > 0.0f && !isFloatingPoint))
-					{
-						newValue = floatMax;
-						clamped = true;
-					}
-				}
+				newValue = ClampAccumulatedValue(newValue, floatValue, floatMin, floatMax, isClamped, isFloatingPoint, out bool clamped);
 
 				// Reduce the accumulator by the amount actually applied so the leftover
 				// fractional movement carries over. Reset it entirely when pinned to a
@@ -339,6 +331,28 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
+			[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead", Justification = "Exact comparisons are intentional sentinel/identity checks; a tolerance would change drag-accumulation behavior.")]
+			private static float ClampAccumulatedValue(float newValue, float floatValue, float floatMin, float floatMax, bool isClamped, bool isFloatingPoint, out bool clamped)
+			{
+				clamped = false;
+				if (newValue != floatValue && isClamped)
+				{
+					if (newValue < floatMin || (newValue > floatValue && AccumulatedDiff < 0.0f && !isFloatingPoint))
+					{
+						newValue = floatMin;
+						clamped = true;
+					}
+
+					if (newValue > floatMax || (newValue < floatValue && AccumulatedDiff > 0.0f && !isFloatingPoint))
+					{
+						newValue = floatMax;
+						clamped = true;
+					}
+				}
+
+				return newValue;
+			}
+
 			private static int ParseFormatPrecision(string fmt, int defaultPrecision)
 			{
 
@@ -357,20 +371,7 @@ public static partial class ImGuiWidgets
 				int precision = int.MaxValue;
 				if (fmtSpan[0] == '.')
 				{
-					fmtSpan = fmtSpan[1..];
-					int precisionLength = 0;
-					while (fmtSpan[precisionLength] is >= '0' and <= '9')
-					{
-						precisionLength++;
-					}
-
-					precision = int.Parse(fmtSpan[..precisionLength], CultureInfo.CurrentCulture);
-					fmtSpan = fmtSpan[precisionLength..];
-
-					if (precision is < 0 or > 99)
-					{
-						precision = defaultPrecision;
-					}
+					precision = ParseFormatPrecisionDigits(ref fmtSpan, defaultPrecision);
 				}
 
 				if (fmtSpan[0] is 'e' or 'E') // Maximum precision with scientific notation
@@ -384,6 +385,27 @@ public static partial class ImGuiWidgets
 				}
 
 				return (precision == int.MaxValue) ? defaultPrecision : precision;
+			}
+
+			private static int ParseFormatPrecisionDigits(ref ReadOnlySpan<char> fmtSpan, int defaultPrecision)
+			{
+				// The caller has matched the leading '.'; consume it and read the digit run.
+				fmtSpan = fmtSpan[1..];
+				int precisionLength = 0;
+				while (fmtSpan[precisionLength] is >= '0' and <= '9')
+				{
+					precisionLength++;
+				}
+
+				int precision = int.Parse(fmtSpan[..precisionLength], CultureInfo.CurrentCulture);
+				fmtSpan = fmtSpan[precisionLength..];
+
+				if (precision is < 0 or > 99)
+				{
+					precision = defaultPrecision;
+				}
+
+				return precision;
 			}
 
 			private static ReadOnlySpan<char> ParseFormatFindStart(string fmt)
@@ -419,12 +441,27 @@ public static partial class ImGuiWidgets
 				return (decimal_precision < MinSteps.Count) ? MinSteps[decimal_precision] : MathF.Pow(10.0f, -decimal_precision);
 			}
 
+			private ImColor ResolveStateColor(KnobColors color)
+			{
+				if (IsActive)
+				{
+					return color.Active;
+				}
+
+				if (IsHovered)
+				{
+					return color.Hovered;
+				}
+
+				return color.Base;
+			}
+
 			private void DrawDot(float size, float radius, float angle, KnobColors color, int segments)
 			{
 				float dotSize = size * Radius;
 				float dotRadius = radius * Radius;
 
-				ImColor dotColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
+				ImColor dotColor = ResolveStateColor(color);
 				ImGui.GetWindowDrawList().AddCircleFilled(
 							new(Center[0] + (MathF.Cos(angle) * dotRadius), Center[1] + (MathF.Sin(angle) * dotRadius)),
 							dotSize,
@@ -439,7 +476,7 @@ public static partial class ImGuiWidgets
 				float angleCos = MathF.Cos(angle);
 				float angleSin = MathF.Sin(angle);
 
-				ImColor tickColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
+				ImColor tickColor = ResolveStateColor(color);
 				ImGui.GetWindowDrawList().AddLine(
 
 					new(Center[0] + (angleCos * tickEnd), Center[1] + (angleSin * tickEnd)),
@@ -452,7 +489,7 @@ public static partial class ImGuiWidgets
 			{
 				float circleRadius = size * Radius;
 
-				ImColor circleColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
+				ImColor circleColor = ResolveStateColor(color);
 				ImGui.GetWindowDrawList().AddCircleFilled(
 						Center,
 						circleRadius,
@@ -466,7 +503,7 @@ public static partial class ImGuiWidgets
 				float trackRadius = radius * Radius;
 				float trackSize = (size * Radius * 0.5f) + 0.0001f;
 
-				ImColor arcColor = IsActive ? color.Active : (IsHovered ? color.Hovered : color.Base);
+				ImColor arcColor = ResolveStateColor(color);
 				KnobImpl.DrawArc(
 						Center,
 						trackRadius,
@@ -493,41 +530,9 @@ public static partial class ImGuiWidgets
 
 				while (textSpan.Length > 0)
 				{
-					while (textSpan.StartsWith(" "))
-					{
-						textSpan = textSpan[1..];
-					}
+					textSpan = TrimSpaces(textSpan);
 
-					while (textSpan.EndsWith(" "))
-					{
-						textSpan = textSpan[..(textSpan.Length - 1)];
-					}
-
-					ReadOnlySpan<char> lineSpan = textSpan;
-
-					float lineSize = ImGui.CalcTextSize(lineSpan.ToString()).X;
-
-					while (lineSize > width)
-					{
-						int lastSpace = lineSpan.LastIndexOf(' ');
-						if (lastSpace == -1)
-						{
-							break;
-						}
-
-						lineSpan = lineSpan[..lastSpace];
-						while (lineSpan.StartsWith(" "))
-						{
-							lineSpan = lineSpan[1..];
-						}
-
-						while (lineSpan.EndsWith(" "))
-						{
-							lineSpan = lineSpan[..(lineSpan.Length - 1)];
-						}
-
-						lineSize = ImGui.CalcTextSize(lineSpan.ToString()).X;
-					}
+					ReadOnlySpan<char> lineSpan = FitLineToWidth(textSpan, width);
 
 					line = lineSpan.ToString();
 					lines.Add(line);
@@ -537,8 +542,43 @@ public static partial class ImGuiWidgets
 				return lines;
 			}
 
+			private static ReadOnlySpan<char> TrimSpaces(ReadOnlySpan<char> span)
+			{
+				while (span.StartsWith(" "))
+				{
+					span = span[1..];
+				}
+
+				while (span.EndsWith(" "))
+				{
+					span = span[..(span.Length - 1)];
+				}
+
+				return span;
+			}
+
+			private static ReadOnlySpan<char> FitLineToWidth(ReadOnlySpan<char> lineSpan, float width)
+			{
+				float lineSize = ImGui.CalcTextSize(lineSpan.ToString()).X;
+
+				while (lineSize > width)
+				{
+					int lastSpace = lineSpan.LastIndexOf(' ');
+					if (lastSpace == -1)
+					{
+						break;
+					}
+
+					lineSpan = TrimSpaces(lineSpan[..lastSpace]);
+					lineSize = ImGui.CalcTextSize(lineSpan.ToString()).X;
+				}
+
+				return lineSpan;
+			}
+
 			[SuppressMessage("Major Code Smell", "S1244:Do not check floating point equality with exact values, use a range instead", Justification = "Exact zero comparisons are intentional sentinel checks for default/unset values; a tolerance would change behavior.")]
 			[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui DragScalar interop; pointers are scoped to the call and not retained.")]
+			[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich Knob widget API; a pass-through of the same drag state.")]
 			public static KnobInternal<TDataType> KnobWithDrag(string label, ImGuiDataType dataType, ref TDataType value, TDataType vMin, TDataType vMax, float speed, string format, float? size, ImGuiKnobOptions flags)
 			{
 				speed = speed == 0 ? float.CreateSaturating(vMax - vMin) / 250.0f : speed;
@@ -629,6 +669,7 @@ public static partial class ImGuiWidgets
 				}
 			}
 
+			[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich public Knob widget API; a pass-through of the same values.")]
 			public static bool BaseKnob(string label, ImGuiDataType dataType, ref TDataType value, TDataType vMin, TDataType vMax, float speed, string format, ImGuiKnobVariant variant, float? size, ImGuiKnobOptions flags, int steps = 10)
 			{
 

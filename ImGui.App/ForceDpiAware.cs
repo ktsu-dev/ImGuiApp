@@ -77,57 +77,52 @@ public static partial class ForceDpiAware
 	/// <returns>The actual scale factor.</returns>
 	public static double GetActualScaleFactor()
 	{
-		double userDpiScale;
-
 		if (OperatingSystem.IsWindows())
 		{
-			userDpiScale = GdiPlusHelper.GetDpiX(IntPtr.Zero);
+			return GdiPlusHelper.GetDpiX(IntPtr.Zero);
 		}
-		else
+
+		string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
+
+		// X11 (and unspecified session type) uses X11 detection; everything else falls back to Wayland.
+		return xdgSessionType is null or "x11"
+			? GetX11DpiScale()
+			: GetWaylandDpiScale();
+	}
+
+	/// <summary>
+	/// Gets the DPI scale factor for X11 sessions, falling back to Wayland/WSL detection where needed.
+	/// </summary>
+	/// <returns>The actual scale factor.</returns>
+	private static double GetX11DpiScale()
+	{
+		nint display = NativeMethods.XOpenDisplay(null!);
+		if (display == IntPtr.Zero)
 		{
-			string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
+			return GetWaylandDpiScale();
+		}
 
-			if (xdgSessionType is null or "x11")
+		string? dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
+
+		if (dpiString == null || !double.TryParse(dpiString, NumberStyles.Any, CultureInfo.InvariantCulture, out double userDpiScale))
+		{
+			int width = NativeMethods.XDisplayWidth(display, 0);
+			int widthMM = NativeMethods.XDisplayWidthMM(display, 0);
+			userDpiScale = width * 25.4 / widthMM;
+		}
+
+		if (NativeMethods.XCloseDisplay(display) != 0)
+		{
+			throw new InvalidOperationException("Failed to close X11 display connection");
+		}
+
+		// If X11 gives us standard DPI, try WSL-specific detection
+		if (Math.Abs(userDpiScale - StandardDpiScale) < 1.0)
+		{
+			double wslScale = GetWaylandDpiScale(); // This includes WSL host detection
+			if (Math.Abs(wslScale - StandardDpiScale) > 1.0)
 			{
-				nint display = NativeMethods.XOpenDisplay(null!);
-				if (display == IntPtr.Zero)
-				{
-					userDpiScale = GetWaylandDpiScale();
-				}
-				else
-				{
-					string? dpiString = Marshal.PtrToStringAnsi(NativeMethods.XGetDefault(display, "Xft", "dpi"));
-
-					if (dpiString == null || !double.TryParse(dpiString, NumberStyles.Any, CultureInfo.InvariantCulture, out userDpiScale))
-					{
-						int width = NativeMethods.XDisplayWidth(display, 0);
-						int widthMM = NativeMethods.XDisplayWidthMM(display, 0);
-						userDpiScale = width * 25.4 / widthMM;
-					}
-
-					if (NativeMethods.XCloseDisplay(display) != 0)
-					{
-						throw new InvalidOperationException("Failed to close X11 display connection");
-					}
-
-					// If X11 gives us standard DPI, try WSL-specific detection
-					if (Math.Abs(userDpiScale - StandardDpiScale) < 1.0)
-					{
-						double wslScale = GetWaylandDpiScale(); // This includes WSL host detection
-						if (Math.Abs(wslScale - StandardDpiScale) > 1.0)
-						{
-							userDpiScale = wslScale;
-						}
-					}
-				}
-			}
-			else if (xdgSessionType == "wayland")
-			{
-				userDpiScale = GetWaylandDpiScale();
-			}
-			else
-			{
-				userDpiScale = GetWaylandDpiScale();
+				userDpiScale = wslScale;
 			}
 		}
 
@@ -626,22 +621,10 @@ public static partial class ForceDpiAware
 
 			if (process.ExitCode == 0)
 			{
-				foreach (string line in output.Split('\n'))
+				bool? wmiResult = TryParsePixelsPerLogicalInch(output, out scale);
+				if (wmiResult.HasValue)
 				{
-					if (line.Contains("PixelsPerXLogicalInch") && line.Contains(':'))
-					{
-						string[] parts = line.Split(':', 2);
-						if (parts.Length > 1)
-						{
-							string value = parts[1].Trim();
-							if (int.TryParse(value, out int dpi) && dpi > 0)
-							{
-								scale = dpi / 96.0;
-								bool isValid = scale > 1.0 && scale <= MaxScaleFactor;
-								return isValid;
-							}
-						}
-					}
+					return wmiResult.Value;
 				}
 			}
 
@@ -654,22 +637,10 @@ public static partial class ForceDpiAware
 
 			if (process.ExitCode == 0)
 			{
-				foreach (string line in output.Split('\n'))
+				bool? cimResult = TryParsePixelsPerLogicalInch(output, out scale);
+				if (cimResult.HasValue)
 				{
-					if (line.Contains("PixelsPerXLogicalInch") && line.Contains(':'))
-					{
-						string[] parts = line.Split(':', 2);
-						if (parts.Length > 1)
-						{
-							string value = parts[1].Trim();
-							if (int.TryParse(value, out int dpi) && dpi > 0)
-							{
-								scale = dpi / 96.0;
-								bool isValid = scale > 1.0 && scale <= MaxScaleFactor;
-								return isValid;
-							}
-						}
-					}
+					return cimResult.Value;
 				}
 			}
 		}
@@ -687,6 +658,40 @@ public static partial class ForceDpiAware
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Parses the "PixelsPerXLogicalInch" value from PowerShell WMI/CIM output.
+	/// </summary>
+	/// <param name="output">The command output to parse.</param>
+	/// <param name="scale">The detected scale factor for the first parseable positive DPI line.</param>
+	/// <returns>
+	/// The validity of the first parseable positive DPI line found, or <see langword="null"/>
+	/// if no such line was present.
+	/// </returns>
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method", Justification = "Explicit loop with early return is clearer and avoids unnecessary LINQ allocations in this diagnostic path.")]
+	private static bool? TryParsePixelsPerLogicalInch(string output, out double scale)
+	{
+		scale = 1.0;
+
+		foreach (string line in output.Split('\n'))
+		{
+			if (line.Contains("PixelsPerXLogicalInch") && line.Contains(':'))
+			{
+				string[] parts = line.Split(':', 2);
+				if (parts.Length > 1)
+				{
+					string value = parts[1].Trim();
+					if (int.TryParse(value, out int dpi) && dpi > 0)
+					{
+						scale = dpi / 96.0;
+						return scale > 1.0 && scale <= MaxScaleFactor;
+					}
+				}
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>
@@ -719,27 +724,11 @@ public static partial class ForceDpiAware
 				// Look for high-resolution displays that typically use scaling
 				foreach (string line in output.Split('\n'))
 				{
-					if (line.Contains(" connected ") && line.Contains('x'))
+					if (LineIndicatesHighDpiDisplay(line))
 					{
-						// Extract resolution (e.g., "2560x1440")
-						string[] parts = line.Split(' ');
-						foreach (string part in parts)
-						{
-							if (part.Contains('x') && !part.Contains('+'))
-							{
-								string[] dimensions = part.Split('x');
-								if (dimensions.Length == 2 &&
-									int.TryParse(dimensions[0], out int width) &&
-									int.TryParse(dimensions[1], out int height) &&
-									((width >= 2560 && height >= 1440) ||  // 1440p+
-									(width >= 1920 && height >= 1080 && (width > 1920 || height > 1080)))) // >1080p
-								{
-									// Common high-DPI resolutions that typically use 125% scaling
-									scale = 1.25; // 125% scaling is common for these resolutions
-									return true;
-								}
-							}
-						}
+						// Common high-DPI resolutions that typically use 125% scaling
+						scale = 1.25; // 125% scaling is common for these resolutions
+						return true;
 					}
 				}
 			}
@@ -758,6 +747,52 @@ public static partial class ForceDpiAware
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Determines whether an xrandr output line describes a connected high-DPI display.
+	/// </summary>
+	/// <param name="line">A single line of xrandr output.</param>
+	/// <returns>True if the line describes a connected display with a high-DPI resolution.</returns>
+	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method", Justification = "Explicit loop with early return is clearer and avoids unnecessary LINQ allocations in this diagnostic path.")]
+	private static bool LineIndicatesHighDpiDisplay(string line)
+	{
+		if (!line.Contains(" connected ") || !line.Contains('x'))
+		{
+			return false;
+		}
+
+		// Extract resolution (e.g., "2560x1440")
+		string[] parts = line.Split(' ');
+		foreach (string part in parts)
+		{
+			if (IsHighDpiResolution(part))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Determines whether an xrandr resolution token (e.g. "2560x1440") is a high-DPI resolution.
+	/// </summary>
+	/// <param name="part">A whitespace-delimited token from an xrandr output line.</param>
+	/// <returns>True if the token is a resolution that typically uses display scaling.</returns>
+	private static bool IsHighDpiResolution(string part)
+	{
+		if (!part.Contains('x') || part.Contains('+'))
+		{
+			return false;
+		}
+
+		string[] dimensions = part.Split('x');
+		return dimensions.Length == 2 &&
+			int.TryParse(dimensions[0], out int width) &&
+			int.TryParse(dimensions[1], out int height) &&
+			((width >= 2560 && height >= 1440) ||  // 1440p+
+			(width >= 1920 && height >= 1080 && (width > 1920 || height > 1080))); // >1080p
 	}
 }
 

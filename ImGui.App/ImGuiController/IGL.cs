@@ -90,5 +90,6 @@ public interface IGL : IDisposable
 	/// Specifies a two-dimensional texture image.
 	/// </summary>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native OpenGL interop; pointer is scoped to the call and not retained.")]
+	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the native OpenGL glTexImage2D signature; the parameter list is fixed by the GL API.")]
 	public unsafe void TexImage2D(GLEnum target, int level, int internalformat, uint width, uint height, int border, GLEnum format, GLEnum type, void* pixels);
 }
