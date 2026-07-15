@@ -116,7 +116,7 @@ public static partial class ImGuiWidgets
 				drawList.AddCircleFilled(center, radius, background.ToImGuiU32(), 0);
 
 				string initials = Initials(displayName);
-				ImColor textColor = Luminance(background.Value) > 0.55f ? new Srgb(0f, 0f, 0f).ToImColor(1f) : new Srgb(1f, 1f, 1f).ToImColor(1f);
+				ImColor textColor = background.MostReadableTextColor();
 				Vector2 textSize = ImGui.CalcTextSize(initials);
 				Vector2 textPos = new(center.X - (textSize.X * 0.5f), center.Y - (textSize.Y * 0.5f));
 				drawList.AddText(textPos, textColor.ToImGuiU32(), initials);
@@ -164,7 +164,5 @@ public static partial class ImGuiWidgets
 			float hueDegrees = hash % 360u;
 			return new Hsl(hueDegrees, 0.55f, 0.55f).ToSrgb().ToImColor();
 		}
-
-		private static float Luminance(Vector4 color) => (0.2126f * color.X) + (0.7152f * color.Y) + (0.0722f * color.Z);
 	}
 }
