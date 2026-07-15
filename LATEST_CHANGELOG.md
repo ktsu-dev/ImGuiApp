@@ -1,8 +1,9 @@
-## v3.0.1 (patch)
+## v3.1.0 (minor)
 
 Changes since v3.0.0:
 
-- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the microsoft group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- [minor] Strengthen color-vector typing with ImGuiVector4; docs ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Replace ImColors factory with Srgb/Color bridge conversions ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Flatten palette to Palette, drop alias, add ImColor.ToImGuiU32 ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Route library colors through the semantic color bridge ([@matt-edmondson](https://github.com/matt-edmondson))
 
