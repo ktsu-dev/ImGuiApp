@@ -523,12 +523,8 @@ public static class Theme
 				);
 			}
 
-			// Calculate contrasting text color for the surface
-			Vector4 surfaceVec = surfaceColor.Value;
-			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
-			uint textColor = luminance > 0.5f ?
-				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
-				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
+			// Calculate contrasting text color for the surface using WCAG relative luminance
+			uint textColor = surfaceColor.MostReadableTextColor().ToImGuiU32();
 
 			// Draw theme name text over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -668,12 +664,8 @@ public static class Theme
 				);
 			}
 
-			// Calculate contrasting text color for the surface
-			Vector4 surfaceVec = surfaceColor.Value;
-			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
-			uint textColor = luminance > 0.5f ?
-				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
-				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
+			// Calculate contrasting text color for the surface using WCAG relative luminance
+			uint textColor = surfaceColor.MostReadableTextColor().ToImGuiU32();
 
 			// Draw family name text over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -861,12 +853,8 @@ public static class Theme
 				);
 			}
 
-			// Calculate contrasting text color for the surface
-			Vector4 surfaceVec = surfaceColor.Value;
-			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
-			uint textColor = luminance > 0.5f ?
-				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
-				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
+			// Calculate contrasting text color for the surface using WCAG relative luminance
+			uint textColor = surfaceColor.MostReadableTextColor().ToImGuiU32();
 
 			// Draw group name text centered over the surface area (below title bar)
 			Vector2 textPos = new(
