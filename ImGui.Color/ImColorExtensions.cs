@@ -29,68 +29,68 @@ public static class ImColorExtensions
 	/// <param name="saturation">The new saturation.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor WithSaturation(this ImColor color, float saturation) =>
-		Rebuild(color, Srgb(color).WithSaturation(saturation));
+		Rebuild(color, ToSrgb(color).WithSaturation(saturation));
 
 	/// <summary>Returns a copy with HSL saturation increased by <paramref name="amount"/> (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="amount">The amount to add.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor SaturateBy(this ImColor color, float amount) =>
-		Rebuild(color, Srgb(color).SaturateBy(amount));
+		Rebuild(color, ToSrgb(color).SaturateBy(amount));
 
 	/// <summary>Returns a copy with HSL saturation decreased by <paramref name="amount"/> (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="amount">The amount to subtract.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor DesaturateBy(this ImColor color, float amount) =>
-		Rebuild(color, Srgb(color).DesaturateBy(amount));
+		Rebuild(color, ToSrgb(color).DesaturateBy(amount));
 
 	/// <summary>Returns a copy with HSL saturation multiplied by <paramref name="factor"/> (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="factor">The multiplier.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor MultiplySaturation(this ImColor color, float factor) =>
-		Rebuild(color, Srgb(color).MultiplySaturation(factor));
+		Rebuild(color, ToSrgb(color).MultiplySaturation(factor));
 
 	/// <summary>Returns a fully desaturated (grayscale) copy, preserving lightness and alpha.</summary>
 	/// <param name="color">The color.</param>
 	/// <returns>The grayscale color.</returns>
-	public static ImColor ToGrayscale(this ImColor color) => Rebuild(color, Srgb(color).ToGrayscale());
+	public static ImColor ToGrayscale(this ImColor color) => Rebuild(color, ToSrgb(color).ToGrayscale());
 
 	/// <summary>Returns a copy with HSL lightness replaced (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="lightness">The new lightness.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor WithLightness(this ImColor color, float lightness) =>
-		Rebuild(color, Srgb(color).WithLightness(lightness));
+		Rebuild(color, ToSrgb(color).WithLightness(lightness));
 
 	/// <summary>Returns a copy with HSL lightness increased by <paramref name="amount"/> (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="amount">The amount to add.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor LightenBy(this ImColor color, float amount) =>
-		Rebuild(color, Srgb(color).LightenBy(amount));
+		Rebuild(color, ToSrgb(color).LightenBy(amount));
 
 	/// <summary>Returns a copy with HSL lightness decreased by <paramref name="amount"/> (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="amount">The amount to subtract.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor DarkenBy(this ImColor color, float amount) =>
-		Rebuild(color, Srgb(color).DarkenBy(amount));
+		Rebuild(color, ToSrgb(color).DarkenBy(amount));
 
 	/// <summary>Returns a copy with HSL lightness multiplied by <paramref name="factor"/> (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="factor">The multiplier.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor MultiplyLightness(this ImColor color, float factor) =>
-		Rebuild(color, Srgb(color).MultiplyLightness(factor));
+		Rebuild(color, ToSrgb(color).MultiplyLightness(factor));
 
 	/// <summary>Returns a copy with its hue offset by <paramref name="degrees"/> around the wheel (wraps at 360).</summary>
 	/// <param name="color">The color.</param>
 	/// <param name="degrees">The hue offset in degrees.</param>
 	/// <returns>The adjusted color.</returns>
 	public static ImColor OffsetHue(this ImColor color, float degrees) =>
-		Rebuild(color, Srgb(color).OffsetHue(degrees));
+		Rebuild(color, ToSrgb(color).OffsetHue(degrees));
 
 	/// <summary>Returns a copy with alpha replaced (clamped to 0-1).</summary>
 	/// <param name="color">The color.</param>
@@ -102,15 +102,9 @@ public static class ImColorExtensions
 	/// <summary>Returns the per-channel inverse (photographic negative) in sRGB, preserving alpha.</summary>
 	/// <param name="color">The color.</param>
 	/// <returns>The inverted color.</returns>
-	public static ImColor Invert(this ImColor color) => Rebuild(color, Srgb(color).Invert());
+	public static ImColor Invert(this ImColor color) => Rebuild(color, ToSrgb(color).Invert());
 
 	// --- Analysis (linear-space color science) ---
-
-	/// <summary>Converts to HSL. Hue is in degrees (0-360); saturation and lightness are 0-1.</summary>
-	/// <param name="color">The color.</param>
-	/// <returns>The HSL value.</returns>
-	public static Hsl ToHsl(this ImColor color) => Srgb(color).ToHsl();
-
 	/// <summary>The WCAG relative luminance (computed on linear channels).</summary>
 	/// <param name="color">The color.</param>
 	/// <returns>The relative luminance.</returns>
@@ -209,7 +203,25 @@ public static class ImColorExtensions
 		return background.WithLightness(bestLightness);
 	}
 
-	private static Srgb Srgb(ImColor color) => new(color.Value.X, color.Value.Y, color.Value.Z);
+	/// <summary>
+	/// Converts an ImColor to an Srgb color.
+	/// </summary>
+	/// <param name="color"></param>
+	/// <returns>The Srgb color.</returns>
+	public static Srgb ToSrgb(ImColor color) => new(color.Value.X, color.Value.Y, color.Value.Z);
+
+	/// <summary>Converts to HSL. Hue is in degrees (0-360); saturation and lightness are 0-1.</summary>
+	/// <param name="color">The color.</param>
+	/// <returns>The HSL value.</returns>
+	public static Hsl ToHsl(this ImColor color) => ToSrgb(color).ToHsl();
+
+	/// <summary>
+	/// Converts an ImColor to an ImGuiVector4
+	/// </summary>
+	/// <param name="color"></param>
+	/// <returns>The ImGuiVector4 representation of the color.</returns>
+	public static ImGuiVector4 ToImGuiVector4(this ImColor color) =>
+		new(color.Value.X, color.Value.Y, color.Value.Z, color.Value.W);
 
 	private static ImColor Rebuild(ImColor original, Srgb adjusted) =>
 		new() { Value = new Vector4((float)adjusted.R, (float)adjusted.G, (float)adjusted.B, original.Value.W) };
