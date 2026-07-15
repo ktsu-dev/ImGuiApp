@@ -12,6 +12,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Presence/status indicator drawn as a small dot on an <see cref="ImGuiWidgets.Avatar(string, string, float, AvatarStatus)"/>.
@@ -106,19 +107,19 @@ public static partial class ImGuiWidgets
 			{
 				unsafe
 				{
-					drawList.AddImageRounded(new ImTextureRef(texId: textureId), origin, origin + new Vector2(resolvedDiameter, resolvedDiameter), Vector2.Zero, Vector2.One, ImGui.GetColorU32(Vector4.One), radius);
+					drawList.AddImageRounded(new ImTextureRef(texId: textureId), origin, origin + new Vector2(resolvedDiameter, resolvedDiameter), Vector2.Zero, Vector2.One, ImGui.GetColorU32(ImGuiVector4.One), radius);
 				}
 			}
 			else
 			{
-				Vector4 background = BackgroundFor(displayName);
-				drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(background), 0);
+				ImColor background = BackgroundFor(displayName);
+				drawList.AddCircleFilled(center, radius, background.ToImGuiU32(), 0);
 
 				string initials = Initials(displayName);
-				Vector4 textColor = Luminance(background) > 0.55f ? new Vector4(0f, 0f, 0f, 1f) : Vector4.One;
+				ImColor textColor = Luminance(background.Value) > 0.55f ? new Srgb(0f, 0f, 0f).ToImColor(1f) : new Srgb(1f, 1f, 1f).ToImColor(1f);
 				Vector2 textSize = ImGui.CalcTextSize(initials);
 				Vector2 textPos = new(center.X - (textSize.X * 0.5f), center.Y - (textSize.Y * 0.5f));
-				drawList.AddText(textPos, ImGui.GetColorU32(textColor), initials);
+				drawList.AddText(textPos, textColor.ToImGuiU32(), initials);
 			}
 
 			if (status != AvatarStatus.None)
@@ -140,18 +141,18 @@ public static partial class ImGuiWidgets
 			uint ringColor = ImGui.GetColorU32(ImGuiCol.WindowBg);
 			drawList.AddCircleFilled(dotCenter, dotRadius + MathF.Max(dotRadius * 0.25f, 1.5f), ringColor, 0);
 
-			Vector4 statusColor = status switch
+			ImColor statusColor = status switch
 			{
-				AvatarStatus.Online => Color.Palette.Semantic.Success.Value,
-				AvatarStatus.Away => Color.Palette.Semantic.Warning.Value,
-				AvatarStatus.Busy => Color.Palette.Semantic.Error.Value,
-				AvatarStatus.Offline => Color.Palette.Neutral.Gray.Value,
-				_ => Color.Palette.Neutral.Gray.Value,
+				AvatarStatus.Online => Palette.Semantic.Success,
+				AvatarStatus.Away => Palette.Semantic.Warning,
+				AvatarStatus.Busy => Palette.Semantic.Error,
+				AvatarStatus.Offline => Palette.Neutral.Gray,
+				_ => Palette.Neutral.Gray,
 			};
-			drawList.AddCircleFilled(dotCenter, dotRadius, ImGui.GetColorU32(statusColor), 0);
+			drawList.AddCircleFilled(dotCenter, dotRadius, statusColor.ToImGuiU32(), 0);
 		}
 
-		private static Vector4 BackgroundFor(string displayName)
+		private static ImColor BackgroundFor(string displayName)
 		{
 			// Stable (non-randomized) FNV-1a hash so the same name always maps to the same hue.
 			uint hash = 2166136261u;
@@ -161,7 +162,7 @@ public static partial class ImGuiWidgets
 			}
 
 			float hueDegrees = hash % 360u;
-			return ImColors.FromHsl(hueDegrees, 0.55f, 0.55f).Value;
+			return new Hsl(hueDegrees, 0.55f, 0.55f).ToSrgb().ToImColor();
 		}
 
 		private static float Luminance(Vector4 color) => (0.2126f * color.X) + (0.7152f * color.Y) + (0.0722f * color.Z);

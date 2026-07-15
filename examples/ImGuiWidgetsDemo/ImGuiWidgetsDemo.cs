@@ -10,6 +10,7 @@ using System.Numerics;
 using System.Text;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Popups;
 using ktsu.ImGui.Styler;
 using ktsu.ImGui.Widgets;
@@ -741,25 +742,25 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 
 			ImGui.TextUnformatted("Status Lights:");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Success, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("System OK");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Warning, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Warning, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Warning");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Error, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Error, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Error");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Info, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Info, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Info");
 
 			ImGui.Separator();
 			ImGui.TextUnformatted("Enabled vs Disabled:");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Success, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Enabled");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, false);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Success, false);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Disabled");
 		}
@@ -1016,7 +1017,7 @@ internal static class ImGuiWidgetsDemo
 
 			// Image demo with color tinting
 			ImGui.TextUnformatted("Clickable Image (with alpha-preserved tinting):");
-			Vector4 tintColor = new(1.0f, 0.8f, 0.8f, 1.0f); // Light red tint
+			ImGuiVector4 tintColor = new(1.0f, 0.8f, 0.8f, 1.0f); // Light red tint
 			if (ImGuiWidgets.Image(ktsuTexture.TextureId, new Vector2(64, 64), tintColor))
 			{
 				MessageOK.Open("Image Clicked", "You clicked the tinted image!");

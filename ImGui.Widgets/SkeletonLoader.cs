@@ -9,6 +9,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -85,10 +87,10 @@ public static partial class ImGuiWidgets
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
 
 			// Muted base and a lighter highlight, both pulled from the active theme.
-			Vector4 baseColor = colors[(int)ImGuiCol.FrameBg];
-			Vector4 highlight = colors[(int)ImGuiCol.FrameBgHovered];
+			ImColor baseColor = new() { Value = colors[(int)ImGuiCol.FrameBg] };
+			ImColor highlight = new() { Value = colors[(int)ImGuiCol.FrameBgHovered] };
 
-			drawList.AddRectFilled(min, max, ImGui.GetColorU32(baseColor), rounding);
+			drawList.AddRectFilled(min, max, baseColor.ToImGuiU32(), rounding);
 
 			// Clip the moving band to the placeholder bounds so it never bleeds past the edges.
 			drawList.PushClipRect(min, max, true);
@@ -105,8 +107,8 @@ public static partial class ImGuiWidgets
 			float left = center - (bandWidth * 0.5f);
 			float right = center + (bandWidth * 0.5f);
 
-			uint edge = ImGui.GetColorU32(highlight with { W = 0.0f });
-			uint core = ImGui.GetColorU32(highlight);
+			uint edge = highlight.WithAlpha(0f).ToImGuiU32();
+			uint core = highlight.ToImGuiU32();
 
 			// Two halves form a transparent -> bright -> transparent horizontal gradient.
 			drawList.AddRectFilledMultiColor(new Vector2(left, min.Y), new Vector2(center, max.Y), edge, core, core, edge);

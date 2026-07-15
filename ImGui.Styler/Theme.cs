@@ -12,7 +12,7 @@ using Hexa.NET.ImGui;
 using ktsu.ImGui.Color;
 using ktsu.ThemeProvider;
 using ktsu.ThemeProvider.ImGui;
-using SemanticColor = ktsu.Semantics.Color.Color;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides methods and properties to manage and apply themes for ImGui elements using ThemeProvider.
@@ -23,7 +23,7 @@ public static class Theme
 	private static string? currentThemeName;
 
 	// Cache for complete palettes to avoid recalculating them every frame
-	private static readonly Dictionary<string, IReadOnlyDictionary<SemanticColorRequest, SemanticColor>> paletteCache = [];
+	private static readonly Dictionary<string, IReadOnlyDictionary<SemanticColorRequest, Color>> paletteCache = [];
 	private static readonly Lock paletteCacheLock = new();
 
 	// ThemeBrowser modal instance
@@ -379,22 +379,22 @@ public static class Theme
 		try
 		{
 			// Get the theme's complete palette for color preview
-			IReadOnlyDictionary<SemanticColorRequest, SemanticColor> completePalette = GetCompletePalette(theme.CreateInstance());
+			IReadOnlyDictionary<SemanticColorRequest, Color> completePalette = GetCompletePalette(theme.CreateInstance());
 
 			// Get primary color for title bar and surface color for background
-			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
-			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
+			ImColor primaryColor = Palette.Basic.Blue; // Fallback
+			ImColor surfaceColor = Palette.Neutral.Gray; // Fallback
 
-			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
+			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out Color primary))
 			{
 				primaryColor = primary.ToImColor();
 			}
 
-			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
+			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out Color surface))
 			{
 				surfaceColor = surface.ToImColor();
 			}
-			else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
+			else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out Color surfaceMed))
 			{
 				surfaceColor = surfaceMed.ToImColor();
 			}
@@ -430,7 +430,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 0.3f)),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(0.3f),
 				2.0f
 			);
 
@@ -438,7 +438,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin,
 				dialogMax,
-				ImGui.ColorConvertFloat4ToU32(surfaceColor.Value),
+				surfaceColor.ToImGuiU32(),
 				2.0f
 			);
 
@@ -446,7 +446,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin,
 				titleBarMax,
-				ImGui.ColorConvertFloat4ToU32(primaryColor.Value),
+				primaryColor.ToImGuiU32(),
 				2.0f,
 				ImDrawFlags.RoundCornersTop
 			);
@@ -458,7 +458,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.4f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.4f),
 					2.0f,
 					ImDrawFlags.None,
 					1.0f
@@ -471,7 +471,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin,
 					dialogMax,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.4f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.4f),
 					2.0f,
 					ImDrawFlags.None,
 					1.0f
@@ -482,8 +482,8 @@ public static class Theme
 			Vector4 surfaceVec = surfaceColor.Value;
 			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
 			uint textColor = luminance > 0.5f ?
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 1.0f)) : // Dark text on light surface
-				ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f));   // Light text on dark surface
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
+				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
 
 			// Draw theme name text over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -542,28 +542,28 @@ public static class Theme
 		try
 		{
 			// Get colors from the representative theme if available
-			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
-			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
+			ImColor primaryColor = Palette.Basic.Blue; // Fallback
+			ImColor surfaceColor = Palette.Neutral.Gray; // Fallback
 
 			if (representativeTheme != null)
 			{
 				try
 				{
 					// Use the complete palette for efficient color extraction
-					IReadOnlyDictionary<SemanticColorRequest, SemanticColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+					IReadOnlyDictionary<SemanticColorRequest, Color> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
 
 					// Get primary color for title bar
-					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
+					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out Color primary))
 					{
 						primaryColor = primary.ToImColor();
 					}
 
 					// Get surface color for background
-					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
+					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out Color surface))
 					{
 						surfaceColor = surface.ToImColor();
 					}
-					else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
+					else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out Color surfaceMed))
 					{
 						surfaceColor = surfaceMed.ToImColor();
 					}
@@ -590,10 +590,10 @@ public static class Theme
 			ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(ImGui.GetStyle().ItemSpacing.X, 4.0f)); // Ensure proper vertical spacing
 
 			// Now use the standard BeginMenu with transparent styling to handle menu behavior
-			ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0, 0, 0, 0)); // Transparent
-			ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(1, 1, 1, 0.1f)); // Subtle hover
-			ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(1, 1, 1, 0.2f)); // Subtle active
-			ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0, 0, 0, 0)); // Hide text (we drew our own)
+			ImGui.PushStyleColor(ImGuiCol.Header, new Srgb(0f, 0f, 0f).ToImColor(0f).Value); // Transparent
+			ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Srgb(1f, 1f, 1f).ToImColor(0.1f).Value); // Subtle hover
+			ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Srgb(1f, 1f, 1f).ToImColor(0.2f).Value); // Subtle active
+			ImGui.PushStyleColor(ImGuiCol.Text, new Srgb(0f, 0f, 0f).ToImColor(0f).Value); // Hide text (we drew our own)
 
 			// Use a dummy selectable to reserve the exact space we want, then use BeginMenu
 			Vector2 desiredSize = new(desiredWidth, 34.0f); // 34px height to match our dialog design
@@ -622,7 +622,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 0.3f)),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(0.3f),
 				2.0f
 			);
 
@@ -630,7 +630,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin,
 				dialogMax,
-				ImGui.ColorConvertFloat4ToU32(surfaceColor.Value),
+				surfaceColor.ToImGuiU32(),
 				2.0f
 			);
 
@@ -638,7 +638,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin,
 				titleBarMax,
-				ImGui.ColorConvertFloat4ToU32(primaryColor.Value),
+				primaryColor.ToImGuiU32(),
 				2.0f,
 				ImDrawFlags.RoundCornersTop
 			);
@@ -650,7 +650,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.3f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.3f),
 					2.0f,
 					ImDrawFlags.None,
 					1.0f
@@ -661,8 +661,8 @@ public static class Theme
 			Vector4 surfaceVec = surfaceColor.Value;
 			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
 			uint textColor = luminance > 0.5f ?
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 1.0f)) : // Dark text on light surface
-				ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f));   // Light text on dark surface
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
+				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
 
 			// Draw family name text over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -708,26 +708,26 @@ public static class Theme
 		try
 		{
 			// Get colors from the representative theme
-			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
-			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
+			ImColor primaryColor = Palette.Basic.Blue; // Fallback
+			ImColor surfaceColor = Palette.Neutral.Gray; // Fallback
 
 			try
 			{
 				// Use the complete palette for efficient color extraction
-				IReadOnlyDictionary<SemanticColorRequest, SemanticColor> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+				IReadOnlyDictionary<SemanticColorRequest, Color> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
 
 				// Get primary color for title bar
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out Color primary))
 				{
 					primaryColor = primary.ToImColor();
 				}
 
 				// Get surface color for background
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out Color surface))
 				{
 					surfaceColor = surface.ToImColor();
 				}
-				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
+				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out Color surfaceMed))
 				{
 					surfaceColor = surfaceMed.ToImColor();
 				}
@@ -768,7 +768,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 0.2f)),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(0.2f),
 				1.5f
 			);
 
@@ -776,7 +776,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin,
 				dialogMax,
-				ImGui.ColorConvertFloat4ToU32(surfaceColor.Value),
+				surfaceColor.ToImGuiU32(),
 				1.5f
 			);
 
@@ -784,7 +784,7 @@ public static class Theme
 			drawList.AddRectFilled(
 				dialogMin,
 				titleBarMax,
-				ImGui.ColorConvertFloat4ToU32(primaryColor.Value),
+				primaryColor.ToImGuiU32(),
 				1.5f,
 				ImDrawFlags.RoundCornersTop
 			);
@@ -796,7 +796,7 @@ public static class Theme
 				drawList.AddRect(
 					dialogMin + new Vector2(0.5f, 0.5f),
 					dialogMax - new Vector2(0.5f, 0.5f),
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.25f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.25f),
 					1.5f,
 					ImDrawFlags.None,
 					0.8f
@@ -807,8 +807,8 @@ public static class Theme
 			Vector4 surfaceVec = surfaceColor.Value;
 			float luminance = (0.299f * surfaceVec.X) + (0.587f * surfaceVec.Y) + (0.114f * surfaceVec.Z);
 			uint textColor = luminance > 0.5f ?
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 1.0f)) : // Dark text on light surface
-				ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f));   // Light text on dark surface
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(1.0f) : // Dark text on light surface
+				new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(1.0f);   // Light text on dark surface
 
 			// Draw group name text centered over the surface area (below title bar)
 			Vector2 textPos = new(
@@ -889,7 +889,7 @@ public static class Theme
 	/// This provides every color that can be requested from the theme, useful for theme exploration and previews.
 	/// </summary>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if no theme is active.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? GetCurrentThemeCompletePalette()
+	public static IReadOnlyDictionary<SemanticColorRequest, Color>? GetCurrentThemeCompletePalette()
 	{
 		ThemeRegistry.ThemeInfo? currentTheme = CurrentTheme;
 		if (currentTheme is null)
@@ -907,7 +907,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The semantic theme to generate the complete palette from.</param>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, SemanticColor> GetCompletePalette(ISemanticTheme theme)
+	public static IReadOnlyDictionary<SemanticColorRequest, Color> GetCompletePalette(ISemanticTheme theme)
 	{
 		Ensure.NotNull(theme);
 
@@ -917,14 +917,14 @@ public static class Theme
 		// Check cache first
 		using (paletteCacheLock.EnterScope())
 		{
-			if (paletteCache.TryGetValue(cacheKey, out IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? cachedPalette))
+			if (paletteCache.TryGetValue(cacheKey, out IReadOnlyDictionary<SemanticColorRequest, Color>? cachedPalette))
 			{
 				return cachedPalette;
 			}
 		}
 
 		// Generate the palette
-		IReadOnlyDictionary<SemanticColorRequest, SemanticColor> palette = GeneratePaletteUncached(theme);
+		IReadOnlyDictionary<SemanticColorRequest, Color> palette = GeneratePaletteUncached(theme);
 
 		// Cache the result
 		using (paletteCacheLock.EnterScope())
@@ -948,7 +948,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="themeName">The name of the theme to get the palette for.</param>
 	/// <returns>A dictionary mapping every possible semantic color request to its assigned color, or null if theme not found.</returns>
-	public static IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? GetCompletePalette(string themeName)
+	public static IReadOnlyDictionary<SemanticColorRequest, Color>? GetCompletePalette(string themeName)
 	{
 		ThemeRegistry.ThemeInfo? themeInfo = FindTheme(themeName);
 		if (themeInfo is null)
@@ -964,7 +964,7 @@ public static class Theme
 	/// </summary>
 	/// <param name="theme">The theme to generate the palette from.</param>
 	/// <returns>The complete palette dictionary.</returns>
-	private static IReadOnlyDictionary<SemanticColorRequest, SemanticColor> GeneratePaletteUncached(ISemanticTheme theme) =>
+	private static IReadOnlyDictionary<SemanticColorRequest, Color> GeneratePaletteUncached(ISemanticTheme theme) =>
 		SemanticColorMapper.MakeCompletePalette(theme);
 
 	/// <summary>
@@ -982,7 +982,7 @@ public static class Theme
 		keyBuilder.Append('_');
 
 		// Add a simple hash of the semantic mappings
-		foreach (KeyValuePair<SemanticMeaning, Collection<SemanticColor>> mapping in theme.SemanticMapping.OrderBy(kvp => kvp.Key))
+		foreach (KeyValuePair<SemanticMeaning, Collection<Color>> mapping in theme.SemanticMapping.OrderBy(kvp => kvp.Key))
 		{
 			keyBuilder.Append(mapping.Key);
 			keyBuilder.Append(':');
@@ -1011,7 +1011,7 @@ public static class Theme
 	/// <returns>An array of all available semantic color requests, or empty array if no theme is active.</returns>
 	public static ImmutableArray<SemanticColorRequest> GetCurrentThemeAvailableColorRequests()
 	{
-		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? palette = GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, Color>? palette = GetCurrentThemeCompletePalette();
 		return palette?.Keys.ToImmutableArray() ?? [];
 	}
 
@@ -1022,9 +1022,9 @@ public static class Theme
 	/// <param name="request">The semantic color request specifying the color to retrieve.</param>
 	/// <param name="color">The retrieved color if found.</param>
 	/// <returns>True if the color was found, false otherwise.</returns>
-	public static bool TryGetColor(SemanticColorRequest request, out SemanticColor color)
+	public static bool TryGetColor(SemanticColorRequest request, out Color color)
 	{
-		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? palette = GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, Color>? palette = GetCurrentThemeCompletePalette();
 		if (palette is not null && palette.TryGetValue(request, out color))
 		{
 			return true;
@@ -1040,8 +1040,8 @@ public static class Theme
 	/// </summary>
 	/// <param name="request">The semantic color request specifying the color to retrieve.</param>
 	/// <returns>The color if found, null otherwise.</returns>
-	public static SemanticColor? GetColor(SemanticColorRequest request) =>
-		TryGetColor(request, out SemanticColor color) ? color : null;
+	public static Color? GetColor(SemanticColorRequest request) =>
+		TryGetColor(request, out Color color) ? color : null;
 
 	#endregion
 

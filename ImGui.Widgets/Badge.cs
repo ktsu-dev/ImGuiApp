@@ -10,6 +10,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -29,7 +30,7 @@ public static partial class ImGuiWidgets
 		string text = FormatBadgeCount(count, maxCount);
 		if (text.Length != 0)
 		{
-			BadgeImpl.DrawText(text, Color.Palette.Semantic.Error.Value);
+			BadgeImpl.DrawText(text, Palette.Semantic.Error);
 		}
 	}
 
@@ -42,7 +43,7 @@ public static partial class ImGuiWidgets
 	{
 		if (!string.IsNullOrEmpty(text))
 		{
-			BadgeImpl.DrawText(text, Color.Palette.Semantic.Error.Value);
+			BadgeImpl.DrawText(text, Palette.Semantic.Error);
 		}
 	}
 
@@ -50,7 +51,7 @@ public static partial class ImGuiWidgets
 	/// Overlays a small solid dot on the top-right corner of the most recently submitted item (a presence /
 	/// unread indicator with no count). Call this immediately after the item it decorates.
 	/// </summary>
-	public static void BadgeDot() => BadgeImpl.DrawDot(Color.Palette.Semantic.Error.Value);
+	public static void BadgeDot() => BadgeImpl.DrawDot(Palette.Semantic.Error);
 
 	/// <summary>
 	/// Formats a badge count: an empty string for non-positive counts, the count itself when within
@@ -73,7 +74,7 @@ public static partial class ImGuiWidgets
 
 	internal static class BadgeImpl
 	{
-		internal static void DrawText(string text, Vector4 background)
+		internal static void DrawText(string text, ImColor background)
 		{
 			Vector2 anchor = ImGui.GetItemRectMax() with { Y = ImGui.GetItemRectMin().Y };
 
@@ -87,19 +88,19 @@ public static partial class ImGuiWidgets
 			Vector2 min = new(max.X - width, max.Y - height);
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-			drawList.AddRectFilled(min, max, ImGui.GetColorU32(background), height * 0.5f);
+			drawList.AddRectFilled(min, max, background.ToImGuiU32(), height * 0.5f);
 
 			Vector2 textPos = new(min.X + ((width - textSize.X) * 0.5f), min.Y + ((height - textSize.Y) * 0.5f));
-			drawList.AddText(textPos, ImGui.GetColorU32(Vector4.One), text);
+			drawList.AddText(textPos, ImGui.GetColorU32(ImGuiVector4.One), text);
 		}
 
-		internal static void DrawDot(Vector4 background)
+		internal static void DrawDot(ImColor background)
 		{
 			Vector2 anchor = ImGui.GetItemRectMax() with { Y = ImGui.GetItemRectMin().Y };
 			float radius = MathF.Max(ImGui.GetTextLineHeight() * 0.25f, 4.0f);
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-			drawList.AddCircleFilled(anchor, radius, ImGui.GetColorU32(background), 0);
+			drawList.AddCircleFilled(anchor, radius, background.ToImGuiU32(), 0);
 		}
 	}
 }

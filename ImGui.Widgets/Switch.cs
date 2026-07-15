@@ -10,7 +10,9 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Widgets.Animation;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -86,7 +88,7 @@ public static partial class ImGuiWidgets
 			float maxX = origin.X + width - radius;
 			float thumbX = minX + ((maxX - minX) * eased);
 			Vector2 thumbCenter = new(thumbX, origin.Y + radius);
-			drawList.AddCircleFilled(thumbCenter, thumbRadius, ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)), 32);
+			drawList.AddCircleFilled(thumbCenter, thumbRadius, new Srgb(1f, 1f, 1f).ToImGuiU32(1f), 32);
 
 			// Visible label to the right of the switch (text before ## only).
 			string visible = VisibleLabel(label);

@@ -9,6 +9,9 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -52,7 +55,7 @@ public static partial class ImGuiWidgets
 
 		if (fill > 0.0f)
 		{
-			drawList.AddRectFilled(new Vector2(min.X, fillTop), max, ImGui.GetColorU32(ZoneColor(db)));
+			drawList.AddRectFilled(new Vector2(min.X, fillTop), max, ZoneColor(db).ToImGuiU32());
 		}
 
 		// Peak-hold marker.
@@ -60,7 +63,7 @@ public static partial class ImGuiWidgets
 		{
 			float peak = Math.Clamp((peakDb - minDb) / range, 0.0f, 1.0f);
 			float peakY = max.Y - (peak * meterSize.Y);
-			drawList.AddLine(new Vector2(min.X, peakY), new Vector2(max.X, peakY), ImGui.GetColorU32(ZoneColor(peakDb)), 2.0f);
+			drawList.AddLine(new Vector2(min.X, peakY), new Vector2(max.X, peakY), ZoneColor(peakDb).ToImGuiU32(), 2.0f);
 		}
 
 		drawList.AddRect(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.Border]));
@@ -72,10 +75,10 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="db">The level, in decibels.</param>
 	/// <returns>Green below -6 dB, amber up to 0 dB, otherwise red.</returns>
-	private static Vector4 ZoneColor(float db) => db switch
+	private static ImColor ZoneColor(float db) => db switch
 	{
-		> 0.0f => new Vector4(0.90f, 0.20f, 0.20f, 1.0f),
-		> -6.0f => new Vector4(0.90f, 0.78f, 0.20f, 1.0f),
-		_ => new Vector4(0.25f, 0.80f, 0.35f, 1.0f),
+		> 0.0f => new Srgb(0.90f, 0.20f, 0.20f).ToImColor(1.0f),
+		> -6.0f => new Srgb(0.90f, 0.78f, 0.20f).ToImColor(1.0f),
+		_ => new Srgb(0.25f, 0.80f, 0.35f).ToImColor(1.0f),
 	};
 }

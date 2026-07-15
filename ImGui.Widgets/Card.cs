@@ -9,6 +9,9 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -39,7 +42,7 @@ public static partial class ImGuiWidgets
 		private readonly Vector2 padding;
 		private readonly float rounding;
 		private readonly float width;
-		private readonly Vector4? background;
+		private readonly ImGuiVector4? background;
 		private readonly bool border;
 		private readonly bool wrapPushed;
 		private bool disposed;
@@ -52,7 +55,7 @@ public static partial class ImGuiWidgets
 		/// <param name="rounding">Corner radius in pixels. When negative a value derived from the style's frame rounding is used.</param>
 		/// <param name="background">Explicit fill colour. When <see langword="null"/> an elevated surface colour is resolved from the active theme.</param>
 		/// <param name="border">Whether to stroke a one-pixel border in the theme's border colour.</param>
-		public Card(float width = 0f, float padding = -1f, float rounding = -1f, Vector4? background = null, bool border = true)
+		public Card(float width = 0f, float padding = -1f, float rounding = -1f, ImGuiVector4? background = null, bool border = true)
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
 			this.padding = padding >= 0f ? new Vector2(padding, padding) : style.WindowPadding;
@@ -111,7 +114,7 @@ public static partial class ImGuiWidgets
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
 			DrawShadow(drawList, cardMin, cardMax, rounding, colors[(int)ImGuiCol.BorderShadow]);
 
-			Vector4 fill = background ?? ResolveSurface(colors);
+			Vector4 fill = background?.ToVector4() ?? ResolveSurface(colors);
 			drawList.AddRectFilled(cardMin, cardMax, ImGui.GetColorU32(fill), rounding);
 
 			if (border)
@@ -142,8 +145,9 @@ public static partial class ImGuiWidgets
 		// Soft drop shadow: a stack of expanding rounded rects, faintest on the outside, offset slightly downward.
 		private static void DrawShadow(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 shadowColor)
 		{
-			float baseAlpha = shadowColor.W > 0.01f ? shadowColor.W : 0.25f;
-			Vector3 rgb = shadowColor.W > 0.01f ? new Vector3(shadowColor.X, shadowColor.Y, shadowColor.Z) : Vector3.Zero;
+			// Fall back to a soft black shadow when the theme supplies a fully-transparent shadow colour.
+			ImColor baseColor = shadowColor.W > 0.01f ? new ImColor { Value = shadowColor } : new Srgb(0f, 0f, 0f).ToImColor(0.25f);
+			float baseAlpha = baseColor.Value.W;
 
 			const int layers = 4;
 			float maxGrow = MathF.Max(rounding, 6.0f);
@@ -161,7 +165,7 @@ public static partial class ImGuiWidgets
 				}
 
 				Vector2 g = new(grow, grow);
-				drawList.AddRectFilled(min - g + offset, max + g + offset, ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, alpha)), rounding + grow);
+				drawList.AddRectFilled(min - g + offset, max + g + offset, baseColor.WithAlpha(alpha).ToImGuiU32(), rounding + grow);
 			}
 		}
 	}

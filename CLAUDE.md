@@ -29,8 +29,8 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness
 - **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
-- **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Conversions (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`), `ImColors` factories (`FromHex`, `FromRgb`, `FromRgba`, `FromVector`, `FromHsl`), and `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`.
-- **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Color.Palette`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
+- **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
+- **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
 - **ImGuiNodeEditor** (`ktsu.ImGuiNodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`
 
@@ -57,12 +57,12 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
-- `ImGui.Color/ColorImGuiExtensions.cs` - SemanticColor ↔ ImColor/ImU32/Vector4 conversions
-- `ImGui.Color/ImColors.cs` - ImColor factory methods (hex, RGB, HSL, vector)
+- `ImGui.Color/ColorImGuiExtensions.cs` - `Color` ↔ ImColor/ImU32/Vector4 conversions (`ImColor.ToImGuiU32` applies global alpha; `Color.ToImGuiU32` is pure)
+- `ImGui.Color/SrgbImGuiExtensions.cs` - Direct `Srgb` → ImColor/ImGuiVector4/ImU32 conversions (no linear round-trip)
 - `ImGui.Color/ImColorExtensions.cs` - ImColor adjustment, analysis, and contrast operations
-- `ImGui.Styler/Color.cs` - Theme-aware color palette (`Color.Palette`) and theme color lookups
+- `ImGui.Styler/Palette.cs` - Theme-aware color palette (`Palette.Basic`, `Palette.Semantic`, `Palette.Neutral`, …) and theme color lookups
 - `ImGui.Styler/Theme.cs` - Theme management, browser, and selector
-- `ImGui.Styler/ScopedColor.cs` - RAII-pattern color styling
+- `ImGui.Styler/ScopedColor.cs` - RAII-pattern color styling (`ImColor`/`Color`/`Srgb` overloads; `ScopedTextColor` too)
 - `NodeGraph/NodeAttribute.cs` - Core node attributes
 - `NodeGraph/PinAttribute.cs` - Pin declaration attributes
 - `ImGuiNodeEditor/NodeEditorEngine.cs` - Node graph business logic
@@ -117,9 +117,16 @@ ImGuiApp.Start(new ImGuiAppConfig
 ### Scoped Styling (RAII Pattern)
 
 ```csharp
+// ScopedColor accepts a semantic Color, an Srgb, or an ImColor
 using (new ScopedColor(ImGuiCol.Text, Color.FromHex("#ff6b6b")))
 {
     ImGui.Text("Styled text");  // Auto-restored after block
+}
+
+// Theme-aware palette entries are ImColor values
+using (new ScopedColor(ImGuiCol.Button, Palette.Semantic.Success))
+{
+    ImGui.Button("Themed button");
 }
 
 using (Text.Color.Error())

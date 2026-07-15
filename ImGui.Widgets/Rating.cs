@@ -9,6 +9,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -89,7 +90,7 @@ public static partial class ImGuiWidgets
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			uint emptyColor = ImGui.GetColorU32(ImGuiCol.FrameBg);
-			uint filledColor = ImGui.GetColorU32(Color.Palette.Basic.Yellow.Value);
+			uint filledColor = Palette.Basic.Yellow.ToImGuiU32();
 			float radius = starSize * 0.5f;
 
 			for (int i = 0; i < starCount; i++)

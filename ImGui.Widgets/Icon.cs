@@ -9,6 +9,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -45,7 +46,7 @@ public static partial class ImGuiWidgets
 		/// <summary>
 		/// The color of the icon.
 		/// </summary>
-		public Vector4 Color { get; init; } = Styler.Color.Palette.Neutral.White.Value;
+		public ImGuiVector4 Color { get; init; } = new(Styler.Palette.Neutral.White.Value);
 
 		/// <summary>
 		/// The tooltip to display.
@@ -306,7 +307,7 @@ public static partial class ImGuiWidgets
 			return wasClicked;
 		}
 
-		private static void VerticalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, Vector4 color = default, Vector2 cursorStartPos = default)
+		private static void VerticalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, ImGuiVector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2((boundingBoxSize.X - imageSize.X) / 2, 0);
 			ImGui.SetCursorScreenPos(imageTopLeft);
@@ -315,7 +316,7 @@ public static partial class ImGuiWidgets
 				if (color != default)
 				{
 					// Use transparent background with color as tint to preserve alpha
-					ImGui.ImageWithBg(new ImTextureRef(texId: textureId), imageSize, Vector4.Zero, color);
+					ImGui.ImageWithBg(new ImTextureRef(texId: textureId), imageSize, ImGuiVector4.Zero, color);
 				}
 				else
 				{
@@ -335,7 +336,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private static void HorizontalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, Vector2 itemSpacing, Vector4 color = default, Vector2 cursorStartPos = default)
+		private static void HorizontalLayout(IEnumerable<(string, Vector2)> linesWithSizes, nint textureId, Vector2 imageSize, Vector2 boundingBoxSize, Vector2 itemSpacing, ImGuiVector4 color = default, Vector2 cursorStartPos = default)
 		{
 			Vector2 imageTopLeft = cursorStartPos + new Vector2(0, (boundingBoxSize.Y - imageSize.Y) / 2);
 			ImGui.SetCursorScreenPos(imageTopLeft);
@@ -345,7 +346,7 @@ public static partial class ImGuiWidgets
 				if (color != default)
 				{
 					// Use transparent background with color as tint to preserve alpha
-					ImGui.ImageWithBg(new ImTextureRef(texId: textureId), imageSize, Vector4.Zero, color);
+					ImGui.ImageWithBg(new ImTextureRef(texId: textureId), imageSize, ImGuiVector4.Zero, color);
 				}
 				else
 				{

@@ -15,7 +15,7 @@ using ktsu.ImGui.App;
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 using ktsu.ThemeProvider;
-using SemanticColor = ktsu.Semantics.Color.Color;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Comprehensive demonstration of the ImGuiStyler library capabilities.
@@ -222,7 +222,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Separator();
 
 		// Check if a theme is active
-		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
+		IReadOnlyDictionary<SemanticColorRequest, Color>? completePalette = Theme.GetCurrentThemeCompletePalette();
 		if (completePalette is null)
 		{
 			ImGui.TextWrapped("No theme is currently active. Select a theme from the Theme Gallery tab to see its complete palette.");
@@ -256,7 +256,7 @@ internal sealed class ImGuiStylerDemo
 
 		ImColor? neutralIconColor = null;
 		if (highestNeutralPriority.HasValue &&
-			completePalette.TryGetValue(new(SemanticMeaning.Neutral, highestNeutralPriority.Value), out SemanticColor neutralColor))
+			completePalette.TryGetValue(new(SemanticMeaning.Neutral, highestNeutralPriority.Value), out Color neutralColor))
 		{
 			neutralIconColor = neutralColor.ToImColor();
 		}
@@ -296,7 +296,7 @@ internal sealed class ImGuiStylerDemo
 					ImGui.TableSetColumnIndex(colIndex + 1); // +1 because column 0 is semantic name
 
 					SemanticColorRequest request = new(meaning, priority);
-					if (completePalette.TryGetValue(request, out SemanticColor color))
+					if (completePalette.TryGetValue(request, out Color color))
 					{
 						ImColor imColor = color.ToImColor();
 
@@ -332,7 +332,7 @@ internal sealed class ImGuiStylerDemo
 							);
 
 							// Use the highest priority neutral color for the icon
-							drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(neutralIconColor.Value.Value), iconText);
+							drawList.AddText(textPos, neutralIconColor.Value.ToImGuiU32(), iconText);
 						}
 
 						// Tooltip
@@ -368,65 +368,65 @@ internal sealed class ImGuiStylerDemo
 
 		// Basic Colors Palette
 		RenderColorPaletteSection("Basic Colors", [
-			("Red", Color.Palette.Basic.Red),
-			("Green", Color.Palette.Basic.Green),
-			("Blue", Color.Palette.Basic.Blue),
-			("Yellow", Color.Palette.Basic.Yellow),
-			("Cyan", Color.Palette.Basic.Cyan),
-			("Magenta", Color.Palette.Basic.Magenta),
-			("Orange", Color.Palette.Basic.Orange),
-			("Pink", Color.Palette.Basic.Pink),
-			("Lime", Color.Palette.Basic.Lime),
-			("Purple", Color.Palette.Basic.Purple),
+			("Red", Palette.Basic.Red),
+			("Green", Palette.Basic.Green),
+			("Blue", Palette.Basic.Blue),
+			("Yellow", Palette.Basic.Yellow),
+			("Cyan", Palette.Basic.Cyan),
+			("Magenta", Palette.Basic.Magenta),
+			("Orange", Palette.Basic.Orange),
+			("Pink", Palette.Basic.Pink),
+			("Lime", Palette.Basic.Lime),
+			("Purple", Palette.Basic.Purple),
 		]);
 
 		// Semantic Colors Palette
 		RenderColorPaletteSection("Semantic Colors", [
-			("Error", Color.Palette.Semantic.Error),
-			("Warning", Color.Palette.Semantic.Warning),
-			("Success", Color.Palette.Semantic.Success),
-			("Info", Color.Palette.Semantic.Info),
-			("Primary", Color.Palette.Semantic.Primary),
-			("Secondary", Color.Palette.Semantic.Secondary),
+			("Error", Palette.Semantic.Error),
+			("Warning", Palette.Semantic.Warning),
+			("Success", Palette.Semantic.Success),
+			("Info", Palette.Semantic.Info),
+			("Primary", Palette.Semantic.Primary),
+			("Secondary", Palette.Semantic.Secondary),
 		]);
 
 		// Neutral Colors Palette
 		RenderColorPaletteSection("Neutral Colors", [
-			("White", Color.Palette.Neutral.White),
-			("Light Gray", Color.Palette.Neutral.LightGray),
-			("Gray", Color.Palette.Neutral.Gray),
-			("Dark Gray", Color.Palette.Neutral.DarkGray),
-			("Black", Color.Palette.Neutral.Black),
+			("White", Palette.Neutral.White),
+			("Light Gray", Palette.Neutral.LightGray),
+			("Gray", Palette.Neutral.Gray),
+			("Dark Gray", Palette.Neutral.DarkGray),
+			("Black", Palette.Neutral.Black),
 		]);
 
 		// Natural Colors Palette
 		RenderColorPaletteSection("Natural Colors", [
-			("Brown", Color.Palette.Natural.Brown),
-			("Olive", Color.Palette.Natural.Olive),
-			("Maroon", Color.Palette.Natural.Maroon),
-			("Navy", Color.Palette.Natural.Navy),
-			("Teal", Color.Palette.Natural.Teal),
-			("Indigo", Color.Palette.Natural.Indigo),
+			("Brown", Palette.Natural.Brown),
+			("Olive", Palette.Natural.Olive),
+			("Maroon", Palette.Natural.Maroon),
+			("Navy", Palette.Natural.Navy),
+			("Teal", Palette.Natural.Teal),
+			("Indigo", Palette.Natural.Indigo),
 		]);
 
 		// Vibrant Colors Palette
 		RenderColorPaletteSection("Vibrant Colors", [
-			("Coral", Color.Palette.Vibrant.Coral),
-			("Salmon", Color.Palette.Vibrant.Salmon),
-			("Turquoise", Color.Palette.Vibrant.Turquoise),
-			("Violet", Color.Palette.Vibrant.Violet),
-			("Gold", Color.Palette.Vibrant.Gold),
-			("Silver", Color.Palette.Vibrant.Silver),
+			("Coral", Palette.Vibrant.Coral),
+			("Salmon", Palette.Vibrant.Salmon),
+			("Turquoise", Palette.Vibrant.Turquoise),
+			("Violet", Palette.Vibrant.Violet),
+			("Gold", Palette.Vibrant.Gold),
+			("Silver", Palette.Vibrant.Silver),
 		]);
 
 		// Pastel Colors Palette
 		RenderColorPaletteSection("Pastel Colors", [
-			("Beige", Color.Palette.Pastel.Beige),
-			("Peach", Color.Palette.Pastel.Peach),
-			("Mint", Color.Palette.Pastel.Mint),
-			("Lavender", Color.Palette.Pastel.Lavender),
-			("Khaki", Color.Palette.Pastel.Khaki),
-			("Plum", Color.Palette.Pastel.Plum),
+			("Beige", Palette.Pastel.Beige),
+			("Peach", Palette.Pastel.Peach),
+			("Mint", Palette.Pastel.Mint),
+			("Lavender", Palette.Pastel.Lavender),
+			("Khaki", Palette.Pastel.Khaki),
+			("Plum", Palette.Pastel.Plum),
 		]);
 
 		ImGui.Separator();
@@ -436,7 +436,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.ColorEdit4("Custom Color", ref colorValue[0]);
 
 		// Show color variations
-		ImColor baseColor = ImColors.FromRgba(colorValue[0], colorValue[1], colorValue[2], colorValue[3]);
+		ImColor baseColor = new Srgb(colorValue[0], colorValue[1], colorValue[2]).ToImColor(colorValue[3]);
 		ImGui.Text("Color Variations:");
 
 		ImGui.BeginGroup();
@@ -651,14 +651,14 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Separator();
 
 		ImGui.Text("Scoped color themes:");
-		using (Theme.FromColor(Color.Palette.Semantic.Error))
+		using (Theme.FromColor(Palette.Semantic.Error))
 		{
 			ImGui.Text("Error-themed section:");
 			ImGui.Button("Danger Button");
 			ImGui.ProgressBar(0.8f, new Vector2(-1, 0), "80% Critical");
 		}
 
-		using (Theme.FromColor(Color.Palette.Semantic.Success))
+		using (Theme.FromColor(Palette.Semantic.Success))
 		{
 			ImGui.Text("Success-themed section:");
 			ImGui.Button("Success Button");
@@ -676,17 +676,17 @@ internal sealed class ImGuiStylerDemo
 
 		if (string.IsNullOrWhiteSpace(formUsername))
 		{
-			using ScopedColor errorText = new(Color.Palette.Basic.Red);
+			using ScopedColor errorText = new(Palette.Basic.Red);
 			ImGui.Text("❌ Required");
 		}
 		else if (formUsername.Length < 3)
 		{
-			using ScopedColor warningText = new(Color.Palette.Basic.Yellow);
+			using ScopedColor warningText = new(Palette.Basic.Yellow);
 			ImGui.Text("⚠ Username should be at least 3 characters");
 		}
 		else
 		{
-			using ScopedColor successText = new(Color.Palette.Basic.Green);
+			using ScopedColor successText = new(Palette.Basic.Green);
 			ImGui.Text("✓ Username looks good");
 		}
 
@@ -695,12 +695,12 @@ internal sealed class ImGuiStylerDemo
 		bool validEmail = formEmail.Contains('@') && formEmail.Contains('.');
 		if (!string.IsNullOrWhiteSpace(formEmail) && !validEmail)
 		{
-			using ScopedColor errorText = new(Color.Palette.Basic.Red);
+			using ScopedColor errorText = new(Palette.Basic.Red);
 			ImGui.Text("⚠ Invalid email format");
 		}
 		else if (validEmail)
 		{
-			using ScopedColor successText = new(Color.Palette.Basic.Green);
+			using ScopedColor successText = new(Palette.Basic.Green);
 			ImGui.Text("✓ Email looks valid");
 		}
 
@@ -708,14 +708,14 @@ internal sealed class ImGuiStylerDemo
 
 		if (!canSubmit)
 		{
-			using (Theme.DisabledFromColor(Color.Palette.Neutral.Gray))
+			using (Theme.DisabledFromColor(Palette.Neutral.Gray))
 			{
 				ImGui.Button("Submit (Complete form first)");
 			}
 		}
 		else
 		{
-			using (Theme.FromColor(Color.Palette.Semantic.Success))
+			using (Theme.FromColor(Palette.Semantic.Success))
 			{
 				if (ImGui.Button("Submit Registration"))
 				{
@@ -732,12 +732,12 @@ internal sealed class ImGuiStylerDemo
 		ImGui.SameLine();
 		if (string.IsNullOrWhiteSpace(formUsername))
 		{
-			using ScopedColor errorText = new(Color.Palette.Basic.Red);
+			using ScopedColor errorText = new(Palette.Basic.Red);
 			ImGui.Text("❌ Required");
 		}
 		else
 		{
-			using ScopedColor successText = new(Color.Palette.Basic.Green);
+			using ScopedColor successText = new(Palette.Basic.Green);
 			ImGui.Text("✅ Valid");
 		}
 
@@ -745,12 +745,12 @@ internal sealed class ImGuiStylerDemo
 		ImGui.SameLine();
 		if (string.IsNullOrWhiteSpace(formEmail) || !formEmail.Contains('@'))
 		{
-			using ScopedColor errorText = new(Color.Palette.Basic.Red);
+			using ScopedColor errorText = new(Palette.Basic.Red);
 			ImGui.Text("❌ Invalid");
 		}
 		else
 		{
-			using ScopedColor successText = new(Color.Palette.Basic.Green);
+			using ScopedColor successText = new(Palette.Basic.Green);
 			ImGui.Text("✅ Valid");
 		}
 
@@ -938,9 +938,9 @@ internal sealed class ImGuiStylerDemo
 		ImGui.TextUnformatted("");
 
 		ImGui.Text("// Use color palette (theme-aware)");
-		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "ImColor primaryColor = Color.Palette.Semantic.Primary;");
-		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "ImColor errorColor = Color.Palette.Semantic.Error;");
-		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "ImColor customRed = Color.Palette.Basic.Red; // Adapts to theme");
+		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "ImColor primaryColor = Palette.Semantic.Primary;");
+		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "ImColor errorColor = Palette.Semantic.Error;");
+		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "ImColor customRed = Palette.Basic.Red; // Adapts to theme");
 		ImGui.TextUnformatted("");
 
 		ImGui.Text("// NEW: Use complete theme palette API (powered by MakeCompletePalette)");
@@ -961,7 +961,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.TextUnformatted("");
 
 		ImGui.Text("// Scoped theme colors for UI sections");
-		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "using (Theme.FromColor(Color.Palette.Semantic.Success))");
+		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "using (Theme.FromColor(Palette.Semantic.Success))");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "{");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "    ImGui.Button(\"Success Button\");");
 		ImGui.TextColored(new Vector4(0.6f, 0.8f, 0.6f, 1.0f), "}");

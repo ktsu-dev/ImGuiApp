@@ -10,7 +10,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.Color;
 using ktsu.ThemeProvider;
-using SemanticColor = ktsu.Semantics.Color.Color;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides theme preview card widgets for displaying theme information in a dialog window style.
@@ -87,10 +87,10 @@ public static class ThemeCard
 			Vector2 cardSize = size ?? new Vector2(180, 70);
 
 			// Get colors for dialog window style from complete palette
-			ImColor primaryColor = Color.Palette.Basic.Blue; // Fallback
-			ImColor surfaceColor = Color.Palette.Neutral.Gray; // Fallback
-			ImColor textColor = Color.Palette.Neutral.White; // Fallback
-			IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette = null;
+			ImColor primaryColor = Palette.Basic.Blue; // Fallback
+			ImColor surfaceColor = Palette.Neutral.Gray; // Fallback
+			ImColor textColor = Palette.Neutral.White; // Fallback
+			IReadOnlyDictionary<SemanticColorRequest, Color>? completePalette = null;
 
 			try
 			{
@@ -98,27 +98,27 @@ public static class ThemeCard
 				completePalette = Theme.GetCompletePalette(theme.CreateInstance());
 
 				// Get primary color for title bar
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out SemanticColor primary))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out Color primary))
 				{
 					primaryColor = primary.ToImColor();
 				}
 
 				// Get surface color for background
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out SemanticColor surface))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out Color surface))
 				{
 					surfaceColor = surface.ToImColor();
 				}
-				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out SemanticColor surfaceMed))
+				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out Color surfaceMed))
 				{
 					surfaceColor = surfaceMed.ToImColor();
 				}
 
 				// Get highest priority neutral for text
-				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.VeryHigh), out SemanticColor textVeryHigh))
+				if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.VeryHigh), out Color textVeryHigh))
 				{
 					textColor = textVeryHigh.ToImColor();
 				}
-				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.High), out SemanticColor textHigh))
+				else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.High), out Color textHigh))
 				{
 					textColor = textHigh.ToImColor();
 				}
@@ -157,7 +157,7 @@ public static class ThemeCard
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, shadowOpacity)),
+				new Srgb(0.0f, 0.0f, 0.0f).ToImGuiU32(shadowOpacity),
 				3.0f
 			);
 
@@ -165,7 +165,7 @@ public static class ThemeCard
 			drawList.AddRectFilled(
 				dialogMin,
 				dialogMax,
-				ImGui.ColorConvertFloat4ToU32(surfaceColor.Value),
+				surfaceColor.ToImGuiU32(),
 				3.0f
 			);
 
@@ -173,7 +173,7 @@ public static class ThemeCard
 			drawList.AddRectFilled(
 				dialogMin,
 				titleBarMax,
-				ImGui.ColorConvertFloat4ToU32(primaryColor.Value),
+				primaryColor.ToImGuiU32(),
 				3.0f,
 				ImDrawFlags.RoundCornersTop
 			);
@@ -185,7 +185,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.3f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.3f),
 					2.5f,
 					ImDrawFlags.None,
 					1.0f
@@ -195,7 +195,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin + new Vector2(2.0f, 2.0f),
 					dialogMax - new Vector2(2.0f, 2.0f),
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.15f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.15f),
 					2.0f,
 					ImDrawFlags.None,
 					0.5f
@@ -208,7 +208,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin,
 					dialogMax,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.6f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.6f),
 					3.0f,
 					ImDrawFlags.None,
 					1.5f
@@ -221,7 +221,7 @@ public static class ThemeCard
 				drawList.AddRectFilled(
 					dialogMin,
 					dialogMax,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.1f)),
+					new Srgb(1.0f, 1.0f, 1.0f).ToImGuiU32(0.1f),
 					3.0f
 				);
 			}
@@ -239,7 +239,7 @@ public static class ThemeCard
 				titleBarMax.Y + ((contentHeight - textSize.Y) * 0.5f) - 4.0f // Centered vertically but moved up 4px for balance
 			);
 
-			drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(textColor.Value), displayText);
+			drawList.AddText(textPos, textColor.ToImGuiU32(), displayText);
 
 			// Add semantic color swatches in bottom right corner
 			DrawSemanticSwatches(drawList, completePalette, dialogMax, margin);
@@ -322,7 +322,7 @@ public static class ThemeCard
 	/// <param name="completePalette">The complete color palette for the theme.</param>
 	/// <param name="dialogMax">The bottom-right corner of the dialog area.</param>
 	/// <param name="margin">The margin from the dialog edge.</param>
-	private static void DrawSemanticSwatches(ImDrawListPtr drawList, IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette, Vector2 dialogMax, float margin)
+	private static void DrawSemanticSwatches(ImDrawListPtr drawList, IReadOnlyDictionary<SemanticColorRequest, Color>? completePalette, Vector2 dialogMax, float margin)
 	{
 		// Skip drawing swatches if palette is not available
 		if (completePalette is null)
@@ -356,7 +356,7 @@ public static class ThemeCard
 			SemanticColorRequest colorRequest = new(swatchMeanings[i], Priority.High);
 
 			// Try to get the color from the complete palette
-			if (completePalette.TryGetValue(colorRequest, out SemanticColor semanticColor))
+			if (completePalette.TryGetValue(colorRequest, out Color semanticColor))
 			{
 				ImColor swatchColor = semanticColor.ToImColor();
 
@@ -370,7 +370,7 @@ public static class ThemeCard
 				);
 
 				// Draw the color swatch as a flat square
-				drawList.AddRectFilled(swatchMin, swatchMax, ImGui.ColorConvertFloat4ToU32(swatchColor.Value));
+				drawList.AddRectFilled(swatchMin, swatchMax, swatchColor.ToImGuiU32());
 			}
 		}
 	}

@@ -9,12 +9,11 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using SemanticHsl = ktsu.Semantics.Color.Hsl;
-using SemanticSrgb = ktsu.Semantics.Color.Srgb;
+using ktsu.Semantics.Color;
 
 /// <summary>
 /// Adjustment and analysis operations on ImGui <see cref="ImColor"/> values. The cylindrical
-/// adjustments (saturation, lightness, hue) delegate to <see cref="SemanticSrgb"/>'s HSL operations,
+/// adjustments (saturation, lightness, hue) delegate to <see cref="Srgb"/>'s HSL operations,
 /// staying in the gamma-encoded sRGB space ImGui uses; luminance, contrast, and distance delegate to
 /// the linear <c>ktsu.Semantics.Color.Color</c> so they use correct color science.
 /// </summary>
@@ -110,7 +109,7 @@ public static class ImColorExtensions
 	/// <summary>Converts to HSL. Hue is in degrees (0-360); saturation and lightness are 0-1.</summary>
 	/// <param name="color">The color.</param>
 	/// <returns>The HSL value.</returns>
-	public static SemanticHsl ToHsl(this ImColor color) => Srgb(color).ToHsl();
+	public static Hsl ToHsl(this ImColor color) => Srgb(color).ToHsl();
 
 	/// <summary>The WCAG relative luminance (computed on linear channels).</summary>
 	/// <param name="color">The color.</param>
@@ -141,8 +140,8 @@ public static class ImColorExtensions
 	/// <returns>The text color.</returns>
 	public static ImColor MostReadableTextColor(this ImColor background)
 	{
-		ImColor white = ImColors.FromRgba(1f, 1f, 1f, 1f);
-		ImColor black = ImColors.FromRgba(0f, 0f, 0f, 1f);
+		ImColor white = new Srgb(1, 1, 1).ToImColor();
+		ImColor black = new Srgb(0, 0, 0).ToImColor();
 
 		float whiteContrast = white.GetContrastRatioOver(background);
 		float blackContrast = black.GetContrastRatioOver(background);
@@ -210,8 +209,8 @@ public static class ImColorExtensions
 		return background.WithLightness(bestLightness);
 	}
 
-	private static SemanticSrgb Srgb(ImColor color) => new(color.Value.X, color.Value.Y, color.Value.Z);
+	private static Srgb Srgb(ImColor color) => new(color.Value.X, color.Value.Y, color.Value.Z);
 
-	private static ImColor Rebuild(ImColor original, SemanticSrgb adjusted) =>
+	private static ImColor Rebuild(ImColor original, Srgb adjusted) =>
 		new() { Value = new Vector4((float)adjusted.R, (float)adjusted.G, (float)adjusted.B, original.Value.W) };
 }

@@ -153,7 +153,7 @@ public class ThemeBrowser
 		ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - totalButtonsWidth) * 0.5f);
 
 		// Reset button
-		using (Theme.FromColor(Color.Palette.Semantic.Warning))
+		using (Theme.FromColor(Palette.Semantic.Warning))
 		{
 			if (ImGui.Button("Reset", new Vector2(buttonWidth, 0)))
 			{
