@@ -157,7 +157,7 @@ public static class ThemeCard
 			drawList.AddRectFilled(
 				dialogMin + shadowOffset,
 				dialogMax + shadowOffset,
-				ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, shadowOpacity)),
+				ImGui.ColorConvertFloat4ToU32(ImColors.FromRgba(0.0f, 0.0f, 0.0f, shadowOpacity).Value),
 				3.0f
 			);
 
@@ -185,7 +185,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin + Vector2.One,
 					dialogMax - Vector2.One,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.3f)),
+					ImGui.ColorConvertFloat4ToU32(ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.3f).Value),
 					2.5f,
 					ImDrawFlags.None,
 					1.0f
@@ -195,7 +195,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin + new Vector2(2.0f, 2.0f),
 					dialogMax - new Vector2(2.0f, 2.0f),
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.15f)),
+					ImGui.ColorConvertFloat4ToU32(ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.15f).Value),
 					2.0f,
 					ImDrawFlags.None,
 					0.5f
@@ -208,7 +208,7 @@ public static class ThemeCard
 				drawList.AddRect(
 					dialogMin,
 					dialogMax,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.6f)),
+					ImGui.ColorConvertFloat4ToU32(ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.6f).Value),
 					3.0f,
 					ImDrawFlags.None,
 					1.5f
@@ -221,7 +221,7 @@ public static class ThemeCard
 				drawList.AddRectFilled(
 					dialogMin,
 					dialogMax,
-					ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 0.1f)),
+					ImGui.ColorConvertFloat4ToU32(ImColors.FromRgba(1.0f, 1.0f, 1.0f, 0.1f).Value),
 					3.0f
 				);
 			}

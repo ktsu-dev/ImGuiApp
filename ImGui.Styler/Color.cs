@@ -4,13 +4,12 @@
 
 namespace ktsu.ImGui.Styler;
 
-using System.Numerics;
-
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
 using ktsu.ThemeProvider;
 
+using NamedColors = ktsu.Semantics.Color.NamedColors;
 using SemanticColor = ktsu.Semantics.Color.Color;
 
 /// <summary>
@@ -69,10 +68,10 @@ public static class Color
 	/// or returns the fallback color if no theme is applied.
 	/// This preserves the intended hue while adapting to the theme's color scheme.
 	/// </summary>
-	/// <param name="fallbackColor">The default hardcoded color to find a close match for.</param>
+	/// <param name="fallbackColor">The default color (standard storage) to find a close match for.</param>
 	/// <returns>An ImColor that's close to the fallback color within the current theme, or the fallback color itself.</returns>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3398:Move this method inside 'Palette'.", Justification = "Helper is shared across multiple nested types (Basic, Neutral, Natural, Vibrant, Pastel); moving it into a single nested type would break cohesion.")]
-	private static ImColor GetThemeColor(ImColor fallbackColor)
+	private static ImColor GetThemeColor(SemanticColor fallbackColor)
 	{
 		// Check if a theme is currently applied and get its complete palette
 		IReadOnlyDictionary<SemanticColorRequest, SemanticColor>? completePalette = Theme.GetCurrentThemeCompletePalette();
@@ -80,10 +79,6 @@ public static class Color
 		{
 			try
 			{
-				// Convert the fallback color (sRGB, as shown in ImGui) to a semantic color for comparison
-				Vector4 fallbackVec = fallbackColor.Value;
-				SemanticColor targetColor = SemanticColor.FromSrgb(fallbackVec.X, fallbackVec.Y, fallbackVec.Z, fallbackVec.W);
-
 				SemanticColor? closestColor = null;
 				double closestDistance = double.MaxValue;
 
@@ -91,7 +86,7 @@ public static class Color
 				// This is much more efficient than nested loops through semantic mappings
 				foreach (SemanticColor color in completePalette.Values)
 				{
-					double distance = targetColor.DistanceTo(color);
+					double distance = fallbackColor.DistanceTo(color);
 					if (distance < closestDistance)
 					{
 						closestDistance = distance;
@@ -115,8 +110,8 @@ public static class Color
 			}
 		}
 
-		// Fall back to hardcoded color if no theme is applied or no close match found
-		return fallbackColor;
+		// Fall back to the standard-storage color (converted at the ImGui seam) if no theme is applied or no close match found
+		return fallbackColor.ToImColor();
 	}
 
 	#endregion
@@ -135,16 +130,16 @@ public static class Color
 		public static class Basic
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Red => GetThemeColor(ImColors.FromHex("#ff4a49"));
-			public static ImColor Green => GetThemeColor(ImColors.FromHex("#49ff4a"));
-			public static ImColor Blue => GetThemeColor(ImColors.FromHex("#49a3ff"));
-			public static ImColor Yellow => GetThemeColor(ImColors.FromHex("#ecff49"));
-			public static ImColor Cyan => GetThemeColor(ImColors.FromHex("#49feff"));
-			public static ImColor Magenta => GetThemeColor(ImColors.FromHex("#ff49fe"));
-			public static ImColor Orange => GetThemeColor(ImColors.FromHex("#ffa549"));
-			public static ImColor Pink => GetThemeColor(ImColors.FromHex("#ff49a3"));
-			public static ImColor Lime => GetThemeColor(ImColors.FromHex("#a3ff49"));
-			public static ImColor Purple => GetThemeColor(ImColors.FromHex("#c949ff"));
+			public static ImColor Red => GetThemeColor(SemanticColor.FromHex("#ff4a49"));
+			public static ImColor Green => GetThemeColor(SemanticColor.FromHex("#49ff4a"));
+			public static ImColor Blue => GetThemeColor(SemanticColor.FromHex("#49a3ff"));
+			public static ImColor Yellow => GetThemeColor(SemanticColor.FromHex("#ecff49"));
+			public static ImColor Cyan => GetThemeColor(SemanticColor.FromHex("#49feff"));
+			public static ImColor Magenta => GetThemeColor(SemanticColor.FromHex("#ff49fe"));
+			public static ImColor Orange => GetThemeColor(SemanticColor.FromHex("#ffa549"));
+			public static ImColor Pink => GetThemeColor(SemanticColor.FromHex("#ff49a3"));
+			public static ImColor Lime => GetThemeColor(SemanticColor.FromHex("#a3ff49"));
+			public static ImColor Purple => GetThemeColor(SemanticColor.FromHex("#c949ff"));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -155,12 +150,12 @@ public static class Color
 		public static class Neutral
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor White => GetThemeColor(ImColors.FromHex("#ffffff"));
-			public static ImColor Black => GetThemeColor(ImColors.FromHex("#000000"));
-			public static ImColor Gray => GetThemeColor(ImColors.FromHex("#808080"));
-			public static ImColor LightGray => GetThemeColor(ImColors.FromHex("#c0c0c0"));
-			public static ImColor DarkGray => GetThemeColor(ImColors.FromHex("#404040"));
-			public static ImColor Transparent => ImColors.FromHex("#00000000"); // Always transparent
+			public static ImColor White => GetThemeColor(NamedColors.White);
+			public static ImColor Black => GetThemeColor(NamedColors.Black);
+			public static ImColor Gray => GetThemeColor(NamedColors.Gray);
+			public static ImColor LightGray => GetThemeColor(SemanticColor.FromHex("#c0c0c0"));
+			public static ImColor DarkGray => GetThemeColor(SemanticColor.FromHex("#404040"));
+			public static ImColor Transparent => NamedColors.Transparent.ToImColor(); // Always transparent
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -187,12 +182,12 @@ public static class Color
 		public static class Natural
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Brown => GetThemeColor(ImColors.FromRgb(165, 42, 42));
-			public static ImColor Olive => GetThemeColor(ImColors.FromRgb(128, 128, 0));
-			public static ImColor Maroon => GetThemeColor(ImColors.FromRgb(128, 0, 0));
-			public static ImColor Navy => GetThemeColor(ImColors.FromRgb(0, 0, 128));
-			public static ImColor Teal => GetThemeColor(ImColors.FromRgb(0, 128, 128));
-			public static ImColor Indigo => GetThemeColor(ImColors.FromRgb(75, 0, 130));
+			public static ImColor Brown => GetThemeColor(SemanticColor.FromBytes(165, 42, 42));
+			public static ImColor Olive => GetThemeColor(SemanticColor.FromBytes(128, 128, 0));
+			public static ImColor Maroon => GetThemeColor(SemanticColor.FromBytes(128, 0, 0));
+			public static ImColor Navy => GetThemeColor(SemanticColor.FromBytes(0, 0, 128));
+			public static ImColor Teal => GetThemeColor(SemanticColor.FromBytes(0, 128, 128));
+			public static ImColor Indigo => GetThemeColor(SemanticColor.FromBytes(75, 0, 130));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -203,12 +198,12 @@ public static class Color
 		public static class Vibrant
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Coral => GetThemeColor(ImColors.FromRgb(255, 127, 80));
-			public static ImColor Salmon => GetThemeColor(ImColors.FromRgb(250, 128, 114));
-			public static ImColor Turquoise => GetThemeColor(ImColors.FromRgb(64, 224, 208));
-			public static ImColor Violet => GetThemeColor(ImColors.FromRgb(238, 130, 238));
-			public static ImColor Gold => GetThemeColor(ImColors.FromRgb(255, 215, 0));
-			public static ImColor Silver => GetThemeColor(ImColors.FromRgb(192, 192, 192));
+			public static ImColor Coral => GetThemeColor(SemanticColor.FromBytes(255, 127, 80));
+			public static ImColor Salmon => GetThemeColor(SemanticColor.FromBytes(250, 128, 114));
+			public static ImColor Turquoise => GetThemeColor(SemanticColor.FromBytes(64, 224, 208));
+			public static ImColor Violet => GetThemeColor(SemanticColor.FromBytes(238, 130, 238));
+			public static ImColor Gold => GetThemeColor(SemanticColor.FromBytes(255, 215, 0));
+			public static ImColor Silver => GetThemeColor(SemanticColor.FromBytes(192, 192, 192));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 
@@ -219,12 +214,12 @@ public static class Color
 		public static class Pastel
 		{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-			public static ImColor Beige => GetThemeColor(ImColors.FromRgb(245, 245, 220));
-			public static ImColor Peach => GetThemeColor(ImColors.FromRgb(255, 218, 185));
-			public static ImColor Mint => GetThemeColor(ImColors.FromRgb(189, 252, 201));
-			public static ImColor Lavender => GetThemeColor(ImColors.FromRgb(230, 230, 250));
-			public static ImColor Khaki => GetThemeColor(ImColors.FromRgb(240, 230, 140));
-			public static ImColor Plum => GetThemeColor(ImColors.FromRgb(221, 160, 221));
+			public static ImColor Beige => GetThemeColor(SemanticColor.FromBytes(245, 245, 220));
+			public static ImColor Peach => GetThemeColor(SemanticColor.FromBytes(255, 218, 185));
+			public static ImColor Mint => GetThemeColor(SemanticColor.FromBytes(189, 252, 201));
+			public static ImColor Lavender => GetThemeColor(SemanticColor.FromBytes(230, 230, 250));
+			public static ImColor Khaki => GetThemeColor(SemanticColor.FromBytes(240, 230, 140));
+			public static ImColor Plum => GetThemeColor(SemanticColor.FromBytes(221, 160, 221));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		}
 	}

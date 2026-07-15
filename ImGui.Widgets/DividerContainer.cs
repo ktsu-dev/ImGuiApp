@@ -12,6 +12,8 @@ using Extensions;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -204,20 +206,20 @@ public static partial class ImGuiWidgets
 						}
 					}
 
-					Vector4 lineColor;
+					ImColor lineColor;
 					if (DragIndex == i)
 					{
-						lineColor = new Vector4(1, 1, 1, 0.7f);
+						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.7f);
 					}
 					else if (handleHovered)
 					{
-						lineColor = new Vector4(1, 1, 1, 0.5f);
+						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.5f);
 					}
 					else
 					{
-						lineColor = new Vector4(1, 1, 1, 0.3f);
+						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.3f);
 					}
-					drawList.AddLine(lineA, lineB, ImGui.ColorConvertFloat4ToU32(lineColor), lineWidth);
+					drawList.AddLine(lineA, lineB, ImGui.ColorConvertFloat4ToU32(lineColor.Value), lineWidth);
 
 					if (handleHovered || DragIndex == i)
 					{

@@ -9,6 +9,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -142,8 +144,9 @@ public static partial class ImGuiWidgets
 		// Soft drop shadow: a stack of expanding rounded rects, faintest on the outside, offset slightly downward.
 		private static void DrawShadow(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 shadowColor)
 		{
-			float baseAlpha = shadowColor.W > 0.01f ? shadowColor.W : 0.25f;
-			Vector3 rgb = shadowColor.W > 0.01f ? new Vector3(shadowColor.X, shadowColor.Y, shadowColor.Z) : Vector3.Zero;
+			// Fall back to a soft black shadow when the theme supplies a fully-transparent shadow colour.
+			ImColor baseColor = shadowColor.W > 0.01f ? new ImColor { Value = shadowColor } : ImColors.FromRgba(0f, 0f, 0f, 0.25f);
+			float baseAlpha = baseColor.Value.W;
 
 			const int layers = 4;
 			float maxGrow = MathF.Max(rounding, 6.0f);
@@ -161,7 +164,7 @@ public static partial class ImGuiWidgets
 				}
 
 				Vector2 g = new(grow, grow);
-				drawList.AddRectFilled(min - g + offset, max + g + offset, ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, alpha)), rounding + grow);
+				drawList.AddRectFilled(min - g + offset, max + g + offset, ImGui.GetColorU32(baseColor.WithAlpha(alpha).Value), rounding + grow);
 			}
 		}
 	}

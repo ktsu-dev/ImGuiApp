@@ -10,6 +10,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Widgets.Animation;
 
 /// <summary>
@@ -86,7 +87,7 @@ public static partial class ImGuiWidgets
 			float maxX = origin.X + width - radius;
 			float thumbX = minX + ((maxX - minX) * eased);
 			Vector2 thumbCenter = new(thumbX, origin.Y + radius);
-			drawList.AddCircleFilled(thumbCenter, thumbRadius, ImGui.GetColorU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)), 32);
+			drawList.AddCircleFilled(thumbCenter, thumbRadius, ImGui.GetColorU32(ImColors.FromRgba(1f, 1f, 1f, 1f).Value), 32);
 
 			// Visible label to the right of the switch (text before ## only).
 			string visible = VisibleLabel(label);
