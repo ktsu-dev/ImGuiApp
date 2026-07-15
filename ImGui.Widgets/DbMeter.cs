@@ -54,7 +54,7 @@ public static partial class ImGuiWidgets
 
 		if (fill > 0.0f)
 		{
-			drawList.AddRectFilled(new Vector2(min.X, fillTop), max, ImGui.GetColorU32(ZoneColor(db).Value));
+			drawList.AddRectFilled(new Vector2(min.X, fillTop), max, ZoneColor(db).ToImGuiU32());
 		}
 
 		// Peak-hold marker.
@@ -62,7 +62,7 @@ public static partial class ImGuiWidgets
 		{
 			float peak = Math.Clamp((peakDb - minDb) / range, 0.0f, 1.0f);
 			float peakY = max.Y - (peak * meterSize.Y);
-			drawList.AddLine(new Vector2(min.X, peakY), new Vector2(max.X, peakY), ImGui.GetColorU32(ZoneColor(peakDb).Value), 2.0f);
+			drawList.AddLine(new Vector2(min.X, peakY), new Vector2(max.X, peakY), ZoneColor(peakDb).ToImGuiU32(), 2.0f);
 		}
 
 		drawList.AddRect(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.Border]));

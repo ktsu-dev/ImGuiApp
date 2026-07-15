@@ -112,13 +112,13 @@ public static partial class ImGuiWidgets
 			else
 			{
 				ImColor background = BackgroundFor(displayName);
-				drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(background.Value), 0);
+				drawList.AddCircleFilled(center, radius, background.ToImGuiU32(), 0);
 
 				string initials = Initials(displayName);
 				ImColor textColor = Luminance(background.Value) > 0.55f ? ImColors.FromRgba(0f, 0f, 0f, 1f) : ImColors.FromRgba(1f, 1f, 1f, 1f);
 				Vector2 textSize = ImGui.CalcTextSize(initials);
 				Vector2 textPos = new(center.X - (textSize.X * 0.5f), center.Y - (textSize.Y * 0.5f));
-				drawList.AddText(textPos, ImGui.GetColorU32(textColor.Value), initials);
+				drawList.AddText(textPos, textColor.ToImGuiU32(), initials);
 			}
 
 			if (status != AvatarStatus.None)
@@ -142,13 +142,13 @@ public static partial class ImGuiWidgets
 
 			ImColor statusColor = status switch
 			{
-				AvatarStatus.Online => Color.Palette.Semantic.Success,
-				AvatarStatus.Away => Color.Palette.Semantic.Warning,
-				AvatarStatus.Busy => Color.Palette.Semantic.Error,
-				AvatarStatus.Offline => Color.Palette.Neutral.Gray,
-				_ => Color.Palette.Neutral.Gray,
+				AvatarStatus.Online => Palette.Semantic.Success,
+				AvatarStatus.Away => Palette.Semantic.Warning,
+				AvatarStatus.Busy => Palette.Semantic.Error,
+				AvatarStatus.Offline => Palette.Neutral.Gray,
+				_ => Palette.Neutral.Gray,
 			};
-			drawList.AddCircleFilled(dotCenter, dotRadius, ImGui.GetColorU32(statusColor.Value), 0);
+			drawList.AddCircleFilled(dotCenter, dotRadius, statusColor.ToImGuiU32(), 0);
 		}
 
 		private static ImColor BackgroundFor(string displayName)

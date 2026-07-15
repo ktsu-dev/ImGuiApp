@@ -219,7 +219,7 @@ public static partial class ImGuiWidgets
 					{
 						lineColor = ImColors.FromRgba(1f, 1f, 1f, 0.3f);
 					}
-					drawList.AddLine(lineA, lineB, ImGui.ColorConvertFloat4ToU32(lineColor.Value), lineWidth);
+					drawList.AddLine(lineA, lineB, lineColor.ToImGuiU32(), lineWidth);
 
 					if (handleHovered || DragIndex == i)
 					{

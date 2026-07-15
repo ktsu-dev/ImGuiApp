@@ -11,6 +11,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+
 /// <summary>
 /// Options for customizing the appearance and behavior of the knob widget.
 /// </summary>
@@ -174,7 +176,7 @@ public static partial class ImGuiWidgets
 
 			ImDrawListPtr drawlist = ImGui.GetWindowDrawList();
 
-			drawlist.AddBezierCubic(start, arc1, arc2, end, ImGui.GetColorU32(color.Value), thickness, numSegments);
+			drawlist.AddBezierCubic(start, arc1, arc2, end, color.ToImGuiU32(), thickness, numSegments);
 		}
 
 		internal static void DrawArc(Vector2 center, float radius, float startAngle, float endAngle, float thickness, ImColor color, int numSegments, int bezierCount)
@@ -426,7 +428,7 @@ public static partial class ImGuiWidgets
 				ImGui.GetWindowDrawList().AddCircleFilled(
 							new(Center[0] + (MathF.Cos(angle) * dotRadius), Center[1] + (MathF.Sin(angle) * dotRadius)),
 							dotSize,
-							ImGui.GetColorU32(dotColor.Value),
+							dotColor.ToImGuiU32(),
 							segments);
 			}
 
@@ -442,7 +444,7 @@ public static partial class ImGuiWidgets
 
 					new(Center[0] + (angleCos * tickEnd), Center[1] + (angleSin * tickEnd)),
 					new(Center[0] + (angleCos * tickStart), Center[1] + (angleSin * tickStart)),
-					ImGui.GetColorU32(tickColor.Value),
+					tickColor.ToImGuiU32(),
 					width * Radius);
 			}
 
@@ -454,7 +456,7 @@ public static partial class ImGuiWidgets
 				ImGui.GetWindowDrawList().AddCircleFilled(
 						Center,
 						circleRadius,
-						ImGui.GetColorU32(circleColor.Value),
+						circleColor.ToImGuiU32(),
 						segments);
 			}
 

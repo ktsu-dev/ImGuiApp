@@ -8,7 +8,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using SemanticColor = ktsu.Semantics.Color.Color;
+using ktsu.Semantics.Color;
 
 [TestClass]
 public class ColorImGuiAdapterTests
@@ -17,7 +17,7 @@ public class ColorImGuiAdapterTests
 	public void ToImColor_EmitsSrgbEncodedValue()
 	{
 		// A linear color built from sRGB 0.5 must emit the sRGB value (~0.5) to ImGui, not linear (~0.214).
-		SemanticColor color = SemanticColor.FromSrgb(0.5, 0.5, 0.5, 1.0);
+		Color color = Color.FromSrgb(0.5, 0.5, 0.5, 1.0);
 		ImColor im = color.ToImColor();
 		Assert.AreEqual(0.5f, im.Value.X, 1e-4f);
 		Assert.AreEqual(1.0f, im.Value.W, 1e-6f);
@@ -26,8 +26,8 @@ public class ColorImGuiAdapterTests
 	[TestMethod]
 	public void ImColorRoundTrip_IsStable()
 	{
-		SemanticColor original = SemanticColor.FromSrgb(0.2, 0.6, 0.9, 0.8);
-		SemanticColor roundTripped = original.ToImColor().FromImColor();
+		Color original = Color.FromSrgb(0.2, 0.6, 0.9, 0.8);
+		Color roundTripped = original.ToImColor().FromImColor();
 		Assert.AreEqual(original.R, roundTripped.R, 1e-6);
 		Assert.AreEqual(original.G, roundTripped.G, 1e-6);
 		Assert.AreEqual(original.B, roundTripped.B, 1e-6);
@@ -46,10 +46,10 @@ public class ColorImGuiAdapterTests
 	[TestMethod]
 	public void ToImGuiVector4_EmitsSrgbAndRoundTrips()
 	{
-		SemanticColor color = SemanticColor.FromSrgb(0.3, 0.7, 0.4, 1.0);
+		Color color = Color.FromSrgb(0.3, 0.7, 0.4, 1.0);
 		ImGuiVector4 vector = color.ToImGuiVector4();
 		Assert.AreEqual(0.3f, vector.X, 1e-4f);
-		SemanticColor back = ColorImGuiExtensions.FromImGuiVector4(vector);
+		Color back = ColorImGuiExtensions.FromImGuiVector4(vector);
 		Assert.AreEqual(color.G, back.G, 1e-6);
 	}
 
@@ -57,7 +57,7 @@ public class ColorImGuiAdapterTests
 	public void FromImGuiVector4_RawVectorInterpretedAsSrgb()
 	{
 		Vector4 raw = new(0.0f, 0.0f, 0.0f, 1.0f);
-		SemanticColor color = ColorImGuiExtensions.FromImGuiVector4(raw);
+		Color color = ColorImGuiExtensions.FromImGuiVector4(raw);
 		Assert.AreEqual(0.0, color.R, 1e-9);
 		Assert.AreEqual(1.0, color.A, 1e-9);
 	}
@@ -66,11 +66,11 @@ public class ColorImGuiAdapterTests
 	public void ToImGuiU32_PacksChannelsInImGuiByteOrder()
 	{
 		// Opaque pure red: R=255, G=0, B=0, A=255 → default IM_COL32 layout 0xAABBGGRR = 0xFF0000FF.
-		SemanticColor red = SemanticColor.FromSrgb(1.0, 0.0, 0.0, 1.0);
+		Color red = Color.FromSrgb(1.0, 0.0, 0.0, 1.0);
 		Assert.AreEqual(0xFF0000FFu, red.ToImGuiU32());
 
 		// Opaque pure blue lands in the third byte: 0xFFFF0000.
-		SemanticColor blue = SemanticColor.FromSrgb(0.0, 0.0, 1.0, 1.0);
+		Color blue = Color.FromSrgb(0.0, 0.0, 1.0, 1.0);
 		Assert.AreEqual(0xFFFF0000u, blue.ToImGuiU32());
 	}
 
@@ -78,7 +78,7 @@ public class ColorImGuiAdapterTests
 	public void ToImGuiU32_EmitsSrgbEncodedValue()
 	{
 		// sRGB 0.5 must pack to ~128, not the linear ~55.
-		SemanticColor color = SemanticColor.FromSrgb(0.5, 0.5, 0.5, 1.0);
+		Color color = Color.FromSrgb(0.5, 0.5, 0.5, 1.0);
 		uint packed = color.ToImGuiU32();
 		Assert.AreEqual(128u, packed & 0xFF);
 		Assert.AreEqual(255u, (packed >> 24) & 0xFF);
@@ -87,8 +87,8 @@ public class ColorImGuiAdapterTests
 	[TestMethod]
 	public void ImGuiU32RoundTrip_IsStableWithinByteQuantization()
 	{
-		SemanticColor original = SemanticColor.FromSrgb(0.2, 0.6, 0.9, 0.8);
-		SemanticColor roundTripped = ColorImGuiExtensions.FromImGuiU32(original.ToImGuiU32());
+		Color original = Color.FromSrgb(0.2, 0.6, 0.9, 0.8);
+		Color roundTripped = ColorImGuiExtensions.FromImGuiU32(original.ToImGuiU32());
 		// A single byte per channel means ~1/255 tolerance.
 		Assert.AreEqual(original.R, roundTripped.R, 2.0 / 255.0);
 		Assert.AreEqual(original.G, roundTripped.G, 2.0 / 255.0);
@@ -99,7 +99,7 @@ public class ColorImGuiAdapterTests
 	[TestMethod]
 	public void ToImGuiU32_MatchesImGuiConversion()
 	{
-		SemanticColor color = SemanticColor.FromSrgb(0.3, 0.7, 0.4, 0.9);
+		Color color = Color.FromSrgb(0.3, 0.7, 0.4, 0.9);
 		uint ours = color.ToImGuiU32();
 		uint imgui = Hexa.NET.ImGui.ImGui.ColorConvertFloat4ToU32(color.ToSrgbVector4());
 		Assert.AreEqual(imgui, ours);

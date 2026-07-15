@@ -25,27 +25,27 @@ public static partial class Text
 			/// <summary>
 			/// Gets or sets the normal text color.
 			/// </summary>
-			public static ImColor Normal { get; set; } = Styler.Color.Palette.Neutral.White;
+			public static ImColor Normal { get; set; } = Styler.Palette.Neutral.White;
 
 			/// <summary>
 			/// Gets or sets the error text color.
 			/// </summary>
-			public static ImColor Error { get; set; } = Styler.Color.Palette.Basic.Red;
+			public static ImColor Error { get; set; } = Styler.Palette.Basic.Red;
 
 			/// <summary>
 			/// Gets or sets the warning text color.
 			/// </summary>
-			public static ImColor Warning { get; set; } = Styler.Color.Palette.Basic.Yellow;
+			public static ImColor Warning { get; set; } = Styler.Palette.Basic.Yellow;
 
 			/// <summary>
 			/// Gets or sets the info text color.
 			/// </summary>
-			public static ImColor Info { get; set; } = Styler.Color.Palette.Basic.Cyan;
+			public static ImColor Info { get; set; } = Styler.Palette.Basic.Cyan;
 
 			/// <summary>
 			/// Gets or sets the success text color.
 			/// </summary>
-			public static ImColor Success { get; set; } = Styler.Color.Palette.Basic.Green;
+			public static ImColor Success { get; set; } = Styler.Palette.Basic.Green;
 		}
 
 		/// <summary>

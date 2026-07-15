@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -29,7 +31,7 @@ public static partial class ImGuiWidgets
 			Vector2 dummyRectMin = ImGui.GetItemRectMin();
 			Vector2 dummyRectMax = ImGui.GetItemRectMax();
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-			uint colorToShow = enabled ? ImGui.GetColorU32(color.Value) : ImGui.GetColorU32(ImGuiCol.FrameBg);
+			uint colorToShow = enabled ? color.ToImGuiU32() : ImGui.GetColorU32(ImGuiCol.FrameBg);
 			drawList.AddRectFilled(dummyRectMin, dummyRectMax, colorToShow);
 		}
 	}

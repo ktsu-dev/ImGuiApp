@@ -741,25 +741,25 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 
 			ImGui.TextUnformatted("Status Lights:");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Success, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("System OK");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Warning, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Warning, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Warning");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Error, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Error, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Error");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Info, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Info, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Info");
 
 			ImGui.Separator();
 			ImGui.TextUnformatted("Enabled vs Disabled:");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, true);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Success, true);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Enabled");
-			ImGuiWidgets.ColorIndicator(Color.Palette.Semantic.Success, false);
+			ImGuiWidgets.ColorIndicator(Palette.Semantic.Success, false);
 			ImGui.SameLine();
 			ImGui.TextUnformatted("Disabled");
 		}

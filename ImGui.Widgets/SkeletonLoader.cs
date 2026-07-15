@@ -90,7 +90,7 @@ public static partial class ImGuiWidgets
 			ImColor baseColor = new() { Value = colors[(int)ImGuiCol.FrameBg] };
 			ImColor highlight = new() { Value = colors[(int)ImGuiCol.FrameBgHovered] };
 
-			drawList.AddRectFilled(min, max, ImGui.GetColorU32(baseColor.Value), rounding);
+			drawList.AddRectFilled(min, max, baseColor.ToImGuiU32(), rounding);
 
 			// Clip the moving band to the placeholder bounds so it never bleeds past the edges.
 			drawList.PushClipRect(min, max, true);
@@ -107,8 +107,8 @@ public static partial class ImGuiWidgets
 			float left = center - (bandWidth * 0.5f);
 			float right = center + (bandWidth * 0.5f);
 
-			uint edge = ImGui.GetColorU32(highlight.WithAlpha(0f).Value);
-			uint core = ImGui.GetColorU32(highlight.Value);
+			uint edge = highlight.WithAlpha(0f).ToImGuiU32();
+			uint core = highlight.ToImGuiU32();
 
 			// Two halves form a transparent -> bright -> transparent horizontal gradient.
 			drawList.AddRectFilledMultiColor(new Vector2(left, min.Y), new Vector2(center, max.Y), edge, core, core, edge);

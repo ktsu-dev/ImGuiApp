@@ -164,7 +164,7 @@ public static partial class ImGuiWidgets
 				}
 
 				Vector2 g = new(grow, grow);
-				drawList.AddRectFilled(min - g + offset, max + g + offset, ImGui.GetColorU32(baseColor.WithAlpha(alpha).Value), rounding + grow);
+				drawList.AddRectFilled(min - g + offset, max + g + offset, baseColor.WithAlpha(alpha).ToImGuiU32(), rounding + grow);
 			}
 		}
 	}

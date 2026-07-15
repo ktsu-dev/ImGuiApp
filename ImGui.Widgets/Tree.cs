@@ -8,6 +8,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 using ktsu.ScopedAction;
 
@@ -53,7 +54,7 @@ public static partial class ImGuiWidgets
 				float bottom = CursorEnd.Y + HalfFrameHeight + HalfLineThickness;
 				Vector2 a = new(Left, Top);
 				Vector2 b = new(Left, bottom);
-				ImGui.GetWindowDrawList().AddLine(a, b, ImGui.GetColorU32(Color.Palette.Neutral.Gray.Value), LineThickness);
+				ImGui.GetWindowDrawList().AddLine(a, b, Palette.Neutral.Gray.ToImGuiU32(), LineThickness);
 				ImGui.NewLine();
 				ImGui.Unindent();
 			};
@@ -79,7 +80,7 @@ public static partial class ImGuiWidgets
 					Vector2 a = new(parent.Left, y);
 					Vector2 b = new(right, y);
 
-					ImGui.GetWindowDrawList().AddLine(a, b, ImGui.GetColorU32(Color.Palette.Neutral.Gray.Value), LineThickness);
+					ImGui.GetWindowDrawList().AddLine(a, b, Palette.Neutral.Gray.ToImGuiU32(), LineThickness);
 				},
 			onClose: null)
 		{

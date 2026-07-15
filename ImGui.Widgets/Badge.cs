@@ -29,7 +29,7 @@ public static partial class ImGuiWidgets
 		string text = FormatBadgeCount(count, maxCount);
 		if (text.Length != 0)
 		{
-			BadgeImpl.DrawText(text, Color.Palette.Semantic.Error.Value);
+			BadgeImpl.DrawText(text, Palette.Semantic.Error.Value);
 		}
 	}
 
@@ -42,7 +42,7 @@ public static partial class ImGuiWidgets
 	{
 		if (!string.IsNullOrEmpty(text))
 		{
-			BadgeImpl.DrawText(text, Color.Palette.Semantic.Error.Value);
+			BadgeImpl.DrawText(text, Palette.Semantic.Error.Value);
 		}
 	}
 
@@ -50,7 +50,7 @@ public static partial class ImGuiWidgets
 	/// Overlays a small solid dot on the top-right corner of the most recently submitted item (a presence /
 	/// unread indicator with no count). Call this immediately after the item it decorates.
 	/// </summary>
-	public static void BadgeDot() => BadgeImpl.DrawDot(Color.Palette.Semantic.Error.Value);
+	public static void BadgeDot() => BadgeImpl.DrawDot(Palette.Semantic.Error.Value);
 
 	/// <summary>
 	/// Formats a badge count: an empty string for non-positive counts, the count itself when within
