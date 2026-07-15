@@ -69,47 +69,67 @@ public static partial class ImGuiWidgets
 				lower = MathF.Min(lower, upper - minGap);
 			}
 
-			bool changed = false;
+			HandleActivation(id, lower, upper, min, max, trackMinX, span);
+			bool changed = HandleDrag(id, ref lower, ref upper, min, max, minGap, trackMinX, span);
+			DrawSlider(label, lower, upper, min, max, trackMinX, trackMaxX, trackY, span, grabRadius, height);
 
-			if (ImGui.IsItemActivated())
+			return changed;
+		}
+
+		private static void HandleActivation(uint id, float lower, float upper, float min, float max, float trackMinX, float span)
+		{
+			if (!ImGui.IsItemActivated())
 			{
-				// Grab whichever handle is nearer the click.
-				float mouseX = ImGui.GetIO().MousePos.X;
-				float lowerX = trackMinX + (ValueToFraction(lower, min, max) * span);
-				float upperX = trackMinX + (ValueToFraction(upper, min, max) * span);
-				ActiveHandle[id] = MathF.Abs(mouseX - lowerX) <= MathF.Abs(mouseX - upperX) ? 0 : 1;
+				return;
 			}
 
-			if (ImGui.IsItemActive())
-			{
-				int handle = ActiveHandle.GetValueOrDefault(id, -1);
-				float t = Math.Clamp((ImGui.GetIO().MousePos.X - trackMinX) / span, 0.0f, 1.0f);
-				float newValue = min + (t * (max - min));
+			// Grab whichever handle is nearer the click.
+			float mouseX = ImGui.GetIO().MousePos.X;
+			float lowerX = trackMinX + (ValueToFraction(lower, min, max) * span);
+			float upperX = trackMinX + (ValueToFraction(upper, min, max) * span);
+			ActiveHandle[id] = MathF.Abs(mouseX - lowerX) <= MathF.Abs(mouseX - upperX) ? 0 : 1;
+		}
 
-				if (handle == 0)
-				{
-					float clamped = Math.Clamp(newValue, min, upper - minGap);
-					if (clamped != lower)
-					{
-						lower = clamped;
-						changed = true;
-					}
-				}
-				else if (handle == 1)
-				{
-					float clamped = Math.Clamp(newValue, lower + minGap, max);
-					if (clamped != upper)
-					{
-						upper = clamped;
-						changed = true;
-					}
-				}
-			}
-			else
+		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (detecting whether the clamped value actually changed); a tolerance would change behavior.")]
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private interaction helper extracted from Draw to reduce cognitive complexity; the parameters thread the slider geometry computed once by the caller and bundling them would not improve readability.")]
+		private static bool HandleDrag(uint id, ref float lower, ref float upper, float min, float max, float minGap, float trackMinX, float span)
+		{
+			if (!ImGui.IsItemActive())
 			{
 				ActiveHandle.Remove(id);
+				return false;
 			}
 
+			int handle = ActiveHandle.GetValueOrDefault(id, -1);
+			float t = Math.Clamp((ImGui.GetIO().MousePos.X - trackMinX) / span, 0.0f, 1.0f);
+			float newValue = min + (t * (max - min));
+
+			bool changed = false;
+			if (handle == 0)
+			{
+				float clamped = Math.Clamp(newValue, min, upper - minGap);
+				if (clamped != lower)
+				{
+					lower = clamped;
+					changed = true;
+				}
+			}
+			else if (handle == 1)
+			{
+				float clamped = Math.Clamp(newValue, lower + minGap, max);
+				if (clamped != upper)
+				{
+					upper = clamped;
+					changed = true;
+				}
+			}
+
+			return changed;
+		}
+
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted from Draw to reduce cognitive complexity; the parameters thread the slider geometry computed once by the caller and bundling them would not improve readability.")]
+		private static void DrawSlider(string label, float lower, float upper, float min, float max, float trackMinX, float trackMaxX, float trackY, float span, float grabRadius, float height)
+		{
 			// Draw track, filled selection, and handles.
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
@@ -138,8 +158,6 @@ public static partial class ImGuiWidgets
 				ImGui.AlignTextToFramePadding();
 				ImGui.TextUnformatted(visible);
 			}
-
-			return changed;
 		}
 
 		private static float ValueToFraction(float value, float min, float max) =>

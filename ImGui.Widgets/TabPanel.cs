@@ -396,56 +396,71 @@ public static partial class ImGuiWidgets
 
 			if (ImGui.BeginTabBar(Id, flags))
 			{
-				for (int i = 0; i < Tabs.Count; i++)
-				{
-					Tab tab = Tabs[i];
-
-					// Skip hidden tabs
-					if (!tab.IsVisible)
-					{
-						continue;
-					}
-
-					ImGuiTabItemFlags tabFlags = ImGuiTabItemFlags.None;
-
-					// Use the UnsavedDocument flag for dirty indicator
-					if (tab.IsDirty)
-					{
-						tabFlags |= ImGuiTabItemFlags.UnsavedDocument;
-					}
-
-					if (!Closable)
-					{
-						tabFlags |= (ImGuiTabItemFlags)ImGuiTabItemFlagsPrivate.NoCloseButton;
-						tabFlags |= ImGuiTabItemFlags.NoCloseWithMiddleMouseButton;
-					}
-
-					bool tabOpen = true;
-
-					if (ImGui.BeginTabItem($"{tab.Label}##{tab.Id}", ref tabOpen, tabFlags))
-					{
-						if (ActiveTabIndex != i)
-						{
-							ActiveTabIndex = i;
-							TabChangedDelegate?.Invoke(i);
-							TabChangedByIdDelegate?.Invoke(tab.Id);
-						}
-
-						tab.Content?.Invoke();
-						ImGui.EndTabItem();
-					}
-
-					if (Closable && !tabOpen)
-					{
-						RemoveTab(i);
-#pragma warning disable S127 // Do not update the stop condition variable 'i' in the body of the for loop
-						i--; // Adjust index since we removed an item; intentional in-loop removal pattern
-#pragma warning restore S127
-					}
-				}
-
+				DrawTabItems();
 				ImGui.EndTabBar();
 			}
+		}
+
+		private void DrawTabItems()
+		{
+			for (int i = 0; i < Tabs.Count; i++)
+			{
+				Tab tab = Tabs[i];
+
+				// Skip hidden tabs
+				if (!tab.IsVisible)
+				{
+					continue;
+				}
+
+				ImGuiTabItemFlags tabFlags = ResolveTabItemFlags(tab);
+				bool tabOpen = true;
+
+				if (ImGui.BeginTabItem($"{tab.Label}##{tab.Id}", ref tabOpen, tabFlags))
+				{
+					DrawActiveTab(tab, i);
+				}
+
+				if (Closable && !tabOpen)
+				{
+					RemoveTab(i);
+#pragma warning disable S127 // Do not update the stop condition variable 'i' in the body of the for loop
+					i--; // Adjust index since we removed an item; intentional in-loop removal pattern
+#pragma warning restore S127
+				}
+			}
+		}
+
+		private ImGuiTabItemFlags ResolveTabItemFlags(Tab tab)
+		{
+			ImGuiTabItemFlags tabFlags = ImGuiTabItemFlags.None;
+
+			// Use the UnsavedDocument flag for dirty indicator
+			if (tab.IsDirty)
+			{
+				tabFlags |= ImGuiTabItemFlags.UnsavedDocument;
+			}
+
+			if (!Closable)
+			{
+				tabFlags |= (ImGuiTabItemFlags)ImGuiTabItemFlagsPrivate.NoCloseButton;
+				tabFlags |= ImGuiTabItemFlags.NoCloseWithMiddleMouseButton;
+			}
+
+			return tabFlags;
+		}
+
+		private void DrawActiveTab(Tab tab, int i)
+		{
+			if (ActiveTabIndex != i)
+			{
+				ActiveTabIndex = i;
+				TabChangedDelegate?.Invoke(i);
+				TabChangedByIdDelegate?.Invoke(tab.Id);
+			}
+
+			tab.Content?.Invoke();
+			ImGui.EndTabItem();
 		}
 	}
 

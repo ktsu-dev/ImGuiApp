@@ -71,6 +71,7 @@ internal sealed class ImGuiController : IRendererBackend
 	/// </summary>
 	[SuppressMessage("Minor Code Smell", "S3427:Method overloads with default parameter values should not overlap", Justification = "Overlapping overloads are by design to support multiple calling conventions; the explicit 3-param overload delegates here.")]
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font-loading interop; unsafe pointer is pinned within a fixed block and not retained.")]
+	[SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Registering this controller as the global ImGuiApp.renderer must happen here, before onConfigureIO runs, because user OnStart code resolves the backend via ImGuiApp.renderer and the ImGuiApp.controller field is not yet assigned. See the inline comment.")]
 	public ImGuiController(GL gl, IView view, IInputContext input, ImGuiFontConfig? imGuiFontConfig = null, Action? onConfigureIO = null)
 	{
 		DebugLogger.Log("ImGuiController: Starting initialization");
@@ -620,18 +621,16 @@ internal sealed class ImGuiController : IRendererBackend
 				_gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.One, GLEnum.One, GLEnum.One);
 				break;
 
-			case ImGuiAppBlendMode.AlphaBlend:
 			default:
-				// Matches the default established in SetupRenderState.
+				// AlphaBlend is the default; matches the default established in SetupRenderState.
 				_gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.OneMinusSrcAlpha, GLEnum.One, GLEnum.OneMinusSrcAlpha);
 				break;
 		}
 	}
 
 	/// <inheritdoc />
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
 	[SuppressMessage("Major Code Smell", "S927:Parameter names should match base declaration and other partial definitions", Justification = "Parameter name 'drawDataPtr' is used consistently in this implementation; renaming could break existing callers using named arguments.")]
-	public unsafe void RenderDrawData(ImDrawDataPtr drawDataPtr)
+	public void RenderDrawData(ImDrawDataPtr drawDataPtr)
 	{
 		if (_gl is null)
 		{
@@ -691,74 +690,7 @@ internal sealed class ImGuiController : IRendererBackend
 		Vector2 clipScale = drawDataPtr.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
 		// Render command lists
-		for (int n = 0; n < drawDataPtr.CmdListsCount; n++)
-		{
-			ImDrawListPtr cmdListPtr = drawDataPtr.CmdLists[n];
-
-			// Upload vertex/index buffers
-
-			_gl.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
-			_gl.CheckGlError($"Data Vert {n}");
-			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
-			_gl.CheckGlError($"Data Idx {n}");
-
-			for (int cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
-			{
-				ImDrawCmd cmdPtr = cmdListPtr.CmdBuffer[cmd_i];
-
-				unsafe
-				{
-					if (cmdPtr.UserCallback != null)
-					{
-						// Honor draw-command callbacks the way the stock imgui_impl_opengl3 backend
-						// does. The ImDrawCallback_ResetRenderState sentinel asks the backend to
-						// restore its own pipeline state (used after a callback changes GL state, e.g.
-						// a per-region blend-mode switch). Any other value is a real user callback —
-						// invoke it with this command's draw list and command rather than crashing.
-						if ((nint)cmdPtr.UserCallback == ImGui.ImDrawCallbackResetRenderState)
-						{
-							SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
-						}
-						else
-						{
-							ImDrawCmd localCmd = cmdPtr;
-							((delegate* unmanaged[Cdecl]<ImDrawList*, ImDrawCmd*, void>)cmdPtr.UserCallback)(cmdListPtr.Handle, &localCmd);
-						}
-					}
-					else
-					{
-						Vector4 clipRect;
-						clipRect.X = (cmdPtr.ClipRect.X - clipOff.X) * clipScale.X;
-						clipRect.Y = (cmdPtr.ClipRect.Y - clipOff.Y) * clipScale.Y;
-						clipRect.Z = (cmdPtr.ClipRect.Z - clipOff.X) * clipScale.X;
-						clipRect.W = (cmdPtr.ClipRect.W - clipOff.Y) * clipScale.Y;
-
-						if (clipRect.X < framebufferWidth && clipRect.Y < framebufferHeight && clipRect.Z >= 0.0f && clipRect.W >= 0.0f)
-						{
-							// Round scissor rectangle to pixel boundaries to avoid sub-pixel rendering issues
-							int scissorX = (int)Math.Floor(clipRect.X);
-							int scissorY = (int)Math.Floor(framebufferHeight - clipRect.W);
-							uint scissorWidth = (uint)Math.Max(0, Math.Ceiling(clipRect.Z - clipRect.X));
-							uint scissorHeight = (uint)Math.Max(0, Math.Ceiling(clipRect.W - clipRect.Y));
-
-							// Apply scissor/clipping rectangle
-							_gl.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
-							_gl.CheckGlError("Scissor");
-
-							// Bind texture, Draw
-							// In ImGui 1.92.0+, use GetTexID() method to get texture ID
-							// This method returns the texture ID compatible with OpenGL
-							uint textureId = (uint)(nuint)cmdPtr.GetTexID();
-							_gl.BindTexture(GLEnum.Texture2D, textureId);
-							_gl.CheckGlError("Texture");
-
-							_gl.DrawElementsBaseVertex(GLEnum.Triangles, cmdPtr.ElemCount, GLEnum.UnsignedShort, (void*)(cmdPtr.IdxOffset * sizeof(ushort)), (int)cmdPtr.VtxOffset);
-							_gl.CheckGlError("Draw");
-						}
-					}
-				}
-			}
-		}
+		RenderCommandLists(drawDataPtr, framebufferWidth, framebufferHeight, clipOff, clipScale);
 
 		// Destroy the temporary VAO
 		_gl.DeleteVertexArray(_vertexArrayObject);
@@ -778,65 +710,115 @@ internal sealed class ImGuiController : IRendererBackend
 		_gl.BlendEquationSeparate((GLEnum)lastBlendEquationRgb, (GLEnum)lastBlendEquationAlpha);
 		_gl.BlendFuncSeparate((GLEnum)lastBlendSrcRgb, (GLEnum)lastBlendDstRgb, (GLEnum)lastBlendSrcAlpha, (GLEnum)lastBlendDstAlpha);
 
-		if (lastEnableBlend)
-		{
-			_gl.Enable(GLEnum.Blend);
-		}
-		else
-		{
-			_gl.Disable(GLEnum.Blend);
-		}
-
-		if (lastEnableCullFace)
-		{
-			_gl.Enable(GLEnum.CullFace);
-		}
-		else
-		{
-			_gl.Disable(GLEnum.CullFace);
-		}
-
-		if (lastEnableDepthTest)
-		{
-			_gl.Enable(GLEnum.DepthTest);
-		}
-		else
-		{
-			_gl.Disable(GLEnum.DepthTest);
-		}
-
-		if (lastEnableStencilTest)
-		{
-			_gl.Enable(GLEnum.StencilTest);
-		}
-		else
-		{
-			_gl.Disable(GLEnum.StencilTest);
-		}
-
-		if (lastEnableScissorTest)
-		{
-			_gl.Enable(GLEnum.ScissorTest);
-		}
-		else
-		{
-			_gl.Disable(GLEnum.ScissorTest);
-		}
+		SetGlCapability(GLEnum.Blend, lastEnableBlend);
+		SetGlCapability(GLEnum.CullFace, lastEnableCullFace);
+		SetGlCapability(GLEnum.DepthTest, lastEnableDepthTest);
+		SetGlCapability(GLEnum.StencilTest, lastEnableStencilTest);
+		SetGlCapability(GLEnum.ScissorTest, lastEnableScissorTest);
 
 #if !GLES && !LEGACY
-		if (lastEnablePrimitiveRestart)
-		{
-			_gl.Enable(GLEnum.PrimitiveRestart);
-		}
-		else
-		{
-			_gl.Disable(GLEnum.PrimitiveRestart);
-		}
+		SetGlCapability(GLEnum.PrimitiveRestart, lastEnablePrimitiveRestart);
 
 		_gl.PolygonMode(GLEnum.FrontAndBack, (GLEnum)lastPolygonMode[0]);
 #endif
 
 		_gl.Scissor(lastScissorBox[0], lastScissorBox[1], (uint)lastScissorBox[2], (uint)lastScissorBox[3]);
+	}
+
+	/// <summary>
+	/// Renders all ImGui draw command lists to the current framebuffer.
+	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
+	private unsafe void RenderCommandLists(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight, Vector2 clipOff, Vector2 clipScale)
+	{
+		for (int n = 0; n < drawDataPtr.CmdListsCount; n++)
+		{
+			ImDrawListPtr cmdListPtr = drawDataPtr.CmdLists[n];
+
+			// Upload vertex/index buffers
+
+			_gl!.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
+			_gl.CheckGlError($"Data Vert {n}");
+			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
+			_gl.CheckGlError($"Data Idx {n}");
+
+			for (int cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
+			{
+				ImDrawCmd cmdPtr = cmdListPtr.CmdBuffer[cmd_i];
+				RenderDrawCommand(drawDataPtr, cmdListPtr, cmdPtr, framebufferWidth, framebufferHeight, clipOff, clipScale);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Executes a single ImGui draw command, honoring user callbacks or issuing the scissored draw call.
+	/// </summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
+	private unsafe void RenderDrawCommand(ImDrawDataPtr drawDataPtr, ImDrawListPtr cmdListPtr, ImDrawCmd cmdPtr, int framebufferWidth, int framebufferHeight, Vector2 clipOff, Vector2 clipScale)
+	{
+		if (cmdPtr.UserCallback != null)
+		{
+			// Honor draw-command callbacks the way the stock imgui_impl_opengl3 backend
+			// does. The ImDrawCallback_ResetRenderState sentinel asks the backend to
+			// restore its own pipeline state (used after a callback changes GL state, e.g.
+			// a per-region blend-mode switch). Any other value is a real user callback —
+			// invoke it with this command's draw list and command rather than crashing.
+			if ((nint)cmdPtr.UserCallback == ImGui.ImDrawCallbackResetRenderState)
+			{
+				SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
+			}
+			else
+			{
+				ImDrawCmd localCmd = cmdPtr;
+				((delegate* unmanaged[Cdecl]<ImDrawList*, ImDrawCmd*, void>)cmdPtr.UserCallback)(cmdListPtr.Handle, &localCmd);
+			}
+
+			return;
+		}
+
+		Vector4 clipRect;
+		clipRect.X = (cmdPtr.ClipRect.X - clipOff.X) * clipScale.X;
+		clipRect.Y = (cmdPtr.ClipRect.Y - clipOff.Y) * clipScale.Y;
+		clipRect.Z = (cmdPtr.ClipRect.Z - clipOff.X) * clipScale.X;
+		clipRect.W = (cmdPtr.ClipRect.W - clipOff.Y) * clipScale.Y;
+
+		if (clipRect.X < framebufferWidth && clipRect.Y < framebufferHeight && clipRect.Z >= 0.0f && clipRect.W >= 0.0f)
+		{
+			// Round scissor rectangle to pixel boundaries to avoid sub-pixel rendering issues
+			int scissorX = (int)Math.Floor(clipRect.X);
+			int scissorY = (int)Math.Floor(framebufferHeight - clipRect.W);
+			uint scissorWidth = (uint)Math.Max(0, Math.Ceiling(clipRect.Z - clipRect.X));
+			uint scissorHeight = (uint)Math.Max(0, Math.Ceiling(clipRect.W - clipRect.Y));
+
+			// Apply scissor/clipping rectangle
+			_gl!.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
+			_gl.CheckGlError("Scissor");
+
+			// Bind texture, Draw
+			// In ImGui 1.92.0+, use GetTexID() method to get texture ID
+			// This method returns the texture ID compatible with OpenGL
+			uint textureId = (uint)(nuint)cmdPtr.GetTexID();
+			_gl.BindTexture(GLEnum.Texture2D, textureId);
+			_gl.CheckGlError("Texture");
+
+			_gl.DrawElementsBaseVertex(GLEnum.Triangles, cmdPtr.ElemCount, GLEnum.UnsignedShort, (void*)(cmdPtr.IdxOffset * sizeof(ushort)), (int)cmdPtr.VtxOffset);
+			_gl.CheckGlError("Draw");
+		}
+	}
+
+	/// <summary>
+	/// Enables or disables an OpenGL capability based on the previously captured state.
+	/// </summary>
+	private void SetGlCapability(GLEnum capability, bool enabled)
+	{
+		if (enabled)
+		{
+			_gl!.Enable(capability);
+		}
+		else
+		{
+			_gl!.Disable(capability);
+		}
 	}
 
 	internal void CreateDeviceResources()

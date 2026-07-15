@@ -208,31 +208,11 @@ public static class Theme
 				// Group by dark/light for families with many variants
 				if (themes.Count > 4)
 				{
-					ThemeRegistry.ThemeInfo[] darkThemes = [.. themes.Where(t => t.IsDark)];
-					ThemeRegistry.ThemeInfo[] lightThemes = [.. themes.Where(t => !t.IsDark)];
-
-					themeChanged |= RenderThemeGroup("Dark", darkThemes);
-
-					if (darkThemes.Length > 0 && lightThemes.Length > 0)
-					{
-						ImGui.Separator();
-					}
-
-					themeChanged |= RenderThemeGroup("Light", lightThemes);
+					themeChanged = RenderFamilyThemesGrouped(themes);
 				}
 				else
 				{
-					// Few themes - render directly with color swatches
-					foreach (ThemeRegistry.ThemeInfo theme in themes)
-					{
-						bool isSelected = currentThemeName == theme.Name;
-						string displayName = theme.Variant ?? theme.Name;
-
-						if (RenderThemeMenuItemWithDialogSwatches(theme, displayName, isSelected) && !isSelected && Apply(theme.Name))
-						{
-							themeChanged = true;
-						}
-					}
+					themeChanged = RenderFamilyThemesFlat(themes);
 				}
 
 				ImGui.EndMenu();
@@ -241,6 +221,52 @@ public static class Theme
 			{
 				// Pop the ID that was pushed in RenderFamilyMenuHeader when menu was opened
 				ImGui.PopID();
+			}
+		}
+
+		return themeChanged;
+	}
+
+	/// <summary>
+	/// Renders a family's themes grouped into dark and light sections.
+	/// </summary>
+	/// <param name="themes">The themes in the family.</param>
+	/// <returns>True if a theme was selected and changed, false otherwise.</returns>
+	private static bool RenderFamilyThemesGrouped(IReadOnlyList<ThemeRegistry.ThemeInfo> themes)
+	{
+		ThemeRegistry.ThemeInfo[] darkThemes = [.. themes.Where(t => t.IsDark)];
+		ThemeRegistry.ThemeInfo[] lightThemes = [.. themes.Where(t => !t.IsDark)];
+
+		bool themeChanged = RenderThemeGroup("Dark", darkThemes);
+
+		if (darkThemes.Length > 0 && lightThemes.Length > 0)
+		{
+			ImGui.Separator();
+		}
+
+		themeChanged |= RenderThemeGroup("Light", lightThemes);
+
+		return themeChanged;
+	}
+
+	/// <summary>
+	/// Renders a family's themes directly with color swatches (no dark/light grouping).
+	/// </summary>
+	/// <param name="themes">The themes in the family.</param>
+	/// <returns>True if a theme was selected and changed, false otherwise.</returns>
+	private static bool RenderFamilyThemesFlat(IReadOnlyList<ThemeRegistry.ThemeInfo> themes)
+	{
+		bool themeChanged = false;
+
+		// Few themes - render directly with color swatches
+		foreach (ThemeRegistry.ThemeInfo theme in themes)
+		{
+			bool isSelected = currentThemeName == theme.Name;
+			string displayName = theme.Variant ?? theme.Name;
+
+			if (RenderThemeMenuItemWithDialogSwatches(theme, displayName, isSelected) && !isSelected && Apply(theme.Name))
+			{
+				themeChanged = true;
 			}
 		}
 
@@ -294,17 +320,7 @@ public static class Theme
 		if (ImGui.BeginMenu(menuLabel))
 		{
 			// Reset option at the top
-			bool isReset = currentThemeName is null;
-			if (ImGui.MenuItem("Reset to Default", "", isReset) && !isReset)
-			{
-				ResetToDefault();
-				themeChanged = true;
-			}
-
-			if (ImGui.IsItemHovered())
-			{
-				ImGui.SetTooltip("Reset to default ImGui styling with no theme applied");
-			}
+			themeChanged |= RenderResetMenuItem();
 
 			ImGui.Separator();
 
@@ -317,15 +333,7 @@ public static class Theme
 				ImGui.TextDisabled("Dark Themes");
 				ImGui.Separator();
 
-				foreach (ThemeRegistry.ThemeInfo theme in darkThemes)
-				{
-					bool isSelected = currentThemeName == theme.Name;
-
-					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected) && !isSelected && Apply(theme.Name))
-					{
-						themeChanged = true;
-					}
-				}
+				themeChanged |= RenderThemeListByName(darkThemes);
 
 				if (lightThemes.Length > 0)
 				{
@@ -341,18 +349,55 @@ public static class Theme
 					ImGui.Separator();
 				}
 
-				foreach (ThemeRegistry.ThemeInfo theme in lightThemes)
-				{
-					bool isSelected = currentThemeName == theme.Name;
-
-					if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected) && !isSelected && Apply(theme.Name))
-					{
-						themeChanged = true;
-					}
-				}
+				themeChanged |= RenderThemeListByName(lightThemes);
 			}
 
 			ImGui.EndMenu();
+		}
+
+		return themeChanged;
+	}
+
+	/// <summary>
+	/// Renders the "Reset to Default" menu item and its tooltip.
+	/// </summary>
+	/// <returns>True if the theme was reset, false otherwise.</returns>
+	private static bool RenderResetMenuItem()
+	{
+		bool themeChanged = false;
+
+		bool isReset = currentThemeName is null;
+		if (ImGui.MenuItem("Reset to Default", "", isReset) && !isReset)
+		{
+			ResetToDefault();
+			themeChanged = true;
+		}
+
+		if (ImGui.IsItemHovered())
+		{
+			ImGui.SetTooltip("Reset to default ImGui styling with no theme applied");
+		}
+
+		return themeChanged;
+	}
+
+	/// <summary>
+	/// Renders a flat list of theme menu items using each theme's name as the display label.
+	/// </summary>
+	/// <param name="themes">The themes to render.</param>
+	/// <returns>True if a theme was selected and changed, false otherwise.</returns>
+	private static bool RenderThemeListByName(IEnumerable<ThemeRegistry.ThemeInfo> themes)
+	{
+		bool themeChanged = false;
+
+		foreach (ThemeRegistry.ThemeInfo theme in themes)
+		{
+			bool isSelected = currentThemeName == theme.Name;
+
+			if (RenderThemeMenuItemWithDialogSwatches(theme, theme.Name, isSelected) && !isSelected && Apply(theme.Name))
+			{
+				themeChanged = true;
+			}
 		}
 
 		return themeChanged;
@@ -542,41 +587,7 @@ public static class Theme
 		try
 		{
 			// Get colors from the representative theme if available
-			ImColor primaryColor = Palette.Basic.Blue; // Fallback
-			ImColor surfaceColor = Palette.Neutral.Gray; // Fallback
-
-			if (representativeTheme != null)
-			{
-				try
-				{
-					// Use the complete palette for efficient color extraction
-					IReadOnlyDictionary<SemanticColorRequest, Color> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
-
-					// Get primary color for title bar
-					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out Color primary))
-					{
-						primaryColor = primary.ToImColor();
-					}
-
-					// Get surface color for background
-					if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out Color surface))
-					{
-						surfaceColor = surface.ToImColor();
-					}
-					else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out Color surfaceMed))
-					{
-						surfaceColor = surfaceMed.ToImColor();
-					}
-				}
-				catch (ArgumentException)
-				{
-					// Use fallback colors if extraction fails
-				}
-				catch (InvalidOperationException)
-				{
-					// Use fallback colors if extraction fails
-				}
-			}
+			GetFamilyHeaderColors(representativeTheme, out ImColor primaryColor, out ImColor surfaceColor);
 
 			// Use BeginMenu with transparent styling and draw our custom dialog over it
 			string displayText = familyName; // Don't add arrow, BeginMenu will handle it
@@ -692,6 +703,53 @@ public static class Theme
 		}
 
 		return menuOpened;
+	}
+
+	/// <summary>
+	/// Extracts the primary and surface colors used by the family header, falling back to defaults on failure.
+	/// </summary>
+	/// <param name="representativeTheme">The theme to use for color extraction (typically first theme in family).</param>
+	/// <param name="primaryColor">The extracted primary color (title bar).</param>
+	/// <param name="surfaceColor">The extracted surface color (background).</param>
+	private static void GetFamilyHeaderColors(ThemeRegistry.ThemeInfo? representativeTheme, out ImColor primaryColor, out ImColor surfaceColor)
+	{
+		primaryColor = Palette.Basic.Blue; // Fallback
+		surfaceColor = Palette.Neutral.Gray; // Fallback
+
+		if (representativeTheme == null)
+		{
+			return;
+		}
+
+		try
+		{
+			// Use the complete palette for efficient color extraction
+			IReadOnlyDictionary<SemanticColorRequest, Color> completePalette = GetCompletePalette(representativeTheme.CreateInstance());
+
+			// Get primary color for title bar
+			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Primary, Priority.High), out Color primary))
+			{
+				primaryColor = primary.ToImColor();
+			}
+
+			// Get surface color for background
+			if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Low), out Color surface))
+			{
+				surfaceColor = surface.ToImColor();
+			}
+			else if (completePalette.TryGetValue(new SemanticColorRequest(SemanticMeaning.Neutral, Priority.Medium), out Color surfaceMed))
+			{
+				surfaceColor = surfaceMed.ToImColor();
+			}
+		}
+		catch (ArgumentException)
+		{
+			// Use fallback colors if extraction fails
+		}
+		catch (InvalidOperationException)
+		{
+			// Use fallback colors if extraction fails
+		}
 	}
 
 	/// <summary>
@@ -1127,28 +1185,10 @@ public static class Theme
 			ImGui.Separator();
 
 			// Quick reset option
-			if (ImGui.MenuItem("Reset to Default", "", currentThemeName is null) && currentThemeName is not null)
-			{
-				ResetToDefault();
-				themeChanged = true;
-			}
-
-			if (ImGui.IsItemHovered())
-			{
-				ImGui.SetTooltip("Reset to default ImGui styling with no theme applied");
-			}
+			themeChanged |= RenderResetMenuItem();
 
 			// Show current theme info if any
-			if (currentThemeName is not null)
-			{
-				ImGui.Separator();
-				ImGui.TextDisabled($"Current: {currentThemeName}");
-				ThemeRegistry.ThemeInfo? currentTheme = FindTheme(currentThemeName);
-				if (currentTheme is not null)
-				{
-					ImGui.TextDisabled($"({(currentTheme.IsDark ? "Dark" : "Light")})");
-				}
-			}
+			RenderCurrentThemeInfo();
 
 			ImGui.EndMenu();
 		}
@@ -1158,6 +1198,25 @@ public static class Theme
 		bool modalThemeChanged = RenderThemeSelector();
 
 		return themeChanged || modalThemeChanged;
+	}
+
+	/// <summary>
+	/// Renders the current theme information (name and dark/light variant) if a theme is applied.
+	/// </summary>
+	private static void RenderCurrentThemeInfo()
+	{
+		if (currentThemeName is null)
+		{
+			return;
+		}
+
+		ImGui.Separator();
+		ImGui.TextDisabled($"Current: {currentThemeName}");
+		ThemeRegistry.ThemeInfo? currentTheme = FindTheme(currentThemeName);
+		if (currentTheme is not null)
+		{
+			ImGui.TextDisabled($"({(currentTheme.IsDark ? "Dark" : "Light")})");
+		}
 	}
 
 	#endregion

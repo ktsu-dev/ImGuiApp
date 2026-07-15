@@ -90,7 +90,7 @@ public static class ColorImGuiExtensions
 	/// <summary>Saturates a normalized channel to [0, 1] and rounds to a byte, matching ImGui's <c>IM_F32_TO_INT8_SAT</c>.</summary>
 	private static uint ToByte(float value)
 	{
-		float saturated = value < 0f ? 0f : value > 1f ? 1f : value;
+		float saturated = Math.Clamp(value, 0f, 1f);
 		return (uint)((saturated * 255f) + 0.5f);
 	}
 }

@@ -101,7 +101,6 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <param name="dt">The delta time since the last tick.</param>
 		/// <exception cref="NotImplementedException">Thrown if the layout direction is not supported.</exception>
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (detecting whether resize actually changed the zone's size value); a tolerance would suppress legitimate resize callbacks.")]
 		public void Tick(float dt)
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
@@ -156,111 +155,132 @@ public static partial class ImGuiWidgets
 				//draw the grab handle if we're not the last zone
 				if (z != Zones[^1])
 				{
-					Vector2 zoneSize = CalculateZoneSize(z, windowPadding, containerSize, layoutMask, layoutMaskInverse);
-					Vector2 lineA = advance + (zoneSize * layoutMask) + (windowPadding * 0.5f * layoutMask);
-					Vector2 lineB = lineA + (zoneSize * layoutMaskInverse);
-					float lineWidth = style.WindowPadding.X * 0.5f;
-					float grabWidth = style.WindowPadding.X * 2;
-					Vector2 grabBox = new Vector2(grabWidth, grabWidth) * 0.5f;
-					Vector2 grabMin = lineA - (grabBox * layoutMask);
-					Vector2 grabMax = lineB + (grabBox * layoutMask);
-					Vector2 grabSize = grabMax - grabMin;
-					RectangleF handleRect = new(grabMin.X, grabMin.Y, grabSize.X, grabSize.Y);
-					bool handleHovered = handleRect.Contains(mousePos.X, mousePos.Y);
-					bool mouseClickedThisFrame = ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-					bool handleClicked = handleHovered && mouseClickedThisFrame;
-					bool handleDoubleClicked = handleHovered && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);
-
-					if (handleClicked)
-					{
-						DragIndex = i;
-					}
-
-					if (handleDoubleClicked)
-					{
-						resetSize = true;
-					}
-					else if (DragIndex == i)
-					{
-						if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
-						{
-							Vector2 mousePosLocal = mousePos - advance;
-
-							DividerZone first = Zones[0];
-							DividerZone last = Zones[^1];
-							if (first != last && z != first)
-							{
-								mousePosLocal += windowPadding * 0.5f * layoutMask;
-							}
-
-							float requestedSize = layout switch
-							{
-								DividerLayout.Columns => mousePosLocal.X / containerSize.X,
-								DividerLayout.Rows => mousePosLocal.Y / containerSize.Y,
-								_ => throw new NotImplementedException(),
-							};
-							resize = Math.Clamp(requestedSize, 0.1f, 0.9f);
-						}
-						else
-						{
-							DragIndex = -1;
-						}
-					}
-
-					ImColor lineColor;
-					if (DragIndex == i)
-					{
-						lineColor = new Srgb(1f, 1f, 1f).ToImColor(0.7f);
-					}
-					else if (handleHovered)
-					{
-						lineColor = new Srgb(1f, 1f, 1f).ToImColor(0.5f);
-					}
-					else
-					{
-						lineColor = new Srgb(1f, 1f, 1f).ToImColor(0.3f);
-					}
-					drawList.AddLine(lineA, lineB, lineColor.ToImGuiU32(), lineWidth);
-
-					if (handleHovered || DragIndex == i)
-					{
-						ImGui.SetMouseCursor(layout switch
-						{
-							DividerLayout.Columns => ImGuiMouseCursor.ResizeEw,
-							DividerLayout.Rows => ImGuiMouseCursor.ResizeNs,
-							_ => throw new NotImplementedException(),
-						});
-					}
+					DrawDividerHandle(z, i, advance, style, windowPadding, containerSize, layoutMask, layoutMaskInverse, mousePos, drawList, ref resize, ref resetSize);
 				}
 
 				advance += CalculateAdvance(z, windowPadding, containerSize, layoutMask);
 			}
 
 			//do the actual resize at the end of the tick so that we don't mess with the dimensions of the layout mid rendering
-			if (DragIndex > -1)
+			ApplyResize(resize, resetSize);
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted from Tick to reduce cognitive complexity; the parameters thread the immediate-mode layout state (masks, padding, draw list) computed once by the caller, and bundling them would not improve readability.")]
+		private void DrawDividerHandle(DividerZone z, int i, Vector2 advance, ImGuiStylePtr style, Vector2 windowPadding, Vector2 containerSize, Vector2 layoutMask, Vector2 layoutMaskInverse, Vector2 mousePos, ImDrawListPtr drawList, ref float resize, ref bool resetSize)
+		{
+			Vector2 zoneSize = CalculateZoneSize(z, windowPadding, containerSize, layoutMask, layoutMaskInverse);
+			Vector2 lineA = advance + (zoneSize * layoutMask) + (windowPadding * 0.5f * layoutMask);
+			Vector2 lineB = lineA + (zoneSize * layoutMaskInverse);
+			float lineWidth = style.WindowPadding.X * 0.5f;
+			float grabWidth = style.WindowPadding.X * 2;
+			Vector2 grabBox = new Vector2(grabWidth, grabWidth) * 0.5f;
+			Vector2 grabMin = lineA - (grabBox * layoutMask);
+			Vector2 grabMax = lineB + (grabBox * layoutMask);
+			Vector2 grabSize = grabMax - grabMin;
+			RectangleF handleRect = new(grabMin.X, grabMin.Y, grabSize.X, grabSize.Y);
+			bool handleHovered = handleRect.Contains(mousePos.X, mousePos.Y);
+			bool mouseClickedThisFrame = ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+			bool handleClicked = handleHovered && mouseClickedThisFrame;
+			bool handleDoubleClicked = handleHovered && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);
+
+			if (handleClicked)
 			{
-				if (resetSize)
-				{
-					resize = Zones[DragIndex].InitialSize;
-				}
+				DragIndex = i;
+			}
 
-				DividerZone resizedZone = Zones[DragIndex];
-				DividerZone neighbourZone = Zones[DragIndex + 1];
-				float combinedSize = resizedZone.Size + neighbourZone.Size;
-				float maxSize = combinedSize - 0.1f;
-				resize = Math.Clamp(resize, 0.1f, maxSize);
-				bool sizeDidChange = resizedZone.Size != resize;
-				resizedZone.Size = resize;
-				neighbourZone.Size = combinedSize - resize;
-				if (sizeDidChange)
-				{
-					onResized?.Invoke(this);
-				}
+			if (handleDoubleClicked)
+			{
+				resetSize = true;
+			}
+			else if (DragIndex == i)
+			{
+				UpdateDragResize(z, advance, windowPadding, containerSize, layoutMask, mousePos, ref resize);
+			}
 
-				if (resetSize)
+			ImColor lineColor = GetHandleLineColor(i, handleHovered);
+			drawList.AddLine(lineA, lineB, lineColor.ToImGuiU32(), lineWidth);
+
+			if (handleHovered || DragIndex == i)
+			{
+				ImGui.SetMouseCursor(layout switch
 				{
-					DragIndex = -1;
-				}
+					DividerLayout.Columns => ImGuiMouseCursor.ResizeEw,
+					DividerLayout.Rows => ImGuiMouseCursor.ResizeNs,
+					_ => throw new NotImplementedException(),
+				});
+			}
+		}
+
+		private void UpdateDragResize(DividerZone z, Vector2 advance, Vector2 windowPadding, Vector2 containerSize, Vector2 layoutMask, Vector2 mousePos, ref float resize)
+		{
+			if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
+			{
+				DragIndex = -1;
+				return;
+			}
+
+			Vector2 mousePosLocal = mousePos - advance;
+
+			DividerZone first = Zones[0];
+			DividerZone last = Zones[^1];
+			if (first != last && z != first)
+			{
+				mousePosLocal += windowPadding * 0.5f * layoutMask;
+			}
+
+			float requestedSize = layout switch
+			{
+				DividerLayout.Columns => mousePosLocal.X / containerSize.X,
+				DividerLayout.Rows => mousePosLocal.Y / containerSize.Y,
+				_ => throw new NotImplementedException(),
+			};
+			resize = Math.Clamp(requestedSize, 0.1f, 0.9f);
+		}
+
+		private ImColor GetHandleLineColor(int i, bool handleHovered)
+		{
+			if (DragIndex == i)
+			{
+				return new Srgb(1f, 1f, 1f).ToImColor(0.7f);
+			}
+
+			if (handleHovered)
+			{
+				return new Srgb(1f, 1f, 1f).ToImColor(0.5f);
+			}
+
+			return new Srgb(1f, 1f, 1f).ToImColor(0.3f);
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (detecting whether resize actually changed the zone's size value); a tolerance would suppress legitimate resize callbacks.")]
+		private void ApplyResize(float resize, bool resetSize)
+		{
+			if (DragIndex <= -1)
+			{
+				return;
+			}
+
+			if (resetSize)
+			{
+				resize = Zones[DragIndex].InitialSize;
+			}
+
+			DividerZone resizedZone = Zones[DragIndex];
+			DividerZone neighbourZone = Zones[DragIndex + 1];
+			float combinedSize = resizedZone.Size + neighbourZone.Size;
+			float maxSize = combinedSize - 0.1f;
+			resize = Math.Clamp(resize, 0.1f, maxSize);
+			bool sizeDidChange = resizedZone.Size != resize;
+			resizedZone.Size = resize;
+			neighbourZone.Size = combinedSize - resize;
+			if (sizeDidChange)
+			{
+				onResized?.Invoke(this);
+			}
+
+			if (resetSize)
+			{
+				DragIndex = -1;
 			}
 		}
 

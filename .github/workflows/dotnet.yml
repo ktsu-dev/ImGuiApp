@@ -50,13 +50,13 @@ jobs:
 
     steps:
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: 17
           distribution: "zulu" # Alternative distribution options are available.
 
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Full history for versioning
           fetch-tags: true
@@ -65,7 +65,7 @@ jobs:
           persist-credentials: true
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
           cache: true
@@ -78,7 +78,7 @@ jobs:
 
       - name: Cache SonarQube Cloud packages
         if: ${{ env.SONAR_TOKEN != '' }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -89,7 +89,7 @@ jobs:
       - name: Cache SonarQube Cloud scanner
         if: ${{ env.SONAR_TOKEN != '' }}
         id: cache-sonar-scanner
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -183,7 +183,7 @@ jobs:
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: coverage-report
@@ -203,13 +203,13 @@ jobs:
 
     steps:
       - name: Checkout Release Commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.build.outputs.release_hash }}
           fetch-depth: 0 # Full history for better auto-detection
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
@@ -233,7 +233,7 @@ jobs:
           dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: winget-manifests-${{ needs.build.outputs.version }}
           path: winget/*.yaml
@@ -251,9 +251,9 @@ jobs:
 
     steps:
       - name: Checkout Release Commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.build.outputs.release_hash }}
 
       - name: Detect Dependencies
-        uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
+        uses: advanced-security/component-detection-dependency-submission-action@v0.1.4

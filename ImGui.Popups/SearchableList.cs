@@ -94,12 +94,7 @@ public partial class ImGuiPopups
 
 			if (ImGui.InputText("##Search", ref searchTerm, 255, ImGuiInputTextFlags.EnterReturnsTrue))
 			{
-				TItem? confirmedItem = cachedValue ?? selectedItem;
-				if (confirmedItem is not null)
-				{
-					OnConfirm(confirmedItem);
-					ImGui.CloseCurrentPopup();
-				}
+				ConfirmSelectedItem();
 			}
 
 			Dictionary<string, TItem> itemLookup = Items.Select(item => (item, itemString: item.ToString() ?? string.Empty))
@@ -111,45 +106,62 @@ public partial class ImGuiPopups
 
 			if (ImGui.BeginListBox("##List"))
 			{
-				selectedItem = null;
-				foreach (string itemString in sortedStrings)
-				{
-					if (!itemLookup.TryGetValue(itemString, out TItem? item))
-					{
-						continue;
-					}
-
-					//if nothing has been explicitly selected, select the first item which will be the best match
-					if (selectedItem is null && cachedValue is null)
-					{
-						selectedItem = item;
-					}
-
-					string displayText = GetText?.Invoke(item) ?? item.ToString() ?? string.Empty;
-
-					if (ImGui.Selectable(displayText, item == (cachedValue ?? selectedItem)))
-					{
-						cachedValue = item;
-					}
-				}
-
+				DrawItemList(sortedStrings, itemLookup);
 				ImGui.EndListBox();
 			}
 
 			if (ImGui.Button($"OK###{Modal.Title.ToSnakeCase()}_OK"))
 			{
-				TItem? confirmedItem = cachedValue ?? selectedItem;
-				if (confirmedItem is not null)
-				{
-					OnConfirm(confirmedItem);
-					ImGui.CloseCurrentPopup();
-				}
+				ConfirmSelectedItem();
 			}
 
 			ImGui.SameLine();
 			if (ImGui.Button($"Cancel###{Modal.Title.ToSnakeCase()}_Cancel"))
 			{
 				ImGui.CloseCurrentPopup();
+			}
+		}
+
+		/// <summary>
+		/// Confirms the current selection, invoking the callback and closing the popup if an item is selected.
+		/// </summary>
+		private void ConfirmSelectedItem()
+		{
+			TItem? confirmedItem = cachedValue ?? selectedItem;
+			if (confirmedItem is not null)
+			{
+				OnConfirm(confirmedItem);
+				ImGui.CloseCurrentPopup();
+			}
+		}
+
+		/// <summary>
+		/// Draws the ranked list of items, tracking the current selection.
+		/// </summary>
+		/// <param name="sortedStrings">The ranked item strings to display.</param>
+		/// <param name="itemLookup">Lookup from item string to item.</param>
+		private void DrawItemList(IEnumerable<string> sortedStrings, Dictionary<string, TItem> itemLookup)
+		{
+			selectedItem = null;
+			foreach (string itemString in sortedStrings)
+			{
+				if (!itemLookup.TryGetValue(itemString, out TItem? item))
+				{
+					continue;
+				}
+
+				//if nothing has been explicitly selected, select the first item which will be the best match
+				if (selectedItem is null && cachedValue is null)
+				{
+					selectedItem = item;
+				}
+
+				string displayText = GetText?.Invoke(item) ?? item.ToString() ?? string.Empty;
+
+				if (ImGui.Selectable(displayText, item == (cachedValue ?? selectedItem)))
+				{
+					cachedValue = item;
+				}
 			}
 		}
 

@@ -142,51 +142,59 @@ public static partial class ImGuiWidgets
 
 			for (int i = 0; i < length; i++)
 			{
-				if (i > 0)
-				{
-					ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
-				}
-
-				ImGui.PushID(i);
-				ImGui.SetNextItemWidth(box);
-
-				if (focusReq == i)
-				{
-					ImGui.SetKeyboardFocusHere();
-				}
-
-				bool empty = i >= value.Length;
-				string slot = empty ? string.Empty : value[i].ToString();
-				string edited = slot;
-
-				if (ImGui.InputText("##slot", ref edited, 8u, flags))
-				{
-					string cleaned = NormalizePin(edited, 2, digitsOnly);
-					char? typed = cleaned.Length > 0 ? cleaned[^1] : null;
-					value = SetPinSlot(value, i, typed, length);
-					changed = true;
-
-					// Auto-advance after a successful keystroke.
-					if (typed.HasValue && i + 1 < length)
-					{
-						FocusRequest[groupId] = i + 1;
-					}
-				}
-				else if (empty && i > 0 && ImGui.IsItemFocused() && ImGui.IsKeyPressed(ImGuiKey.Backspace))
-				{
-					// Backspace in an empty box clears the previous box and steps focus back.
-					value = SetPinSlot(value, i - 1, null, length);
-					FocusRequest[groupId] = i - 1;
-					changed = true;
-				}
-
-				ImGui.PopID();
+				changed |= DrawPinBox(groupId, ref value, i, length, focusReq, box, digitsOnly, flags);
 			}
 
 			// Drop the focus request only if it was consumed (not replaced by a new one this frame).
 			if (focusReq >= 0 && FocusRequest.GetValueOrDefault(groupId, -1) == focusReq)
 			{
 				FocusRequest.Remove(groupId);
+			}
+
+			ImGui.PopID();
+			return changed;
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted from Draw to reduce cognitive complexity; the parameters thread the per-frame PIN box state from the caller and bundling them would not improve readability.")]
+		private static bool DrawPinBox(uint groupId, ref string value, int i, int length, int focusReq, float box, bool digitsOnly, ImGuiInputTextFlags flags)
+		{
+			if (i > 0)
+			{
+				ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
+			}
+
+			ImGui.PushID(i);
+			ImGui.SetNextItemWidth(box);
+
+			if (focusReq == i)
+			{
+				ImGui.SetKeyboardFocusHere();
+			}
+
+			bool empty = i >= value.Length;
+			string slot = empty ? string.Empty : value[i].ToString();
+			string edited = slot;
+
+			bool changed = false;
+			if (ImGui.InputText("##slot", ref edited, 8u, flags))
+			{
+				string cleaned = NormalizePin(edited, 2, digitsOnly);
+				char? typed = cleaned.Length > 0 ? cleaned[^1] : null;
+				value = SetPinSlot(value, i, typed, length);
+				changed = true;
+
+				// Auto-advance after a successful keystroke.
+				if (typed.HasValue && i + 1 < length)
+				{
+					FocusRequest[groupId] = i + 1;
+				}
+			}
+			else if (empty && i > 0 && ImGui.IsItemFocused() && ImGui.IsKeyPressed(ImGuiKey.Backspace))
+			{
+				// Backspace in an empty box clears the previous box and steps focus back.
+				value = SetPinSlot(value, i - 1, null, length);
+				FocusRequest[groupId] = i - 1;
+				changed = true;
 			}
 
 			ImGui.PopID();

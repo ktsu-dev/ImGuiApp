@@ -69,6 +69,7 @@ public static partial class ImGuiWidgets
 	/// <param name="textMode">The text display mode (percentage, time, or custom).</param>
 	/// <param name="timeValue">The time value in seconds (used when textMode is Time).</param>
 	/// <param name="customText">Custom text to display (used when textMode is Custom).</param>
+	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Widget mirrors Dear ImGui's parameter-rich immediate-mode API; the parameter list matches the established widget convention and cannot be reduced without a breaking API change.")]
 	public static void RadialProgressBar(float progress, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None, ImGuiRadialProgressBarTextMode textMode = ImGuiRadialProgressBarTextMode.Percentage, float timeValue = 0, string? customText = null) =>
 		RadialProgressBarImpl.Draw(progress, radius, thickness, segments, options, textMode, timeValue, customText);
 
@@ -105,6 +106,7 @@ public static partial class ImGuiWidgets
 	internal static class RadialProgressBarImpl
 	{
 		[SuppressMessage("Major Code Smell", "S2234:Parameters to 'DrawArc' have the same names but not the same order as the method arguments.", Justification = "Angle arguments intentionally swapped for counter-clockwise sweep; reordering would invert the arc direction.")]
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich public RadialProgressBar widget API; a pass-through of the same values.")]
 		public static void Draw(float progress, float radius, float thickness, int segments, ImGuiRadialProgressBarOptions options, ImGuiRadialProgressBarTextMode textMode, float timeValue, string? customText)
 		{
 			// Validate input parameters
@@ -181,6 +183,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Drawing primitive parameterized by geometry (center, radius, angles, thickness, color, segments); grouping would obscure the call sites.")]
 		private static void DrawArc(ImDrawListPtr drawList, Vector2 center, float radius, float startAngle, float endAngle, float thickness, uint color, int segments)
 		{
 			// Calculate the number of segments based on the arc length

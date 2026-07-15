@@ -61,93 +61,16 @@ public sealed class GestureMachine(GestureSettings? settings = null)
 
 		if (justPressed)
 		{
-			_startPos = pos;
-			_currentPos = pos;
-			_lastPos = pos;
-			_velocity = Vector2.Zero;
-			_pressDuration = 0.0f;
-			_longPressFired = false;
-			_panActive = false;
-			IsPressed = true;
+			BeginPress(pos);
 		}
 		else if (IsPressed)
 		{
-			_pressDuration += deltaTime;
-
-			Vector2 frameDelta = pos - _lastPos;
-			Vector2 instantVelocity = deltaTime > 0.0f ? frameDelta / deltaTime : Vector2.Zero;
-
-			// Exponential smoothing: blend new sample toward stored velocity by the smoothing factor.
-			float smoothing = Math.Clamp(Settings.VelocitySmoothing, 0.0f, 1.0f);
-			_velocity = (_velocity * smoothing) + (instantVelocity * (1.0f - smoothing));
-
-			_currentPos = pos;
-			_lastPos = pos;
-
-			Vector2 totalDelta = _currentPos - _startPos;
-			float totalDistance = totalDelta.Length();
-
-			// Long-press fires once when the pointer has stayed roughly still past the threshold.
-			if (!_longPressFired
-				&& _pressDuration >= Settings.LongPressMinDuration
-				&& totalDistance <= Settings.TapMaxDistance)
-			{
-				fired |= GestureFlags.LongPress;
-				_longPressFired = true;
-			}
-
-			// Pan promotion: once we've moved past the threshold we're in a pan for the rest of this press.
-			if (!_panActive && totalDistance > Settings.PanMinDistance)
-			{
-				_panActive = true;
-				fired |= GestureFlags.PanStart;
-			}
-
-			if (_panActive)
-			{
-				fired |= GestureFlags.Pan;
-			}
+			fired |= UpdateActivePress(pos, deltaTime);
 		}
 
 		if (justReleased)
 		{
-			Vector2 totalDelta = _currentPos - _startPos;
-			float totalDistance = totalDelta.Length();
-			bool wasPan = _panActive;
-			Vector2 releaseVelocity = _velocity;
-
-			if (wasPan)
-			{
-				fired |= GestureFlags.PanEnd;
-
-				GestureFlags swipe = ClassifySwipe(totalDelta, releaseVelocity);
-				fired |= swipe;
-			}
-			else if (!_longPressFired
-				&& _pressDuration <= Settings.TapMaxDuration
-				&& totalDistance <= Settings.TapMaxDistance)
-			{
-				bool isDoubleTap =
-					_timeSinceLastTap <= Settings.DoubleTapMaxInterval
-					&& Vector2.Distance(_startPos, _lastTapPos) <= Settings.DoubleTapMaxDistance;
-
-				if (isDoubleTap)
-				{
-					fired |= GestureFlags.DoubleTap;
-					// Reset so a third quick tap does NOT chain into another double-tap.
-					_timeSinceLastTap = float.MaxValue;
-				}
-				else
-				{
-					fired |= GestureFlags.Tap;
-					_timeSinceLastTap = 0.0f;
-					_lastTapPos = _startPos;
-				}
-			}
-
-			IsPressed = false;
-			_panActive = false;
-			_pressDuration = 0.0f;
+			fired |= EndPress();
 		}
 
 		Vector2 startPosResult = (!IsPressed && fired == GestureFlags.None) ? Vector2.Zero : _startPos;
@@ -159,6 +82,109 @@ public sealed class GestureMachine(GestureSettings? settings = null)
 			Delta: _currentPos - _startPos,
 			Velocity: _velocity,
 			PressDuration: IsPressed ? _pressDuration : 0.0f);
+	}
+
+	private void BeginPress(Vector2 pos)
+	{
+		_startPos = pos;
+		_currentPos = pos;
+		_lastPos = pos;
+		_velocity = Vector2.Zero;
+		_pressDuration = 0.0f;
+		_longPressFired = false;
+		_panActive = false;
+		IsPressed = true;
+	}
+
+	private GestureFlags UpdateActivePress(Vector2 pos, float deltaTime)
+	{
+		GestureFlags fired = GestureFlags.None;
+
+		_pressDuration += deltaTime;
+
+		Vector2 frameDelta = pos - _lastPos;
+		Vector2 instantVelocity = deltaTime > 0.0f ? frameDelta / deltaTime : Vector2.Zero;
+
+		// Exponential smoothing: blend new sample toward stored velocity by the smoothing factor.
+		float smoothing = Math.Clamp(Settings.VelocitySmoothing, 0.0f, 1.0f);
+		_velocity = (_velocity * smoothing) + (instantVelocity * (1.0f - smoothing));
+
+		_currentPos = pos;
+		_lastPos = pos;
+
+		Vector2 totalDelta = _currentPos - _startPos;
+		float totalDistance = totalDelta.Length();
+
+		// Long-press fires once when the pointer has stayed roughly still past the threshold.
+		if (!_longPressFired
+			&& _pressDuration >= Settings.LongPressMinDuration
+			&& totalDistance <= Settings.TapMaxDistance)
+		{
+			fired |= GestureFlags.LongPress;
+			_longPressFired = true;
+		}
+
+		// Pan promotion: once we've moved past the threshold we're in a pan for the rest of this press.
+		if (!_panActive && totalDistance > Settings.PanMinDistance)
+		{
+			_panActive = true;
+			fired |= GestureFlags.PanStart;
+		}
+
+		if (_panActive)
+		{
+			fired |= GestureFlags.Pan;
+		}
+
+		return fired;
+	}
+
+	private GestureFlags EndPress()
+	{
+		GestureFlags fired = GestureFlags.None;
+
+		Vector2 totalDelta = _currentPos - _startPos;
+		float totalDistance = totalDelta.Length();
+		bool wasPan = _panActive;
+		Vector2 releaseVelocity = _velocity;
+
+		if (wasPan)
+		{
+			fired |= GestureFlags.PanEnd;
+
+			GestureFlags swipe = ClassifySwipe(totalDelta, releaseVelocity);
+			fired |= swipe;
+		}
+		else if (!_longPressFired
+			&& _pressDuration <= Settings.TapMaxDuration
+			&& totalDistance <= Settings.TapMaxDistance)
+		{
+			fired |= ClassifyTap();
+		}
+
+		IsPressed = false;
+		_panActive = false;
+		_pressDuration = 0.0f;
+
+		return fired;
+	}
+
+	private GestureFlags ClassifyTap()
+	{
+		bool isDoubleTap =
+			_timeSinceLastTap <= Settings.DoubleTapMaxInterval
+			&& Vector2.Distance(_startPos, _lastTapPos) <= Settings.DoubleTapMaxDistance;
+
+		if (isDoubleTap)
+		{
+			// Reset so a third quick tap does NOT chain into another double-tap.
+			_timeSinceLastTap = float.MaxValue;
+			return GestureFlags.DoubleTap;
+		}
+
+		_timeSinceLastTap = 0.0f;
+		_lastTapPos = _startPos;
+		return GestureFlags.Tap;
 	}
 
 	/// <summary>Drop all in-flight state. Use when the host element loses focus or unmounts.</summary>

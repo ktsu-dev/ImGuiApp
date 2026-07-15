@@ -233,7 +233,7 @@ public static partial class ImGuiWidgets
 			return currentGridLayout;
 		}
 
-		internal static void ShowRowMajor<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
+		private static void EnsureGridSize(GridOptions gridOptions)
 		{
 			if (gridOptions.GridSize.X <= 0)
 			{
@@ -244,6 +244,11 @@ public static partial class ImGuiWidgets
 			{
 				gridOptions.GridSize = new(gridOptions.GridSize.X, ImGui.GetContentRegionAvail().Y);
 			}
+		}
+
+		internal static void ShowRowMajor<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
+		{
+			EnsureGridSize(gridOptions);
 
 			Vector2 itemSpacing = ImGui.GetStyle().ItemSpacing;
 			T[] itemList = [.. items];
@@ -275,52 +280,64 @@ public static partial class ImGuiWidgets
 			uint borderColor = ImGui.GetColorU32(ImGui.GetStyle().Colors[(int)ImGuiCol.Border]);
 			if (ImGui.BeginChild($"rowMajorGrid_{id}", gridOptions.GridSize, ImGuiChildFlags.None))
 			{
-				Vector2 gridTopLeft = ImGui.GetCursorScreenPos();
-				if (EnableGridDebugDraw)
-				{
-					drawList.AddRect(gridTopLeft, gridTopLeft + gridOptions.GridSize, borderColor);
-				}
-
-				Vector2 rowTopleft = gridTopLeft;
-				for (int rowIndex = 0; rowIndex < gridLayout.RowCount; rowIndex++)
-				{
-					bool isFirstRow = rowIndex == 0;
-					float previousRowHeight = isFirstRow ? 0f : gridLayout.RowHeights[rowIndex - 1];
-
-					float columnCursorX = rowTopleft.X;
-					float columnCursorY = rowTopleft.Y + previousRowHeight;
-					rowTopleft = new(columnCursorX, columnCursorY);
-					ImGui.SetCursorScreenPos(rowTopleft);
-
-					Vector2 cellTopLeft = ImGui.GetCursorScreenPos();
-					int itemBeginIndex = rowIndex * gridLayout.ColumnCount;
-					int itemEndIndex = Math.Min(itemBeginIndex + gridLayout.ColumnCount, itemListCount);
-					for (int itemIndex = itemBeginIndex; itemIndex < itemEndIndex; itemIndex++)
-					{
-						int columnIndex = itemIndex - itemBeginIndex;
-						bool isFirstColumn = itemIndex == itemBeginIndex;
-						float previousCellWidth = isFirstColumn ? 0f : gridLayout.ColumnWidths[columnIndex - 1];
-
-						float cellCursorX = cellTopLeft.X + previousCellWidth;
-						float cellCursorY = cellTopLeft.Y;
-						cellTopLeft = new(cellCursorX, cellCursorY);
-						ImGui.SetCursorScreenPos(cellTopLeft);
-
-						float cellWidth = gridLayout.ColumnWidths[columnIndex];
-						float cellHeight = gridLayout.RowHeights[rowIndex];
-						Vector2 cellSize = new(cellWidth, cellHeight);
-
-						if (EnableGridDebugDraw)
-						{
-							drawList.AddRect(cellTopLeft, cellTopLeft + cellSize, borderColor);
-						}
-
-						drawDelegate(itemList[itemIndex], cellSize, itemDimensions[itemIndex]);
-					}
-				}
+				DrawRowMajorContent(gridLayout, gridOptions, itemList, itemListCount, itemDimensions, drawDelegate, drawList, borderColor);
 			}
 
 			ImGui.EndChild();
+		}
+
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted to reduce cognitive complexity; the parameters thread the grid layout state computed once by the caller and bundling them would not improve readability.")]
+		private static void DrawRowMajorContent<T>(GridLayout gridLayout, GridOptions gridOptions, T[] itemList, int itemListCount, Vector2[] itemDimensions, DrawGridCell<T> drawDelegate, ImDrawListPtr drawList, uint borderColor)
+		{
+			Vector2 gridTopLeft = ImGui.GetCursorScreenPos();
+			if (EnableGridDebugDraw)
+			{
+				drawList.AddRect(gridTopLeft, gridTopLeft + gridOptions.GridSize, borderColor);
+			}
+
+			Vector2 rowTopleft = gridTopLeft;
+			for (int rowIndex = 0; rowIndex < gridLayout.RowCount; rowIndex++)
+			{
+				bool isFirstRow = rowIndex == 0;
+				float previousRowHeight = isFirstRow ? 0f : gridLayout.RowHeights[rowIndex - 1];
+
+				float columnCursorX = rowTopleft.X;
+				float columnCursorY = rowTopleft.Y + previousRowHeight;
+				rowTopleft = new(columnCursorX, columnCursorY);
+				ImGui.SetCursorScreenPos(rowTopleft);
+
+				DrawRowMajorRow(rowIndex, gridLayout, itemList, itemListCount, itemDimensions, drawDelegate, drawList, borderColor);
+			}
+		}
+
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted to reduce cognitive complexity; the parameters thread the grid layout state computed once by the caller and bundling them would not improve readability.")]
+		private static void DrawRowMajorRow<T>(int rowIndex, GridLayout gridLayout, T[] itemList, int itemListCount, Vector2[] itemDimensions, DrawGridCell<T> drawDelegate, ImDrawListPtr drawList, uint borderColor)
+		{
+			Vector2 cellTopLeft = ImGui.GetCursorScreenPos();
+			int itemBeginIndex = rowIndex * gridLayout.ColumnCount;
+			int itemEndIndex = Math.Min(itemBeginIndex + gridLayout.ColumnCount, itemListCount);
+			for (int itemIndex = itemBeginIndex; itemIndex < itemEndIndex; itemIndex++)
+			{
+				int columnIndex = itemIndex - itemBeginIndex;
+				bool isFirstColumn = itemIndex == itemBeginIndex;
+				float previousCellWidth = isFirstColumn ? 0f : gridLayout.ColumnWidths[columnIndex - 1];
+
+				float cellCursorX = cellTopLeft.X + previousCellWidth;
+				float cellCursorY = cellTopLeft.Y;
+				cellTopLeft = new(cellCursorX, cellCursorY);
+				ImGui.SetCursorScreenPos(cellTopLeft);
+
+				float cellWidth = gridLayout.ColumnWidths[columnIndex];
+				float cellHeight = gridLayout.RowHeights[rowIndex];
+				Vector2 cellSize = new(cellWidth, cellHeight);
+
+				if (EnableGridDebugDraw)
+				{
+					drawList.AddRect(cellTopLeft, cellTopLeft + cellSize, borderColor);
+				}
+
+				drawDelegate(itemList[itemIndex], cellSize, itemDimensions[itemIndex]);
+			}
 		}
 		#endregion
 
@@ -382,15 +399,7 @@ public static partial class ImGuiWidgets
 
 		internal static void ShowColumnMajor<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
 		{
-			if (gridOptions.GridSize.X <= 0)
-			{
-				gridOptions.GridSize = new(ImGui.GetContentRegionAvail().X, gridOptions.GridSize.Y);
-			}
-
-			if (gridOptions.GridSize.Y <= 0)
-			{
-				gridOptions.GridSize = new(gridOptions.GridSize.X, ImGui.GetContentRegionAvail().Y);
-			}
+			EnsureGridSize(gridOptions);
 
 			Vector2 itemSpacing = ImGui.GetStyle().ItemSpacing;
 			T[] itemList = [.. items];
@@ -422,52 +431,64 @@ public static partial class ImGuiWidgets
 			uint borderColor = ImGui.GetColorU32(ImGui.GetStyle().Colors[(int)ImGuiCol.Border]);
 			if (ImGui.BeginChild($"columnMajorGrid_{id}", gridOptions.GridSize, ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
 			{
-				Vector2 gridTopLeft = ImGui.GetCursorScreenPos();
-				if (EnableGridDebugDraw)
-				{
-					drawList.AddRect(gridTopLeft, gridTopLeft + gridOptions.GridSize, borderColor);
-				}
-
-				Vector2 columnTopLeft = gridTopLeft;
-				for (int columnIndex = 0; columnIndex < gridLayout.ColumnCount; columnIndex++)
-				{
-					bool isFirstColumn = columnIndex == 0;
-					float previousColumnWidth = isFirstColumn ? 0f : gridLayout.ColumnWidths[columnIndex - 1];
-
-					float columnCursorX = columnTopLeft.X + previousColumnWidth;
-					float columnCursorY = columnTopLeft.Y;
-					columnTopLeft = new(columnCursorX, columnCursorY);
-					ImGui.SetCursorScreenPos(columnTopLeft);
-
-					Vector2 cellTopLeft = ImGui.GetCursorScreenPos();
-					int itemBeginIndex = columnIndex * gridLayout.RowCount;
-					int itemEndIndex = Math.Min(itemBeginIndex + gridLayout.RowCount, itemListCount);
-					for (int itemIndex = itemBeginIndex; itemIndex < itemEndIndex; itemIndex++)
-					{
-						int rowIndex = itemIndex - itemBeginIndex;
-						bool isFirstRow = itemIndex == itemBeginIndex;
-						float previousCellHeight = isFirstRow ? 0f : gridLayout.RowHeights[rowIndex - 1];
-
-						float cellCursorX = cellTopLeft.X;
-						float cellCursorY = cellTopLeft.Y + previousCellHeight;
-						cellTopLeft = new(cellCursorX, cellCursorY);
-						ImGui.SetCursorScreenPos(cellTopLeft);
-
-						float cellWidth = gridLayout.ColumnWidths[columnIndex];
-						float cellHeight = gridLayout.RowHeights[rowIndex];
-						Vector2 cellSize = new(cellWidth, cellHeight);
-
-						if (EnableGridDebugDraw)
-						{
-							drawList.AddRect(cellTopLeft, cellTopLeft + cellSize, borderColor);
-						}
-
-						drawDelegate(itemList[itemIndex], cellSize, itemDimensions[itemIndex]);
-					}
-				}
+				DrawColumnMajorContent(gridLayout, gridOptions, itemList, itemListCount, itemDimensions, drawDelegate, drawList, borderColor);
 			}
 
 			ImGui.EndChild();
+		}
+
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted to reduce cognitive complexity; the parameters thread the grid layout state computed once by the caller and bundling them would not improve readability.")]
+		private static void DrawColumnMajorContent<T>(GridLayout gridLayout, GridOptions gridOptions, T[] itemList, int itemListCount, Vector2[] itemDimensions, DrawGridCell<T> drawDelegate, ImDrawListPtr drawList, uint borderColor)
+		{
+			Vector2 gridTopLeft = ImGui.GetCursorScreenPos();
+			if (EnableGridDebugDraw)
+			{
+				drawList.AddRect(gridTopLeft, gridTopLeft + gridOptions.GridSize, borderColor);
+			}
+
+			Vector2 columnTopLeft = gridTopLeft;
+			for (int columnIndex = 0; columnIndex < gridLayout.ColumnCount; columnIndex++)
+			{
+				bool isFirstColumn = columnIndex == 0;
+				float previousColumnWidth = isFirstColumn ? 0f : gridLayout.ColumnWidths[columnIndex - 1];
+
+				float columnCursorX = columnTopLeft.X + previousColumnWidth;
+				float columnCursorY = columnTopLeft.Y;
+				columnTopLeft = new(columnCursorX, columnCursorY);
+				ImGui.SetCursorScreenPos(columnTopLeft);
+
+				DrawColumnMajorColumn(columnIndex, gridLayout, itemList, itemListCount, itemDimensions, drawDelegate, drawList, borderColor);
+			}
+		}
+
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted to reduce cognitive complexity; the parameters thread the grid layout state computed once by the caller and bundling them would not improve readability.")]
+		private static void DrawColumnMajorColumn<T>(int columnIndex, GridLayout gridLayout, T[] itemList, int itemListCount, Vector2[] itemDimensions, DrawGridCell<T> drawDelegate, ImDrawListPtr drawList, uint borderColor)
+		{
+			Vector2 cellTopLeft = ImGui.GetCursorScreenPos();
+			int itemBeginIndex = columnIndex * gridLayout.RowCount;
+			int itemEndIndex = Math.Min(itemBeginIndex + gridLayout.RowCount, itemListCount);
+			for (int itemIndex = itemBeginIndex; itemIndex < itemEndIndex; itemIndex++)
+			{
+				int rowIndex = itemIndex - itemBeginIndex;
+				bool isFirstRow = itemIndex == itemBeginIndex;
+				float previousCellHeight = isFirstRow ? 0f : gridLayout.RowHeights[rowIndex - 1];
+
+				float cellCursorX = cellTopLeft.X;
+				float cellCursorY = cellTopLeft.Y + previousCellHeight;
+				cellTopLeft = new(cellCursorX, cellCursorY);
+				ImGui.SetCursorScreenPos(cellTopLeft);
+
+				float cellWidth = gridLayout.ColumnWidths[columnIndex];
+				float cellHeight = gridLayout.RowHeights[rowIndex];
+				Vector2 cellSize = new(cellWidth, cellHeight);
+
+				if (EnableGridDebugDraw)
+				{
+					drawList.AddRect(cellTopLeft, cellTopLeft + cellSize, borderColor);
+				}
+
+				drawDelegate(itemList[itemIndex], cellSize, itemDimensions[itemIndex]);
+			}
 		}
 		#endregion
 	}
