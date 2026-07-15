@@ -1,6 +1,6 @@
-## v3.1.3 (patch)
+## v3.1.4 (patch)
 
-Changes since v3.1.2:
+Changes since v3.1.3:
 
-- [patch] Use WCAG relative luminance to pick contrasting text color ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 8 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
