@@ -82,6 +82,12 @@ public static partial class ForceDpiAware
 			return GdiPlusHelper.GetDpiX(IntPtr.Zero);
 		}
 
+		// Modern macOS has no X11; interrogate the display's backing scale via CoreGraphics.
+		if (OperatingSystem.IsMacOS())
+		{
+			return GetMacOSDpiScale();
+		}
+
 		string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
 
 		// X11 (and unspecified session type) uses X11 detection; everything else falls back to Wayland.
@@ -127,6 +133,55 @@ public static partial class ForceDpiAware
 		}
 
 		return userDpiScale;
+	}
+
+	/// <summary>
+	/// Gets the DPI scale factor on macOS from the main display's backing scale factor.
+	/// </summary>
+	/// <returns>
+	/// The actual scale factor: <see cref="StandardDpiScale"/> on a standard display,
+	/// twice that on a Retina display. Falls back to <see cref="StandardDpiScale"/> when the
+	/// display mode cannot be read or CoreGraphics is unavailable (for example, a headless host).
+	/// </returns>
+	private static double GetMacOSDpiScale()
+	{
+		try
+		{
+			uint displayId = NativeMethods.CGMainDisplayID();
+			nint mode = NativeMethods.CGDisplayCopyDisplayMode(displayId);
+			if (mode == IntPtr.Zero)
+			{
+				return StandardDpiScale;
+			}
+
+			try
+			{
+				// The pixel-width to point-width ratio is the display's backing scale factor
+				// (1.0 on a standard display, 2.0 on Retina).
+				nuint pixelWidth = NativeMethods.CGDisplayModeGetPixelWidth(mode);
+				nuint pointWidth = NativeMethods.CGDisplayModeGetWidth(mode);
+				if (pointWidth == 0)
+				{
+					return StandardDpiScale;
+				}
+
+				double scale = (double)pixelWidth / pointWidth;
+				return scale * StandardDpiScale;
+			}
+			finally
+			{
+				// CGDisplayCopyDisplayMode follows the Core Foundation "Copy" ownership rule.
+				NativeMethods.CGDisplayModeRelease(mode);
+			}
+		}
+		catch (DllNotFoundException)
+		{
+			return StandardDpiScale;
+		}
+		catch (EntryPointNotFoundException)
+		{
+			return StandardDpiScale;
+		}
 	}
 
 	/// <summary>
