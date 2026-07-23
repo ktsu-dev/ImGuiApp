@@ -27,7 +27,7 @@ internal static class MarkdownParser
 	// Insertion-ordered cache; oldest entry is evicted when the cap is exceeded.
 	private static readonly Dictionary<string, MarkdigAst> Cache = [];
 	private static readonly Queue<string> InsertionOrder = new();
-#if NET10_0_OR_GREATER
+#if NET9_0_OR_GREATER
 	private static readonly System.Threading.Lock Gate = new();
 #else
 	private static readonly object Gate = new();
