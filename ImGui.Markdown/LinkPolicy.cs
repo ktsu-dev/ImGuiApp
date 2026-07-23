@@ -66,9 +66,9 @@ internal static class LinkPolicy
 		{
 			using Process? process = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 		}
-		catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or FileNotFoundException)
+		catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.FileNotFoundException or System.NotSupportedException)
 		{
-			// Opening a URL is best-effort; swallow launcher failures so the render loop is unaffected.
+			// Opening a URL is best-effort; swallow launcher failures, platform unsupported cases, so the render loop is unaffected.
 		}
 	}
 }

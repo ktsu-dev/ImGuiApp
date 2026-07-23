@@ -4,6 +4,8 @@
 
 namespace ktsu.ImGui.Markdown.Tests;
 
+using ktsu.ImGui.Markdown;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
