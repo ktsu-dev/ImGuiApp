@@ -26,4 +26,8 @@ public sealed class MarkdownDocument
 		Source = markdown ?? string.Empty;
 		Ast = MarkdownParser.Parse(Source);
 	}
+
+	/// <summary>Renders this document at the current cursor position.</summary>
+	/// <param name="config">Optional rendering config; defaults are used when omitted.</param>
+	public void Render(MarkdownConfig? config = null) => ImGuiMarkdown.Render(this, config);
 }
