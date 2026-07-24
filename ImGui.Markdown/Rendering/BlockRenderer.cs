@@ -212,35 +212,47 @@ internal static class BlockRenderer
 		}
 
 		const ImGuiTableFlags flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp;
-		if (ImGui.BeginTable("##mdtable", columnCount, flags))
-		{
-			foreach (Block rowBlock in table)
-			{
-				if (rowBlock is Markdig.Extensions.Tables.TableRow row)
-				{
-					ImGui.TableNextRow();
-					using ScopedMarkdownFont? headerFont = row.IsHeader
-						? new ScopedMarkdownFont(MarkdownFontRole.Bold, ImGui.GetFontSize(), config)
-						: null;
 
-					foreach (Block cellBlock in row)
+		// Each table needs a unique ImGui id: the literal "##mdtable" would otherwise be shared by
+		// every table at the same ID-stack level, colliding their column widths and resize state.
+		// table.Span.Start is a stable, per-table-unique offset into the parsed source.
+		ImGui.PushID(table.Span.Start);
+		try
+		{
+			if (ImGui.BeginTable("##mdtable", columnCount, flags))
+			{
+				foreach (Block rowBlock in table)
+				{
+					if (rowBlock is Markdig.Extensions.Tables.TableRow row)
 					{
-						if (cellBlock is Markdig.Extensions.Tables.TableCell cell)
+						ImGui.TableNextRow();
+						using ScopedMarkdownFont? headerFont = row.IsHeader
+							? new ScopedMarkdownFont(MarkdownFontRole.Bold, ImGui.GetFontSize(), config)
+							: null;
+
+						foreach (Block cellBlock in row)
 						{
-							ImGui.TableNextColumn();
-							foreach (Block content in cell)
+							if (cellBlock is Markdig.Extensions.Tables.TableCell cell)
 							{
-								if (content is ParagraphBlock paragraph)
+								ImGui.TableNextColumn();
+								foreach (Block content in cell)
 								{
-									InlineRenderer.Render(paragraph.Inline, config);
+									if (content is ParagraphBlock paragraph)
+									{
+										InlineRenderer.Render(paragraph.Inline, config);
+									}
 								}
 							}
 						}
 					}
 				}
-			}
 
-			ImGui.EndTable();
+				ImGui.EndTable();
+			}
+		}
+		finally
+		{
+			ImGui.PopID();
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));

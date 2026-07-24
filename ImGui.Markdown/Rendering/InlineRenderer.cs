@@ -58,11 +58,16 @@ internal static class InlineRenderer
 			y += line.Height + lineSpacing;
 		}
 
+		// Reset the cursor to the captured origin before reserving layout space: link and image
+		// tokens call SetCursorScreenPos (and images/InvisibleButton advance the ImGui cursor), so
+		// when the last drawn token is a link or image the live cursor is no longer at origin.
+		ImGui.SetCursorScreenPos(origin);
+
 		// Reserve the space the text occupied so following blocks flow beneath it.
 		ImGui.Dummy(new Vector2(wrapWidth, y));
 	}
 
-	private static Vector2 Measure(string text, MarkdownFontRole _, float bodySize, MarkdownConfig config, bool isImage)
+	private static Vector2 Measure(string text, MarkdownFontRole role, float bodySize, MarkdownConfig config, bool isImage)
 	{
 		if (isImage)
 		{
@@ -72,7 +77,9 @@ internal static class InlineRenderer
 			return new Vector2(width, height);
 		}
 
-		// CalcTextSize measures at the current font size, which already matches the body role.
+		// Measure with the role's font pushed so the measured width matches what DrawToken draws
+		// once a real Code/bold/italic font is registered via FontResolver.
+		using ScopedMarkdownFont font = new(role, bodySize, config);
 		float baseWidth = ImGui.CalcTextSize(text).X;
 		return new Vector2(baseWidth, ImGui.GetTextLineHeight());
 	}

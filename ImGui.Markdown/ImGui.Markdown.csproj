@@ -14,10 +14,8 @@
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="Markdig" />
-    <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Color" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
-    <ProjectReference Include="..\ImGui.Styler\ImGui.Styler.csproj" />
     <PackageReference Include="Polyfill" />
   </ItemGroup>
 </Project>
