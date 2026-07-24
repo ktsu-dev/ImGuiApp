@@ -1,0 +1,25 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+  <Sdk Name="ktsu.Sdk.App" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\..\ImGui.Markdown\ImGui.Markdown.csproj" />
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Semantics.Paths" />
+    <PackageReference Include="ktsu.Semantics.Strings" />
+    <PackageReference Include="Polyfill" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="ktsu.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

@@ -25,6 +25,7 @@
 - **Font Management**: Unicode, emoji, and Nerd Font support with GPU memory management via `FontMemoryGuard` and dynamic font scaling
 - **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
 - **Color Utilities**: HSL/HSLA color creation, accessibility-focused contrast calculations, color manipulation extensions, and semantic color palettes
+- **Markdown Rendering**: CommonMark rendering (headings, emphasis, lists, tables, links, images) built on Markdig via `ktsu.ImGui.Markdown`, standalone and independent of `ktsu.ImGui.App`
 
 ## Libraries
 
@@ -68,6 +69,12 @@ Generic attribute-based system for declaring node graphs. Decorate classes, stru
 
 Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine` for business logic, `AttributeBasedNodeFactory` for node creation from decorated types, physics-based layout simulation, and `NodeEditorRenderer`/`NodeEditorInputHandler` for rendering and interaction.
 
+### ImGui.Markdown - Markdown Rendering
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Markdown?label=ktsu.ImGui.Markdown&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Markdown)
+
+CommonMark markdown renderer built on Markdig, with pipe tables, task lists, and autolinks. Renders headings, emphasis, inline and block code, lists, blockquotes, tables, links, and images directly inside Dear ImGui. Standalone, with no dependency on `ktsu.ImGui.App`.
+
 ## Installation
 
 ### Package Manager Console
@@ -78,6 +85,7 @@ Install-Package ktsu.ImGui.Widgets
 Install-Package ktsu.ImGui.Popups
 Install-Package ktsu.ImGui.Styler
 Install-Package ktsu.NodeGraph
+Install-Package ktsu.ImGui.Markdown
 ```
 
 ### .NET CLI
@@ -88,6 +96,7 @@ dotnet add package ktsu.ImGui.Widgets
 dotnet add package ktsu.ImGui.Popups
 dotnet add package ktsu.ImGui.Styler
 dotnet add package ktsu.NodeGraph
+dotnet add package ktsu.ImGui.Markdown
 ```
 
 ### Package Reference
@@ -98,6 +107,7 @@ dotnet add package ktsu.NodeGraph
 <PackageReference Include="ktsu.ImGui.Popups" Version="x.y.z" />
 <PackageReference Include="ktsu.ImGui.Styler" Version="x.y.z" />
 <PackageReference Include="ktsu.NodeGraph" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.Markdown" Version="x.y.z" />
 ```
 
 ## Usage Examples
@@ -343,6 +353,21 @@ NodeEditorInputHandler inputHandler = new();
 renderer.Render(engine, editorSize);
 ```
 
+### Markdown Rendering
+
+```csharp
+using ktsu.ImGui.Markdown;
+using Hexa.NET.ImGui;
+
+ImGui.Begin("Markdown");
+ImGuiMarkdown.Render("""
+    # Hello, ImGui
+
+    A **CommonMark** renderer for *Dear ImGui*, with `inline code` and [links](https://github.com/ktsu-dev).
+    """);
+ImGui.End();
+```
+
 ## API Reference
 
 ### `ImGuiApp` (Static)
@@ -536,6 +561,20 @@ Core node graph business logic.
 | `[NodeVisibility]` | Class/Struct | Controls menu visibility |
 | `[WildcardPin]` | Property/Field | Accepts wildcard connections |
 
+### `ImGuiMarkdown` (Static)
+
+CommonMark markdown rendering.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Render(string, MarkdownConfig?)` | `void` | Parses (cached by source) and renders markdown at the current cursor position |
+| `Render(MarkdownDocument, MarkdownConfig?)` | `void` | Renders a pre-parsed document at the current cursor position |
+
+| Class | Description |
+| ----- | ----------- |
+| `MarkdownDocument` | Parses markdown once in its constructor; render the same instance every frame for hot paths |
+| `MarkdownConfig` | Rendering options: `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, `LinkColor` |
+
 ## Demo Applications
 
 The repository includes demo applications showcasing all features:
@@ -548,6 +587,7 @@ dotnet run --project examples/ImGuiAppDemo
 dotnet run --project examples/ImGuiWidgetsDemo
 dotnet run --project examples/ImGuiPopupsDemo
 dotnet run --project examples/ImGuiStylerDemo
+dotnet run --project examples/ImGuiMarkdownDemo
 ```
 
 ## Contributing

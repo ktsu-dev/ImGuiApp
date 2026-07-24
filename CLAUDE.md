@@ -33,6 +33,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
 - **ImGuiNodeEditor** (`ktsu.ImGuiNodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`
+- **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). v1 has no code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
 
 ### Examples
 
@@ -40,6 +41,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `examples/ImGuiWidgetsDemo/` - Widget showcase
 - `examples/ImGuiStylerDemo/` - Theme gallery
 - `examples/ImGuiPopupsDemo/` - Popup demonstrations
+- `examples/ImGuiMarkdownDemo/` - Markdown rendering demo
 
 ### Tests
 
@@ -88,6 +90,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ktsu.Invoker** (1.1.2) - Delegate invocation utilities
 - **ktsu.ScopedAction** (1.1.6) - RAII-pattern scoped actions
 - **Polyfill** (9.7.7) - Backport newer .NET APIs
+- **Markdig** - CommonMark markdown parser backing `ImGui.Markdown`
 
 ## Architecture
 
