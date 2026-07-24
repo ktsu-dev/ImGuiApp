@@ -4,6 +4,7 @@
 
 namespace ktsu.ImGui.Markdown;
 
+using System;
 using System.Numerics;
 using System.Text;
 
@@ -87,13 +88,29 @@ internal static class BlockRenderer
 
 	private static void RenderList(ListBlock list, MarkdownConfig config)
 	{
-		int index = 0;
 		int start = 1;
 		if (list.IsOrdered && int.TryParse(list.OrderedStart, out int parsed))
 		{
 			start = parsed;
 		}
 
+		// Content sits in a gutter at least as wide as the widest marker in this list, so the marker
+		// never overlaps the text (e.g. "[x]" is wider than the default indent) and every item aligns
+		// to the same content column. ImGui.Indent resets the cursor X, so the gutter, not SameLine,
+		// determines where content begins.
+		float gutter = config.ListIndentPixels;
+		int measureIndex = 0;
+		foreach (Block probe in list)
+		{
+			if (probe is ListItemBlock probeItem)
+			{
+				string probeMarker = ListMarker.For(list.IsOrdered, measureIndex, start, TryGetTaskState(probeItem));
+				gutter = MathF.Max(gutter, ImGui.CalcTextSize(probeMarker).X + ImGui.GetStyle().ItemSpacing.X);
+				measureIndex++;
+			}
+		}
+
+		int index = 0;
 		foreach (Block item in list)
 		{
 			if (item is ListItemBlock listItem)
@@ -103,9 +120,9 @@ internal static class BlockRenderer
 
 				ImGui.TextUnformatted(marker);
 				ImGui.SameLine();
-				ImGui.Indent(config.ListIndentPixels);
+				ImGui.Indent(gutter);
 				Render(listItem, config);
-				ImGui.Unindent(config.ListIndentPixels);
+				ImGui.Unindent(gutter);
 				index++;
 			}
 		}
@@ -150,20 +167,25 @@ internal static class BlockRenderer
 	{
 		string text = ExtractCodeText(code);
 		float size = ImGui.GetFontSize();
+		const float pad = 4.0f;
 		Vector2 start = ImGui.GetCursorScreenPos();
-		Vector2 avail = ImGui.GetContentRegionAvail();
+		float availWidth = ImGui.GetContentRegionAvail().X;
 
 		using (new ScopedMarkdownFont(MarkdownFontRole.Code, size, config))
 		{
 			Vector2 textSize = ImGui.CalcTextSize(text);
-			float height = textSize.Y + 8.0f;
+			float blockHeight = textSize.Y + (pad * 2.0f);
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-			drawList.AddRectFilled(start, start + new Vector2(avail.X, height), MarkdownColors.InlineCodeBackground(), 3.0f);
-			ImGui.Dummy(new Vector2(0.0f, 4.0f));
-			ImGui.Indent(4.0f);
+			drawList.AddRectFilled(start, start + new Vector2(availWidth, blockHeight), MarkdownColors.InlineCodeBackground(), 3.0f);
+
+			// Position the text at an explicit padded offset. Using Dummy + TextUnformatted as separate
+			// items previously let ImGui insert ItemSpacing.Y between them, pushing the text below the
+			// shaded background. Drawing at start + pad and then reserving the full footprint avoids that.
+			ImGui.SetCursorScreenPos(new Vector2(start.X + pad, start.Y + pad));
 			ImGui.TextUnformatted(text);
-			ImGui.Unindent(4.0f);
-			ImGui.Dummy(new Vector2(0.0f, 4.0f));
+
+			ImGui.SetCursorScreenPos(start);
+			ImGui.Dummy(new Vector2(availWidth, blockHeight));
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
