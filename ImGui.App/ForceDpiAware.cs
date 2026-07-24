@@ -82,6 +82,12 @@ public static partial class ForceDpiAware
 			return GdiPlusHelper.GetDpiX(IntPtr.Zero);
 		}
 
+		// Modern macOS has no X11; interrogate the display's backing scale via CoreGraphics.
+		if (OperatingSystem.IsMacOS())
+		{
+			return GetMacOSDpiScale();
+		}
+
 		string? xdgSessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")?.ToLower();
 
 		// X11 (and unspecified session type) uses X11 detection; everything else falls back to Wayland.
@@ -127,6 +133,76 @@ public static partial class ForceDpiAware
 		}
 
 		return userDpiScale;
+	}
+
+	/// <summary>
+	/// Gets the DPI scale factor on macOS from the main display's backing scale factor.
+	/// </summary>
+	/// <returns>
+	/// The actual scale factor: <see cref="StandardDpiScale"/> on a standard display,
+	/// twice that on a Retina display. Falls back to <see cref="StandardDpiScale"/> when the
+	/// display mode cannot be read or CoreGraphics is unavailable (for example, a headless host).
+	/// </returns>
+	// This method is pure native orchestration over the CoreGraphics P/Invokes; every line only
+	// runs on a macOS host with a display, so it cannot be exercised by the coverage runner (which
+	// runs on Windows). The testable scale arithmetic lives in MacOSBackingScaleToDpi, which is
+	// covered by unit tests. Excluded from coverage for that reason, matching the repository's
+	// treatment of other native C ABI boundary code.
+	[ExcludeFromCodeCoverage(Justification = "Native CoreGraphics orchestration; only reachable on a macOS host with a display. Testable arithmetic is factored into MacOSBackingScaleToDpi.")]
+	private static double GetMacOSDpiScale()
+	{
+		try
+		{
+			uint displayId = NativeMethods.CGMainDisplayID();
+			nint mode = NativeMethods.CGDisplayCopyDisplayMode(displayId);
+			if (mode == IntPtr.Zero)
+			{
+				return StandardDpiScale;
+			}
+
+			try
+			{
+				// The pixel-width to point-width ratio is the display's backing scale factor
+				// (1.0 on a standard display, 2.0 on Retina).
+				nuint pixelWidth = NativeMethods.CGDisplayModeGetPixelWidth(mode);
+				nuint pointWidth = NativeMethods.CGDisplayModeGetWidth(mode);
+				return MacOSBackingScaleToDpi(pixelWidth, pointWidth);
+			}
+			finally
+			{
+				// CGDisplayCopyDisplayMode follows the Core Foundation "Copy" ownership rule.
+				NativeMethods.CGDisplayModeRelease(mode);
+			}
+		}
+		catch (DllNotFoundException)
+		{
+			return StandardDpiScale;
+		}
+		catch (EntryPointNotFoundException)
+		{
+			return StandardDpiScale;
+		}
+	}
+
+	/// <summary>
+	/// Converts a macOS display mode's pixel and point widths into an actual DPI scale factor.
+	/// </summary>
+	/// <param name="pixelWidth">The display mode width in physical pixels.</param>
+	/// <param name="pointWidth">The display mode width in points.</param>
+	/// <returns>
+	/// <see cref="StandardDpiScale"/> scaled by the pixel-to-point ratio (the display's backing
+	/// scale factor: <c>1.0</c> on a standard display, <c>2.0</c> on Retina), or
+	/// <see cref="StandardDpiScale"/> when <paramref name="pointWidth"/> is zero.
+	/// </returns>
+	internal static double MacOSBackingScaleToDpi(nuint pixelWidth, nuint pointWidth)
+	{
+		if (pointWidth == 0)
+		{
+			return StandardDpiScale;
+		}
+
+		double scale = (double)pixelWidth / pointWidth;
+		return scale * StandardDpiScale;
 	}
 
 	/// <summary>

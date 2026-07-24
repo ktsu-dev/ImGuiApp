@@ -274,4 +274,47 @@ internal static partial class NativeMethods
 	[LibraryImport(GDILibraryName)]
 	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 	internal static partial int GdipGetDpiX(IntPtr graphics, out float dpi);
+
+	// CoreGraphics is loaded by its full framework path; macOS frameworks are not on the
+	// default dylib search path, so a bare "CoreGraphics" name would not resolve. No
+	// DefaultDllImportSearchPaths here: that attribute controls the Windows loader only.
+	private const string CoreGraphicsLibraryName = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
+
+	/// <summary>
+	/// Returns the display ID of the main display.
+	/// </summary>
+	/// <returns>The <c>CGDirectDisplayID</c> of the main display.</returns>
+	[LibraryImport(CoreGraphicsLibraryName)]
+	internal static partial uint CGMainDisplayID();
+
+	/// <summary>
+	/// Returns a copy of the current display mode for the given display.
+	/// </summary>
+	/// <param name="display">The display to query.</param>
+	/// <returns>A <c>CGDisplayModeRef</c> the caller owns and must release with <see cref="CGDisplayModeRelease"/>, or <see cref="IntPtr.Zero"/> on failure.</returns>
+	[LibraryImport(CoreGraphicsLibraryName)]
+	internal static partial nint CGDisplayCopyDisplayMode(uint display);
+
+	/// <summary>
+	/// Returns the width, in physical pixels, of the specified display mode.
+	/// </summary>
+	/// <param name="mode">The display mode to query.</param>
+	/// <returns>The pixel width of the display mode.</returns>
+	[LibraryImport(CoreGraphicsLibraryName)]
+	internal static partial nuint CGDisplayModeGetPixelWidth(nint mode);
+
+	/// <summary>
+	/// Returns the width, in points, of the specified display mode.
+	/// </summary>
+	/// <param name="mode">The display mode to query.</param>
+	/// <returns>The point width of the display mode.</returns>
+	[LibraryImport(CoreGraphicsLibraryName)]
+	internal static partial nuint CGDisplayModeGetWidth(nint mode);
+
+	/// <summary>
+	/// Releases a display mode obtained from <see cref="CGDisplayCopyDisplayMode"/>.
+	/// </summary>
+	/// <param name="mode">The display mode to release.</param>
+	[LibraryImport(CoreGraphicsLibraryName)]
+	internal static partial void CGDisplayModeRelease(nint mode);
 }
