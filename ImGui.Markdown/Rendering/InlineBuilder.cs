@@ -73,6 +73,10 @@ internal static class InlineBuilder
 				runs.Add(new InlineRun(html.Tag, MarkdownSizing.EmphasisRole(bold, italic), linkUrl, IsImage: false));
 				break;
 
+			case Markdig.Extensions.TaskLists.TaskList:
+				// The checkbox marker is rendered by ListMarker in BlockRenderer; drop the inline itself.
+				break;
+
 			case ContainerInline nested:
 				Walk(nested, runs, bold, italic, linkUrl);
 				break;

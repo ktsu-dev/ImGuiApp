@@ -35,7 +35,7 @@ internal static class InlineRenderer
 		}
 
 		float bodySize = ImGui.GetFontSize();
-		float lineHeight = ImGui.GetTextLineHeightWithSpacing();
+		float lineSpacing = ImGui.GetTextLineHeightWithSpacing() - ImGui.GetTextLineHeight();
 
 		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, wrapWidth, (text, role, isImage) => Measure(text, role, bodySize, config, isImage));
 
@@ -46,47 +46,44 @@ internal static class InlineRenderer
 		uint textU32 = MarkdownColors.TextU32();
 
 		float y = 0.0f;
+		int linkIndex = 0;
 		foreach (LaidOutLine line in lines)
 		{
 			foreach (LaidOutToken token in line.Tokens)
 			{
 				Vector2 pos = new(origin.X + token.X, origin.Y + y);
-				DrawToken(token, pos, bodySize, config, drawList, token.LinkUrl is null ? textU32 : linkU32);
+				DrawToken(token, pos, bodySize, config, drawList, token.LinkUrl is null ? textU32 : linkU32, ref linkIndex);
 			}
 
-			y += lineHeight;
+			y += line.Height + lineSpacing;
 		}
 
 		// Reserve the space the text occupied so following blocks flow beneath it.
 		ImGui.Dummy(new Vector2(wrapWidth, y));
 	}
 
-	private static float Measure(string text, MarkdownFontRole role, float bodySize, MarkdownConfig config, bool isImage)
+	private static Vector2 Measure(string text, MarkdownFontRole _, float bodySize, MarkdownConfig config, bool isImage)
 	{
 		if (isImage)
 		{
 			MarkdownImageResult? image = config.ImageResolver?.Invoke(text);
-			return image?.Size.X ?? ImagePlaceholderWidth;
+			float width = image?.Size.X ?? ImagePlaceholderWidth;
+			float height = image?.Size.Y ?? bodySize;
+			return new Vector2(width, height);
 		}
 
-		float size = role is >= MarkdownFontRole.H1 and <= MarkdownFontRole.H6
-			? MarkdownSizing.HeadingPixelSize(bodySize, (int)role - (int)MarkdownFontRole.H1 + 1, config.HeadingScales)
-			: bodySize;
-
-		// CalcTextSize measures at the current font size; scale by the role's target size ratio.
+		// CalcTextSize measures at the current font size, which already matches the body role.
 		float baseWidth = ImGui.CalcTextSize(text).X;
-		return baseWidth * (size / bodySize);
+		return new Vector2(baseWidth, ImGui.GetTextLineHeight());
 	}
 
 	private const float ImagePlaceholderWidth = 120.0f;
 
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; pointers are scoped to the call and not retained.")]
-	private static void DrawToken(LaidOutToken token, Vector2 pos, float bodySize, MarkdownConfig config, ImDrawListPtr drawList, uint color)
+	private static void DrawToken(LaidOutToken token, Vector2 pos, float bodySize, MarkdownConfig config, ImDrawListPtr drawList, uint color, ref int linkIndex)
 	{
 		MarkdownFontRole role = token.Role;
-		float size = role is >= MarkdownFontRole.H1 and <= MarkdownFontRole.H6
-			? MarkdownSizing.HeadingPixelSize(bodySize, (int)role - (int)MarkdownFontRole.H1 + 1, config.HeadingScales)
-			: bodySize;
+		float size = bodySize;
 
 		if (token.IsImage)
 		{
@@ -133,7 +130,8 @@ internal static class InlineRenderer
 			drawList.AddLine(new Vector2(pos.X, underlineY), new Vector2(pos.X + token.Width, underlineY), color, 1.0f);
 
 			ImGui.SetCursorScreenPos(pos);
-			ImGui.InvisibleButton("##mdlink_" + token.LinkUrl + "_" + pos.X.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_" + pos.Y.ToString(System.Globalization.CultureInfo.InvariantCulture), new Vector2(token.Width, size));
+			ImGui.PushID(linkIndex++);
+			ImGui.InvisibleButton("##mdlink", new Vector2(token.Width, size));
 			if (ImGui.IsItemHovered())
 			{
 				ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -143,6 +141,8 @@ internal static class InlineRenderer
 			{
 				LinkPolicy.Activate(token.LinkUrl, config.OnLinkClicked);
 			}
+
+			ImGui.PopID();
 		}
 	}
 }

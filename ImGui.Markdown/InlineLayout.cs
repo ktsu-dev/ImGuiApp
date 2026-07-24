@@ -6,6 +6,7 @@ namespace ktsu.ImGui.Markdown;
 
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 /// <summary>A styled run of inline content produced from the markdown AST.</summary>
 /// <param name="Text">The run text (for images, the resolved src used as the image key).</param>
@@ -31,6 +32,9 @@ internal sealed class LaidOutLine
 
 	/// <summary>The total line width in pixels (end of the last token).</summary>
 	public required float Width { get; init; }
+
+	/// <summary>The maximum token height on this line, in pixels (zero when the line is empty).</summary>
+	public required float Height { get; init; }
 }
 
 /// <summary>
@@ -44,32 +48,34 @@ internal static class InlineLayout
 	/// </summary>
 	/// <param name="runs">The styled runs to lay out.</param>
 	/// <param name="maxWidth">The maximum line width in pixels.</param>
-	/// <param name="measure">Measures the pixel width of text for a given role.</param>
+	/// <param name="measure">Measures the pixel size (width in X, height in Y) of text for a given role.</param>
 	/// <returns>The wrapped lines.</returns>
 	public static IReadOnlyList<LaidOutLine> Wrap(
 		IReadOnlyList<InlineRun> runs,
 		float maxWidth,
-		Func<string, MarkdownFontRole, bool, float> measure)
+		Func<string, MarkdownFontRole, bool, Vector2> measure)
 	{
 		Ensure.NotNull(runs);
 		Ensure.NotNull(measure);
 
-		float spaceWidth = measure(" ", MarkdownFontRole.Body, false);
+		float spaceWidth = measure(" ", MarkdownFontRole.Body, false).X;
 
 		List<LaidOutLine> lines = [];
 		List<LaidOutToken> current = [];
 		float cursorX = 0.0f;
+		float lineHeight = 0.0f;
 
 		void FlushLine()
 		{
 			if (current.Count > 0)
 			{
 				LaidOutToken[] tokens = [.. current];
-				lines.Add(new LaidOutLine { Tokens = tokens, Width = cursorX });
+				lines.Add(new LaidOutLine { Tokens = tokens, Width = cursorX, Height = lineHeight });
 			}
 
 			current = [];
 			cursorX = 0.0f;
+			lineHeight = 0.0f;
 		}
 
 		foreach (InlineRun run in runs)
@@ -80,7 +86,8 @@ internal static class InlineLayout
 
 			foreach (string token in tokens)
 			{
-				float tokenWidth = measure(token, run.Role, run.IsImage);
+				Vector2 tokenSize = measure(token, run.Role, run.IsImage);
+				float tokenWidth = tokenSize.X;
 				float advance = current.Count == 0 ? 0.0f : spaceWidth;
 
 				if (current.Count > 0 && cursorX + advance + tokenWidth > maxWidth)
@@ -92,6 +99,7 @@ internal static class InlineLayout
 				float x = cursorX + advance;
 				current.Add(new LaidOutToken(token, run.Role, run.LinkUrl, run.IsImage, x, tokenWidth));
 				cursorX = x + tokenWidth;
+				lineHeight = Math.Max(lineHeight, tokenSize.Y);
 			}
 		}
 

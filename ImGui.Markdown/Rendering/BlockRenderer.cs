@@ -194,35 +194,53 @@ internal static class BlockRenderer
 
 	private static void RenderTable(Markdig.Extensions.Tables.Table table, MarkdownConfig config)
 	{
-		// v1: render each row's cells as inline content separated by a tab-like spacing.
-		// A full column-aligned table can replace this later without touching callers.
-		foreach (Block rowBlock in table)
+		int columnCount = table.ColumnDefinitions.Count;
+		if (columnCount == 0)
 		{
-			if (rowBlock is Markdig.Extensions.Tables.TableRow row)
+			foreach (Block rowBlock in table)
 			{
-				bool first = true;
-				foreach (Block cellBlock in row)
+				if (rowBlock is Markdig.Extensions.Tables.TableRow row)
 				{
-					if (cellBlock is Markdig.Extensions.Tables.TableCell cell)
-					{
-						if (!first)
-						{
-							ImGui.SameLine();
-							ImGui.TextUnformatted("  |  ");
-							ImGui.SameLine();
-						}
+					columnCount = System.Math.Max(columnCount, row.Count);
+				}
+			}
+		}
 
-						first = false;
-						foreach (Block content in cell)
+		if (columnCount == 0)
+		{
+			return;
+		}
+
+		const ImGuiTableFlags flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp;
+		if (ImGui.BeginTable("##mdtable", columnCount, flags))
+		{
+			foreach (Block rowBlock in table)
+			{
+				if (rowBlock is Markdig.Extensions.Tables.TableRow row)
+				{
+					ImGui.TableNextRow();
+					using ScopedMarkdownFont? headerFont = row.IsHeader
+						? new ScopedMarkdownFont(MarkdownFontRole.Bold, ImGui.GetFontSize(), config)
+						: null;
+
+					foreach (Block cellBlock in row)
+					{
+						if (cellBlock is Markdig.Extensions.Tables.TableCell cell)
 						{
-							if (content is ParagraphBlock paragraph)
+							ImGui.TableNextColumn();
+							foreach (Block content in cell)
 							{
-								InlineRenderer.Render(paragraph.Inline, config);
+								if (content is ParagraphBlock paragraph)
+								{
+									InlineRenderer.Render(paragraph.Inline, config);
+								}
 							}
 						}
 					}
 				}
 			}
+
+			ImGui.EndTable();
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));

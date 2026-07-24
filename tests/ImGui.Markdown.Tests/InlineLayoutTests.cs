@@ -5,13 +5,14 @@
 namespace ktsu.ImGui.Markdown.Tests;
 
 using System.Collections.Generic;
+using System.Numerics;
 using ktsu.ImGui.Markdown;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
 public sealed class InlineLayoutTests
 {
-	private static float Measure(string text, MarkdownFontRole role, bool isImage) => text.Length;
+	private static Vector2 Measure(string text, MarkdownFontRole role, bool isImage) => new(text.Length, 1f);
 
 	[TestMethod]
 	public void Wrap_ShortRun_ProducesSingleLine()
@@ -66,5 +67,20 @@ public sealed class InlineLayoutTests
 	{
 		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap([], 100f, Measure);
 		Assert.AreEqual(0, lines.Count);
+	}
+
+	[TestMethod]
+	public void Wrap_LineHeight_TracksTallestToken()
+	{
+		static Vector2 MeasureWithTallImage(string text, MarkdownFontRole role, bool isImage) => new(text.Length, isImage ? 10f : 1f);
+
+		List<InlineRun> runs =
+		[
+			new("hi", MarkdownFontRole.Body, null, false),
+			new("logo.png", MarkdownFontRole.Body, null, true),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, MeasureWithTallImage);
+		Assert.AreEqual(1, lines.Count);
+		Assert.AreEqual(10f, lines[0].Height);
 	}
 }
