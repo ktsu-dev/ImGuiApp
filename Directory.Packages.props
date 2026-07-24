@@ -15,6 +15,7 @@
     <PackageVersion Include="Hexa.NET.ImGuizmo" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImNodes" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImPlot" Version="2.2.9" />
+    <PackageVersion Include="HexaGen.Runtime" Version="1.1.21" />
     <PackageVersion Include="ktsu.Invoker" Version="1.2.15" />
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.25" />
     <PackageVersion Include="ktsu.TextFilter" Version="1.5.25" />

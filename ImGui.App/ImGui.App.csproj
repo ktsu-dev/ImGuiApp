@@ -21,6 +21,7 @@
     <PackageReference Include="Hexa.NET.ImGuizmo" />
     <PackageReference Include="Hexa.NET.ImNodes" />
     <PackageReference Include="Hexa.NET.ImPlot" />
+    <PackageReference Include="HexaGen.Runtime" />
     <PackageReference Include="ktsu.Invoker" />
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Paths" />
