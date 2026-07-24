@@ -81,8 +81,11 @@ jobs:
     # release. Building+launching two apps after a cold cimgui cache approaches the old 30-min cap, so
     # the budget is 50 min (a warm-cache run is ~20).
     name: iOS Simulator Smoke Test
-    # The .NET 10 iOS workload (Microsoft.iOS 26.5) requires Xcode 26.5 to build a runnable .app.
-    # macos-15 only carries up to Xcode 26.3; macos-26 (Tahoe) ships the matching Xcode 26.5+.
+    # The .NET 10 iOS workload requires a matching Xcode to build a runnable .app, and the required
+    # version tracks whatever Microsoft ships in the latest `dotnet workload install ios` (e.g.
+    # Microsoft.iOS 26.5.10301 requires Xcode 26.6). macos-26 (Tahoe) carries several side-by-side
+    # Xcodes; the "Resolve and pin" step below selects the newest installed one so it satisfies the
+    # workload's minimum regardless of which band Microsoft last shipped.
     # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
     runs-on: macos-26
     timeout-minutes: 50
@@ -131,21 +134,28 @@ jobs:
           xcrun simctl list runtimes || true
         continue-on-error: true
 
-      # ROOT CAUSE: the hosted Xcode_26.5.0.app is a SYMLINK, and on .NET 10 + Xcode 26 hosted runners
-      # `xcodebuild -find` intermittently fails to resolve the toolchain through a symlinked developer
-      # dir - dying with `errno=Invalid argument` (NOT "No such file or directory"; the SDK exists).
-      # The managed build and IL strip never call `xcrun -find` so they pass, but native clang linking
-      # (and `-find actool`) do, so they die with clang exit 72. Fix: resolve the .app symlink to its
-      # REAL path with `readlink -f` and pin BOTH xcode-select and DEVELOPER_DIR to it. `readlink -f`
-      # is a no-op on an already-real path, so this is safe either way; writing DEVELOPER_DIR to
-      # $GITHUB_ENV overrides any workflow/job-level value for later steps.
+      # Pin the newest installed Xcode. The required Xcode is a MOVING TARGET: `dotnet workload
+      # install ios` pulls the latest Microsoft.iOS band, whose minimum-Xcode check bumps ahead of
+      # the runner's *default* Xcode (macos-26 defaults to 26.5 but installs 26.6 side-by-side, and
+      # the 26.5.10301 workload requires 26.6). Selecting the highest-versioned /Applications/Xcode_*.app
+      # tracks the workload without hardcoding a version that goes stale on the next monthly bump.
+      #
+      # ROOT CAUSE for the readlink step: the hosted Xcode_*.app entries are SYMLINKS, and on
+      # .NET 10 + Xcode 26 hosted runners `xcodebuild -find` intermittently fails to resolve the
+      # toolchain through a symlinked developer dir - dying with `errno=Invalid argument` (NOT "No
+      # such file or directory"; the SDK exists). The managed build and IL strip never call
+      # `xcrun -find` so they pass, but native clang linking (and `-find actool`) do, so they die
+      # with clang exit 72. Fix: resolve the .app symlink to its REAL path with `readlink -f` and pin
+      # BOTH xcode-select and DEVELOPER_DIR to it. `readlink -f` is a no-op on an already-real path,
+      # so this is safe either way; writing DEVELOPER_DIR to $GITHUB_ENV overrides any
+      # workflow/job-level value for later steps.
       # Refs: dotnet/macios#21762, actions/runner-images#13347.
-      - name: Resolve and pin the real Xcode 26.5 path (symlink workaround)
+      - name: Resolve and pin the newest installed Xcode (symlink workaround)
         run: |
           set -uxo pipefail
-          XC=/Applications/Xcode_26.5.app
-          [ -d "$XC" ] || XC=/Applications/Xcode_26.5.0.app
-          [ -d "$XC" ] || XC="$(dirname "$(dirname "$(xcode-select -p)")")"
+          # Highest version among the side-by-side Xcodes; excludes the unversioned /Applications/Xcode.app.
+          XC="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          [ -n "$XC" ] && [ -d "$XC" ] || XC="$(dirname "$(dirname "$(xcode-select -p)")")"
           XC="$(readlink -f "$XC")"
           echo "Resolved real Xcode: $XC"
           sudo xcode-select -switch "$XC/Contents/Developer"
