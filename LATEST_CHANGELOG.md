@@ -1,6 +1,28 @@
-## v3.1.10 (patch)
+## v3.2.0 (minor)
 
-Changes since v3.1.9:
+Changes since v3.1.0:
 
-- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- ci(ios): pin newest installed Xcode instead of hardcoded 26.5 ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(app): add direct HexaGen.Runtime reference for iOS build ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(markdown): correct list marker gutter and code-block vertical padding ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(markdown): correct inline cursor reservation, table ids, role-aware measure; drop unused deps ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs(markdown): add package README and update suite docs ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add ImGuiMarkdownDemo example ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(markdown): task-list text, image line height, table columns; drop dead heading branch ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add block/inline renderers and public Render entry points ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(markdown): guard System.Threading.Lock for net9+ so net9 build passes ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add theme color resolution and scoped font pushing ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): flatten AST inlines into styled runs ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add pure sizing and list-marker helpers ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add Markdig pipeline, bounded parse cache, MarkdownDocument ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add pure InlineLayout word-wrap engine ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix(markdown): broaden LinkPolicy exception filter and align test usings ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add LinkPolicy for scheme filtering and safe OS-open ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): add MarkdownConfig, MarkdownFontRole, MarkdownImageResult ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat(markdown): scaffold ktsu.ImGui.Markdown package with Markdig ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add implementation plan for ktsu.ImGui.Markdown ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add design spec for ktsu.ImGui.Markdown package ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Use WCAG relative luminance to pick contrasting text color ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Fix CI annotations: package validation, workflow deprecations, code smells ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor color conversion methods to use ToSrgb; add new ToHsl and ToImGuiVector4 methods ([@matt-edmondson](https://github.com/matt-edmondson))
 
