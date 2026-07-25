@@ -1,7 +1,4 @@
-## v3.2.2 (patch)
+## v3.2.2
 
-Changes since v3.2.1:
-
-- Bump HexaGen.Runtime from 1.1.21 to 1.1.24 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 7 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+No significant changes detected since v3.2.2.
 
