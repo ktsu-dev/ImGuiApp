@@ -55,7 +55,7 @@ public sealed class FilesystemBrowserSortTests
 			MakeDirectory("alpha"),
 		];
 
-		List<string> sorted = [.. ImGuiPopups.FilesystemBrowser.SortContents(contents).Select(p => Path.GetFileName(p.ToString()!))];
+		List<string> sorted = [.. ImGuiPopups.FilesystemBrowser.SortContents(contents).Select(p => Path.GetFileName(p.WeakString))];
 
 		CollectionAssert.AreEqual(new List<string> { "alpha", "zebra", "a.txt", "b.txt" }, sorted);
 	}
@@ -70,7 +70,7 @@ public sealed class FilesystemBrowserSortTests
 			MakeFile("Banana.txt"),
 		];
 
-		List<string> sorted = [.. ImGuiPopups.FilesystemBrowser.SortContents(contents).Select(p => Path.GetFileName(p.ToString()!))];
+		List<string> sorted = [.. ImGuiPopups.FilesystemBrowser.SortContents(contents).Select(p => Path.GetFileName(p.WeakString))];
 
 		CollectionAssert.AreEqual(new List<string> { "apple.txt", "Banana.txt", "Zebra.txt" }, sorted);
 	}
@@ -90,8 +90,8 @@ public sealed class FilesystemBrowserSortTests
 			MakeFile("b.txt"),
 		];
 
-		List<string> sorted = [.. ImGuiPopups.FilesystemBrowser.SortContents(contents).Select(p => p.ToString()!)];
-		List<string> sortedReversed = [.. ImGuiPopups.FilesystemBrowser.SortContents(reversed).Select(p => p.ToString()!)];
+		List<string> sorted = [.. ImGuiPopups.FilesystemBrowser.SortContents(contents).Select(p => p.WeakString)];
+		List<string> sortedReversed = [.. ImGuiPopups.FilesystemBrowser.SortContents(reversed).Select(p => p.WeakString)];
 
 		CollectionAssert.AreEqual(sorted, sortedReversed);
 	}
