@@ -78,6 +78,24 @@ public static partial class ImGuiApp
 		};
 	}
 
+	/// <summary>
+	/// Gets a value indicating whether the window manager owns the window's position and size.
+	/// </summary>
+	/// <remarks>
+	/// Resolved from <see cref="ImGuiAppConfig.WindowGeometry"/>, falling back to
+	/// <see cref="WindowingEnvironment.CompositorOwnsGeometry"/> when that is
+	/// <see cref="WindowGeometryMode.Auto"/>. When true the application neither moves nor resizes
+	/// its own window, and does not record the reported window position — under Wayland and tiling
+	/// window managers that position is a placeholder, and writing it back would persist garbage
+	/// geometry and fight the tiler.
+	/// </remarks>
+	public static bool CompositorOwnsWindowGeometry => Config.WindowGeometry switch
+	{
+		WindowGeometryMode.Application => false,
+		WindowGeometryMode.Compositor => true,
+		_ => WindowingEnvironment.CompositorOwnsGeometry,
+	};
+
 	internal static ConcurrentDictionary<string, int> FontIndices { get; } = [];
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static float lastFontScaleFactor;
@@ -225,7 +243,13 @@ public static partial class ImGuiApp
 		{
 			Title = config.Title,
 			Size = new((int)config.InitialWindowState.Size.X, (int)config.InitialWindowState.Size.Y),
-			Position = new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
+			// The saved position is only meaningful when the application owns geometry. Under a
+			// tiling window manager (or any Wayland session) the request is ignored, and the
+			// default state's deliberately off-screen sentinel would otherwise make the window
+			// look mispositioned for the frames before the compositor claims it.
+			Position = CompositorOwnsWindowGeometry
+				? WindowOptions.Default.Position
+				: new((int)config.InitialWindowState.Pos.X, (int)config.InitialWindowState.Pos.Y),
 			WindowState = Silk.NET.Windowing.WindowState.Normal,
 			IsVisible = !config.StartHidden, // Tray apps can start hidden; the loop still runs
 			VSync = false, // Disable VSync to allow PID frame limiter to control frame rate
@@ -920,7 +944,13 @@ public static partial class ImGuiApp
 			LastNormalWindowState = new()
 			{
 				Size = new(window.Size.X, window.Size.Y),
-				Pos = new(window.Position.X, window.Position.Y),
+				// A Wayland client cannot query where it is, and a tiling window manager moves the
+				// window whenever the layout changes. Recording the reported position there would
+				// overwrite the caller's saved geometry with a placeholder (typically 0,0) that
+				// then gets persisted and restored on the next launch, so keep what we already had.
+				Pos = CompositorOwnsWindowGeometry
+					? LastNormalWindowState.Pos
+					: new(window.Position.X, window.Position.Y),
 				LayoutState = Silk.NET.Windowing.WindowState.Normal
 			};
 		}
@@ -988,6 +1018,32 @@ public static partial class ImGuiApp
 	private static Silk.NET.Maths.Vector2D<int>? lastCheckedWindowPosition;
 	private static Silk.NET.Maths.Vector2D<int>? lastCheckedWindowSize;
 	private static bool needsPositionValidation = true;
+	private static bool loggedCompositorOwnedGeometry;
+
+	/// <summary>
+	/// Gets the number of physical framebuffer pixels per window unit, per axis.
+	/// </summary>
+	/// <remarks>
+	/// One on platforms that report the window in pixels (Windows, unscaled X11). Greater than one
+	/// where the window is reported in logical units and the surface is scaled up: a Wayland
+	/// surface under fractional or integer scaling, or a Retina display. ImGui works in framebuffer
+	/// pixels, so anything the backend hands over in window units is multiplied by this.
+	/// </remarks>
+	internal static System.Numerics.Vector2 WindowToFramebufferScale
+	{
+		get
+		{
+			if (window is null || window.Size.X <= 0 || window.Size.Y <= 0)
+			{
+				return System.Numerics.Vector2.One;
+			}
+
+			Silk.NET.Maths.Vector2D<int> framebuffer = window.FramebufferSize;
+			return framebuffer.X <= 0 || framebuffer.Y <= 0
+				? System.Numerics.Vector2.One
+				: new((float)framebuffer.X / window.Size.X, (float)framebuffer.Y / window.Size.Y);
+		}
+	}
 
 	/// <summary>
 	/// Ensures the window is positioned on a visible monitor. This method provides improved
@@ -999,6 +1055,20 @@ public static partial class ImGuiApp
 		// Early exit for invalid states
 		if (window is null || window.WindowState == Silk.NET.Windowing.WindowState.Minimized)
 		{
+			return;
+		}
+
+		// The window manager decides where windows live: it has already placed this one somewhere
+		// visible, the position we would read back is a placeholder, and moving or resizing the
+		// window ourselves either does nothing (Wayland) or fights the tiler into a resize storm.
+		if (CompositorOwnsWindowGeometry)
+		{
+			if (!loggedCompositorOwnedGeometry)
+			{
+				loggedCompositorOwnedGeometry = true;
+				DebugLogger.Log("EnsureWindowPositionIsValid: Window manager owns geometry, skipping position validation");
+			}
+
 			return;
 		}
 
@@ -1482,6 +1552,17 @@ public static partial class ImGuiApp
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();
 
+		// A surface the platform scales for us states its scale directly, and that is more
+		// authoritative than any desktop setting we can probe: a Wayland compositor may apply a
+		// fractional scale that no gsettings key mentions. ImGui lays out in framebuffer pixels, so
+		// this is the factor that keeps the UI at the right physical size.
+		System.Numerics.Vector2 surfaceScale = WindowToFramebufferScale;
+		float uniformSurfaceScale = Math.Min(surfaceScale.X, surfaceScale.Y);
+		if (uniformSurfaceScale > 1.01f)
+		{
+			newScaleFactor = uniformSurfaceScale;
+		}
+
 		// Only update if the scale factor changed significantly (more than 1% difference)
 		if (Math.Abs(ScaleFactor - newScaleFactor) > 0.01f)
 		{
@@ -1941,6 +2022,7 @@ public static partial class ImGuiApp
 		originalWindowProc = 0;
 		LastNormalWindowState = new();
 		preOverlayWindowState = null;
+		loggedCompositorOwnedGeometry = false;
 		FontIndices.Clear();
 		lastFontScaleFactor = 0;
 		currentPinnedFontData.Clear();

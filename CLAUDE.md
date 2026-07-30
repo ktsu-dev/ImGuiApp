@@ -56,6 +56,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/FontMemoryGuard.cs` - GPU memory management for font atlases
 - `ImGui.App/FontHelper.cs` - Unicode, emoji, and Nerd Font character range support
 - `ImGui.App/ForceDpiAware.cs` - Multi-platform DPI detection
+- `ImGui.App/WindowingEnvironment.cs` - Wayland / tiling window manager detection driving `ImGuiAppConfig.WindowGeometry`
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop

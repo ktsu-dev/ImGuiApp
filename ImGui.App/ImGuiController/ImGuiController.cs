@@ -222,7 +222,11 @@ internal sealed class ImGuiController : IRendererBackend
 	{
 		ImGuiApp.OnUserInput();
 		ImGuiIOPtr io = ImGui.GetIO();
-		io.AddMousePosEvent(position.X, position.Y);
+
+		// The backend reports the cursor in window units; ImGui works in framebuffer pixels, which
+		// differ on a scaled surface (Wayland fractional scaling, Retina).
+		Vector2 scale = ImGuiApp.WindowToFramebufferScale;
+		io.AddMousePosEvent(position.X * scale.X, position.Y * scale.Y);
 	}
 
 	/// <summary>
@@ -328,22 +332,18 @@ internal sealed class ImGuiController : IRendererBackend
 	internal void SetPerFrameImGuiData(float deltaSeconds)
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
-		io.DisplaySize = new Vector2(_windowWidth, _windowHeight);
 
-		if (_windowWidth > 0 && _windowHeight > 0 && _view is not null)
-		{
-			// Force framebuffer scale to 1.0 on Linux to prevent blurry text rendering
-			// WSL and Linux often have framebuffer scaling issues that cause blur
-			if (OperatingSystem.IsLinux())
-			{
-				io.DisplayFramebufferScale = Vector2.One;
-			}
-			else
-			{
-				io.DisplayFramebufferScale = new Vector2(_view.FramebufferSize.X / _windowWidth,
-					_view.FramebufferSize.Y / _windowHeight);
-			}
-		}
+		// ImGui's coordinate space is physical framebuffer pixels, so the display size is the
+		// framebuffer and the framebuffer scale is always 1. On a platform that reports the window
+		// in logical units — a scaled Wayland surface, a Retina display — the two differ, and
+		// ImGuiApp.ScaleFactor carries that ratio so the UI is laid out at the right physical size
+		// with glyphs rasterized to match. Anything arriving in logical units (mouse position) is
+		// converted on the way in; see ImGuiApp.WindowToFramebufferScale.
+		Vector2D<int> framebufferSize = _view?.FramebufferSize ?? new Vector2D<int>(_windowWidth, _windowHeight);
+		io.DisplaySize = framebufferSize.X > 0 && framebufferSize.Y > 0
+			? new Vector2(framebufferSize.X, framebufferSize.Y)
+			: new Vector2(_windowWidth, _windowHeight);
+		io.DisplayFramebufferScale = Vector2.One;
 
 		io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
 	}
@@ -542,6 +542,12 @@ internal sealed class ImGuiController : IRendererBackend
 		{
 			return;
 		}
+
+		// Set the viewport from the draw data every frame rather than relying on a resize event to
+		// have set it. Some backends never raise one — a Wayland surface can be sized by the
+		// compositor before the handler is attached — which would leave the viewport at whatever
+		// size the drawable had when the context was created, and the UI drawn into a corner.
+		_gl.Viewport(0, 0, (uint)framebufferWidth, (uint)framebufferHeight);
 
 		// Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
 		_gl.Enable(GLEnum.Blend);

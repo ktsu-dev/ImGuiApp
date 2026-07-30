@@ -71,6 +71,17 @@ public class ImGuiAppConfig
 	public ImGuiAppWindowState InitialWindowState { get; init; } = new();
 
 	/// <summary>
+	/// Gets or sets who owns the window's position and size.
+	/// </summary>
+	/// <remarks>
+	/// Defaults to <see cref="WindowGeometryMode.Auto"/>, which detects Wayland sessions and
+	/// tiling window managers and hands geometry to them. Override this when the detection is
+	/// wrong for your setup — for example to force <see cref="WindowGeometryMode.Application"/>
+	/// on an X11 desktop that is misidentified as tiling.
+	/// </remarks>
+	public WindowGeometryMode WindowGeometry { get; init; } = WindowGeometryMode.Auto;
+
+	/// <summary>
 	/// Gets or sets a value indicating whether the window is created hidden.
 	/// When true, the window starts invisible and must be shown with <c>ImGuiApp.Show</c>
 	/// (typically from a system tray icon). The render loop still runs while hidden.
