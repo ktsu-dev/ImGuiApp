@@ -1,6 +1,6 @@
-## v3.3.2 (patch)
+## v3.3.3 (patch)
 
-Changes since v3.3.1:
+Changes since v3.3.2:
 
-- [patch] Upgrade to ktsu.Semantics 2.8.0 and simplify path access ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 5 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
