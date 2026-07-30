@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ktsu.ImGui.Popups.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.CaseConverter" />
