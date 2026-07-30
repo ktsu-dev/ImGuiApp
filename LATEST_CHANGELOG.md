@@ -1,6 +1,6 @@
-## v3.2.5 (patch)
+## v3.2.6 (patch)
 
-Changes since v3.2.4:
+Changes since v3.2.5:
 
-- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Update gitattributes to match editorconfig for cs files ([@matt-edmondson](https://github.com/matt-edmondson))
 
