@@ -346,18 +346,20 @@ public partial class ImGuiPopups
 		/// <param name="contents">The filesystem entries to order.</param>
 		/// <returns>The ordered entries.</returns>
 		/// <remarks>
-		/// The secondary sort key is the entry's string value rather than the entry itself because
-		/// <see cref="IAbsolutePath"/> does not implement <see cref="IComparable{T}"/>. Sorting by the entry
-		/// would make LINQ fall back to <see cref="Comparer{T}.Default"/>, which calls the non-generic
-		/// <see cref="IComparable.CompareTo(object)"/> on the underlying semantic string, which throws
-		/// <see cref="ArgumentException"/> when handed a path object in ktsu.Semantics.Strings 2.7.10 and
-		/// earlier. Sorting on the string value also gives case-insensitive display order.
+		/// The secondary sort key is the entry's string value rather than the entry itself. Sorting by the
+		/// entry makes LINQ fall back to <see cref="Comparer{T}.Default"/>, because <see cref="IAbsolutePath"/>
+		/// implements neither <see cref="IComparable{T}"/> of itself nor of <see cref="IPath"/> — the
+		/// <see cref="IComparable{T}"/> that ktsu.Semantics.Paths declares on <see cref="IPath"/> only helps
+		/// collections typed as <see cref="IPath"/> exactly. Every comparison would therefore box through the
+		/// non-generic <see cref="IComparable.CompareTo(object)"/>, which additionally threw
+		/// <see cref="ArgumentException"/> before ktsu.Semantics.Strings 2.7.11 (ktsu-dev/ImGuiApp#273).
+		/// Sorting on the string value also gives case-insensitive display order.
 		/// </remarks>
 		internal static Collection<IAbsolutePath> SortContents(IEnumerable<IAbsolutePath> contents) =>
 			contents
 				.OrderBy(p => p is not AbsoluteDirectoryPath)
-				.ThenBy(p => p.ToString(), StringComparer.OrdinalIgnoreCase)
-				.ThenBy(p => p.ToString(), StringComparer.Ordinal)
+				.ThenBy(p => p.WeakString, StringComparer.OrdinalIgnoreCase)
+				.ThenBy(p => p.WeakString, StringComparer.Ordinal)
 				.ToCollection();
 
 		/// <summary>
@@ -390,8 +392,7 @@ public partial class ImGuiPopups
 			ImGui.TableNextColumn();
 			AbsoluteDirectoryPath? directory = path as AbsoluteDirectoryPath;
 			AbsoluteFilePath? file = path as AbsoluteFilePath;
-			string displayPath = directory?.WeakString ?? file?.WeakString ?? string.Empty;
-			displayPath = displayPath.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
+			string displayPath = path.WeakString.RemovePrefix(CurrentDirectory.WeakString).Trim(Path.DirectorySeparatorChar);
 
 			if (directory is not null)
 			{
