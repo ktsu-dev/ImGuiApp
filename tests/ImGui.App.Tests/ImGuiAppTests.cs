@@ -64,6 +64,11 @@ public sealed class ImGuiAppTests : IDisposable
 	private static void ResetState()
 	{
 		ImGuiApp.Reset();
+
+		// These tests assert on application-driven window placement, so pin the geometry mode
+		// instead of letting it be decided by whichever session the test host happens to run in
+		// (auto-detection hands geometry to the compositor under Wayland and tiling WMs).
+		ImGuiApp.Config = new ImGuiAppConfig { WindowGeometry = WindowGeometryMode.Application };
 	}
 
 	[TestMethod]

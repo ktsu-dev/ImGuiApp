@@ -20,6 +20,11 @@ public sealed class ImGuiAppWindowManagementTests
 	public void Setup()
 	{
 		ImGuiApp.Reset();
+
+		// These tests assert on application-driven window placement, so pin the geometry mode
+		// instead of letting it be decided by whichever session the test host happens to run in
+		// (auto-detection hands geometry to the compositor under Wayland and tiling WMs).
+		ImGuiApp.Config = new ImGuiAppConfig { WindowGeometry = WindowGeometryMode.Application };
 	}
 
 	[TestCleanup]
@@ -265,9 +270,52 @@ public sealed class ImGuiAppWindowManagementTests
 		ImGuiApp.DisableOverlay();
 	}
 
+	[TestMethod]
+	public void CaptureWindowNormalState_WhenCompositorOwnsGeometry_KeepsSavedPosition()
+	{
+		// Wayland and tiling window managers report a placeholder position. Recording it would
+		// overwrite the caller's saved geometry with garbage that is then persisted and restored.
+		ImGuiApp.Config = new ImGuiAppConfig { WindowGeometry = WindowGeometryMode.Compositor };
+		ImGuiApp.LastNormalWindowState = new ImGuiAppWindowState { Size = new Vector2(800, 600), Pos = new Vector2(300, 200) };
+
+		Mock<IWindow> mockWindow = TestHelpers.CreateMockWindow();
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+		mockWindow.Setup(w => w.Size).Returns(new Silk.NET.Maths.Vector2D<int>(1024, 768));
+		mockWindow.Setup(w => w.Position).Returns(new Silk.NET.Maths.Vector2D<int>(0, 0));
+		ImGuiApp.window = mockWindow.Object;
+
+		ImGuiApp.CaptureWindowNormalState();
+
+		Assert.AreEqual(new Vector2(1024, 768), ImGuiApp.LastNormalWindowState.Size, "The compositor-assigned size is still worth recording.");
+		Assert.AreEqual(new Vector2(300, 200), ImGuiApp.LastNormalWindowState.Pos, "The reported position is meaningless here and must not overwrite the saved one.");
+	}
+
 	#endregion
 
 	#region Window Position Validation Tests
+
+	[TestMethod]
+	public void EnsureWindowPositionIsValid_WhenCompositorOwnsGeometry_LeavesWindowAlone()
+	{
+		// The window is entirely outside the monitor, which would normally trigger a relocation.
+		// Under a tiling window manager that relocation is either ignored or fights the tiler.
+		ImGuiApp.Config = new ImGuiAppConfig { WindowGeometry = WindowGeometryMode.Compositor };
+
+		Mock<IWindow> mockWindow = TestHelpers.CreateMockWindow();
+		Mock<IMonitor> mockMonitor = new();
+		mockMonitor.Setup(m => m.Bounds).Returns(new Silk.NET.Maths.Rectangle<int>(0, 0, 1920, 1080));
+		mockWindow.Setup(w => w.Monitor).Returns(mockMonitor.Object);
+		mockWindow.Setup(w => w.WindowState).Returns(WindowState.Normal);
+		mockWindow.Setup(w => w.Size).Returns(new Silk.NET.Maths.Vector2D<int>(1280, 720));
+		mockWindow.Setup(w => w.Position).Returns(new Silk.NET.Maths.Vector2D<int>(30000, 30000));
+		ImGuiApp.window = mockWindow.Object;
+
+		ImGuiApp.ForceWindowPositionValidation();
+		ImGuiApp.EnsureWindowPositionIsValid();
+
+		mockWindow.VerifySet(w => w.Position = It.IsAny<Silk.NET.Maths.Vector2D<int>>(), Times.Never());
+		mockWindow.VerifySet(w => w.Size = It.IsAny<Silk.NET.Maths.Vector2D<int>>(), Times.Never());
+	}
 
 	[TestMethod]
 	public void EnsureWindowPositionIsValid_WithNullWindow_DoesNotThrow()

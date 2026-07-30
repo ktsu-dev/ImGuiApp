@@ -371,6 +371,7 @@ The main entry point for creating and managing ImGui applications.
 | `IsVisible` | `bool` | Gets whether the application window is visible |
 | `IsIdle` | `bool` | Gets whether the application is currently idle |
 | `ScaleFactor` | `float` | Gets the current DPI scale factor |
+| `CompositorOwnsWindowGeometry` | `bool` | Gets whether the window manager, rather than the application, owns window position and size |
 
 #### Methods
 
@@ -400,6 +401,7 @@ Configuration for the ImGui application.
 | `Title` | `string` | `"ImGuiApp"` | The window title |
 | `IconPath` | `string` | `""` | The file path to the application window icon |
 | `InitialWindowState` | `ImGuiAppWindowState` | `new()` | The initial state of the application window |
+| `WindowGeometry` | `WindowGeometryMode` | `Auto` | Who owns window position and size (see [Tiling window managers](#tiling-window-managers-and-wayland)) |
 | `Fonts` | `Dictionary<string, byte[]>` | `[]` | Font name to font data mapping |
 | `EnableUnicodeSupport` | `bool` | `true` | Whether to enable Unicode and emoji support |
 | `SaveIniSettings` | `bool` | `true` | Whether ImGui should save window settings to imgui.ini |
@@ -485,6 +487,30 @@ Represents the state of the application window.
 | `Size` | `Vector2` | The size of the window |
 | `Pos` | `Vector2` | The position of the window |
 | `LayoutState` | `WindowState` | The layout state of the window (Normal, Maximized, etc.) |
+
+## Tiling window managers and Wayland
+
+Under a tiling window manager (i3, sway, niri, Hyprland, dwm, …) or any Wayland session, the window
+manager — not the client — decides where windows go and how big they are. A Wayland client cannot
+even read its own position: the backend reports a placeholder. Applications that place and track
+their own window in those environments end up fighting the tiler and persisting garbage geometry.
+
+`ImGuiAppConfig.WindowGeometry` selects who is in charge:
+
+| Value | Behaviour |
+|-------|-----------|
+| `Auto` (default) | Detects Wayland sessions and known tiling window managers, and hands geometry to them; everything else keeps the application in charge |
+| `Application` | The application places its own window: the requested position is honoured, off-screen windows are relocated, and the live position is recorded in `ImGuiApp.WindowState` |
+| `Compositor` | The application never moves or resizes its own window, and never records the reported position |
+
+```csharp
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    Title = "My App",
+    // Override only if auto-detection is wrong for your setup
+    WindowGeometry = WindowGeometryMode.Application,
+});
+```
 
 ## Debug Features
 
