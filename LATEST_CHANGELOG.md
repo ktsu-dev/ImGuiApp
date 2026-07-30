@@ -1,6 +1,6 @@
-## v3.3.1 (patch)
+## v3.3.2 (patch)
 
-Changes since v3.3.0:
+Changes since v3.3.1:
 
-- [patch] Fix file dialog crash and drive list on Linux ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Upgrade to ktsu.Semantics 2.8.0 and simplify path access ([@matt-edmondson](https://github.com/matt-edmondson))
 
