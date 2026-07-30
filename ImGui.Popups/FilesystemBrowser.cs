@@ -5,11 +5,11 @@
 namespace ktsu.ImGui.Popups;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Text.Json.Serialization;
 using Hexa.NET.ImGui;
 using ktsu.Extensions;
@@ -59,6 +59,22 @@ public partial class ImGuiPopups
 	/// </summary>
 	public class FilesystemBrowser
 	{
+		/// <summary>
+		/// Mount point prefixes that are hidden from the drive list on Unix-like systems.
+		/// </summary>
+		/// <remarks>
+		/// <see cref="Environment.GetLogicalDrives"/> reports every mount point on Unix, so the raw list is
+		/// dominated by kernel pseudo filesystems (<c>/proc</c>, <c>/sys</c>, <c>/dev</c>) and runtime state
+		/// (<c>/run</c>) that hold nothing a user would browse to. Removable media is commonly mounted under
+		/// <c>/run/media</c>, so that subtree is kept — see <see cref="RemovableMediaPrefix"/>.
+		/// </remarks>
+		private static readonly string[] HiddenUnixMountPrefixes = ["/proc", "/sys", "/dev", "/run"];
+
+		/// <summary>
+		/// The mount point prefix for removable media, kept even though it sits under a hidden prefix.
+		/// </summary>
+		private const string RemovableMediaPrefix = "/run/media";
+
 		/// <summary>
 		/// Gets or sets the mode of the browser (Open or Save).
 		/// </summary>
@@ -205,7 +221,7 @@ public partial class ImGuiPopups
 			Matcher = new();
 			Matcher.AddInclude(Glob);
 			Drives.Clear();
-			Environment.GetLogicalDrives().ForEach(Drives.Add);
+			GetNavigableDrives().ForEach(Drives.Add);
 			RefreshContents();
 			Modal.Open(title, ShowContent, customSize);
 		}
@@ -237,18 +253,19 @@ public partial class ImGuiPopups
 		/// </summary>
 		private void DrawDrivesCombo()
 		{
-			if (Drives.Count != 0 && ImGui.BeginCombo("##Drives", Drives[0]))
+			if (Drives.Count == 0)
 			{
-				StringBuilder currentDriveStringBuilder = new();
-				currentDriveStringBuilder.Append(CurrentDirectory.Split(Path.VolumeSeparatorChar).Current);
-				currentDriveStringBuilder.Append(Path.VolumeSeparatorChar);
-				currentDriveStringBuilder.Append(Path.DirectorySeparatorChar);
-				string currentDrive = currentDriveStringBuilder.ToString();
+				return;
+			}
 
+			string currentDrive = CurrentDriveOf(CurrentDirectory, Drives[0]);
+
+			if (ImGui.BeginCombo("##Drives", currentDrive))
+			{
 #pragma warning disable S3267 // Explicit loop is clearer; LINQ rewrite would add unnecessary allocation and complicate ImGui immediate-mode usage.
 				foreach (string drive in Drives)
 				{
-					if (ImGui.Selectable(drive, drive == currentDrive))
+					if (ImGui.Selectable(drive, string.Equals(drive, currentDrive, StringComparison.OrdinalIgnoreCase)))
 					{
 						CurrentDirectory = drive.As<AbsoluteDirectoryPath>();
 						RefreshContents();
@@ -258,6 +275,45 @@ public partial class ImGuiPopups
 
 				ImGui.EndCombo();
 			}
+		}
+
+		/// <summary>
+		/// Gets the logical drives worth offering in the drive combo, deduplicated and ordered.
+		/// </summary>
+		/// <returns>The drives to display.</returns>
+		internal static IEnumerable<string> GetNavigableDrives() =>
+			Environment.GetLogicalDrives()
+				.Where(IsNavigableDrive)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.OrderBy(drive => drive, StringComparer.OrdinalIgnoreCase);
+
+		/// <summary>
+		/// Determines whether a logical drive is user-navigable storage rather than a pseudo filesystem.
+		/// </summary>
+		/// <param name="drive">The drive reported by <see cref="Environment.GetLogicalDrives"/>.</param>
+		/// <returns><see langword="true"/> if the drive should be listed; otherwise, <see langword="false"/>.</returns>
+		internal static bool IsNavigableDrive(string drive)
+		{
+			if (OperatingSystem.IsWindows())
+			{
+				return true;
+			}
+
+			return drive.StartsWith(RemovableMediaPrefix, StringComparison.Ordinal)
+				|| !HiddenUnixMountPrefixes.Any(prefix => drive.StartsWith(prefix, StringComparison.Ordinal));
+		}
+
+		/// <summary>
+		/// Gets the root of the given directory in the same form <see cref="Environment.GetLogicalDrives"/> reports,
+		/// so it can be matched against <see cref="Drives"/>.
+		/// </summary>
+		/// <param name="directory">The directory to take the root of.</param>
+		/// <param name="fallback">The value to return when the directory has no determinable root.</param>
+		/// <returns>The directory's root, or <paramref name="fallback"/> when the root cannot be determined.</returns>
+		internal static string CurrentDriveOf(AbsoluteDirectoryPath directory, string fallback)
+		{
+			string? root = Path.GetPathRoot(directory.WeakString);
+			return string.IsNullOrEmpty(root) ? fallback : root;
 		}
 
 		/// <summary>
@@ -273,7 +329,7 @@ public partial class ImGuiPopups
 				ImGuiSelectableFlags flags = ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowDoubleClick | ImGuiSelectableFlags.NoAutoClosePopups;
 				DrawParentDirectoryRow(flags);
 
-				foreach (IAbsolutePath? path in CurrentContents.OrderBy(p => p is not AbsoluteDirectoryPath).ThenBy(p => p).ToCollection())
+				foreach (IAbsolutePath path in SortContents(CurrentContents))
 				{
 					DrawContentRow(path, flags);
 				}
@@ -283,6 +339,26 @@ public partial class ImGuiPopups
 
 			ImGui.EndChild();
 		}
+
+		/// <summary>
+		/// Orders filesystem entries for display, listing directories before files and sorting each group by name.
+		/// </summary>
+		/// <param name="contents">The filesystem entries to order.</param>
+		/// <returns>The ordered entries.</returns>
+		/// <remarks>
+		/// The secondary sort key is the entry's string value rather than the entry itself because
+		/// <see cref="IAbsolutePath"/> does not implement <see cref="IComparable{T}"/>. Sorting by the entry
+		/// would make LINQ fall back to <see cref="Comparer{T}.Default"/>, which calls the non-generic
+		/// <see cref="IComparable.CompareTo(object)"/> on the underlying semantic string, which throws
+		/// <see cref="ArgumentException"/> when handed a path object in ktsu.Semantics.Strings 2.7.10 and
+		/// earlier. Sorting on the string value also gives case-insensitive display order.
+		/// </remarks>
+		internal static Collection<IAbsolutePath> SortContents(IEnumerable<IAbsolutePath> contents) =>
+			contents
+				.OrderBy(p => p is not AbsoluteDirectoryPath)
+				.ThenBy(p => p.ToString(), StringComparer.OrdinalIgnoreCase)
+				.ThenBy(p => p.ToString(), StringComparer.Ordinal)
+				.ToCollection();
 
 		/// <summary>
 		/// Draws the ".." row that navigates to the parent directory.
