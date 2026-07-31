@@ -1,6 +1,6 @@
-## v3.3.3 (patch)
+## v3.3.4 (patch)
 
-Changes since v3.3.2:
+Changes since v3.3.3:
 
-- Bump the ktsu group with 5 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
