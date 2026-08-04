@@ -372,12 +372,12 @@ public partial class ImGuiPopups
 			ImGui.TableNextColumn();
 			if (ImGui.Selectable("..", false, flags) && ImGui.IsMouseDoubleClicked(0))
 			{
-				string? newPath = Path.GetDirectoryName(CurrentDirectory.WeakString.Trim(Path.DirectorySeparatorChar));
-				if (newPath is not null)
-				{
-					CurrentDirectory = newPath.As<AbsoluteDirectoryPath>();
-					RefreshContents();
-				}
+				// Take the parent from the path type rather than trimming separators off the string: trimming
+				// also removes the leading separator, which is the root itself on Unix, so the "parent" came
+				// back relative and failed AbsoluteDirectoryPath validation (ktsu-dev/ImGuiApp#281). A root is
+				// its own parent, so this stays put once there is nowhere left to go.
+				CurrentDirectory = CurrentDirectory.Parent;
+				RefreshContents();
 			}
 		}
 
