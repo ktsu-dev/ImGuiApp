@@ -56,7 +56,7 @@ jobs:
           distribution: "zulu" # Alternative distribution options are available.
 
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Full history for versioning
           fetch-tags: true
@@ -65,11 +65,20 @@ jobs:
           persist-credentials: true
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          # setup-dotnet caches the NuGet global packages folder and keys it on a hash of these
+          # files. The csproj files alone are not enough: this repository uses central package
+          # management, so Directory.Packages.props is where versions actually live, and global.json
+          # pins the ktsu SDK versions, which are NuGet packages too. Without them a version bump in
+          # either file reuses the previous key, and because a cache hit never re-saves, the newly
+          # downloaded packages would never make it into the cache.
           cache: true
-          cache-dependency-path: "**/*.csproj"
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
 
       # Ensure NuGet packages directory exists for caching (prevents error when pipeline exits early)
       - name: Ensure NuGet cache directory exists
@@ -101,41 +110,52 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' && steps.cache-sonar-scanner.outputs.cache-hit != 'true' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
+        shell: pwsh
         run: |
           New-Item -Path .\.sonar\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
 
-      - name: Configure SonarQube exclusions
-        shell: bash
+      # KtsuBuild is cloned and compiled before the SonarQube window opens. The scanner injects its
+      # Roslyn analyzers into every project compiled between begin and end, so building KtsuBuild
+      # inside the window made it report KtsuBuild's own code smells against this repository. That is
+      # a compiler diagnostic rather than a reported issue, so sonar.exclusions cannot suppress it.
+      - name: Clone KtsuBuild (Latest Tag)
+        shell: pwsh
         run: |
-          EXCLUSIONS="_temp/**,_actions/**"
-          if [ "${{ github.event.repository.name }}" != "KtsuBuild" ]; then
-            EXCLUSIONS="$EXCLUSIONS,**/KtsuBuild/**"
-          fi
-          # NativeExports.cs is intentionally unsafe C ABI boundary code; exclude from all analysis.
-          EXCLUSIONS="$EXCLUSIONS,**/NativeExports.cs"
-          echo "SONAR_EXCLUSIONS=$EXCLUSIONS" >> $GITHUB_ENV
+          # Sorting by [version] rather than as text, so v1.8.15 wins over v1.8.9.
+          $tags = git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git |
+            Select-String -Pattern 'refs/tags/(v\d+\.\d+\.\d+)$' |
+            ForEach-Object { $_.Matches[0].Groups[1].Value }
+          $latestTag = $tags | Sort-Object { [version]$_.Substring(1) } | Select-Object -Last 1
+
+          if ([string]::IsNullOrEmpty($latestTag)) {
+            Write-Host "No version tags found, falling back to HEAD"
+            git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          }
+          else {
+            Write-Host "Cloning KtsuBuild at tag: $latestTag"
+            git clone --depth 1 --branch $latestTag https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build KtsuBuild CLI
+        shell: pwsh
+        run: |
+          dotnet build "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Begin SonarQube
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
+        shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.exclusions="${{ env.SONAR_EXCLUSIONS }}"
-
-      - name: Clone KtsuBuild (Latest Tag)
-        run: |
-          LATEST_TAG=$(git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' | sed 's/refs\/tags\///' | sort -V | tail -1 || true)
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No version tags found, falling back to HEAD"
-            git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          else
-            echo "Cloning KtsuBuild at tag: $LATEST_TAG"
-            git clone --depth 1 --branch "$LATEST_TAG" https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          fi
-        shell: bash
+          # sonar.projectBaseDir is pinned to the workspace. Scanner for .NET v8 otherwise derives it
+          # from the projects it sees, and anything compiled outside the workspace widens it to a
+          # common ancestor, which pulls the runner's own checkouts under _actions and _temp into the
+          # file scan. Pinning it means only this repository is ever in scope, so no exclusions are
+          # needed for those directories.
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
 
       - name: Run KtsuBuild CI Pipeline
         id: pipeline
@@ -155,7 +175,9 @@ jobs:
             $args += @("--version-bump", $versionBump)
           }
 
-          & dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- @args
+          # --no-build because the CLI was compiled before the SonarQube window opened. Recompiling
+          # it here would pull the scanner's injected analyzers into KtsuBuild's own sources.
+          & dotnet run --no-build --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- @args
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # Set outputs for downstream jobs
@@ -178,12 +200,12 @@ jobs:
         if: env.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
+        shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-report
@@ -203,27 +225,34 @@ jobs:
 
     steps:
       - name: Checkout Release Commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.build.outputs.release_hash }}
           fetch-depth: 0 # Full history for better auto-detection
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
       - name: Clone KtsuBuild (Latest Tag)
+        shell: pwsh
         run: |
-          LATEST_TAG=$(git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' | sed 's/refs\/tags\///' | sort -V | tail -1 || true)
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No version tags found, falling back to HEAD"
+          # Sorting by [version] rather than as text, so v1.8.15 wins over v1.8.9.
+          $tags = git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git |
+            Select-String -Pattern 'refs/tags/(v\d+\.\d+\.\d+)$' |
+            ForEach-Object { $_.Matches[0].Groups[1].Value }
+          $latestTag = $tags | Sort-Object { [version]$_.Substring(1) } | Select-Object -Last 1
+
+          if ([string]::IsNullOrEmpty($latestTag)) {
+            Write-Host "No version tags found, falling back to HEAD"
             git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          else
-            echo "Cloning KtsuBuild at tag: $LATEST_TAG"
-            git clone --depth 1 --branch "$LATEST_TAG" https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          fi
-        shell: bash
+          }
+          else {
+            Write-Host "Cloning KtsuBuild at tag: $latestTag"
+            git clone --depth 1 --branch $latestTag https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Update Winget Manifests
         shell: pwsh
@@ -233,7 +262,7 @@ jobs:
           dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: winget-manifests-${{ needs.build.outputs.version }}
           path: winget/*.yaml
@@ -251,9 +280,12 @@ jobs:
 
     steps:
       - name: Checkout Release Commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.build.outputs.release_hash }}
 
+      # Pinned to a full commit SHA rather than a tag. Tags are mutable, so a third party action
+      # referenced by tag can be repointed at different code after review. The trailing comment is
+      # the convention dependabot reads, so it still offers upgrades and rewrites both parts.
       - name: Detect Dependencies
-        uses: advanced-security/component-detection-dependency-submission-action@v0.1.4
+        uses: advanced-security/component-detection-dependency-submission-action@31f25a8de68ae5ce2ca274bc28546a78683c15ce # v0.1.4
