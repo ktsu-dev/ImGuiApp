@@ -1,3 +1,11 @@
+## v3.3.8-pre.1 (prerelease)
+
+Changes since v3.3.7:
+
+- Sync .github\workflows\update-sdks.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dependabot-merge.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+
 ## v3.3.7 (patch)
 
 Changes since v3.3.6:
@@ -1512,8 +1520,7 @@ Changes since v1.0.0:
 
 ## v1.12.16-pre.1 (prerelease)
 
-Changes since v1.12.15:
-
+No significant changes detected since v1.12.15.
 
 ## v1.12.15 (patch)
 
@@ -1547,13 +1554,11 @@ Changes since v1.12.11:
 
 ## v1.12.12-pre.3 (prerelease)
 
-Changes since v1.12.12-pre.2:
-
+No significant changes detected since v1.12.12-pre.2.
 
 ## v1.12.12-pre.2 (prerelease)
 
-Changes since v1.12.12-pre.1:
-
+No significant changes detected since v1.12.12-pre.1.
 
 ## v1.12.12-pre.1 (prerelease)
 
@@ -1619,38 +1624,31 @@ Changes since v1.12.5:
 
 ## v1.12.6-pre.10 (prerelease)
 
-Changes since v1.12.6-pre.9:
-
+No significant changes detected since v1.12.6-pre.9.
 
 ## v1.12.6-pre.9 (prerelease)
 
-Changes since v1.12.6-pre.8:
-
+No significant changes detected since v1.12.6-pre.8.
 
 ## v1.12.6-pre.8 (prerelease)
 
-Changes since v1.12.6-pre.7:
-
+No significant changes detected since v1.12.6-pre.7.
 
 ## v1.12.6-pre.7 (prerelease)
 
-Changes since v1.12.6-pre.6:
-
+No significant changes detected since v1.12.6-pre.6.
 
 ## v1.12.6-pre.6 (prerelease)
 
-Changes since v1.12.6-pre.5:
-
+No significant changes detected since v1.12.6-pre.5.
 
 ## v1.12.6-pre.5 (prerelease)
 
-Changes since v1.12.6-pre.4:
-
+No significant changes detected since v1.12.6-pre.4.
 
 ## v1.12.6-pre.4 (prerelease)
 
-Changes since v1.12.6-pre.3:
-
+No significant changes detected since v1.12.6-pre.3.
 
 ## v1.12.6-pre.3 (prerelease)
 
@@ -1660,8 +1658,7 @@ Changes since v1.12.6-pre.2:
 
 ## v1.12.6-pre.2 (prerelease)
 
-Changes since v1.12.6-pre.1:
-
+No significant changes detected since v1.12.6-pre.1.
 
 ## v1.12.6-pre.1 (prerelease)
 
@@ -2010,13 +2007,11 @@ Changes since v1.0.12-pre.5:
 
 ## v1.0.12-pre.5 (prerelease)
 
-Changes since v1.0.12-pre.4:
-
+No significant changes detected since v1.0.12-pre.4.
 
 ## v1.0.12-pre.4 (prerelease)
 
-Changes since v1.0.12-pre.3:
-
+No significant changes detected since v1.0.12-pre.3.
 
 ## v1.0.12-pre.3 (prerelease)
 
@@ -2313,23 +2308,19 @@ Changes since v1.0.0-alpha.42:
 
 ## v1.0.0-alpha.42 (prerelease)
 
-Changes since v1.0.0-alpha.41:
-
+No significant changes detected since v1.0.0-alpha.41.
 
 ## v1.0.0-alpha.41 (prerelease)
 
-Changes since v1.0.0-alpha.40:
-
+No significant changes detected since v1.0.0-alpha.40.
 
 ## v1.0.0-alpha.40 (prerelease)
 
-Changes since v1.0.0-alpha.39:
-
+No significant changes detected since v1.0.0-alpha.39.
 
 ## v1.0.0-alpha.39 (prerelease)
 
-Changes since v1.0.0-alpha.38:
-
+No significant changes detected since v1.0.0-alpha.38.
 
 ## v1.0.0-alpha.38 (prerelease)
 
