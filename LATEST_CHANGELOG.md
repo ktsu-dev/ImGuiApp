@@ -1,6 +1,6 @@
-## v3.3.6 (patch)
+## v3.3.7 (patch)
 
-Changes since v3.3.5:
+Changes since v3.3.6:
 
-- [patch] Fix crash navigating to the parent directory in the filesystem browser ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
