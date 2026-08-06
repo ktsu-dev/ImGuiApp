@@ -115,34 +115,21 @@ jobs:
           New-Item -Path .\.sonar\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
 
-      # KtsuBuild is cloned and compiled before the SonarQube window opens. The scanner injects its
-      # Roslyn analyzers into every project compiled between begin and end, so building KtsuBuild
-      # inside the window made it report KtsuBuild's own code smells against this repository. That is
-      # a compiler diagnostic rather than a reported issue, so sonar.exclusions cannot suppress it.
-      - name: Clone KtsuBuild (Latest Tag)
+      # Installed as a prebuilt package rather than cloned and compiled from source. Nothing is
+      # compiled here, which matters for SonarQube: the scanner injects its Roslyn analyzers into
+      # every project compiled between begin and end, so building KtsuBuild inside that window used
+      # to report KtsuBuild's own code smells against this repository. That is a compiler diagnostic
+      # rather than a reported issue, so sonar.exclusions could not suppress it, and the build had to
+      # be ordered ahead of the window. A tool install has no such constraint.
+      #
+      # --tool-path rather than -g so the install is self-contained; the directory is added to PATH
+      # for later steps in this job. Jobs do not share PATH, so each one installs the tool itself.
+      - name: Install KtsuBuild
         shell: pwsh
         run: |
-          # Sorting by [version] rather than as text, so v1.8.15 wins over v1.8.9.
-          $tags = git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git |
-            Select-String -Pattern 'refs/tags/(v\d+\.\d+\.\d+)$' |
-            ForEach-Object { $_.Matches[0].Groups[1].Value }
-          $latestTag = $tags | Sort-Object { [version]$_.Substring(1) } | Select-Object -Last 1
-
-          if ([string]::IsNullOrEmpty($latestTag)) {
-            Write-Host "No version tags found, falling back to HEAD"
-            git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          }
-          else {
-            Write-Host "Cloning KtsuBuild at tag: $latestTag"
-            git clone --depth 1 --branch $latestTag https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          }
+          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Build KtsuBuild CLI
-        shell: pwsh
-        run: |
-          dotnet build "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
 
       - name: Begin SonarQube
         if: ${{ env.SONAR_TOKEN != '' }}
@@ -175,9 +162,7 @@ jobs:
             $args += @("--version-bump", $versionBump)
           }
 
-          # --no-build because the CLI was compiled before the SonarQube window opened. Recompiling
-          # it here would pull the scanner's injected analyzers into KtsuBuild's own sources.
-          & dotnet run --no-build --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- @args
+          & ktsubuild @args
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # Set outputs for downstream jobs
@@ -235,31 +220,20 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
-      - name: Clone KtsuBuild (Latest Tag)
+      # PATH is not shared between jobs, so this job installs the tool for itself.
+      - name: Install KtsuBuild
         shell: pwsh
         run: |
-          # Sorting by [version] rather than as text, so v1.8.15 wins over v1.8.9.
-          $tags = git ls-remote --tags https://github.com/ktsu-dev/KtsuBuild.git |
-            Select-String -Pattern 'refs/tags/(v\d+\.\d+\.\d+)$' |
-            ForEach-Object { $_.Matches[0].Groups[1].Value }
-          $latestTag = $tags | Sort-Object { [version]$_.Substring(1) } | Select-Object -Last 1
-
-          if ([string]::IsNullOrEmpty($latestTag)) {
-            Write-Host "No version tags found, falling back to HEAD"
-            git clone --depth 1 https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          }
-          else {
-            Write-Host "Cloning KtsuBuild at tag: $latestTag"
-            git clone --depth 1 --branch $latestTag https://github.com/ktsu-dev/KtsuBuild.git "${{ runner.temp }}/KtsuBuild"
-          }
+          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
 
       - name: Update Winget Manifests
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
+          ktsubuild winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
         uses: actions/upload-artifact@v7
