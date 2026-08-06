@@ -1,3 +1,10 @@
+## v3.3.9 (patch)
+
+Changes since v3.3.8:
+
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+
 ## v3.3.8 (patch)
 
 Changes since v3.3.7:
@@ -9,11 +16,7 @@ Changes since v3.3.7:
 
 ## v3.3.8-pre.1 (prerelease)
 
-Changes since v3.3.7:
-
-- Sync .github\workflows\update-sdks.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dependabot-merge.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+No significant changes detected since v3.3.8.
 
 ## v3.3.7 (patch)
 
