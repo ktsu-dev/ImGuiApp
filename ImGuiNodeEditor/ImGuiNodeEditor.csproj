@@ -14,7 +14,7 @@
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="Hexa.NET.ImNodes" />
     <PackageReference Include="ktsu.Semantics.Quantities" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

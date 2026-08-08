@@ -19,7 +19,7 @@
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 

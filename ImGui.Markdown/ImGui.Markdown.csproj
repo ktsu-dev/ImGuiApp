@@ -16,6 +16,6 @@
     <PackageReference Include="Markdig" />
     <PackageReference Include="ktsu.Semantics.Color" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 </Project>
