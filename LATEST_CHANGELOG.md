@@ -1,9 +1,8 @@
-## v3.3.10 (patch)
+## v3.3.11 (patch)
 
-Changes since v3.3.9:
+Changes since v3.3.10:
 
-- chore: update ktsu.Sdk to 2.21.1 [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
-- Sync examples\ImGuiAppDemo.iOS\icon.png ([@KtsuTools](https://github.com/KtsuTools))
-- Sync examples\ImGuiAppDemo\icon.png ([@KtsuTools](https://github.com/KtsuTools))
-- Sync icon.png ([@KtsuTools](https://github.com/KtsuTools))
+- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the microsoft group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 6 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
