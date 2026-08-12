@@ -19,7 +19,7 @@ trim_trailing_whitespace = true
 [*.{cs,csx,cake,fs,fsx,vb,vbx}]
 indent_style = tab
 
-file_header_template = Copyright (c) 2023-2026 ktsu-dev contributors
+file_header_template = Copyright (c) ktsu.dev\nAll rights reserved.\nLicensed under the MIT license.
 
 # Default severity for all .NET Code Style rules
 dotnet_analyzer_diagnostic.severity = error
