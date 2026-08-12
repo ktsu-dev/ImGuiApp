@@ -1,8 +1,6 @@
-## v3.3.11 (patch)
+## v3.3.12 (patch)
 
-Changes since v3.3.10:
+Changes since v3.3.11:
 
-- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the microsoft group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 6 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Mark Polyfill as private in library csproj ([@Simon Cropp](https://github.com/Simon Cropp))
 
