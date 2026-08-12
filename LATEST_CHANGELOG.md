@@ -1,6 +1,6 @@
-## v3.3.12 (patch)
+## v3.3.13 (patch)
 
-Changes since v3.3.11:
+Changes since v3.3.12:
 
-- Mark Polyfill as private in library csproj ([@Simon Cropp](https://github.com/Simon Cropp))
+- Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
 
