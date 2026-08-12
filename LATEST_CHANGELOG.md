@@ -2,5 +2,6 @@
 
 Changes since v3.3.12:
 
+- Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
 - Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
 
