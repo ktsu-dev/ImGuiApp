@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 // This assembly is a thin AOT publish wrapper around ktsu.ForceDirectedLayout.
 // Its only purpose is to be `dotnet publish -r <rid> /p:PublishAot=true /p:NativeLib=Shared`-ed

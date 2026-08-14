@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 // Examples demonstrating automatic instance pin behavior for classes and structs.
 

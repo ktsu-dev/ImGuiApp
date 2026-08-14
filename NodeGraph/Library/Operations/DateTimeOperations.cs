@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 // Date and time operations as static method nodes.
 

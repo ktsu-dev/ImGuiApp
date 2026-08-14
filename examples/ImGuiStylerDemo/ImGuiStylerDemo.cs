@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Examples.Styler;
 

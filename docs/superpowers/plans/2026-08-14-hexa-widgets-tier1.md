@@ -15,7 +15,7 @@
 Every task's requirements implicitly include this section.
 
 - **File header.** Every new `.cs` file starts with exactly this single line, then a blank line:
-  `// Copyright (c) 2023-2026 ktsu.dev contributors`
+  `// Copyright (c) 2023-2026 ktsu-dev contributors`
 - **Style.** Tabs for indentation. CRLF line endings. File-scoped namespaces (`namespace ktsu.ImGui.Widgets;`). Using directives *inside* the namespace. Explicit types — never `var`. Always braces on control flow. No `this.` qualifier. Explicit accessibility modifiers.
 - **Docs.** Warnings are errors and `GenerateDocumentationFile` is on. Every public member needs a complete XML doc comment including `<param>`, `<returns>`, and `<typeparam>` where applicable. A missing doc fails the build.
 - **Validation.** Use `Ensure.NotNull(x)` (Polyfill, global namespace, no using directive needed) — not `ArgumentNullException.ThrowIfNull`. It throws `ArgumentNullException`.
@@ -34,15 +34,27 @@ dotnet build ImGui.Widgets/ImGui.Widgets.csproj
 # Build everything
 dotnet build ImGui.sln
 
-# Run the widget tests
-dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj
-
-# Run one test class
-dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~HexaWidgetTests"
-
-# Run one test method
-dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~FlattenCaptions_EmptyList_ReturnsEmpty"
+# Run the widget tests (builds first; whole suite runs in well under a second)
+dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj
 ```
+
+**Use `dotnet run --project` for tests, not `dotnet test`.** This repo's test projects are
+MSTest.Sdk on Microsoft Testing Platform, and in this environment the `dotnet test` bridge
+reports `Zero tests ran` with exit code 5 even though the same assembly passes 108/108 when
+run directly. `dotnet run --project` is the MTP-native path and works. Do not spend time
+debugging `dotnet test` — it is a known-bad path here.
+
+**Do not filter to a single test.** MTP does not accept the `--filter
+"FullyQualifiedName~X"` syntax used by VSTest; it silently matches nothing and reports
+`Zero tests ran`, which reads exactly like a passing-but-empty run. Always run the whole
+project and read the totals. A run that reports `total: 0` is a broken command, never a
+pass.
+
+**If a build fails with `KtsuRewriteEditorConfigHeader ... .editorconfig ... being used by
+another process`,** that is a race in ktsu.Sdk between parallel target frameworks, not your
+change. Run `dotnet build-server shutdown` and retry. Never edit `.editorconfig` to work
+around it — the SDK rewrites that file on every build and your edit will be silently
+reverted.
 
 ## File Structure
 
@@ -113,7 +125,7 @@ Expected: SUCCESS. If NU1605 or a downgrade warning appears for `Hexa.NET.ImGui`
 
 - [ ] **Step 4: Confirm the existing tests still pass**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: PASS, same count as before the change.
 
 - [ ] **Step 5: Commit**
@@ -259,7 +271,7 @@ public static unsafe void ProgressBar(float value, Vector2 size, uint background
 - [ ] **Step 1: Write `Spinner.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -286,7 +298,7 @@ public static partial class ImGuiWidgets
 Hexa calls this `ProgressBar`, but its own README documents it as a buffering bar, and we already ship `RadialProgressBar`. The name here reflects what it is.
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -355,7 +367,7 @@ public static bool HorizontalSplitter(string strId, ref float height, float minH
 Create `tests/ImGui.Widgets.Tests/HexaWidgetTests.cs`:
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets.Tests;
 
@@ -443,13 +455,13 @@ public sealed class HexaWidgetTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~HexaWidgetTests"`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: FAIL to compile with "does not contain a definition for 'ResolveSplitterMetrics'" and "'VerticalSplitter'".
 
 - [ ] **Step 3: Write `Splitter.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -527,7 +539,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~HexaWidgetTests"`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: PASS, 7 tests.
 
 If the two `MinGreaterThanMax` tests fail with an access violation rather than an `ArgumentOutOfRangeException`, the guard clause is running after an ImGui call — move all validation above the `ImGui.GetStyle()` line.
@@ -574,7 +586,7 @@ Note that Hexa's `TransparentButton(string)` has no size overload; the sized pat
 - [ ] **Step 1: Write `HexaButtons.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -729,7 +741,7 @@ public static bool IconTreeNode(string label, string icon, Vector4 iconColor, Im
 - [ ] **Step 1: Write `IconTreeNode.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -865,13 +877,13 @@ Add `using System.Linq;` to the file's using block if it is not already present.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~EnumCombo"`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: FAIL to compile with "does not contain a definition for 'EnumComboNames'".
 
 - [ ] **Step 3: Write `EnumCombo.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -917,7 +929,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~HexaWidgetTests"`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: PASS, 11 tests.
 
 If `EnumComboNames_FlagsEnum` fails because `Enum.GetValues<T>()` orders by value rather than declaration, adjust the expected array to match the actual ordering and note it in the test comment — the ordering guarantee belongs to the runtime, not to us.
@@ -962,7 +974,7 @@ public static void Tooltip(string desc);
 - [ ] **Step 1: Write `TextAlign.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1008,7 +1020,7 @@ public static partial class ImGuiWidgets
 - [ ] **Step 2: Write `Tooltip.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1071,7 +1083,7 @@ public static void ImageScaleTo(ImTextureRef image, Vector2 imgSize, Vector2 des
 - [ ] **Step 1: Write `ImageAlign.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1153,7 +1165,7 @@ public static bool Breadcrumb(string strId, ref string path);
 - [ ] **Step 1: Write `Breadcrumb.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1225,7 +1237,7 @@ Both take `ReadOnlySpan<byte>`, so the label is UTF-8 encoded inside the wrapper
 - [ ] **Step 1: Write `DatePicker.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1323,7 +1335,7 @@ public static bool FileTreeView(string strId, Vector2 size, ref string currentFo
 - [ ] **Step 1: Write `FileTreeView.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1511,13 +1523,13 @@ Add these members to `HexaWidgetTests`, inside the existing class body:
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~FlameGraph or FullyQualifiedName~FlattenCaptions"`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: FAIL to compile with "does not contain a definition for 'FlattenCaptions'".
 
 - [ ] **Step 3: Write `FlameGraph.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -1674,14 +1686,14 @@ Note that `captionBytes` is empty when `samples` is empty; `GCHandle.Alloc` on a
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj --filter "FullyQualifiedName~HexaWidgetTests"`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: PASS, 21 tests.
 
 If the local function `Getter` will not convert to Hexa's `ValuesGetter` delegate, declare it explicitly instead: `HexaFlameGraph.ValuesGetter getter = Getter;` and pass `getter`.
 
 - [ ] **Step 5: Run the whole test suite**
 
-Run: `dotnet test tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: PASS, all tests including the pre-existing ones.
 
 - [ ] **Step 6: Commit**
@@ -1710,7 +1722,7 @@ The comparison tab's contract: each row binds both implementations to the *same*
 - [ ] **Step 1: Write `HexaWidgetsDemo.cs`**
 
 ```csharp
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Examples.Widgets;
 
@@ -2027,7 +2039,7 @@ Add the new widgets to `ImGui.Widgets/README.md`'s widget list with a one-line d
 
 - [ ] **Step 3: Verify the whole solution still builds and tests pass**
 
-Run: `dotnet build ImGui.sln && dotnet test`
+Run: `dotnet build ImGui.sln && dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
 Expected: SUCCESS, all tests pass.
 
 - [ ] **Step 4: Commit**

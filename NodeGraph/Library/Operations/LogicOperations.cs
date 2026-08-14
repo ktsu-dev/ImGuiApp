@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu.dev contributors
+// Copyright (c) 2023-2026 ktsu-dev contributors
 
 // Logic operations including type conversions and comparisons.
 
