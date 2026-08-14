@@ -113,7 +113,7 @@ namespace `ktsu.ImGui.Widgets`. One file per widget family, matching current con
 | `HexaButtons.cs` | `bool ToggleSwitch(string label, ref bool selected)`<br>`bool ToggleButton(string label, ref bool selected, Vector2 size = default)`<br>`bool TransparentButton(string label, Vector2 size = default)`<br>`bool InlineButton(string label, Vector2 min, Vector2 max, Vector2 anchor, InlineButtonPlacement placement = InlineButtonPlacement.None)` |
 | `EnumCombo.cs` | `bool EnumCombo<T>(string label, ref T value) where T : struct, Enum` |
 | `TextAlign.cs` | `void TextCenteredV(string text)` · `void TextCenteredH(string text)` · `void TextCenteredVH(string text)` |
-| `ImageAlign.cs` | `void ImageCenteredV(ImTextureRef image, Vector2 size)` · `void ImageCenteredH(…)` · `void ImageCenteredVH(…)` · `void ImageScaleTo(ImTextureRef image, Vector2 imageSize, Vector2 destinationSize)` |
+| `ImageAlign.cs` | `void ImageCenteredV(nint textureId, Vector2 size)` · `void ImageCenteredH(…)` · `void ImageCenteredVH(…)` · `void ImageScaleTo(nint textureId, Vector2 imageSize, Vector2 destinationSize)` |
 | `Tooltip.cs` | `void Tooltip(string description)` |
 
 ### Supporting public types
@@ -159,15 +159,19 @@ Applied uniformly across every wrapper:
    wrapper requires an active ImGui context, which is already true of all of them.
 2. **Strings.** Only `string` overloads are exposed. Hexa's `byte*` and
    `ReadOnlySpan<byte>` overloads are not surfaced.
-3. **Paths.** `FileTreeView` takes `AbsoluteDirectoryPath` from `ktsu.Semantics.Paths`,
+3. **Textures.** `ImageAlign` takes `nint textureId` rather than Hexa's `ImTextureRef`,
+   matching our existing `ImGuiWidgets.Image` / `ImageCentered` API. The wrapper
+   constructs `new ImTextureRef(texId: textureId)` internally, which is already the idiom
+   used by `Icon.cs` and `Avatar.cs`.
+4. **Paths.** `FileTreeView` takes `AbsoluteDirectoryPath` from `ktsu.Semantics.Paths`,
    since it enumerates the real filesystem. **Deliberate exception:** `Breadcrumb` keeps
    `ref string path`, because Hexa's implementation only tokenizes on `/` and `\` for
    display and the path need not exist on disk. Forcing a validated path type there would
    reject legitimate virtual paths.
-4. **Return values.** Hexa's `DatePicker.Draw` returns `void`. Our wrapper returns `bool`
+5. **Return values.** Hexa's `DatePicker.Draw` returns `void`. Our wrapper returns `bool`
    by capturing the `ref DateTime` before the call and comparing after, matching
    `YearPicker`, which already returns `bool`.
-5. **Sizing.** Default sizes derive from `ImGui.GetFrameHeight()` /
+6. **Sizing.** Default sizes derive from `ImGui.GetFrameHeight()` /
    `ImGui.GetTextLineHeight()`, matching the house convention set by `Switch`,
    `RadialProgressBar` and `Rating`. No widget in this repo multiplies by `GlobalScale`,
    and these will not either.
@@ -179,10 +183,10 @@ Applied uniformly across every wrapper:
    so the grab area scales with the UI. A zero-thickness splitter has no legitimate use,
    so the sentinel is unambiguous.
 
-6. **Overloads.** Hexa's defaulting ladders (four `VerticalSplitter` overloads, and so on)
+7. **Overloads.** Hexa's defaulting ladders (four `VerticalSplitter` overloads, and so on)
    collapse into a single method with optional parameters, since every Hexa default is a
    compile-time constant.
-7. **No `unsafe` in signatures.** Any pointer work is confined to wrapper internals.
+8. **No `unsafe` in signatures.** Any pointer work is confined to wrapper internals.
 
 ### Flame graph marshalling
 
@@ -253,21 +257,39 @@ existing gallery tabs instead.
 ## Testing
 
 `tests/ImGui.Widgets.Tests/HexaWidgetTests.cs`, following the existing convention in that
-project: pure logic and marshalling only, with draw paths verified visually in the demo.
+project.
 
-Coverage:
+**The binding constraint:** the existing test project never creates an ImGui context — no
+test in `tests/` calls `ImGui.CreateContext`. `IconTests` is the model: the draw path stays
+untested and a *pure helper extracted from it* (`ImGuiWidgets.CalcTextBlockSize`) is what
+gets asserted. Anything touching `ImGui.GetStyle()`, `ImGui.GetFontSize()` or a draw list
+would null-deref without a context.
 
-- **Flame graph marshalling** — round-trip a `FlameGraphSample` list through the callback
-  and assert the values the callback writes match the source, including multi-byte UTF-8
-  captions, an empty list, and a single-sample list.
-- **Colour conversion** — for each wrapper taking a colour, assert the `Srgb`/`Color` input
-  packs to the `uint`/`Vector4` Hexa would receive.
-- **Change detection** — `DatePicker` and `YearPicker` return `false` when the `ref
-  DateTime` is untouched and `true` when it changes.
-- **`EnumCombo`** — name resolution for a normal enum, an enum with explicit values, and a
-  `[Flags]` enum.
-- **Argument guards** — null and empty labels, out-of-range `selected` index for the flame
-  graph, and `min > max` on the splitters.
+That rules out testing colour conversion directly, because the `Srgb.ToImGuiU32()` chosen
+in the conversion rules applies the global style alpha and therefore requires a live
+context. Colour output is verified visually in the demo instead.
+
+So each wrapper's context-dependent logic is split into a pure `internal static` helper
+that the wrapper calls, and only the helper is unit-tested:
+
+- **`FlattenCaptions(IReadOnlyList<FlameGraphSample>)`** → the UTF-8 caption block plus
+  per-sample byte offsets. Assert offsets and bytes for: an empty list, a single sample,
+  multi-byte UTF-8 captions, and an empty-string caption.
+- **`ResolveSplitterMetrics(float thickness, float tolerance, float grabMinSize)`** → the
+  sentinel substitution. Assert that `0f` yields the style-derived value, that a non-zero
+  value passes through untouched, and that both parameters resolve independently.
+- **`ResolveFlameGraphSelection(int selected, int sampleCount)`** → clamping. Assert
+  in-range passthrough, negative, past-the-end, and an empty sample list.
+- **`EnumComboNames<T>()`** → name resolution, delegating to Hexa's
+  `ComboEnumHelper<T>.GetName`, which is pure. Assert a plain enum, an enum with explicit
+  values, and a `[Flags]` enum.
+- **Argument guards** — `ArgumentNullException` / `ArgumentException` for null and empty
+  labels, and `ArgumentOutOfRangeException` for `min > max` on the splitters. These must be
+  thrown by the guard clause *before* any ImGui call, which is what makes them testable
+  without a context; that ordering is itself part of what the tests pin down.
+
+`DatePicker`/`YearPicker` change detection has no pure helper worth extracting — the
+comparison is a single `!=` on a `DateTime` — and is verified in the demo.
 
 ## File layout
 
