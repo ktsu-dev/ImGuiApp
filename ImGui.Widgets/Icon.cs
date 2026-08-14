@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Widgets;
 
@@ -46,7 +44,7 @@ public static partial class ImGuiWidgets
 		/// <summary>
 		/// The color of the icon.
 		/// </summary>
-		public ImGuiVector4 Color { get; init; } = new(Styler.Palette.Neutral.White.Value);
+		public ImGuiVector4 Color { get; init; } = new(Palette.Neutral.White.Value);
 
 		/// <summary>
 		/// The tooltip to display.

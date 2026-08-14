@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Examples.App.Demos;
 
@@ -12,7 +10,7 @@ using Hexa.NET.ImPlot;
 /// <summary>
 /// Demo for ImPlot advanced plotting
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
+[SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
 internal sealed class ImPlotDemo : IDemoTab
 {
 	private readonly List<float> sinData = [];

@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Examples.Styler;
 
@@ -8,14 +6,12 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
-
 using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App;
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
-using ktsu.ThemeProvider;
 using ktsu.Semantics.Color;
+using ktsu.ThemeProvider;
 
 /// <summary>
 /// Comprehensive demonstration of the ImGuiStyler library capabilities.
@@ -52,9 +48,9 @@ internal sealed class ImGuiStylerDemo
 		ImGuiApp.Start(new()
 		{
 			Title = "ImGuiStyler Demo - Comprehensive Theme & Color Showcase",
-			OnAppMenu = ImGuiStylerDemo.OnAppMenu,
+			OnAppMenu = OnAppMenu,
 			OnMoveOrResize = demo.OnMoveOrResize,
-			OnRender = ImGuiStylerDemo.OnRender,
+			OnRender = OnRender,
 			OnStart = demo.OnStart,
 			FrameWrapperFactory = () => currentSelectedTheme is null ? null : new ScopedTheme(currentSelectedTheme.CreateInstance()),
 			SaveIniSettings = false,

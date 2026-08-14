@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Color;
 
@@ -14,7 +12,7 @@ using ktsu.Semantics.Color;
 /// Direct bridges from a gamma-encoded <see cref="Srgb"/> value to ImGui's color types. ImGui works in
 /// sRGB, so these pack the channels straight through with no linear round-trip — prefer them for colors
 /// authored as sRGB (fixed UI colors, overlays, HSL-derived hues) rather than routing through the linear
-/// <see cref="ktsu.Semantics.Color.Color"/>. Alpha is supplied separately since <see cref="Srgb"/> carries only RGB.
+/// <see cref="Color"/>. Alpha is supplied separately since <see cref="Srgb"/> carries only RGB.
 /// </summary>
 public static class SrgbImGuiExtensions
 {

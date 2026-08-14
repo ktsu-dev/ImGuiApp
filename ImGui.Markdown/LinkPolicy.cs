@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Markdown;
 
@@ -66,7 +64,7 @@ internal static class LinkPolicy
 		{
 			using Process? process = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 		}
-		catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.FileNotFoundException or System.NotSupportedException)
+		catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or FileNotFoundException or NotSupportedException)
 		{
 			// Opening a URL is best-effort; swallow launcher failures, platform unsupported cases, so the render loop is unaffected.
 		}

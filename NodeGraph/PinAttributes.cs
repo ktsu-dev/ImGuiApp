@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.NodeGraph;
 
@@ -382,5 +380,4 @@ public sealed class OutputPinAttribute : PinAttribute
 	public OutputPinAttribute(string displayName) : base(displayName)
 	{
 	}
-
 }

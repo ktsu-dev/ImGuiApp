@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Widgets.Tests;
 
@@ -14,14 +12,14 @@ public sealed class EasingTests
 	[TestMethod]
 	public void All_Curves_HitZeroAndOneAtEndpoints()
 	{
-		System.Func<float, float>[] curves =
+		Func<float, float>[] curves =
 		[
 			Easing.Linear,
 			Easing.InQuad, Easing.OutQuad, Easing.InOutQuad,
 			Easing.InCubic, Easing.OutCubic, Easing.InOutCubic,
 		];
 
-		foreach (System.Func<float, float> curve in curves)
+		foreach (Func<float, float> curve in curves)
 		{
 			Assert.AreEqual(0.0f, curve(0.0f), 1e-5f, "Curve must return 0 at t=0");
 			Assert.AreEqual(1.0f, curve(1.0f), 1e-5f, "Curve must return 1 at t=1");

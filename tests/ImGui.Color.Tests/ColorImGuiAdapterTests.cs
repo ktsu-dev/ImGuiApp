@@ -1,6 +1,4 @@
-// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Color.Tests;
 
@@ -101,7 +99,7 @@ public class ColorImGuiAdapterTests
 	{
 		Color color = Color.FromSrgb(0.3, 0.7, 0.4, 0.9);
 		uint ours = color.ToImGuiU32();
-		uint imgui = Hexa.NET.ImGui.ImGui.ColorConvertFloat4ToU32(color.ToImGuiVector4());
+		uint imgui = ImGui.ColorConvertFloat4ToU32(color.ToImGuiVector4());
 		Assert.AreEqual(imgui, ours);
 	}
 }

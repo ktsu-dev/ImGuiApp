@@ -1,6 +1,4 @@
-﻿// Copyright (c) ktsu.dev
-// All rights reserved.
-// Licensed under the MIT license.
+// Copyright (c) 2023-2026 ktsu.dev contributors
 
 namespace ktsu.ImGui.Markdown;
 
@@ -49,7 +47,7 @@ internal static class BlockRenderer
 				RenderQuote(quote, config);
 				break;
 
-			case Markdig.Syntax.CodeBlock code:
+			case CodeBlock code:
 				RenderCodeBlock(code, config);
 				break;
 
@@ -163,7 +161,7 @@ internal static class BlockRenderer
 		drawList.AddLine(new Vector2(barX, start.Y), new Vector2(barX, end.Y), MarkdownColors.BlockquoteBar(), 2.0f);
 	}
 
-	private static void RenderCodeBlock(Markdig.Syntax.CodeBlock code, MarkdownConfig config)
+	private static void RenderCodeBlock(CodeBlock code, MarkdownConfig config)
 	{
 		string text = ExtractCodeText(code);
 		float size = ImGui.GetFontSize();
@@ -223,7 +221,7 @@ internal static class BlockRenderer
 			{
 				if (rowBlock is Markdig.Extensions.Tables.TableRow row)
 				{
-					columnCount = System.Math.Max(columnCount, row.Count);
+					columnCount = Math.Max(columnCount, row.Count);
 				}
 			}
 		}
