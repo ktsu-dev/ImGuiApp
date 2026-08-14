@@ -29,14 +29,32 @@ Every task's requirements implicitly include this section.
 
 ```bash
 # Build just the library (fastest feedback)
-dotnet build ImGui.Widgets/ImGui.Widgets.csproj
+dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false
 
 # Build everything
-dotnet build ImGui.sln
+dotnet build ImGui.sln -p:KtsuSyncStyleConfigFiles=false
 
 # Run the widget tests (builds first; whole suite runs in well under a second)
-dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj
+dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false
 ```
+
+**Always pass `-p:KtsuSyncStyleConfigFiles=false`.** ktsu.Sdk's `_KtsuSyncStyleConfigFiles`
+target runs `BeforeTargets="PrepareForBuild"` in *every* project: it copies `.editorconfig`
+out of the SDK package and then rewrites its `file_header_template` from that project's
+`$(Copyright)`. Because projects and target frameworks build in parallel, one project
+rewrites `.editorconfig` while another project's analyzers are reading it. The result is
+non-deterministic `IDE0073` header failures — observed at 184 errors, then 0, then 45 across
+three consecutive runs of unchanged code, with failing and passing files having
+byte-identical headers. The flag disables that sync for the build only and changes nothing
+on disk. Without it you cannot tell a real failure from a race.
+
+If you see `KtsuRewriteEditorConfigHeader ... '.editorconfig' ... being used by another
+process`, that is the same race in its other failure mode. Run `dotnet build-server
+shutdown` and retry with the flag.
+
+**Never "fix" an `IDE0073` failure by editing `.editorconfig` or by rewriting file headers.**
+The committed headers are correct and match the committed template. Rebuild with the flag
+first; the errors will disappear.
 
 **Use `dotnet run --project` for tests, not `dotnet test`.** This repo's test projects are
 MSTest.Sdk on Microsoft Testing Platform, and in this environment the `dotnet test` bridge
@@ -120,12 +138,12 @@ In `ImGui.Widgets/ImGui.Widgets.csproj`, add to the existing second `<ItemGroup>
 
 - [ ] **Step 3: Restore and build**
 
-Run: `dotnet restore && dotnet build ImGui.sln`
+Run: `dotnet restore && dotnet build ImGui.sln -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS. If NU1605 or a downgrade warning appears for `Hexa.NET.ImGui`, that means CPM did not win — stop and report rather than pinning a lower version, because the spec depends on 2.2.9 being the resolved version.
 
 - [ ] **Step 4: Confirm the existing tests still pass**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: PASS, same count as before the change.
 
 - [ ] **Step 5: Commit**
@@ -232,7 +250,7 @@ Add this immediately after the closing brace of `GetEmojiRanges`:
 
 - [ ] **Step 4: Build**
 
-Run: `dotnet build ImGui.App/ImGui.App.csproj`
+Run: `dotnet build ImGui.App/ImGui.App.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 - [ ] **Step 5: Commit**
@@ -325,7 +343,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 3: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS. If `Srgb` does not resolve, check whether the correct using is `ktsu.Semantics` or `ktsu.Semantics.Color` by looking at how `ImGui.Color/SrgbImGuiExtensions.cs` declares its namespace, and use that in both files.
 
 - [ ] **Step 4: Commit**
@@ -455,7 +473,7 @@ public sealed class HexaWidgetTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: FAIL to compile with "does not contain a definition for 'ResolveSplitterMetrics'" and "'VerticalSplitter'".
 
 - [ ] **Step 3: Write `Splitter.cs`**
@@ -539,7 +557,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: PASS, 7 tests.
 
 If the two `MinGreaterThanMax` tests fail with an access violation rather than an `ArgumentOutOfRangeException`, the guard clause is running after an ImGui call — move all validation above the `ImGui.GetStyle()` line.
@@ -704,7 +722,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 2: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 If `new ImRect(min, max)` does not compile, check `ImRect`'s available constructors in the Hexa.NET.ImGui bindings and use the field-initialiser form (`ImRect bounds = new() { Min = min, Max = max };`) instead.
@@ -774,7 +792,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 2: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 If `ToImGuiVector4()` returns an `ImGuiVector4` rather than a `System.Numerics.Vector4` and Hexa rejects it, check the alias at the top of `ImGui.Color/ColorImGuiExtensions.cs` — `ImGuiVector4` is an alias for `System.Numerics.Vector4` in this repo and should convert implicitly.
@@ -877,7 +895,7 @@ Add `using System.Linq;` to the file's using block if it is not already present.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: FAIL to compile with "does not contain a definition for 'EnumComboNames'".
 
 - [ ] **Step 3: Write `EnumCombo.cs`**
@@ -929,7 +947,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: PASS, 11 tests.
 
 If `EnumComboNames_FlagsEnum` fails because `Enum.GetValues<T>()` orders by value rather than declaration, adjust the expected array to match the actual ordering and note it in the test comment — the ordering guarantee belongs to the runtime, not to us.
@@ -1043,7 +1061,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 3: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 - [ ] **Step 4: Commit**
@@ -1132,7 +1150,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 2: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 - [ ] **Step 3: Commit**
@@ -1195,7 +1213,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 2: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 - [ ] **Step 3: Commit**
@@ -1300,7 +1318,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 2: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 - [ ] **Step 3: Commit**
@@ -1379,7 +1397,7 @@ public static partial class ImGuiWidgets
 
 - [ ] **Step 2: Build**
 
-Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
+Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
 If `.As<AbsoluteDirectoryPath>()` does not resolve, check which namespace supplies the `As` extension by looking at `ImGui.Popups/FilesystemBrowser.cs:100`, which uses the same idiom, and match its using directives.
@@ -1523,7 +1541,7 @@ Add these members to `HexaWidgetTests`, inside the existing class body:
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: FAIL to compile with "does not contain a definition for 'FlattenCaptions'".
 
 - [ ] **Step 3: Write `FlameGraph.cs`**
@@ -1686,14 +1704,14 @@ Note that `captionBytes` is empty when `samples` is empty; `GCHandle.Alloc` on a
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: PASS, 21 tests.
 
 If the local function `Getter` will not convert to Hexa's `ValuesGetter` delegate, declare it explicitly instead: `HexaFlameGraph.ValuesGetter getter = Getter;` and pass `getter`.
 
 - [ ] **Step 5: Run the whole test suite**
 
-Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: PASS, all tests including the pre-existing ones.
 
 - [ ] **Step 6: Commit**
@@ -1921,10 +1939,10 @@ In `examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.cs`, inside `OnStart`, change the
 
 - [ ] **Step 3: Build and run**
 
-Run: `dotnet build ImGui.sln`
+Run: `dotnet build ImGui.sln -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
-Run: `dotnet run --project examples/ImGuiWidgetsDemo`
+Run: `dotnet run --project examples/ImGuiWidgetsDemo -p:KtsuSyncStyleConfigFiles=false`
 Expected: the window opens with a third pane titled "Hexa Widgets" containing both tabs. Toggle the ktsu switch and confirm the Hexa toggle follows, and vice versa. The date picker's calendar button and the file tree's home icon will show placeholder boxes until Task 15 is done — that is expected here.
 
 If any API in this file does not compile — particularly `ImGuiWidgets.Tree()`, `ImGuiWidgets.RadialProgressBar`, `ImGuiWidgets.TextCentered`, `Color.FromRgb` or `Srgb.FromRgb` — read the actual signature in the corresponding source file and adjust the call. The comparison rows matter; the exact construction syntax does not.
@@ -1993,7 +2011,7 @@ If the demo project does not already set `<AllowUnsafeBlocks>`, add it to `examp
 
 - [ ] **Step 3: Build and run**
 
-Run: `dotnet build ImGui.sln && dotnet run --project examples/ImGuiAppDemo`
+Run: `dotnet build ImGui.sln && dotnet run --project examples/ImGuiAppDemo -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS, and the demo runs whether or not the TTF is present.
 
 To verify the icons actually resolve, drop a `MaterialIcons-Regular.ttf` (Apache 2.0, from the google/material-design-icons repository) next to the demo binary and re-run `examples/ImGuiWidgetsDemo` — the date picker's calendar button and the file tree's home icon should render as glyphs rather than placeholder boxes. Do not commit the TTF.
@@ -2039,7 +2057,7 @@ Add the new widgets to `ImGui.Widgets/README.md`'s widget list with a one-line d
 
 - [ ] **Step 3: Verify the whole solution still builds and tests pass**
 
-Run: `dotnet build ImGui.sln && dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj`
+Run: `dotnet build ImGui.sln && dotnet run --project tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS, all tests pass.
 
 - [ ] **Step 4: Commit**
