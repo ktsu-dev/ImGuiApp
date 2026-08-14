@@ -11,9 +11,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="Hexa.NET.ImGui.Widgets" />
+    <PackageReference Include="Hexa.NET.ImGui.Widgets.Extras" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Color" />
+    <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.TextFilter" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
