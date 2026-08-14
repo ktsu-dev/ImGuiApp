@@ -122,6 +122,24 @@ ImGuiApp.Start(new ImGuiAppConfig
 });
 ```
 
+### Font Configuration
+
+The `ImGuiAppConfig.OnConfigureFonts` callback fires during font atlas initialization, after fonts configured via the `Fonts` property have been added but immediately before the atlas is built. This is the correct — and only — place to register custom fonts with custom glyph ranges, using `FontHelper.AddCustomFont(io, fontData, size, glyphRange, mergeWithPrevious: true)`. For example, Material Icons requires this:
+
+```csharp
+OnConfigureFonts = () =>
+{
+    var io = ImGui.GetIO();
+    var fontData = File.ReadAllBytes("MaterialIcons-Regular.ttf");
+    unsafe
+    {
+        FontHelper.AddCustomFont(io, fontData, 16f, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true);
+    }
+}
+```
+
+Do not register custom fonts from `OnStart` — that runs after the atlas has already built, so glyphs silently fail to rasterize. Routing via `ImGuiAppConfig.Fonts` also does not work for fonts with custom glyph ranges, since that path applies the Nerd Font ranges instead. The callback fires on every atlas rebuild (including DPI and `GlobalScale` changes), so handlers must be safe to run repeatedly and re-register fonts each time.
+
 ### Scoped Styling (RAII Pattern)
 
 ```csharp
