@@ -131,8 +131,9 @@ internal static class ImGuiWidgetsDemo
 	private static void OnStart()
 	{
 		// Create main layout with dedicated demo sections
-		DividerContainer.Add(new("Widget Demos", 0.6f, ShowWidgetDemos));
-		DividerContainer.Add(new("Advanced Demos", 0.4f, ShowAdvancedDemos));
+		DividerContainer.Add(new("Widget Demos", 0.4f, ShowWidgetDemos));
+		DividerContainer.Add(new("Advanced Demos", 0.3f, ShowAdvancedDemos));
+		DividerContainer.Add(new("Hexa Widgets", 0.3f, HexaWidgetsDemo.Show));
 
 		// Initialize TabPanel demo
 		TabIds["tab1"] = DemoTabPanel.AddTab("tab1", "Tab 1", ShowTab1Content);

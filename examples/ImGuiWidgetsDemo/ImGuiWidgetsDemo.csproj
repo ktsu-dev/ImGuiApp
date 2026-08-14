@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
     <ProjectReference Include="..\..\ImGui.Widgets\ImGui.Widgets.csproj" />
     <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Semantics.Color" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.TextFilter" />
