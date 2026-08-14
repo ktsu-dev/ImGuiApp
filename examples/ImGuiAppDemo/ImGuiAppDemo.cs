@@ -78,6 +78,28 @@ internal static class ImGuiAppDemo
 		AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
 		_ = ImGuiApp.GetOrLoadTexture(iconPath);
 		DemoImages.LoadEager();
+
+		// Material Icons lives in the Unicode Private Use Area (U+E000-U+F8FF), which overlaps the
+		// Nerd Font ranges ImGuiApp loads by default -- Material's Computer glyph at U+E31E falls
+		// inside the Nerd Font Weather Icons range. A merged font cannot own a codepoint twice, so
+		// whichever font is merged last wins the contested span.
+		//
+		// Note this deliberately does NOT go through ImGuiAppConfig.Fonts: that path applies the
+		// Nerd Font glyph ranges, which do not cover Material's codepoints, so the icons would
+		// still be missing. Hexa-backed widgets such as ImGuiWidgets.DatePicker and
+		// ImGuiWidgets.FileTreeView need this font; without it they render placeholder boxes.
+		AbsoluteFilePath materialIconsPath =
+			AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "MaterialIcons-Regular.ttf".As<FileName>();
+
+		if (File.Exists(materialIconsPath.ToString()))
+		{
+			ImGuiIOPtr io = ImGui.GetIO();
+			byte[] fontData = File.ReadAllBytes(materialIconsPath.ToString());
+			unsafe
+			{
+				_ = FontHelper.AddCustomFont(io, fontData, 16f, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true);
+			}
+		}
 	}
 
 	private static void OnRender(float dt)
