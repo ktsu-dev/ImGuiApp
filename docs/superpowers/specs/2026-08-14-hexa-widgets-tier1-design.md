@@ -89,9 +89,21 @@ combined into the Nerd Font builder. Apps that want both must accept that Materi
 contested `0xE300–0xE3EB` span for whichever font is merged last. `ImGuiAppDemo`
 demonstrates the layering and documents the conflict inline.
 
+A public `uint* GetMaterialIconRanges()` accompanies it, mirroring the existing public
+`GetEmojiRanges()` including its build-once caching. This is necessary rather than
+decorative: `ImGuiAppConfig.Fonts` routes every font it loads through
+`GetExtendedUnicodeRanges`, so a Material TTF registered that way would receive the *Nerd
+Font* mapping and still leave `\xe9b2` unmapped. The supported path is therefore
+
+```csharp
+FontHelper.AddCustomFont(io, ttfBytes, 16f, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true);
+```
+
+using the already-public `AddCustomFont`.
+
 No font file is embedded: no package weight, no third-party binary in the repo, no
-licensing question. Apps supply their own Material Icons TTF through the existing custom
-font path.
+licensing question. Apps supply their own Material Icons TTF (Apache 2.0, from
+google/material-design-icons).
 
 ## Public API
 
