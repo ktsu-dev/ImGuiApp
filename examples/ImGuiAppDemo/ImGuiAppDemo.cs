@@ -44,6 +44,7 @@ internal static class ImGuiAppDemo
 		Title = "ImGuiApp Demo",
 		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
 		OnStart = OnStart,
+		OnConfigureFonts = OnConfigureFonts,
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
 		SaveIniSettings = false,
@@ -78,7 +79,15 @@ internal static class ImGuiAppDemo
 		AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
 		_ = ImGuiApp.GetOrLoadTexture(iconPath);
 		DemoImages.LoadEager();
+	}
 
+	// OnConfigureFonts runs after ImGuiAppConfig.Fonts has been added to the atlas but before the
+	// atlas is built, which is the only point at which a font merged with custom glyph ranges is
+	// actually rasterized. Registering it from OnStart instead is too late: OnStart runs after the
+	// atlas has already finished building for this frame, so a font merged there is silently never
+	// rasterized (no compile error, no exception — just missing glyphs).
+	private static void OnConfigureFonts()
+	{
 		// Material Icons lives in the Unicode Private Use Area (U+E000-U+F8FF), which overlaps the
 		// Nerd Font ranges ImGuiApp loads by default -- Material's Computer glyph at U+E31E falls
 		// inside the Nerd Font Weather Icons range. A merged font cannot own a codepoint twice, so

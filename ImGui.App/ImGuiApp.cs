@@ -1677,6 +1677,13 @@ public static partial class ImGuiApp
 			FontIndices["Default"] = defaultFontIndex;
 		}
 
+		// Let the consumer register additional fonts with custom glyph ranges (for example Material
+		// Icons via FontHelper.AddCustomFont) before the atlas is built. This must run on every path
+		// that reaches here -- i.e. every actual rebuild -- but never on the early-return skip path
+		// above, since a font merged after the atlas already reports itself built would never be
+		// rasterized (RecreateFontDeviceTexture skips rebuilding once io.Fonts.TexIsBuilt is true).
+		Config.OnConfigureFonts?.Invoke();
+
 		// Build the font atlas to generate the texture
 		ImGuiP.ImFontAtlasBuildMain(fontAtlasPtr);
 
