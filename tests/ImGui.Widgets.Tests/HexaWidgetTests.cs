@@ -149,4 +149,114 @@ public sealed class HexaWidgetTests
 			ImGuiWidgets.EnumCombo(null!, ref local);
 		});
 	}
+
+	[TestMethod]
+	public void FlattenCaptions_EmptyList_ReturnsEmpty()
+	{
+		(byte[] bytes, int[] offsets) = ImGuiWidgets.FlattenCaptions([]);
+
+		Assert.AreEqual(0, bytes.Length);
+		Assert.AreEqual(0, offsets.Length);
+	}
+
+	[TestMethod]
+	public void FlattenCaptions_SingleAsciiCaption_WritesNullTerminatedBytes()
+	{
+		(byte[] bytes, int[] offsets) = ImGuiWidgets.FlattenCaptions(
+			[new FlameGraphSample(0f, 1f, 0, "ab")]);
+
+		// CA1861: hoist the expected literal array out of the call so it isn't flagged as a
+		// constant-array argument.
+		byte[] expectedBytes = [0x61, 0x62, 0x00];
+		int[] expectedOffsets = [0];
+		CollectionAssert.AreEqual(expectedBytes, bytes);
+		CollectionAssert.AreEqual(expectedOffsets, offsets);
+	}
+
+	[TestMethod]
+	public void FlattenCaptions_MultipleCaptions_OffsetsPointPastEachTerminator()
+	{
+		(byte[] bytes, int[] offsets) = ImGuiWidgets.FlattenCaptions(
+		[
+			new FlameGraphSample(0f, 1f, 0, "ab"),
+			new FlameGraphSample(1f, 2f, 1, "c"),
+		]);
+
+		// "ab\0c\0"
+		// CA1861: hoist the expected literal array out of the call so it isn't flagged as a
+		// constant-array argument.
+		byte[] expectedBytes = [0x61, 0x62, 0x00, 0x63, 0x00];
+		int[] expectedOffsets = [0, 3];
+		CollectionAssert.AreEqual(expectedBytes, bytes);
+		CollectionAssert.AreEqual(expectedOffsets, offsets);
+	}
+
+	[TestMethod]
+	public void FlattenCaptions_MultiByteUtf8Caption_UsesByteLengthNotCharLength()
+	{
+		// U+00E9 encodes as two bytes (0xC3 0xA9), so the next offset must be 3, not 2.
+		(byte[] bytes, int[] offsets) = ImGuiWidgets.FlattenCaptions(
+		[
+			new FlameGraphSample(0f, 1f, 0, "é"),
+			new FlameGraphSample(1f, 2f, 1, "x"),
+		]);
+
+		// CA1861: hoist the expected literal array out of the call so it isn't flagged as a
+		// constant-array argument.
+		byte[] expectedBytes = [0xC3, 0xA9, 0x00, 0x78, 0x00];
+		int[] expectedOffsets = [0, 3];
+		CollectionAssert.AreEqual(expectedBytes, bytes);
+		CollectionAssert.AreEqual(expectedOffsets, offsets);
+	}
+
+	[TestMethod]
+	public void FlattenCaptions_EmptyStringCaption_WritesOnlyTerminator()
+	{
+		(byte[] bytes, int[] offsets) = ImGuiWidgets.FlattenCaptions(
+		[
+			new FlameGraphSample(0f, 1f, 0, ""),
+			new FlameGraphSample(1f, 2f, 1, "y"),
+		]);
+
+		// CA1861: hoist the expected literal array out of the call so it isn't flagged as a
+		// constant-array argument.
+		byte[] expectedBytes = [0x00, 0x79, 0x00];
+		int[] expectedOffsets = [0, 1];
+		CollectionAssert.AreEqual(expectedBytes, bytes);
+		CollectionAssert.AreEqual(expectedOffsets, offsets);
+	}
+
+	[TestMethod]
+	public void ResolveFlameGraphSelection_InRange_PassesThrough()
+	{
+		Assert.AreEqual(2, ImGuiWidgets.ResolveFlameGraphSelection(2, 5));
+	}
+
+	[TestMethod]
+	public void ResolveFlameGraphSelection_Negative_ClampsToMinusOne()
+	{
+		Assert.AreEqual(-1, ImGuiWidgets.ResolveFlameGraphSelection(-7, 5));
+	}
+
+	[TestMethod]
+	public void ResolveFlameGraphSelection_PastEnd_ClampsToMinusOne()
+	{
+		Assert.AreEqual(-1, ImGuiWidgets.ResolveFlameGraphSelection(5, 5));
+	}
+
+	[TestMethod]
+	public void ResolveFlameGraphSelection_EmptySampleList_ClampsToMinusOne()
+	{
+		Assert.AreEqual(-1, ImGuiWidgets.ResolveFlameGraphSelection(0, 0));
+	}
+
+	[TestMethod]
+	public void FlameGraph_NullSamples_ThrowsBeforeTouchingImGui()
+	{
+		Assert.ThrowsExactly<ArgumentNullException>(() =>
+		{
+			int selected = -1;
+			ImGuiWidgets.FlameGraph("label", null!, ref selected);
+		});
+	}
 }
