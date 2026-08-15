@@ -58,6 +58,23 @@ public static class FontHelper
 	/// </summary>
 	public static void CleanupCustomFonts()
 	{
+		CleanupPinnedFontHandles();
+
+		// Reset glyph ranges
+		CleanupGlyphRanges();
+	}
+
+	/// <summary>
+	/// Frees the pinned font data handles without touching the cached glyph ranges.
+	/// </summary>
+	/// <remarks>
+	/// Callers rebuilding the font atlas want this rather than <see cref="CleanupCustomFonts"/>.
+	/// The cached ranges are standalone native buffers that ImGui never frees and that
+	/// <c>ImFontAtlas::Clear</c> does not touch, so they stay valid across rebuilds; resetting the
+	/// cache would rebuild them each time and leak the previous builder and range vector.
+	/// </remarks>
+	internal static void CleanupPinnedFontHandles()
+	{
 		foreach (GCHandle handle in customFontHandles)
 		{
 			try
@@ -72,10 +89,8 @@ public static class FontHelper
 				// Handle was already freed, ignore
 			}
 		}
-		customFontHandles.Clear();
 
-		// Reset glyph ranges
-		CleanupGlyphRanges();
+		customFontHandles.Clear();
 	}
 
 	/// <summary>

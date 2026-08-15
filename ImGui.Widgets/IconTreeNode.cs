@@ -22,7 +22,9 @@ public static partial class ImGuiWidgets
 	/// <remarks>
 	/// When this returns <see langword="true"/> the caller MUST call <c>ImGui.TreePop()</c> after
 	/// drawing the children: an open node pushes onto the ID stack and does not pop itself. Omitting
-	/// the pop corrupts the ID stack for the rest of the frame and produces no compile error.
+	/// the pop corrupts the ID stack for the rest of the frame and produces no compile error. The
+	/// exception is <see cref="ImGuiTreeNodeFlags.NoTreePushOnOpen"/>, which suppresses the push —
+	/// pair that flag with no pop, or the stack is over-popped instead.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException"><paramref name="label"/> or <paramref name="icon"/> is <see langword="null"/>.</exception>
 	public static bool IconTreeNode(string label, string icon, Color iconColor, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
