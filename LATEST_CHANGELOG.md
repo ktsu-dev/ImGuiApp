@@ -1,6 +1,6 @@
-## v3.4.1 (patch)
+## v3.4.2 (patch)
 
-Changes since v3.4.0:
+Changes since v3.4.1:
 
-- Suppress S6640 on the demo OnConfigureFonts handlers ([@matt-edmondson](https://github.com/matt-edmondson))
+- Migrate the three icon.png files into LFS ([@matt-edmondson](https://github.com/matt-edmondson))
 
