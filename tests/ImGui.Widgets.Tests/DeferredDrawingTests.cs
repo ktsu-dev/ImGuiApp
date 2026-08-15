@@ -65,4 +65,29 @@ public sealed class DeferredDrawingTests
 
 		Assert.IsTrue(tracker.HasEverPumped);
 	}
+
+	[TestMethod]
+	public void EvaluateFallbackTick_PumpNeverRun_Ticks()
+	{
+		ImGuiWidgets.PumpTracker tracker = default;
+
+		Assert.IsTrue(ImGuiWidgets.EvaluateFallbackTick(0, pumpHasEverRun: false, ref tracker));
+	}
+
+	[TestMethod]
+	public void EvaluateFallbackTick_PumpHasRun_DoesNotTick()
+	{
+		ImGuiWidgets.PumpTracker tracker = default;
+
+		Assert.IsFalse(ImGuiWidgets.EvaluateFallbackTick(0, pumpHasEverRun: true, ref tracker));
+	}
+
+	[TestMethod]
+	public void EvaluateFallbackTick_SecondCallInSameFrame_TicksOnce()
+	{
+		ImGuiWidgets.PumpTracker tracker = default;
+		_ = ImGuiWidgets.EvaluateFallbackTick(5, pumpHasEverRun: false, ref tracker);
+
+		Assert.IsFalse(ImGuiWidgets.EvaluateFallbackTick(5, pumpHasEverRun: false, ref tracker));
+	}
 }

@@ -150,4 +150,67 @@ public static partial class ImGuiWidgets
 				"everything DrawDeferred() does. Every dialog is being drawn twice this frame.");
 		}
 	}
+
+	/// <summary>
+	/// Tracks the fallback animation tick separately from <see cref="pumpTracker"/>, so the two
+	/// never interfere with each other.
+	/// </summary>
+	private static PumpTracker fallbackAnimationTracker;
+
+	/// <summary>
+	/// Advances Hexa's animation clock if no per-frame pump has ever run, so animated Hexa-backed
+	/// widgets (for example <see cref="ToggleSwitch"/>) stay correct even when the application
+	/// never calls <see cref="DrawDeferred"/> or <see cref="DrawDeferredDocked"/>.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Once a pump has run, this does nothing: the pump owns the clock from then on, and <see
+	/// cref="DrawDeferredDocked"/> ticks it from inside Hexa's <c>WidgetManager.Draw()</c>, where
+	/// this method's once-per-frame guard cannot suppress it. Ticking here too in that case would
+	/// advance animations at double speed - the exact failure mode the deleted
+	/// <c>HexaAnimationPump</c> stopgap's own doc comment warned about.
+	/// </para>
+	/// <para>
+	/// Before the first pump call, this ticks the clock at most once per frame using its own
+	/// tracker, so any number of animated widgets calling it in the same frame still advance the
+	/// clock exactly once.
+	/// </para>
+	/// </remarks>
+	internal static void TickAnimationClockIfUnpumped()
+	{
+		if (EvaluateFallbackTick(ImGui.GetFrameCount(), pumpTracker.HasEverPumped, ref fallbackAnimationTracker))
+		{
+			HexaAnimationManager.Tick();
+		}
+	}
+
+	/// <summary>
+	/// Decides whether the animation-clock fallback should tick this frame.
+	/// </summary>
+	/// <param name="currentFrame">The current ImGui frame number.</param>
+	/// <param name="pumpHasEverRun">
+	/// Whether <see cref="DrawDeferred"/> or <see cref="DrawDeferredDocked"/> has ever run. When
+	/// <see langword="true"/>, the fallback never ticks - the pump owns the clock.
+	/// </param>
+	/// <param name="tracker">
+	/// The fallback's own tracker, separate from the pump's <see cref="PumpTracker"/>, so the two
+	/// never interfere.
+	/// </param>
+	/// <returns><see langword="true"/> if the caller should advance the clock.</returns>
+	internal static bool EvaluateFallbackTick(int currentFrame, bool pumpHasEverRun, ref PumpTracker tracker)
+	{
+		if (pumpHasEverRun)
+		{
+			return false;
+		}
+
+		if (tracker.HasEverPumped && tracker.LastFrame == currentFrame)
+		{
+			return false;
+		}
+
+		tracker.LastFrame = currentFrame;
+		tracker.HasEverPumped = true;
+		return true;
+	}
 }

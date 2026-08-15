@@ -98,7 +98,16 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal static class HexaButtonImpl
 	{
-		internal static bool ToggleSwitch(string label, ref bool selected) => HexaButton.ToggleSwitch(label, ref selected);
+		internal static bool ToggleSwitch(string label, ref bool selected)
+		{
+			// ToggleSwitch is animated, and Hexa's animation clock only advances when
+			// something ticks it. If the application never calls DrawDeferred() or
+			// DrawDeferredDocked(), this fallback keeps the clock moving so the switch
+			// doesn't render inverted after its first click; see
+			// DeferredDrawing.TickAnimationClockIfUnpumped.
+			TickAnimationClockIfUnpumped();
+			return HexaButton.ToggleSwitch(label, ref selected);
+		}
 
 		internal static bool ToggleButton(string label, ref bool selected, Vector2 size) => HexaButton.ToggleButton(label, ref selected, size, ImGuiButtonFlags.None);
 
