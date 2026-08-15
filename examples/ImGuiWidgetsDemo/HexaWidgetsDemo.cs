@@ -9,6 +9,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.App;
 using ktsu.ImGui.Widgets;
 using ktsu.Semantics.Color;
 using ktsu.Semantics.Paths;
@@ -27,6 +28,8 @@ internal static class HexaWidgetsDemo
 	private static EnumValues sharedEnum = EnumValues.Value1;
 	private static float sharedSplitWidth = 200f;
 	private static float sharedProgress = 0.45f;
+	private static float sharedImageSize = 48f;
+	private static int ktsuImageClicks;
 
 	// Net-new widget state.
 	private static string breadcrumbPath = @"C:\dev\ktsu-dev\ImGuiApp\ImGui.Widgets";
@@ -119,6 +122,21 @@ internal static class HexaWidgetsDemo
 		ImGui.TableNextColumn();
 		ImGuiWidgets.TextCenteredH("Hexa centered");
 
+		BeginRow("Image centering");
+		ImGuiAppTextureInfo sharedImage = ImGuiApp.GetOrLoadTexture(
+			AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>());
+		Vector2 imageSize = new(sharedImageSize, sharedImageSize);
+
+		// ktsu's ImageCentered reports clicks; Hexa's ImageCenteredH does not.
+		if (ImGuiWidgets.ImageCentered(sharedImage.TextureId, imageSize))
+		{
+			ktsuImageClicks++;
+		}
+
+		ImGui.TextUnformatted($"clicks: {ktsuImageClicks}");
+		ImGui.TableNextColumn();
+		ImGuiWidgets.ImageCenteredH(sharedImage.TextureId, imageSize);
+
 		BeginRow("Splitter");
 		ImGui.TextUnformatted($"DividerContainer: see the Advanced pane ({sharedSplitWidth:F0}px)");
 		ImGui.TableNextColumn();
@@ -130,6 +148,7 @@ internal static class HexaWidgetsDemo
 
 		ImGui.Separator();
 		ImGui.SliderFloat("Shared progress", ref sharedProgress, 0f, 1f);
+		ImGui.SliderFloat("Shared image size", ref sharedImageSize, 16f, 96f);
 	}
 
 	private static void BeginRow(string name)
