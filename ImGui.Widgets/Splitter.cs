@@ -32,7 +32,10 @@ public static partial class ImGuiWidgets
 	/// <param name="height">Height of the splitter bar, or zero to fill the available region.</param>
 	/// <param name="thickness">Thickness of the bar in pixels, or zero to derive from the style.</param>
 	/// <param name="tolerance">Grab tolerance in pixels, or zero to derive from the style.</param>
-	/// <returns><see langword="true"/> if the width changed this frame.</returns>
+	/// <returns><see langword="true"/> while the splitter is being dragged. This reports the grab
+	/// state, not a change flag: it is <see langword="true"/> on mouse-down before any movement and
+	/// stays <see langword="true"/> through zero-delta frames of a drag. Compare
+	/// <paramref name="width"/> against its previous value to detect an actual change.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="id"/> is <see langword="null"/>.</exception>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="minWidth"/> exceeds <paramref name="maxWidth"/>.</exception>
 	public static bool VerticalSplitter(string id, ref float width, float minWidth = float.MinValue, float maxWidth = float.MaxValue, float height = 0f, float thickness = 0f, float tolerance = 0f)
@@ -57,7 +60,10 @@ public static partial class ImGuiWidgets
 	/// <param name="width">Width of the splitter bar, or zero to fill the available region.</param>
 	/// <param name="thickness">Thickness of the bar in pixels, or zero to derive from the style.</param>
 	/// <param name="tolerance">Grab tolerance in pixels, or zero to derive from the style.</param>
-	/// <returns><see langword="true"/> if the height changed this frame.</returns>
+	/// <returns><see langword="true"/> while the splitter is being dragged. This reports the grab
+	/// state, not a change flag: it is <see langword="true"/> on mouse-down before any movement and
+	/// stays <see langword="true"/> through zero-delta frames of a drag. Compare
+	/// <paramref name="height"/> against its previous value to detect an actual change.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="id"/> is <see langword="null"/>.</exception>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="minHeight"/> exceeds <paramref name="maxHeight"/>.</exception>
 	public static bool HorizontalSplitter(string id, ref float height, float minHeight = float.MinValue, float maxHeight = float.MaxValue, float width = 0f, float thickness = 0f, float tolerance = 0f)

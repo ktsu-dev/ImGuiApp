@@ -182,7 +182,7 @@ internal static class HexaWidgetsDemo
 
 		if (ImGui.CollapsingHeader("Date and year pickers"))
 		{
-			ImGui.TextWrapped("The date picker's calendar button needs a Material Icons font in the atlas (see ImGuiAppDemo); without one it shows a placeholder box. The year picker below draws no icon glyphs and needs no icon font.");
+			ImGui.TextWrapped("The date picker's calendar button needs a Material Icons font in the atlas; drop MaterialIcons-Regular.ttf next to this demo's binary and it is picked up automatically. Without one it shows a placeholder box. The year picker below draws no icon glyphs and needs no icon font.");
 			ImGuiWidgets.DatePicker("Date", ref pickedDate);
 			ImGuiWidgets.YearPicker("Year", ref pickedYear);
 			ImGui.TextUnformatted($"Picked: {pickedDate:yyyy-MM-dd}, year {pickedYear:yyyy}");
@@ -197,7 +197,7 @@ internal static class HexaWidgetsDemo
 
 		if (ImGui.CollapsingHeader("File tree view"))
 		{
-			ImGui.TextWrapped("Needs a Material Icons font in the atlas; see ImGuiAppDemo.");
+			ImGui.TextWrapped("Needs a Material Icons font in the atlas; drop MaterialIcons-Regular.ttf next to this demo's binary.");
 			ImGuiWidgets.FileTreeView("##fileTree", new Vector2(0f, 200f), ref treeFolder, treeFolder);
 			ImGui.TextUnformatted(treeFolder.ToString());
 		}

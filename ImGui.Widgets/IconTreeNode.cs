@@ -19,6 +19,11 @@ public static partial class ImGuiWidgets
 	/// <param name="iconColor">Colour applied to the icon glyph only; the label uses the current text colour.</param>
 	/// <param name="flags">Tree node behaviour flags.</param>
 	/// <returns><see langword="true"/> if the node is open and its children should be drawn.</returns>
+	/// <remarks>
+	/// When this returns <see langword="true"/> the caller MUST call <c>ImGui.TreePop()</c> after
+	/// drawing the children: an open node pushes onto the ID stack and does not pop itself. Omitting
+	/// the pop corrupts the ID stack for the rest of the frame and produces no compile error.
+	/// </remarks>
 	/// <exception cref="ArgumentNullException"><paramref name="label"/> or <paramref name="icon"/> is <see langword="null"/>.</exception>
 	public static bool IconTreeNode(string label, string icon, Color iconColor, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
 	{

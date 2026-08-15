@@ -1608,6 +1608,12 @@ public static partial class ImGuiApp
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
 
+		// Release the font blobs pinned by the previous OnConfigureFonts run. The atlas that
+		// referenced them was just discarded, and the hook below re-registers on every rebuild, so
+		// without this each DPI change would leave another permanently pinned copy of the caller's
+		// font data behind.
+		FontHelper.CleanupCustomFonts();
+
 		// Note: Atlas texture size configuration not available in current Hexa.NET.ImGui binding
 		// The glyph limit calculation below uses RecommendedAtlasSize to determine if fallback is needed
 		// Modern ImGui versions automatically expand the atlas texture as needed

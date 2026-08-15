@@ -45,13 +45,11 @@ public static class FontHelper
 	/// <summary>
 	/// Stores the Material Icons glyph ranges to prevent memory deallocation.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated during lazy initialization and cannot be made readonly.")]
 	private static ImVector<uint> materialIconRanges;
 
 	/// <summary>
 	/// Tracks whether the Material Icons ranges have been initialized.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Field is mutated to track initialization state and cannot be made readonly.")]
 	private static bool materialIconRangesInitialized;
 
 	/// <summary>
@@ -204,8 +202,9 @@ public static class FontHelper
 	/// Pass the result to <see cref="AddCustomFont"/> with <c>mergeWithPrevious: true</c>. Do not load a
 	/// Material Icons font through <c>ImGuiAppConfig.Fonts</c> — that path applies
 	/// <see cref="GetExtendedUnicodeRanges"/>, whose Nerd Font mapping does not cover Material's
-	/// codepoints. Material and Nerd Font ranges overlap at U+E300–U+E3EB; whichever font is merged
-	/// last wins that span.
+	/// codepoints. These ranges claim the whole Private Use Area (U+E000–U+F8FF), which subsumes
+	/// every Nerd Font range — Pomicons, Powerline, Font Awesome, Devicons, Octicons and the rest —
+	/// so whichever font is merged last wins all of them, not just one contested span.
 	/// </remarks>
 	/// <returns>Pointer to the Material Icons glyph ranges.</returns>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the ranges are cached in a static field so the pointer stays valid.")]
@@ -339,13 +338,17 @@ public static class FontHelper
 	/// Adds the Material Icons private-use glyph range to the glyph ranges builder.
 	/// </summary>
 	/// <remarks>
-	/// Material Icons maps its glyphs into the Unicode Private Use Area (U+E000–U+F8FF).
-	/// This range overlaps the Nerd Font ranges added by <see cref="AddNerdFontRanges"/> —
-	/// notably Weather Icons at U+E300–U+E3EB, which collides with Material's
-	/// <c>Computer</c> glyph at U+E31E. A single merged font cannot own the same codepoint
-	/// twice, so this method is intended for building a <em>separate</em> merged font and is
-	/// deliberately not called from <see cref="GetExtendedUnicodeRanges"/>. Whichever font is
-	/// merged last wins the contested span.
+	/// Material Icons maps its glyphs into the Unicode Private Use Area, and this method claims
+	/// that area in its entirety (U+E000–U+F8FF). That span subsumes <em>every</em> range added by
+	/// <see cref="AddNerdFontRanges"/> — Pomicons (U+E000–U+E00D), Powerline (U+E0A0–U+E0D4), Font
+	/// Awesome Extension (U+E200–U+E2A9), Weather Icons (U+E300–U+E3EB), Devicons
+	/// (U+E700–U+E7C5), Font Awesome (U+F000–U+F2E0), Font Logos, Octicons, and most of Material
+	/// Design Icons (U+F500–U+F8FF). A single merged font cannot own the same codepoint twice, so
+	/// this method is intended for building a <em>separate</em> merged font and is deliberately not
+	/// called from <see cref="GetExtendedUnicodeRanges"/>. Whichever font is merged last wins the
+	/// whole overlap, so merging Material Icons last replaces the Nerd Font glyphs across all of
+	/// those ranges — not only the Weather Icons span that collides with Material's
+	/// <c>Computer</c> glyph at U+E31E.
 	/// </remarks>
 	/// <param name="builder">The glyph ranges builder to add the Material Icons range to.</param>
 	internal static void AddMaterialIconRanges(ImFontGlyphRangesBuilderPtr builder)

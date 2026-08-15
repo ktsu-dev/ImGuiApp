@@ -200,6 +200,12 @@ public static partial class ImGuiApp
 		// TryBeginImGuiFrame so it tracks the user's GlobalScale; the atlas itself is just rasterised at
 		// pointSize * ScaleFactor here.
 
+		// Same contract as the desktop InitFonts path: the consumer's chance to register fonts with
+		// custom glyph ranges after the configured fonts are added but before the atlas is built.
+		// Without this, an app that follows the documented OnConfigureFonts pattern silently gets no
+		// glyphs on iOS.
+		Config.OnConfigureFonts?.Invoke();
+
 		if (!io.Fonts.TexIsBuilt)
 		{
 			ImGuiP.ImFontAtlasBuildMain(io.Fonts);
