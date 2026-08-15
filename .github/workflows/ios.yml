@@ -80,6 +80,23 @@ jobs:
     # exits after N frames via the IMGUIAPP_IOS_SMOKE_FRAMES hook). Runs independently; does not gate
     # release. Building+launching two apps after a cold cimgui cache approaches the old 30-min cap, so
     # the budget is 50 min (a warm-cache run is ~20).
+    #
+    # DISABLED on automatic triggers: manual dispatch only.
+    #
+    # The 50-minute budget is not reliably enough. Cold-cache runs build native cimgui, the smoke app
+    # and the full demo app in one job, and have overrun the cap repeatedly -- the job is then
+    # *cancelled* mid-build, which surfaces as a red X indistinguishable from a genuine failure and
+    # blocks unrelated PRs. Observed twice in eight runs (PR #300 at 50m28s, and a dependabot run).
+    #
+    # Note this disables real coverage, not just noise: the smoke assertion itself has been passing,
+    # and it is the only thing that exercises the iOS runtime path (including the
+    # ImGuiAppConfig.OnConfigureFonts hook added in #299). The compile-only ios-build job below does
+    # not launch anything.
+    #
+    # To re-enable, delete the `if:` line. Doing that alone will reproduce the timeouts -- the
+    # underlying fix is to split the demo-app build into its own job, or raise the budget past the
+    # cold-cache worst case.
+    if: github.event_name == 'workflow_dispatch'
     name: iOS Simulator Smoke Test
     # The .NET 10 iOS workload requires a matching Xcode to build a runnable .app, and the required
     # version tracks whatever Microsoft ships in the latest `dotnet workload install ios` (e.g.
@@ -89,10 +106,11 @@ jobs:
     # (The compile-only ios-build job needs no Xcode, so it stays on macos-14.)
     runs-on: macos-26
     timeout-minutes: 50
-    # HARD GATE: the .NET 10 + Xcode 26 symlinked-developer-dir bug that broke native linking
+    # The .NET 10 + Xcode 26 symlinked-developer-dir bug that broke native linking
     # (`xcodebuild -find` -> errno=Invalid argument) is worked around by the "Resolve and pin the
-    # real Xcode" step below (readlink -f + xcode-select/DEVELOPER_DIR pin; dotnet/macios#21762), so
-    # this runtime smoke test now reliably passes and gates the PR like any other required check.
+    # real Xcode" step below (readlink -f + xcode-select/DEVELOPER_DIR pin; dotnet/macios#21762).
+    # That workaround still holds -- the smoke assertion passes when the job gets to run. What no
+    # longer holds is the claim that it gates the PR: see the `if:` above.
     permissions:
       contents: read
 
