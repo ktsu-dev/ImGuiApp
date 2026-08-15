@@ -14,7 +14,7 @@
     <PackageReference Include="ktsu.ThemeProvider.ImGui" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
     <ProjectReference Include="..\ImGui.Popups\ImGui.Popups.csproj" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

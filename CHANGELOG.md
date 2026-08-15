@@ -1,3 +1,33 @@
+## v3.3.13 (patch)
+
+Changes since v3.3.12:
+
+- Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
+- Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
+
+## v3.3.12 (patch)
+
+Changes since v3.3.11:
+
+- Mark Polyfill as private in library csproj ([@Simon Cropp](https://github.com/Simon Cropp))
+
+## v3.3.11 (patch)
+
+Changes since v3.3.10:
+
+- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the microsoft group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 6 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.3.10 (patch)
+
+Changes since v3.3.9:
+
+- chore: update ktsu.Sdk to 2.21.1 [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync examples\ImGuiAppDemo.iOS\icon.png ([@KtsuTools](https://github.com/KtsuTools))
+- Sync examples\ImGuiAppDemo\icon.png ([@KtsuTools](https://github.com/KtsuTools))
+- Sync icon.png ([@KtsuTools](https://github.com/KtsuTools))
+
 ## v3.3.9 (patch)
 
 Changes since v3.3.8:
