@@ -27,7 +27,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 ### Libraries
 
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness
-- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId. Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`. Several of these deliberately duplicate an existing ktsu widget (`HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, `ImageCenteredV/H/VH` vs `ImageCentered`) — both survive on purpose until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which to keep. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font.
+- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId. Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Several of these deliberately duplicate an existing ktsu widget (`HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, `ImageCenteredV/H/VH` vs `ImageCentered`) — both survive on purpose until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which to keep. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below.
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
@@ -62,6 +62,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
 - `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshalling
 - `ImGui.Widgets/Splitter.cs` - Hexa-backed horizontal/vertical draggable splitters
+- `ImGui.Widgets/DeferredDrawing.cs` - `DrawDeferred()`/`DrawDeferredDocked()` per-frame pumps, and the `ToggleSwitch` animation-clock fallback used when neither has ever run
+- `ImGui.Widgets/DockedWindow.cs` - Abstract base for windows drawn by `DrawDeferredDocked()`; composes Hexa's `ImWindow` via a private adapter instead of inheriting it
+- `ImGui.Widgets/Dialogs/` - Hexa-backed dialog wrappers: `FileDialogs.cs` (`OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`), `RenameDialog.cs`, `MessageDialogs.cs` (`DialogMessageBox`/`ShowMessageBox`), `DialogOutcome.cs` (shared `DialogOutcome` enum and result mapping)
 - `ImGui.Color/ColorImGuiExtensions.cs` - `Color` ↔ ImColor/ImU32/Vector4 conversions (`ImColor.ToImGuiU32` applies global alpha; `Color.ToImGuiU32` is pure)
 - `ImGui.Color/SrgbImGuiExtensions.cs` - Direct `Srgb` → ImColor/ImGuiVector4/ImU32 conversions (no linear round-trip)
 - `ImGui.Color/ImColorExtensions.cs` - ImColor adjustment, analysis, and contrast operations
@@ -141,6 +144,39 @@ OnConfigureFonts = () =>
 Do not register custom fonts from `OnStart` — that runs after the atlas has already built, so glyphs silently fail to rasterize. Routing via `ImGuiAppConfig.Fonts` also does not work for fonts with custom glyph ranges, since that path applies the Nerd Font ranges instead. The callback fires on every atlas rebuild — that means startup plus any DPI change greater than 5%, but *not* `SetGlobalScale`, which does not rebuild the atlas — so handlers must be safe to run repeatedly and re-register fonts each time. `InitFonts` releases the previous run's pinned font data before invoking the callback, so re-registering does not accumulate pinned memory.
 
 Note that `FontHelper.GetMaterialIconRanges()` claims the entire Private Use Area (U+E000–U+F8FF), which subsumes every Nerd Font range. Merging Material Icons last therefore replaces Nerd Font glyphs across Powerline, Font Awesome, Devicons, Octicons and the rest — not just one narrow span.
+
+### Deferred Drawing (dialogs and docked windows)
+
+Hexa's dialogs and `DockedWindow` are stateful: `Show()` registers the instance with a static
+manager, and it is only drawn by a per-frame pump. Call one of these once per frame, at the end of
+`OnRender`:
+
+- `ImGuiWidgets.DrawDeferred()` — draws every open dialog, message box and popup, and advances
+  Hexa's animation clock. No layout opinion.
+- `ImGuiWidgets.DrawDeferredDocked()` — additionally creates a dockspace over the main viewport
+  and draws every registered `DockedWindow`. Internally it does everything `DrawDeferred()` does
+  (via Hexa's `WidgetManager.Draw()`, which itself calls Hexa's `DialogManager.Draw()`,
+  `MessageBoxes.Draw()`, `PopupManager.Draw()` and `AnimationManager.Tick()`), so `DrawDeferred()`
+  must not also be called. `DockedWindow` only renders under this pump — under `DrawDeferred()` a
+  `DockedWindow` is registered but never drawn, because the dockspace it attaches to does not exist.
+
+They are mutually exclusive: calling both in the same frame draws every dialog twice.
+`ImGuiWidgets` detects this (via the ImGui frame counter) and logs a `Trace.TraceWarning`, but does
+not throw.
+
+Showing a dialog (`OpenFileDialog`, `SaveFileDialog`, `OpenFolderDialog`, `RenameDialog`,
+`DialogMessageBox`, or `ShowMessageBox`) before any pump has ever run throws
+`InvalidOperationException` — otherwise it would never appear, and the manager's internal
+collections would grow for the life of the process.
+
+A pump is not required just to keep animated Hexa-backed widgets correct: `ToggleSwitch` ticks
+Hexa's animation clock itself once per frame whenever no pump has ever run, so it animates
+correctly even in an application that never calls `DrawDeferred()` or `DrawDeferredDocked()`. Once
+either pump runs for the first time, it owns the clock exclusively and the fallback stops ticking.
+The pump is required for dialogs, not for animation.
+
+The file dialogs' underlying `Close()` briefly blocks the UI thread while its async directory-scan
+task unwinds (`refreshTask?.Wait()`).
 
 ### Scoped Styling (RAII Pattern)
 
