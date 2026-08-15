@@ -39,12 +39,18 @@ internal static class HexaWidgetsDemo
 	private static string sharedSaveTarget = "(none)";
 	private static string sharedMessageAnswer = "(none)";
 
-	// ktsu's FilesystemBrowser popups render inline wherever they are pumped (see the ShowIfOpen
-	// calls at the end of Show), unlike Hexa's static deferred-draw manager, so each row needs its
-	// own persistent instance to survive across frames and its own per-frame pump call.
+	// ktsu's popups render inline wherever they are pumped (see the ShowIfOpen calls at the end of
+	// Show), unlike Hexa's static deferred-draw manager, so each needs its own persistent instance
+	// to survive across frames and its own per-frame pump call. Each instance must also be owned
+	// exclusively by the pane that opens it: ImGui derives a popup's underlying ID from the ID
+	// stack of whichever window is current when Open()/ShowIfOpen() run, so sharing one instance
+	// across two panes that tick every frame in their own BeginChild (as this "Hexa Widgets" zone
+	// and the "Advanced Demos" zone both do via DividerContainer) lets a later Open() from one pane
+	// silently strand a popup already open under the other pane's ID.
 	private static readonly ImGuiPopups.FilesystemBrowser KtsuOpenFileBrowser = new();
 	private static readonly ImGuiPopups.FilesystemBrowser KtsuOpenFolderBrowser = new();
 	private static readonly ImGuiPopups.FilesystemBrowser KtsuSaveFileBrowser = new();
+	private static readonly ImGuiPopups.MessageOK KtsuMessageBox = new();
 
 	// Net-new widget state.
 	private static string breadcrumbPath = @"C:\dev\ktsu-dev\ImGuiApp\ImGui.Widgets";
@@ -94,7 +100,7 @@ internal static class HexaWidgetsDemo
 		// tab needs an unconditional per-frame ShowIfOpen() call here. This method runs every frame
 		// regardless of which internal tab is active -- the same guarantee ImGuiWidgets.DrawDeferred()
 		// relies on in OnRender for the Hexa side.
-		ImGuiWidgetsDemo.MessageOK.ShowIfOpen();
+		KtsuMessageBox.ShowIfOpen();
 		KtsuOpenFileBrowser.ShowIfOpen();
 		KtsuOpenFolderBrowser.ShowIfOpen();
 		KtsuSaveFileBrowser.ShowIfOpen();
@@ -255,7 +261,7 @@ internal static class HexaWidgetsDemo
 			// MessageOK also declares an Open(string, string, Vector2) overload that the compiler
 			// would otherwise prefer, since both are three-argument overloads.
 			Dictionary<string, Action?> ktsuMessageButtons = new() { { "OK", () => sharedMessageAnswer = "Ok" } };
-			ImGuiWidgetsDemo.MessageOK.Open("Confirm", "Keep both implementations?", ktsuMessageButtons);
+			KtsuMessageBox.Open("Confirm", "Keep both implementations?", ktsuMessageButtons);
 		}
 
 		ImGui.TableNextColumn();

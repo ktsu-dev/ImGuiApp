@@ -91,10 +91,7 @@ internal static class ImGuiWidgetsDemo
 	private static bool skeletonLoading = true;
 
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
-
-	// internal: HexaWidgetsDemo's "Dialogs" comparison tab reuses this already-pumped instance for
-	// the ktsu side of its Message row instead of standing up a second one.
-	internal static ImGuiPopups.MessageOK MessageOK { get; } = new();
+	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
 	private static ImGuiWidgets.TabPanel DemoTabPanel { get; } = new("DemoTabPanel", true, true);
 	private static Dictionary<string, string> TabIds { get; } = [];
 	private static int NextDynamicTabId { get; set; } = 1;
