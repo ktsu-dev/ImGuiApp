@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.Examples.Widgets;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
@@ -10,6 +11,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
+using ktsu.ImGui.Popups;
 using ktsu.ImGui.Widgets;
 using ktsu.Semantics.Color;
 using ktsu.Semantics.Paths;
@@ -36,6 +38,13 @@ internal static class HexaWidgetsDemo
 	private static string sharedChosenFolder = "(none)";
 	private static string sharedSaveTarget = "(none)";
 	private static string sharedMessageAnswer = "(none)";
+
+	// ktsu's FilesystemBrowser popups render inline wherever they are pumped (see the ShowIfOpen
+	// calls at the end of Show), unlike Hexa's static deferred-draw manager, so each row needs its
+	// own persistent instance to survive across frames and its own per-frame pump call.
+	private static readonly ImGuiPopups.FilesystemBrowser KtsuOpenFileBrowser = new();
+	private static readonly ImGuiPopups.FilesystemBrowser KtsuOpenFolderBrowser = new();
+	private static readonly ImGuiPopups.FilesystemBrowser KtsuSaveFileBrowser = new();
 
 	// Net-new widget state.
 	private static string breadcrumbPath = @"C:\dev\ktsu-dev\ImGuiApp\ImGui.Widgets";
@@ -80,6 +89,15 @@ internal static class HexaWidgetsDemo
 
 			ImGui.EndTabBar();
 		}
+
+		// ktsu's popups render inline wherever they're pumped, so each live dialog in the "Dialogs"
+		// tab needs an unconditional per-frame ShowIfOpen() call here. This method runs every frame
+		// regardless of which internal tab is active -- the same guarantee ImGuiWidgets.DrawDeferred()
+		// relies on in OnRender for the Hexa side.
+		ImGuiWidgetsDemo.MessageOK.ShowIfOpen();
+		KtsuOpenFileBrowser.ShowIfOpen();
+		KtsuOpenFolderBrowser.ShowIfOpen();
+		KtsuSaveFileBrowser.ShowIfOpen();
 	}
 
 	private static void ShowComparison()
@@ -188,7 +206,11 @@ internal static class HexaWidgetsDemo
 		ImGui.TableHeadersRow();
 
 		BeginRow("Open file");
-		ImGui.TextUnformatted("FilesystemBrowser");
+		if (ImGui.Button("Open##ktsuOpenFile"))
+		{
+			KtsuOpenFileBrowser.FileOpen("Open a file", file => sharedChosenFile = file.ToString());
+		}
+
 		ImGui.TableNextColumn();
 		if (ImGui.Button("Open##hexaOpenFile"))
 		{
@@ -197,7 +219,11 @@ internal static class HexaWidgetsDemo
 		}
 
 		BeginRow("Pick folder");
-		ImGui.TextUnformatted("FilesystemBrowser");
+		if (ImGui.Button("Pick##ktsuFolder"))
+		{
+			KtsuOpenFolderBrowser.ChooseDirectory("Pick a folder", directory => sharedChosenFolder = directory.ToString());
+		}
+
 		ImGui.TableNextColumn();
 		if (ImGui.Button("Pick##hexaFolder"))
 		{
@@ -206,7 +232,11 @@ internal static class HexaWidgetsDemo
 		}
 
 		BeginRow("Save file");
-		ImGui.TextUnformatted("FilesystemBrowser");
+		if (ImGui.Button("Save##ktsuSave"))
+		{
+			KtsuSaveFileBrowser.FileSave("Save a file", file => sharedSaveTarget = file.ToString());
+		}
+
 		ImGui.TableNextColumn();
 		if (ImGui.Button("Save##hexaSave"))
 		{
@@ -215,7 +245,19 @@ internal static class HexaWidgetsDemo
 		}
 
 		BeginRow("Message");
-		ImGui.TextUnformatted("MessageOK");
+		if (ImGui.Button("Ask##ktsuMessage"))
+		{
+			// MessageOK's convenience Open(title, message) has no outcome callback -- through that
+			// path ktsu only ever offers a fixed, silent single "OK" button. Its base Prompt class
+			// does support per-button actions, so that inherited Open(title, label, buttons) overload
+			// is used here to give this row a real, comparable answer instead of leaving it dead.
+			// The button dictionary is typed explicitly rather than via target-typed new() because
+			// MessageOK also declares an Open(string, string, Vector2) overload that the compiler
+			// would otherwise prefer, since both are three-argument overloads.
+			Dictionary<string, Action?> ktsuMessageButtons = new() { { "OK", () => sharedMessageAnswer = "Ok" } };
+			ImGuiWidgetsDemo.MessageOK.Open("Confirm", "Keep both implementations?", ktsuMessageButtons);
+		}
+
 		ImGui.TableNextColumn();
 		if (ImGui.Button("Ask##hexaMessage"))
 		{
@@ -232,7 +274,7 @@ internal static class HexaWidgetsDemo
 		ImGui.TextUnformatted($"Answer:  {sharedMessageAnswer}");
 
 		ImGui.Separator();
-		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged.");
+		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged. ktsu's dialogs render inline wherever they are pumped (see the ShowIfOpen calls in Show) rather than through a central deferred-draw manager, and ktsu's MessageOK has no built-in Yes/No button-set the way Hexa's ShowMessageBox does -- this row's ktsu answer is always \"Ok\".");
 	}
 
 	private static void ShowNetNew()
