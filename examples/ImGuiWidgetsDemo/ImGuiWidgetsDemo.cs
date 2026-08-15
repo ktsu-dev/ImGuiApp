@@ -127,14 +127,13 @@ internal static class ImGuiWidgetsDemo
 	private static string RegexSearchTerm = string.Empty;
 	private static SearchBoxOptions RegexSearchOptions = new(Label: "##RegexSearch", FilterType: TextFilterType.Regex);
 
-#pragma warning disable CA5394 //Do not use insecure randomness - Random is used only for generating visual demo data; no security or cryptographic use.
-	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
 	// The Hexa-backed DatePicker, FileTreeView and IconTreeNode draw Material Icons glyphs, so this
 	// demo needs the same font registration as ImGuiAppDemo -- otherwise the widgets the "Hexa
 	// Widgets" pane exists to evaluate render as placeholder boxes. The font is not checked into the
 	// repo; drop MaterialIcons-Regular.ttf next to the binary and this picks it up. OnConfigureFonts
 	// is the only hook that works: it runs after the configured fonts are added but before the atlas
 	// is built, whereas OnStart runs after the atlas has already been built.
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "FontHelper.GetMaterialIconRanges() returns a uint* that ImGui owns for the lifetime of the atlas; the pointer is passed straight through and never dereferenced or retained here.")]
 	private static void OnConfigureFonts()
 	{
 		AbsoluteFilePath materialIconsPath =
@@ -151,6 +150,8 @@ internal static class ImGuiWidgetsDemo
 		}
 	}
 
+#pragma warning disable CA5394 //Do not use insecure randomness - Random is used only for generating visual demo data; no security or cryptographic use.
+	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
 	private static void OnStart()
 	{
 		// Create main layout with dedicated demo sections

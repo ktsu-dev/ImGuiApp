@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Examples.App;
 
+using System.Diagnostics.CodeAnalysis;
+
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Examples.App.Demos;
@@ -86,6 +88,7 @@ internal static class ImGuiAppDemo
 	// actually rasterized. Registering it from OnStart instead is too late: OnStart runs after the
 	// atlas has already finished building for this frame, so a font merged there is silently never
 	// rasterized (no compile error, no exception — just missing glyphs).
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "FontHelper.GetMaterialIconRanges() returns a uint* that ImGui owns for the lifetime of the atlas; the pointer is passed straight through and never dereferenced or retained here.")]
 	private static void OnConfigureFonts()
 	{
 		// Material Icons lives in the Unicode Private Use Area (U+E000-U+F8FF), which overlaps the
