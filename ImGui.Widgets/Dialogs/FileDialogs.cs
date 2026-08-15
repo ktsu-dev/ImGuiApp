@@ -4,9 +4,9 @@ namespace ktsu.ImGui.Widgets;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 
 using ktsu.Semantics.Paths;
-using ktsu.Semantics.Strings;
 
 using HexaDialogMessageBoxType = Hexa.NET.ImGui.Widgets.Dialogs.DialogMessageBoxType;
 using HexaDialogResult = Hexa.NET.ImGui.Widgets.Dialogs.DialogResult;
@@ -40,17 +40,62 @@ public static partial class ImGuiWidgets
 	/// Converts a path string from Hexa into a semantic file path.
 	/// </summary>
 	/// <param name="raw">The path Hexa reported.</param>
-	/// <returns>The parsed path, or <see langword="null"/> if there was none.</returns>
+	/// <returns>
+	/// The parsed path, or <see langword="null"/> if there was none or it was not a valid absolute
+	/// file path.
+	/// </returns>
+	/// <remarks>
+	/// Deliberately non-throwing. Hexa hands these values to us from inside its own draw loop, so an
+	/// exception here would unwind through <c>ImGui.End()</c> and Hexa's dialog bookkeeping and
+	/// leave the dialog manager permanently wedged. Hexa does not guarantee an absolute path: a
+	/// bare filename typed into <c>SaveFileDialog</c>'s text box reaches us verbatim.
+	/// </remarks>
 	internal static AbsoluteFilePath? TryParseFilePath(string? raw) =>
-		string.IsNullOrWhiteSpace(raw) ? null : raw.As<AbsoluteFilePath>();
+		!string.IsNullOrWhiteSpace(raw) && AbsoluteFilePath.TryCreate(raw, out AbsoluteFilePath? parsed)
+			? parsed
+			: null;
 
 	/// <summary>
 	/// Converts a path string from Hexa into a semantic directory path.
 	/// </summary>
 	/// <param name="raw">The path Hexa reported.</param>
-	/// <returns>The parsed path, or <see langword="null"/> if there was none.</returns>
+	/// <returns>
+	/// The parsed path, or <see langword="null"/> if there was none or it was not a valid absolute
+	/// directory path.
+	/// </returns>
+	/// <remarks>Non-throwing, for the same reason as <see cref="TryParseFilePath"/>.</remarks>
 	internal static AbsoluteDirectoryPath? TryParseDirectoryPath(string? raw) =>
-		string.IsNullOrWhiteSpace(raw) ? null : raw.As<AbsoluteDirectoryPath>();
+		!string.IsNullOrWhiteSpace(raw) && AbsoluteDirectoryPath.TryCreate(raw, out AbsoluteDirectoryPath? parsed)
+			? parsed
+			: null;
+
+	/// <summary>
+	/// Resolves the target a save dialog reported into an absolute file path.
+	/// </summary>
+	/// <param name="selectedFile">The value Hexa's <c>SelectedFile</c> holds at close time.</param>
+	/// <param name="currentFolder">The folder the dialog was browsing.</param>
+	/// <returns>The resolved path, or <see langword="null"/> if it cannot be resolved.</returns>
+	/// <remarks>
+	/// Hexa's save dialog binds its text box straight to the private backing field, bypassing the
+	/// property setter that would have joined the typed name to the current folder. A bare filename
+	/// is therefore the normal case, not an edge case, so it is joined to the browsed folder here.
+	/// </remarks>
+	internal static AbsoluteFilePath? ResolveSaveTarget(string? selectedFile, string? currentFolder)
+	{
+		if (string.IsNullOrWhiteSpace(selectedFile))
+		{
+			return null;
+		}
+
+		if (Path.IsPathFullyQualified(selectedFile))
+		{
+			return TryParseFilePath(selectedFile);
+		}
+
+		return string.IsNullOrWhiteSpace(currentFolder) || !Path.IsPathFullyQualified(currentFolder)
+			? null
+			: TryParseFilePath(Path.Combine(currentFolder, selectedFile));
+	}
 
 	/// <summary>
 	/// A dialog for choosing one or more existing files.
@@ -64,6 +109,7 @@ public static partial class ImGuiWidgets
 	public sealed class OpenFileDialog
 	{
 		private readonly HexaOpenFileDialog dialog = new();
+		private readonly DialogShowGuard guard = new(nameof(OpenFileDialog));
 
 		/// <summary>
 		/// Gets or sets a value indicating whether more than one file may be chosen.
@@ -79,13 +125,20 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <param name="onClosed">Invoked once, when the dialog closes.</param>
 		/// <exception cref="ArgumentNullException"><paramref name="onClosed"/> is <see langword="null"/>.</exception>
-		/// <exception cref="InvalidOperationException">No deferred-drawing pump has ever run.</exception>
+		/// <exception cref="InvalidOperationException">
+		/// No deferred-drawing pump has ever run, or this instance is already shown.
+		/// </exception>
 		public void Show(Action<FileDialogOutcome> onClosed)
 		{
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
+			guard.Enter();
 
-			dialog.Show((_, result) => onClosed(BuildOutcome(dialog, result)));
+			dialog.Show((_, result) =>
+			{
+				guard.Exit();
+				onClosed(BuildOutcome(dialog, result));
+			});
 		}
 
 		/// <summary>
@@ -124,22 +177,30 @@ public static partial class ImGuiWidgets
 	public sealed class SaveFileDialog
 	{
 		private readonly HexaSaveFileDialog dialog = new();
+		private readonly DialogShowGuard guard = new(nameof(SaveFileDialog));
 
 		/// <summary>
 		/// Shows the dialog.
 		/// </summary>
 		/// <param name="onClosed">Invoked once, when the dialog closes.</param>
 		/// <exception cref="ArgumentNullException"><paramref name="onClosed"/> is <see langword="null"/>.</exception>
-		/// <exception cref="InvalidOperationException">No deferred-drawing pump has ever run.</exception>
+		/// <exception cref="InvalidOperationException">
+		/// No deferred-drawing pump has ever run, or this instance is already shown.
+		/// </exception>
 		public void Show(Action<FileDialogOutcome> onClosed)
 		{
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
+			guard.Enter();
 
-			dialog.Show((_, result) => onClosed(new FileDialogOutcome(
-				MapDialogResult(result, HexaDialogMessageBoxType.Ok),
-				TryParseFilePath(dialog.SelectedFile),
-				[])));
+			dialog.Show((_, result) =>
+			{
+				guard.Exit();
+				onClosed(new FileDialogOutcome(
+					MapDialogResult(result, HexaDialogMessageBoxType.Ok),
+					ResolveSaveTarget(dialog.SelectedFile, dialog.CurrentFolder),
+					[]));
+			});
 		}
 	}
 
@@ -153,21 +214,29 @@ public static partial class ImGuiWidgets
 	public sealed class OpenFolderDialog
 	{
 		private readonly HexaOpenFolderDialog dialog = new();
+		private readonly DialogShowGuard guard = new(nameof(OpenFolderDialog));
 
 		/// <summary>
 		/// Shows the dialog.
 		/// </summary>
 		/// <param name="onClosed">Invoked once, when the dialog closes.</param>
 		/// <exception cref="ArgumentNullException"><paramref name="onClosed"/> is <see langword="null"/>.</exception>
-		/// <exception cref="InvalidOperationException">No deferred-drawing pump has ever run.</exception>
+		/// <exception cref="InvalidOperationException">
+		/// No deferred-drawing pump has ever run, or this instance is already shown.
+		/// </exception>
 		public void Show(Action<FolderDialogOutcome> onClosed)
 		{
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
+			guard.Enter();
 
-			dialog.Show((_, result) => onClosed(new FolderDialogOutcome(
-				MapDialogResult(result, HexaDialogMessageBoxType.Ok),
-				TryParseDirectoryPath(dialog.SelectedFolder))));
+			dialog.Show((_, result) =>
+			{
+				guard.Exit();
+				onClosed(new FolderDialogOutcome(
+					MapDialogResult(result, HexaDialogMessageBoxType.Ok),
+					TryParseDirectoryPath(dialog.SelectedFolder)));
+			});
 		}
 	}
 }

@@ -7,13 +7,19 @@ using HexaImWindow = Hexa.NET.ImGui.Widgets.ImWindow;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// A window that docks into the dockspace created by <see cref="DrawDeferredDocked"/>.
-	/// Subclass it and override <see cref="Title"/> and <see cref="DrawContent"/>.
+	/// A floating window that the user can drag into the dockspace <see cref="DrawDeferredDocked"/>
+	/// creates. Subclass it and override <see cref="Title"/> and <see cref="DrawContent"/>.
 	/// </summary>
 	/// <remarks>
 	/// <para>
 	/// Only drawn by <see cref="DrawDeferredDocked"/>. Under <see cref="DrawDeferred"/> the window
-	/// is registered but never rendered, because the dockspace it attaches to does not exist.
+	/// is registered but never rendered, because Hexa's widget manager - which owns both the
+	/// dockspace and the list of registered windows - is only driven by that pump.
+	/// </para>
+	/// <para>
+	/// The window is dockable, not auto-docked: it opens floating and stays there until the user
+	/// drags it in. Hexa only pins a window to its dockspace when the window is marked as embedded,
+	/// which it does not do for windows registered through <see cref="Show"/>.
 	/// </para>
 	/// <para>
 	/// <see cref="Title"/> is both the window caption and its identity, so two windows sharing a

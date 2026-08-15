@@ -88,14 +88,34 @@ public static partial class ImGuiWidgets
 	/// Mutually exclusive with <see cref="DrawDeferred"/>. Calling both in one frame draws every
 	/// dialog twice.
 	/// </para>
+	/// <para>
+	/// Enables <see cref="ImGuiConfigFlags.DockingEnable"/> if it is not already set. Hexa's
+	/// <c>WidgetManager.Draw()</c> calls <c>DockSpaceOverViewport</c> without checking the flag, so
+	/// without it the dockspace is a no-op. The flag is set here rather than in <c>ImGui.App</c>
+	/// because this is the opt-in path whose contract requires docking; enabling it globally would
+	/// change behaviour for every consumer, including those that never draw a docked window.
+	/// </para>
 	/// </remarks>
 	public static void DrawDeferredDocked()
 	{
 		ReportPumpState();
+		EnableDocking();
 
 		// WidgetManager.Draw internally calls DialogManager.Draw, MessageBoxes.Draw,
 		// PopupManager.Draw and AnimationManager.Tick, so this must not also call them.
 		HexaWidgetManager.Draw();
+	}
+
+	/// <summary>
+	/// Enables ImGui's docking config flag if it is not already enabled.
+	/// </summary>
+	private static void EnableDocking()
+	{
+		ImGuiIOPtr io = ImGui.GetIO();
+		if ((io.ConfigFlags & ImGuiConfigFlags.DockingEnable) == 0)
+		{
+			io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+		}
 	}
 
 	/// <summary>

@@ -7,7 +7,7 @@ using Hexa.NET.ImGui;
 using ktsu.ImGui.Widgets;
 
 /// <summary>
-/// A window that docks into the dockspace created by ImGuiWidgets.DrawDeferredDocked.
+/// A floating window the user can drag into the dockspace ImGuiWidgets.DrawDeferredDocked creates.
 /// </summary>
 internal sealed class DockedWindowDemo : ImGuiWidgets.DockedWindow
 {
@@ -19,7 +19,7 @@ internal sealed class DockedWindowDemo : ImGuiWidgets.DockedWindow
 	/// <inheritdoc/>
 	protected override void DrawContent()
 	{
-		ImGui.TextWrapped("This window is managed by Hexa's WidgetManager and docks into the dockspace that DrawDeferredDocked creates. Drag its tab to re-dock it.");
+		ImGui.TextWrapped("This window is managed by Hexa's WidgetManager. It opens floating, not docked -- drag its title bar into the dockspace that DrawDeferredDocked creates to dock it.");
 
 		if (ImGui.Button("Click me"))
 		{

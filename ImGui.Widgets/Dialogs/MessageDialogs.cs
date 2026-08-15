@@ -109,6 +109,7 @@ public static partial class ImGuiWidgets
 	{
 		private readonly HexaDialogMessageBox dialog;
 		private readonly HexaDialogMessageBoxType type;
+		private readonly DialogShowGuard guard = new(nameof(DialogMessageBox));
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DialogMessageBox"/> class.
@@ -131,15 +132,22 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <param name="onClosed">Invoked once, when the dialog closes.</param>
 		/// <exception cref="ArgumentNullException"><paramref name="onClosed"/> is <see langword="null"/>.</exception>
-		/// <exception cref="InvalidOperationException">No deferred-drawing pump has ever run.</exception>
+		/// <exception cref="InvalidOperationException">
+		/// No deferred-drawing pump has ever run, or this instance is already shown.
+		/// </exception>
 		public void Show(Action<DialogOutcome> onClosed)
 		{
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
+			guard.Enter();
 
 			// The configured type is passed through because Hexa aliases Yes to Ok in DialogResult;
 			// it is the only surviving evidence of which button the user pressed.
-			dialog.Show((_, result) => onClosed(MapDialogResult(result, type)));
+			dialog.Show((_, result) =>
+			{
+				guard.Exit();
+				onClosed(MapDialogResult(result, type));
+			});
 		}
 	}
 }

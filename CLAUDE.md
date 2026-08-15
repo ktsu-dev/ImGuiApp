@@ -153,12 +153,17 @@ manager, and it is only drawn by a per-frame pump. Call one of these once per fr
 
 - `ImGuiWidgets.DrawDeferred()` — draws every open dialog, message box and popup, and advances
   Hexa's animation clock. No layout opinion.
-- `ImGuiWidgets.DrawDeferredDocked()` — additionally creates a dockspace over the main viewport
-  and draws every registered `DockedWindow`. Internally it does everything `DrawDeferred()` does
-  (via Hexa's `WidgetManager.Draw()`, which itself calls Hexa's `DialogManager.Draw()`,
-  `MessageBoxes.Draw()`, `PopupManager.Draw()` and `AnimationManager.Tick()`), so `DrawDeferred()`
-  must not also be called. `DockedWindow` only renders under this pump — under `DrawDeferred()` a
-  `DockedWindow` is registered but never drawn, because the dockspace it attaches to does not exist.
+- `ImGuiWidgets.DrawDeferredDocked()` — additionally enables `ImGuiConfigFlags.DockingEnable` if it
+  is not already set, creates a dockspace over the main viewport, and draws every registered
+  `DockedWindow`. The flag is set here rather than in `ImGui.App` because this is the opt-in path
+  whose contract requires docking, and Hexa's `WidgetManager.Draw()` calls `DockSpaceOverViewport`
+  without checking the flag — without it the dockspace silently does nothing. Internally it does
+  everything `DrawDeferred()` does (via Hexa's `WidgetManager.Draw()`, which itself calls Hexa's
+  `DialogManager.Draw()`, `MessageBoxes.Draw()`, `PopupManager.Draw()` and `AnimationManager.Tick()`),
+  so `DrawDeferred()` must not also be called. `DockedWindow` only renders under this pump — under
+  `DrawDeferred()` a `DockedWindow` is registered but never drawn, because Hexa's widget manager is
+  only driven by that pump. A `DockedWindow` is dockable but **not** auto-docked: it opens floating
+  and stays there until the user drags it into the dockspace.
 
 They are mutually exclusive: calling both in the same frame draws every dialog twice.
 `ImGuiWidgets` detects this (via the ImGui frame counter) and logs a `Trace.TraceWarning`, but does
@@ -168,6 +173,14 @@ Showing a dialog (`OpenFileDialog`, `SaveFileDialog`, `OpenFolderDialog`, `Renam
 `DialogMessageBox`, or `ShowMessageBox`) before any pump has ever run throws
 `InvalidOperationException` — otherwise it would never appear, and the manager's internal
 collections would grow for the life of the process.
+
+Calling `Show()` on a dialog instance that is already shown also throws `InvalidOperationException`.
+Hexa's `Dialog.Show()` adds the instance to its manager unconditionally, so a second `Show()`
+registers the same instance twice; closing removes one entry and the survivor is never drawn, never
+closed and never removed, which latches `WidgetManager.BlockInput` on for the life of the process.
+Wait for the close callback, or create a new instance per showing. The guard lives in
+`ImGuiWidgets.DialogShowGuard` and is cleared from the close callback, which Hexa invokes on every
+close path including the window's X button.
 
 A pump is not required just to keep animated Hexa-backed widgets correct: `ToggleSwitch` ticks
 Hexa's animation clock itself once per frame whenever no pump has ever run, so it animates
