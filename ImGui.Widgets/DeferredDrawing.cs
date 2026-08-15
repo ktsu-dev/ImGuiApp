@@ -74,13 +74,13 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws a dockspace over the main viewport, every registered <c>DockedWindow</c>, and
+	/// Draws a dockspace over the main viewport, every registered <see cref="DockedWindow"/>, and
 	/// everything <see cref="DrawDeferred"/> draws. Call once per frame, at the end of your render
 	/// callback.
 	/// </summary>
 	/// <remarks>
 	/// <para>
-	/// Only needed if the application uses <c>DockedWindow</c>. This creates a dockspace
+	/// Only needed if the application uses <see cref="DockedWindow"/>. This creates a dockspace
 	/// over the main viewport, which is a layout decision — prefer <see cref="DrawDeferred"/>
 	/// unless you want that.
 	/// </para>
