@@ -31,6 +31,12 @@ internal static class HexaWidgetsDemo
 	private static float sharedImageSize = 48f;
 	private static int ktsuImageClicks;
 
+	// Shared state: the ktsu and Hexa dialogs of each row write to the same field.
+	private static string sharedChosenFile = "(none)";
+	private static string sharedChosenFolder = "(none)";
+	private static string sharedSaveTarget = "(none)";
+	private static string sharedMessageAnswer = "(none)";
+
 	// Net-new widget state.
 	private static string breadcrumbPath = @"C:\dev\ktsu-dev\ImGuiApp\ImGui.Widgets";
 	private static DateTime pickedDate = new(2026, 8, 14);
@@ -38,6 +44,7 @@ internal static class HexaWidgetsDemo
 	private static AbsoluteDirectoryPath treeFolder = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>();
 	private static bool toggleButtonState;
 	private static int flameSelected = -1;
+	private static string renameResult = "(none)";
 
 	private static readonly Collection<FlameGraphSample> FlameSamples =
 	[
@@ -62,6 +69,12 @@ internal static class HexaWidgetsDemo
 			if (ImGui.BeginTabItem("Net New"))
 			{
 				ShowNetNew();
+				ImGui.EndTabItem();
+			}
+
+			if (ImGui.BeginTabItem("Dialogs"))
+			{
+				ShowDialogComparison();
 				ImGui.EndTabItem();
 			}
 
@@ -159,6 +172,69 @@ internal static class HexaWidgetsDemo
 		ImGui.TableNextColumn();
 	}
 
+	private static void ShowDialogComparison()
+	{
+		ImGui.TextWrapped("Dialogs are windows, not inline widgets, so each row is a pair of buttons writing to one shared field. Open ktsu's, then Hexa's, and compare what comes back.");
+		ImGui.Separator();
+
+		if (!ImGui.BeginTable("HexaDialogComparison", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+		{
+			return;
+		}
+
+		ImGui.TableSetupColumn("Dialog", ImGuiTableColumnFlags.WidthFixed, 140f);
+		ImGui.TableSetupColumn("ktsu");
+		ImGui.TableSetupColumn("Hexa");
+		ImGui.TableHeadersRow();
+
+		BeginRow("Open file");
+		ImGui.TextUnformatted("FilesystemBrowser");
+		ImGui.TableNextColumn();
+		if (ImGui.Button("Open##hexaOpenFile"))
+		{
+			ImGuiWidgets.OpenFileDialog dialog = new();
+			dialog.Show(outcome => sharedChosenFile = outcome.Path?.ToString() ?? $"({outcome.Outcome})");
+		}
+
+		BeginRow("Pick folder");
+		ImGui.TextUnformatted("FilesystemBrowser");
+		ImGui.TableNextColumn();
+		if (ImGui.Button("Pick##hexaFolder"))
+		{
+			ImGuiWidgets.OpenFolderDialog dialog = new();
+			dialog.Show(outcome => sharedChosenFolder = outcome.Path?.ToString() ?? $"({outcome.Outcome})");
+		}
+
+		BeginRow("Save file");
+		ImGui.TextUnformatted("FilesystemBrowser");
+		ImGui.TableNextColumn();
+		if (ImGui.Button("Save##hexaSave"))
+		{
+			ImGuiWidgets.SaveFileDialog dialog = new();
+			dialog.Show(outcome => sharedSaveTarget = outcome.Path?.ToString() ?? $"({outcome.Outcome})");
+		}
+
+		BeginRow("Message");
+		ImGui.TextUnformatted("MessageOK");
+		ImGui.TableNextColumn();
+		if (ImGui.Button("Ask##hexaMessage"))
+		{
+			ImGuiWidgets.ShowMessageBox("Confirm", "Keep both implementations?", MessageBoxButtons.YesNo,
+				outcome => sharedMessageAnswer = outcome.ToString());
+		}
+
+		ImGui.EndTable();
+
+		ImGui.Separator();
+		ImGui.TextUnformatted($"File:    {sharedChosenFile}");
+		ImGui.TextUnformatted($"Folder:  {sharedChosenFolder}");
+		ImGui.TextUnformatted($"Save to: {sharedSaveTarget}");
+		ImGui.TextUnformatted($"Answer:  {sharedMessageAnswer}");
+
+		ImGui.Separator();
+		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged.");
+	}
+
 	private static void ShowNetNew()
 	{
 		ImGui.TextWrapped("Hexa widgets with no ktsu counterpart.");
@@ -200,6 +276,28 @@ internal static class HexaWidgetsDemo
 			ImGui.TextWrapped("Needs a Material Icons font in the atlas; drop MaterialIcons-Regular.ttf next to this demo's binary.");
 			ImGuiWidgets.FileTreeView("##fileTree", new Vector2(0f, 200f), ref treeFolder, treeFolder);
 			ImGui.TextUnformatted(treeFolder.ToString());
+		}
+
+		if (ImGui.CollapsingHeader("Rename and message dialogs"))
+		{
+			if (ImGui.Button("Rename a file"))
+			{
+				ImGuiWidgets.RenameDialog dialog = new(
+					AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>())
+				{
+					SkipAutomaticMove = true,
+				};
+				dialog.Show(outcome => renameResult = outcome.Error?.Message ?? outcome.Destination?.ToString() ?? $"({outcome.Outcome})");
+			}
+
+			ImGui.SameLine();
+			if (ImGui.Button("Dialog message box"))
+			{
+				ImGuiWidgets.DialogMessageBox box = new("Question", "Movable, unlike the modal message box.", MessageBoxButtons.YesNoCancel);
+				box.Show(outcome => renameResult = outcome.ToString());
+			}
+
+			ImGui.TextUnformatted(renameResult);
 		}
 	}
 }
