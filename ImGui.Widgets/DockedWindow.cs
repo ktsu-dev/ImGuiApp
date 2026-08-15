@@ -20,21 +20,51 @@ public static partial class ImGuiWidgets
 	/// title will collide.
 	/// </para>
 	/// </remarks>
-	public abstract class DockedWindow : HexaImWindow
+	public abstract class DockedWindow
 	{
+		/// <summary>
+		/// Adapts this <see cref="DockedWindow"/> to Hexa's window base class so it can be
+		/// registered with Hexa's internal widget manager. Composition, not inheritance, keeps
+		/// the vendor type out of this library's public surface.
+		/// </summary>
+		private readonly Adapter adapter;
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DockedWindow"/> class.
+		/// </summary>
+		protected DockedWindow() => adapter = new Adapter(this);
+
 		/// <summary>
 		/// Gets the window caption, which is also its identity.
 		/// </summary>
 		protected abstract string Title { get; }
 
 		/// <summary>
-		/// Gets the window caption. Forwards to <see cref="Title"/>.
-		/// </summary>
-		public sealed override string Name => Title;
-
-		/// <summary>
 		/// Draws the window's contents. Called once per frame while the window is open.
 		/// </summary>
-		public abstract override void DrawContent();
+		protected abstract void DrawContent();
+
+		/// <summary>
+		/// Registers the window so it is drawn by <see cref="DrawDeferredDocked"/>.
+		/// </summary>
+		public void Show() => adapter.Show();
+
+		/// <summary>
+		/// Unregisters the window so it is no longer drawn.
+		/// </summary>
+		public void Close() => adapter.Close();
+
+		/// <summary>
+		/// Forwards Hexa's window callbacks to the owning <see cref="DockedWindow"/>. Never
+		/// exposed outside this file.
+		/// </summary>
+		private sealed class Adapter(DockedWindow owner) : HexaImWindow
+		{
+			/// <inheritdoc/>
+			public override string Name => owner.Title;
+
+			/// <inheritdoc/>
+			public override void DrawContent() => owner.DrawContent();
+		}
 	}
 }
