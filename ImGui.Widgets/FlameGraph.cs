@@ -126,14 +126,35 @@ public static partial class ImGuiWidgets
 			// `data` inside the callback.
 			void* captionData = captionHandle.AddrOfPinnedObject().ToPointer();
 
+			// Every out-parameter must be null-checked. PlotFlame is a pull-based API that asks
+			// for different fields at different stages and passes null for the ones it does not
+			// need: it requests only the level while measuring maximum depth, and only the
+			// start/end pair while deriving the scale. Writing unconditionally dereferences null
+			// on the very first sample.
 			void Getter(float* start, float* end, byte* level, byte** caption, void* data, int idx)
 			{
 				FlameGraphSample sample = samples[idx];
-				*start = sample.Start;
-				*end = sample.End;
-				*level = sample.Level;
-				byte* captionBase = (byte*)data;
-				*caption = captionBase + captionOffsets[idx];
+
+				if (start is not null)
+				{
+					*start = sample.Start;
+				}
+
+				if (end is not null)
+				{
+					*end = sample.End;
+				}
+
+				if (level is not null)
+				{
+					*level = sample.Level;
+				}
+
+				if (caption is not null)
+				{
+					byte* captionBase = (byte*)data;
+					*caption = captionBase + captionOffsets[idx];
+				}
 			}
 
 			HexaFlameGraph.PlotFlame(
