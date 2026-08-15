@@ -1,6 +1,6 @@
-## v3.4.2 (patch)
+## v3.4.3 (patch)
 
-Changes since v3.4.1:
+Changes since v3.4.2:
 
-- Migrate the three icon.png files into LFS ([@matt-edmondson](https://github.com/matt-edmondson))
+- Disable the iOS simulator smoke test on automatic triggers ([@matt-edmondson](https://github.com/matt-edmondson))
 
