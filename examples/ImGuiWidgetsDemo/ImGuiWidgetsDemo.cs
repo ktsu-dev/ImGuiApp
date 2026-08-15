@@ -48,6 +48,7 @@ internal static class ImGuiWidgetsDemo
 		{
 			Title = "ImGuiWidgets - Complete Library Demo",
 			OnStart = OnStart,
+			OnConfigureFonts = OnConfigureFonts,
 			OnAppMenu = OnAppMenu,
 			OnMoveOrResize = OnMoveOrResize,
 			OnRender = OnRender,
@@ -128,11 +129,34 @@ internal static class ImGuiWidgetsDemo
 
 #pragma warning disable CA5394 //Do not use insecure randomness - Random is used only for generating visual demo data; no security or cryptographic use.
 	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
+	// The Hexa-backed DatePicker, FileTreeView and IconTreeNode draw Material Icons glyphs, so this
+	// demo needs the same font registration as ImGuiAppDemo -- otherwise the widgets the "Hexa
+	// Widgets" pane exists to evaluate render as placeholder boxes. The font is not checked into the
+	// repo; drop MaterialIcons-Regular.ttf next to the binary and this picks it up. OnConfigureFonts
+	// is the only hook that works: it runs after the configured fonts are added but before the atlas
+	// is built, whereas OnStart runs after the atlas has already been built.
+	private static void OnConfigureFonts()
+	{
+		AbsoluteFilePath materialIconsPath =
+			AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "MaterialIcons-Regular.ttf".As<FileName>();
+
+		if (File.Exists(materialIconsPath.ToString()))
+		{
+			ImGuiIOPtr io = ImGui.GetIO();
+			byte[] fontData = File.ReadAllBytes(materialIconsPath.ToString());
+			unsafe
+			{
+				_ = FontHelper.AddCustomFont(io, fontData, 16f, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true);
+			}
+		}
+	}
+
 	private static void OnStart()
 	{
 		// Create main layout with dedicated demo sections
-		DividerContainer.Add(new("Widget Demos", 0.6f, ShowWidgetDemos));
-		DividerContainer.Add(new("Advanced Demos", 0.4f, ShowAdvancedDemos));
+		DividerContainer.Add(new("Widget Demos", 0.4f, ShowWidgetDemos));
+		DividerContainer.Add(new("Advanced Demos", 0.3f, ShowAdvancedDemos));
+		DividerContainer.Add(new("Hexa Widgets", 0.3f, HexaWidgetsDemo.Show));
 
 		// Initialize TabPanel demo
 		TabIds["tab1"] = DemoTabPanel.AddTab("tab1", "Tab 1", ShowTab1Content);

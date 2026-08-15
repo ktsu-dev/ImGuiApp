@@ -43,10 +43,37 @@ public static class FontHelper
 	internal static bool emojiRangesInitialized;
 
 	/// <summary>
+	/// Stores the Material Icons glyph ranges to prevent memory deallocation.
+	/// </summary>
+	private static ImVector<uint> materialIconRanges;
+
+	/// <summary>
+	/// Tracks whether the Material Icons ranges have been initialized.
+	/// </summary>
+	private static bool materialIconRangesInitialized;
+
+	/// <summary>
 	/// Cleans up all pinned memory handles for custom fonts and glyph ranges.
 	/// This should be called when shutting down the application.
 	/// </summary>
 	public static void CleanupCustomFonts()
+	{
+		CleanupPinnedFontHandles();
+
+		// Reset glyph ranges
+		CleanupGlyphRanges();
+	}
+
+	/// <summary>
+	/// Frees the pinned font data handles without touching the cached glyph ranges.
+	/// </summary>
+	/// <remarks>
+	/// Callers rebuilding the font atlas want this rather than <see cref="CleanupCustomFonts"/>.
+	/// The cached ranges are standalone native buffers that ImGui never frees and that
+	/// <c>ImFontAtlas::Clear</c> does not touch, so they stay valid across rebuilds; resetting the
+	/// cache would rebuild them each time and leak the previous builder and range vector.
+	/// </remarks>
+	internal static void CleanupPinnedFontHandles()
 	{
 		foreach (GCHandle handle in customFontHandles)
 		{
@@ -62,10 +89,8 @@ public static class FontHelper
 				// Handle was already freed, ignore
 			}
 		}
-		customFontHandles.Clear();
 
-		// Reset glyph ranges
-		CleanupGlyphRanges();
+		customFontHandles.Clear();
 	}
 
 	/// <summary>
@@ -76,6 +101,7 @@ public static class FontHelper
 	{
 		extendedUnicodeRangesInitialized = false;
 		emojiRangesInitialized = false;
+		materialIconRangesInitialized = false;
 		// Note: ImVector<uint> instances are value types managed by ImGui
 		// and will be properly cleaned up when reassigned
 	}
@@ -185,6 +211,40 @@ public static class FontHelper
 	}
 
 	/// <summary>
+	/// Gets the Material Icons glyph ranges for loading a Material Icons font as a separate merged font.
+	/// </summary>
+	/// <remarks>
+	/// Pass the result to <see cref="AddCustomFont"/> with <c>mergeWithPrevious: true</c>. Do not load a
+	/// Material Icons font through <c>ImGuiAppConfig.Fonts</c> — that path applies
+	/// <see cref="GetExtendedUnicodeRanges"/>, whose Nerd Font mapping does not cover Material's
+	/// codepoints. These ranges claim the whole Private Use Area (U+E000–U+F8FF), which subsumes
+	/// every Nerd Font range — Pomicons, Powerline, Font Awesome, Devicons, Octicons and the rest —
+	/// so whichever font is merged last wins all of them, not just one contested span.
+	/// </remarks>
+	/// <returns>Pointer to the Material Icons glyph ranges.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the ranges are cached in a static field so the pointer stays valid.")]
+	public static unsafe uint* GetMaterialIconRanges()
+	{
+		// Only build ranges once and store them to prevent memory deallocation
+		if (!materialIconRangesInitialized)
+		{
+			ImFontGlyphRangesBuilderPtr builder = new(ImGui.ImFontGlyphRangesBuilder());
+
+			AddMaterialIconRanges(builder);
+
+			materialIconRanges = new ImVector<uint>();
+			fixed (ImVector<uint>* rangesPtr = &materialIconRanges)
+			{
+				builder.BuildRanges(rangesPtr);
+			}
+
+			materialIconRangesInitialized = true;
+		}
+
+		return materialIconRanges.Data;
+	}
+
+	/// <summary>
 	/// Adds Latin Extended character ranges to the glyph ranges builder.
 	/// Includes Latin Extended-A and Latin Extended-B character blocks.
 	/// </summary>
@@ -284,6 +344,32 @@ public static class FontHelper
 		// Add individual Octicon symbols that are outside the main range
 		uint[] individualOcticons = [0x2665, 0x26A1];
 		foreach (uint c in individualOcticons)
+		{
+			builder.AddChar(c);
+		}
+	}
+
+	/// <summary>
+	/// Adds the Material Icons private-use glyph range to the glyph ranges builder.
+	/// </summary>
+	/// <remarks>
+	/// Material Icons maps its glyphs into the Unicode Private Use Area, and this method claims
+	/// that area in its entirety (U+E000–U+F8FF). That span subsumes <em>every</em> range added by
+	/// <see cref="AddNerdFontRanges"/> — Pomicons (U+E000–U+E00D), Powerline (U+E0A0–U+E0D4), Font
+	/// Awesome Extension (U+E200–U+E2A9), Weather Icons (U+E300–U+E3EB), Devicons
+	/// (U+E700–U+E7C5), Font Awesome (U+F000–U+F2E0), Font Logos, Octicons, and most of Material
+	/// Design Icons (U+F500–U+F8FF). A single merged font cannot own the same codepoint twice, so
+	/// this method is intended for building a <em>separate</em> merged font and is deliberately not
+	/// called from <see cref="GetExtendedUnicodeRanges"/>. Whichever font is merged last wins the
+	/// whole overlap, so merging Material Icons last replaces the Nerd Font glyphs across all of
+	/// those ranges — not only the Weather Icons span that collides with Material's
+	/// <c>Computer</c> glyph at U+E31E.
+	/// </remarks>
+	/// <param name="builder">The glyph ranges builder to add the Material Icons range to.</param>
+	internal static void AddMaterialIconRanges(ImFontGlyphRangesBuilderPtr builder)
+	{
+		// Material Icons occupies the Basic Multilingual Plane Private Use Area in its entirety.
+		for (uint c = 0xE000; c <= 0xF8FF; c++)
 		{
 			builder.AddChar(c);
 		}

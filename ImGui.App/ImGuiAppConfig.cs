@@ -100,6 +100,21 @@ public class ImGuiAppConfig
 	public Action OnStart { get; init; } = () => { };
 
 	/// <summary>
+	/// Gets or sets the action to be performed to register additional fonts with custom glyph ranges.
+	/// </summary>
+	/// <remarks>
+	/// Runs after the fonts configured via <see cref="Fonts"/> have been added to the atlas, but
+	/// immediately before the atlas is built. This is the correct place to call
+	/// <c>FontHelper.AddCustomFont</c> with a custom glyph range (for example
+	/// <c>FontHelper.GetMaterialIconRanges()</c>) — fonts merged from <see cref="OnStart"/> are too
+	/// late, because the atlas has already finished building by the time <see cref="OnStart"/> runs.
+	/// Routing a font through <see cref="Fonts"/> instead is also unsuitable when custom glyph ranges
+	/// are needed, since every font added that way is mapped with the extended Unicode/Nerd Font
+	/// ranges rather than the ranges the font actually needs.
+	/// </remarks>
+	public Action? OnConfigureFonts { get; init; }
+
+	/// <summary>
 	/// Gets or sets a scoped action to enclose the frame rendering.
 	/// </summary>
 	public Func<ScopedAction?> FrameWrapperFactory { get; init; } = () => null;

@@ -271,7 +271,7 @@ internal sealed class ImGuiController : IRendererBackend
 	}
 
 	/// <inheritdoc />
-	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+	[SuppressMessage(
 		"Reliability",
 		"CA2000:Dispose objects before losing scope",
 		Justification = "The Texture wrapper's resource is the GL texture; we hand its name back to ImGui, " +
@@ -516,7 +516,7 @@ internal sealed class ImGuiController : IRendererBackend
 	/// </summary>
 	/// <param name="key">The ImGuiKey to translate.</param>
 	/// <returns>The matching ImGuiKey.Mod*.</returns>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases", Justification = "We're only translating mod keys here.")]
+	[SuppressMessage("Style", "IDE0072:Add missing cases", Justification = "We're only translating mod keys here.")]
 	internal static ImGuiKey TranslateImGuiKeyToImGuiModKey(ImGuiKey key)
 	{
 		return key switch

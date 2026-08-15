@@ -44,7 +44,7 @@ public static partial class ImGuiWidgets
 		/// <summary>
 		/// The color of the icon.
 		/// </summary>
-		public ImGuiVector4 Color { get; init; } = new(Styler.Palette.Neutral.White.Value);
+		public ImGuiVector4 Color { get; init; } = new(Palette.Neutral.White.Value);
 
 		/// <summary>
 		/// The tooltip to display.

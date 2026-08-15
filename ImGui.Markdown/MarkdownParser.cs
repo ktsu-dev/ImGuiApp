@@ -26,7 +26,7 @@ internal static class MarkdownParser
 	private static readonly Dictionary<string, MarkdigAst> Cache = [];
 	private static readonly Queue<string> InsertionOrder = new();
 #if NET9_0_OR_GREATER
-	private static readonly System.Threading.Lock Gate = new();
+	private static readonly Lock Gate = new();
 #else
 	private static readonly object Gate = new();
 #endif

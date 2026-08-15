@@ -10,7 +10,7 @@ using Hexa.NET.ImPlot;
 /// <summary>
 /// Demo for ImPlot advanced plotting
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
+[SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Used for dummy data purposes")]
 internal sealed class ImPlotDemo : IDemoTab
 {
 	private readonly List<float> sinData = [];

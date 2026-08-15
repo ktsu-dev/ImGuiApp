@@ -35,7 +35,7 @@ public record class SearchBoxOptions(
 );
 
 /// <summary>
-/// Options for configuring a <see cref="ImGuiWidgets.SearchBoxRanked{T}(ref SearchBoxRankedOptions, ref string, System.Collections.Generic.IEnumerable{T}, System.Func{T, string})"/>.
+/// Options for configuring a <see cref="ImGuiWidgets.SearchBoxRanked{T}(ref SearchBoxRankedOptions, ref string, IEnumerable{T}, Func{T, string})"/>.
 /// </summary>
 /// <param name="Label">Label for display and id.</param>
 /// <param name="Hint">Hint text to display; when <see langword="null"/> a hint is derived from the fuzzy filter.</param>

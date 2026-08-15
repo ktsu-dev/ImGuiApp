@@ -380,5 +380,4 @@ public sealed class OutputPinAttribute : PinAttribute
 	public OutputPinAttribute(string displayName) : base(displayName)
 	{
 	}
-
 }

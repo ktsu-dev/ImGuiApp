@@ -8,9 +8,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
 using ktsu.ThemeProvider;
 using ktsu.ThemeProvider.ImGui;
-using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides methods and properties to manage and apply themes for ImGui elements using ThemeProvider.

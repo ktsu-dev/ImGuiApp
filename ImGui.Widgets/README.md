@@ -18,6 +18,7 @@ ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provid
 - **Scoped Id**: A utility class for creating scoped IDs
 - **Scoped Disable**: Temporarily disable UI elements within a scope
 - **SearchBox**: A powerful search box with support for various filter types (Glob, Regex, Fuzzy) and matching options
+- **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, and a file tree view. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
 
 ## Installation
 
@@ -579,6 +580,33 @@ stackedContainer.Tick(deltaTime);
 ```
 
 The dividers can be dragged by the user to resize the content regions dynamically.
+
+### Hexa-backed Widgets
+
+These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) rather than reimplementing rendering logic:
+
+- **`Spinner`**: Indeterminate loading spinner animated from the ImGui frame time
+- **`BufferingBar`**: Horizontal bar filled left-to-right in proportion to a value
+- **`HorizontalSplitter` / `VerticalSplitter`**: Draggable splitters that adjust a bound height/width within min/max limits
+- **`ToggleSwitch`**: Sliding on/off switch
+- **`ToggleButton`**: Button that shows a highlight ring while selected
+- **`TransparentButton`**: Button with no background until hovered
+- **`InlineButton`**: Compact button anchored inside an existing rectangle, for rows and headers
+- **`IconTreeNode`**: Tree node with a coloured icon glyph before its label
+- **`EnumCombo<T>`**: Combo box listing every member of an enum type
+- **`TextCenteredV` / `TextCenteredH` / `TextCenteredVH`**: Text centred vertically, horizontally, or both
+- **`ImageCenteredV` / `ImageCenteredH` / `ImageCenteredVH`**: Image centred vertically, horizontally, or both
+- **`ImageScaleTo`**: Image scaled to fit inside a destination box while preserving aspect ratio
+- **`Tooltip`**: Shows a tooltip for the preceding item while it is hovered
+- **`Breadcrumb`**: Clickable breadcrumb trail from a separator-delimited path
+- **`DatePicker`**: Calendar control for picking a date
+- **`YearPicker`**: Grid control for picking a year
+- **`FlameGraph`**: Flame graph of hierarchical timing samples
+- **`FileTreeView`**: Navigable tree of the filesystem rooted at the machine's drives
+
+**Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker` requires no icon font.
+
+**Duplicate widgets**: Several Hexa-backed widgets deliberately coexist with an existing ktsu widget that covers similar ground: `HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, and `ImageCenteredV/H/VH` vs `ImageCentered`. Both sides of each pair remain until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which one to keep — that decision is a separate, breaking change.
 
 ## Contributing
 

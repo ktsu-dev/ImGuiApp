@@ -13,6 +13,6 @@
     <ProjectReference Include="..\..\ImGui.Popups\ImGui.Popups.csproj" />
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Semantics.Strings" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 </Project>

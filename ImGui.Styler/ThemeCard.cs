@@ -7,8 +7,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.Color;
-using ktsu.ThemeProvider;
 using ktsu.Semantics.Color;
+using ktsu.ThemeProvider;
 
 /// <summary>
 /// Provides theme preview card widgets for displaying theme information in a dialog window style.

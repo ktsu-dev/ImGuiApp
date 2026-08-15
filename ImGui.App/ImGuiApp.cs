@@ -26,7 +26,7 @@ using Color = System.Drawing.Color;
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
+[SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "This class is the main entry point for the ImGui application and requires many dependencies. Consider refactoring in the future.")]
 public static partial class ImGuiApp
 {
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
@@ -1608,6 +1608,14 @@ public static partial class ImGuiApp
 		fontAtlasPtr.Clear();
 		FontIndices.Clear();
 
+		// Release the font blobs pinned by the previous OnConfigureFonts run. The atlas that
+		// referenced them was just discarded, and the hook below re-registers on every rebuild, so
+		// without this each DPI change would leave another permanently pinned copy of the caller's
+		// font data behind. Deliberately not CleanupCustomFonts(), which also resets the cached
+		// glyph ranges -- those survive a rebuild, and rebuilding them would leak the previous
+		// builder and range vector on every DPI change.
+		FontHelper.CleanupPinnedFontHandles();
+
 		// Note: Atlas texture size configuration not available in current Hexa.NET.ImGui binding
 		// The glyph limit calculation below uses RecommendedAtlasSize to determine if fallback is needed
 		// Modern ImGui versions automatically expand the atlas texture as needed
@@ -1676,6 +1684,13 @@ public static partial class ImGuiApp
 			FontIndices["default"] = defaultFontIndex;
 			FontIndices["Default"] = defaultFontIndex;
 		}
+
+		// Let the consumer register additional fonts with custom glyph ranges (for example Material
+		// Icons via FontHelper.AddCustomFont) before the atlas is built. This must run on every path
+		// that reaches here -- i.e. every actual rebuild -- but never on the early-return skip path
+		// above, since a font merged after the atlas already reports itself built would never be
+		// rasterized (RecreateFontDeviceTexture skips rebuilding once io.Fonts.TexIsBuilt is true).
+		Config.OnConfigureFonts?.Invoke();
 
 		// Build the font atlas to generate the texture
 		ImGuiP.ImFontAtlasBuildMain(fontAtlasPtr);
