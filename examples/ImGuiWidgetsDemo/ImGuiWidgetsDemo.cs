@@ -90,7 +90,14 @@ internal static class ImGuiWidgetsDemo
 	private static string otpValue = string.Empty;
 	private static bool skeletonLoading = true;
 
-	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
+	// The DividerContainer is no longer this demo's top-level layout -- the main window is a tab bar
+	// now -- so the widget keeps a live instance of its own, drawn inside its demo section.
+	private static ImGuiWidgets.DividerContainer DividerDemoContainer { get; } = new("DividerDemoContainer");
+
+	// DividerContainer.Tick needs a delta time, and the divider demo runs from a collapsing header
+	// that has none threaded through to it, so OnRender stashes the frame's delta here.
+	private static float deltaTime;
+
 	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
 	private static ImGuiWidgets.TabPanel DemoTabPanel { get; } = new("DemoTabPanel", true, true);
 	private static Dictionary<string, string> TabIds { get; } = [];
@@ -154,10 +161,12 @@ internal static class ImGuiWidgetsDemo
 	[SuppressMessage("Security Hotspot", "S2245:Make sure that using this pseudorandom number generator is safe here", Justification = "Random is used only for generating visual demo data; no security or cryptographic use.")]
 	private static void OnStart()
 	{
-		// Create main layout with dedicated demo sections
-		DividerContainer.Add(new("Widget Demos", 0.4f, ShowWidgetDemos));
-		DividerContainer.Add(new("Advanced Demos", 0.3f, ShowAdvancedDemos));
-		DividerContainer.Add(new("Hexa Widgets", 0.3f, HexaWidgetsDemo.Show));
+		// Zones for the live DividerContainer demo (see ShowDividerDemo); the demo's own layout is
+		// the tab bar in OnRender.
+		DividerDemoContainer.Add(new("DividerDemoLeft", 0.5f, _ =>
+			ImGui.TextWrapped("Drag the handle between these zones to resize them, or double-click it to reset.")));
+		DividerDemoContainer.Add(new("DividerDemoRight", 0.5f, _ =>
+			ImGui.TextWrapped("Each zone is its own child window, so it scrolls and clips independently.")));
 
 		// Initialize TabPanel demo
 		TabIds["tab1"] = DemoTabPanel.AddTab("tab1", "Tab 1", ShowTab1Content);
@@ -194,11 +203,42 @@ internal static class ImGuiWidgetsDemo
 
 	private static void OnRender(float dt)
 	{
-		DividerContainer.Tick(dt);
+		deltaTime = dt;
+
+		if (ImGui.BeginTabBar("DemoTabs"))
+		{
+			ShowTab("Widget Demos", ShowWidgetDemos);
+			ShowTab("Advanced Demos", ShowAdvancedDemos);
+			ShowTab("Hexa vs ktsu", HexaWidgetsDemo.ShowComparison);
+			ShowTab("Net New", HexaWidgetsDemo.ShowNetNew);
+			ShowTab("Dialogs", HexaWidgetsDemo.ShowDialogComparison);
+
+			ImGui.EndTabBar();
+		}
 
 		// Hexa's dialogs are stateful: Show() registers them with a static manager and they are
-		// only drawn by this pump. Without it no dialog appears.
+		// only drawn by this pump. Without it no dialog appears. It sits outside the tab bar because
+		// Hexa draws its dialogs as their own windows, so it does not matter which tab is active --
+		// unlike ktsu's popups, which are pumped inline by the tab that opens them.
 		ImGuiWidgets.DrawDeferred();
+	}
+
+	/// <summary>
+	/// Draws one top-level tab. The content goes in a child window so that it scrolls under a tab
+	/// bar that stays put, rather than scrolling the tab bar off the top of the window with it.
+	/// </summary>
+	/// <param name="label">The tab label.</param>
+	/// <param name="content">The tab's contents, drawn only while the tab is active.</param>
+	private static void ShowTab(string label, Action content)
+	{
+		if (ImGui.BeginTabItem(label))
+		{
+			// BeginChild must be paired with EndChild whatever it returns, so the result is ignored.
+			ImGui.BeginChild($"{label}Content", Vector2.Zero, ImGuiChildFlags.None);
+			content();
+			ImGui.EndChild();
+			ImGui.EndTabItem();
+		}
 	}
 
 	private static void OnAppMenu()
@@ -211,7 +251,7 @@ internal static class ImGuiWidgetsDemo
 		// Method intentionally left empty.
 	}
 
-	private static void ShowWidgetDemos(float size)
+	private static void ShowWidgetDemos()
 	{
 		ImGui.TextUnformatted("ImGuiWidgets Library - Comprehensive Demo");
 		ImGui.Separator();
@@ -228,7 +268,7 @@ internal static class ImGuiWidgetsDemo
 		ShowMobileContainersDemo();
 	}
 
-	private static void ShowAdvancedDemos(float size)
+	private static void ShowAdvancedDemos()
 	{
 		AbsoluteFilePath ktsuIconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>();
 		ImGuiAppTextureInfo ktsuTexture = ImGuiApp.GetOrLoadTexture(ktsuIconPath);
@@ -1122,16 +1162,19 @@ internal static class ImGuiWidgetsDemo
 	{
 		if (ImGui.CollapsingHeader("Divider Container"))
 		{
-			ImGui.TextUnformatted("This entire demo uses a DividerContainer!");
-			ImGui.TextUnformatted("The resizable divider between 'Widget Demos' and 'Advanced Demos'");
-			ImGui.TextUnformatted("is created using ImGuiWidgets.DividerContainer.");
-
-			ImGui.Separator();
 			ImGui.TextUnformatted("DividerContainer features:");
 			ImGui.BulletText("Resizable panes with drag handle");
 			ImGui.BulletText("Persistent sizing ratios");
 			ImGui.BulletText("Automatic content management");
 			ImGui.BulletText("Nested dividers support");
+
+			ImGui.Separator();
+
+			// The container lays itself out into the whole remaining content region, so it is given a
+			// fixed-height host to draw into rather than being left to swallow the rest of the tab.
+			ImGui.BeginChild("DividerDemoHost", new Vector2(0f, 120f), ImGuiChildFlags.None);
+			DividerDemoContainer.Tick(deltaTime);
+			ImGui.EndChild();
 		}
 	}
 

@@ -5,7 +5,6 @@ namespace ktsu.ImGui.Examples.Widgets;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -22,6 +21,11 @@ using ktsu.Semantics.Strings;
 /// Hexa.NET.ImGui.Widgets, plus a gallery of the Hexa widgets that have no ktsu counterpart.
 /// Each comparison row drives both implementations from the same backing field so behavioural
 /// differences are visible rather than inferred.
+/// <para>
+/// The three entry points -- <see cref="ShowComparison"/>, <see cref="ShowNetNew"/> and
+/// <see cref="ShowDialogComparison"/> -- are each a top-level tab of the demo window, drawn by
+/// ImGuiWidgetsDemo.OnRender.
+/// </para>
 /// </summary>
 internal static class HexaWidgetsDemo
 {
@@ -40,13 +44,14 @@ internal static class HexaWidgetsDemo
 	private static string sharedMessageAnswer = "(none)";
 
 	// ktsu's popups render inline wherever they are pumped (see the ShowIfOpen calls at the end of
-	// Show), unlike Hexa's static deferred-draw manager, so each needs its own persistent instance
-	// to survive across frames and its own per-frame pump call. Each instance must also be owned
-	// exclusively by the pane that opens it: ImGui derives a popup's underlying ID from the ID
-	// stack of whichever window is current when Open()/ShowIfOpen() run, so sharing one instance
-	// across two panes that tick every frame in their own BeginChild (as this "Hexa Widgets" zone
-	// and the "Advanced Demos" zone both do via DividerContainer) lets a later Open() from one pane
-	// silently strand a popup already open under the other pane's ID.
+	// ShowDialogComparison), unlike Hexa's static deferred-draw manager, so each needs its own
+	// persistent instance to survive across frames and its own pump call. Each instance must also be
+	// owned exclusively by the tab that opens it: ImGui derives a popup's underlying ID from the ID
+	// stack current when Open()/ShowIfOpen() run, and a tab item pushes its own ID, so an instance
+	// shared with another tab (as with the "Advanced Demos" tab's own MessageOK) would be opened
+	// under one tab's ID and pumped under the other's, and never appear. Pumping from inside the tab
+	// is enough to keep an open popup alive because these are modal: while one is up the user cannot
+	// reach the tab bar to switch away from it.
 	private static readonly ImGuiPopups.FilesystemBrowser KtsuOpenFileBrowser = new();
 	private static readonly ImGuiPopups.FilesystemBrowser KtsuOpenFolderBrowser = new();
 	private static readonly ImGuiPopups.FilesystemBrowser KtsuSaveFileBrowser = new();
@@ -88,43 +93,10 @@ internal static class HexaWidgetsDemo
 		new(6f, 9.4f, 2, "Draw"),
 	];
 
-	[SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Signature must match ktsu.ImGui.Widgets.DividerContainer's Action<float> tick delegate (see DividerContainer.Add); this pane's content does not depend on the available width.")]
-	internal static void Show(float size)
-	{
-		if (ImGui.BeginTabBar("HexaWidgetsTabs"))
-		{
-			if (ImGui.BeginTabItem("Hexa vs ktsu"))
-			{
-				ShowComparison();
-				ImGui.EndTabItem();
-			}
-
-			if (ImGui.BeginTabItem("Net New"))
-			{
-				ShowNetNew();
-				ImGui.EndTabItem();
-			}
-
-			if (ImGui.BeginTabItem("Dialogs"))
-			{
-				ShowDialogComparison();
-				ImGui.EndTabItem();
-			}
-
-			ImGui.EndTabBar();
-		}
-
-		// ktsu's popups render inline wherever they're pumped, so each live dialog in the "Dialogs"
-		// tab needs an unconditional per-frame ShowIfOpen() call here. This method runs every frame
-		// regardless of which internal tab is active -- the same guarantee ImGuiWidgets.DrawDeferred()
-		// relies on in OnRender for the Hexa side.
-		KtsuMessageBox.ShowIfOpen();
-		KtsuOpenFileBrowser.ShowIfOpen();
-		KtsuOpenFolderBrowser.ShowIfOpen();
-		KtsuSaveFileBrowser.ShowIfOpen();
-	}
-
-	private static void ShowComparison()
+	/// <summary>
+	/// The "Hexa vs ktsu" tab: every widget with an implementation on both sides, a row apiece.
+	/// </summary>
+	internal static void ShowComparison()
 	{
 		ImGui.TextWrapped("Both columns of each row are bound to the same value. Change one and the other follows.");
 		ImGui.Separator();
@@ -193,7 +165,7 @@ internal static class HexaWidgetsDemo
 		ImGuiWidgets.ImageCenteredH(sharedImage.TextureId, imageSize);
 
 		BeginRow("Splitter");
-		ImGui.TextUnformatted($"DividerContainer: see the Advanced pane ({sharedSplitWidth:F0}px)");
+		ImGui.TextUnformatted($"DividerContainer: see the Advanced Demos tab ({sharedSplitWidth:F0}px)");
 		ImGui.TableNextColumn();
 		ImGuiWidgets.VerticalSplitter("##hexaSplitter", ref sharedSplitWidth, 80f, 400f, 40f);
 		ImGui.SameLine();
@@ -214,7 +186,23 @@ internal static class HexaWidgetsDemo
 		ImGui.TableNextColumn();
 	}
 
-	private static void ShowDialogComparison()
+	/// <summary>
+	/// The "Dialogs" tab: the dialog pairs, plus the per-frame pump ktsu's inline popups need.
+	/// </summary>
+	internal static void ShowDialogComparison()
+	{
+		ShowDialogTable();
+
+		// ktsu's popups render inline wherever they're pumped, so each dialog opened above needs an
+		// unconditional ShowIfOpen() call from this same tab, every frame. It is outside
+		// ShowDialogTable so that the early return in there cannot skip it.
+		KtsuMessageBox.ShowIfOpen();
+		KtsuOpenFileBrowser.ShowIfOpen();
+		KtsuOpenFolderBrowser.ShowIfOpen();
+		KtsuSaveFileBrowser.ShowIfOpen();
+	}
+
+	private static void ShowDialogTable()
 	{
 		ImGui.TextWrapped("Dialogs are windows, not inline widgets, so each row is a pair of buttons writing to one shared field. Open ktsu's, then Hexa's, and compare what comes back.");
 		ImGui.Separator();
@@ -298,10 +286,13 @@ internal static class HexaWidgetsDemo
 		ImGui.TextUnformatted($"Answer:  {sharedMessageAnswer}");
 
 		ImGui.Separator();
-		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged. ktsu's dialogs render inline wherever they are pumped (see the ShowIfOpen calls in Show) rather than through a central deferred-draw manager, and ktsu's MessageOK has no built-in Yes/No button-set the way Hexa's ShowMessageBox does -- this row's ktsu answer is always \"Ok\".");
+		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged. ktsu's dialogs render inline wherever they are pumped (see the ShowIfOpen calls in ShowDialogComparison) rather than through a central deferred-draw manager, and ktsu's MessageOK has no built-in Yes/No button-set the way Hexa's ShowMessageBox does -- this row's ktsu answer is always \"Ok\".");
 	}
 
-	private static void ShowNetNew()
+	/// <summary>
+	/// The "Net New" tab: Hexa widgets with no ktsu counterpart.
+	/// </summary>
+	internal static void ShowNetNew()
 	{
 		ImGui.TextWrapped("Hexa widgets with no ktsu counterpart.");
 		ImGui.Separator();
@@ -393,8 +384,8 @@ internal static class HexaWidgetsDemo
 	}
 
 	/// <summary>
-	/// Width for the curve editors: the remaining content region, floored so a collapsed or
-	/// clipped pane still yields something the editor can draw into rather than a zero-width sliver.
+	/// Width for the curve editors: the remaining content region, floored so a narrow or clipped
+	/// window still yields something the editor can draw into rather than a zero-width sliver.
 	/// </summary>
 	/// <returns>The width in pixels.</returns>
 	private static float AvailableEditorWidth() => Math.Max(ImGui.GetContentRegionAvail().X, 120f);
