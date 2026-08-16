@@ -27,7 +27,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 ### Libraries
 
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness
-- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId. Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Several of these deliberately duplicate an existing ktsu widget (`HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, `ImageCenteredV/H/VH` vs `ImageCentered`) — both survive on purpose until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which to keep. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below.
+- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId. Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Several of these deliberately duplicate an existing ktsu widget (`HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, `ImageCenteredV/H/VH` vs `ImageCentered`) — both survive on purpose until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which to keep. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
@@ -190,6 +190,40 @@ The pump is required for dialogs, not for animation.
 
 The file dialogs' underlying `Close()` briefly blocks the UI thread while its async directory-scan
 task unwinds (`refreshTask?.Wait()`).
+
+### Callback-driven editors
+
+`ImGuiWidgets.Sequencer` and the multi-curve `ImGuiWidgets.CurveEditor(CurveSource, Vector2, string)`
+take a source object they interrogate while drawing, rather than a value:
+
+- Subclass `ImGuiWidgets.SequenceSource` for a timeline: implement `FrameMin`, `FrameMax`, `ItemCount`,
+  `GetItem(int)`, and `SetItemRange(int index, int start, int endFrame)` (the third parameter is the
+  clip's new *end* frame, not a generic "end" value), which receives drag edits. `GetItemLabel`,
+  `ItemTypeNames`, `AddItem`, `DeleteItem`, `DuplicateItem`, `Copy`, `Paste`, `GetCustomHeight`,
+  `DoubleClick`, `BeginEdit` and `EndEdit` are virtual with no-op/empty defaults.
+- Subclass `ImGuiWidgets.CurveSource` for a multi-curve graph: implement `CurveCount`, `ViewMin`,
+  `ViewMax`, `GetPointCount(int)`, `GetPoints(int)`, `GetCurveColor(int)`, `EditPoint(int, int, Vector2)`
+  and `AddPoint(int, Vector2)`. `IsVisible`, `GetInterpolation`, `BackgroundColor`, `BeginEdit` and
+  `EndEdit` are virtual with sensible defaults.
+
+Neither entry point calls or requires `DrawDeferred()`/`DrawDeferredDocked()` — they are immediate-mode
+calls that happen to take a callback object, drawn inline wherever you call them. `SequenceSource` and
+`CurveSource` themselves are plain abstract classes with managed members only; no vendor type and no
+`unsafe` appears in either class's public surface (the `unsafe` in `Sequencer`'s and the multi-curve
+`CurveEditor`'s own signatures is confined to the adapters that marshal to Hexa internally).
+
+`ImGuiWidgets.CurveEditor` also has a single-curve overload — distinguished from the `CurveSource`
+overload by its first parameter's type and the overload's arity — that edits a `CurveData` value:
+`CurveEditor(CurveData curve, Vector2 size, Vector2 rangeMin, Vector2 rangeMax, ref int selection,
+string label)`. `ImGuiWidgets.BezierEditor(string label, ref BezierControlPoints points, float size =
+128f)` edits a `BezierControlPoints` pair (`First`/`Second`) directly, with no source object.
+
+`CurveData` wraps the curve representation the widget expects, exposing `PointCount`, a mutable `Shape`
+(`CurveShape.Smooth` or `.Freehand`), and `GetPoint`/`AddPoint`/`SetPoint`/`RemovePoint`/`Clear` over
+`CurveKnot` values (a `Position` plus a `CurvePointKind` of `.Smooth` or `.Corner`). It tracks a dirty
+flag internally: every one of those mutators, the `Shape` setter, and an edit made through the
+`CurveEditor(CurveData, ...)` overload all mark it dirty, so `Sample(float t)` recomputes the
+underlying sample cache on its next call rather than returning a stale value.
 
 ### Scoped Styling (RAII Pattern)
 
