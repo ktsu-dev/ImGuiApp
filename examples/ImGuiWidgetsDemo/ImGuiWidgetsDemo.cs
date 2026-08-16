@@ -93,6 +93,7 @@ internal static class ImGuiWidgetsDemo
 	private static ImGuiWidgets.DividerContainer DividerContainer { get; } = new("DemoDividerContainer");
 	private static ImGuiPopups.MessageOK MessageOK { get; } = new();
 	private static ImGuiWidgets.TabPanel DemoTabPanel { get; } = new("DemoTabPanel", true, true);
+	private static ImGuiWidgets.ImageCanvasState ImageCanvasDemoState { get; } = new();
 	private static Dictionary<string, string> TabIds { get; } = [];
 	private static int NextDynamicTabId { get; set; } = 1;
 
@@ -237,12 +238,41 @@ internal static class ImGuiWidgetsDemo
 		ImGui.Separator();
 
 		ShowImageAndIconDemo(ktsuTexture);
+		ShowImageCanvasDemo(ktsuTexture);
 		ShowTabPanelDemo();
 		ShowSearchBoxDemo();
 		ShowGridDemo(ktsuTexture);
 		ShowDividerDemo();
 
 		MessageOK.ShowIfOpen();
+	}
+
+	private static void ShowImageCanvasDemo(ImGuiAppTextureInfo ktsuTexture)
+	{
+		if (ImGui.CollapsingHeader("ImageCanvas"))
+		{
+			ImGui.TextUnformatted("Pannable, zoomable image canvas with a checkerboard behind transparency:");
+			ImGui.BulletText("Drag to pan");
+			ImGui.BulletText("Scroll to zoom toward the cursor");
+			ImGui.BulletText("Double-click to fit the image to the canvas");
+			ImGui.Separator();
+
+			if (ImGui.Button("Fit"))
+			{
+				ImageCanvasDemoState.FitToViewport(new Vector2(ktsuTexture.Width, ktsuTexture.Height), new Vector2(ImGui.GetContentRegionAvail().X, 300f));
+			}
+			ImGui.SameLine();
+			if (ImGui.Button("1:1"))
+			{
+				ImageCanvasDemoState.ResetToActualSize();
+			}
+			ImGui.SameLine();
+			ImGui.TextUnformatted($"Zoom: {ImageCanvasDemoState.Zoom:0.##}x");
+
+			Vector2 imageSize = new(ktsuTexture.Width, ktsuTexture.Height);
+			Vector2 canvasSize = new(ImGui.GetContentRegionAvail().X, 300f);
+			ImGuiWidgets.ImageCanvas("image_canvas_demo", ktsuTexture.TextureId, imageSize, ImageCanvasDemoState, canvasSize);
+		}
 	}
 
 	private static void ShowTabPanelDemo()
