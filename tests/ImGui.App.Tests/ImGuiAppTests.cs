@@ -464,6 +464,8 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		public int CreateTextureCallCount { get; private set; }
 		public int DeleteTextureCallCount { get; private set; }
 		public nint NextHandle { get; init; }
+		public nint LastUpdatedTextureId { get; private set; }
+		public byte[] LastUpdatedPixels { get; private set; } = [];
 
 		public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 		{
@@ -471,9 +473,35 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 			return NextHandle;
 		}
 
+		public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
+		{
+			LastUpdatedTextureId = id;
+			LastUpdatedPixels = rgba.ToArray();
+			return true;
+		}
+
 		public void DeleteTexture(nint id) => DeleteTextureCallCount++;
 		public void RenderDrawData(Hexa.NET.ImGui.ImDrawDataPtr drawData) { }
 		public void Dispose() { }
+	}
+
+	[TestMethod]
+	public void UpdateTexture_ThroughTheBackendInterface_ReceivesTheHandleAndPixels()
+	{
+		// The local is typed as IRendererBackend deliberately. Calling through the interface is what
+		// makes this fail to compile until the interface declares UpdateTexture. Calling it on the
+		// concrete fake would compile and pass the moment the fake gained the method, proving nothing
+		// about the contract this task exists to add.
+		using FakeRendererBackend fake = new() { NextHandle = 11 };
+		IRendererBackend backend = fake;
+		nint id = backend.CreateTexture(new byte[4], 1, 1);
+		byte[] pixels = [1, 2, 3, 4];
+
+		bool updated = backend.UpdateTexture(id, pixels, 1, 1);
+
+		Assert.IsTrue(updated, "A backend that supports in-place update should report success");
+		Assert.AreEqual(id, fake.LastUpdatedTextureId, "The handle should reach the backend unchanged");
+		CollectionAssert.AreEqual(pixels, fake.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
 	}
 
 	[TestMethod]

@@ -95,6 +95,29 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 	}
 
 	/// <inheritdoc />
+	/// <remarks>
+	/// Metal supports this natively: <c>ReplaceRegion</c> is the same call <see cref="CreateTexture"/>
+	/// already uses to populate a freshly allocated texture, so there is no reason to decline and send
+	/// the caller down the recreate path. An unrecognized handle does return <see langword="false"/>,
+	/// because recreating is the correct recovery when the texture is gone.
+	/// </remarks>
+	public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		if (!textures.TryGetValue(id, out IMTLTexture? texture))
+		{
+			return false;
+		}
+
+		MTLRegion region = MTLRegion.Create2D(0, 0, (nuint)width, (nuint)height);
+		fixed (byte* pixels = rgba)
+		{
+			texture.ReplaceRegion(region, 0, (nint)pixels, (nuint)(width * 4));
+		}
+
+		return true;
+	}
+
+	/// <inheritdoc />
 	public void DeleteTexture(nint id)
 	{
 		if (textures.Remove(id, out IMTLTexture? texture))

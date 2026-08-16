@@ -104,6 +104,12 @@ public sealed unsafe class MockGL(TestGL testGL) : IGL
 		_testGL.TexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
 	}
 
+	public void TexSubImage2D(GLEnum target, int level, int xoffset, int yoffset, uint width, uint height, GLEnum format, GLEnum type, void* pixels)
+	{
+		ThrowIfDisposed();
+		_testGL.TexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
+	}
+
 	public void Dispose()
 	{
 		if (!_disposed)

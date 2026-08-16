@@ -28,6 +28,24 @@ internal interface IRendererBackend : IDisposable
 	public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height);
 
 	/// <summary>
+	/// Replaces the pixel contents of an existing texture in place, reusing its GPU storage.
+	/// </summary>
+	/// <param name="id">The handle returned by <see cref="CreateTexture"/>.</param>
+	/// <param name="rgba">Tightly packed RGBA8 pixel data (<paramref name="width"/> * <paramref name="height"/> * 4 bytes).</param>
+	/// <param name="width">Texture width in pixels. Must match the width the texture was created with.</param>
+	/// <param name="height">Texture height in pixels. Must match the height the texture was created with.</param>
+	/// <returns>
+	/// <see langword="true"/> if the texture was updated in place. <see langword="false"/> if this backend
+	/// cannot update textures at all, in which case the caller should recreate the texture instead.
+	/// </returns>
+	/// <exception cref="InvalidOperationException">
+	/// The backend supports in-place update but its rendering context is not initialized. That is a
+	/// different condition from returning <see langword="false"/>, and recreating the texture will not
+	/// help, so it is reported as a fault rather than as a declined capability.
+	/// </exception>
+	public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height);
+
+	/// <summary>
 	/// Releases a texture previously returned by <see cref="CreateTexture"/>.
 	/// </summary>
 	/// <param name="id">The handle returned by <see cref="CreateTexture"/>.</param>

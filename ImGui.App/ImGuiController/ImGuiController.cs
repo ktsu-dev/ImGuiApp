@@ -302,6 +302,32 @@ internal sealed class ImGuiController : IRendererBackend
 	}
 
 	/// <inheritdoc />
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; pointer is pinned within a fixed block and not retained.")]
+	public unsafe bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		// Matches CreateTexture rather than DeleteTexture's null-conditional no-op: a torn-down context
+		// is a fault here, not a declined capability. Returning false would send the caller into the
+		// recreate path, where CreateTexture would throw this same exception one step further from the
+		// cause.
+		if (_gl is null)
+		{
+			throw new InvalidOperationException("OpenGL context is not initialized.");
+		}
+
+		// Preserve whatever was bound — the caller may be mid-frame.
+		_gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
+		_gl.BindTexture(GLEnum.Texture2D, (uint)id);
+
+		fixed (byte* pixelPtr = rgba)
+		{
+			_gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, (uint)width, (uint)height, GLEnum.Rgba, GLEnum.UnsignedByte, pixelPtr);
+		}
+
+		_gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
+		return true;
+	}
+
+	/// <inheritdoc />
 	// _gl can be null if the context has already been torn down; callers expect a no-op then.
 	public void DeleteTexture(nint id) => _gl?.DeleteTexture((uint)id);
 
