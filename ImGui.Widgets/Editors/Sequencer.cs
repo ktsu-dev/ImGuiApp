@@ -41,28 +41,44 @@ public static partial class ImGuiWidgets
 		Ensure.NotNull(source);
 
 		int count = source.ItemCount;
-		Span<SequenceRange> ranges = count <= SequencerStackAllocLimit
-			? stackalloc SequenceRange[count]
-			: new SequenceRange[count];
 
+		// One extra slot past the real entries: a scratch landing zone for out-of-range Get()
+		// calls (see SequenceAdapter.Get), kept in the same pinned buffer as the real data.
+		int bufferLength = count + 1;
+		Span<SequenceRange> buffer = bufferLength <= SequencerStackAllocLimit
+			? stackalloc SequenceRange[bufferLength]
+			: new SequenceRange[bufferLength];
+
+		Span<SequenceRange> ranges = buffer[..count];
 		FillRanges(source, ranges);
 
 		SequenceRange[] before = ranges.ToArray();
 		SequenceAdapter adapter = new(source);
 		bool changed;
 
-		fixed (SequenceRange* pinned = ranges)
+		fixed (SequenceRange* pinned = buffer)
 		{
 			adapter.Bind(pinned, count);
 			try
 			{
-				changed = HexaSequencer.Sequencer(
-					adapter,
-					ref currentFrame,
-					ref expanded,
-					ref selectedEntry,
-					ref firstFrame,
-					MapFeatures(features));
+				// Hexa's ref-parameter overload (ImSequencer.cs:76) has an aliasing bug: it pins
+				// &currentFrame for selectedEntry and firstFrame too, so those two are silently
+				// never written and both alias the playhead instead. Call the pointer overload
+				// directly, pinning each parameter to its own address, so nobody "simplifies"
+				// this back to the broken convenience overload.
+				fixed (int* pCurrentFrame = &currentFrame)
+				fixed (bool* pExpanded = &expanded)
+				fixed (int* pSelectedEntry = &selectedEntry)
+				fixed (int* pFirstFrame = &firstFrame)
+				{
+					changed = HexaSequencer.Sequencer(
+						adapter,
+						pCurrentFrame,
+						pExpanded,
+						pSelectedEntry,
+						pFirstFrame,
+						MapFeatures(features));
+				}
 			}
 			finally
 			{
@@ -124,22 +140,56 @@ public static partial class ImGuiWidgets
 		/// <remarks>
 		/// Upstream calls this with different subsets of the out-parameters set to null, so every
 		/// one is checked before writing. Writing unconditionally dereferences null.
+		/// <para>
+		/// Upstream also never checks whether <paramref name="start"/>/<paramref name="end"/> were
+		/// actually written before dereferencing <em>them</em> (the drag path at
+		/// <c>ImSequencer.cs:530-547</c> reads <c>*start</c>/<c>*end</c> unconditionally). An
+		/// out-of-range <paramref name="index"/> is reachable in practice — Hexa's own
+		/// <c>MovingEntry</c> is static state that can outlive a frame where the source's item
+		/// count shrank — so it must still receive a writable address rather than being left
+		/// unwritten. Out-of-range writes are redirected to a scratch slot reserved one past the
+		/// real entries in the same pinned buffer, zeroed first so a stale value from a previous
+		/// frame can't leak into a drag.
+		/// </para>
 		/// </remarks>
 		public override void Get(int index, int** start, int** end, int* type, uint* color)
 		{
-			if (ranges is null || index < 0 || index >= count)
+			if (ranges is null)
 			{
+				// Only reachable if Get is called outside the Bind/Unbind window, which means
+				// there is no pinned memory at all to redirect writes to.
 				return;
 			}
 
-			if (start is not null)
+			bool inRange = index >= 0 && index < count;
+
+			if (start is not null || end is not null)
 			{
-				*start = &ranges[index].Start;
+				SequenceRange* target;
+				if (inRange)
+				{
+					target = &ranges[index];
+				}
+				else
+				{
+					target = &ranges[count];
+					*target = default;
+				}
+
+				if (start is not null)
+				{
+					*start = &target->Start;
+				}
+
+				if (end is not null)
+				{
+					*end = &target->End;
+				}
 			}
 
-			if (end is not null)
+			if (!inRange)
 			{
-				*end = &ranges[index].End;
+				return;
 			}
 
 			if (type is not null || color is not null)
