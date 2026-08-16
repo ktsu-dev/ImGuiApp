@@ -100,10 +100,12 @@ public static partial class ImGuiWidgets
 	{
 		internal static bool ToggleSwitch(string label, ref bool selected)
 		{
-			// ToggleSwitch is animated, and Hexa's animation clock only advances when something
-			// ticks it. Without this the switch renders inverted after its first click; see
-			// HexaAnimationPump.
-			HexaAnimationPump.TickOncePerFrame();
+			// ToggleSwitch is animated, and Hexa's animation clock only advances when
+			// something ticks it. If the application never calls DrawDeferred() or
+			// DrawDeferredDocked(), this fallback keeps the clock moving so the switch
+			// doesn't render inverted after its first click; see
+			// DeferredDrawing.TickAnimationClockIfUnpumped.
+			TickAnimationClockIfUnpumped();
 			return HexaButton.ToggleSwitch(label, ref selected);
 		}
 

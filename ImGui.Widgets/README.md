@@ -18,7 +18,7 @@ ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provid
 - **Scoped Id**: A utility class for creating scoped IDs
 - **Scoped Disable**: Temporarily disable UI elements within a scope
 - **SearchBox**: A powerful search box with support for various filter types (Glob, Regex, Fuzzy) and matching options
-- **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, and a file tree view. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
+- **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, a file tree view, stateful file/rename/message dialogs, and a docked-window base class. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
 
 ## Installation
 
@@ -603,10 +603,16 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 - **`YearPicker`**: Grid control for picking a year
 - **`FlameGraph`**: Flame graph of hierarchical timing samples
 - **`FileTreeView`**: Navigable tree of the filesystem rooted at the machine's drives
+- **`OpenFileDialog`** / **`SaveFileDialog`** / **`OpenFolderDialog`**: Stateful dialogs for choosing existing files, a save destination, or a folder
+- **`RenameDialog`**: Renames or moves a file, reporting success or failure without throwing
+- **`DialogMessageBox`** / **`ShowMessageBox`**: A movable-window-style and a popup-style message box, respectively
+- **`DockedWindow`**: Abstract base for a floating window the user can drag into the dockspace `DrawDeferredDocked()` creates — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. It is dockable, not auto-docked: it opens floating and stays there until the user drags it in
 
-**Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker` requires no icon font.
+**Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same font for their toolbar, breadcrumb and file-tree glyphs. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker`, `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` require no icon font.
 
 **Duplicate widgets**: Several Hexa-backed widgets deliberately coexist with an existing ktsu widget that covers similar ground: `HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, and `ImageCenteredV/H/VH` vs `ImageCentered`. Both sides of each pair remain until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which one to keep — that decision is a separate, breaking change.
+
+**Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it additionally enables `ImGuiConfigFlags.DockingEnable` (idempotently, since Hexa's dockspace is a no-op without it) and creates a dockspace over the main viewport, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
 
 ## Contributing
 

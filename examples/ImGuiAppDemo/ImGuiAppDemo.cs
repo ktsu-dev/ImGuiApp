@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Examples.App.Demos;
+using ktsu.ImGui.Widgets;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 
@@ -21,6 +22,8 @@ internal static class ImGuiAppDemo
 	private static OverlayCorner overlayCorner = OverlayCorner.TopRight;
 
 	private static readonly List<IDemoTab> demoTabs = [];
+
+	private static readonly DockedWindowDemo DockedWindow = new();
 
 	static ImGuiAppDemo()
 	{
@@ -81,6 +84,9 @@ internal static class ImGuiAppDemo
 		AbsoluteFilePath iconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
 		_ = ImGuiApp.GetOrLoadTexture(iconPath);
 		DemoImages.LoadEager();
+
+		// Registers with Hexa's WidgetManager; only rendered by DrawDeferredDocked below.
+		DockedWindow.Show();
 	}
 
 	// OnConfigureFonts runs after ImGuiAppConfig.Fonts has been added to the atlas but before the
@@ -149,6 +155,11 @@ internal static class ImGuiAppDemo
 		{
 			RenderAboutWindow();
 		}
+
+		// DrawDeferredDocked creates a dockspace over the main viewport and draws registered
+		// DockedWindows, plus every dialog, message box and popup. It is mutually exclusive with
+		// DrawDeferred, which it already includes.
+		ImGuiWidgets.DrawDeferredDocked();
 	}
 
 	// Demonstrates the canonical overlay API: toggle, opacity, click-through, and corner anchor.

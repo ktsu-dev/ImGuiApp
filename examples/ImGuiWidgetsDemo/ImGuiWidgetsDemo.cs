@@ -192,7 +192,14 @@ internal static class ImGuiWidgetsDemo
 	}
 #pragma warning restore CA5394 //Do not use insecure randomness
 
-	private static void OnRender(float dt) => DividerContainer.Tick(dt);
+	private static void OnRender(float dt)
+	{
+		DividerContainer.Tick(dt);
+
+		// Hexa's dialogs are stateful: Show() registers them with a static manager and they are
+		// only drawn by this pump. Without it no dialog appears.
+		ImGuiWidgets.DrawDeferred();
+	}
 
 	private static void OnAppMenu()
 	{

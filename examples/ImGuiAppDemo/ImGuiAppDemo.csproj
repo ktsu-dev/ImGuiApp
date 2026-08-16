@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\..\ImGui.Widgets\ImGui.Widgets.csproj" />
     <ProjectReference Include="..\..\ImGuiNodeEditor\ImGuiNodeEditor.csproj" />
     <ProjectReference Include="..\..\NodeGraph\NodeGraph.csproj" />
     <PackageReference Include="Hexa.NET.ImGui" />
