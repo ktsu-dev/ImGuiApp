@@ -368,7 +368,10 @@ internal static class HexaWidgetsDemo
 
 		if (ImGui.CollapsingHeader("Curve and bezier fields"))
 		{
-			_ = ImGuiWidgets.CurveEditor(DemoCurve, new Vector2(0f, 120f), Vector2.Zero, Vector2.One, ref demoCurveSelection, "##demoCurve");
+			// Both curve editors need an explicit width. The Vector2(0f, h) idiom used above for
+			// FlameGraph and FileTreeView does not transfer: neither vendor curve widget treats a
+			// zero dimension as "fill", so a zero X renders the editor as a sliver.
+			_ = ImGuiWidgets.CurveEditor(DemoCurve, new Vector2(AvailableEditorWidth(), 120f), Vector2.Zero, Vector2.One, ref demoCurveSelection, "##demoCurve");
 			ImGui.TextUnformatted($"Sample at 0.5: {DemoCurve.Sample(0.5f):F3}");
 
 			_ = ImGuiWidgets.BezierEditor("Easing", ref demoBezier);
@@ -378,7 +381,7 @@ internal static class HexaWidgetsDemo
 		if (ImGui.CollapsingHeader("Multi-curve editor"))
 		{
 			ImGui.TextWrapped("Two curves over one view range. Drag a point to move it.");
-			_ = ImGuiWidgets.CurveEditor(MultiCurve, new Vector2(0f, 160f), "##multiCurve");
+			_ = ImGuiWidgets.CurveEditor(MultiCurve, new Vector2(AvailableEditorWidth(), 160f), "##multiCurve");
 		}
 
 		if (ImGui.CollapsingHeader("Sequencer"))
@@ -388,6 +391,13 @@ internal static class HexaWidgetsDemo
 			ImGui.TextUnformatted($"Frame {timelineFrame}, selected {timelineSelected}, last edit: {timelineLastEdit}");
 		}
 	}
+
+	/// <summary>
+	/// Width for the curve editors: the remaining content region, floored so a collapsed or
+	/// clipped pane still yields something the editor can draw into rather than a zero-width sliver.
+	/// </summary>
+	/// <returns>The width in pixels.</returns>
+	private static float AvailableEditorWidth() => Math.Max(ImGui.GetContentRegionAvail().X, 120f);
 
 	/// <summary>
 	/// Two curves over a shared view range, for the multi-curve editor demo.

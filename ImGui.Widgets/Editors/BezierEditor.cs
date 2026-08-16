@@ -28,6 +28,10 @@ public static partial class ImGuiWidgets
 	{
 		Ensure.NotNull(label);
 
+		// Hexa's ref overload forms an unpinned pointer from this argument, which is the same defect
+		// CurveField.cs refuses — but it is harmless here and must stay: HexaBezierCurve is a struct
+		// in a stack local, which the GC never relocates, so the pointer stays valid for the whole
+		// call. Do not copy this shape onto a ref parameter or a field; that is the unsafe case.
 		HexaBezierCurve curve = ToVendorBezier(points);
 		bool changed = HexaBezierWidget.Bezier(label, ref curve, size);
 		if (changed)
