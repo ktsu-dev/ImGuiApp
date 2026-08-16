@@ -204,8 +204,23 @@ public abstract class CurveSource
 public enum CurveInterpolation { None, Discrete, Linear, Smooth, Bezier }
 ```
 
-`CurveInterpolation` mirrors upstream's `CurveType`, dropping the prefix that made
-`CurveType.CurveLinear` stutter.
+`CurveInterpolation` mirrors `Hexa.NET.ImGui.Widgets.ImCurveEdit.CurveType`, dropping the prefix
+that made `CurveType.CurveLinear` stutter.
+
+### Two different upstream enums are both called `CurveType`
+
+This is a trap worth stating explicitly, because the names are identical and the meanings are not:
+
+| Upstream type | Members | Used by |
+|---|---|---|
+| `Hexa.NET.ImGui.Widgets.ImCurveEdit.CurveType` | `None, CurveDiscrete, CurveLinear, CurveSmooth, CurveBezier` | `CurveContext.GetCurveType` — interpolation between points |
+| `Hexa.NET.Mathematics.CurveType` | `Smooth, Freehand` | `Curve.Type` — how the Extras field authors the curve |
+
+They get **separate mirrors**: `CurveInterpolation` for the first, `CurveShape { Smooth, Freehand }`
+for the second. A single shared mirror would silently mis-map, since neither member set is a
+subset of the other.
+
+Note also the namespace is `Hexa.NET.Mathematics`; `Hexa.NET.Math` is the *package* name.
 
 `Edit` returns `int ret`, set to `1` when anything changed. Our entry point returns `bool`,
 matching every other widget in the suite.
@@ -232,21 +247,33 @@ public surface:
 public sealed class CurveData
 {
     public CurveData();
-    public CurveData(IEnumerable<Vector2> points, CurveInterpolation interpolation = CurveInterpolation.Linear);
+    public CurveData(IEnumerable<CurveKnot> points, CurveShape shape = CurveShape.Smooth);
 
     public int PointCount { get; }
-    public CurveInterpolation Interpolation { get; set; }
+    public CurveShape Shape { get; set; }
 
-    public Vector2 GetPoint(int index);
-    public void AddPoint(Vector2 point);
-    public void SetPoint(int index, Vector2 point);
+    public CurveKnot GetPoint(int index);
+    public void AddPoint(CurveKnot point);
+    public void SetPoint(int index, CurveKnot point);
     public void RemovePoint(int index);
     public void Clear();
 
     /// Samples the computed curve. Recomputes the cache if points changed since the last read.
     public float Sample(float t);
 }
+
+/// A single authored point. Mirrors Hexa.NET.Mathematics.CurvePoint.
+public readonly record struct CurveKnot(Vector2 Position, CurvePointKind Kind);
+
+public enum CurvePointKind { Smooth, Corner }
+
+public enum CurveShape { Smooth, Freehand }
 ```
+
+`CurveKnot` exists because upstream's `CurvePoint` carries a per-point `CurvePointType`
+(`Smooth` / `Corner`) alongside its coordinates. Exposing points as bare `Vector2` would silently
+drop that, and corner-versus-smooth is a real authoring distinction the widget honours. The name
+avoids colliding with the `CurvePoint` in `Hexa.NET.Mathematics`.
 
 `Sample` recomputing lazily matters: upstream's `Compute()` fills a `float[]` cache that goes
 stale on every edit, and making the caller remember to call it is the kind of contract this
@@ -282,7 +309,9 @@ functions, so the untestable surface is as thin as it can be:
 | Null-guard dispatch in `Get` | The Tier 1 crash shape; must survive all three upstream null combinations |
 | UTF-8 label encoding | `GetItemLabel` returns `ReadOnlySpan<byte>` upstream |
 | `SequencerFeatures` ↔ `SequencerOptions` | Numeric gaps at `1 << 0` and `1 << 2` make a naive cast wrong |
-| `CurveInterpolation` ↔ `CurveType` | Every member, so a new upstream value cannot silently mis-map |
+| `CurveInterpolation` ↔ `ImCurveEdit.CurveType` | Every member, so a new upstream value cannot silently mis-map |
+| `CurveShape` ↔ `Mathematics.CurveType` | The *other* `CurveType`; a shared mirror would mis-map |
+| `CurvePointKind` ↔ `CurvePointType` | Dropping it would silently discard corner-vs-smooth authoring |
 | `Srgb` ↔ packed `uint` | Already covered by Tier 1's conversion rules; reused here |
 | `CurveData` point operations | Add / move / remove / sample, independent of any ImGui context |
 
