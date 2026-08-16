@@ -30,6 +30,24 @@ public sealed class SequenceSourceTests
 	}
 
 	[TestMethod]
+	public void FillRanges_BufferLongerThanItemCount_FillsOnlyRealEntriesWithoutThrowing()
+	{
+		StubSequenceSource source = new([(10, 20), (30, 40)]);
+		Span<ImGuiWidgets.SequenceRange> ranges = new ImGuiWidgets.SequenceRange[5];
+
+		ImGuiWidgets.FillRanges(source, ranges);
+
+		Assert.AreEqual(10, ranges[0].Start);
+		Assert.AreEqual(20, ranges[0].End);
+		Assert.AreEqual(30, ranges[1].Start);
+		Assert.AreEqual(40, ranges[1].End);
+		Assert.AreEqual(0, ranges[2].Start);
+		Assert.AreEqual(0, ranges[2].End);
+		Assert.AreEqual(0, ranges[4].Start);
+		Assert.AreEqual(0, ranges[4].End);
+	}
+
+	[TestMethod]
 	public void ComputeRangeEdits_NothingChanged_ReturnsNoEdits()
 	{
 		ImGuiWidgets.SequenceRange[] before = [new() { Start = 1, End = 2 }, new() { Start = 3, End = 4 }];
@@ -83,6 +101,30 @@ public sealed class SequenceSourceTests
 		List<(int Index, int Start, int End)> edits = ImGuiWidgets.ComputeRangeEdits([], []);
 
 		Assert.AreEqual(0, edits.Count);
+	}
+
+	[TestMethod]
+	public void ComputeRangeEdits_MismatchedLengths_TruncatesToShorterSpanWithoutThrowing()
+	{
+		ImGuiWidgets.SequenceRange[] before = [new() { Start = 1, End = 2 }, new() { Start = 3, End = 4 }, new() { Start = 5, End = 6 }];
+		ImGuiWidgets.SequenceRange[] after = [new() { Start = 9, End = 9 }, new() { Start = 3, End = 4 }];
+
+		List<(int Index, int Start, int End)> edits = ImGuiWidgets.ComputeRangeEdits(before, after);
+
+		Assert.AreEqual(1, edits.Count);
+		Assert.AreEqual((0, 9, 9), edits[0]);
+	}
+
+	[TestMethod]
+	public void ComputeRangeEdits_BothStartAndEndMoved_ReportsThatItemOnce()
+	{
+		ImGuiWidgets.SequenceRange[] before = [new() { Start = 1, End = 2 }];
+		ImGuiWidgets.SequenceRange[] after = [new() { Start = 8, End = 9 }];
+
+		List<(int Index, int Start, int End)> edits = ImGuiWidgets.ComputeRangeEdits(before, after);
+
+		Assert.AreEqual(1, edits.Count);
+		Assert.AreEqual((0, 8, 9), edits[0]);
 	}
 
 	[TestMethod]

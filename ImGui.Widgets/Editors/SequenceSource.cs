@@ -155,13 +155,21 @@ public static partial class ImGuiWidgets
 	/// Copies every clip's frame range out of a source into a buffer.
 	/// </summary>
 	/// <param name="source">The source to read.</param>
-	/// <param name="ranges">Buffer to fill; must be at least as long as the source's item count.</param>
+	/// <param name="ranges">
+	/// Buffer to fill. Its length need not match the source's item count exactly: if it is longer,
+	/// the extra entries are left untouched; if it is shorter, only the entries that fit are filled.
+	/// </param>
 	/// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
 	internal static void FillRanges(SequenceSource source, Span<SequenceRange> ranges)
 	{
 		Ensure.NotNull(source);
 
-		for (int i = 0; i < ranges.Length; i++)
+		// The buffer may legitimately be longer than the source's item count (a caller reusing a
+		// fixed-capacity buffer across frames rather than reallocating as clips are added), so the
+		// fill is bounded by whichever is smaller — never index source.GetItem past ItemCount.
+		int count = Math.Min(ranges.Length, source.ItemCount);
+
+		for (int i = 0; i < count; i++)
 		{
 			SequenceItem item = source.GetItem(i);
 			ranges[i].Start = item.Start;
@@ -183,6 +191,11 @@ public static partial class ImGuiWidgets
 	internal static List<(int Index, int Start, int End)> ComputeRangeEdits(ReadOnlySpan<SequenceRange> before, ReadOnlySpan<SequenceRange> after)
 	{
 		List<(int Index, int Start, int End)> edits = [];
+
+		// before and after are two snapshots of the same buffer taken immediately around a single
+		// call, so they are only ever different lengths because of a caller bug, not a real edit.
+		// Truncating to the shorter span keeps this helper crash-free without inventing edits for
+		// entries that only exist on one side.
 		int count = Math.Min(before.Length, after.Length);
 
 		for (int i = 0; i < count; i++)
