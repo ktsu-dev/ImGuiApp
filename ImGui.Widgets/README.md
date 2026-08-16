@@ -19,6 +19,7 @@ ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provid
 - **Scoped Disable**: Temporarily disable UI elements within a scope
 - **SearchBox**: A powerful search box with support for various filter types (Glob, Regex, Fuzzy) and matching options
 - **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, a file tree view, stateful file/rename/message dialogs, and a docked-window base class. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
+- **Callback-driven editors**: `Sequencer` (an editable clip timeline), `CurveEditor` (a multi-curve graph, or a single `CurveData` curve), and `BezierEditor` (a cubic easing curve) — driven by a `SequenceSource`/`CurveSource` you subclass, or by a `CurveData`/`BezierControlPoints` value. See [Callback-driven Editors](#callback-driven-editors) below.
 
 ## Installation
 
@@ -613,6 +614,37 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 **Duplicate widgets**: Several Hexa-backed widgets deliberately coexist with an existing ktsu widget that covers similar ground: `HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, and `ImageCenteredV/H/VH` vs `ImageCentered`. Both sides of each pair remain until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which one to keep — that decision is a separate, breaking change.
 
 **Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it additionally enables `ImGuiConfigFlags.DockingEnable` (idempotently, since Hexa's dockspace is a no-op without it) and creates a dockspace over the main viewport, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
+
+### Callback-driven Editors
+
+`Sequencer` and the multi-curve `CurveEditor` overload take a source object they interrogate while drawing, instead of a value:
+
+- Subclass **`SequenceSource`** for a timeline: `FrameMin`, `FrameMax`, `ItemCount`, `GetItem(int)`, and `SetItemRange(int index, int start, int endFrame)`, which receives drag edits.
+- Subclass **`CurveSource`** for a multi-curve graph: `CurveCount`, `ViewMin`, `ViewMax`, `GetPointCount(int)`, `GetPoints(int)`, `GetCurveColor(int)`, `EditPoint(int, int, Vector2)`, `AddPoint(int, Vector2)`.
+
+Neither needs a deferred-drawing pump — both are immediate-mode calls that happen to take a callback object, and neither `Sequencer` nor `CurveEditor` calls `DrawDeferred()`/`DrawDeferredDocked()`.
+
+```csharp
+public static bool ImGuiWidgets.Sequencer(SequenceSource source, ref int currentFrame, ref bool expanded,
+    ref int selectedEntry, ref int firstFrame, SequencerFeatures features = SequencerFeatures.EditAll);
+
+public static bool ImGuiWidgets.CurveEditor(CurveSource source, Vector2 size, string id);
+```
+
+`CurveEditor` also has a single-curve overload taking a **`CurveData`** value instead of a `CurveSource`:
+
+```csharp
+public static bool ImGuiWidgets.CurveEditor(CurveData curve, Vector2 size, Vector2 rangeMin,
+    Vector2 rangeMax, ref int selection, string label);
+```
+
+`CurveData` wraps the curve representation the widget expects — points are `CurveKnot` (`Position` plus a `CurvePointKind` of `.Smooth` or `.Corner`), shaped by `CurveShape.Smooth`/`.Freehand` — and tracks a dirty flag so `Sample(float t)` recomputes its cache automatically after `AddPoint`/`SetPoint`/`RemovePoint`/`Clear`, a `Shape` change, or an edit made through the widget.
+
+**`BezierEditor`** edits a `BezierControlPoints` pair (`First`/`Second`) directly, with no source object:
+
+```csharp
+public static bool ImGuiWidgets.BezierEditor(string label, ref BezierControlPoints points, float size = 128f);
+```
 
 ## Contributing
 

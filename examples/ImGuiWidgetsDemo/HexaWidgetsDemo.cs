@@ -61,6 +61,24 @@ internal static class HexaWidgetsDemo
 	private static int flameSelected = -1;
 	private static string renameResult = "(none)";
 
+	private static readonly CurveData DemoCurve = new(
+	[
+		new CurveKnot(new Vector2(0f, 0f), CurvePointKind.Smooth),
+		new CurveKnot(new Vector2(0.5f, 0.8f), CurvePointKind.Smooth),
+		new CurveKnot(new Vector2(1f, 0.2f), CurvePointKind.Corner),
+	]);
+
+	private static int demoCurveSelection = -1;
+	private static BezierControlPoints demoBezier = new(new Vector2(0.25f, 0.1f), new Vector2(0.75f, 0.9f));
+
+	private static readonly DemoCurveSource MultiCurve = new();
+	private static readonly DemoSequence Timeline = new();
+	private static int timelineFrame;
+	private static bool timelineExpanded = true;
+	private static int timelineSelected = -1;
+	private static int timelineFirstFrame;
+	private static string timelineLastEdit = "(none)";
+
 	private static readonly Collection<FlameGraphSample> FlameSamples =
 	[
 		new(0f, 10f, 0, "Frame"),
@@ -347,5 +365,113 @@ internal static class HexaWidgetsDemo
 
 			ImGui.TextUnformatted(renameResult);
 		}
+
+		if (ImGui.CollapsingHeader("Curve and bezier fields"))
+		{
+			// Both curve editors need an explicit width. The Vector2(0f, h) idiom used above for
+			// FlameGraph and FileTreeView does not transfer: neither vendor curve widget treats a
+			// zero dimension as "fill", so a zero X renders the editor as a sliver.
+			_ = ImGuiWidgets.CurveEditor(DemoCurve, new Vector2(AvailableEditorWidth(), 120f), Vector2.Zero, Vector2.One, ref demoCurveSelection, "##demoCurve");
+			ImGui.TextUnformatted($"Sample at 0.5: {DemoCurve.Sample(0.5f):F3}");
+
+			_ = ImGuiWidgets.BezierEditor("Easing", ref demoBezier);
+			ImGui.TextUnformatted($"Control points: {demoBezier.First:F2} {demoBezier.Second:F2}");
+		}
+
+		if (ImGui.CollapsingHeader("Multi-curve editor"))
+		{
+			ImGui.TextWrapped("Two curves over one view range. Drag a point to move it.");
+			_ = ImGuiWidgets.CurveEditor(MultiCurve, new Vector2(AvailableEditorWidth(), 160f), "##multiCurve");
+		}
+
+		if (ImGui.CollapsingHeader("Sequencer"))
+		{
+			ImGui.TextWrapped("Drag a clip's edges to retime it. Edits are written back through SetItemRange, which is what the line below reports.");
+			_ = ImGuiWidgets.Sequencer(Timeline, ref timelineFrame, ref timelineExpanded, ref timelineSelected, ref timelineFirstFrame);
+			ImGui.TextUnformatted($"Frame {timelineFrame}, selected {timelineSelected}, last edit: {timelineLastEdit}");
+		}
+	}
+
+	/// <summary>
+	/// Width for the curve editors: the remaining content region, floored so a collapsed or
+	/// clipped pane still yields something the editor can draw into rather than a zero-width sliver.
+	/// </summary>
+	/// <returns>The width in pixels.</returns>
+	private static float AvailableEditorWidth() => Math.Max(ImGui.GetContentRegionAvail().X, 120f);
+
+	/// <summary>
+	/// Two curves over a shared view range, for the multi-curve editor demo.
+	/// </summary>
+	private sealed class DemoCurveSource : ImGuiWidgets.CurveSource
+	{
+		private readonly Vector2[][] curves =
+		[
+			[new Vector2(0f, 0f), new Vector2(0.5f, 0.6f), new Vector2(1f, 0.3f)],
+			[new Vector2(0f, 0.8f), new Vector2(0.5f, 0.2f), new Vector2(1f, 0.9f)],
+		];
+
+		public override int CurveCount => curves.Length;
+
+		public override Vector2 ViewMin => Vector2.Zero;
+
+		public override Vector2 ViewMax => Vector2.One;
+
+		public override int GetPointCount(int curveIndex) => curves[curveIndex].Length;
+
+		public override Span<Vector2> GetPoints(int curveIndex) => curves[curveIndex];
+
+		public override Srgb GetCurveColor(int curveIndex) =>
+			curveIndex == 0 ? new Srgb(0.9f, 0.4f, 0.3f) : new Srgb(0.3f, 0.7f, 0.9f);
+
+		public override int EditPoint(int curveIndex, int pointIndex, Vector2 value)
+		{
+			curves[curveIndex][pointIndex] = value;
+			return pointIndex;
+		}
+
+		public override void AddPoint(int curveIndex, Vector2 value)
+		{
+			// The demo keeps a fixed point count so the editor's add gesture is a no-op here.
+		}
+	}
+
+	/// <summary>
+	/// A short in-memory timeline, for the sequencer demo. Drag edits write back through
+	/// SetItemRange, which is what the label below the widget reports.
+	/// </summary>
+	private sealed class DemoSequence : ImGuiWidgets.SequenceSource
+	{
+		private readonly List<(int Start, int End, int Type)> clips =
+		[
+			(0, 20, 0),
+			(25, 60, 1),
+			(70, 95, 0),
+		];
+
+		public override int FrameMin => 0;
+
+		public override int FrameMax => 100;
+
+		public override int ItemCount => clips.Count;
+
+		public override IReadOnlyList<string> ItemTypeNames => ["Camera", "Audio"];
+
+		public override SequenceItem GetItem(int index) => new(
+			clips[index].Start,
+			clips[index].End,
+			clips[index].Type,
+			clips[index].Type == 0 ? new Srgb(0.8f, 0.5f, 0.2f) : new Srgb(0.3f, 0.6f, 0.8f));
+
+		public override string GetItemLabel(int index) => $"{ItemTypeNames[clips[index].Type]} {index}";
+
+		public override void SetItemRange(int index, int start, int endFrame)
+		{
+			clips[index] = (start, endFrame, clips[index].Type);
+			timelineLastEdit = $"item {index} -> [{start}, {endFrame}]";
+		}
+
+		public override void AddItem(int typeIndex) => clips.Add((0, 10, typeIndex));
+
+		public override void DeleteItem(int index) => clips.RemoveAt(index);
 	}
 }
