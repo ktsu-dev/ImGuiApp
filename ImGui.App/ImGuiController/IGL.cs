@@ -90,4 +90,15 @@ public interface IGL : IDisposable
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native OpenGL interop; pointer is scoped to the call and not retained.")]
 	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the native OpenGL glTexImage2D signature; the parameter list is fixed by the GL API.")]
 	public unsafe void TexImage2D(GLEnum target, int level, int internalformat, uint width, uint height, int border, GLEnum format, GLEnum type, void* pixels);
+
+	/// <summary>
+	/// Replaces a rectangular sub-region of an existing two-dimensional texture image.
+	/// </summary>
+	/// <remarks>
+	/// Unlike <see cref="TexImage2D"/> this reuses the existing storage rather than reallocating it,
+	/// which is what makes repeated uploads to a live texture cheap.
+	/// </remarks>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native OpenGL interop; pointer is scoped to the call and not retained.")]
+	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the native OpenGL glTexSubImage2D signature; the parameter list is fixed by the GL API.")]
+	public unsafe void TexSubImage2D(GLEnum target, int level, int xoffset, int yoffset, uint width, uint height, GLEnum format, GLEnum type, void* pixels);
 }

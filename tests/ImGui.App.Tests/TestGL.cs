@@ -92,6 +92,11 @@ public sealed unsafe class TestGL : IGL
 		ThrowIfDisposed();
 	}
 
+	public void TexSubImage2D(GLEnum target, int level, int xoffset, int yoffset, uint width, uint height, GLEnum format, GLEnum type, void* pixels)
+	{
+		ThrowIfDisposed();
+	}
+
 	public void Dispose()
 	{
 		if (!_disposed)

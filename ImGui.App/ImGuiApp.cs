@@ -1546,6 +1546,86 @@ public static partial class ImGuiApp
 	/// <exception cref="ArgumentNullException">Thrown if the textureInfo is null.</exception>
 	public static void DeleteTexture(ImGuiAppTextureInfo textureInfo) => DeleteTexture(Ensure.NotNull(textureInfo).TextureId);
 
+	/// <summary>
+	/// Creates a GPU texture from pixels held in memory.
+	/// </summary>
+	/// <param name="rgba">Tightly packed RGBA8 pixels, <paramref name="width"/> * <paramref name="height"/> * 4 bytes.</param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <returns>Texture info owned by the caller.</returns>
+	/// <remarks>
+	/// Unlike <see cref="GetOrLoadTexture(AbsoluteFilePath)"/>, the returned texture is NOT tracked in the
+	/// internal texture cache: it has no file path to reload from, so it is not restored by
+	/// <c>ReloadAllTextures</c> after a renderer restart. The caller owns its lifetime, must call
+	/// <see cref="DeleteTexture(ImGuiAppTextureInfo)"/>, and must re-upload its contents if the renderer restarts.
+	/// </remarks>
+	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop; pointer is scoped to the call and not retained.")]
+	public static ImGuiAppTextureInfo CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		ValidatePixelSpan(rgba, width, height);
+
+		nint textureId = UploadTextureRGBA(rgba.ToArray(), width, height);
+		ImTextureRef textureRef;
+		unsafe
+		{
+			textureRef = new ImTextureRef(default, textureId);
+		}
+
+		return new ImGuiAppTextureInfo()
+		{
+			Width = width,
+			Height = height,
+			TextureId = textureId,
+			TextureRef = textureRef,
+		};
+	}
+
+	/// <summary>
+	/// Replaces the contents of a texture created by <see cref="CreateTexture"/>.
+	/// </summary>
+	/// <param name="textureInfo">The texture to update, as returned by <see cref="CreateTexture"/>.</param>
+	/// <param name="rgba">Tightly packed RGBA8 pixels, <paramref name="width"/> * <paramref name="height"/> * 4 bytes.</param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <remarks>
+	/// Falls back to deleting and recreating the texture when the active renderer backend cannot update
+	/// in place, mutating <paramref name="textureInfo"/> to carry the new handle.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException"><paramref name="textureInfo"/> is null.</exception>
+	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop; pointer is scoped to the call and not retained.")]
+	public static void UpdateTexture(ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		Ensure.NotNull(textureInfo);
+		ValidatePixelSpan(rgba, width, height);
+
+		bool sameSize = textureInfo.Width == width && textureInfo.Height == height;
+		if (sameSize && renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, rgba, width, height))
+		{
+			return;
+		}
+
+		DeleteTexture(textureInfo.TextureId);
+		textureInfo.TextureId = UploadTextureRGBA(rgba.ToArray(), width, height);
+		unsafe
+		{
+			textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
+		}
+
+		textureInfo.Width = width;
+		textureInfo.Height = height;
+	}
+
+	private static void ValidatePixelSpan(ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		int expected = checked(width * height * 4);
+		if (rgba.Length != expected)
+		{
+			throw new ArgumentException($"Expected {expected} bytes for a {width}x{height} RGBA texture but got {rgba.Length}.", nameof(rgba));
+		}
+	}
+
 	internal static void UpdateDpiScale()
 	{
 		float newScaleFactor = (float)ForceDpiAware.GetWindowScaleFactor();

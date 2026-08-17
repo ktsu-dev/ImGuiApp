@@ -464,6 +464,9 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		public int CreateTextureCallCount { get; private set; }
 		public int DeleteTextureCallCount { get; private set; }
 		public nint NextHandle { get; init; }
+		public nint LastUpdatedTextureId { get; private set; }
+		public byte[] LastUpdatedPixels { get; private set; } = [];
+		public bool UpdateTextureResult { get; init; } = true;
 
 		public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 		{
@@ -471,9 +474,35 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 			return NextHandle;
 		}
 
+		public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
+		{
+			LastUpdatedTextureId = id;
+			LastUpdatedPixels = rgba.ToArray();
+			return UpdateTextureResult;
+		}
+
 		public void DeleteTexture(nint id) => DeleteTextureCallCount++;
 		public void RenderDrawData(Hexa.NET.ImGui.ImDrawDataPtr drawData) { }
 		public void Dispose() { }
+	}
+
+	[TestMethod]
+	public void UpdateTexture_ThroughTheBackendInterface_ReceivesTheHandleAndPixels()
+	{
+		// The local is typed as IRendererBackend deliberately. Calling through the interface is what
+		// makes this fail to compile until the interface declares UpdateTexture. Calling it on the
+		// concrete fake would compile and pass the moment the fake gained the method, proving nothing
+		// about the contract this task exists to add.
+		using FakeRendererBackend fake = new() { NextHandle = 11 };
+		IRendererBackend backend = fake;
+		nint id = backend.CreateTexture(new byte[4], 1, 1);
+		byte[] pixels = [1, 2, 3, 4];
+
+		bool updated = backend.UpdateTexture(id, pixels, 1, 1);
+
+		Assert.IsTrue(updated, "A backend that supports in-place update should report success");
+		Assert.AreEqual(id, fake.LastUpdatedTextureId, "The handle should reach the backend unchanged");
+		CollectionAssert.AreEqual(pixels, fake.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
 	}
 
 	[TestMethod]
@@ -507,6 +536,90 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		ImGuiApp.DeleteTexture(123);
 
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "Delete should route through the registered backend");
+	}
+
+	[TestMethod]
+	public void CreateTexture_WithWrongPixelCount_Throws()
+	{
+		byte[] tooFew = new byte[8];
+
+		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.CreateTexture(tooFew, 2, 2));
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithNullInfo_Throws()
+	{
+		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.UpdateTexture(null!, new byte[4], 1, 1));
+	}
+
+	[TestMethod]
+	public void CreateTexture_WithBackendRegistered_ReturnsUntrackedTextureInfo()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[2 * 2 * 4], 2, 2);
+
+		Assert.AreEqual(42, info.TextureId, "Handle should come from the backend");
+		Assert.AreEqual(2, info.Width);
+		Assert.AreEqual(2, info.Height);
+		Assert.AreEqual(0, ImGuiApp.Textures.Count, "Memory textures must stay out of the path-keyed cache");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithSameSize_UpdatesInPlaceWithoutRecreating()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+		byte[] pixels = [1, 2, 3, 4];
+
+		ImGuiApp.UpdateTexture(info, pixels, 1, 1);
+
+		Assert.AreEqual(info.TextureId, backend.LastUpdatedTextureId, "In-place update should target the existing handle");
+		CollectionAssert.AreEqual(pixels, backend.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
+		Assert.AreEqual(0, backend.DeleteTextureCallCount, "A successful in-place update must not delete the texture");
+		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithDifferentSize_RecreatesTexture()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[2 * 2 * 4], 2, 2);
+
+		ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A size change must delete the old texture");
+		Assert.AreEqual(2, backend.CreateTextureCallCount, "A size change must recreate the texture");
+		Assert.AreEqual(1, info.Width, "The info must carry the new width");
+		Assert.AreEqual(1, info.Height, "The info must carry the new height");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WhenBackendDeclines_FallsBackToRecreate()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42, UpdateTextureResult = false };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A declined update must delete the old texture");
+		Assert.AreEqual(2, backend.CreateTextureCallCount, "A declined update must recreate the texture");
 	}
 
 	[TestMethod]
