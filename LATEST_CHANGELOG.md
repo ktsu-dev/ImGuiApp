@@ -2,6 +2,7 @@
 
 Changes since v3.7.0:
 
+- fix: guard probe marking against a missing ImGui context [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - docs: document the harness and probe packages, reconcile the spec [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - feat: qualify probe names by window and scope [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
 - feat: mark probes from the widget and popup libraries by default [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
