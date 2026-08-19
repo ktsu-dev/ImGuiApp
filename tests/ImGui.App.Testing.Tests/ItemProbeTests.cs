@@ -30,7 +30,7 @@ public sealed class ItemProbeTests
 				onPressed();
 			}
 
-			ImGuiApp.MarkItem("the.button");
+			ImGuiProbes.MarkItem("the.button");
 
 			ImGui.End();
 		},
@@ -94,7 +94,7 @@ public sealed class ItemProbeTests
 						pressed = true;
 					}
 
-					ImGuiApp.MarkItem("the.button");
+					ImGuiProbes.MarkItem("the.button");
 				}
 
 				ImGui.End();
@@ -119,7 +119,7 @@ public sealed class ItemProbeTests
 		// Production applications call MarkItem with no harness present. It must be inert, not throw.
 		ImGuiProbes.SetProbe(null);
 
-		ImGuiApp.MarkItem("ignored");
+		ImGuiProbes.MarkItem("ignored");
 	}
 
 	[TestMethod]
@@ -158,10 +158,10 @@ public sealed class ItemProbeTests
 				ImGui.Begin("probe", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings);
 
 				ImGui.Button("first", new Vector2(80, 20));
-				ImGuiApp.MarkItem("duplicate");
+				ImGuiProbes.MarkItem("duplicate");
 
 				ImGui.Button("second", new Vector2(80, 20));
-				ImGuiApp.MarkItem("duplicate");
+				ImGuiProbes.MarkItem("duplicate");
 
 				ImGui.End();
 			},
@@ -213,7 +213,7 @@ public sealed class ItemProbeTests
 					left = true;
 				}
 
-				ImGuiApp.MarkItem("Go");
+				ImGuiProbes.MarkItem("Go");
 				ImGui.End();
 
 				ImGui.SetNextWindowPos(new Vector2(140, 0));
@@ -224,7 +224,7 @@ public sealed class ItemProbeTests
 					right = true;
 				}
 
-				ImGuiApp.MarkItem("Go");
+				ImGuiProbes.MarkItem("Go");
 				ImGui.End();
 			},
 		};

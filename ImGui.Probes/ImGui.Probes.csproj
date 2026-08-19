@@ -10,6 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Packaging metadata only. Without this the file is copied to a consumer's output, and since
+         ktsu.ImGui.App now references this package, two DESCRIPTION.md files land at the same
+         relative path and publishing fails with NETSDK1152. -->
+    <Content Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>

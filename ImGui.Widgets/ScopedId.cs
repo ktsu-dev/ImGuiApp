@@ -30,11 +30,10 @@ public static partial class ImGuiWidgets
 			// scope is qualified by it and two identically labelled widgets stay distinguishable.
 			ImGuiProbes.PushScope(id);
 
-			OnClose = () =>
-			{
-				ImGuiProbes.PopScope();
-				ImGui.PopID();
-			};
+			// A method group rather than a lambda. A lambda here makes the compiler emit a
+			// generated attribute on net9.0 and net10.0 that it does not emit on net8.0, which
+			// leaves the package's assemblies inconsistent and fails package validation (CP0001).
+			OnClose = PopScopeAndId;
 		}
 
 		/// <summary>
@@ -45,12 +44,13 @@ public static partial class ImGuiWidgets
 		{
 			ImGui.PushID(id);
 			ImGuiProbes.PushScope(id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			OnClose = PopScopeAndId;
+		}
 
-			OnClose = () =>
-			{
-				ImGuiProbes.PopScope();
-				ImGui.PopID();
-			};
+		private static void PopScopeAndId()
+		{
+			ImGuiProbes.PopScope();
+			ImGui.PopID();
 		}
 	}
 }

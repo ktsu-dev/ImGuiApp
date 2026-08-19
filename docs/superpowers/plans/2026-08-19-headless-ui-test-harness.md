@@ -3002,7 +3002,7 @@ git commit -m "test: prove the harness renders deterministically [patch]"
 > 1. **The registry is not in `ktsu.ImGui.App`.** Nothing depends on that package, so `ImGui.Widgets`
 >    and `ImGui.Popups` could not reach it without taking a dependency that drags windowing and
 >    OpenGL into every consumer of a button. It lives in a new dependency-free `ktsu.ImGui.Probes`
->    package instead, as `ImGuiProbes`, with `ImGuiApp.MarkItem` forwarding to it. `ImGuiProbes` also
+>    package instead, as `ImGuiProbes`, with applications calling `ImGuiProbes.MarkItem` directly. `ImGuiProbes` also
 >    carries an `Enabled` master switch.
 > 2. **The libraries mark their own items.** Popups marks filesystem browser rows by filename, its
 >    drives, its filename field and its buttons, plus the prompt, input and searchable list controls.
@@ -3026,7 +3026,7 @@ spec for why Dear ImGui's test engine was rejected in favor of this.
 
 **Interfaces:**
 - Consumes: `ImGuiAppHarness.Step`, `HarnessMouse.Click` from Tasks 9 and 11.
-- Produces: `ImGuiApp.MarkItem(string name)` and `ImGuiApp.SetItemProbe(Action<string, Vector2, Vector2>?)` in `ktsu.ImGui.App`. In the harness: `ItemProbe Probe { get; }` with `Rectangle? Rect(string name)`, `bool WasSeenInFrame(string name, int frame)`, `IReadOnlyCollection<string> KnownNames`, plus `ImGuiAppHarness.Click(string name)`.
+- Produces: `ImGuiProbes.MarkItem(string name)` and `ImGuiProbes.SetProbe(Action<string, Vector2, Vector2>?)` in `ktsu.ImGui.Probes`. In the harness: `ItemProbe Probe { get; }` with `Rectangle? Rect(string name)`, `bool WasSeenInFrame(string name, int frame)`, `IReadOnlyCollection<string> KnownNames`, plus `ImGuiAppHarness.Click(string name)`.
 
 - [x] **Step 1: Write the failing test**
 
@@ -3064,7 +3064,7 @@ public sealed class ItemProbeTests
 				onPressed();
 			}
 
-			ImGuiApp.MarkItem("the.button");
+			ImGuiProbes.MarkItem("the.button");
 
 			ImGui.End();
 		},
@@ -3128,7 +3128,7 @@ public sealed class ItemProbeTests
 						pressed = true;
 					}
 
-					ImGuiApp.MarkItem("the.button");
+					ImGuiProbes.MarkItem("the.button");
 				}
 
 				ImGui.End();
@@ -3153,7 +3153,7 @@ public sealed class ItemProbeTests
 		// Production applications call MarkItem with no harness present. It must be inert, not throw.
 		ImGuiApp.SetItemProbe(null);
 
-		ImGuiApp.MarkItem("ignored");
+		ImGuiProbes.MarkItem("ignored");
 	}
 }
 ```
@@ -3258,7 +3258,7 @@ name-based clicking:
 	/// Clicks a named item at the center of the rectangle ImGui reported for it, so the test states
 	/// no coordinate of its own.
 	/// </summary>
-	/// <param name="name">A name the application passed to <see cref="ImGuiApp.MarkItem"/>.</param>
+	/// <param name="name">A name the application passed to <see cref="ktsu.ImGui.Probes.ImGuiProbes.MarkItem(string)"/>.</param>
 	/// <exception cref="ArgumentException">The name was never recorded.</exception>
 	/// <exception cref="InvalidOperationException">The item was not drawn in the most recent frame.</exception>
 	public void Click(string name)
