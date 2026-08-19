@@ -2,6 +2,8 @@
 
 Changes since v3.7.0:
 
+- fix: stop two ktsu packages colliding over their package data [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: scope build badge to the default branch ([@matt-edmondson](https://github.com/matt-edmondson))
 - fix: guard probe marking against a missing ImGui context [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - docs: document the harness and probe packages, reconcile the spec [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - feat: qualify probe names by window and scope [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
