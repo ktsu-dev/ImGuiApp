@@ -727,13 +727,7 @@ public static partial class ImGuiApp
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear(ClearBufferMask.ColorBufferBit);
 
-			RenderWithScaling(() =>
-			{
-				using ScopedAction? frameWrapper = config.FrameWrapperFactory.Invoke();
-				RenderAppMenu(config.OnAppMenu);
-				RenderWindowContents(config.OnRender, (float)delta);
-				RenderPerformanceMonitor();
-			});
+			RenderFrameContents(config, (float)delta);
 
 			controller?.Render();
 
@@ -741,6 +735,71 @@ public static partial class ImGuiApp
 			ApplyFrameRateLimit();
 		};
 	}
+
+	/// <summary>
+	/// Runs the application-facing part of one frame: the frame wrapper, the application menu, the
+	/// application's render callback, and the performance monitor. It does not begin or end an ImGui
+	/// frame and does not present anything, so a host that drives frames itself supplies those.
+	/// </summary>
+	/// <remarks>
+	/// Public so a host can render frames outside <see cref="Start(ImGuiAppConfig)"/>, which is how
+	/// the headless test harness in ktsu.ImGui.App.Testing drives an application. Sharing this method
+	/// rather than reimplementing it is the point: a harness that reproduced the frame body would be
+	/// testing its own copy instead of the code that ships. Call
+	/// <see cref="BeginExternalFrameSession"/> first.
+	/// </remarks>
+	/// <param name="config">The configuration supplying the render callbacks.</param>
+	/// <param name="delta">Seconds elapsed since the previous frame.</param>
+	public static void RenderFrameContents(ImGuiAppConfig config, float delta)
+	{
+		Ensure.NotNull(config);
+
+		RenderWithScaling(() =>
+		{
+			using ScopedAction? frameWrapper = config.FrameWrapperFactory.Invoke();
+			RenderAppMenu(config.OnAppMenu);
+			RenderWindowContents(config.OnRender, delta);
+			RenderPerformanceMonitor();
+		});
+	}
+
+	/// <summary>
+	/// Prepares the shared state a host needs before driving frames itself, without creating a
+	/// window or a render context.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="Invoker"/> is otherwise assigned only by <see cref="Start(ImGuiAppConfig)"/>, so
+	/// work marshalled from a worker thread would have nowhere to run and would be lost silently.
+	/// The invoker binds to the calling thread, so call this from the thread that will drive frames.
+	/// </remarks>
+	/// <exception cref="InvalidOperationException">A session is already active.</exception>
+	public static void BeginExternalFrameSession()
+	{
+		if (Invoker is not null)
+		{
+			throw new InvalidOperationException(
+				"An ImGuiApp session is already active. A second session would replace the invoker the first one is using.");
+		}
+
+		Invoker = new();
+	}
+
+	/// <summary>
+	/// Releases the state established by <see cref="BeginExternalFrameSession"/>.
+	/// </summary>
+	public static void EndExternalFrameSession() => Invoker = null!;
+
+	/// <summary>
+	/// Records the most recently submitted ImGui item under a stable name, so a test can address it
+	/// without naming a coordinate. Call immediately after submitting the widget.
+	/// </summary>
+	/// <remarks>
+	/// Forwards to <see cref="ktsu.ImGui.Probes.ImGuiProbes.MarkItem(string)"/>. The registry lives
+	/// in its own package so widget and dialog libraries can mark their items without depending on
+	/// this one, which would drag windowing and OpenGL into every consumer of a widget library.
+	/// </remarks>
+	/// <param name="name">A stable name for the item.</param>
+	public static void MarkItem(string name) => ktsu.ImGui.Probes.ImGuiProbes.MarkItem(name);
 
 	internal static void ApplyFrameRateLimit()
 	{

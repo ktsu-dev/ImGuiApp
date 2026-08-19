@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.CaseConverter;
 using ktsu.TextFilter;
 
@@ -90,7 +92,9 @@ public partial class ImGuiPopups
 				ImGui.SetKeyboardFocusHere();
 			}
 
-			if (ImGui.InputText("##Search", ref searchTerm, 255, ImGuiInputTextFlags.EnterReturnsTrue))
+			bool searchChanged = ImGui.InputText("##Search", ref searchTerm, 255, ImGuiInputTextFlags.EnterReturnsTrue);
+			ImGuiProbes.MarkItem("searchable-list/search");
+			if (searchChanged)
 			{
 				ConfirmSelectedItem();
 			}
@@ -108,13 +112,17 @@ public partial class ImGuiPopups
 				ImGui.EndListBox();
 			}
 
-			if (ImGui.Button($"OK###{Modal.Title.ToSnakeCase()}_OK"))
+			bool okClicked = ImGui.Button($"OK###{Modal.Title.ToSnakeCase()}_OK");
+			ImGuiProbes.MarkItem("searchable-list/ok");
+			if (okClicked)
 			{
 				ConfirmSelectedItem();
 			}
 
 			ImGui.SameLine();
-			if (ImGui.Button($"Cancel###{Modal.Title.ToSnakeCase()}_Cancel"))
+			bool cancelClicked = ImGui.Button($"Cancel###{Modal.Title.ToSnakeCase()}_Cancel");
+			ImGuiProbes.MarkItem("searchable-list/cancel");
+			if (cancelClicked)
 			{
 				ImGui.CloseCurrentPopup();
 			}
@@ -156,7 +164,9 @@ public partial class ImGuiPopups
 
 				string displayText = GetText?.Invoke(item) ?? item.ToString() ?? string.Empty;
 
-				if (ImGui.Selectable(displayText, item == (cachedValue ?? selectedItem)))
+				bool itemClicked = ImGui.Selectable(displayText, item == (cachedValue ?? selectedItem));
+				ImGuiProbes.MarkItem("searchable-list", displayText);
+				if (itemClicked)
 				{
 					cachedValue = item;
 				}

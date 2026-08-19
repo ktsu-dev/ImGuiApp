@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Widgets.Animation;
 using ktsu.Semantics.Color;
@@ -44,6 +46,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 origin = ImGui.GetCursorScreenPos();
 			ImGui.InvisibleButton(label, new Vector2(width, height));
+			ImGuiProbes.MarkItem(label);
 
 			bool changed = false;
 			if (ImGui.IsItemClicked())

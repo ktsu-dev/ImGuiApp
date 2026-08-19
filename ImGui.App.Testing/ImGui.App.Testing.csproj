@@ -1,0 +1,31 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <!-- net10.0 only, deliberately. This is test infrastructure consumed by test projects,
+         which target the latest runtime by convention. Multi-targeting also collides with
+         Polyfill: ImGui.App grants this assembly InternalsVisibleTo, so its internal Polyfill
+         extension methods are visible here, and on net8.0/net9.0 where Polyfill actually emits
+         code a second copy makes every such call ambiguous. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <RootNamespace>ktsu.ImGui.App.Testing</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <!-- Used directly: the harness pumps ImGuiApp.Invoker every frame so work marshalled from a
+         worker thread lands rather than being lost. -->
+    <PackageReference Include="ktsu.Invoker" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+  </ItemGroup>
+
+</Project>

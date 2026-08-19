@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Widgets.Gestures;
 
 public static partial class ImGuiWidgets
@@ -35,6 +37,7 @@ public static partial class ImGuiWidgets
 
 		// Claims the region with its own invisible button, so IsItemHovered below refers to it.
 		GestureResult gesture = GestureDetector("##canvas", canvasSize);
+		ImGuiProbes.MarkItem(id);
 		bool hovered = ImGui.IsItemHovered();
 
 		// MouseDelta, not gesture.Delta: gesture.Delta is total travel since press start, and PanBy is

@@ -3,6 +3,8 @@
 namespace ktsu.ImGui.Widgets;
 
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 using ktsu.ScopedAction;
 
 /// <summary>
@@ -23,7 +25,16 @@ public static partial class ImGuiWidgets
 		public ScopedId(string id)
 		{
 			ImGui.PushID(id);
-			OnClose = ImGui.PopID;
+
+			// Mirrors the identifier push into the probe name stack, so a marked item inside this
+			// scope is qualified by it and two identically labelled widgets stay distinguishable.
+			ImGuiProbes.PushScope(id);
+
+			OnClose = () =>
+			{
+				ImGuiProbes.PopScope();
+				ImGui.PopID();
+			};
 		}
 
 		/// <summary>
@@ -33,7 +44,13 @@ public static partial class ImGuiWidgets
 		public ScopedId(int id)
 		{
 			ImGui.PushID(id);
-			OnClose = ImGui.PopID;
+			ImGuiProbes.PushScope(id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+			OnClose = () =>
+			{
+				ImGuiProbes.PopScope();
+				ImGui.PopID();
+			};
 		}
 	}
 }
