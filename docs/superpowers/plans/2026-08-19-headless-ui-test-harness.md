@@ -39,7 +39,7 @@
 - Consumes: nothing.
 - Produces: assembly `ktsu.ImGui.App.Testing` with root namespace `ktsu.ImGui.App.Testing`, referencing `ImGui.App` and able to see its internals.
 
-- [ ] **Step 1: Create the library project file**
+- [x] **Step 1: Create the library project file**
 
 Create `ImGui.App.Testing/ImGui.App.Testing.csproj`:
 
@@ -70,7 +70,7 @@ Create `ImGui.App.Testing/ImGui.App.Testing.csproj`:
 </Project>
 ```
 
-- [ ] **Step 2: Grant the harness access to ImGui.App internals**
+- [x] **Step 2: Grant the harness access to ImGui.App internals**
 
 `IRendererBackend` and the frame rendering helpers are internal. Add to the `ItemGroup` in `ImGui.App/ImGui.App.csproj` that already contains `<InternalsVisibleTo Include="ktsu.ImGui.App.Tests" />`:
 
@@ -78,7 +78,7 @@ Create `ImGui.App.Testing/ImGui.App.Testing.csproj`:
     <InternalsVisibleTo Include="ktsu.ImGui.App.Testing" />
 ```
 
-- [ ] **Step 3: Create the assembly info file**
+- [x] **Step 3: Create the assembly info file**
 
 Per repository convention, assembly attributes live in their own file. Create `ImGui.App.Testing/AssemblyInfo.cs`:
 
@@ -91,7 +91,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("ktsu.ImGui.App.Testing.Tests")]
 ```
 
-- [ ] **Step 4: Create the test project file**
+- [x] **Step 4: Create the test project file**
 
 Create `tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`:
 
@@ -116,7 +116,7 @@ Create `tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`:
 </Project>
 ```
 
-- [ ] **Step 5: Write a scaffolding test**
+- [x] **Step 5: Write a scaffolding test**
 
 Create `tests/ImGui.App.Testing.Tests/ScaffoldingTests.cs`:
 
@@ -142,7 +142,7 @@ public sealed class ScaffoldingTests
 }
 ```
 
-- [ ] **Step 6: Add both projects to the solution**
+- [x] **Step 6: Add both projects to the solution**
 
 Run:
 
@@ -151,7 +151,7 @@ dotnet sln ImGui.sln add ImGui.App.Testing/ImGui.App.Testing.csproj
 dotnet sln ImGui.sln add tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 ```
 
-- [ ] **Step 7: Build and run the test**
+- [x] **Step 7: Build and run the test**
 
 Run:
 
@@ -163,7 +163,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: build succeeds with zero warnings, one test passes.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add ImGui.App.Testing tests/ImGui.App.Testing.Tests ImGui.sln ImGui.App/ImGui.App.csproj
@@ -182,7 +182,7 @@ git commit -m "feat: scaffold the ktsu.ImGui.App.Testing package [minor]"
 - Consumes: nothing.
 - Produces: `Bitmap32` with `int Width`, `int Height`, `Span<byte> Pixels` (RGBA8, tightly packed), `Rgba32 GetPixel(int x, int y)`, `void SetPixel(int x, int y, Rgba32 color)`, `void Clear(Rgba32 color)`, `void SavePng(string path)`, `byte[] EncodePng()`. Also produces `readonly record struct Rgba32(byte R, byte G, byte B, byte A)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/ImGui.App.Testing.Tests/Bitmap32Tests.cs`:
 
@@ -248,12 +248,12 @@ public sealed class Bitmap32Tests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `Bitmap32` and `Rgba32` do not exist.
 
-- [ ] **Step 3: Implement the pixel buffer**
+- [x] **Step 3: Implement the pixel buffer**
 
 Create `ImGui.App.Testing/Bitmap32.cs`:
 
@@ -426,7 +426,7 @@ public sealed class Bitmap32(int width, int height)
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -437,7 +437,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all `Bitmap32Tests` pass.
 
-- [ ] **Step 5: Verify the PNG is readable by something other than this code**
+- [x] **Step 5: Verify the PNG is readable by something other than this code**
 
 Self-validation is not proof of a correct encoder. Write one bitmap to disk and open it with an independent decoder:
 
@@ -453,7 +453,7 @@ powershell -NoProfile -Command "Add-Type -AssemblyName System.Drawing; $i=[Syste
 
 Expected: the reported dimensions match the bitmap. Record the result in the commit message if it needed a fix.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ImGui.App.Testing/Bitmap32.cs tests/ImGui.App.Testing.Tests/Bitmap32Tests.cs
@@ -472,7 +472,7 @@ git commit -m "feat: add an RGBA pixel buffer with dependency-free PNG encoding 
 - Consumes: `Bitmap32`, `Rgba32` from Task 2.
 - Produces: `SoftwareRasterizer` with `void FillTriangle(Bitmap32 target, in Vertex a, in Vertex b, in Vertex c, TextureSource? texture, in Rectangle scissor)` and `readonly record struct Vertex(Vector2 Position, Vector2 Uv, Rgba32 Color)`. Task 4 adds texture sampling, Task 5 adds scissor honoring. This task fills flat-colored triangles with the scissor covering the whole target.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/SoftwareRasterizerTests.cs`:
 
@@ -561,12 +561,12 @@ public sealed class SoftwareRasterizerTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `SoftwareRasterizer`, `Vertex`, `TextureSource` and `Rectangle` do not exist.
 
-- [ ] **Step 3: Implement the rasterizer**
+- [x] **Step 3: Implement the rasterizer**
 
 Create `ImGui.App.Testing/SoftwareRasterizer.cs`. `TextureSource` is declared here but only sampled in Task 4, so this task passes `null` and fills with vertex color:
 
@@ -721,7 +721,7 @@ public static class SoftwareRasterizer
 }
 ```
 
-- [ ] **Step 4: Add the texture source placeholder**
+- [x] **Step 4: Add the texture source placeholder**
 
 `FillTriangle` references `TextureSource`. Create the minimal type now so this task compiles, and Task 4 tests its sampling. Add to `ImGui.App.Testing/TextureSource.cs`:
 
@@ -750,7 +750,7 @@ public sealed class TextureSource(Bitmap32 pixels)
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -761,7 +761,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all four `SoftwareRasterizerTests` pass. `TextureSource.Sample` is never reached, because every test passes `texture: null`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ImGui.App.Testing/SoftwareRasterizer.cs ImGui.App.Testing/TextureSource.cs tests/ImGui.App.Testing.Tests/SoftwareRasterizerTests.cs
@@ -781,7 +781,7 @@ git commit -m "feat: rasterize flat-shaded triangles in software [minor]"
 - Consumes: `Bitmap32`, `Rgba32`, `SoftwareRasterizer.Modulate`, `SoftwareRasterizer.BlendOver` from Tasks 2 and 3.
 - Produces: a working `TextureSource.Sample(float u, float v)`.
 
-- [ ] **Step 1: Write the failing sampling tests**
+- [x] **Step 1: Write the failing sampling tests**
 
 Create `tests/ImGui.App.Testing.Tests/TextureSourceTests.cs`:
 
@@ -823,7 +823,7 @@ public sealed class TextureSourceTests
 }
 ```
 
-- [ ] **Step 2: Write the failing blending tests**
+- [x] **Step 2: Write the failing blending tests**
 
 Create `tests/ImGui.App.Testing.Tests/BlendingTests.cs`:
 
@@ -873,7 +873,7 @@ public sealed class BlendingTests
 }
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run:
 
@@ -884,7 +884,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: the four `TextureSourceTests` fail with `NotImplementedException`. The `BlendingTests` should already pass, because Task 3 implemented `BlendOver` and `Modulate`. If any blending test fails, fix the implementation now, because the rasterizer depends on it.
 
-- [ ] **Step 4: Implement sampling**
+- [x] **Step 4: Implement sampling**
 
 Replace the body of `Sample` in `ImGui.App.Testing/TextureSource.cs`:
 
@@ -906,7 +906,7 @@ Replace the body of `Sample` in `ImGui.App.Testing/TextureSource.cs`:
 
 Add `using System;` to the file's using directives if it is not already present.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -917,7 +917,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: every test passes.
 
-- [ ] **Step 6: Add a textured triangle test**
+- [x] **Step 6: Add a textured triangle test**
 
 Append to `tests/ImGui.App.Testing.Tests/SoftwareRasterizerTests.cs`:
 
@@ -943,12 +943,12 @@ Append to `tests/ImGui.App.Testing.Tests/SoftwareRasterizerTests.cs`:
 	}
 ```
 
-- [ ] **Step 7: Run the tests again**
+- [x] **Step 7: Run the tests again**
 
 Run: `./tests/ImGui.App.Testing.Tests/bin/Debug/net10.0/ktsu.ImGui.App.Testing.Tests.exe`
 Expected: all tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add ImGui.App.Testing/TextureSource.cs tests/ImGui.App.Testing.Tests
@@ -966,7 +966,7 @@ git commit -m "feat: sample textures and blend straight alpha in the rasterizer 
 - Consumes: `SoftwareRasterizer.FillTriangle` from Task 3, which already accepts and applies a scissor rectangle.
 - Produces: no new API. This task proves clipping works and fixes it if it does not.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/ScissorTests.cs`:
 
@@ -1037,7 +1037,7 @@ public sealed class ScissorTests
 }
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run:
 
@@ -1048,7 +1048,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: these tests should pass against the Task 3 implementation, which already intersects the scissor with the triangle bounds and clamps to the target. If any fail, fix `FillTriangle` and rerun. Do not weaken the tests to match the implementation.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/ImGui.App.Testing.Tests/ScissorTests.cs
@@ -1067,7 +1067,7 @@ git commit -m "test: cover scissor clipping in the rasterizer [patch]"
 - Consumes: `IRendererBackend` (internal to `ktsu.ImGui.App`), `Bitmap32`, `TextureSource`, `SoftwareRasterizer`, `Rectangle` from earlier tasks.
 - Produces: `internal sealed class SoftwareRendererBackend : IRendererBackend` with `Bitmap32 Target { get; }`, `void Clear(Rgba32 color)`, plus the interface members `CreateTexture`, `UpdateTexture`, `DeleteTexture`, `RenderDrawData`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/SoftwareRendererBackendTests.cs`:
 
@@ -1131,12 +1131,12 @@ public sealed class SoftwareRendererBackendTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `SoftwareRendererBackend` does not exist.
 
-- [ ] **Step 3: Implement the backend**
+- [x] **Step 3: Implement the backend**
 
 Create `ImGui.App.Testing/SoftwareRendererBackend.cs`:
 
@@ -1267,7 +1267,7 @@ internal sealed class SoftwareRendererBackend(int width, int height) : IRenderer
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -1286,7 +1286,7 @@ grep -n "GetTexID\|CmdLists\|IdxBuffer" ImGui.App/bin/Debug/net10.0/Hexa.NET.ImG
 
 and adjust, rather than guessing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ImGui.App.Testing/SoftwareRendererBackend.cs tests/ImGui.App.Testing.Tests/SoftwareRendererBackendTests.cs
@@ -1305,13 +1305,13 @@ git commit -m "feat: render ImGui draw data through a software backend [minor]"
 - Consumes: existing internal `RenderWithScaling`, `RenderAppMenu`, `RenderWindowContents`, `RenderPerformanceMonitor`.
 - Produces: `internal static void RenderFrameContents(ImGuiAppConfig config, float delta)` on `ImGuiApp`, callable by the harness.
 
-- [ ] **Step 1: Read the current handler**
+- [x] **Step 1: Read the current handler**
 
 Run: `sed -n '718,745p' ImGui.App/ImGuiApp.cs`
 
 The body inside `window!.Render += delta => { ... }` currently performs the font check, the GL clear, a `RenderWithScaling` block wrapping the frame wrapper and three render calls, `controller?.Render()`, and `ApplyFrameRateLimit()`.
 
-- [ ] **Step 2: Extract the application content into a shared method**
+- [x] **Step 2: Extract the application content into a shared method**
 
 Add this method to `ImGuiApp`, directly after `SetupWindowRenderHandler`:
 
@@ -1338,7 +1338,7 @@ Add this method to `ImGuiApp`, directly after `SetupWindowRenderHandler`:
 	}
 ```
 
-- [ ] **Step 3: Call the extracted method from the window handler**
+- [x] **Step 3: Call the extracted method from the window handler**
 
 Replace the `RenderWithScaling(() => { ... });` block inside `window!.Render += delta => { ... }` with a single call, leaving the font check, GL clear, `controller?.Render()` and `ApplyFrameRateLimit()` exactly as they are:
 
@@ -1346,7 +1346,7 @@ Replace the `RenderWithScaling(() => { ... });` block inside `window!.Render += 
 			RenderFrameContents(config, (float)delta);
 ```
 
-- [ ] **Step 4: Write a test that the extraction preserves call order**
+- [x] **Step 4: Write a test that the extraction preserves call order**
 
 Create `tests/ImGui.App.Tests/FrameContentsTests.cs`. This does not start a window. It calls the extracted method directly and records the order the callbacks fire, which is the behavior the extraction must preserve:
 
@@ -1398,7 +1398,7 @@ public sealed class FrameContentsTests
 }
 ```
 
-- [ ] **Step 5: Run the ImGui.App tests**
+- [x] **Step 5: Run the ImGui.App tests**
 
 Run:
 
@@ -1409,7 +1409,7 @@ dotnet build tests/ImGui.App.Tests/ImGui.App.Tests.csproj
 
 Expected: the existing suite still passes and the two new tests pass. If the ordering test proves impossible to run without an ImGui context, delete it and rely on the harness end-to-end test in Task 9 instead. Say so in the commit message rather than leaving a test that asserts nothing.
 
-- [ ] **Step 6: Confirm the windowed path still works**
+- [x] **Step 6: Confirm the windowed path still works**
 
 The extraction touches the real render loop, so verify a windowed application still runs:
 
@@ -1419,7 +1419,7 @@ dotnet build examples/ImGuiAppDemo/ImGuiAppDemo.csproj
 
 Expected: build succeeds. Run the demo briefly if a display is available and confirm the window renders its menu.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add ImGui.App/ImGuiApp.cs tests/ImGui.App.Tests/FrameContentsTests.cs
@@ -1438,7 +1438,7 @@ git commit -m "refactor: extract per-frame application rendering into RenderFram
 - Consumes: `SoftwareRendererBackend` from Task 6.
 - Produces: `internal sealed class HeadlessImGuiContext : IDisposable` with a constructor taking `(int width, int height, float dpiScale, SoftwareRendererBackend backend)`, and members `void BeginFrame(float delta)`, `void EndFrame()`, `ImGuiIOPtr IO { get; }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/HeadlessImGuiContextTests.cs`:
 
@@ -1492,12 +1492,12 @@ public sealed class HeadlessImGuiContextTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `HeadlessImGuiContext` does not exist.
 
-- [ ] **Step 3: Implement the headless context**
+- [x] **Step 3: Implement the headless context**
 
 Create `ImGui.App.Testing/HeadlessImGuiContext.cs`. The atlas API here matches what `ImGuiController.RecreateFontDeviceTexture` uses in this repository, which is the authoritative reference for the bound ImGui version:
 
@@ -1615,7 +1615,7 @@ internal sealed class HeadlessImGuiContext : IDisposable
 }
 ```
 
-- [ ] **Step 4: Allow unsafe blocks in the project**
+- [x] **Step 4: Allow unsafe blocks in the project**
 
 `BuildFontAtlas` and the ini filename assignment need unsafe code. Add to the `PropertyGroup` in `ImGui.App.Testing/ImGui.App.Testing.csproj`:
 
@@ -1623,7 +1623,7 @@ internal sealed class HeadlessImGuiContext : IDisposable
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -1634,7 +1634,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all three `HeadlessImGuiContextTests` pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ImGui.App.Testing tests/ImGui.App.Testing.Tests/HeadlessImGuiContextTests.cs
@@ -1654,7 +1654,7 @@ git commit -m "feat: add a headless ImGui context with a software font atlas [mi
 - Consumes: `HeadlessImGuiContext`, `SoftwareRendererBackend`, `ImGuiApp.RenderFrameContents` from Tasks 6, 7 and 8.
 - Produces: `public sealed class ImGuiAppHarness : IDisposable` with `static ImGuiAppHarness Start(ImGuiAppConfig config, HarnessOptions options)`, `void Step()`, `void Step(int frames)`, `int FrameCount { get; }`, `Bitmap32 Target { get; }`. Also `public sealed record HarnessOptions` with `int Width`, `int Height`, `float DpiScale`, `float FrameDelta`, `Rgba32 ClearColor`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/ImGuiAppHarnessTests.cs`:
 
@@ -1753,12 +1753,12 @@ public sealed class ImGuiAppHarnessTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `ImGuiAppHarness`, `HarnessOptions` and `HarnessFrameException` do not exist.
 
-- [ ] **Step 3: Implement the options record**
+- [x] **Step 3: Implement the options record**
 
 Create `ImGui.App.Testing/HarnessOptions.cs`:
 
@@ -1790,7 +1790,7 @@ public sealed record HarnessOptions
 }
 ```
 
-- [ ] **Step 4: Implement the frame exception**
+- [x] **Step 4: Implement the frame exception**
 
 Create `ImGui.App.Testing/HarnessFrameException.cs`:
 
@@ -1832,7 +1832,7 @@ public sealed class HarnessFrameException : Exception
 }
 ```
 
-- [ ] **Step 5: Implement the harness**
+- [x] **Step 5: Implement the harness**
 
 Create `ImGui.App.Testing/ImGuiAppHarness.cs`:
 
@@ -1964,7 +1964,7 @@ public sealed class ImGuiAppHarness : IDisposable
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run:
 
@@ -1986,7 +1986,7 @@ If it does fail anyway, populate what the harness needs in its constructor rathe
 the shared method. Bypassing it would defeat the point of Task 7, which exists so the harness and
 the window drive identical application code.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add ImGui.App.Testing tests/ImGui.App.Testing.Tests/ImGuiAppHarnessTests.cs
@@ -2005,7 +2005,7 @@ git commit -m "feat: add the headless harness entry point and frame stepping [mi
 - Consumes: `ImGuiAppHarness.Step` from Task 9.
 - Produces: `bool StepUntil(Func<bool> predicate, int maxFrames)` on `ImGuiAppHarness`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/StepUntilTests.cs`:
 
@@ -2060,12 +2060,12 @@ public sealed class StepUntilTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `StepUntil` does not exist.
 
-- [ ] **Step 3: Implement conditional stepping**
+- [x] **Step 3: Implement conditional stepping**
 
 Add to `ImGuiAppHarness`, after `Step(int frames)`:
 
@@ -2103,7 +2103,7 @@ Add to `ImGuiAppHarness`, after `Step(int frames)`:
 	}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -2114,7 +2114,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all three `StepUntilTests` pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ImGui.App.Testing/ImGuiAppHarness.cs tests/ImGui.App.Testing.Tests/StepUntilTests.cs
@@ -2134,7 +2134,7 @@ git commit -m "feat: advance frames until a condition holds [minor]"
 - Consumes: `ImGuiAppHarness.Step` from Task 9.
 - Produces: `HarnessMouse Mouse { get; }` on `ImGuiAppHarness`, and `public sealed class HarnessMouse` with `void MoveTo(float x, float y)`, `void Down(int button)`, `void Up(int button)`, `void Click(float x, float y, int button = 0)`, `void Drag(float fromX, float fromY, float toX, float toY, int steps = 16)`, `void Wheel(float x, float y, int clicks)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/MouseInputTests.cs`:
 
@@ -2226,12 +2226,12 @@ public sealed class MouseInputTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `Mouse` does not exist on the harness.
 
-- [ ] **Step 3: Implement the mouse**
+- [x] **Step 3: Implement the mouse**
 
 Create `ImGui.App.Testing/HarnessMouse.cs`:
 
@@ -2340,7 +2340,7 @@ public sealed class HarnessMouse(ImGuiAppHarness harness)
 }
 ```
 
-- [ ] **Step 4: Expose the mouse on the harness**
+- [x] **Step 4: Expose the mouse on the harness**
 
 Add to `ImGuiAppHarness`, as a property initialized in the constructor:
 
@@ -2355,7 +2355,7 @@ and in the constructor body, after the context is created:
 		Mouse = new HarnessMouse(this);
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -2366,7 +2366,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all four `MouseInputTests` pass. If `Click` does not activate the button, add one more frame between press and release before changing anything else, because ImGui needs the press to be visible in a completed frame.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ImGui.App.Testing tests/ImGui.App.Testing.Tests/MouseInputTests.cs
@@ -2386,7 +2386,7 @@ git commit -m "feat: inject mouse input into the harness [minor]"
 - Consumes: `ImGuiAppHarness.Step` from Task 9.
 - Produces: `HarnessKeyboard Keyboard { get; }` on `ImGuiAppHarness`, and `public sealed class HarnessKeyboard` with `void Press(ImGuiKey key, bool ctrl = false, bool shift = false, bool alt = false)`, `void Type(string text)`, `void KeyDown(ImGuiKey key)`, `void KeyUp(ImGuiKey key)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/KeyboardInputTests.cs`:
 
@@ -2472,12 +2472,12 @@ public sealed class KeyboardInputTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `Keyboard` does not exist on the harness.
 
-- [ ] **Step 3: Implement the keyboard**
+- [x] **Step 3: Implement the keyboard**
 
 Create `ImGui.App.Testing/HarnessKeyboard.cs`:
 
@@ -2575,7 +2575,7 @@ public sealed class HarnessKeyboard(ImGuiAppHarness harness)
 }
 ```
 
-- [ ] **Step 4: Expose the keyboard on the harness**
+- [x] **Step 4: Expose the keyboard on the harness**
 
 Add to `ImGuiAppHarness`:
 
@@ -2590,7 +2590,7 @@ and in the constructor, next to the mouse:
 		Keyboard = new HarnessKeyboard(this);
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -2601,7 +2601,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all three `KeyboardInputTests` pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ImGui.App.Testing tests/ImGui.App.Testing.Tests/KeyboardInputTests.cs
@@ -2621,7 +2621,7 @@ git commit -m "feat: inject keyboard input and typed text into the harness [mino
 - Consumes: `Bitmap32`, `Rgba32` from Task 2, `ImGuiAppHarness.Target` from Task 9.
 - Produces: `CapturedFrame Capture()` on `ImGuiAppHarness`, and `public sealed class CapturedFrame` with `int Width`, `int Height`, `Rgba32 GetPixel(int x, int y)`, `void SavePng(string path)`, `Rectangle? FindBounds(Func<Rgba32, bool> predicate)`, `int CountPixels(Func<Rgba32, bool> predicate)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/CapturedFrameTests.cs`:
 
@@ -2712,12 +2712,12 @@ public sealed class CapturedFrameTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `CapturedFrame` does not exist.
 
-- [ ] **Step 3: Implement the captured frame**
+- [x] **Step 3: Implement the captured frame**
 
 Create `ImGui.App.Testing/CapturedFrame.cs`:
 
@@ -2820,7 +2820,7 @@ public sealed class CapturedFrame
 }
 ```
 
-- [ ] **Step 4: Expose capture on the harness**
+- [x] **Step 4: Expose capture on the harness**
 
 Add to `ImGuiAppHarness`:
 
@@ -2843,7 +2843,7 @@ Add to `ImGuiAppHarness`:
 	}
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -2854,7 +2854,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all `CapturedFrameTests` pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ImGui.App.Testing tests/ImGui.App.Testing.Tests/CapturedFrameTests.cs
@@ -2872,7 +2872,7 @@ git commit -m "feat: capture and measure rendered frames [minor]"
 - Consumes: everything built so far.
 - Produces: no new API. This task proves the central claim of the design, that two runs produce identical output.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `tests/ImGui.App.Testing.Tests/DeterminismTests.cs`:
 
@@ -2960,7 +2960,7 @@ public sealed class DeterminismTests
 }
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run:
 
@@ -2971,7 +2971,7 @@ dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
 
 Expected: all three pass. If the determinism test fails, the likely causes in order are: a hash-ordered iteration in the backend's texture dictionary affecting draw order, font atlas rebuilding differently on the second context, or uninitialized memory in the render target. Fix the cause rather than loosening the comparison.
 
-- [ ] **Step 3: Run the whole suite**
+- [x] **Step 3: Run the whole suite**
 
 Run:
 
@@ -2985,7 +2985,7 @@ dotnet build ImGui.sln
 
 Expected: the whole solution builds with zero warnings and every suite passes. The Task 7 extraction touched the shared render path, so a regression in the other suites matters here.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/ImGui.App.Testing.Tests/DeterminismTests.cs
@@ -2995,6 +2995,24 @@ git commit -m "test: prove the harness renders deterministically [patch]"
 ---
 
 ### Task 15: Item Probes
+
+> **2026-08-19 result: built, with three deviations from the steps below.** The steps are left as
+> written so the reasoning is still legible, but the code differs.
+>
+> 1. **The registry is not in `ktsu.ImGui.App`.** Nothing depends on that package, so `ImGui.Widgets`
+>    and `ImGui.Popups` could not reach it without taking a dependency that drags windowing and
+>    OpenGL into every consumer of a button. It lives in a new dependency-free `ktsu.ImGui.Probes`
+>    package instead, as `ImGuiProbes`, with `ImGuiApp.MarkItem` forwarding to it. `ImGuiProbes` also
+>    carries an `Enabled` master switch.
+> 2. **The libraries mark their own items.** Popups marks filesystem browser rows by filename, its
+>    drives, its filename field and its buttons, plus the prompt, input and searchable list controls.
+>    Twelve widgets mark the region they claim for interaction. An application therefore gets
+>    addressable widgets without marking anything.
+> 3. **Names are qualified and resolved by suffix.** A bare label collided across windows, which the
+>    steps below did not account for. Names now record as window, then pushed scopes, then the item
+>    name, with `ScopedId` pushing a probe scope alongside its identifier. Lookups match trailing
+>    segments so tests still write short names. Ambiguity covers both a query matching several names
+>    and one name marked twice in a frame.
 
 Removes coordinates from tests. An application marks the items a test should be able to address, and
 the harness resolves a name to the rectangle ImGui reported for that item. See Item Probes in the
@@ -3010,7 +3028,7 @@ spec for why Dear ImGui's test engine was rejected in favor of this.
 - Consumes: `ImGuiAppHarness.Step`, `HarnessMouse.Click` from Tasks 9 and 11.
 - Produces: `ImGuiApp.MarkItem(string name)` and `ImGuiApp.SetItemProbe(Action<string, Vector2, Vector2>?)` in `ktsu.ImGui.App`. In the harness: `ItemProbe Probe { get; }` with `Rectangle? Rect(string name)`, `bool WasSeenInFrame(string name, int frame)`, `IReadOnlyCollection<string> KnownNames`, plus `ImGuiAppHarness.Click(string name)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/ImGui.App.Testing.Tests/ItemProbeTests.cs`:
 
@@ -3140,12 +3158,12 @@ public sealed class ItemProbeTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
 Expected: compile error, `MarkItem`, `SetItemProbe`, `Probe` and `Click(string)` do not exist.
 
-- [ ] **Step 3: Add the marking API to ktsu.ImGui.App**
+- [x] **Step 3: Add the marking API to ktsu.ImGui.App**
 
 Add to `ImGuiApp`, next to the external frame session members:
 
@@ -3180,7 +3198,7 @@ Add to `ImGuiApp`, next to the external frame session members:
 	}
 ```
 
-- [ ] **Step 4: Implement the probe recorder**
+- [x] **Step 4: Implement the probe recorder**
 
 Create `ImGui.App.Testing/ItemProbe.cs`:
 
@@ -3227,7 +3245,7 @@ public sealed class ItemProbe
 }
 ```
 
-- [ ] **Step 5: Wire the probe into the harness**
+- [x] **Step 5: Wire the probe into the harness**
 
 In `ImGuiAppHarness` add the property, install the recorder in `Start`, clear it in `Dispose`, and add
 name-based clicking:
@@ -3277,7 +3295,7 @@ In `Dispose`, alongside `EndExternalFrameSession`:
 
 `ItemProbe.Record` is internal, so the harness records entries while callers cannot forge them.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run:
 
@@ -3294,7 +3312,7 @@ completed is recorded under `FrameCount - 1` once the step returns. Correct the 
 than loosening the test: that test is the entire reason a stale click fails instead of silently
 passing.
 
-- [ ] **Step 7: Confirm marking costs nothing in production**
+- [x] **Step 7: Confirm marking costs nothing in production**
 
 An application that marks items with no probe installed must be unaffected:
 
@@ -3305,7 +3323,7 @@ dotnet build tests/ImGui.App.Tests/ImGui.App.Tests.csproj
 
 Expected: all tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add ImGui.App/ImGuiApp.cs ImGui.App.Testing tests/ImGui.App.Testing.Tests/ItemProbeTests.cs
@@ -3316,6 +3334,11 @@ git commit -m "feat: address widgets by name through item probes [minor]"
 
 ### Task 16: Package Documentation
 
+> **2026-08-19 result: done, covering two packages rather than one.** `ktsu.ImGui.Probes` needed its
+> own readme and description once the registry moved there. Every code snippet in both readme files
+> was compiled and run rather than eyeballed, since documentation that does not compile is worse than
+> none because it is trusted.
+
 **Files:**
 - Create: `ImGui.App.Testing/README.md`
 - Create: `ImGui.App.Testing/DESCRIPTION.md`
@@ -3324,13 +3347,13 @@ git commit -m "feat: address widgets by name through item probes [minor]"
 - Consumes: the finished public API.
 - Produces: package documentation matching the repository's existing convention.
 
-- [ ] **Step 1: Check the convention**
+- [x] **Step 1: Check the convention**
 
 Run: `head -30 ImGui.Popups/DESCRIPTION.md ImGui.App/README.md`
 
 Match whatever those files do for structure and tone.
 
-- [ ] **Step 2: Write the description**
+- [x] **Step 2: Write the description**
 
 Create `ImGui.App.Testing/DESCRIPTION.md` with a single paragraph, no heading, describing the package for the NuGet listing:
 
@@ -3338,7 +3361,7 @@ Create `ImGui.App.Testing/DESCRIPTION.md` with a single paragraph, no heading, d
 Headless test harness for ktsu.ImGui.App applications. Renders through a CPU rasterizer with no display, GPU or graphics driver, injects input directly into ImGui rather than through the operating system, and advances frames under the test's control so results do not depend on timing. Captures rendered frames for measurement in assertions and as diagnostic artifacts.
 ```
 
-- [ ] **Step 3: Write the readme**
+- [x] **Step 3: Write the readme**
 
 Create `ImGui.App.Testing/README.md` covering, in this order: what the package is for, a complete worked example starting a harness and asserting on a captured frame, the determinism guarantees, and the two known weaknesses from the spec (coordinate-based interaction, and not testing the GL backend). Use the worked example below verbatim as the centerpiece:
 
@@ -3359,11 +3382,11 @@ Assert.IsNotNull(image, "Something should have been drawn.");
 frame.SavePng("artifact.png");
 ```
 
-- [ ] **Step 4: Verify the documented example compiles**
+- [x] **Step 4: Verify the documented example compiles**
 
 Copy the example into a scratch test method, build it, and correct the readme if any name is wrong. Documentation that does not compile is worse than none, because it is trusted.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ImGui.App.Testing/README.md ImGui.App.Testing/DESCRIPTION.md

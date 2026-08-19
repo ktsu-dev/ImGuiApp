@@ -64,7 +64,8 @@ records the tradeoff so the duplication is deleted when the refactor happens.
 
 | Project | Package | Contents |
 |---|---|---|
-| `ImGui.App` | `ktsu.ImGui.App` | Existing. Gains an internal frame pump and `InternalsVisibleTo`. |
+| `ImGui.Probes` | `ktsu.ImGui.Probes` | New. The item-marking registry, with no dependencies of its own. |
+| `ImGui.App` | `ktsu.ImGui.App` | Existing. Gains a public frame-hosting API and forwards marking. |
 | `ImGui.App.Testing` | `ktsu.ImGui.App.Testing` | New. Harness, headless controller, software rasterizer, capture. |
 | `tests/ImGui.App.Testing.Tests` | not packaged | New. Tests for the harness itself. |
 
@@ -197,11 +198,27 @@ them, compiling roughly 660 KB of additional C++, writing a C shim because the e
 classes while Hexa.NET binds the C wrapper, and supplying a coroutine implementation. That is a
 native build pipeline to own and keep aligned with Hexa.NET's ImGui version, in perpetuity.
 
+### Where the Registry Lives
+
+Marking is a cross-cutting concern. Widget libraries, dialog libraries and the application host all
+want to mark items, and none of them should have to depend on another to do it. The registry
+therefore lives in its own package, `ktsu.ImGui.Probes`, which depends on nothing but the ImGui
+binding.
+
+It could not live in `ktsu.ImGui.App`. Nothing depends on that package, so `ImGui.Widgets` and
+`ImGui.Popups` would have had to take a dependency on it, which would drag windowing and OpenGL into
+every consumer of a button. Putting the registry in a package with no dependencies also means a
+library outside this repository can mark its items without adopting any of this repository's
+opinions.
+
+`ImGuiProbes` carries an `Enabled` flag, a master switch independent of whether a probe is installed.
+Setting it false suppresses marking without disturbing the installed callback.
+
 ### How Probes Work
 
-ImGui already reports the rectangle of the most recently submitted item through
-`GetItemRectMin` and `GetItemRectMax`, in the public API. An application marks the items it wants a
-test to address, immediately after submitting them:
+ImGui already reports the rectangle of the most recently submitted item through `GetItemRectMin` and
+`GetItemRectMax`, in the public API. A library or application marks an item immediately after
+submitting it:
 
 ```csharp
 if (ImGui.MenuItem("Open..."))
@@ -209,12 +226,12 @@ if (ImGui.MenuItem("Open..."))
 	OpenRequested();
 }
 
-ImGuiApp.MarkItem("file.open");
+ImGuiProbes.MarkItem("file.open");
 ```
 
-`MarkItem` lives in `ktsu.ImGui.App`, not in the testing package, so an application never takes a
-dependency on test infrastructure to be testable. In production no probe is installed and the call
-costs one null check.
+In production no probe is installed and the call costs one null check, so a library can mark
+unconditionally. `ImGuiApp.MarkItem` forwards to the same registry, so an application already
+referencing the host package does not need a second reference to mark its own items.
 
 A test then addresses the item by name and never states a coordinate:
 
@@ -223,19 +240,55 @@ harness.Click("file.open");
 Rectangle? rect = harness.Probe.Rect("canvas.image");
 ```
 
-### Staleness
+### Marking in the Libraries
 
-Probes are recorded per frame. A name last seen in an earlier frame belongs to something no longer
-on screen, such as a closed popup, so acting on it would click empty space or whatever has since
-moved there. `Click` therefore fails when a name was not marked during the most recent frame, and
-says so, rather than clicking a stale rectangle and reporting a pass. An unknown name fails with the
-list of names that were seen, since the usual cause is a typo or a widget that never rendered.
+`ktsu.ImGui.Widgets` and `ktsu.ImGui.Popups` mark their own interactive items, so an application gets
+addressable widgets without marking anything itself.
+
+The filesystem browser is the case that matters most. It marks its rows by filename, along with its
+drives, its save filename field, and its confirm and cancel buttons. That makes a dialog assertable:
+a test can state that the browser lists a given image and excludes a file that does not match the
+codec filter, which is exactly the defect that shipped in ImGuiApp#312 and was noticed only because
+somebody looked at a screenshot.
+
+Widgets mark the region they claim for interaction, which for most of them is the invisible button
+they already submit, so the recorded rectangle is exactly the clickable area. `DividerContainer` draws
+its handle manually rather than as an ImGui item, so it marks an explicit region instead.
+
+### Name Qualification
+
+A bare label does not identify an item. Two widgets can share a label, and ImGui keeps them apart
+through its identifier stack rather than through the label alone. A probe name that ignored that
+context would collide exactly where ImGui does not.
+
+Names are therefore recorded fully qualified, as the ImGui window followed by any pushed scopes and
+then the item's own name. `ScopedId` pushes a probe scope alongside its identifier, so anything
+already scoped for ImGui is scoped for probes without further work.
+
+Tests do not write the whole path. A lookup matches on trailing path segments, so `a.png` resolves
+`Open Image/filesystem-browser/a.png` as long as nothing else ends the same way. Qualification is
+applied always rather than only on collision, because a name that changed meaning the day a second
+widget appeared would break tests for reasons unrelated to the change that caused it.
+
+### Ambiguity and Staleness
+
+Two conditions make a name refuse to resolve, and both fail loudly rather than guessing.
+
+A query matching several recorded names is ambiguous, and the failure lists the candidates so the
+author can qualify further. A single fully qualified name marked twice within one frame is also
+ambiguous: qualification could not separate those two items, and clicking whichever was drawn second
+would be a test that passes while doing the wrong thing.
+
+Probes are recorded per frame. A name last seen in an earlier frame belongs to something no longer on
+screen, such as a closed popup, so acting on it would click empty space or whatever has since moved
+there. `Click` fails when a name was not marked during the most recent frame, rather than clicking a
+stale rectangle and reporting a pass.
 
 ### What Probes Do Not Cover
 
-Only marked items are addressable. Widgets drawn by a library the application does not control, such
-as the interior of a third-party widget, cannot be marked without that library cooperating. Tests
-for those fall back to coordinates, with the helper convention described under ImageGui Integration.
+Only marked items are addressable. Two identically labelled widgets in the same window with no scope
+between them still collide, and are refused rather than guessed at. ImGui has the same limitation and
+the same remedy: give them distinct identifiers.
 
 ## ImageGui Integration
 
@@ -324,10 +377,11 @@ result, so the workflow must invoke the test executable directly, as the existin
 
 ## Known Weaknesses
 
-**Only marked items can be addressed by name.** Item probes remove coordinates from tests, but
-only for items the application marks. Anything unmarked still has to be clicked at a position, where
-a layout change moves the target and the test either fails confusingly or clicks something else and
-passes. The coordinate helper convention limits the blast radius for those cases.
+**Only marked items can be addressed by name.** The widget and dialog libraries mark their own
+interactive items, and an application can mark anything else it wants reachable, but an unmarked item
+still has to be clicked at a position, where a layout change moves the target and the test either
+fails confusingly or clicks something else and passes. The coordinate helper convention limits the
+blast radius for those cases.
 
 **The harness does not test the shipping renderer.** Software rasterization is what makes the tests
 trustworthy in continuous integration, and it is also what stops them from covering the GL path.
