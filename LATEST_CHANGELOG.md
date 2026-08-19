@@ -1,4 +1,6 @@
-## v3.6.1
+## v3.8.1 (patch)
 
-No significant changes detected since v3.6.1.
+Changes since v3.8.0:
+
+- chore: refresh the API compatibility suppressions [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 

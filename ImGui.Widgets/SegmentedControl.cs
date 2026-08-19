@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -69,6 +71,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 origin = ImGui.GetCursorScreenPos();
 			ImGui.InvisibleButton(label, new Vector2(totalWidth, height));
+			ImGuiProbes.MarkItem(label);
 
 			bool changed = false;
 			if (ImGui.IsItemActive() && ImGui.IsItemHovered())

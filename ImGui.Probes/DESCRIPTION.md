@@ -1,0 +1,1 @@
+Lets a user interface library record where it drew named items, so an automated test can address a widget by name instead of by pixel position. Deliberately tiny and dependency free, so any ImGui library can mark its items without taking on a dependency on an application host or on test infrastructure. Marking costs a single null check when nothing is recording.

@@ -13,6 +13,8 @@ using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
+using ktsu.ImGui.Probes;
+
 using Microsoft.Extensions.FileSystemGlobbing;
 
 /// <summary>
@@ -117,6 +119,9 @@ public partial class ImGuiPopups
 		/// <summary>
 		/// The glob pattern used for filtering files.
 		/// </summary>
+		/// <summary>Name prefix for probe marks, so tests address rows and buttons by name.</summary>
+		private const string ProbePrefix = "filesystem-browser";
+
 		private string Glob { get; set; } = "*";
 
 		/// <summary>
@@ -144,7 +149,7 @@ public partial class ImGuiPopups
 		/// </summary>
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileOpen(string title, Action<AbsoluteFilePath> onChooseFile, string glob = "*") => FileOpen(title, onChooseFile, customSize: Vector2.Zero, glob);
 
 		/// <summary>
@@ -153,7 +158,7 @@ public partial class ImGuiPopups
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
 		/// <param name="customSize">Custom size of the dialog.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileOpen(string title, Action<AbsoluteFilePath> onChooseFile, Vector2 customSize, string glob = "*") => File(title, FilesystemBrowserMode.Open, onChooseFile, customSize, glob);
 
 		/// <summary>
@@ -161,7 +166,7 @@ public partial class ImGuiPopups
 		/// </summary>
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileSave(string title, Action<AbsoluteFilePath> onChooseFile, string glob = "*") => FileSave(title, onChooseFile, customSize: Vector2.Zero, glob);
 
 		/// <summary>
@@ -170,7 +175,7 @@ public partial class ImGuiPopups
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
 		/// <param name="customSize">Custom size of the dialog.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileSave(string title, Action<AbsoluteFilePath> onChooseFile, Vector2 customSize, string glob = "*") => File(title, FilesystemBrowserMode.Save, onChooseFile, customSize, glob);
 
 		/// <summary>
@@ -180,7 +185,7 @@ public partial class ImGuiPopups
 		/// <param name="mode">The mode of the browser (Open or Save).</param>
 		/// <param name="onChooseFile">Callback for when a file is chosen.</param>
 		/// <param name="customSize">Custom size of the popup.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		private void File(string title, FilesystemBrowserMode mode, Action<AbsoluteFilePath> onChooseFile, Vector2 customSize, string glob) => OpenPopup(title, mode, FilesystemBrowserTarget.File, onChooseFile, (d) => { }, customSize, glob);
 
 		/// <summary>
@@ -207,7 +212,7 @@ public partial class ImGuiPopups
 		/// <param name="onChooseFile">Callback for when a file is chosen.</param>
 		/// <param name="onChooseDirectory">Callback for when a directory is chosen.</param>
 		/// <param name="customSize">Custom size of the popup.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		private void OpenPopup(string title, FilesystemBrowserMode mode, FilesystemBrowserTarget target, Action<AbsoluteFilePath> onChooseFile, Action<AbsoluteDirectoryPath> onChooseDirectory, Vector2 customSize, string glob)
 		{
 			FileName = new();
@@ -216,12 +221,30 @@ public partial class ImGuiPopups
 			OnChooseFile = onChooseFile;
 			OnChooseDirectory = onChooseDirectory;
 			Glob = glob;
-			Matcher = new();
-			Matcher.AddInclude(Glob);
+			Matcher = BuildMatcher(glob);
 			Drives.Clear();
 			GetNavigableDrives().ForEach(Drives.Add);
 			RefreshContents();
 			Modal.Open(title, ShowContent, customSize);
+		}
+
+		/// <summary>
+		/// Builds a matcher from a glob string. Several patterns may be supplied separated by
+		/// semicolons, for example <c>*.png;*.jpg</c>. The underlying globbing library treats a
+		/// whole string as a single pattern and has no separator of its own, so each pattern has
+		/// to be added as its own include or the combined string matches nothing at all.
+		/// </summary>
+		/// <param name="glob">Glob pattern, or several separated by semicolons.</param>
+		/// <returns>A matcher including every pattern supplied.</returns>
+		internal static Matcher BuildMatcher(string glob)
+		{
+			Matcher matcher = new();
+			foreach (string pattern in glob.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+			{
+				matcher.AddInclude(pattern);
+			}
+
+			return matcher;
 		}
 
 		/// <summary>
@@ -238,6 +261,7 @@ public partial class ImGuiPopups
 			{
 				string fileName = FileName;
 				ImGui.InputText("##SaveAs", ref fileName, 256);
+				ImGuiProbes.MarkItem(ProbePrefix, "filename");
 				FileName = fileName.As<FileName>();
 			}
 
@@ -263,7 +287,9 @@ public partial class ImGuiPopups
 #pragma warning disable S3267 // Explicit loop is clearer; LINQ rewrite would add unnecessary allocation and complicate ImGui immediate-mode usage.
 				foreach (string drive in Drives)
 				{
-					if (ImGui.Selectable(drive, string.Equals(drive, currentDrive, StringComparison.OrdinalIgnoreCase)))
+					bool driveClicked = ImGui.Selectable(drive, string.Equals(drive, currentDrive, StringComparison.OrdinalIgnoreCase));
+					ImGuiProbes.MarkItem(ProbePrefix, $"drive/{drive}");
+					if (driveClicked)
 					{
 						CurrentDirectory = drive.As<AbsoluteDirectoryPath>();
 						RefreshContents();
@@ -368,7 +394,9 @@ public partial class ImGuiPopups
 		{
 			ImGui.TableNextRow();
 			ImGui.TableNextColumn();
-			if (ImGui.Selectable("..", false, flags) && ImGui.IsMouseDoubleClicked(0))
+			bool parentClicked = ImGui.Selectable("..", false, flags);
+			ImGuiProbes.MarkItem(ProbePrefix, "..");
+			if (parentClicked && ImGui.IsMouseDoubleClicked(0))
 			{
 				// Take the parent from the path type rather than trimming separators off the string: trimming
 				// also removes the leading separator, which is the root itself on Unix, so the "parent" came
@@ -397,7 +425,13 @@ public partial class ImGuiPopups
 				displayPath += Path.DirectorySeparatorChar;
 			}
 
-			if (ImGui.Selectable(displayPath, ChosenItem == path, flags))
+			bool rowClicked = ImGui.Selectable(displayPath, ChosenItem == path, flags);
+
+			// Rows are marked by their displayed name, so a test can select a known file without
+			// counting rows or naming a pixel position.
+			ImGuiProbes.MarkItem(ProbePrefix, displayPath);
+
+			if (rowClicked)
 			{
 				if (directory is not null)
 				{
@@ -431,13 +465,17 @@ public partial class ImGuiPopups
 				FilesystemBrowserMode.Save => "Save",
 				_ => "Choose"
 			};
-			if (ImGui.Button(confirmText))
+			bool confirmClicked = ImGui.Button(confirmText);
+			ImGuiProbes.MarkItem(ProbePrefix, "confirm");
+			if (confirmClicked)
 			{
 				ChooseItem();
 			}
 
 			ImGui.SameLine();
-			if (ImGui.Button("Cancel"))
+			bool cancelClicked = ImGui.Button("Cancel");
+			ImGuiProbes.MarkItem(ProbePrefix, "cancel");
+			if (cancelClicked)
 			{
 				ImGui.CloseCurrentPopup();
 			}

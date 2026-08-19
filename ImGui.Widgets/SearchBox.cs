@@ -8,6 +8,8 @@ using System.Linq;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.TextFilter;
 
 /// <summary>
@@ -77,6 +79,7 @@ public static partial class ImGuiWidgets
 		string displayHint = options.ShowHint && (hintWidth + framePadding) <= availableWidth ? hint : string.Empty;
 
 		bool changed = ImGui.InputTextWithHint(options.Label, displayHint, ref filterText, 256);
+		ImGuiProbes.MarkItem(options.Label);
 		bool isHovered = ImGui.IsItemHovered();
 		bool isRightMouseClicked = ImGui.IsMouseClicked(ImGuiMouseButton.Right);
 

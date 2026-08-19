@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 using ktsu.Semantics.Color;
@@ -97,6 +99,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 origin = ImGui.GetCursorScreenPos();
 			bool clicked = ImGui.InvisibleButton(id, new Vector2(resolvedDiameter, resolvedDiameter));
+			ImGuiProbes.MarkItem(id);
 			Vector2 center = new(origin.X + radius, origin.Y + radius);
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();

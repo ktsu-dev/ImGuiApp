@@ -3,6 +3,8 @@
 namespace ktsu.ImGui.Widgets;
 
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 using ktsu.ScopedAction;
 
 /// <summary>
@@ -23,7 +25,15 @@ public static partial class ImGuiWidgets
 		public ScopedId(string id)
 		{
 			ImGui.PushID(id);
-			OnClose = ImGui.PopID;
+
+			// Mirrors the identifier push into the probe name stack, so a marked item inside this
+			// scope is qualified by it and two identically labelled widgets stay distinguishable.
+			ImGuiProbes.PushScope(id);
+
+			// A method group rather than a lambda. A lambda here makes the compiler emit a
+			// generated attribute on net9.0 and net10.0 that it does not emit on net8.0, which
+			// leaves the package's assemblies inconsistent and fails package validation (CP0001).
+			OnClose = PopScopeAndId;
 		}
 
 		/// <summary>
@@ -33,7 +43,14 @@ public static partial class ImGuiWidgets
 		public ScopedId(int id)
 		{
 			ImGui.PushID(id);
-			OnClose = ImGui.PopID;
+			ImGuiProbes.PushScope(id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			OnClose = PopScopeAndId;
+		}
+
+		private static void PopScopeAndId()
+		{
+			ImGuiProbes.PopScope();
+			ImGui.PopID();
 		}
 	}
 }

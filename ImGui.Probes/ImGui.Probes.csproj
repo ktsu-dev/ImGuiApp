@@ -1,0 +1,25 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <RootNamespace>ktsu.ImGui.Probes</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Packaging metadata only. Without this the file is copied to a consumer's output, and since
+         ktsu.ImGui.App now references this package, two DESCRIPTION.md files land at the same
+         relative path and publishing fails with NETSDK1152. -->
+    <Content Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,60 @@
-## v3.6.1
+## v3.8.1 (patch)
 
-No significant changes detected since v3.6.1.
+Changes since v3.8.0:
+
+- chore: refresh the API compatibility suppressions [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.8.0 (minor)
+
+Changes since v3.7.0:
+
+- fix: stop two ktsu packages colliding over their package data [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: scope build badge to the default branch ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: guard probe marking against a missing ImGui context [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: document the harness and probe packages, reconcile the spec [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: qualify probe names by window and scope [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: mark probes from the widget and popup libraries by default [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: address widgets by name through item probes [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- test: prove the harness renders deterministically [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: add the headless harness with input, stepping and capture [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: add a headless ImGui context with a software font atlas [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: let a host drive ImGuiApp frames without a window [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: render ImGui draw data through the software renderer [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: rasterize textured, blended, scissored triangles in software [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: add an RGBA pixel buffer with dependency-free PNG encoding [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: scaffold the ktsu.ImGui.App.Testing package [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: plan the headless UI test harness implementation [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: design a headless UI test harness [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: match every pattern in a semicolon-separated glob [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.7.3 (patch)
+
+Changes since v3.7.2:
+
+- fix: match every pattern in a semicolon-separated glob [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.7.2 (patch)
+
+Changes since v3.7.1:
+
+- Bump the ktsu group with 7 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.7.1 (patch)
+
+Changes since v3.7.0:
+
+- Bump Hexa.NET.Math from 2.0.6 to 2.0.8 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.7.0 (minor)
+
+Changes since v3.6.0:
+
+- feat: add ImageCanvas pan and zoom widget [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: add ImageCanvasState pan and zoom view math [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: public in-memory texture create and update on ImGuiApp [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Give the widgets demo a top-level tab bar ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: add IRendererBackend.UpdateTexture for in-place texture upload [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v3.6.1 (patch)
 

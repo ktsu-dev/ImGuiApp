@@ -9,6 +9,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -64,6 +66,7 @@ public static partial class ImGuiWidgets
 			float valueWidth = MathF.Max(ImGui.CalcTextSize(text).X + (ImGui.GetStyle().FramePadding.X * 2.0f), height * 1.5f);
 			Vector2 valueOrigin = ImGui.GetCursorScreenPos();
 			ImGui.InvisibleButton("##value", new Vector2(valueWidth, height));
+			ImGuiProbes.MarkItem("##value");
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			Span<Vector4> colors = ImGui.GetStyle().Colors;

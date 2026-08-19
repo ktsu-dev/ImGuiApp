@@ -727,19 +727,97 @@ public static partial class ImGuiApp
 			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
 			gl?.Clear(ClearBufferMask.ColorBufferBit);
 
-			RenderWithScaling(() =>
-			{
-				using ScopedAction? frameWrapper = config.FrameWrapperFactory.Invoke();
-				RenderAppMenu(config.OnAppMenu);
-				RenderWindowContents(config.OnRender, (float)delta);
-				RenderPerformanceMonitor();
-			});
+			RenderFrameContents(config, (float)delta);
 
 			controller?.Render();
 
 			// Apply sleep-based frame rate limiting
 			ApplyFrameRateLimit();
 		};
+	}
+
+	/// <summary>
+	/// Runs the application-facing part of one frame: the frame wrapper, the application menu, the
+	/// application's render callback, and the performance monitor. It does not begin or end an ImGui
+	/// frame and does not present anything, so a host that drives frames itself supplies those.
+	/// </summary>
+	/// <remarks>
+	/// Public so a host can render frames outside <see cref="Start(ImGuiAppConfig)"/>, which is how
+	/// the headless test harness in ktsu.ImGui.App.Testing drives an application. Sharing this method
+	/// rather than reimplementing it is the point: a harness that reproduced the frame body would be
+	/// testing its own copy instead of the code that ships. Call
+	/// <see cref="BeginExternalFrameSession()"/> first.
+	/// </remarks>
+	/// <param name="config">The configuration supplying the render callbacks.</param>
+	/// <param name="delta">Seconds elapsed since the previous frame.</param>
+	public static void RenderFrameContents(ImGuiAppConfig config, float delta)
+	{
+		Ensure.NotNull(config);
+
+		RenderWithScaling(() =>
+		{
+			using ScopedAction? frameWrapper = config.FrameWrapperFactory.Invoke();
+			RenderAppMenu(config.OnAppMenu);
+			RenderWindowContents(config.OnRender, delta);
+			RenderPerformanceMonitor();
+		});
+	}
+
+	/// <summary>
+	/// Prepares the shared state a host needs before driving frames itself, without creating a
+	/// window or a render context.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="Invoker"/> is otherwise assigned only by <see cref="Start(ImGuiAppConfig)"/>, so
+	/// work marshalled from a worker thread would have nowhere to run and would be lost silently.
+	/// The invoker binds to the calling thread, so call this from the thread that will drive frames.
+	/// </remarks>
+	/// <exception cref="InvalidOperationException">A session is already active.</exception>
+	public static void BeginExternalFrameSession()
+	{
+		if (Invoker is not null)
+		{
+			throw new InvalidOperationException(
+				"An ImGuiApp session is already active. A second session would replace the invoker the first one is using.");
+		}
+
+		Invoker = new();
+	}
+
+	/// <summary>
+	/// Prepares the shared state a host needs before driving frames itself, and installs the
+	/// renderer that host draws with.
+	/// </summary>
+	/// <remarks>
+	/// The parameterless overload leaves no backend installed, which is correct for a host that
+	/// never uploads a texture but fatal for one that does: <see cref="CreateTexture"/>,
+	/// <see cref="UpdateTexture"/> and <see cref="DeleteTexture(nint)"/> all route through the
+	/// backend and throw without one. An application that shows an image it generated — rather than
+	/// one loaded from a file — reaches exactly that path, so a host that intends to render such an
+	/// application supplies its renderer here.
+	/// </remarks>
+	/// <param name="backend">The renderer this session's frames are drawn with.</param>
+	/// <exception cref="ArgumentNullException"><paramref name="backend"/> is null.</exception>
+	/// <exception cref="InvalidOperationException">A session is already active.</exception>
+	public static void BeginExternalFrameSession(IRendererBackend backend)
+	{
+		Ensure.NotNull(backend);
+		BeginExternalFrameSession();
+		renderer = backend;
+	}
+
+	/// <summary>
+	/// Releases the state established by <see cref="BeginExternalFrameSession()"/>.
+	/// </summary>
+	/// <remarks>
+	/// The backend is released along with the invoker, but not disposed: the host supplied it and
+	/// owns its lifetime, and a session that disposed it would break a host that runs a second
+	/// session with the same renderer.
+	/// </remarks>
+	public static void EndExternalFrameSession()
+	{
+		Invoker = null!;
+		renderer = null;
 	}
 
 	internal static void ApplyFrameRateLimit()

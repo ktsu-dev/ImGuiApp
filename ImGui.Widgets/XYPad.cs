@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -34,6 +36,7 @@ public static partial class ImGuiWidgets
 
 		Vector2 cursorPos = ImGui.GetCursorScreenPos();
 		ImGui.InvisibleButton(label, padSize);
+		ImGuiProbes.MarkItem(label);
 
 		bool changed = false;
 		if (ImGui.IsItemActive() && padSize.X > 0 && padSize.Y > 0)
