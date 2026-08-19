@@ -10,15 +10,19 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 /// <summary>
-/// Turns ImGui draw data into pixels on the CPU. Mirrors the shape of the renderer seam the OpenGL
-/// and Metal backends implement, but deliberately does not implement that interface: it is internal
-/// to ktsu.ImGui.App, and depending on it would require friend access, which in turn makes every
-/// polyfilled call in this assembly ambiguous between two copies of the same source-only package.
-/// Nothing inside ktsu.ImGui.App consumes this renderer, so the interface buys nothing here.
+/// Turns ImGui draw data into pixels on the CPU, as the renderer backend for a headless session.
 /// </summary>
+/// <remarks>
+/// This implements the same seam the OpenGL and Metal backends do, which is what lets an
+/// application under test upload its own textures through <see cref="ImGuiApp.CreateTexture"/> and
+/// have them reach the rasterizer that is actually drawing. It previously only mirrored the seam's
+/// shape without implementing it, because the interface was internal and friend access would have
+/// made every polyfilled call in this assembly ambiguous between two compiled copies of a
+/// source-only package. The interface is public now, so neither problem applies.
+/// </remarks>
 /// <param name="width">Render target width in pixels.</param>
 /// <param name="height">Render target height in pixels.</param>
-public sealed class SoftwareRenderer(int width, int height) : IDisposable
+public sealed class SoftwareRenderer(int width, int height) : IRendererBackend
 {
 	private readonly Dictionary<nint, TextureSource> textures = [];
 	private nint nextId = 1;

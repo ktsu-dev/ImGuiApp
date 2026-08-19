@@ -746,7 +746,7 @@ public static partial class ImGuiApp
 	/// the headless test harness in ktsu.ImGui.App.Testing drives an application. Sharing this method
 	/// rather than reimplementing it is the point: a harness that reproduced the frame body would be
 	/// testing its own copy instead of the code that ships. Call
-	/// <see cref="BeginExternalFrameSession"/> first.
+	/// <see cref="BeginExternalFrameSession()"/> first.
 	/// </remarks>
 	/// <param name="config">The configuration supplying the render callbacks.</param>
 	/// <param name="delta">Seconds elapsed since the previous frame.</param>
@@ -785,9 +785,40 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Releases the state established by <see cref="BeginExternalFrameSession"/>.
+	/// Prepares the shared state a host needs before driving frames itself, and installs the
+	/// renderer that host draws with.
 	/// </summary>
-	public static void EndExternalFrameSession() => Invoker = null!;
+	/// <remarks>
+	/// The parameterless overload leaves no backend installed, which is correct for a host that
+	/// never uploads a texture but fatal for one that does: <see cref="CreateTexture"/>,
+	/// <see cref="UpdateTexture"/> and <see cref="DeleteTexture(nint)"/> all route through the
+	/// backend and throw without one. An application that shows an image it generated — rather than
+	/// one loaded from a file — reaches exactly that path, so a host that intends to render such an
+	/// application supplies its renderer here.
+	/// </remarks>
+	/// <param name="backend">The renderer this session's frames are drawn with.</param>
+	/// <exception cref="ArgumentNullException"><paramref name="backend"/> is null.</exception>
+	/// <exception cref="InvalidOperationException">A session is already active.</exception>
+	public static void BeginExternalFrameSession(IRendererBackend backend)
+	{
+		Ensure.NotNull(backend);
+		BeginExternalFrameSession();
+		renderer = backend;
+	}
+
+	/// <summary>
+	/// Releases the state established by <see cref="BeginExternalFrameSession()"/>.
+	/// </summary>
+	/// <remarks>
+	/// The backend is released along with the invoker, but not disposed: the host supplied it and
+	/// owns its lifetime, and a session that disposed it would break a host that runs a second
+	/// session with the same renderer.
+	/// </remarks>
+	public static void EndExternalFrameSession()
+	{
+		Invoker = null!;
+		renderer = null;
+	}
 
 	internal static void ApplyFrameRateLimit()
 	{
