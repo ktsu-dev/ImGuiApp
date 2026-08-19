@@ -173,4 +173,72 @@ public sealed class ItemProbeTests
 		Assert.IsTrue(harness.Probe.IsAmbiguous("duplicate"), "Two items marked under one name in a frame is ambiguous.");
 		Assert.ThrowsExactly<InvalidOperationException>(() => harness.Click("duplicate"));
 	}
+
+	[TestMethod]
+	public void MarkedNames_AreQualifiedByTheirWindow()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(ConfigWithButton(() => { }), Window());
+		harness.Step();
+
+		Assert.IsTrue(
+			harness.Probe.KnownNames.Contains("probe/the.button"),
+			$"Names should carry their window. Saw: {string.Join(", ", harness.Probe.KnownNames)}.");
+	}
+
+	[TestMethod]
+	public void Rect_ResolvesByTrailingSegments()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(ConfigWithButton(() => { }), Window());
+		harness.Step();
+
+		// A test should not have to write the window name to reach an unambiguous item.
+		Assert.IsNotNull(harness.Probe.Rect("the.button"), "A trailing portion of the name should resolve.");
+		Assert.IsNotNull(harness.Probe.Rect("probe/the.button"), "The full name should resolve too.");
+	}
+
+	[TestMethod]
+	public void SameLabelInTwoWindows_StaysDistinguishable()
+	{
+		bool left = false;
+		bool right = false;
+		ImGuiAppConfig config = new()
+		{
+			OnRender = _ =>
+			{
+				ImGui.SetNextWindowPos(new Vector2(0, 0));
+				ImGui.SetNextWindowSize(new Vector2(120, 80));
+				ImGui.Begin("Left", ImGuiWindowFlags.NoSavedSettings);
+				if (ImGui.Button("Go", new Vector2(60, 20)))
+				{
+					left = true;
+				}
+
+				ImGuiApp.MarkItem("Go");
+				ImGui.End();
+
+				ImGui.SetNextWindowPos(new Vector2(140, 0));
+				ImGui.SetNextWindowSize(new Vector2(120, 80));
+				ImGui.Begin("Right", ImGuiWindowFlags.NoSavedSettings);
+				if (ImGui.Button("Go", new Vector2(60, 20)))
+				{
+					right = true;
+				}
+
+				ImGuiApp.MarkItem("Go");
+				ImGui.End();
+			},
+		};
+
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(config, Window());
+		harness.Step();
+
+		// The bare label cannot identify one of them, but the qualified names can.
+		Assert.IsTrue(harness.Probe.IsAmbiguous("Go"), "A label used in two windows should not resolve on its own.");
+		Assert.AreEqual(2, harness.Probe.Matches("Go").Count);
+
+		harness.Click("Left/Go");
+
+		Assert.IsTrue(left, "The qualified name should reach the left button.");
+		Assert.IsFalse(right, "and only that one.");
+	}
 }

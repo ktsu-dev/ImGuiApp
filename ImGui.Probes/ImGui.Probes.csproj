@@ -6,6 +6,7 @@
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
     <RootNamespace>ktsu.ImGui.Probes</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

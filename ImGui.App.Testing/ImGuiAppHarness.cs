@@ -174,16 +174,16 @@ public sealed class ImGuiAppHarness : IDisposable
 		ObjectDisposedException.ThrowIf(disposed, this);
 		Ensure.NotNull(name);
 
-		Rectangle rect = Probe.Rect(name)
-			?? throw new ArgumentException(
-				$"No item named '{name}' has been marked. Marked so far: {string.Join(", ", Probe.KnownNames)}.",
-				nameof(name));
-
 		if (Probe.IsAmbiguous(name))
 		{
 			throw new InvalidOperationException(
-				$"Item '{name}' was marked more than once in the same frame, so it does not identify one item. Give the widgets distinct labels, or address this one by position.");
+				$"'{name}' does not identify one item. Candidates: {string.Join(", ", Probe.Matches(name))}. Qualify it further, for example by including the window name.");
 		}
+
+		Rectangle rect = Probe.Rect(name)
+			?? throw new ArgumentException(
+				$"No item matching '{name}' has been marked. Marked so far: {string.Join(", ", Probe.KnownNames)}.",
+				nameof(name));
 
 		if (!Probe.WasSeenInFrame(name, FrameCount - 1))
 		{

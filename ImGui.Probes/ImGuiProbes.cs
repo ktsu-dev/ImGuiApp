@@ -3,7 +3,9 @@
 namespace ktsu.ImGui.Probes;
 
 using System;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using Hexa.NET.ImGui;
 
@@ -53,6 +55,57 @@ public static class ImGuiProbes
 	/// <param name="callback">The callback, or null to stop recording.</param>
 	public static void SetProbe(Action<string, Vector2, Vector2>? callback) => probe = callback;
 
+	private static readonly List<string> scopes = [];
+
+	/// <summary>
+	/// Pushes a name scope, so items marked until the matching <see cref="PopScope"/> are qualified
+	/// by it. Mirrors ImGui's own identifier stack, which is what keeps two identically labelled
+	/// widgets apart.
+	/// </summary>
+	/// <param name="scope">The scope name.</param>
+	public static void PushScope(string scope) => scopes.Add(scope);
+
+	/// <summary>Pops the most recently pushed name scope.</summary>
+	public static void PopScope()
+	{
+		if (scopes.Count > 0)
+		{
+			scopes.RemoveAt(scopes.Count - 1);
+		}
+	}
+
+	/// <summary>
+	/// Builds the fully qualified name for an item: the ImGui window it is being drawn into, then any
+	/// pushed scopes, then the item's own name, separated by forward slashes.
+	/// </summary>
+	/// <remarks>
+	/// Qualification matters because a bare label is not unique. ImGui keeps two widgets with the same
+	/// label apart through its identifier stack, and a probe name that ignored that context would
+	/// collide exactly where ImGui does not. Tests do not have to write the whole path: a probe
+	/// resolves a trailing portion of it as long as only one item matches.
+	/// </remarks>
+	/// <param name="name">The item's own name.</param>
+	/// <returns>The qualified name.</returns>
+	public static string Qualify(string name)
+	{
+		string window = CurrentWindowName();
+
+		return scopes.Count == 0
+			? string.IsNullOrEmpty(window) ? name : $"{window}/{name}"
+			: string.IsNullOrEmpty(window)
+				? $"{string.Join("/", scopes)}/{name}"
+				: $"{window}/{string.Join("/", scopes)}/{name}";
+	}
+
+	private static unsafe string CurrentWindowName()
+	{
+		ImGuiWindowPtr window = ImGuiP.GetCurrentWindowRead();
+
+		return window.Handle is null || window.Name is null
+			? string.Empty
+			: Marshal.PtrToStringUTF8((nint)window.Name) ?? string.Empty;
+	}
+
 	/// <summary>
 	/// Records the most recently submitted ImGui item under a stable name. Call immediately after
 	/// submitting the widget, while it is still the current item.
@@ -65,7 +118,7 @@ public static class ImGuiProbes
 			return;
 		}
 
-		probe!(name, ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+		probe!(Qualify(name), ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
 	}
 
 	/// <summary>
@@ -81,7 +134,7 @@ public static class ImGuiProbes
 			return;
 		}
 
-		probe!($"{prefix}/{label}", ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+		probe!(Qualify($"{prefix}/{label}"), ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
 	}
 
 	/// <summary>
@@ -98,6 +151,6 @@ public static class ImGuiProbes
 			return;
 		}
 
-		probe!(name, min, max);
+		probe!(Qualify(name), min, max);
 	}
 }
