@@ -4,6 +4,7 @@ namespace ktsu.ImGui.App.Testing;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -65,9 +66,10 @@ public sealed class SoftwareRenderer(int width, int height) : IDisposable
 
 	/// <summary>Rasterizes a complete ImGui draw-data tree into the render target.</summary>
 	/// <param name="drawData">Draw data obtained after calling <c>ImGui.Render</c>.</param>
-	public unsafe void RenderDrawData(ImDrawDataPtr drawData)
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to read a native function pointer during ImGui interop; the pointer is compared and never dereferenced or retained.")]
+	public void RenderDrawData(ImDrawDataPtr drawData)
 	{
-		if (drawData.Handle is null || drawData.CmdListsCount == 0)
+		if (drawData.Equals(default) || drawData.CmdListsCount == 0)
 		{
 			return;
 		}
@@ -84,7 +86,15 @@ public sealed class SoftwareRenderer(int width, int height) : IDisposable
 
 				// A user callback replaces drawing for that command. The harness cannot execute an
 				// application's native callback, so the command is skipped rather than guessed at.
-				if (cmd.UserCallback is not null)
+				// UserCallback is a function pointer, so reading it needs an unsafe context; the
+				// block is kept to that single comparison.
+				bool hasUserCallback;
+				unsafe
+				{
+					hasUserCallback = cmd.UserCallback is not null;
+				}
+
+				if (hasUserCallback)
 				{
 					continue;
 				}
