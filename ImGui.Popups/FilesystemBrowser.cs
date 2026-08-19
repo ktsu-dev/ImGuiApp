@@ -144,7 +144,7 @@ public partial class ImGuiPopups
 		/// </summary>
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileOpen(string title, Action<AbsoluteFilePath> onChooseFile, string glob = "*") => FileOpen(title, onChooseFile, customSize: Vector2.Zero, glob);
 
 		/// <summary>
@@ -153,7 +153,7 @@ public partial class ImGuiPopups
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
 		/// <param name="customSize">Custom size of the dialog.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileOpen(string title, Action<AbsoluteFilePath> onChooseFile, Vector2 customSize, string glob = "*") => File(title, FilesystemBrowserMode.Open, onChooseFile, customSize, glob);
 
 		/// <summary>
@@ -161,7 +161,7 @@ public partial class ImGuiPopups
 		/// </summary>
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileSave(string title, Action<AbsoluteFilePath> onChooseFile, string glob = "*") => FileSave(title, onChooseFile, customSize: Vector2.Zero, glob);
 
 		/// <summary>
@@ -170,7 +170,7 @@ public partial class ImGuiPopups
 		/// <param name="title">The title of the dialog.</param>
 		/// <param name="onChooseFile">Callback invoked when a file is chosen.</param>
 		/// <param name="customSize">Custom size of the dialog.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		public void FileSave(string title, Action<AbsoluteFilePath> onChooseFile, Vector2 customSize, string glob = "*") => File(title, FilesystemBrowserMode.Save, onChooseFile, customSize, glob);
 
 		/// <summary>
@@ -180,7 +180,7 @@ public partial class ImGuiPopups
 		/// <param name="mode">The mode of the browser (Open or Save).</param>
 		/// <param name="onChooseFile">Callback for when a file is chosen.</param>
 		/// <param name="customSize">Custom size of the popup.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		private void File(string title, FilesystemBrowserMode mode, Action<AbsoluteFilePath> onChooseFile, Vector2 customSize, string glob) => OpenPopup(title, mode, FilesystemBrowserTarget.File, onChooseFile, (d) => { }, customSize, glob);
 
 		/// <summary>
@@ -207,7 +207,7 @@ public partial class ImGuiPopups
 		/// <param name="onChooseFile">Callback for when a file is chosen.</param>
 		/// <param name="onChooseDirectory">Callback for when a directory is chosen.</param>
 		/// <param name="customSize">Custom size of the popup.</param>
-		/// <param name="glob">Glob pattern for filtering files.</param>
+		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		private void OpenPopup(string title, FilesystemBrowserMode mode, FilesystemBrowserTarget target, Action<AbsoluteFilePath> onChooseFile, Action<AbsoluteDirectoryPath> onChooseDirectory, Vector2 customSize, string glob)
 		{
 			FileName = new();
@@ -216,12 +216,30 @@ public partial class ImGuiPopups
 			OnChooseFile = onChooseFile;
 			OnChooseDirectory = onChooseDirectory;
 			Glob = glob;
-			Matcher = new();
-			Matcher.AddInclude(Glob);
+			Matcher = BuildMatcher(glob);
 			Drives.Clear();
 			GetNavigableDrives().ForEach(Drives.Add);
 			RefreshContents();
 			Modal.Open(title, ShowContent, customSize);
+		}
+
+		/// <summary>
+		/// Builds a matcher from a glob string. Several patterns may be supplied separated by
+		/// semicolons, for example <c>*.png;*.jpg</c>. The underlying globbing library treats a
+		/// whole string as a single pattern and has no separator of its own, so each pattern has
+		/// to be added as its own include or the combined string matches nothing at all.
+		/// </summary>
+		/// <param name="glob">Glob pattern, or several separated by semicolons.</param>
+		/// <returns>A matcher including every pattern supplied.</returns>
+		internal static Matcher BuildMatcher(string glob)
+		{
+			Matcher matcher = new();
+			foreach (string pattern in glob.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+			{
+				matcher.AddInclude(pattern);
+			}
+
+			return matcher;
 		}
 
 		/// <summary>
