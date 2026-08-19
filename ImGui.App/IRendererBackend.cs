@@ -14,7 +14,16 @@ using Hexa.NET.ImGui;
 /// (input, NewFrame/EndFrame, font configuration) stays in the concrete backend until
 /// the broader split described in the iOS port plan is in place.
 /// </summary>
-internal interface IRendererBackend : IDisposable
+/// <remarks>
+/// Public because a host that drives its own frames through
+/// <see cref="ImGuiApp.BeginExternalFrameSession(IRendererBackend)"/> has to supply one. Without
+/// that, every texture the application uploads through <see cref="ImGuiApp.CreateTexture"/> fails
+/// on a backend that was never installed, which rules out testing any application that shows an
+/// image it generated. Keeping the seam internal and reaching it through friend access was tried
+/// and does not work: <c>Polyfill</c> is source-only, so friend access makes every polyfilled call
+/// ambiguous between the two compiled copies.
+/// </remarks>
+public interface IRendererBackend : IDisposable
 {
 	/// <summary>
 	/// Uploads an RGBA8 pixel buffer to the GPU and returns an opaque, pointer-sized handle.

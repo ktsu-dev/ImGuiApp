@@ -75,9 +75,24 @@ public sealed class ImGuiAppHarness : IDisposable
 				"An ImGuiAppHarness is already running in this process. ImGui contexts are global, so harnesses cannot overlap. Dispose the previous one first.");
 		}
 
-		ImGuiApp.BeginExternalFrameSession();
-
 		ImGuiAppHarness harness = new(config, options);
+
+		// The rasterizer becomes ImGuiApp's renderer backend for the session, so an application
+		// that uploads a texture through ImGuiApp reaches the renderer that is drawing its frames.
+		// Without this, anything showing an image it generated rather than loaded fails on a
+		// backend that was never installed.
+		try
+		{
+			ImGuiApp.BeginExternalFrameSession(harness.renderer);
+		}
+		catch
+		{
+			// Not yet the live harness, so this releases the context and the rasterizer without
+			// ending a session that was never begun.
+			harness.Dispose();
+			throw;
+		}
+
 		live = harness;
 
 		// Items are recorded against the frame being rendered, which is FrameCount until the step

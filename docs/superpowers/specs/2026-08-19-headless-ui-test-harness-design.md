@@ -117,6 +117,13 @@ using ImGuiAppHarness harness = ImGuiAppHarness.Start(app.BuildConfig(), new Har
 });
 ```
 
+The harness also installs its rasterizer as the application host's renderer backend for the
+duration of the session. That is what lets an application upload its own textures through
+`ImGuiApp.CreateTexture` and have them reach the renderer actually drawing the frame. Without it,
+every such call fails on a backend that was never installed, which rules out testing any
+application that shows an image it generated rather than one loaded from a file — ImageGui's entire
+preview path, among others. The seam is `IRendererBackend`, made public for this reason.
+
 ### Determinism Controls
 
 `HarnessOptions` pins everything that would otherwise vary between runs:
