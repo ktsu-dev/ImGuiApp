@@ -17,6 +17,9 @@
 
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
+    <!-- Used directly: the harness pumps ImGuiApp.Invoker every frame so work marshalled from a
+         worker thread lands rather than being lost. -->
+    <PackageReference Include="ktsu.Invoker" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 
