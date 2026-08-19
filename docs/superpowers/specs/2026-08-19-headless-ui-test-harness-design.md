@@ -230,8 +230,10 @@ ImGuiProbes.MarkItem("file.open");
 ```
 
 In production no probe is installed and the call costs one null check, so a library can mark
-unconditionally. `ImGuiApp.MarkItem` forwards to the same registry, so an application already
-referencing the host package does not need a second reference to mark its own items.
+unconditionally. Applications call `ImGuiProbes.MarkItem` directly and reference the package
+explicitly. `ktsu.ImGui.App` deliberately does not forward to it: a host that re-exposed the API
+would have to depend on the registry package, and two ktsu packages in one publish currently collide
+over the `_PackageData` files the SDK copies to output.
 
 A test then addresses the item by name and never states a coordinate:
 

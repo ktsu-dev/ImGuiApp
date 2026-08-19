@@ -789,18 +789,6 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static void EndExternalFrameSession() => Invoker = null!;
 
-	/// <summary>
-	/// Records the most recently submitted ImGui item under a stable name, so a test can address it
-	/// without naming a coordinate. Call immediately after submitting the widget.
-	/// </summary>
-	/// <remarks>
-	/// Forwards to <see cref="ktsu.ImGui.Probes.ImGuiProbes.MarkItem(string)"/>. The registry lives
-	/// in its own package so widget and dialog libraries can mark their items without depending on
-	/// this one, which would drag windowing and OpenGL into every consumer of a widget library.
-	/// </remarks>
-	/// <param name="name">A stable name for the item.</param>
-	public static void MarkItem(string name) => ktsu.ImGui.Probes.ImGuiProbes.MarkItem(name);
-
 	internal static void ApplyFrameRateLimit()
 	{
 		// Reset PID controller if target frame rate has changed

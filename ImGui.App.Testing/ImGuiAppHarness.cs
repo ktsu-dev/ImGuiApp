@@ -166,7 +166,7 @@ public sealed class ImGuiAppHarness : IDisposable
 	/// Clicks a named item at the center of the rectangle ImGui reported for it, so the test states
 	/// no coordinate of its own.
 	/// </summary>
-	/// <param name="name">A name the application passed to <see cref="ImGuiApp.MarkItem"/>.</param>
+	/// <param name="name">A name the application passed to <see cref="ktsu.ImGui.Probes.ImGuiProbes.MarkItem(string)"/>.</param>
 	/// <exception cref="ArgumentException">The name was never recorded.</exception>
 	/// <exception cref="InvalidOperationException">The item was not drawn in the most recent frame.</exception>
 	public void Click(string name)
