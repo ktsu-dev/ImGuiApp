@@ -789,6 +789,35 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static void EndExternalFrameSession() => Invoker = null!;
 
+	private static Action<string, System.Numerics.Vector2, System.Numerics.Vector2>? itemProbe;
+
+	/// <summary>
+	/// Installs a callback receiving the name and rectangle of each item passed to
+	/// <see cref="MarkItem"/>, or clears it when null.
+	/// </summary>
+	/// <remarks>
+	/// Intended for test hosts. Applications call <see cref="MarkItem"/> unconditionally and pay one
+	/// null check when no probe is installed, so being testable costs an application nothing in
+	/// production and needs no dependency on test infrastructure.
+	/// </remarks>
+	/// <param name="probe">The callback, or null to stop recording.</param>
+	public static void SetItemProbe(Action<string, System.Numerics.Vector2, System.Numerics.Vector2>? probe) => itemProbe = probe;
+
+	/// <summary>
+	/// Records the most recently submitted ImGui item under a stable name, so a test can address it
+	/// without naming a coordinate. Call immediately after submitting the widget.
+	/// </summary>
+	/// <param name="name">A stable name for the item.</param>
+	public static void MarkItem(string name)
+	{
+		if (itemProbe is null)
+		{
+			return;
+		}
+
+		itemProbe(name, ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+	}
+
 	internal static void ApplyFrameRateLimit()
 	{
 		// Reset PID controller if target frame rate has changed

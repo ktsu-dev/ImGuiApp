@@ -36,8 +36,8 @@ control, and captures rendered pixels for measurement and diagnosis.
 
 - Golden image comparison. Full frame baselines are not the assertion mechanism, for reasons given
   under Rendering Substrate.
-- Targeting widgets by name. Dear ImGui's test engine is not bound in Hexa.NET.ImGui, so
-  interaction is coordinate based. See Known Weaknesses.
+- Integrating Dear ImGui's test engine. Named targeting is instead provided by item probes, for
+  the reasons under Item Probes.
 - Testing the OpenGL renderer. The harness rasterizes in software, so a defect specific to the GL
   backend will not be caught. See Deferred Work.
 - Replacing unit tests. The harness targets integration behavior that only appears when the whole
@@ -170,6 +170,73 @@ Captured frames serve two purposes. Measurements taken from them appear in asser
 the position of a known landmark or the extent of a rendered image. Whole frames are written as
 artifacts when a test fails, so a failure can be diagnosed without reproducing it locally.
 
+## Item Probes
+
+Coordinate-based interaction is brittle. A layout change moves what a test clicks, and the test
+either fails confusingly or, worse, clicks something else and passes. Item probes remove the
+coordinates from tests without taking on Dear ImGui's test engine.
+
+### Why Not the Test Engine
+
+Dear ImGui ships a test engine that provides exactly this, addressing widgets by name. It was
+evaluated and rejected on two grounds.
+
+The first is licensing. The test engine is not under the MIT license that covers Dear ImGui itself.
+It uses the Dear ImGui Test Engine License, which is free for individuals, not-for-profits,
+educational use, open-source derivative work, and entities under two million dollars of turnover,
+and requires a paid license otherwise. ktsu-dev qualifies for the free license, but
+`ktsu.ImGui.App.Testing` is a package other people consume, and embedding the engine would pass
+that obligation to every downstream user. A commercial consumer above the threshold would need to
+buy a license in order to use a ktsu test package. This repository already carries issue #230 about
+a comparable constraint.
+
+The second is build ownership. The engine's hooks only exist when Dear ImGui itself is compiled
+with `IMGUI_ENABLE_TEST_ENGINE`, and Hexa.NET.ImGui ships prebuilt native binaries for nine runtime
+identifiers. Using the engine would mean producing a test-engine-enabled native build for each of
+them, compiling roughly 660 KB of additional C++, writing a C shim because the engine's API is C++
+classes while Hexa.NET binds the C wrapper, and supplying a coroutine implementation. That is a
+native build pipeline to own and keep aligned with Hexa.NET's ImGui version, in perpetuity.
+
+### How Probes Work
+
+ImGui already reports the rectangle of the most recently submitted item through
+`GetItemRectMin` and `GetItemRectMax`, in the public API. An application marks the items it wants a
+test to address, immediately after submitting them:
+
+```csharp
+if (ImGui.MenuItem("Open..."))
+{
+	OpenRequested();
+}
+
+ImGuiApp.MarkItem("file.open");
+```
+
+`MarkItem` lives in `ktsu.ImGui.App`, not in the testing package, so an application never takes a
+dependency on test infrastructure to be testable. In production no probe is installed and the call
+costs one null check.
+
+A test then addresses the item by name and never states a coordinate:
+
+```csharp
+harness.Click("file.open");
+Rectangle? rect = harness.Probe.Rect("canvas.image");
+```
+
+### Staleness
+
+Probes are recorded per frame. A name last seen in an earlier frame belongs to something no longer
+on screen, such as a closed popup, so acting on it would click empty space or whatever has since
+moved there. `Click` therefore fails when a name was not marked during the most recent frame, and
+says so, rather than clicking a stale rectangle and reporting a pass. An unknown name fails with the
+list of names that were seen, since the usual cause is a typo or a widget that never rendered.
+
+### What Probes Do Not Cover
+
+Only marked items are addressable. Widgets drawn by a library the application does not control, such
+as the interior of a third-party widget, cannot be marked without that library cooperating. Tests
+for those fall back to coordinates, with the helper convention described under ImageGui Integration.
+
 ## ImageGui Integration
 
 ### Application Changes
@@ -257,11 +324,10 @@ result, so the workflow must invoke the test executable directly, as the existin
 
 ## Known Weaknesses
 
-**Coordinate based interaction is brittle.** Without a bound test engine, tests click at positions.
-A layout change moves what a test clicks, and the test either fails confusingly or, worse, clicks
-something else and passes. The coordinate helper convention limits the blast radius but does not
-remove the problem. Binding Dear ImGui's test engine would fix it properly and is the obvious
-future improvement.
+**Only marked items can be addressed by name.** Item probes remove coordinates from tests, but
+only for items the application marks. Anything unmarked still has to be clicked at a position, where
+a layout change moves the target and the test either fails confusingly or clicks something else and
+passes. The coordinate helper convention limits the blast radius for those cases.
 
 **The harness does not test the shipping renderer.** Software rasterization is what makes the tests
 trustworthy in continuous integration, and it is also what stops them from covering the GL path.
@@ -274,5 +340,4 @@ covering something the application no longer does. Issue #313 removes this once 
 
 - **An opt in OpenGL suite.** The same scenarios run against a real GL context with framebuffer
   readback, for local runs and any environment with a working driver, covering the GL specific gap.
-- **Dear ImGui test engine bindings.** Removes coordinate based interaction entirely.
 - **The `ImGuiController` split**, tracked as issue #313.

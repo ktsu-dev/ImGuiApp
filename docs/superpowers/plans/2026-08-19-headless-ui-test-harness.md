@@ -2994,7 +2994,327 @@ git commit -m "test: prove the harness renders deterministically [patch]"
 
 ---
 
-### Task 15: Package Documentation
+### Task 15: Item Probes
+
+Removes coordinates from tests. An application marks the items a test should be able to address, and
+the harness resolves a name to the rectangle ImGui reported for that item. See Item Probes in the
+spec for why Dear ImGui's test engine was rejected in favor of this.
+
+**Files:**
+- Modify: `ImGui.App/ImGuiApp.cs`
+- Create: `ImGui.App.Testing/ItemProbe.cs`
+- Modify: `ImGui.App.Testing/ImGuiAppHarness.cs`
+- Create: `tests/ImGui.App.Testing.Tests/ItemProbeTests.cs`
+
+**Interfaces:**
+- Consumes: `ImGuiAppHarness.Step`, `HarnessMouse.Click` from Tasks 9 and 11.
+- Produces: `ImGuiApp.MarkItem(string name)` and `ImGuiApp.SetItemProbe(Action<string, Vector2, Vector2>?)` in `ktsu.ImGui.App`. In the harness: `ItemProbe Probe { get; }` with `Rectangle? Rect(string name)`, `bool WasSeenInFrame(string name, int frame)`, `IReadOnlyCollection<string> KnownNames`, plus `ImGuiAppHarness.Click(string name)`.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/ImGui.App.Testing.Tests/ItemProbeTests.cs`:
+
+```csharp
+// Copyright (c) 2023-2026 ktsu-dev contributors
+
+namespace ktsu.ImGui.App.Testing.Tests;
+
+using System;
+using System.Numerics;
+
+using Hexa.NET.ImGui;
+
+using ktsu.ImGui.App;
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+[TestClass]
+public sealed class ItemProbeTests
+{
+	private static HarnessOptions Window() => new() { Width = 300, Height = 200 };
+
+	private static ImGuiAppConfig ConfigWithButton(Action onPressed) => new()
+	{
+		OnRender = _ =>
+		{
+			ImGui.SetNextWindowPos(Vector2.Zero);
+			ImGui.SetNextWindowSize(new Vector2(240, 150));
+			ImGui.Begin("probe", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings);
+
+			if (ImGui.Button("press me", new Vector2(120, 30)))
+			{
+				onPressed();
+			}
+
+			ImGuiApp.MarkItem("the.button");
+
+			ImGui.End();
+		},
+	};
+
+	[TestMethod]
+	public void Rect_AfterMarking_ReportsTheItemRectangle()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(ConfigWithButton(() => { }), Window());
+		harness.Step();
+
+		Rectangle? rect = harness.Probe.Rect("the.button");
+
+		Assert.IsNotNull(rect, "A marked item should be resolvable by name.");
+		Assert.IsTrue(rect.Value.Width is >= 118 and <= 122, $"The button was 120 wide, but the probe reported {rect.Value.Width}.");
+		Assert.IsTrue(rect.Value.Height is >= 28 and <= 32, $"The button was 30 tall, but the probe reported {rect.Value.Height}.");
+	}
+
+	[TestMethod]
+	public void Click_ByName_ActivatesTheItem()
+	{
+		bool pressed = false;
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(ConfigWithButton(() => pressed = true), Window());
+		harness.Step();
+
+		harness.Click("the.button");
+
+		Assert.IsTrue(pressed, "Clicking by name should activate the item without the test naming a coordinate.");
+	}
+
+	[TestMethod]
+	public void Click_UnknownName_ThrowsListingKnownNames()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(ConfigWithButton(() => { }), Window());
+		harness.Step();
+
+		ArgumentException error = Assert.ThrowsExactly<ArgumentException>(() => harness.Click("no.such.item"));
+
+		Assert.IsTrue(
+			error.Message.Contains("the.button", StringComparison.Ordinal),
+			"The failure should list what was seen, since a typo is the usual cause.");
+	}
+
+	[TestMethod]
+	public void Click_ItemNotDrawnThisFrame_ThrowsRatherThanClickingStalePosition()
+	{
+		bool visible = true;
+		bool pressed = false;
+		ImGuiAppConfig config = new()
+		{
+			OnRender = _ =>
+			{
+				ImGui.SetNextWindowPos(Vector2.Zero);
+				ImGui.SetNextWindowSize(new Vector2(240, 150));
+				ImGui.Begin("probe", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings);
+
+				if (visible)
+				{
+					if (ImGui.Button("press me", new Vector2(120, 30)))
+					{
+						pressed = true;
+					}
+
+					ImGuiApp.MarkItem("the.button");
+				}
+
+				ImGui.End();
+			},
+		};
+
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(config, Window());
+		harness.Step();
+
+		visible = false;
+		harness.Step();
+
+		// Clicking a stale rectangle would hit whatever has since moved there, and could pass while
+		// testing nothing at all, which is worse than failing.
+		Assert.ThrowsExactly<InvalidOperationException>(() => harness.Click("the.button"));
+		Assert.IsFalse(pressed);
+	}
+
+	[TestMethod]
+	public void MarkItem_WithNoProbeInstalled_DoesNothing()
+	{
+		// Production applications call MarkItem with no harness present. It must be inert, not throw.
+		ImGuiApp.SetItemProbe(null);
+
+		ImGuiApp.MarkItem("ignored");
+	}
+}
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj`
+Expected: compile error, `MarkItem`, `SetItemProbe`, `Probe` and `Click(string)` do not exist.
+
+- [ ] **Step 3: Add the marking API to ktsu.ImGui.App**
+
+Add to `ImGuiApp`, next to the external frame session members:
+
+```csharp
+	private static Action<string, Vector2, Vector2>? itemProbe;
+
+	/// <summary>
+	/// Installs a callback receiving the name and rectangle of each item passed to
+	/// <see cref="MarkItem"/>, or clears it when null.
+	/// </summary>
+	/// <remarks>
+	/// Intended for test hosts. Applications call <see cref="MarkItem"/> unconditionally and pay one
+	/// null check when no probe is installed, so being testable costs an application nothing in
+	/// production and needs no dependency on test infrastructure.
+	/// </remarks>
+	/// <param name="probe">The callback, or null to stop recording.</param>
+	public static void SetItemProbe(Action<string, Vector2, Vector2>? probe) => itemProbe = probe;
+
+	/// <summary>
+	/// Records the most recently submitted ImGui item under a stable name, so a test can address it
+	/// without naming a coordinate. Call immediately after submitting the widget.
+	/// </summary>
+	/// <param name="name">A stable name for the item.</param>
+	public static void MarkItem(string name)
+	{
+		if (itemProbe is null)
+		{
+			return;
+		}
+
+		itemProbe(name, ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+	}
+```
+
+- [ ] **Step 4: Implement the probe recorder**
+
+Create `ImGui.App.Testing/ItemProbe.cs`:
+
+```csharp
+// Copyright (c) 2023-2026 ktsu-dev contributors
+
+namespace ktsu.ImGui.App.Testing;
+
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+
+/// <summary>
+/// Records where named items were drawn, so tests address widgets by name rather than by position.
+/// </summary>
+public sealed class ItemProbe
+{
+	private readonly Dictionary<string, (Rectangle Rect, int Frame)> seen = [];
+
+	/// <summary>Gets the names recorded so far, for diagnostics when a lookup fails.</summary>
+	public IReadOnlyCollection<string> KnownNames => seen.Keys;
+
+	/// <summary>Gets the most recent rectangle recorded for a name, or null when never seen.</summary>
+	/// <param name="name">The item name.</param>
+	/// <returns>The rectangle, or null.</returns>
+	public Rectangle? Rect(string name) =>
+		seen.TryGetValue(name, out (Rectangle Rect, int Frame) entry) ? entry.Rect : null;
+
+	/// <summary>Gets a value indicating whether a name was marked during a given frame.</summary>
+	/// <param name="name">The item name.</param>
+	/// <param name="frame">The frame number to check.</param>
+	/// <returns>True when the item was drawn in that frame.</returns>
+	public bool WasSeenInFrame(string name, int frame) =>
+		seen.TryGetValue(name, out (Rectangle Rect, int Frame) entry) && entry.Frame == frame;
+
+	internal void Record(string name, Vector2 min, Vector2 max, int frame) =>
+		seen[name] = (
+			new Rectangle(
+				(int)MathF.Round(min.X),
+				(int)MathF.Round(min.Y),
+				(int)MathF.Round(max.X),
+				(int)MathF.Round(max.Y)),
+			frame);
+}
+```
+
+- [ ] **Step 5: Wire the probe into the harness**
+
+In `ImGuiAppHarness` add the property, install the recorder in `Start`, clear it in `Dispose`, and add
+name-based clicking:
+
+```csharp
+	/// <summary>Gets the record of where named items were drawn.</summary>
+	public ItemProbe Probe { get; } = new();
+
+	/// <summary>
+	/// Clicks a named item at the center of the rectangle ImGui reported for it, so the test states
+	/// no coordinate of its own.
+	/// </summary>
+	/// <param name="name">A name the application passed to <see cref="ImGuiApp.MarkItem"/>.</param>
+	/// <exception cref="ArgumentException">The name was never recorded.</exception>
+	/// <exception cref="InvalidOperationException">The item was not drawn in the most recent frame.</exception>
+	public void Click(string name)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Ensure.NotNull(name);
+
+		Rectangle rect = Probe.Rect(name)
+			?? throw new ArgumentException(
+				$"No item named '{name}' has been marked. Marked so far: {string.Join(", ", Probe.KnownNames)}.",
+				nameof(name));
+
+		if (!Probe.WasSeenInFrame(name, FrameCount - 1))
+		{
+			throw new InvalidOperationException(
+				$"Item '{name}' was not drawn in the most recent frame, so its recorded position is stale. Clicking it would hit whatever has since moved there.");
+		}
+
+		Mouse.Click(rect.MinX + (rect.Width / 2f), rect.MinY + (rect.Height / 2f));
+	}
+```
+
+In `Start`, after the harness is constructed and before `OnStart` runs:
+
+```csharp
+		ImGuiApp.SetItemProbe((name, min, max) => harness.Probe.Record(name, min, max, harness.FrameCount));
+```
+
+In `Dispose`, alongside `EndExternalFrameSession`:
+
+```csharp
+			ImGuiApp.SetItemProbe(null);
+```
+
+`ItemProbe.Record` is internal, so the harness records entries while callers cannot forge them.
+
+- [ ] **Step 6: Run the tests to verify they pass**
+
+Run:
+
+```bash
+dotnet build tests/ImGui.App.Testing.Tests/ImGui.App.Testing.Tests.csproj
+./tests/ImGui.App.Testing.Tests/bin/Debug/net10.0/ktsu.ImGui.App.Testing.Tests.exe
+```
+
+Expected: all five `ItemProbeTests` pass.
+
+If the staleness test fails by one frame, check what `FrameCount` holds when the recorder runs. The
+recorder fires during a step, before `FrameCount` is incremented, so an item drawn in the frame just
+completed is recorded under `FrameCount - 1` once the step returns. Correct the arithmetic rather
+than loosening the test: that test is the entire reason a stale click fails instead of silently
+passing.
+
+- [ ] **Step 7: Confirm marking costs nothing in production**
+
+An application that marks items with no probe installed must be unaffected:
+
+```bash
+dotnet build tests/ImGui.App.Tests/ImGui.App.Tests.csproj
+./tests/ImGui.App.Tests/bin/Debug/net10.0/ktsu.ImGui.App.Tests.exe
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add ImGui.App/ImGuiApp.cs ImGui.App.Testing tests/ImGui.App.Testing.Tests/ItemProbeTests.cs
+git commit -m "feat: address widgets by name through item probes [minor]"
+```
+
+---
+
+### Task 16: Package Documentation
 
 **Files:**
 - Create: `ImGui.App.Testing/README.md`

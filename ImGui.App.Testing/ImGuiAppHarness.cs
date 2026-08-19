@@ -51,6 +51,9 @@ public sealed class ImGuiAppHarness : IDisposable
 	/// <summary>Gets the keyboard input injector.</summary>
 	public HarnessKeyboard Keyboard { get; }
 
+	/// <summary>Gets the record of where named items were drawn.</summary>
+	public ItemProbe Probe { get; } = new();
+
 	/// <summary>
 	/// Starts a harness around an application configuration. Pass the same configuration the
 	/// application gives <see cref="ImGuiApp.Start"/>, so the test exercises the real setup rather
@@ -75,6 +78,10 @@ public sealed class ImGuiAppHarness : IDisposable
 
 		ImGuiAppHarness harness = new(config, options);
 		live = harness;
+
+		// Items are recorded against the frame being rendered, which is FrameCount until the step
+		// completes and increments it.
+		ImGuiApp.SetItemProbe((name, min, max) => harness.Probe.Record(name, min, max, harness.FrameCount));
 
 		config.OnStart?.Invoke();
 
@@ -155,6 +162,32 @@ public sealed class ImGuiAppHarness : IDisposable
 	}
 
 	/// <summary>
+	/// Clicks a named item at the center of the rectangle ImGui reported for it, so the test states
+	/// no coordinate of its own.
+	/// </summary>
+	/// <param name="name">A name the application passed to <see cref="ImGuiApp.MarkItem"/>.</param>
+	/// <exception cref="ArgumentException">The name was never recorded.</exception>
+	/// <exception cref="InvalidOperationException">The item was not drawn in the most recent frame.</exception>
+	public void Click(string name)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Ensure.NotNull(name);
+
+		Rectangle rect = Probe.Rect(name)
+			?? throw new ArgumentException(
+				$"No item named '{name}' has been marked. Marked so far: {string.Join(", ", Probe.KnownNames)}.",
+				nameof(name));
+
+		if (!Probe.WasSeenInFrame(name, FrameCount - 1))
+		{
+			throw new InvalidOperationException(
+				$"Item '{name}' was not drawn in the most recent frame, so its recorded position is stale. Clicking it would hit whatever has since moved there.");
+		}
+
+		Mouse.Click(rect.MinX + (rect.Width / 2f), rect.MinY + (rect.Height / 2f));
+	}
+
+	/// <summary>
 	/// Takes an immutable snapshot of the most recently rendered frame. The snapshot copies the
 	/// pixels, so later frames do not alter it.
 	/// </summary>
@@ -183,6 +216,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		if (ReferenceEquals(live, this))
 		{
 			live = null;
+			ImGuiApp.SetItemProbe(null);
 			ImGuiApp.EndExternalFrameSession();
 		}
 
