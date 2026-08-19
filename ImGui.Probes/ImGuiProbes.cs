@@ -4,6 +4,7 @@ namespace ktsu.ImGui.Probes;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -97,8 +98,18 @@ public static class ImGuiProbes
 				: $"{window}/{string.Join("/", scopes)}/{name}";
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui exposes the window name as a raw UTF-8 pointer; it is copied into a managed string immediately and never retained.")]
 	private static unsafe string CurrentWindowName()
 	{
+		// The context has to be checked before asking for the window. GetCurrentWindowRead reads
+		// through the global context pointer without validating it, so calling it with no context
+		// established does not return null, it access-violates and takes the process down. A library
+		// marking an item outside a frame would otherwise crash rather than record a poor name.
+		if (ImGui.GetCurrentContext().Handle is null)
+		{
+			return string.Empty;
+		}
+
 		ImGuiWindowPtr window = ImGuiP.GetCurrentWindowRead();
 
 		return window.Handle is null || window.Name is null

@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.App.Testing;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -28,6 +29,7 @@ internal sealed class HeadlessImGuiContext : IDisposable
 	/// <param name="height">Display height in pixels.</param>
 	/// <param name="dpiScale">Framebuffer scale applied to the display.</param>
 	/// <param name="renderer">The renderer receiving draw data and owning the atlas texture.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui exposes the ini and log filenames as raw pointers, and clearing them is the only way to stop layout being persisted between test runs.")]
 	public HeadlessImGuiContext(int width, int height, float dpiScale, SoftwareRenderer renderer)
 	{
 		Ensure.NotNull(renderer);
@@ -72,6 +74,7 @@ internal sealed class HeadlessImGuiContext : IDisposable
 	}
 
 	/// <inheritdoc/>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to test a native context handle before destroying it; the pointer is compared and never dereferenced.")]
 	public void Dispose()
 	{
 		if (disposed)
@@ -97,6 +100,7 @@ internal sealed class HeadlessImGuiContext : IDisposable
 		disposed = true;
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The font atlas is produced by ImGui as a raw pixel pointer; copying it out is the only way to upload it, and the span is scoped to this call.")]
 	private unsafe void BuildFontAtlas(ImGuiIOPtr io)
 	{
 		// Matches what ImGuiController.RecreateFontDeviceTexture does for the bound ImGui version,
