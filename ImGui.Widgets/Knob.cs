@@ -9,6 +9,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Color;
 
 /// <summary>
@@ -229,6 +231,7 @@ public static partial class ImGuiWidgets
 
 				// Handle dragging
 				ImGui.InvisibleButton(label_, new(Radius * 2.0f, Radius * 2.0f));
+				ImGuiProbes.MarkItem(label_);
 
 				ValueChanged = DragBehavior(dataType, ref value, vMin, vMax, speed, format, flags);
 

@@ -10,6 +10,8 @@ using Extensions;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Color;
 using ktsu.Semantics.Color;
 
@@ -176,6 +178,7 @@ public static partial class ImGuiWidgets
 			Vector2 grabMax = lineB + (grabBox * layoutMask);
 			Vector2 grabSize = grabMax - grabMin;
 			RectangleF handleRect = new(grabMin.X, grabMin.Y, grabSize.X, grabSize.Y);
+			ImGuiProbes.MarkRegion($"{Id}/divider/{z.Id}", grabMin, grabMin + grabSize);
 			bool handleHovered = handleRect.Contains(mousePos.X, mousePos.Y);
 			bool mouseClickedThisFrame = ImGui.IsMouseClicked(ImGuiMouseButton.Left);
 			bool handleClicked = handleHovered && mouseClickedThisFrame;

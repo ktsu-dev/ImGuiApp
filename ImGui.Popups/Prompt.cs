@@ -9,6 +9,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Contains classes for displaying various popup windows using ImGui.
 /// </summary>
@@ -118,7 +120,9 @@ public static partial class ImGuiPopups
 
 			foreach ((string text, Action? action) in Buttons)
 			{
-				if (ImGui.Button(text))
+				bool clicked = ImGui.Button(text);
+				ImGuiProbes.MarkItem($"prompt/{text}");
+				if (clicked)
 				{
 					action?.Invoke();
 					ImGui.CloseCurrentPopup();

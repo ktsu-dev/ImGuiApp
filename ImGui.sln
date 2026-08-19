@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.App.Testing", "ImGui.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.App.Testing.Tests", "tests\ImGui.App.Testing.Tests\ImGui.App.Testing.Tests.csproj", "{114D96FD-C54C-4260-B0DA-FFD9C92CB339}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.Probes", "ImGui.Probes\ImGui.Probes.csproj", "{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -353,6 +355,18 @@ Global
 		{114D96FD-C54C-4260-B0DA-FFD9C92CB339}.Release|x64.Build.0 = Release|Any CPU
 		{114D96FD-C54C-4260-B0DA-FFD9C92CB339}.Release|x86.ActiveCfg = Release|Any CPU
 		{114D96FD-C54C-4260-B0DA-FFD9C92CB339}.Release|x86.Build.0 = Release|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Debug|x64.Build.0 = Debug|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Debug|x86.Build.0 = Debug|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Release|x64.ActiveCfg = Release|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Release|x64.Build.0 = Release|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Release|x86.ActiveCfg = Release|Any CPU
+		{14CE4D9E-0993-48F6-A8A2-1C6B3CF0BF5F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

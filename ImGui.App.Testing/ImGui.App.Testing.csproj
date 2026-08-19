@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImGui.App\ImGui.App.csproj" />
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
   </ItemGroup>
 
 </Project>

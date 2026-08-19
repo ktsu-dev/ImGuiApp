@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 
@@ -71,6 +73,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 origin = ImGui.GetCursorScreenPos();
 			bool clicked = ImGui.InvisibleButton(id, new Vector2(totalWidth, starSize));
+			ImGuiProbes.MarkItem(id);
 			bool hovered = !readOnly && ImGui.IsItemHovered();
 
 			float displayValue = value;

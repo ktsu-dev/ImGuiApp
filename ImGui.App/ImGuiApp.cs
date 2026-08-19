@@ -789,34 +789,17 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static void EndExternalFrameSession() => Invoker = null!;
 
-	private static Action<string, System.Numerics.Vector2, System.Numerics.Vector2>? itemProbe;
-
-	/// <summary>
-	/// Installs a callback receiving the name and rectangle of each item passed to
-	/// <see cref="MarkItem"/>, or clears it when null.
-	/// </summary>
-	/// <remarks>
-	/// Intended for test hosts. Applications call <see cref="MarkItem"/> unconditionally and pay one
-	/// null check when no probe is installed, so being testable costs an application nothing in
-	/// production and needs no dependency on test infrastructure.
-	/// </remarks>
-	/// <param name="probe">The callback, or null to stop recording.</param>
-	public static void SetItemProbe(Action<string, System.Numerics.Vector2, System.Numerics.Vector2>? probe) => itemProbe = probe;
-
 	/// <summary>
 	/// Records the most recently submitted ImGui item under a stable name, so a test can address it
 	/// without naming a coordinate. Call immediately after submitting the widget.
 	/// </summary>
+	/// <remarks>
+	/// Forwards to <see cref="ktsu.ImGui.Probes.ImGuiProbes.MarkItem(string)"/>. The registry lives
+	/// in its own package so widget and dialog libraries can mark their items without depending on
+	/// this one, which would drag windowing and OpenGL into every consumer of a widget library.
+	/// </remarks>
 	/// <param name="name">A stable name for the item.</param>
-	public static void MarkItem(string name)
-	{
-		if (itemProbe is null)
-		{
-			return;
-		}
-
-		itemProbe(name, ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
-	}
+	public static void MarkItem(string name) => ktsu.ImGui.Probes.ImGuiProbes.MarkItem(name);
 
 	internal static void ApplyFrameRateLimit()
 	{

@@ -13,6 +13,8 @@ using Hexa.NET.ImGui;
 using ktsu.Extensions;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
+using ktsu.ImGui.Probes;
+
 using Microsoft.Extensions.FileSystemGlobbing;
 
 /// <summary>
@@ -117,6 +119,9 @@ public partial class ImGuiPopups
 		/// <summary>
 		/// The glob pattern used for filtering files.
 		/// </summary>
+		/// <summary>Name prefix for probe marks, so tests address rows and buttons by name.</summary>
+		private const string ProbePrefix = "filesystem-browser";
+
 		private string Glob { get; set; } = "*";
 
 		/// <summary>
@@ -256,6 +261,7 @@ public partial class ImGuiPopups
 			{
 				string fileName = FileName;
 				ImGui.InputText("##SaveAs", ref fileName, 256);
+				ImGuiProbes.MarkItem(ProbePrefix, "filename");
 				FileName = fileName.As<FileName>();
 			}
 
@@ -281,7 +287,9 @@ public partial class ImGuiPopups
 #pragma warning disable S3267 // Explicit loop is clearer; LINQ rewrite would add unnecessary allocation and complicate ImGui immediate-mode usage.
 				foreach (string drive in Drives)
 				{
-					if (ImGui.Selectable(drive, string.Equals(drive, currentDrive, StringComparison.OrdinalIgnoreCase)))
+					bool driveClicked = ImGui.Selectable(drive, string.Equals(drive, currentDrive, StringComparison.OrdinalIgnoreCase));
+					ImGuiProbes.MarkItem(ProbePrefix, $"drive/{drive}");
+					if (driveClicked)
 					{
 						CurrentDirectory = drive.As<AbsoluteDirectoryPath>();
 						RefreshContents();
@@ -386,7 +394,9 @@ public partial class ImGuiPopups
 		{
 			ImGui.TableNextRow();
 			ImGui.TableNextColumn();
-			if (ImGui.Selectable("..", false, flags) && ImGui.IsMouseDoubleClicked(0))
+			bool parentClicked = ImGui.Selectable("..", false, flags);
+			ImGuiProbes.MarkItem(ProbePrefix, "..");
+			if (parentClicked && ImGui.IsMouseDoubleClicked(0))
 			{
 				// Take the parent from the path type rather than trimming separators off the string: trimming
 				// also removes the leading separator, which is the root itself on Unix, so the "parent" came
@@ -415,7 +425,13 @@ public partial class ImGuiPopups
 				displayPath += Path.DirectorySeparatorChar;
 			}
 
-			if (ImGui.Selectable(displayPath, ChosenItem == path, flags))
+			bool rowClicked = ImGui.Selectable(displayPath, ChosenItem == path, flags);
+
+			// Rows are marked by their displayed name, so a test can select a known file without
+			// counting rows or naming a pixel position.
+			ImGuiProbes.MarkItem(ProbePrefix, displayPath);
+
+			if (rowClicked)
 			{
 				if (directory is not null)
 				{
@@ -449,13 +465,17 @@ public partial class ImGuiPopups
 				FilesystemBrowserMode.Save => "Save",
 				_ => "Choose"
 			};
-			if (ImGui.Button(confirmText))
+			bool confirmClicked = ImGui.Button(confirmText);
+			ImGuiProbes.MarkItem(ProbePrefix, "confirm");
+			if (confirmClicked)
 			{
 				ChooseItem();
 			}
 
 			ImGui.SameLine();
-			if (ImGui.Button("Cancel"))
+			bool cancelClicked = ImGui.Button("Cancel");
+			ImGuiProbes.MarkItem(ProbePrefix, "cancel");
+			if (cancelClicked)
 			{
 				ImGui.CloseCurrentPopup();
 			}

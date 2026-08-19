@@ -5,6 +5,7 @@ namespace ktsu.ImGui.App.Testing;
 using System;
 
 using ktsu.ImGui.App;
+using ktsu.ImGui.Probes;
 
 /// <summary>
 /// Runs an ImGui application with no window, no display and no GPU, advancing frames under the
@@ -81,7 +82,7 @@ public sealed class ImGuiAppHarness : IDisposable
 
 		// Items are recorded against the frame being rendered, which is FrameCount until the step
 		// completes and increments it.
-		ImGuiApp.SetItemProbe((name, min, max) => harness.Probe.Record(name, min, max, harness.FrameCount));
+		ImGuiProbes.SetProbe((name, min, max) => harness.Probe.Record(name, min, max, harness.FrameCount));
 
 		config.OnStart?.Invoke();
 
@@ -178,6 +179,12 @@ public sealed class ImGuiAppHarness : IDisposable
 				$"No item named '{name}' has been marked. Marked so far: {string.Join(", ", Probe.KnownNames)}.",
 				nameof(name));
 
+		if (Probe.IsAmbiguous(name))
+		{
+			throw new InvalidOperationException(
+				$"Item '{name}' was marked more than once in the same frame, so it does not identify one item. Give the widgets distinct labels, or address this one by position.");
+		}
+
 		if (!Probe.WasSeenInFrame(name, FrameCount - 1))
 		{
 			throw new InvalidOperationException(
@@ -216,7 +223,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		if (ReferenceEquals(live, this))
 		{
 			live = null;
-			ImGuiApp.SetItemProbe(null);
+			ImGuiProbes.SetProbe(null);
 			ImGuiApp.EndExternalFrameSession();
 		}
 

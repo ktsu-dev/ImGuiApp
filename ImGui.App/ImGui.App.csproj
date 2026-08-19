@@ -94,4 +94,8 @@
 
 
 
+  <ItemGroup>
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+  </ItemGroup>
+
 </Project>

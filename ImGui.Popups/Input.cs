@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Popups;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 using ktsu.CaseConverter;
 
 public partial class ImGuiPopups
@@ -71,7 +73,9 @@ public partial class ImGuiPopups
 				}
 
 				ImGui.SameLine();
-				if (ImGui.Button($"OK###{Modal.Title.ToSnakeCase()}_OK"))
+				bool okClicked = ImGui.Button($"OK###{Modal.Title.ToSnakeCase()}_OK");
+				ImGuiProbes.MarkItem("input/ok");
+				if (okClicked)
 				{
 					OnConfirm(cachedValue);
 					ImGui.CloseCurrentPopup();
@@ -103,7 +107,12 @@ public partial class ImGuiPopups
 		/// </summary>
 		/// <param name="value">The input value.</param>
 		/// <returns>True if Enter is pressed.</returns>
-		protected override bool ShowEdit(ref string value) => ImGui.InputText($"###{Modal.Title.ToSnakeCase()}_INPUT", ref value, 100, ImGuiInputTextFlags.EnterReturnsTrue);
+		protected override bool ShowEdit(ref string value)
+		{
+			bool changed = ImGui.InputText($"###{Modal.Title.ToSnakeCase()}_INPUT", ref value, 100, ImGuiInputTextFlags.EnterReturnsTrue);
+			ImGuiProbes.MarkItem("input/field");
+			return changed;
+		}
 	}
 
 	/// <summary>

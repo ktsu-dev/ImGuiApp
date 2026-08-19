@@ -8,6 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
+using ktsu.ImGui.Probes;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -116,8 +117,60 @@ public sealed class ItemProbeTests
 	public void MarkItem_WithNoProbeInstalled_DoesNothing()
 	{
 		// Production applications call MarkItem with no harness present. It must be inert, not throw.
-		ImGuiApp.SetItemProbe(null);
+		ImGuiProbes.SetProbe(null);
 
 		ImGuiApp.MarkItem("ignored");
+	}
+
+	[TestMethod]
+	public void Enabled_False_SuppressesMarkingWithoutRemovingTheProbe()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(ConfigWithButton(() => { }), Window());
+
+		try
+		{
+			ImGuiProbes.Enabled = false;
+			harness.Step();
+
+			Assert.IsNull(harness.Probe.Rect("the.button"), "The flag should suppress marking while the probe stays installed.");
+
+			ImGuiProbes.Enabled = true;
+			harness.Step();
+
+			Assert.IsNotNull(harness.Probe.Rect("the.button"), "Re-enabling should resume marking.");
+		}
+		finally
+		{
+			ImGuiProbes.Enabled = true;
+		}
+	}
+
+	[TestMethod]
+	public void Click_AmbiguousName_ThrowsRatherThanPickingOne()
+	{
+		// Two distinct items sharing a name, which is easy to hit once libraries mark automatically.
+		ImGuiAppConfig config = new()
+		{
+			OnRender = _ =>
+			{
+				ImGui.SetNextWindowPos(Vector2.Zero);
+				ImGui.SetNextWindowSize(new Vector2(240, 150));
+				ImGui.Begin("probe", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings);
+
+				ImGui.Button("first", new Vector2(80, 20));
+				ImGuiApp.MarkItem("duplicate");
+
+				ImGui.Button("second", new Vector2(80, 20));
+				ImGuiApp.MarkItem("duplicate");
+
+				ImGui.End();
+			},
+		};
+
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(config, Window());
+		harness.Step();
+
+		Assert.IsTrue(harness.Probe.IsAmbiguous("duplicate"), "Two items marked under one name in a frame is ambiguous.");
+		Assert.ThrowsExactly<InvalidOperationException>(() => harness.Click("duplicate"));
 	}
 }
