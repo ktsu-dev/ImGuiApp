@@ -16,12 +16,16 @@ using Hexa.NET.ImGui;
 /// </summary>
 /// <remarks>
 /// Public because a host that drives its own frames through
-/// <see cref="ImGuiApp.BeginExternalFrameSession(IRendererBackend)"/> has to supply one. Without
-/// that, every texture the application uploads through <see cref="ImGuiApp.CreateTexture"/> fails
-/// on a backend that was never installed, which rules out testing any application that shows an
-/// image it generated. Keeping the seam internal and reaching it through friend access was tried
-/// and does not work: <c>Polyfill</c> is source-only, so friend access makes every polyfilled call
-/// ambiguous between the two compiled copies.
+/// <c>ImGuiApp.BeginExternalFrameSession</c> has to supply one. Without that, every texture the
+/// application uploads through <c>ImGuiApp.CreateTexture</c> fails on a backend that was never
+/// installed, which rules out testing any application that shows an image it generated. Keeping
+/// the seam internal and reaching it through friend access was tried and does not work:
+/// <c>Polyfill</c> is source-only, so friend access makes every polyfilled call ambiguous between
+/// the two compiled copies.
+/// <para>
+/// Referred to here in plain code rather than with a cref: this file compiles for the iOS target
+/// framework as well, where the desktop host type is not part of the compilation.
+/// </para>
 /// </remarks>
 public interface IRendererBackend : IDisposable
 {
