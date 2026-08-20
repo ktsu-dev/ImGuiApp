@@ -33,7 +33,7 @@ public class ImageCanvasStateTests
 	}
 
 	[TestMethod]
-	public void FitToViewport_CentresImage()
+	public void FitToViewport_CentersImage()
 	{
 		ImGuiWidgets.ImageCanvasState state = new();
 

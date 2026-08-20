@@ -118,7 +118,7 @@ internal sealed class InputHandlingDemo : IDemoTab
 			ImGui.SameLine();
 			if (ImGui.Button("Cancel"))
 			{
-				modalResult = "Cancelled";
+				modalResult = "Canceled";
 				ImGui.CloseCurrentPopup();
 			}
 

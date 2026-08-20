@@ -317,7 +317,7 @@ functions, so the untestable surface is as thin as it can be:
 
 **Standing rules carried forward, both earned:**
 
-1. For any callback- or marshalling-shaped upstream API, read **every call site of the callback**,
+1. For any callback- or marshaling-shaped upstream API, read **every call site of the callback**,
    not just its signature. The Tier 1 `FlameGraph` Critical was a guaranteed crash found only this
    way — and this tier has three `Get` call sites with three different null combinations.
 2. Verifying that callback state is *populated* when it fires is not enough. Tier 2's Criticals
@@ -332,7 +332,7 @@ tab. All four land in the Net New gallery in `examples/ImGuiWidgetsDemo`:
 
 - A sequencer over a small in-memory clip list, with drag-to-edit writing back through
   `SetItemRange` and the result printed below so the round-trip is visible.
-- A multi-curve editor over two or three curves with distinct colours.
+- A multi-curve editor over two or three curves with distinct colors.
 - A single-curve `CurveData` field and a `BezierControlPoints` field.
 
 The demo already calls `ImGuiWidgets.DrawDeferred()`; none of these widgets need a pump — they are

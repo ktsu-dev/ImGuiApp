@@ -10,8 +10,8 @@ public static partial class ImGuiWidgets
 	/// Pan and zoom state for an image canvas, independent of any rendering.
 	/// </summary>
 	/// <remarks>
-	/// Pan is expressed as an offset in viewport pixels applied to the image's centred position, so a
-	/// pan of zero always means "centred", whatever the zoom.
+	/// Pan is expressed as an offset in viewport pixels applied to the image's centerd position, so a
+	/// pan of zero always means "centerd", whatever the zoom.
 	/// </remarks>
 	public sealed class ImageCanvasState
 	{
@@ -27,7 +27,7 @@ public static partial class ImGuiWidgets
 		/// <summary>Gets or sets the largest permitted zoom factor.</summary>
 		public float MaxZoom { get; init; } = 64f;
 
-		/// <summary>Scales the image to fit entirely within the viewport and centres it.</summary>
+		/// <summary>Scales the image to fit entirely within the viewport and centers it.</summary>
 		/// <param name="imageSize">Native image size in pixels.</param>
 		/// <param name="viewportSize">Viewport size in pixels.</param>
 		public void FitToViewport(Vector2 imageSize, Vector2 viewportSize)
@@ -42,7 +42,7 @@ public static partial class ImGuiWidgets
 			Pan = Vector2.Zero;
 		}
 
-		/// <summary>Sets zoom to 1:1 and recentres.</summary>
+		/// <summary>Sets zoom to 1:1 and recenters.</summary>
 		public void ResetToActualSize()
 		{
 			Zoom = Math.Clamp(1f, MinZoom, MaxZoom);
@@ -65,10 +65,10 @@ public static partial class ImGuiWidgets
 			float newZoom = Math.Clamp(Zoom * factor, MinZoom, MaxZoom);
 			float applied = newZoom / Zoom;
 
-			// Keep the anchor fixed: the vector from the image centre to the anchor scales with the zoom.
-			Vector2 centre = (viewportSize * 0.5f) + Pan;
-			Vector2 centreToAnchor = anchor - centre;
-			Pan += centreToAnchor - (centreToAnchor * applied);
+			// Keep the anchor fixed: the vector from the image center to the anchor scales with the zoom.
+			Vector2 center = (viewportSize * 0.5f) + Pan;
+			Vector2 centerToAnchor = anchor - center;
+			Pan += centerToAnchor - (centerToAnchor * applied);
 
 			Zoom = newZoom;
 		}

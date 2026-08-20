@@ -12,7 +12,7 @@ using HexaImageHelper = Hexa.NET.ImGui.Widgets.ImageHelper;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws an image centred vertically within the current line.
+	/// Draws an image centerd vertically within the current line.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -26,7 +26,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws an image centred horizontally within the available content region.
+	/// Draws an image centerd horizontally within the available content region.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -40,7 +40,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws an image centred both vertically and horizontally within the available content region.
+	/// Draws an image centerd both vertically and horizontally within the available content region.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>

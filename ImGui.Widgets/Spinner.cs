@@ -14,7 +14,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="radius">Radius of the spinner in pixels.</param>
 	/// <param name="thickness">Stroke thickness of the spinner arc in pixels.</param>
-	/// <param name="color">Colour of the spinner arc.</param>
+	/// <param name="color">Color of the spinner arc.</param>
 	public static void Spinner(float radius, float thickness, Srgb color) =>
 		HexaSpinner.Spinner(radius, thickness, color.ToImGuiU32());
 }

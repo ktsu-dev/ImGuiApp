@@ -81,7 +81,7 @@ public static partial class ImGuiWidgets
 	/// <param name="label">Label for display and identity.</param>
 	/// <param name="min">Top-left corner of the bounds to anchor within, in screen space.</param>
 	/// <param name="max">Bottom-right corner of the bounds to anchor within, in screen space.</param>
-	/// <param name="anchor">Normalised anchor point within the bounds, where (0,0) is top-left and (1,1) is bottom-right.</param>
+	/// <param name="anchor">Normalized anchor point within the bounds, where (0,0) is top-left and (1,1) is bottom-right.</param>
 	/// <param name="placement">Placement options.</param>
 	/// <returns><see langword="true"/> if the button was clicked this frame.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="label"/> is <see langword="null"/>.</exception>

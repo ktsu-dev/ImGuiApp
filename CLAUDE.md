@@ -60,7 +60,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
-- `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshalling
+- `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshaling
 - `ImGui.Widgets/Splitter.cs` - Hexa-backed horizontal/vertical draggable splitters
 - `ImGui.Widgets/DeferredDrawing.cs` - `DrawDeferred()`/`DrawDeferredDocked()` per-frame pumps, and the `ToggleSwitch` animation-clock fallback used when neither has ever run
 - `ImGui.Widgets/DockedWindow.cs` - Abstract base for windows drawn by `DrawDeferredDocked()`; composes Hexa's `ImWindow` via a private adapter instead of inheriting it

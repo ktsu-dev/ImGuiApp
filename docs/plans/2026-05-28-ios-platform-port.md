@@ -19,7 +19,7 @@
 >   `.github/workflows/dotnet.yml`) builds a headless smoke app, boots a simulator, launches it, runs
 >   N frames via the `IMGUIAPP_IOS_SMOKE_FRAMES` hook, and asserts `IMGUIAPP_IOS_SMOKE_OK`. Worked
 >   around the .NET 10 + Xcode 26 symlinked-developer-dir native-link bug (`readlink -f` Xcode pin).
->   This is a **hard gate**, so all iOS runtime behaviour below is verified in CI.
+>   This is a **hard gate**, so all iOS runtime behavior below is verified in CI.
 > - ✅ **Task 4 — Metal renderer** — `MetalRendererBackend` (`IRendererBackend` via Metal:
 >   `CAMetalLayer`, command queue, per-frame `MTLBuffer`s, `MTLTexture` atlas/user textures, a single
 >   `MTLRenderPipelineState`, runtime-compiled `ImGui.metal` shader), wired into
@@ -44,7 +44,7 @@
 >   map `UIKeyboardHidUsage` → `ImGuiKey` (`IOSKeyMap`) with modifiers + typed characters; a hidden
 >   `IUIKeyInput` first-responder (`SoftKeyboardView`) toggled by `io.WantTextInput` feeds the soft
 >   keyboard. `ImGuiApp.iOS.Input` bridges into ImGui IO. The smoke run exercises the input IO calls so
->   their Apple-ARM64-ABI safety is CI-checked; touch/key *behaviour* still needs on-device verification.
+>   their Apple-ARM64-ABI safety is CI-checked; touch/key *behavior* still needs on-device verification.
 > - ✅ **Task 6 — DPI, fonts, ini redirect** (§2.4–2.6) — `ScaleFactor` from `UIScreen.Scale` (Task 4);
 >   the iOS font atlas now loads the bundled Nerd Font + merged NotoEmoji + extended Unicode ranges
 >   (shared `FontHelper`) rasterized at `pointSize × ScaleFactor` with `FontGlobalScale = 1/ScaleFactor`
@@ -111,7 +111,7 @@ ImGui's input model is single-mouse. We map:
 
 ### 2.4 DPI & scaling: drop `ForceDpiAware`, use `UIScreen.Scale`
 
-`ForceDpiAware.cs` (761 lines) detects DPI by interrogating X11/Win32/macOS-window APIs that don't apply on iOS. On iOS the answer is `UIScreen.MainScreen.Scale` (typically 2 or 3) for pixel density, and `UIScreen.MainScreen.NativeBounds` for resolution. `ImGuiApp.ScaleFactor` initialises from that; `GlobalScale` stays user-controlled. The `ForceDpiAware` type is excluded from the `net10.0-ios` compile via `<Compile Remove>` in the csproj rather than gated with `#if`s — keeps the desktop file readable.
+`ForceDpiAware.cs` (761 lines) detects DPI by interrogating X11/Win32/macOS-window APIs that don't apply on iOS. On iOS the answer is `UIScreen.MainScreen.Scale` (typically 2 or 3) for pixel density, and `UIScreen.MainScreen.NativeBounds` for resolution. `ImGuiApp.ScaleFactor` initializes from that; `GlobalScale` stays user-controlled. The `ForceDpiAware` type is excluded from the `net10.0-ios` compile via `<Compile Remove>` in the csproj rather than gated with `#if`s — keeps the desktop file readable.
 
 ### 2.5 Fonts & textures: shared atlas, Metal upload
 
@@ -148,7 +148,7 @@ Honour `config.SaveIniSettings = false` by setting `IniFilename = null` (ImGui n
 
 ## 3. Public API Contract on iOS
 
-| Member | iOS behaviour |
+| Member | iOS behavior |
 |---|---|
 | `Start(ImGuiAppConfig)` | Bootstraps `UIApplication.Main`. Does not return until OS kills the process. |
 | `Stop()` | Calls `terminateWithSuccess` selector. Logs a warning that iOS apps should not self-terminate. |
@@ -169,7 +169,7 @@ Honour `config.SaveIniSettings = false` by setting `IniFilename = null` (ImGui n
 
 ---
 
-## 4. Code Organisation
+## 4. Code Organization
 
 ```
 ImGui.App/
@@ -199,7 +199,7 @@ The csproj uses `<Compile Remove>` to scope desktop-only files out of `net10.0-i
 
 Each task is a separate PR. Each PR includes a manual verification recipe because CI can't validate iOS.
 
-### Task 1 — Extract `IRendererBackend` on desktop, no behavioural change
+### Task 1 — Extract `IRendererBackend` on desktop, no behavioral change
 
 **Scope:** Introduce the interface (§2.5), make `ImGuiController` implement it, route `ImGuiApp` through it. Desktop only — iOS stub unchanged.
 
@@ -235,7 +235,7 @@ Each task is a separate PR. Each PR includes a manual verification recipe becaus
 
 **Verify:** Demo (`examples/ImGuiAppDemo`) needs a tiny iOS-aware tweak — ImGuiAppDemo.csproj gets a `net10.0-ios` TFM and `[Register]`s its own `Main`. Launching shows the demo window with all default ImGui demo widgets interactive via touch.
 
-**Risk:** High. The Metal port is the bulk of the project's novelty. Plan for two PRs if it gets too big: (4a) atlas + flat-coloured draw lists, (4b) textured draw lists + user textures via `GetOrLoadTexture`. Triple-buffered command buffers and `MTLBuffer` ring allocation must be correct or you get flicker/GPU stalls; budget time for a frame-debugger session in Xcode.
+**Risk:** High. The Metal port is the bulk of the project's novelty. Plan for two PRs if it gets too big: (4a) atlas + flat-colored draw lists, (4b) textured draw lists + user textures via `GetOrLoadTexture`. Triple-buffered command buffers and `MTLBuffer` ring allocation must be correct or you get flicker/GPU stalls; budget time for a frame-debugger session in Xcode.
 
 **Est:** 1–2 PRs. ~700 LoC of C# + ~150 LoC of Metal shader.
 
@@ -296,7 +296,7 @@ Until Task 2 lands, every iOS-touching PR needs a Mac smoke test in the PR descr
 2. `dotnet build -f net10.0-ios ImGui.App/ImGui.App.csproj` log tail.
 3. For Task 3+: a screen recording or screenshot of the simulator showing the demo running.
 
-After Task 2 lands, the Mac job catches compile regressions automatically; manual screenshots still required for behavioural changes.
+After Task 2 lands, the Mac job catches compile regressions automatically; manual screenshots still required for behavioral changes.
 
 ---
 
@@ -307,6 +307,6 @@ After Task 2 lands, the Mac job catches compile regressions automatically; manua
 3. **AOT trimming budget.** **Decision: trim-correct from the start.** Annotate / root the necessary types (`TrimmerRootDescriptor`, `DynamicDependency`) rather than disabling trimming. Expect Mac/CI round-trips chasing linker strips.
 4. **iPad Stage Manager / multi-window.** Single-scene is fine for v1; document the limitation. (Unchanged — still deferred.)
 
-**Verification path (decided):** invest in an automated **iOS-simulator CI job first**, before writing the native Metal renderer, so runtime behaviour (launch, tick, render, exit) is caught in CI rather than relying on ad-hoc Mac smoke tests. This re-orders the plan: the simulator harness + CI job is the immediate next chunk, ahead of Task 4.
+**Verification path (decided):** invest in an automated **iOS-simulator CI job first**, before writing the native Metal renderer, so runtime behavior (launch, tick, render, exit) is caught in CI rather than relying on ad-hoc Mac smoke tests. This re-orders the plan: the simulator harness + CI job is the immediate next chunk, ahead of Task 4.
 
 **Renderer bindings (decided, no external dep):** use the `Metal` / `CoreAnimation` bindings built into the Microsoft.iOS SDK (`MTLDevice`, `MTLCommandQueue`, `CAMetalLayer`, …) rather than a third-party NuGet or hand-rolled P/Invoke.

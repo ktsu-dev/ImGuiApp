@@ -61,7 +61,7 @@ public static partial class ImGuiApp
 	public static bool IsIdle { get; private set; }
 
 	/// <summary>
-	/// Gets the DPI scale factor for the application, initialised from <c>UIScreen.MainScreen.Scale</c>
+	/// Gets the DPI scale factor for the application, initialized from <c>UIScreen.MainScreen.Scale</c>
 	/// (typically 2 or 3) when the platform layer starts.
 	/// </summary>
 	public static float ScaleFactor { get; internal set; } = 1.0f;
@@ -164,7 +164,7 @@ public static partial class ImGuiApp
 
 	/// <summary>
 	/// Converts a measurement in ems to pixels. Until the ImGui frame is wired up on iOS there is no
-	/// active font, so this mirrors the desktop uninitialised fallback of ems times the default point size.
+	/// active font, so this mirrors the desktop uninitialized fallback of ems times the default point size.
 	/// </summary>
 	/// <param name="ems">The measurement in ems.</param>
 	/// <returns>The equivalent measurement in pixels.</returns>
@@ -203,7 +203,7 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Advances the application by one frame. Mirrors the desktop ordering: begin the ImGui frame,
 	/// update the consumer, drain queued main-thread work, run the render callback, then submit the
-	/// built draw data to the Metal backend. When the renderer is not yet initialised (the first
+	/// built draw data to the Metal backend. When the renderer is not yet initialized (the first
 	/// ticks before the Metal layer exists, or the headless <see cref="ImGuiAppConfig.TestMode"/>
 	/// path) the lifecycle callbacks still fire so consumers and the smoke harness keep ticking.
 	/// </summary>

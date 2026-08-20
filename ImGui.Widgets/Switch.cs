@@ -20,7 +20,7 @@ using ktsu.Semantics.Color;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws an iOS-style toggle switch with an animated thumb. The track colour interpolates
+	/// Draws an iOS-style toggle switch with an animated thumb. The track color interpolates
 	/// between the frame background (off) and the check-mark accent (on) as the thumb slides.
 	/// </summary>
 	/// <param name="label">A unique label; text after <c>##</c> is hidden but used for the ID. Visible text is drawn to the right of the switch.</param>

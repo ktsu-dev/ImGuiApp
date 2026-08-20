@@ -16,7 +16,7 @@ using ktsu.ImGui.Probes;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws a compact, pill-shaped chip. Filled with the accent colour when <paramref name="selected"/>
+	/// Draws a compact, pill-shaped chip. Filled with the accent color when <paramref name="selected"/>
 	/// is <see langword="true"/>, otherwise outlined. Useful for filter / choice tags.
 	/// </summary>
 	/// <param name="label">The chip caption; text after <c>##</c> is hidden but used for the ID.</param>

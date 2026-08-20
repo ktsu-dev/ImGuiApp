@@ -21,7 +21,7 @@ Every task's requirements implicitly include this section.
 - **Validation.** Use `Ensure.NotNull(x)` (Polyfill, global namespace, no using directive needed) — not `ArgumentNullException.ThrowIfNull`. It throws `ArgumentNullException`.
 - **Suppressions.** No global suppressions. If a warning must be suppressed, use a targeted `[SuppressMessage]` with a real justification string.
 - **Target frameworks.** `ImGui.Widgets` is `net10.0;net9.0;net8.0`. Do not use `#if` framework directives; check API availability against net8.0.
-- **Colour conversion.** `Srgb` → `uint` uses `srgb.ToImGuiU32()` (applies global style alpha, requires a live ImGui context). `Color` → `Vector4` uses `color.ToImGuiVector4()`. Both come from `ktsu.ImGui.Color`.
+- **Color conversion.** `Srgb` → `uint` uses `srgb.ToImGuiU32()` (applies global style alpha, requires a live ImGui context). `Color` → `Vector4` uses `color.ToImGuiVector4()`. Both come from `ktsu.ImGui.Color`.
 - **Never** put `unsafe`, `byte*`, or `ReadOnlySpan<byte>` in a public signature.
 - **Commit messages.** No `Co-Authored-By` lines. No version tags (`[minor]` etc.) on these commits.
 
@@ -274,7 +274,7 @@ git commit -m "Add Material Icons glyph range support to FontHelper"
   - `public static void ImGuiWidgets.Spinner(float radius, float thickness, Srgb color)`
   - `public static void ImGuiWidgets.BufferingBar(float value, Vector2 size, Srgb background, Srgb foreground)`
 
-These two establish the colour-conversion pattern every later wrapper follows. Both are pure passthroughs with no testable pure logic, so this task has no unit test — the draw output is verified in the demo (Task 14).
+These two establish the color-conversion pattern every later wrapper follows. Both are pure passthroughs with no testable pure logic, so this task has no unit test — the draw output is verified in the demo (Task 14).
 
 Hexa's signatures being wrapped:
 
@@ -305,7 +305,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="radius">Radius of the spinner in pixels.</param>
 	/// <param name="thickness">Stroke thickness of the spinner arc in pixels.</param>
-	/// <param name="color">Colour of the spinner arc.</param>
+	/// <param name="color">Color of the spinner arc.</param>
 	public static void Spinner(float radius, float thickness, Srgb color) =>
 		HexaSpinner.Spinner(radius, thickness, color.ToImGuiU32());
 }
@@ -334,8 +334,8 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="value">Fill fraction, clamped by the underlying implementation to the range 0 to 1.</param>
 	/// <param name="size">Size of the bar in pixels.</param>
-	/// <param name="background">Colour of the unfilled portion.</param>
-	/// <param name="foreground">Colour of the filled portion.</param>
+	/// <param name="background">Color of the unfilled portion.</param>
+	/// <param name="foreground">Color of the filled portion.</param>
 	public static void BufferingBar(float value, Vector2 size, Srgb background, Srgb foreground) =>
 		HexaProgressBar.ProgressBar(value, size, background.ToImGuiU32(), foreground.ToImGuiU32());
 }
@@ -394,7 +394,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 /// <summary>
 /// Tests for the pure helpers backing the Hexa-delegated widgets. The draw paths need a live
 /// ImGui context and are verified visually in ImGuiWidgetsDemo; these cover the argument
-/// resolution and marshalling logic that can run without one.
+/// resolution and marshaling logic that can run without one.
 /// </summary>
 [TestClass]
 public sealed class HexaWidgetTests
@@ -700,7 +700,7 @@ public static partial class ImGuiWidgets
 	/// <param name="label">Label for display and identity.</param>
 	/// <param name="min">Top-left corner of the bounds to anchor within, in screen space.</param>
 	/// <param name="max">Bottom-right corner of the bounds to anchor within, in screen space.</param>
-	/// <param name="anchor">Normalised anchor point within the bounds, where (0,0) is top-left and (1,1) is bottom-right.</param>
+	/// <param name="anchor">Normalized anchor point within the bounds, where (0,0) is top-left and (1,1) is bottom-right.</param>
 	/// <param name="placement">Placement options.</param>
 	/// <returns><see langword="true"/> if the button was clicked this frame.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="label"/> is <see langword="null"/>.</exception>
@@ -725,7 +725,7 @@ public static partial class ImGuiWidgets
 Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj -p:KtsuSyncStyleConfigFiles=false`
 Expected: SUCCESS.
 
-If `new ImRect(min, max)` does not compile, check `ImRect`'s available constructors in the Hexa.NET.ImGui bindings and use the field-initialiser form (`ImRect bounds = new() { Min = min, Max = max };`) instead.
+If `new ImRect(min, max)` does not compile, check `ImRect`'s available constructors in the Hexa.NET.ImGui bindings and use the field-initializer form (`ImRect bounds = new() { Min = min, Max = max };`) instead.
 
 - [ ] **Step 3: Commit**
 
@@ -773,12 +773,12 @@ using HexaTreeNode = Hexa.NET.ImGui.Widgets.ImGuiTreeNode;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws a tree node with a coloured icon glyph before its label.
+	/// Draws a tree node with a colored icon glyph before its label.
 	/// </summary>
 	/// <param name="label">Label for display and identity.</param>
 	/// <param name="icon">Icon glyph to draw before the label, typically a single character from an icon font.</param>
-	/// <param name="iconColor">Colour applied to the icon glyph only; the label uses the current text colour.</param>
-	/// <param name="flags">Tree node behaviour flags.</param>
+	/// <param name="iconColor">Color applied to the icon glyph only; the label uses the current text color.</param>
+	/// <param name="flags">Tree node behavior flags.</param>
 	/// <returns><see langword="true"/> if the node is open and its children should be drawn.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="label"/> or <paramref name="icon"/> is <see langword="null"/>.</exception>
 	public static bool IconTreeNode(string label, string icon, Color iconColor, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
@@ -1001,7 +1001,7 @@ using HexaTextHelper = Hexa.NET.ImGui.Widgets.TextHelper;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws text centred vertically within the current line.
+	/// Draws text centerd vertically within the current line.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -1012,7 +1012,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws text centred horizontally within the available content region.
+	/// Draws text centerd horizontally within the available content region.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -1023,7 +1023,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws text centred both vertically and horizontally within the available content region.
+	/// Draws text centerd both vertically and horizontally within the available content region.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -1114,7 +1114,7 @@ using HexaImageHelper = Hexa.NET.ImGui.Widgets.ImageHelper;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws an image centred vertically within the current line.
+	/// Draws an image centerd vertically within the current line.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -1122,7 +1122,7 @@ public static partial class ImGuiWidgets
 		HexaImageHelper.ImageCenteredV(new ImTextureRef(texId: textureId), size);
 
 	/// <summary>
-	/// Draws an image centred horizontally within the available content region.
+	/// Draws an image centerd horizontally within the available content region.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -1130,7 +1130,7 @@ public static partial class ImGuiWidgets
 		HexaImageHelper.ImageCenteredH(new ImTextureRef(texId: textureId), size);
 
 	/// <summary>
-	/// Draws an image centred both vertically and horizontally within the available content region.
+	/// Draws an image centerd both vertically and horizontally within the available content region.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -1718,7 +1718,7 @@ Expected: PASS, all tests including the pre-existing ones.
 
 ```bash
 git add ImGui.Widgets/FlameGraph.cs tests/ImGui.Widgets.Tests/HexaWidgetTests.cs
-git commit -m "Add FlameGraph widget with managed sample marshalling"
+git commit -m "Add FlameGraph widget with managed sample marshaling"
 ```
 
 ---
@@ -1735,7 +1735,7 @@ git commit -m "Add FlameGraph widget with managed sample marshalling"
 
 The existing demo lays out two `DividerZone`s registered in `OnStart`. This adds a third zone containing an `ImGui.BeginTabBar` with two tabs: **"Hexa vs ktsu"** for the overlapping pairs and **"Net New"** for the widgets with no counterpart.
 
-The comparison tab's contract: each row binds both implementations to the *same* backing field, so divergent behaviour shows up live rather than being inferred from two independent demos.
+The comparison tab's contract: each row binds both implementations to the *same* backing field, so divergent behavior shows up live rather than being inferred from two independent demos.
 
 - [ ] **Step 1: Write `HexaWidgetsDemo.cs`**
 
@@ -1758,7 +1758,7 @@ using ktsu.Semantics.Paths;
 /// <summary>
 /// Side-by-side comparison of the widgets that exist in both ktsu.ImGui.Widgets and
 /// Hexa.NET.ImGui.Widgets, plus a gallery of the Hexa widgets that have no ktsu counterpart.
-/// Each comparison row drives both implementations from the same backing field so behavioural
+/// Each comparison row drives both implementations from the same backing field so behavioral
 /// differences are visible rather than inferred.
 /// </summary>
 internal static class HexaWidgetsDemo

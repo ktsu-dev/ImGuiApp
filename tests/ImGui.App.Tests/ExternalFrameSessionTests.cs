@@ -24,7 +24,7 @@ public sealed class ExternalFrameSessionTests
 	{
 		ImGuiApp.BeginExternalFrameSession();
 
-		Assert.IsNotNull(ImGuiApp.Invoker, "A host needs an invoker, or work marshalled from a worker thread is lost.");
+		Assert.IsNotNull(ImGuiApp.Invoker, "A host needs an invoker, or work marshaled from a worker thread is lost.");
 	}
 
 	[TestMethod]

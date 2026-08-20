@@ -122,7 +122,7 @@ public sealed class ImGuiAppHarness : IDisposable
 			{
 				context.BeginFrame(Options.FrameDelta);
 
-				// Anything marshalled onto the UI thread has to run, or work queued from a worker
+				// Anything marshaled onto the UI thread has to run, or work queued from a worker
 				// never lands. An application that uploads a texture through the invoker would
 				// otherwise have every asynchronous result stay invisible to the test.
 				config.OnUpdate?.Invoke(Options.FrameDelta);

@@ -173,7 +173,7 @@ public static partial class ImGuiApp
 		uint* emojiRanges = emojiBytes is not null ? FontHelper.GetEmojiRanges() : null;
 
 		// DefaultFonts (the bundled Nerd Font) first, then any user-supplied Fonts; merge the emoji
-		// glyphs onto each so coloured emoji render inline with text.
+		// glyphs onto each so colored emoji render inline with text.
 		ImFontPtr? defaultFont = null;
 		foreach ((_, byte[] fontBytes) in Config.DefaultFonts.Concat(Config.Fonts))
 		{

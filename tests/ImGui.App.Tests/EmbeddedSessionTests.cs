@@ -21,7 +21,7 @@ public class EmbeddedSessionTests
 	public void WindowHost_DefaultsToStandalone()
 	{
 		ImGuiAppConfig config = new();
-		Assert.AreEqual(ImGuiAppWindowHost.Standalone, config.WindowHost, "Default host must preserve standalone behaviour.");
+		Assert.AreEqual(ImGuiAppWindowHost.Standalone, config.WindowHost, "Default host must preserve standalone behavior.");
 		Assert.AreEqual(0, config.ParentWindowHandle);
 	}
 

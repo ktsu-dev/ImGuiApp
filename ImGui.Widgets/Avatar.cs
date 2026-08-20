@@ -27,7 +27,7 @@ public enum AvatarStatus
 	Away,
 	/// <summary>Do-not-disturb / busy (red).</summary>
 	Busy,
-	/// <summary>Signed out (grey).</summary>
+	/// <summary>Signed out (gray).</summary>
 	Offline,
 }
 
@@ -48,11 +48,11 @@ public static partial class ImGuiWidgets
 		AvatarImpl.Draw(id, textureId, null, diameter, status);
 
 	/// <summary>
-	/// Draws a circular avatar showing the initials of <paramref name="displayName"/> on a colour derived
+	/// Draws a circular avatar showing the initials of <paramref name="displayName"/> on a color derived
 	/// deterministically from the name, with an optional presence dot.
 	/// </summary>
 	/// <param name="id">Unique widget identifier.</param>
-	/// <param name="displayName">Name used to compute the initials and background colour.</param>
+	/// <param name="displayName">Name used to compute the initials and background color.</param>
 	/// <param name="diameter">Avatar diameter in pixels. When 0, defaults to twice the frame height so it scales with DPI.</param>
 	/// <param name="status">Presence status drawn as a dot at the bottom-right.</param>
 	/// <returns>True if the avatar was clicked.</returns>
@@ -138,7 +138,7 @@ public static partial class ImGuiWidgets
 			Vector2 dotCenter = new(center.X + diagonal, center.Y + diagonal);
 			float dotRadius = MathF.Max(radius * 0.28f, 3.0f);
 
-			// A window-coloured ring separates the dot from the avatar fill.
+			// A window-colored ring separates the dot from the avatar fill.
 			uint ringColor = ImGui.GetColorU32(ImGuiCol.WindowBg);
 			drawList.AddCircleFilled(dotCenter, dotRadius + MathF.Max(dotRadius * 0.25f, 1.5f), ringColor, 0);
 

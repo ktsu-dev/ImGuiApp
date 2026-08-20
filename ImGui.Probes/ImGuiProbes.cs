@@ -60,7 +60,7 @@ public static class ImGuiProbes
 
 	/// <summary>
 	/// Pushes a name scope, so items marked until the matching <see cref="PopScope"/> are qualified
-	/// by it. Mirrors ImGui's own identifier stack, which is what keeps two identically labelled
+	/// by it. Mirrors ImGui's own identifier stack, which is what keeps two identically labeled
 	/// widgets apart.
 	/// </summary>
 	/// <param name="scope">The scope name.</param>

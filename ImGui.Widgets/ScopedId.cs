@@ -27,7 +27,7 @@ public static partial class ImGuiWidgets
 			ImGui.PushID(id);
 
 			// Mirrors the identifier push into the probe name stack, so a marked item inside this
-			// scope is qualified by it and two identically labelled widgets stay distinguishable.
+			// scope is qualified by it and two identically labeled widgets stay distinguishable.
 			ImGuiProbes.PushScope(id);
 
 			// A method group rather than a lambda. A lambda here makes the compiler emit a

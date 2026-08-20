@@ -769,7 +769,7 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <remarks>
 	/// <see cref="Invoker"/> is otherwise assigned only by <see cref="Start(ImGuiAppConfig)"/>, so
-	/// work marshalled from a worker thread would have nowhere to run and would be lost silently.
+	/// work marshaled from a worker thread would have nowhere to run and would be lost silently.
 	/// The invoker binds to the calling thread, so call this from the thread that will drive frames.
 	/// </remarks>
 	/// <exception cref="InvalidOperationException">A session is already active.</exception>

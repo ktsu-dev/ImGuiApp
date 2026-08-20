@@ -295,7 +295,7 @@ stale rectangle and reporting a pass.
 
 ### What Probes Do Not Cover
 
-Only marked items are addressable. Two identically labelled widgets in the same window with no scope
+Only marked items are addressable. Two identically labeled widgets in the same window with no scope
 between them still collide, and are refused rather than guessed at. ImGui has the same limitation and
 the same remedy: give them distinct identifiers.
 

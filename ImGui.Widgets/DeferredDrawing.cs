@@ -93,7 +93,7 @@ public static partial class ImGuiWidgets
 	/// <c>WidgetManager.Draw()</c> calls <c>DockSpaceOverViewport</c> without checking the flag, so
 	/// without it the dockspace is a no-op. The flag is set here rather than in <c>ImGui.App</c>
 	/// because this is the opt-in path whose contract requires docking; enabling it globally would
-	/// change behaviour for every consumer, including those that never draw a docked window.
+	/// change behavior for every consumer, including those that never draw a docked window.
 	/// </para>
 	/// </remarks>
 	public static void DrawDeferredDocked()

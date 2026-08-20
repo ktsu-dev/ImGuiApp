@@ -7,7 +7,7 @@ using HexaTextHelper = Hexa.NET.ImGui.Widgets.TextHelper;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws text centred vertically within the current line.
+	/// Draws text centerd vertically within the current line.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -18,7 +18,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws text centred horizontally within the available content region.
+	/// Draws text centerd horizontally within the available content region.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -29,7 +29,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws text centred both vertically and horizontally within the available content region.
+	/// Draws text centerd both vertically and horizontally within the available content region.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>

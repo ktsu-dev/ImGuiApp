@@ -100,7 +100,7 @@ public sealed class WindowingEnvironmentTests
 	{
 		bool result = WindowingEnvironment.Detect(EnvironmentReader());
 
-		Assert.IsFalse(result, "With nothing to go on, the application keeps its existing placement behaviour.");
+		Assert.IsFalse(result, "With nothing to go on, the application keeps its existing placement behavior.");
 	}
 
 	[TestMethod]

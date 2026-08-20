@@ -40,7 +40,7 @@ public class ImGuiAppConfig
 	/// Gets or sets how the application window is hosted.
 	/// </summary>
 	/// <remarks>
-	/// Defaults to <see cref="ImGuiAppWindowHost.Standalone"/>, which preserves the classic behaviour of
+	/// Defaults to <see cref="ImGuiAppWindowHost.Standalone"/>, which preserves the classic behavior of
 	/// <see cref="ImGuiApp.Start(ImGuiAppConfig)"/> (a top-level window owning a blocking loop). Set this to
 	/// <see cref="ImGuiAppWindowHost.EmbeddedChild"/> together with <see cref="ParentWindowHandle"/> and
 	/// start via <see cref="ImGuiApp.StartEmbedded(ImGuiAppConfig)"/> to render as a child of a

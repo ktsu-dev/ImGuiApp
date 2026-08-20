@@ -12,12 +12,12 @@ using HexaTreeNode = Hexa.NET.ImGui.Widgets.ImGuiTreeNode;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws a tree node with a coloured icon glyph before its label.
+	/// Draws a tree node with a colored icon glyph before its label.
 	/// </summary>
 	/// <param name="label">Label for display and identity.</param>
 	/// <param name="icon">Icon glyph to draw before the label, typically a single character from an icon font.</param>
-	/// <param name="iconColor">Colour applied to the icon glyph only; the label uses the current text colour.</param>
-	/// <param name="flags">Tree node behaviour flags.</param>
+	/// <param name="iconColor">Color applied to the icon glyph only; the label uses the current text color.</param>
+	/// <param name="flags">Tree node behavior flags.</param>
 	/// <returns><see langword="true"/> if the node is open and its children should be drawn.</returns>
 	/// <remarks>
 	/// When this returns <see langword="true"/> the caller MUST call <c>ImGui.TreePop()</c> after

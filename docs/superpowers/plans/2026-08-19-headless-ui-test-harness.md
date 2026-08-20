@@ -1922,7 +1922,7 @@ public sealed class ImGuiAppHarness : IDisposable
 			{
 				context.BeginFrame(Options.FrameDelta);
 
-				// The application's update callback and anything marshalled onto the UI thread
+				// The application's update callback and anything marshaled onto the UI thread
 				// must run, or work queued from a worker never lands. ImageGui uploads its
 				// preview texture through the invoker, so skipping this would leave every
 				// asynchronous result invisible to the test.

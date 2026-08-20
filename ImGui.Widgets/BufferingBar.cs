@@ -16,8 +16,8 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="value">Fill fraction, clamped by the underlying implementation to the range 0 to 1.</param>
 	/// <param name="size">Size of the bar in pixels.</param>
-	/// <param name="background">Colour of the unfilled portion.</param>
-	/// <param name="foreground">Colour of the filled portion.</param>
+	/// <param name="background">Color of the unfilled portion.</param>
+	/// <param name="foreground">Color of the filled portion.</param>
 	public static void BufferingBar(float value, Vector2 size, Srgb background, Srgb foreground) =>
 		HexaProgressBar.ProgressBar(value, size, background.ToImGuiU32(), foreground.ToImGuiU32());
 }

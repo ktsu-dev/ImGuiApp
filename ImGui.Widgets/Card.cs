@@ -51,8 +51,8 @@ public static partial class ImGuiWidgets
 		/// <param name="width">Outer card width in pixels. When <c>0</c> the card shrinks to fit its content.</param>
 		/// <param name="padding">Inner padding in pixels on every edge. When negative the style's <see cref="ImGuiStyle.WindowPadding"/> is used.</param>
 		/// <param name="rounding">Corner radius in pixels. When negative a value derived from the style's frame rounding is used.</param>
-		/// <param name="background">Explicit fill colour. When <see langword="null"/> an elevated surface colour is resolved from the active theme.</param>
-		/// <param name="border">Whether to stroke a one-pixel border in the theme's border colour.</param>
+		/// <param name="background">Explicit fill color. When <see langword="null"/> an elevated surface color is resolved from the active theme.</param>
+		/// <param name="border">Whether to stroke a one-pixel border in the theme's border color.</param>
 		public Card(float width = 0f, float padding = -1f, float rounding = -1f, ImGuiVector4? background = null, bool border = true)
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
@@ -127,7 +127,7 @@ public static partial class ImGuiWidgets
 			ImGui.Dummy(cardMax - cardMin);
 		}
 
-		// Resolve an "elevated surface" colour: prefer an opaque child/popup background, else fall back to the window background.
+		// Resolve an "elevated surface" color: prefer an opaque child/popup background, else fall back to the window background.
 		private static Vector4 ResolveSurface(Span<Vector4> colors)
 		{
 			Vector4 child = colors[(int)ImGuiCol.ChildBg];
@@ -143,7 +143,7 @@ public static partial class ImGuiWidgets
 		// Soft drop shadow: a stack of expanding rounded rects, faintest on the outside, offset slightly downward.
 		private static void DrawShadow(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 shadowColor)
 		{
-			// Fall back to a soft black shadow when the theme supplies a fully-transparent shadow colour.
+			// Fall back to a soft black shadow when the theme supplies a fully-transparent shadow color.
 			ImColor baseColor = shadowColor.W > 0.01f ? new ImColor { Value = shadowColor } : new Srgb(0f, 0f, 0f).ToImColor(0.25f);
 			float baseAlpha = baseColor.Value.W;
 

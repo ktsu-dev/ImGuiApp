@@ -13,7 +13,7 @@ using System.Numerics;
 /// <remarks>
 /// <para>
 /// Names are recorded fully qualified, as the ImGui window followed by any pushed scopes and then the
-/// item's own name. Qualification is what keeps two identically labelled widgets apart, the same job
+/// item's own name. Qualification is what keeps two identically labeled widgets apart, the same job
 /// ImGui's identifier stack does for the widgets themselves.
 /// </para>
 /// <para>

@@ -49,10 +49,10 @@ public static partial class ImGuiWidgets
 		public abstract Span<Vector2> GetPoints(int curveIndex);
 
 		/// <summary>
-		/// Gets the colour a curve is drawn in.
+		/// Gets the color a curve is drawn in.
 		/// </summary>
 		/// <param name="curveIndex">Index of the curve.</param>
-		/// <returns>The curve colour.</returns>
+		/// <returns>The curve color.</returns>
 		public abstract Srgb GetCurveColor(int curveIndex);
 
 		/// <summary>
@@ -90,7 +90,7 @@ public static partial class ImGuiWidgets
 		public virtual CurveInterpolation GetInterpolation(int curveIndex) => CurveInterpolation.Linear;
 
 		/// <summary>
-		/// Gets the editor's background colour.
+		/// Gets the editor's background color.
 		/// </summary>
 		public virtual Srgb BackgroundColor => new(0.125f, 0.125f, 0.125f);
 

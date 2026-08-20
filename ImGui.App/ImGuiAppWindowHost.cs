@@ -9,7 +9,7 @@ public enum ImGuiAppWindowHost
 {
 	/// <summary>
 	/// The application creates and owns its own top-level window. This is the default and matches the
-	/// behaviour of <see cref="ImGuiApp.Start(ImGuiAppConfig)"/>.
+	/// behavior of <see cref="ImGuiApp.Start(ImGuiAppConfig)"/>.
 	/// </summary>
 	Standalone,
 

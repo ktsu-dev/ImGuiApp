@@ -28,7 +28,7 @@ public static partial class ImGuiApp
 {
 	// AddCallback marshals these delegates to native function pointers that live in the ImGui
 	// draw list and are invoked by the renderer during RenderDrawData. They must stay rooted for
-	// the lifetime of the process so the marshalled thunks remain valid.
+	// the lifetime of the process so the marshaled thunks remain valid.
 	private static readonly ImDrawCallback blendAdditiveCallback = CreateAdditiveCallback();
 	private static readonly ImDrawCallback blendAlphaCallback = CreateAlphaCallback();
 
