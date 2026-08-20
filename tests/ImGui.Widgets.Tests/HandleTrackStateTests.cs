@@ -298,4 +298,49 @@ public class HandleTrackStateTests
 		Assert.IsTrue(handles[0] <= handles[1] && handles[1] <= handles[2], "Handles must remain ascending after drag with negative minGap.");
 		Assert.IsTrue(handles[0] >= 0f && handles[2] <= 1f, "Handles must remain on track.");
 	}
+
+	// RangeSlider has never had tests. These describe the two-handle behaviour read out of its
+	// source before it was moved onto HandleTrackState, and stand in for the regression suite it
+	// never had. If one of these has to change, RangeSlider's behaviour changed with it.
+
+	[TestMethod]
+	public void TwoHandles_LowerCannotCrossUpper()
+	{
+		float[] handles = [0.2f, 0.6f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.2f);
+
+		state.Drag(handles, 0.95f, 0f, 1f, 0f);
+
+		Assert.AreEqual(0.6f, handles[0], 1e-6f, "The lower handle crossed the upper one.");
+		Assert.AreEqual(0.6f, handles[1], 1e-6f, "The upper handle moved.");
+	}
+
+	[TestMethod]
+	public void TwoHandles_UpperCannotCrossLower()
+	{
+		float[] handles = [0.4f, 0.8f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.8f);
+
+		state.Drag(handles, 0.05f, 0f, 1f, 0f);
+
+		Assert.AreEqual(0.4f, handles[0], 1e-6f, "The lower handle moved.");
+		Assert.AreEqual(0.4f, handles[1], 1e-6f, "The upper handle crossed the lower one.");
+	}
+
+	[TestMethod]
+	public void TwoHandles_MinGapIsHeldOnBothSides()
+	{
+		float[] handles = [0.4f, 0.6f];
+		ImGuiWidgets.HandleTrackState state = new();
+
+		state.Activate(handles, 0.4f);
+		state.Drag(handles, 0.9f, 0f, 1f, 0.2f);
+		Assert.AreEqual(0.4f, handles[0], 1e-6f, "The lower handle came closer than minGap.");
+
+		state.Activate(handles, 0.6f);
+		state.Drag(handles, 0.1f, 0f, 1f, 0.2f);
+		Assert.AreEqual(0.6f, handles[1], 1e-6f, "The upper handle came closer than minGap.");
+	}
 }

@@ -34,10 +34,8 @@ public static partial class ImGuiWidgets
 
 	internal static class RangeSliderImpl
 	{
-		// Per-ID active handle: 0 = lower, 1 = upper, -1 = none.
-		private static readonly Dictionary<uint, int> ActiveHandle = [];
+		private static readonly Dictionary<uint, HandleTrackState> States = [];
 
-		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (sentinel/identity check); a tolerance would change behavior.")]
 		public static bool Draw(string label, ref float lower, ref float upper, float min, float max, float minGap)
 		{
 			if (min > max)
@@ -61,69 +59,36 @@ public static partial class ImGuiWidgets
 			float trackY = origin.Y + (height * 0.5f);
 			float span = MathF.Max(trackMaxX - trackMinX, 1.0f);
 
-			// Clamp inputs to a valid, non-crossing, gap-respecting state before interaction.
-			lower = Math.Clamp(lower, min, max);
-			upper = Math.Clamp(upper, min, max);
-			if (upper - lower < minGap)
+			Span<float> handles = [lower, upper];
+			HandleTrackState.Normalize(handles, min, max, minGap);
+
+			if (!States.TryGetValue(id, out HandleTrackState? state))
 			{
-				upper = MathF.Min(max, lower + minGap);
-				lower = MathF.Min(lower, upper - minGap);
+				state = new HandleTrackState();
+				States[id] = state;
 			}
 
-			HandleActivation(id, lower, upper, min, max, trackMinX, span);
-			bool changed = HandleDrag(id, ref lower, ref upper, min, max, minGap, trackMinX, span);
-			DrawSlider(label, lower, upper, min, max, trackMinX, trackMaxX, trackY, span, grabRadius, height);
+			float mouseValue = min + (Math.Clamp((ImGui.GetIO().MousePos.X - trackMinX) / span, 0.0f, 1.0f) * (max - min));
 
-			return changed;
-		}
-
-		private static void HandleActivation(uint id, float lower, float upper, float min, float max, float trackMinX, float span)
-		{
-			if (!ImGui.IsItemActivated())
+			if (ImGui.IsItemActivated())
 			{
-				return;
+				state.Activate(handles, mouseValue);
 			}
-
-			// Grab whichever handle is nearer the click.
-			float mouseX = ImGui.GetIO().MousePos.X;
-			float lowerX = trackMinX + (ValueToFraction(lower, min, max) * span);
-			float upperX = trackMinX + (ValueToFraction(upper, min, max) * span);
-			ActiveHandle[id] = MathF.Abs(mouseX - lowerX) <= MathF.Abs(mouseX - upperX) ? 0 : 1;
-		}
-
-		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional here (detecting whether the clamped value actually changed); a tolerance would change behavior.")]
-		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private interaction helper extracted from Draw to reduce cognitive complexity; the parameters thread the slider geometry computed once by the caller and bundling them would not improve readability.")]
-		private static bool HandleDrag(uint id, ref float lower, ref float upper, float min, float max, float minGap, float trackMinX, float span)
-		{
-			if (!ImGui.IsItemActive())
-			{
-				ActiveHandle.Remove(id);
-				return false;
-			}
-
-			int handle = ActiveHandle.GetValueOrDefault(id, -1);
-			float t = Math.Clamp((ImGui.GetIO().MousePos.X - trackMinX) / span, 0.0f, 1.0f);
-			float newValue = min + (t * (max - min));
 
 			bool changed = false;
-			if (handle == 0)
+			if (ImGui.IsItemActive())
 			{
-				float clamped = Math.Clamp(newValue, min, upper - minGap);
-				if (clamped != lower)
-				{
-					lower = clamped;
-					changed = true;
-				}
+				changed = state.Drag(handles, mouseValue, min, max, minGap);
 			}
-			else if (handle == 1)
+			else
 			{
-				float clamped = Math.Clamp(newValue, lower + minGap, max);
-				if (clamped != upper)
-				{
-					upper = clamped;
-					changed = true;
-				}
+				state.Release();
 			}
+
+			lower = handles[0];
+			upper = handles[1];
+
+			DrawSlider(label, lower, upper, min, max, trackMinX, trackMaxX, trackY, span, grabRadius, height);
 
 			return changed;
 		}
