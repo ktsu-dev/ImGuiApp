@@ -52,11 +52,29 @@ public static partial class ImGuiWidgets
 		/// <summary>Clears the active handle.</summary>
 		public void Release() => ActiveHandle = -1;
 
+		// Both public entry points take the same bounds and gap, and every defect this class has
+		// had so far came from the two disagreeing about what a degenerate argument means — an
+		// inverted pair, a negative gap, a gap too wide to fit. Deciding that once, here, is what
+		// stops them drifting apart again.
+		private static void NormalizeArguments(ref float lowerBound, ref float upperBound, ref float minGap, int handleCount)
+		{
+			if (lowerBound > upperBound)
+			{
+				(lowerBound, upperBound) = (upperBound, lowerBound);
+			}
+
+			minGap = Math.Clamp(minGap, 0f, handleCount > 1 ? (upperBound - lowerBound) / (handleCount - 1) : 0f);
+		}
+
 		/// <summary>Moves the active handle to <paramref name="value"/>, held inside its neighbours and the bounds.</summary>
 		/// <returns><see langword="true"/> if the handle moved; otherwise <see langword="false"/>.</returns>
 		/// <remarks>
 		/// A drag that resolves to where the handle already sits reports no change. Consumers turn
 		/// changes into undo entries, and a stationary mouse held down must not mint one per frame.
+		/// The handles are expected to already lie within the track, as <see cref="Normalize"/> leaves them.
+		/// A caller that skips <see cref="Normalize"/> and passes handles outside the bounds can still invert order,
+		/// because the track clamp outranks the order constraint. Degenerate arguments (inverted bounds, negative <paramref name="minGap"/>,
+		/// or <paramref name="minGap"/> too wide to fit) are normalized to match <see cref="Normalize"/>'s interpretation.
 		/// </remarks>
 		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional: it detects whether the clamped value differs from the stored one at all, and a tolerance would suppress genuine small drags.")]
 		public bool Drag(Span<float> handles, float value, float lowerBound, float upperBound, float minGap)
@@ -66,10 +84,7 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
-			if (lowerBound > upperBound)
-			{
-				(lowerBound, upperBound) = (upperBound, lowerBound);
-			}
+			NormalizeArguments(ref lowerBound, ref upperBound, ref minGap, handles.Length);
 
 			bool hasLower = ActiveHandle > 0;
 			bool hasUpper = ActiveHandle < handles.Length - 1;
@@ -115,12 +130,7 @@ public static partial class ImGuiWidgets
 		/// </remarks>
 		public static void Normalize(Span<float> handles, float lowerBound, float upperBound, float minGap)
 		{
-			if (lowerBound > upperBound)
-			{
-				(lowerBound, upperBound) = (upperBound, lowerBound);
-			}
-
-			minGap = Math.Clamp(minGap, 0f, handles.Length > 1 ? (upperBound - lowerBound) / (handles.Length - 1) : 0f);
+			NormalizeArguments(ref lowerBound, ref upperBound, ref minGap, handles.Length);
 
 			for (int i = 0; i < handles.Length; i++)
 			{

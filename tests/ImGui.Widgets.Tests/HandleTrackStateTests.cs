@@ -268,4 +268,34 @@ public class HandleTrackStateTests
 
 		Assert.AreEqual(0.7f, handles[0], 1e-6f, "Handle should remain in the (swapped) bounds.");
 	}
+
+	[TestMethod]
+	public void Drag_HandlesNegativeMinGapByClampingToZero()
+	{
+		// A negative minGap is invalid and inverts handle order. Drag must clamp it to zero,
+		// matching Normalize. This protects against negative minGap being treated as licence to overlap.
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, 0f, 0f, 1f, -0.2f);
+
+		Assert.IsTrue(handles[0] <= handles[1] && handles[1] <= handles[2], "Handles must remain ascending after drag with negative minGap.");
+		Assert.IsTrue(handles[0] >= 0f && handles[2] <= 1f, "Handles must remain on track.");
+	}
+
+	[TestMethod]
+	public void Drag_KeepsHandlesAscendingWhenNegativeMinGapDragsToUpperBound()
+	{
+		// A negative minGap should not invert order even when dragging toward the upper bound.
+		// Verify ascending order is maintained.
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, 1f, 0f, 1f, -0.2f);
+
+		Assert.IsTrue(handles[0] <= handles[1] && handles[1] <= handles[2], "Handles must remain ascending after drag with negative minGap.");
+		Assert.IsTrue(handles[0] >= 0f && handles[2] <= 1f, "Handles must remain on track.");
+	}
 }
