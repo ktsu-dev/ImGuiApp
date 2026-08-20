@@ -48,15 +48,35 @@ public class HandleTrackStateTests
 	}
 
 	[TestMethod]
-	public void Normalize_KeepsHandlesInsideTheBoundsWhenOpeningTheGap()
+	public void Normalize_SettlesDownWhenHandlesAreClusteredAtTheTop()
 	{
-		// Three handles piled against the top with a gap that will not fit below it. Pushing up
-		// blindly would put a handle past upperBound; the pass has to walk back down instead.
+		// Three handles piled against the top with a minGap that fits comfortably. The upward
+		// pass separates them; the downward settle ensures none escape upperBound.
 		float[] handles = [1f, 1f, 1f];
 
 		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0.25f);
 
 		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "A handle was pushed below lowerBound.");
 		Assert.IsLessThanOrEqualTo(1f, handles[2], "A handle was pushed above upperBound.");
+	}
+
+	[TestMethod]
+	public void Normalize_NarrowsMinGapWhenItCannotFit()
+	{
+		// Three handles in a span of 1 with minGap = 0.6 require spread of 1.2, which exceeds
+		// the available range. The gap is narrowed to spread evenly (0.5 each) with all handles
+		// kept strictly inside bounds.
+		float[] handles = [1f, 1f, 1f];
+
+		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0.6f);
+
+		// Verify all handles are strictly inside bounds
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "First handle pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "Last handle pushed above upperBound.");
+
+		// Verify handles are evenly spread
+		float gap1 = handles[1] - handles[0];
+		float gap2 = handles[2] - handles[1];
+		Assert.AreEqual(gap1, gap2, 1e-6f, "Gaps should be equal when minGap is narrowed.");
 	}
 }

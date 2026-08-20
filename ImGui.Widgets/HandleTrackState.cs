@@ -28,6 +28,8 @@ public static partial class ImGuiWidgets
 		/// Run before interaction so the handles are in a valid state whatever the caller passed.
 		/// The gap pass walks upward and then back down, because pushing up alone would drive the
 		/// last handle past <paramref name="upperBound"/> when the gaps cannot all fit.
+		/// If the requested <paramref name="minGap"/> is too wide to fit all handles, it is narrowed
+		/// so the handles spread evenly across the range — a sensible default for UI controls.
 		/// </remarks>
 		public static void Normalize(Span<float> handles, float lowerBound, float upperBound, float minGap)
 		{
@@ -36,7 +38,7 @@ public static partial class ImGuiWidgets
 				(lowerBound, upperBound) = (upperBound, lowerBound);
 			}
 
-			minGap = Math.Clamp(minGap, 0f, upperBound - lowerBound);
+			minGap = Math.Clamp(minGap, 0f, handles.Length > 1 ? (upperBound - lowerBound) / (handles.Length - 1) : 0f);
 
 			for (int i = 0; i < handles.Length; i++)
 			{
