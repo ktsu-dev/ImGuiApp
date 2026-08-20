@@ -1,8 +1,6 @@
-## v3.9.0 (minor)
+## v3.9.1 (patch)
 
-Changes since v3.8.0:
+Changes since v3.9.0:
 
-- docs: refer to the host in plain code so the iOS target compiles [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
-- feat: let a headless session install its own renderer backend [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
-- chore: refresh the API compatibility suppressions [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 20 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
