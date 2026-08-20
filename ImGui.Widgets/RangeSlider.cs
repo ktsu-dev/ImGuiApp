@@ -22,6 +22,10 @@ public static partial class ImGuiWidgets
 	/// span within <paramref name="min"/>..<paramref name="max"/>. The handles cannot cross and are
 	/// kept at least <paramref name="minGap"/> apart.
 	/// </summary>
+	/// <remarks>
+	/// If <paramref name="lower"/> and <paramref name="upper"/> arrive inverted, they are sorted rather than
+	/// collapsed, so a caller that passes them the wrong way round gets both values preserved.
+	/// </remarks>
 	/// <param name="label">A unique label; text after <c>##</c> is hidden but used for the ID. Visible text is drawn to the right.</param>
 	/// <param name="lower">The lower bound of the selected range. Updated in place.</param>
 	/// <param name="upper">The upper bound of the selected range. Updated in place.</param>
