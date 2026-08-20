@@ -183,4 +183,41 @@ public class HandleTrackStateTests
 
 		Assert.AreEqual(-1, state.ActiveHandle);
 	}
+
+	[TestMethod]
+	public void Drag_KeepsHandlesOnTheTrackWhenMinGapIsTooWide()
+	{
+		// Two handles at the top with a minGap so wide it cannot fit between bounds.
+		// The active handle must not be pushed outside the track. This reproduces a case where
+		// Normalize narrowed the gap but Drag received the caller's original value, causing
+		// derived floor/ceiling to exceed the bounds.
+		float[] handles = [0.9f, 0.95f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.95f);
+
+		state.Drag(handles, 1.5f, 0f, 1f, 0.5f);
+
+		Assert.IsTrue(handles[0] >= 0f, "First handle pushed below lowerBound.");
+		Assert.IsTrue(handles[1] <= 1f, "Active handle pushed above upperBound.");
+		Assert.IsTrue(handles[1] >= handles[0], "Handles are not in ascending order.");
+	}
+
+	[TestMethod]
+	public void Drag_PreservesHandleOrderWhenNeighborsAreAlreadyCloserThanMinGap()
+	{
+		// Three handles clustered together with a minGap so wide the neighbors are already
+		// closer than it allows. The middle handle must stay between its neighbors and remain
+		// on the track. This reproduces the case where Normalize narrowed the gap internally
+		// but Drag received the original value, causing inversion.
+		float[] handles = [0.85f, 0.9f, 0.95f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.9f);
+
+		state.Drag(handles, 1.5f, 0f, 1f, 0.6f);
+
+		Assert.IsTrue(handles[1] >= handles[0], "Handles are not in ascending order.");
+		Assert.IsTrue(handles[2] >= handles[1], "Handles are not in ascending order.");
+		Assert.IsTrue(handles[0] >= 0f, "First handle pushed below lowerBound.");
+		Assert.IsTrue(handles[2] <= 1f, "Last handle pushed above upperBound.");
+	}
 }

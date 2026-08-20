@@ -66,11 +66,20 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
-			float floor = ActiveHandle == 0 ? lowerBound : handles[ActiveHandle - 1] + minGap;
-			float ceiling = ActiveHandle == handles.Length - 1 ? upperBound : handles[ActiveHandle + 1] - minGap;
+			float low = ActiveHandle == 0 ? lowerBound : handles[ActiveHandle - 1];
+			float high = ActiveHandle == handles.Length - 1 ? upperBound : handles[ActiveHandle + 1];
 
-			// A gap wider than the space available would invert these; keep the window non-empty.
-			ceiling = MathF.Max(ceiling, floor);
+			// Order and the track bounds are inviolable; minGap is what yields when the neighbours
+			// are already closer together than it. They can be: Normalize narrows an over-wide gap
+			// to fit, but Drag is handed the caller's original value, so the two disagree by
+			// construction. Deriving the window from neighbour values and clamping both ends to the
+			// track is what keeps a squeezed handle from being pushed off the end of it.
+			float floor = Math.Clamp(MathF.Min(low + minGap, high), lowerBound, upperBound);
+			float ceiling = Math.Clamp(MathF.Max(high - minGap, low), lowerBound, upperBound);
+			if (ceiling < floor)
+			{
+				ceiling = floor;
+			}
 
 			float clamped = Math.Clamp(value, floor, ceiling);
 			if (clamped == handles[ActiveHandle])
