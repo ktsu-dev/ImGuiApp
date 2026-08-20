@@ -12,7 +12,7 @@ using ktsu.Semantics.Color;
 /// <param name="Start">Frame the clip starts on.</param>
 /// <param name="End">Frame the clip ends on.</param>
 /// <param name="TypeIndex">Index into the source's type names.</param>
-/// <param name="Color">Colour the clip is drawn in.</param>
+/// <param name="Color">Color the clip is drawn in.</param>
 public sealed record SequenceItem(int Start, int End, int TypeIndex, Srgb Color);
 
 public static partial class ImGuiWidgets

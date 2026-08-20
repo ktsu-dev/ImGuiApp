@@ -84,6 +84,6 @@ Rendering is a CPU rasterizer, not the OpenGL backend the application ships with
 results identical on every machine, and it is also why a defect confined to the GL renderer will not
 be caught here.
 
-Only marked items can be addressed by name. Two identically labelled widgets in the same window with
+Only marked items can be addressed by name. Two identically labeled widgets in the same window with
 no scope between them collide, and are refused rather than guessed at. ImGui has the same limitation
 and the same remedy, which is to give them distinct identifiers.

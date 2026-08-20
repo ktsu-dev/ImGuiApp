@@ -48,7 +48,7 @@ public class ImGuiAppViewController : UIViewController
 	public override void LoadView() => View = new MetalView(UIScreen.MainScreen.Bounds);
 
 	/// <summary>
-	/// Initialises the renderer against the Metal view and builds the display link. Called once by
+	/// Initializes the renderer against the Metal view and builds the display link. Called once by
 	/// UIKit after the view loads.
 	/// </summary>
 	public override void ViewDidLoad()
@@ -196,8 +196,8 @@ public class ImGuiAppViewController : UIViewController
 		EndPrimaryTouch(touches);
 	}
 
-	/// <summary>Releases the ImGui mouse button when the primary touch is cancelled.</summary>
-	/// <param name="touches">The touches that were cancelled.</param>
+	/// <summary>Releases the ImGui mouse button when the primary touch is canceled.</summary>
+	/// <param name="touches">The touches that were canceled.</param>
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesCancelled(NSSet touches, UIEvent? evt)
 	{

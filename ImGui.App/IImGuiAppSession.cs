@@ -10,7 +10,7 @@ namespace ktsu.ImGui.App;
 /// Unlike <see cref="ImGuiApp.Start(ImGuiAppConfig)"/>, which runs a blocking render loop on the calling
 /// thread, an embedded session runs its loop on a dedicated UI thread that it owns. The host drives the
 /// session through this interface — forwarding resize and focus changes and disposing it to tear the
-/// window down — while requests are marshalled onto the UI thread. Disposing the session stops the loop,
+/// window down — while requests are marshaled onto the UI thread. Disposing the session stops the loop,
 /// detaches the window from its host, and releases the render resources.
 /// </remarks>
 public interface IImGuiAppSession : IDisposable

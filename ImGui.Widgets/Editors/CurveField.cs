@@ -37,7 +37,7 @@ public static partial class ImGuiWidgets
 	/// through this editor: seed at least one point with <see cref="CurveData.AddPoint"/> first.
 	/// </para>
 	/// <para>
-	/// <paramref name="selection"/> is normalised before and after the vendor call, so it never
+	/// <paramref name="selection"/> is normalized before and after the vendor call, so it never
 	/// addresses a point that is not there. Upstream removes <c>Points[currentSelection]</c> on a
 	/// double-click (<c>ImGuiCurveEditor.cs:208-212</c>) but writes the now-stale index straight back
 	/// out (<c>:233</c>). Clamping alone would only cover deletion of the <em>last</em> point, since

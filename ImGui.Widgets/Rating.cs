@@ -127,7 +127,7 @@ public static partial class ImGuiWidgets
 				verts[i] = new Vector2(center.X + (MathF.Cos(angle) * r), center.Y + (MathF.Sin(angle) * r));
 			}
 
-			// A star is star-shaped about its centre, so a triangle fan from the centre fills it correctly.
+			// A star is star-shaped about its center, so a triangle fan from the center fills it correctly.
 			for (int i = 0; i < verts.Length; i++)
 			{
 				drawList.AddTriangleFilled(center, verts[i], verts[(i + 1) % verts.Length], color);

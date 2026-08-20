@@ -24,7 +24,7 @@ public static partial class ImGuiApp
 	/// non-blocking floating window; with <see cref="ImGuiAppWindowHost.EmbeddedChild"/> the window is
 	/// reparented under <see cref="ImGuiAppConfig.ParentWindowHandle"/> so it renders as a docked child.
 	/// Embedded hosting is currently implemented on Windows; the existing <see cref="Start(ImGuiAppConfig)"/>
-	/// behaviour is unchanged.
+	/// behavior is unchanged.
 	/// </remarks>
 	/// <exception cref="ArgumentException">Thrown when <see cref="ImGuiAppConfig.WindowHost"/> is <see cref="ImGuiAppWindowHost.EmbeddedChild"/> but no <see cref="ImGuiAppConfig.ParentWindowHandle"/> was supplied.</exception>
 	/// <exception cref="InvalidOperationException">Thrown when an application is already running.</exception>

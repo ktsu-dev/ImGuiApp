@@ -43,14 +43,14 @@ internal sealed unsafe class MetalRendererBackend : IRendererBackend
 	private readonly IMTLSamplerState samplerState;
 	private readonly Dictionary<nint, IMTLTexture> textures = [];
 
-	// Clear colour matches the desktop renderer's default (RGB 115,140,153).
+	// Clear color matches the desktop renderer's default (RGB 115,140,153).
 	private readonly MTLClearColor clearColor = new(115.0 / 255.0, 140.0 / 255.0, 153.0 / 255.0, 1.0);
 
 	private nint nextTextureId = 1;
 	private bool disposed;
 
 	/// <summary>
-	/// Initialises the Metal backend against a layer. Compiles the embedded ImGui shader at runtime,
+	/// Initializes the Metal backend against a layer. Compiles the embedded ImGui shader at runtime,
 	/// builds the render pipeline (matching the layer's pixel format) and the linear sampler.
 	/// </summary>
 	/// <param name="layer">The Metal layer whose drawables this backend renders into.</param>

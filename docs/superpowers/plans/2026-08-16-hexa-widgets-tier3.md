@@ -1113,10 +1113,10 @@ public static partial class ImGuiWidgets
 		public abstract Span<Vector2> GetPoints(int curveIndex);
 
 		/// <summary>
-		/// Gets the colour a curve is drawn in.
+		/// Gets the color a curve is drawn in.
 		/// </summary>
 		/// <param name="curveIndex">Index of the curve.</param>
-		/// <returns>The curve colour.</returns>
+		/// <returns>The curve color.</returns>
 		public abstract Srgb GetCurveColor(int curveIndex);
 
 		/// <summary>
@@ -1154,7 +1154,7 @@ public static partial class ImGuiWidgets
 		public virtual CurveInterpolation GetInterpolation(int curveIndex) => CurveInterpolation.Linear;
 
 		/// <summary>
-		/// Gets the editor's background colour.
+		/// Gets the editor's background color.
 		/// </summary>
 		public virtual Srgb BackgroundColor => new(0.125f, 0.125f, 0.125f);
 
@@ -1442,7 +1442,7 @@ using ktsu.Semantics.Color;
 /// <param name="Start">Frame the clip starts on.</param>
 /// <param name="End">Frame the clip ends on.</param>
 /// <param name="TypeIndex">Index into the source's type names.</param>
-/// <param name="Color">Colour the clip is drawn in.</param>
+/// <param name="Color">Color the clip is drawn in.</param>
 public sealed record SequenceItem(int Start, int End, int TypeIndex, Srgb Color);
 
 public static partial class ImGuiWidgets

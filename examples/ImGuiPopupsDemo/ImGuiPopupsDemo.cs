@@ -164,7 +164,7 @@ internal static class ImGuiPopupsDemo
 				Dictionary<string, Action?> buttons = new()
 				{
 					{ "Delete", () => lastPromptResult = "User confirmed deletion" },
-					{ CancelLabel, () => lastPromptResult = "User cancelled deletion" }
+					{ CancelLabel, () => lastPromptResult = "User canceled deletion" }
 				};
 				string warning = "⚠️ WARNING: This action cannot be undone!\n\nAre you sure you want to delete all selected files?";
 				popupPrompt.Open("Confirm Deletion", warning, buttons, ImGuiPopups.PromptTextLayoutType.Wrapped, new Vector2(400, 200));
@@ -399,7 +399,7 @@ internal static class ImGuiPopupsDemo
 		ImGui.SameLine();
 		if (ImGui.Button(CancelLabel))
 		{
-			lastCustomModalResult = "User cancelled";
+			lastCustomModalResult = "User canceled";
 			ImGui.CloseCurrentPopup();
 		}
 	}
@@ -424,7 +424,7 @@ internal static class ImGuiPopupsDemo
 							popupMessageOK.Open("Success", $"Invitation sent to {friend}!");
 						}
 					},
-					{ CancelLabel, () => lastPromptResult = "Workflow cancelled" }
+					{ CancelLabel, () => lastPromptResult = "Workflow canceled" }
 				};
 
 				popupPrompt.Open("Step 3: Confirm", $"{name}, send invitation to {friend}?", buttons);

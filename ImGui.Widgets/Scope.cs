@@ -20,7 +20,7 @@ public static partial class ImGuiWidgets
 	/// <param name="size">The scope size in pixels. Non-positive components fall back to sensible defaults.</param>
 	/// <param name="amplitude">A vertical scale applied to the samples before plotting.</param>
 	/// <remarks>
-	/// Samples are drawn left to right with the zero line through the vertical centre; values are clamped
+	/// Samples are drawn left to right with the zero line through the vertical center; values are clamped
 	/// to the plot area so out-of-range peaks do not draw outside the widget.
 	/// </remarks>
 	public static void Scope(string label, ReadOnlySpan<float> samples, Vector2 size, float amplitude = 1.0f)

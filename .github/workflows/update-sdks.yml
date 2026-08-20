@@ -42,19 +42,6 @@ jobs:
           submodules: recursive
           persist-credentials: true
 
-      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}.x
-          # Keyed on the files that actually pin versions. See the same note in dotnet.yml. This
-          # workflow rewrites the SDK versions in global.json, so including it here also means the
-          # verification build after an update does not restore against a stale key.
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/Directory.Packages.props
-            **/global.json
-
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
@@ -254,6 +241,27 @@ jobs:
           }
         env:
           FORCE_UPDATE: ${{ inputs.force_update }}
+
+      # Deliberately placed after the update check rather than next to Checkout. setup-dotnet
+      # registers a post-job step that saves the NuGet cache, and that step fails the run if
+      # ~/.nuget/packages was never created. On the far more common no-updates path every step
+      # below is skipped, nothing ever restores, and the cache save errors out on a green repo.
+      # Gating the whole action on has_updates keeps the cache for the path that benefits from
+      # it while leaving the no-op path clean. It also means the cache key is computed after
+      # global.json has been rewritten, which is what the note below actually wants.
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        if: steps.update_sdks.outputs.has_updates == 'true'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          # Keyed on the files that actually pin versions. See the same note in dotnet.yml. This
+          # workflow rewrites the SDK versions in global.json, so including it here also means the
+          # verification build after an update does not restore against a stale key.
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
 
       - name: Restore Dependencies
         if: steps.update_sdks.outputs.has_updates == 'true'

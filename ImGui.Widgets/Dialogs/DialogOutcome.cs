@@ -22,7 +22,7 @@ public enum DialogOutcome
 	Ok,
 
 	/// <summary>
-	/// The user cancelled.
+	/// The user canceled.
 	/// </summary>
 	Cancel,
 

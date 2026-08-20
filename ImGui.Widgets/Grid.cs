@@ -114,7 +114,7 @@ public static partial class ImGuiWidgets
 	/// <param name="items">The items to be displayed in the grid.</param>
 	/// <param name="measureDelegate">The delegate to measure the size of each item.</param>
 	/// <param name="drawDelegate">The delegate to draw each item.</param>
-	/// <param name="gridOptions">Additional options to modify the grid behaviour</param>
+	/// <param name="gridOptions">Additional options to modify the grid behavior</param>
 	public static void RowMajorGrid<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
 	{
 		Ensure.NotNull(items);
@@ -150,7 +150,7 @@ public static partial class ImGuiWidgets
 	/// <param name="items">The items to be displayed in the grid.</param>
 	/// <param name="measureDelegate">The delegate to measure the size of each item.</param>
 	/// <param name="drawDelegate">The delegate to draw each item.</param>
-	/// <param name="gridOptions">Additional options to modify the grid behaviour</param>
+	/// <param name="gridOptions">Additional options to modify the grid behavior</param>
 	public static void ColumnMajorGrid<T>(string id, IEnumerable<T> items, MeasureGridCell<T> measureDelegate, DrawGridCell<T> drawDelegate, GridOptions gridOptions)
 	{
 		Ensure.NotNull(items);

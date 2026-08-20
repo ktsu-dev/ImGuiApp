@@ -497,7 +497,7 @@ their own window in those environments end up fighting the tiler and persisting 
 
 `ImGuiAppConfig.WindowGeometry` selects who is in charge:
 
-| Value | Behaviour |
+| Value | Behavior |
 |-------|-----------|
 | `Auto` (default) | Detects Wayland sessions and known tiling window managers, and hands geometry to them; everything else keeps the application in charge |
 | `Application` | The application places its own window: the requested position is honoured, off-screen windows are relocated, and the live position is recorded in `ImGuiApp.WindowState` |
@@ -587,7 +587,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version changes.
 
-## Acknowledgements
+## Acknowledgments
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui

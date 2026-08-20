@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 /// <summary>
 /// Tests for the pure helpers backing the Hexa-delegated widgets. The draw paths need a live
 /// ImGui context and are verified visually in ImGuiWidgetsDemo; these cover the argument
-/// resolution and marshalling logic that can run without one.
+/// resolution and marshaling logic that can run without one.
 /// </summary>
 [TestClass]
 public sealed class HexaWidgetTests

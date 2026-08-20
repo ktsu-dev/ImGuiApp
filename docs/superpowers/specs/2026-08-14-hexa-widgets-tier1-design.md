@@ -27,7 +27,7 @@ deciding which implementation to keep.
 - **Packaging**: Everything lands in the existing `ImGui.Widgets` project as
   `ImGuiWidgets` partials. No new project, no separate opt-in package.
 - **API shape**: Idiomatic ktsu conventions with flat names and no vendor marker —
-  `ImGuiWidgets.Spinner()`, not `ImGuiWidgets.Hexa.Spinner()`. Semantic colour and path
+  `ImGuiWidgets.Spinner()`, not `ImGuiWidgets.Hexa.Spinner()`. Semantic color and path
   types, no `unsafe` in the public surface.
 - **Sequencing**: Tier 1 now; Tiers 2–4 specced later, informed by what Tier 1 settles
   about house style and by which duplicate widgets survive the comparison.
@@ -68,7 +68,7 @@ Compatibility notes, all verified against the upstream project files:
 - Hexa depends on `Hexa.NET.ImGui 2.2.8.4`; central package management pins `2.2.9`, which
   wins. `Hexa.NET.ImGuizmo 2.2.9` is already pinned in this repo.
 - `ImGui.Widgets` already sets `<AllowUnsafeBlocks>True</AllowUnsafeBlocks>`, which the
-  flame-graph marshalling needs.
+  flame-graph marshaling needs.
 
 ### `ImGui.App/FontHelper.cs`
 
@@ -158,7 +158,7 @@ public enum InlineButtonPlacement
 
 Applied uniformly across every wrapper:
 
-1. **Colour.** Hexa's `uint` (ABGR-packed) and `Vector4` colour parameters become
+1. **Color.** Hexa's `uint` (ABGR-packed) and `Vector4` color parameters become
    `ktsu.Semantics` `Srgb` or `Color`, converted at the call boundary using the existing
    `ImGui.Color` extensions. `Srgb` is used where Hexa takes a packed `uint`; `Color`
    where it takes a `Vector4`.
@@ -167,7 +167,7 @@ Applied uniformly across every wrapper:
    `ImGui.GetColorU32` — rather than the pure-pack `Color.ToImGuiU32()`. This is
    deliberate: Hexa passes these straight to draw-list calls, and going through the
    style alpha means Hexa-backed widgets fade consistently with the rest of the UI under
-   `ScopedDisable` and other alpha changes. The consequence is that every colour-taking
+   `ScopedDisable` and other alpha changes. The consequence is that every color-taking
    wrapper requires an active ImGui context, which is already true of all of them.
 2. **Strings.** Only `string` overloads are exposed. Hexa's `byte*` and
    `ReadOnlySpan<byte>` overloads are not surfaced.
@@ -200,7 +200,7 @@ Applied uniformly across every wrapper:
    compile-time constant.
 8. **No `unsafe` in signatures.** Any pointer work is confined to wrapper internals.
 
-### Flame graph marshalling
+### Flame graph marshaling
 
 The largest adaptation. Hexa exposes:
 
@@ -213,7 +213,7 @@ void PlotFlame(string label, ValuesGetter valuesGetter, void* data, int valuesCo
 
 Our wrapper accepts `IReadOnlyList<FlameGraphSample>` and supplies the callback itself. The
 callback reads from the caller's list via a pinned `GCHandle` passed as `data`, writing
-`Start`, `End` and `Level` directly and marshalling `Caption` to a UTF-8 buffer whose
+`Start`, `End` and `Level` directly and marshaling `Caption` to a UTF-8 buffer whose
 lifetime spans the `PlotFlame` call. Caption buffers are allocated once per call into a
 pooled native block sized to the sum of the captions' UTF-8 byte lengths, not per-sample,
 to keep the per-frame allocation to one.
@@ -252,7 +252,7 @@ story has to be designed anyway.
 A new tab in `examples/ImGuiWidgetsDemo`, titled **"Hexa vs ktsu"**.
 
 Layout: a two-column grid, ours on the left, Hexa's on the right, one row per overlapping
-pair. Both columns of a row bind to the *same* backing state, so divergent behaviour
+pair. Both columns of a row bind to the *same* backing state, so divergent behavior
 (different hit areas, different keyboard handling, different response to the same value)
 is visible live rather than inferred from two independent demos.
 
@@ -277,9 +277,9 @@ untested and a *pure helper extracted from it* (`ImGuiWidgets.CalcTextBlockSize`
 gets asserted. Anything touching `ImGui.GetStyle()`, `ImGui.GetFontSize()` or a draw list
 would null-deref without a context.
 
-That rules out testing colour conversion directly, because the `Srgb.ToImGuiU32()` chosen
+That rules out testing color conversion directly, because the `Srgb.ToImGuiU32()` chosen
 in the conversion rules applies the global style alpha and therefore requires a live
-context. Colour output is verified visually in the demo instead.
+context. Color output is verified visually in the demo instead.
 
 So each wrapper's context-dependent logic is split into a pure `internal static` helper
 that the wrapper calls, and only the helper is unit-tested:

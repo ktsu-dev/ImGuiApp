@@ -180,7 +180,7 @@ Rejected alternative: collapsing to `Affirmative`/`Negative` so no distinction i
 Honest, but it degrades `MessageBox`, which does carry the distinction, and it reads poorly for
 an `Ok`-only dialog.
 
-## Upstream behaviour we surface rather than hide
+## Upstream behavior we surface rather than hide
 
 These are Hexa's characteristics. The comparison tab exists to judge Hexa's widgets on their
 merits, so the wrappers must not quietly paper over them — and must not quietly inherit blame for
@@ -235,10 +235,10 @@ constraint. What is pure, and therefore gets real tests:
   resolves to `Yes` for the three Yes-flavoured types and `Ok` for the rest.
 - Path round-tripping through `AbsoluteFilePath` / `AbsoluteDirectoryPath`, including drive roots
   and UNC paths.
-- Pump state: never-ran detection, same-frame double-pump detection, frame-advance behaviour.
+- Pump state: never-ran detection, same-frame double-pump detection, frame-advance behavior.
 
 Standing rule carried from the Tier 1 `FlameGraph` Critical: for any callback- or
-marshalling-shaped upstream API, read **every call site of the callback**, not just its
+marshaling-shaped upstream API, read **every call site of the callback**, not just its
 signature. That bug was a guaranteed process crash and was invisible to both the compiler and the
 test suite.
 

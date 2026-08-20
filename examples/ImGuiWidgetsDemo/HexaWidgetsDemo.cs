@@ -19,7 +19,7 @@ using ktsu.Semantics.Strings;
 /// <summary>
 /// Side-by-side comparison of the widgets that exist in both ktsu.ImGui.Widgets and
 /// Hexa.NET.ImGui.Widgets, plus a gallery of the Hexa widgets that have no ktsu counterpart.
-/// Each comparison row drives both implementations from the same backing field so behavioural
+/// Each comparison row drives both implementations from the same backing field so behavioral
 /// differences are visible rather than inferred.
 /// <para>
 /// The three entry points -- <see cref="ShowComparison"/>, <see cref="ShowNetNew"/> and
@@ -286,7 +286,7 @@ internal static class HexaWidgetsDemo
 		ImGui.TextUnformatted($"Answer:  {sharedMessageAnswer}");
 
 		ImGui.Separator();
-		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged. ktsu's dialogs render inline wherever they are pumped (see the ShowIfOpen calls in ShowDialogComparison) rather than through a central deferred-draw manager, and ktsu's MessageOK has no built-in Yes/No button-set the way Hexa's ShowMessageBox does -- this row's ktsu answer is always \"Ok\".");
+		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centers itself every frame and cannot be dragged. ktsu's dialogs render inline wherever they are pumped (see the ShowIfOpen calls in ShowDialogComparison) rather than through a central deferred-draw manager, and ktsu's MessageOK has no built-in Yes/No button-set the way Hexa's ShowMessageBox does -- this row's ktsu answer is always \"Ok\".");
 	}
 
 	/// <summary>

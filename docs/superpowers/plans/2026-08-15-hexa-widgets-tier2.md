@@ -172,7 +172,7 @@ public enum DialogOutcome
 	Ok,
 
 	/// <summary>
-	/// The user cancelled.
+	/// The user canceled.
 	/// </summary>
 	Cancel,
 
@@ -1012,7 +1012,7 @@ The registry stores a copy, and `MessageBoxes.Draw()` copies it out again (`Mess
 
 The callback *does* work: `MessageBox.Draw()` invokes `Callback?.Invoke(this, Userdata)` on the copy that has the correct `Result` set. **The wrapper must use the callback exclusively and must never read the returned struct.**
 
-A related upstream quirk to document but not fix: because the mutated copy is never written back, the private `shown` latch resets every frame, so `Draw()` re-runs `ImGui.OpenPopup(Title)` and its `SetNextWindowPos(..., Appearing, ...)` every frame. The message box therefore re-centres and cannot be dragged away. That is a real behavioural difference from `ImGuiPopups.MessageOK` and the comparison tab should show it.
+A related upstream quirk to document but not fix: because the mutated copy is never written back, the private `shown` latch resets every frame, so `Draw()` re-runs `ImGui.OpenPopup(Title)` and its `SetNextWindowPos(..., Appearing, ...)` every frame. The message box therefore re-centers and cannot be dragged away. That is a real behavioral difference from `ImGuiPopups.MessageOK` and the comparison tab should show it.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1235,7 +1235,7 @@ git commit -m "Add the message box wrappers"
 
 - [ ] **Step 1: Write the implementation**
 
-There is no pure logic here to test — the type is an abstract adapter whose every member forwards to a base class that needs a live ImGui context. Adding a test that only asserts "a subclass can be constructed" would assert nothing about behaviour.
+There is no pure logic here to test — the type is an abstract adapter whose every member forwards to a base class that needs a live ImGui context. Adding a test that only asserts "a subclass can be constructed" would assert nothing about behavior.
 
 Create `ImGui.Widgets/DockedWindow.cs`:
 
@@ -1404,7 +1404,7 @@ Add a `ShowDialogComparison()` method and call it from a new tab item in `Show`:
 		ImGui.TextUnformatted($"Answer:  {sharedMessageAnswer}");
 
 		ImGui.Separator();
-		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centres itself every frame and cannot be dragged.");
+		ImGui.TextWrapped("Hexa's file dialogs need a Material Icons font for their navigation bar, and block the UI thread briefly when closing while the async directory scan unwinds. Hexa's message box re-centers itself every frame and cannot be dragged.");
 	}
 ```
 
@@ -1617,7 +1617,7 @@ git commit -m "Document the Tier 2 dialogs and the deferred-drawing pumps"
 **Spec coverage.** Every spec section maps to a task: the two pumps and diagnostics (Task 2), the
 result-enum disagreement (Task 1), the outcome records (Tasks 3-4), `MessageBox`'s struct
 semantics (Task 5), `DockedWindow` (Task 6), the comparison demo (Task 7), the `DockedWindow` demo
-split (Task 8), documentation (Task 9). The spec's "upstream behaviour we surface rather than
+split (Task 8), documentation (Task 9). The spec's "upstream behavior we surface rather than
 hide" section is covered by the doc comments in Tasks 3 and 5 plus the demo note in Task 7.
 
 **`PopupManager.Remove` is deliberately unused.** The spec records it as broken upstream — it
@@ -1628,9 +1628,9 @@ only call `PopupManager.Draw()`, which has its own working cleanup path.
 tests. Verify the actual starting count rather than trusting these numbers.
 
 **Task 6 has no unit test** by design, and says why: the type is an abstract adapter with no pure
-logic, and a construction-only test would assert nothing about behaviour.
+logic, and a construction-only test would assert nothing about behavior.
 
-**Standing rule from Tier 1.** For any callback- or marshalling-shaped upstream API, read every
+**Standing rule from Tier 1.** For any callback- or marshaling-shaped upstream API, read every
 call site of the callback, not just its signature. The Tier 1 `FlameGraph` Critical was a
 guaranteed process crash invisible to both the compiler and the test suite, found only by reading
 upstream's four call sites. Tasks 3, 4 and 5 all pass callbacks into Hexa.

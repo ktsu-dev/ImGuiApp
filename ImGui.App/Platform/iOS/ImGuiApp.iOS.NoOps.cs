@@ -50,7 +50,7 @@ public static partial class ImGuiApp
 		WarnIosNoOp(nameof(Hide), "iOS controls window visibility; an app cannot show or hide its own window.");
 
 	/// <summary>
-	/// No-op on iOS: the app icon is provided by the app bundle (asset catalogue / Info.plist), not set
+	/// No-op on iOS: the app icon is provided by the app bundle (asset catalog / Info.plist), not set
 	/// at runtime. Logs a warning once. Present so cross-platform code that calls
 	/// <see cref="SetWindowIcon(string)"/> still compiles.
 	/// </summary>

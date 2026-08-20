@@ -25,7 +25,7 @@ public static partial class ImGuiWidgets
 	/// <param name="maxDb">The level mapped to the top of the meter.</param>
 	/// <param name="peakDb">An optional peak-hold level to mark; pass <see cref="float.NegativeInfinity"/> to hide it.</param>
 	/// <remarks>
-	/// The fill is coloured green below -6 dB, amber up to 0 dB, and red above 0 dB, the conventional
+	/// The fill is colored green below -6 dB, amber up to 0 dB, and red above 0 dB, the conventional
 	/// nominal/peak zones of a digital meter.
 	/// </remarks>
 	public static void DbMeter(string label, float db, Vector2 size, float minDb = -60f, float maxDb = 6f, float peakDb = float.NegativeInfinity)
@@ -69,7 +69,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Returns the conventional meter colour for a level in decibels.
+	/// Returns the conventional meter color for a level in decibels.
 	/// </summary>
 	/// <param name="db">The level, in decibels.</param>
 	/// <returns>Green below -6 dB, amber up to 0 dB, otherwise red.</returns>
