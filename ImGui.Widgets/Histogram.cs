@@ -35,7 +35,9 @@ public static partial class ImGuiWidgets
 	/// <remarks>
 	/// Takes bins rather than the data they came from, which is what keeps it usable for any
 	/// distribution and keeps a full scan of the source off the render thread. Bars are scaled
-	/// against the largest finite, positive bin across every series, so the tallest bar always fills
+	/// against the largest finite, positive bin across every series that is actually drawn — a
+	/// trailing partial run dropped because <c>bins.Length</c> is not an exact multiple of
+	/// <paramref name="seriesCount"/> never competes for the peak, so the tallest bar always fills
 	/// the box and callers do not have to decide what full scale means. Negative, zero,
 	/// <see cref="float.NaN"/> and infinite bins are treated as empty and draw nothing for that bar;
 	/// they are also excluded when finding the peak, so one bad value cannot flatten every other bar
@@ -79,12 +81,18 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
+			// Scope the peak search to the range that is actually drawn. bins.Length may not be an
+			// exact multiple of seriesCount, in which case a trailing partial run belongs to no
+			// series and is never drawn below (see the per-series Slice) — letting it compete for
+			// peak would scale every real bar against data that never appears on screen.
+			ReadOnlySpan<float> drawn = bins[..(seriesCount * binCount)];
+
 			// Only finite, positive bins can define the scale. A NaN or infinite bin is excluded here
 			// rather than allowed to win the max: MathF.Max would otherwise propagate NaN (or an
 			// infinite peak would flatten every other bar to zero height), turning one bad sample into
 			// a frame with no readable bars at all.
 			float peak = 0.0f;
-			foreach (float bin in bins)
+			foreach (float bin in drawn)
 			{
 				if (float.IsFinite(bin) && bin > peak)
 				{
