@@ -122,7 +122,7 @@ public class HandleTrackStateTests
 	}
 
 	[TestMethod]
-	public void Drag_StopsAtTheMinimumGapFromItsNeighbour()
+	public void Drag_StopsAtTheMinimumGapFromItsNeighbor()
 	{
 		float[] handles = [0.1f, 0.5f, 0.9f];
 		ImGuiWidgets.HandleTrackState state = new();
@@ -131,7 +131,7 @@ public class HandleTrackStateTests
 		state.Drag(handles, 0.95f, 0f, 1f, 0.1f);
 
 		Assert.AreEqual(0.8f, handles[1], 1e-6f, "The middle handle did not stop a gap short of the upper one.");
-		Assert.AreEqual(0.9f, handles[2], 1e-6f, "Dragging into a neighbour pushed it instead of stopping.");
+		Assert.AreEqual(0.9f, handles[2], 1e-6f, "Dragging into a neighbor pushed it instead of stopping.");
 	}
 
 	[TestMethod]
@@ -197,9 +197,9 @@ public class HandleTrackStateTests
 
 		state.Drag(handles, 1.5f, 0f, 1f, 0.5f);
 
-		Assert.IsTrue(handles[0] >= 0f, "First handle pushed below lowerBound.");
-		Assert.IsTrue(handles[1] <= 1f, "Active handle pushed above upperBound.");
-		Assert.IsTrue(handles[1] >= handles[0], "Handles are not in ascending order.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "First handle pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[1], "Active handle pushed above upperBound.");
+		Assert.IsGreaterThanOrEqualTo(handles[0], handles[1], "Handles are not in ascending order.");
 	}
 
 	[TestMethod]
@@ -215,10 +215,10 @@ public class HandleTrackStateTests
 
 		state.Drag(handles, 1.5f, 0f, 1f, 0.6f);
 
-		Assert.IsTrue(handles[1] >= handles[0], "Handles are not in ascending order.");
-		Assert.IsTrue(handles[2] >= handles[1], "Handles are not in ascending order.");
-		Assert.IsTrue(handles[0] >= 0f, "First handle pushed below lowerBound.");
-		Assert.IsTrue(handles[2] <= 1f, "Last handle pushed above upperBound.");
+		Assert.IsGreaterThanOrEqualTo(handles[0], handles[1], "Handles are not in ascending order.");
+		Assert.IsGreaterThanOrEqualTo(handles[1], handles[2], "Handles are not in ascending order.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "First handle pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "Last handle pushed above upperBound.");
 	}
 
 	[TestMethod]
@@ -239,7 +239,7 @@ public class HandleTrackStateTests
 	[TestMethod]
 	public void Drag_AllowsSingleHandleToReachBothBoundsWithNonzeroMinGap()
 	{
-		// A single handle has no neighbours, so minGap never applies. With or without minGap,
+		// A single handle has no neighbors, so minGap never applies. With or without minGap,
 		// it should still reach both bounds. This protects against regression 1.
 		float[] handles = [0.5f];
 		ImGuiWidgets.HandleTrackState state = new();
@@ -280,8 +280,10 @@ public class HandleTrackStateTests
 
 		state.Drag(handles, 0f, 0f, 1f, -0.2f);
 
-		Assert.IsTrue(handles[0] <= handles[1] && handles[1] <= handles[2], "Handles must remain ascending after drag with negative minGap.");
-		Assert.IsTrue(handles[0] >= 0f && handles[2] <= 1f, "Handles must remain on track.");
+		Assert.IsLessThanOrEqualTo(handles[1], handles[0], "handles[0] must not exceed handles[1] after drag with negative minGap.");
+		Assert.IsLessThanOrEqualTo(handles[2], handles[1], "handles[1] must not exceed handles[2] after drag with negative minGap.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "handles[0] must remain on track (at or above lowerBound).");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "handles[2] must remain on track (at or below upperBound).");
 	}
 
 	[TestMethod]
@@ -295,13 +297,19 @@ public class HandleTrackStateTests
 
 		state.Drag(handles, 1f, 0f, 1f, -0.2f);
 
-		Assert.IsTrue(handles[0] <= handles[1] && handles[1] <= handles[2], "Handles must remain ascending after drag with negative minGap.");
-		Assert.IsTrue(handles[0] >= 0f && handles[2] <= 1f, "Handles must remain on track.");
+		Assert.IsLessThanOrEqualTo(handles[1], handles[0], "handles[0] must not exceed handles[1] after drag with negative minGap.");
+		Assert.IsLessThanOrEqualTo(handles[2], handles[1], "handles[1] must not exceed handles[2] after drag with negative minGap.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "handles[0] must remain on track (at or above lowerBound).");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "handles[2] must remain on track (at or below upperBound).");
 	}
 
-	// RangeSlider has never had tests. These describe the two-handle behaviour read out of its
-	// source before it was moved onto HandleTrackState, and stand in for the regression suite it
-	// never had. If one of these has to change, RangeSlider's behaviour changed with it.
+	// These three tests pin the shared two-handle interaction rules that RangeSlider now depends
+	// on via HandleTrackState. RangeSlider's own refactor commit does not modify HandleTrackState,
+	// so these tests passed before that refactor and would pass even if RangeSlider's wiring to it
+	// were wrong. They do not observe RangeSlider's wiring — its mouseValue formula, the order it
+	// calls Activate/Drag/Release in, writing handles[0]/handles[1] back to lower/upper, or drawing
+	// only after interaction — and RangeSlider has no test covering that wiring, before or after
+	// this branch.
 
 	[TestMethod]
 	public void TwoHandles_LowerCannotCrossUpper()

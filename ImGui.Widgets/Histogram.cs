@@ -30,7 +30,8 @@ public static partial class ImGuiWidgets
 	/// <param name="size">The box to draw into. Non-positive components fall back to sensible defaults.</param>
 	/// <param name="seriesColors">
 	/// One color per series. Entries missing for a series fall back to red, green and blue, then the
-	/// theme's plot color; entries beyond <paramref name="seriesCount"/> are ignored.
+	/// theme's plot color; entries beyond <paramref name="seriesCount"/> are ignored. A single-series
+	/// histogram with no entry skips the red fallback and goes straight to the theme's plot color.
 	/// </param>
 	/// <remarks>
 	/// Takes bins rather than the data they came from, which is what keeps it usable for any

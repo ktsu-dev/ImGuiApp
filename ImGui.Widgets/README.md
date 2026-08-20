@@ -18,7 +18,7 @@ ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provid
 - **Scoped Id**: A utility class for creating scoped IDs
 - **Scoped Disable**: Temporarily disable UI elements within a scope
 - **SearchBox**: A powerful search box with support for various filter types (Glob, Regex, Fuzzy) and matching options
-- **Histogram**: Draws one or more binned distributions as overlaid bars, scaled to the tallest bin, keeping rendering off the main thread by accepting pre-computed bins
+- **Histogram**: Draws one or more binned distributions as overlaid bars, scaled to the tallest bin, keeping the binning scan off the render thread by accepting pre-computed bins
 - **HandleTrack**: Draggable handles over a rectangle you supply, kept sorted and a minimum distance apart, drawing handles only for overlay on content you own
 - **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, a file tree view, stateful file/rename/message dialogs, and a docked-window base class. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
 - **Callback-driven editors**: `Sequencer` (an editable clip timeline), `CurveEditor` (a multi-curve graph, or a single `CurveData` curve), and `BezierEditor` (a cubic easing curve) — driven by a `SequenceSource`/`CurveSource` you subclass, or by a `CurveData`/`BezierControlPoints` value. See [Callback-driven Editors](#callback-driven-editors) below.

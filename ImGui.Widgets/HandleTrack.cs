@@ -19,21 +19,25 @@ public static partial class ImGuiWidgets
 	/// Draws draggable handles over a rectangle the caller supplies, for example one just occupied
 	/// by a histogram plot. The handles stay ordered and at least <paramref name="minGap"/> apart.
 	/// </summary>
-	/// <param name="label">A unique label, used for the ImGui ID and the probe name.</param>
+	/// <param name="label">A unique label, used for the probe name.</param>
 	/// <param name="handles">The handle positions, updated in place. Kept sorted ascending.</param>
 	/// <param name="rectMin">The top-left of the rectangle to overlay.</param>
 	/// <param name="rectMax">The bottom-right of the rectangle to overlay.</param>
 	/// <param name="lowerBound">The value at the left edge.</param>
 	/// <param name="upperBound">The value at the right edge.</param>
-	/// <param name="minGap">The minimum distance kept between neighbouring handles.</param>
+	/// <param name="minGap">The minimum distance kept between neighboring handles.</param>
 	/// <param name="handleRadius">The grab radius in pixels. Non-positive derives it from the rectangle height.</param>
-	/// <param name="handleCenterY">The vertical centre of the handles. <see cref="float.NaN"/> uses the rectangle's centre.</param>
+	/// <param name="handleCenterY">The vertical center of the handles. <see cref="float.NaN"/> uses the rectangle's center.</param>
 	/// <returns><see langword="true"/> if a handle moved this frame; otherwise <see langword="false"/>.</returns>
 	/// <remarks>
 	/// The widget places an invisible button over the rectangle so activation and dragging work
 	/// through ImGui's normal item mechanics, then restores the cursor so the caller's layout is
 	/// undisturbed. It draws handles and nothing else — no track, no fill — because it is designed
-	/// to sit on top of content it does not own.
+	/// to sit on top of content it does not own, for example a <see cref="Histogram"/> already drawn
+	/// into the same rectangle. An empty <paramref name="handles"/> returns immediately, before the
+	/// invisible button is submitted and before the probe is marked, so a call with no handles
+	/// consumes no layout and registers no probe — the opposite policy to <see cref="Histogram"/>,
+	/// which always reserves layout and draws its frame.
 	/// </remarks>
 	public static bool HandleTrack(
 		string label,
