@@ -595,8 +595,8 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 - **`InlineButton`**: Compact button anchored inside an existing rectangle, for rows and headers
 - **`IconTreeNode`**: Tree node with a colored icon glyph before its label
 - **`EnumCombo<T>`**: Combo box listing every member of an enum type
-- **`TextCenteredV` / `TextCenteredH` / `TextCenteredVH`**: Text centerd vertically, horizontally, or both
-- **`ImageCenteredV` / `ImageCenteredH` / `ImageCenteredVH`**: Image centerd vertically, horizontally, or both
+- **`TextCenteredV` / `TextCenteredH` / `TextCenteredVH`**: Text centered vertically, horizontally, or both
+- **`ImageCenteredV` / `ImageCenteredH` / `ImageCenteredVH`**: Image centered vertically, horizontally, or both
 - **`ImageScaleTo`**: Image scaled to fit inside a destination box while preserving aspect ratio
 - **`Tooltip`**: Shows a tooltip for the preceding item while it is hovered
 - **`Breadcrumb`**: Clickable breadcrumb trail from a separator-delimited path

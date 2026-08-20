@@ -1001,7 +1001,7 @@ using HexaTextHelper = Hexa.NET.ImGui.Widgets.TextHelper;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws text centerd vertically within the current line.
+	/// Draws text centered vertically within the current line.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -1012,7 +1012,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws text centerd horizontally within the available content region.
+	/// Draws text centered horizontally within the available content region.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -1023,7 +1023,7 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Draws text centerd both vertically and horizontally within the available content region.
+	/// Draws text centered both vertically and horizontally within the available content region.
 	/// </summary>
 	/// <param name="text">The text to draw.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
@@ -1114,7 +1114,7 @@ using HexaImageHelper = Hexa.NET.ImGui.Widgets.ImageHelper;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// Draws an image centerd vertically within the current line.
+	/// Draws an image centered vertically within the current line.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -1122,7 +1122,7 @@ public static partial class ImGuiWidgets
 		HexaImageHelper.ImageCenteredV(new ImTextureRef(texId: textureId), size);
 
 	/// <summary>
-	/// Draws an image centerd horizontally within the available content region.
+	/// Draws an image centered horizontally within the available content region.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
@@ -1130,7 +1130,7 @@ public static partial class ImGuiWidgets
 		HexaImageHelper.ImageCenteredH(new ImTextureRef(texId: textureId), size);
 
 	/// <summary>
-	/// Draws an image centerd both vertically and horizontally within the available content region.
+	/// Draws an image centered both vertically and horizontally within the available content region.
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>

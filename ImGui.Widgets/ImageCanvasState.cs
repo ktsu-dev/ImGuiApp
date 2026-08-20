@@ -10,8 +10,8 @@ public static partial class ImGuiWidgets
 	/// Pan and zoom state for an image canvas, independent of any rendering.
 	/// </summary>
 	/// <remarks>
-	/// Pan is expressed as an offset in viewport pixels applied to the image's centerd position, so a
-	/// pan of zero always means "centerd", whatever the zoom.
+	/// Pan is expressed as an offset in viewport pixels applied to the image's centered position, so a
+	/// pan of zero always means "centered", whatever the zoom.
 	/// </remarks>
 	public sealed class ImageCanvasState
 	{
