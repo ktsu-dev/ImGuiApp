@@ -17,7 +17,7 @@ public static partial class ImGuiWidgets
 	/// <summary>
 	/// Draws one or more binned distributions as overlaid bars.
 	/// </summary>
-	/// <param name="label">A unique label, used for the ImGui ID and the probe name.</param>
+	/// <param name="label">A unique label, used for the probe name.</param>
 	/// <param name="bins">
 	/// Bin values, laid out as <paramref name="seriesCount"/> contiguous runs of equal length. A
 	/// trailing partial run (when <c>bins.Length</c> is not an exact multiple of

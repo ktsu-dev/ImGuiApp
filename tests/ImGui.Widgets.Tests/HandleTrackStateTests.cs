@@ -273,7 +273,7 @@ public class HandleTrackStateTests
 	public void Drag_HandlesNegativeMinGapByClampingToZero()
 	{
 		// A negative minGap is invalid and inverts handle order. Drag must clamp it to zero,
-		// matching Normalize. This protects against negative minGap being treated as licence to overlap.
+		// matching Normalize. This protects against negative minGap being treated as license to overlap.
 		float[] handles = [0.1f, 0.5f, 0.9f];
 		ImGuiWidgets.HandleTrackState state = new();
 		state.Activate(handles, 0.5f);

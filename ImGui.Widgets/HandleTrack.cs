@@ -19,7 +19,7 @@ public static partial class ImGuiWidgets
 	/// Draws draggable handles over a rectangle the caller supplies, for example one just occupied
 	/// by a histogram plot. The handles stay ordered and at least <paramref name="minGap"/> apart.
 	/// </summary>
-	/// <param name="label">A unique label, used for the probe name.</param>
+	/// <param name="label">A unique label, used for the ImGui ID and the probe name.</param>
 	/// <param name="handles">The handle positions, updated in place. Kept sorted ascending.</param>
 	/// <param name="rectMin">The top-left of the rectangle to overlay.</param>
 	/// <param name="rectMax">The bottom-right of the rectangle to overlay.</param>
