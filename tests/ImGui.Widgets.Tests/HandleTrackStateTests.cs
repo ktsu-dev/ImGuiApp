@@ -220,4 +220,52 @@ public class HandleTrackStateTests
 		Assert.IsTrue(handles[0] >= 0f, "First handle pushed below lowerBound.");
 		Assert.IsTrue(handles[2] <= 1f, "Last handle pushed above upperBound.");
 	}
+
+	[TestMethod]
+	public void Drag_AllowsEdgeHandleToReachItsTrackBoundWithNonzeroMinGap()
+	{
+		// minGap separates handles from each other, not from the track ends. An edge handle
+		// with a nonzero minGap must still be able to reach its own bound. This protects against
+		// regression 1: minGap being incorrectly applied to bounds.
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.1f);
+
+		state.Drag(handles, -5f, 0f, 1f, 0.05f);
+
+		Assert.AreEqual(0f, handles[0], 1e-6f, "Edge handle should reach its track bound.");
+	}
+
+	[TestMethod]
+	public void Drag_AllowsSingleHandleToReachBothBoundsWithNonzeroMinGap()
+	{
+		// A single handle has no neighbours, so minGap never applies. With or without minGap,
+		// it should still reach both bounds. This protects against regression 1.
+		float[] handles = [0.5f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, -5f, 0f, 1f, 0.2f);
+
+		Assert.AreEqual(0f, handles[0], 1e-6f, "Single handle should reach lowerBound.");
+
+		state.Drag(handles, 5f, 0f, 1f, 0.2f);
+
+		Assert.AreEqual(1f, handles[0], 1e-6f, "Single handle should reach upperBound.");
+	}
+
+	[TestMethod]
+	public void Drag_AcceptsInvertedBoundsWithoutThrowing()
+	{
+		// Drag must handle inverted bounds the same way Normalize does: swap them. It must not
+		// throw ArgumentException. This protects against regression 2.
+		float[] handles = [0.7f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.7f);
+
+		// Should not throw, and should clamp to the (swapped) bounds [0, 1]
+		state.Drag(handles, 0.7f, 1f, 0f, 0f);
+
+		Assert.AreEqual(0.7f, handles[0], 1e-6f, "Handle should remain in the (swapped) bounds.");
+	}
 }

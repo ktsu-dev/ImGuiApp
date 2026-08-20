@@ -66,16 +66,27 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
-			float low = ActiveHandle == 0 ? lowerBound : handles[ActiveHandle - 1];
-			float high = ActiveHandle == handles.Length - 1 ? upperBound : handles[ActiveHandle + 1];
+			if (lowerBound > upperBound)
+			{
+				(lowerBound, upperBound) = (upperBound, lowerBound);
+			}
 
-			// Order and the track bounds are inviolable; minGap is what yields when the neighbours
-			// are already closer together than it. They can be: Normalize narrows an over-wide gap
-			// to fit, but Drag is handed the caller's original value, so the two disagree by
-			// construction. Deriving the window from neighbour values and clamping both ends to the
-			// track is what keeps a squeezed handle from being pushed off the end of it.
-			float floor = Math.Clamp(MathF.Min(low + minGap, high), lowerBound, upperBound);
-			float ceiling = Math.Clamp(MathF.Max(high - minGap, low), lowerBound, upperBound);
+			bool hasLower = ActiveHandle > 0;
+			bool hasUpper = ActiveHandle < handles.Length - 1;
+
+			// minGap separates handles from one another and never from the ends of the track, so it
+			// is added only on a side that has an actual neighbour — an edge handle must still be
+			// able to reach its own bound. Order and the track are inviolable; minGap is what yields
+			// when the neighbours are already closer together than it, which Normalize permits by
+			// narrowing an over-wide gap while Drag is handed the caller's original value.
+			float orderFloor = hasLower ? handles[ActiveHandle - 1] : lowerBound;
+			float orderCeiling = hasUpper ? handles[ActiveHandle + 1] : upperBound;
+
+			float floor = hasLower ? MathF.Min(orderFloor + minGap, orderCeiling) : lowerBound;
+			float ceiling = hasUpper ? MathF.Max(orderCeiling - minGap, orderFloor) : upperBound;
+
+			floor = Math.Clamp(floor, lowerBound, upperBound);
+			ceiling = Math.Clamp(ceiling, lowerBound, upperBound);
 			if (ceiling < floor)
 			{
 				ceiling = floor;
