@@ -47,8 +47,6 @@ public static partial class ImGuiWidgets
 				(min, max) = (max, min);
 			}
 
-			minGap = Math.Clamp(minGap, 0.0f, max - min);
-
 			uint id = ImGui.GetID(label);
 			float height = ImGui.GetFrameHeight();
 			float width = MathF.Max(ImGui.CalcItemWidth(), height * 3.0f);

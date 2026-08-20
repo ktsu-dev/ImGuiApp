@@ -16,12 +16,17 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <remarks>
 	/// Deliberately free of ImGui. Callers convert a mouse position to a value on the track and
-	/// hand that in, which is what lets every rule here be tested without a graphics context —
-	/// the same split <see cref="ImageCanvasState"/> and the gesture types already use.
+	/// hand that in, which is what lets every rule here be tested without a graphics context.
 	/// </remarks>
-	public sealed class HandleTrackState
+	internal sealed class HandleTrackState
 	{
 		/// <summary>Gets the index of the handle being dragged, or -1 when none is.</summary>
+		/// <remarks>
+		/// The retained value is an array position, not a reference to any particular array.
+		/// Activating against one span and then dragging a different span of the same length
+		/// silently targets the same index in the new one — <see cref="Drag"/> only guards a
+		/// stale index when the new span is shorter.
+		/// </remarks>
 		public int ActiveHandle { get; private set; } = -1;
 
 		/// <summary>Selects the handle nearest <paramref name="value"/> as the one being dragged.</summary>
@@ -66,7 +71,7 @@ public static partial class ImGuiWidgets
 			minGap = Math.Clamp(minGap, 0f, handleCount > 1 ? (upperBound - lowerBound) / (handleCount - 1) : 0f);
 		}
 
-		/// <summary>Moves the active handle to <paramref name="value"/>, held inside its neighbours and the bounds.</summary>
+		/// <summary>Moves the active handle to <paramref name="value"/>, held inside its neighbors and the bounds.</summary>
 		/// <returns><see langword="true"/> if the handle moved; otherwise <see langword="false"/>.</returns>
 		/// <remarks>
 		/// A drag that resolves to where the handle already sits reports no change. Consumers turn
@@ -90,10 +95,9 @@ public static partial class ImGuiWidgets
 			bool hasUpper = ActiveHandle < handles.Length - 1;
 
 			// minGap separates handles from one another and never from the ends of the track, so it
-			// is added only on a side that has an actual neighbour — an edge handle must still be
+			// is added only on a side that has an actual neighbor — an edge handle must still be
 			// able to reach its own bound. Order and the track are inviolable; minGap is what yields
-			// when the neighbours are already closer together than it, which Normalize permits by
-			// narrowing an over-wide gap while Drag is handed the caller's original value.
+			// when the neighbors are already closer together than it.
 			float orderFloor = hasLower ? handles[ActiveHandle - 1] : lowerBound;
 			float orderCeiling = hasUpper ? handles[ActiveHandle + 1] : upperBound;
 
@@ -118,13 +122,15 @@ public static partial class ImGuiWidgets
 		}
 
 		/// <summary>
-		/// Clamps handles into the bounds, sorts them ascending, and opens each neighbouring pair
+		/// Clamps handles into the bounds, sorts them ascending, and opens each neighboring pair
 		/// to at least <paramref name="minGap"/>.
 		/// </summary>
 		/// <remarks>
 		/// Run before interaction so the handles are in a valid state whatever the caller passed.
 		/// The gap pass walks upward and then back down, because pushing up alone would drive the
-		/// last handle past <paramref name="upperBound"/> when the gaps cannot all fit.
+		/// last handle past <paramref name="upperBound"/> when the gaps cannot all fit. The downward
+		/// settle also re-clamps to <paramref name="lowerBound"/>, holding the track's lower edge as
+		/// well as its upper one.
 		/// If the requested <paramref name="minGap"/> is too wide to fit all handles, it is narrowed
 		/// so the handles spread evenly across the range — a sensible default for UI controls.
 		/// </remarks>
@@ -148,7 +154,7 @@ public static partial class ImGuiWidgets
 			for (int i = handles.Length - 1; i >= 0; i--)
 			{
 				float ceiling = i == handles.Length - 1 ? upperBound : handles[i + 1] - minGap;
-				handles[i] = MathF.Min(handles[i], ceiling);
+				handles[i] = MathF.Max(MathF.Min(handles[i], ceiling), lowerBound);
 			}
 		}
 	}
