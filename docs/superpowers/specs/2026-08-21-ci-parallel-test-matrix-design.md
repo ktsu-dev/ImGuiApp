@@ -49,7 +49,7 @@ The lever, if that cost bites before self-hosted runners land: build once per pl
 
 The workflow needs three things `ktsubuild` doesn't expose yet. All three are already implemented inside it — they're just not reachable from a command line. Reimplementing them in the workflow would put a second copy of each rule in a YAML file, and the second copy is the one that goes stale.
 
-**`ktsubuild test list --json`** emits the test projects with the platform each is tied to:
+**`ktsubuild test list`** emits the test projects with the platform each is tied to:
 
 ```json
 [
@@ -104,7 +104,7 @@ CI changes can't be proven by reasoning about YAML. Before this syncs anywhere:
 
 ## Sequence
 
-1. `KtsuBuild`: add `test list --json`, `test run --project`, and `build --no-test`. Release to nuget.org.
+1. `KtsuBuild`: add `test list`, `test run --project`, and `build --no-test`. Release to nuget.org.
 2. `ImGuiApp`: restructure `dotnet.yml` against the released tool. Validate on a branch.
 3. Sync to the other repos once the numbers from step 2 are known.
 
