@@ -42,7 +42,7 @@ internal sealed class UtilityDemo : IDemoTab
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the pointer is read-only and scoped to the fixed block.")]
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -50,7 +50,7 @@ internal sealed class UtilityDemo : IDemoTab
 				ImGui.SeparatorText("File Operations:");
 				ImGui.InputText("File Path", ref filePath, 256);
 				ImGui.SameLine();
-				if (ImGui.Button("Load") && !string.IsNullOrEmpty(filePath))
+				if (DemoProbe.Button("Load") && !string.IsNullOrEmpty(filePath))
 				{
 					try
 					{
@@ -85,17 +85,17 @@ internal sealed class UtilityDemo : IDemoTab
 
 				// Debugging tools
 				ImGui.SeparatorText("Debug Tools:");
-				if (ImGui.Button("Show ImGui Demo"))
+				if (DemoProbe.Button("Show ImGui Demo"))
 				{
 					showImGuiDemo = !showImGuiDemo;
 				}
 				ImGui.SameLine();
-				if (ImGui.Button("Show Style Editor"))
+				if (DemoProbe.Button("Show Style Editor"))
 				{
 					showStyleEditor = !showStyleEditor;
 				}
 				ImGui.SameLine();
-				if (ImGui.Button("Show Metrics"))
+				if (DemoProbe.Button("Show Metrics"))
 				{
 					showMetrics = !showMetrics;
 				}

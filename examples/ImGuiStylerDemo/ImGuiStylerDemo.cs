@@ -9,6 +9,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 using ktsu.Semantics.Color;
 using ktsu.ThemeProvider;
@@ -24,7 +25,7 @@ internal sealed class ImGuiStylerDemo
 	private static string valueString = "Hello ImGuiStyler!";
 	private static float valueFloat = 0.5f;
 	private static float valueFloat2 = 0.75f;
-	private static int selectedFamily;
+	internal static int selectedFamily;
 	private static readonly float[] colorValue = [0.4f, 0.7f, 0.0f, 1.0f];
 	private static readonly string[] comboItems = ["Option A", "Option B", "Option C", "Option D"];
 	private static int comboSelection;
@@ -32,20 +33,25 @@ internal sealed class ImGuiStylerDemo
 	private static readonly float[] plotData = [0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f];
 
 	// Form validation fields
-	private static string formUsername = "";
-	private static string formEmail = "";
+	internal static string formUsername = "";
+	internal static string formEmail = "";
 
 	// Use ThemeProvider registry for all available themes
-	private static readonly List<ThemeRegistry.ThemeInfo> availableThemes = [.. Theme.AllThemes];
-	private static readonly List<string> availableFamilies = [.. Theme.Families.OrderBy(f => f)];
+	internal static readonly List<ThemeRegistry.ThemeInfo> availableThemes = [.. Theme.AllThemes];
+	internal static readonly List<string> availableFamilies = [.. Theme.Families.OrderBy(f => f)];
 
 	// Store the currently selected theme instead of applying it globally
-	private static ThemeRegistry.ThemeInfo? currentSelectedTheme;
+	internal static ThemeRegistry.ThemeInfo? currentSelectedTheme;
 
-	private static void Main()
+	/// <summary>
+	/// Builds the configuration the demo runs on. Extracted from <c>Main</c> so a UI test drives the
+	/// real configuration rather than a parallel one written for testing.
+	/// </summary>
+	/// <returns>The application configuration.</returns>
+	internal static ImGuiAppConfig BuildConfig()
 	{
 		ImGuiStylerDemo demo = new();
-		ImGuiApp.Start(new()
+		return new()
 		{
 			Title = "ImGuiStyler Demo - Comprehensive Theme & Color Showcase",
 			OnAppMenu = OnAppMenu,
@@ -54,7 +60,66 @@ internal sealed class ImGuiStylerDemo
 			OnStart = demo.OnStart,
 			FrameWrapperFactory = () => currentSelectedTheme is null ? null : new ScopedTheme(currentSelectedTheme.CreateInstance()),
 			SaveIniSettings = false,
-		});
+		};
+	}
+
+	private static void Main() => ImGuiApp.Start(BuildConfig());
+
+	/// <summary>
+	/// Returns every piece of demo state to its starting value. The demo keeps its state in statics,
+	/// which outlive a harness, so a test that ran before this one would otherwise decide what this
+	/// one starts from.
+	/// </summary>
+	internal static void ResetState()
+	{
+		valueBool = true;
+		valueBool2 = false;
+		valueInt = 42;
+		valueString = "Hello ImGuiStyler!";
+		valueFloat = 0.5f;
+		valueFloat2 = 0.75f;
+		selectedFamily = 0;
+		comboSelection = 0;
+		radioSelection = 1;
+		formUsername = "";
+		formEmail = "";
+		currentSelectedTheme = null;
+
+		// Deliberately not Theme.ResetToDefault(): that writes through ImGui's style, so it needs a
+		// live context, while this runs before a harness starts. The applied style lives in the
+		// context anyway, so a fresh harness already begins from default styling.
+	}
+
+	/// <summary>Submits a button and records it for probing, so a test can click it by label.</summary>
+	private static bool DemoButton(string label)
+	{
+		bool clicked = ImGui.Button(label);
+		ImGuiProbes.MarkItem(label);
+		return clicked;
+	}
+
+	/// <summary>Submits a small button and records it.</summary>
+	private static bool DemoSmallButton(string label)
+	{
+		bool clicked = ImGui.SmallButton(label);
+		ImGuiProbes.MarkItem(label);
+		return clicked;
+	}
+
+	/// <summary>Submits a tab and records its tab button, so a test can switch tabs by label.</summary>
+	private static bool DemoTab(string label)
+	{
+		bool selected = ImGui.BeginTabItem(label);
+		ImGuiProbes.MarkItem(label);
+		return selected;
+	}
+
+	/// <summary>Submits a menu item and records it.</summary>
+	private static bool DemoMenuItem(string label)
+	{
+		bool clicked = ImGui.MenuItem(label);
+		ImGuiProbes.MarkItem(label);
+		return clicked;
 	}
 
 	private void OnStart()
@@ -99,37 +164,37 @@ internal sealed class ImGuiStylerDemo
 
 		if (ImGui.BeginTabBar("DemoTabs"))
 		{
-			if (ImGui.BeginTabItem("🎨 Theme Gallery"))
+			if (DemoTab("🎨 Theme Gallery"))
 			{
 				ShowThemeGallery();
 				ImGui.EndTabItem();
 			}
 
-			if (ImGui.BeginTabItem("🎨 Color Palettes"))
+			if (DemoTab("🎨 Color Palettes"))
 			{
 				ShowColorPalettesDemo();
 				ImGui.EndTabItem();
 			}
 
-			if (ImGui.BeginTabItem("🔍 Complete Theme Palette"))
+			if (DemoTab("🔍 Complete Theme Palette"))
 			{
 				ShowCompleteThemePalette();
 				ImGui.EndTabItem();
 			}
 
-			if (ImGui.BeginTabItem("🖱️ Widget Showcase"))
+			if (DemoTab("🖱️ Widget Showcase"))
 			{
 				ShowWidgetShowcase();
 				ImGui.EndTabItem();
 			}
 
-			if (ImGui.BeginTabItem("💡 Interactive Examples"))
+			if (DemoTab("💡 Interactive Examples"))
 			{
 				ShowInteractiveExamples();
 				ImGui.EndTabItem();
 			}
 
-			if (ImGui.BeginTabItem("📚 Documentation"))
+			if (DemoTab("📚 Documentation"))
 			{
 				ShowDocumentationDemo();
 				ImGui.EndTabItem();
@@ -147,7 +212,9 @@ internal sealed class ImGuiStylerDemo
 
 		// Theme family selector
 		ImGui.Text("Filter by Family:");
-		if (ImGui.Combo("##Family", ref selectedFamily, ["All", .. availableFamilies], availableFamilies.Count + 1))
+		bool familyChanged = ImGui.Combo("##Family", ref selectedFamily, ["All", .. availableFamilies], availableFamilies.Count + 1);
+		ImGuiProbes.MarkItem("Family");
+		if (familyChanged)
 		{
 			// selectedTheme = 0; // Reset selection when family changes
 		}
@@ -165,7 +232,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Text($"Available Themes ({themesToShow.Count}):");
 
 		// Add reset button
-		if (ImGui.Button("Reset to Default"))
+		if (DemoButton("Reset to Default"))
 		{
 			currentSelectedTheme = null;
 		}
@@ -186,26 +253,32 @@ internal sealed class ImGuiStylerDemo
 		ImGui.BeginChild("PreviewArea", new Vector2(0, 200), ImGuiChildFlags.Borders);
 
 		ImGui.Text("Sample UI Elements:");
-		if (ImGui.Button("Sample Button"))
+		if (DemoButton("Sample Button"))
 		{
 			// Button clicked
 		}
 		ImGui.SameLine();
-		if (ImGui.SmallButton("Small"))
+		if (DemoSmallButton("Small"))
 		{
 			// Small button clicked
 		}
 
 		ImGui.Checkbox("Sample Checkbox", ref valueBool);
+		ImGuiProbes.MarkItem("Sample Checkbox");
 		ImGui.SliderFloat("Sample Slider", ref valueFloat, 0.0f, 1.0f);
+		ImGuiProbes.MarkItem("Sample Slider");
 		ImGui.InputText("Sample Input", ref valueString, 128);
+		ImGuiProbes.MarkItem("Sample Input");
 
 		ImGui.Text("Radio Buttons:");
 		ImGui.RadioButton("Option 1", ref radioSelection, 0);
+		ImGuiProbes.MarkItem("Option 1");
 		ImGui.SameLine();
 		ImGui.RadioButton("Option 2", ref radioSelection, 1);
+		ImGuiProbes.MarkItem("Option 2");
 		ImGui.SameLine();
 		ImGui.RadioButton("Option 3", ref radioSelection, 2);
+		ImGuiProbes.MarkItem("Option 3");
 
 		ImGui.EndChild();
 	}
@@ -430,6 +503,7 @@ internal sealed class ImGuiStylerDemo
 		// Interactive color manipulation
 		ImGui.Text("🔧 Interactive Color Tools:");
 		ImGui.ColorEdit4("Custom Color", ref colorValue[0]);
+		ImGuiProbes.MarkItem("Custom Color");
 
 		// Show color variations
 		ImColor baseColor = new Srgb(colorValue[0], colorValue[1], colorValue[2]).ToImColor(colorValue[3]);
@@ -486,9 +560,9 @@ internal sealed class ImGuiStylerDemo
 		// Column 1: Input widgets
 		ImGui.Text("📝 Input Widgets:");
 
-		ImGui.Button("Standard Button");
+		DemoButton("Standard Button");
 		ImGui.SameLine();
-		ImGui.SmallButton("Small");
+		DemoSmallButton("Small");
 
 		if (ImGui.ArrowButton("##left", ImGuiDir.Left))
 		{
@@ -501,17 +575,26 @@ internal sealed class ImGuiStylerDemo
 		}
 
 		ImGui.Checkbox("Checkbox", ref valueBool);
+		ImGuiProbes.MarkItem("Checkbox");
 		ImGui.Checkbox("Checkbox 2", ref valueBool2);
+		ImGuiProbes.MarkItem("Checkbox 2");
 
 		ImGui.RadioButton("Radio A", ref radioSelection, 0);
+		ImGuiProbes.MarkItem("Radio A");
 		ImGui.RadioButton("Radio B", ref radioSelection, 1);
+		ImGuiProbes.MarkItem("Radio B");
 		ImGui.RadioButton("Radio C", ref radioSelection, 2);
+		ImGuiProbes.MarkItem("Radio C");
 
 		ImGui.SliderFloat("Slider", ref valueFloat, 0.0f, 1.0f);
+		ImGuiProbes.MarkItem("Slider");
 		ImGui.SliderFloat("Slider 2", ref valueFloat2, -10.0f, 10.0f);
+		ImGuiProbes.MarkItem("Slider 2");
 		ImGui.SliderInt("Int Slider", ref valueInt, 0, 100);
+		ImGuiProbes.MarkItem("Int Slider");
 
 		ImGui.InputText("Text Input", ref valueString, 128);
+		ImGuiProbes.MarkItem("Text Input");
 
 		if (ImGui.BeginCombo("Combo", comboItems[comboSelection]))
 		{
@@ -531,6 +614,7 @@ internal sealed class ImGuiStylerDemo
 		}
 
 		ImGui.ColorEdit3("Color", ref colorValue[0]);
+		ImGuiProbes.MarkItem("Color");
 
 		ImGui.NextColumn();
 
@@ -641,8 +725,9 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Text("🎯 Scoped Theme Applications:");
 
 		ImGui.Text("Normal themed section:");
-		ImGui.Button("Normal Button");
+		DemoButton("Normal Button");
 		ImGui.SliderFloat("Normal Slider", ref valueFloat, 0.0f, 1.0f);
+		ImGuiProbes.MarkItem("Normal Slider");
 
 		ImGui.Separator();
 
@@ -650,14 +735,14 @@ internal sealed class ImGuiStylerDemo
 		using (Theme.FromColor(Palette.Semantic.Error))
 		{
 			ImGui.Text("Error-themed section:");
-			ImGui.Button("Danger Button");
+			DemoButton("Danger Button");
 			ImGui.ProgressBar(0.8f, new Vector2(-1, 0), "80% Critical");
 		}
 
 		using (Theme.FromColor(Palette.Semantic.Success))
 		{
 			ImGui.Text("Success-themed section:");
-			ImGui.Button("Success Button");
+			DemoButton("Success Button");
 			ImGui.ProgressBar(0.9f, new Vector2(-1, 0), "90% Complete");
 		}
 
@@ -669,6 +754,7 @@ internal sealed class ImGuiStylerDemo
 
 		ImGui.Text("User Registration:");
 		ImGui.InputText("Username", ref formUsername, 64);
+		ImGuiProbes.MarkItem("Username");
 
 		if (string.IsNullOrWhiteSpace(formUsername))
 		{
@@ -687,6 +773,7 @@ internal sealed class ImGuiStylerDemo
 		}
 
 		ImGui.InputText("Email", ref formEmail, 128);
+		ImGuiProbes.MarkItem("Email");
 
 		bool validEmail = formEmail.Contains('@') && formEmail.Contains('.');
 		if (!string.IsNullOrWhiteSpace(formEmail) && !validEmail)
@@ -706,14 +793,14 @@ internal sealed class ImGuiStylerDemo
 		{
 			using (Theme.DisabledFromColor(Palette.Neutral.Gray))
 			{
-				ImGui.Button("Submit (Complete form first)");
+				DemoButton("Submit (Complete form first)");
 			}
 		}
 		else
 		{
 			using (Theme.FromColor(Palette.Semantic.Success))
 			{
-				if (ImGui.Button("Submit Registration"))
+				if (DemoButton("Submit Registration"))
 				{
 					// Handle submission
 				}
@@ -725,6 +812,7 @@ internal sealed class ImGuiStylerDemo
 		// Form validation example with basic colors
 		ImGui.Text("📝 Form with Validation:");
 		ImGui.InputText("Username", ref formUsername, 64);
+		ImGuiProbes.MarkItem("Username");
 		ImGui.SameLine();
 		if (string.IsNullOrWhiteSpace(formUsername))
 		{
@@ -738,6 +826,7 @@ internal sealed class ImGuiStylerDemo
 		}
 
 		ImGui.InputText("Email", ref formEmail, 64);
+		ImGuiProbes.MarkItem("Email");
 		ImGui.SameLine();
 		if (string.IsNullOrWhiteSpace(formEmail) || !formEmail.Contains('@'))
 		{
@@ -759,7 +848,7 @@ internal sealed class ImGuiStylerDemo
 		ImGui.Separator();
 		ImGui.Text("Normal styling here...");
 
-		if (ImGui.Button("Normal Button"))
+		if (DemoButton("Normal Button"))
 		{
 			// Normal button styling
 		}
@@ -775,19 +864,21 @@ internal sealed class ImGuiStylerDemo
 			// This 'using' block applies the theme temporarily
 			using (new ScopedTheme(demoTheme.CreateInstance()))
 			{
-				if (ImGui.Button("Themed Button"))
+				if (DemoButton("Themed Button"))
 				{
 					// This button uses the scoped theme
 				}
 
 				ImGui.SameLine();
-				if (ImGui.SmallButton("Small Themed"))
+				if (DemoSmallButton("Small Themed"))
 				{
 					// This button also uses the scoped theme
 				}
 
 				ImGui.Checkbox("Themed Checkbox", ref valueBool2);
+				ImGuiProbes.MarkItem("Themed Checkbox");
 				ImGui.SliderFloat("Themed Slider", ref valueFloat2, 0.0f, 1.0f);
+				ImGuiProbes.MarkItem("Themed Slider");
 
 				ImGui.Text("All UI elements in this block use the scoped theme colors!");
 			}
@@ -796,7 +887,7 @@ internal sealed class ImGuiStylerDemo
 
 		ImGui.Separator();
 		ImGui.Text("Back to normal styling automatically...");
-		if (ImGui.Button("Normal Button Again"))
+		if (DemoButton("Normal Button Again"))
 		{
 			// Back to normal styling
 		}
@@ -827,7 +918,7 @@ internal sealed class ImGuiStylerDemo
 
 		if (ImGui.BeginMenu("Help"))
 		{
-			if (ImGui.MenuItem("About ImGuiStyler"))
+			if (DemoMenuItem("About ImGuiStyler"))
 			{
 				// Show about dialog - placeholder for demonstration
 			}

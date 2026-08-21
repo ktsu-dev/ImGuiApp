@@ -174,8 +174,8 @@ internal static class HexaWidgetsDemo
 		ImGui.EndTable();
 
 		ImGui.Separator();
-		ImGui.SliderFloat("Shared progress", ref sharedProgress, 0f, 1f);
-		ImGui.SliderFloat("Shared image size", ref sharedImageSize, 16f, 96f);
+		DemoProbe.SliderFloat("Shared progress", ref sharedProgress, 0f, 1f);
+		DemoProbe.SliderFloat("Shared image size", ref sharedImageSize, 16f, 96f);
 	}
 
 	private static void BeginRow(string name)
@@ -218,46 +218,46 @@ internal static class HexaWidgetsDemo
 		ImGui.TableHeadersRow();
 
 		BeginRow("Open file");
-		if (ImGui.Button("Open##ktsuOpenFile"))
+		if (DemoProbe.Button("Open##ktsuOpenFile"))
 		{
 			KtsuOpenFileBrowser.FileOpen("Open a file", file => sharedChosenFile = file.ToString());
 		}
 
 		ImGui.TableNextColumn();
-		if (ImGui.Button("Open##hexaOpenFile"))
+		if (DemoProbe.Button("Open##hexaOpenFile"))
 		{
 			ImGuiWidgets.OpenFileDialog dialog = new();
 			dialog.Show(outcome => sharedChosenFile = outcome.Path?.ToString() ?? $"({outcome.Outcome})");
 		}
 
 		BeginRow("Pick folder");
-		if (ImGui.Button("Pick##ktsuFolder"))
+		if (DemoProbe.Button("Pick##ktsuFolder"))
 		{
 			KtsuOpenFolderBrowser.ChooseDirectory("Pick a folder", directory => sharedChosenFolder = directory.ToString());
 		}
 
 		ImGui.TableNextColumn();
-		if (ImGui.Button("Pick##hexaFolder"))
+		if (DemoProbe.Button("Pick##hexaFolder"))
 		{
 			ImGuiWidgets.OpenFolderDialog dialog = new();
 			dialog.Show(outcome => sharedChosenFolder = outcome.Path?.ToString() ?? $"({outcome.Outcome})");
 		}
 
 		BeginRow("Save file");
-		if (ImGui.Button("Save##ktsuSave"))
+		if (DemoProbe.Button("Save##ktsuSave"))
 		{
 			KtsuSaveFileBrowser.FileSave("Save a file", file => sharedSaveTarget = file.ToString());
 		}
 
 		ImGui.TableNextColumn();
-		if (ImGui.Button("Save##hexaSave"))
+		if (DemoProbe.Button("Save##hexaSave"))
 		{
 			ImGuiWidgets.SaveFileDialog dialog = new();
 			dialog.Show(outcome => sharedSaveTarget = outcome.Path?.ToString() ?? $"({outcome.Outcome})");
 		}
 
 		BeginRow("Message");
-		if (ImGui.Button("Ask##ktsuMessage"))
+		if (DemoProbe.Button("Ask##ktsuMessage"))
 		{
 			// MessageOK's convenience Open(title, message) has no outcome callback -- through that
 			// path ktsu only ever offers a fixed, silent single "OK" button. Its base Prompt class
@@ -271,7 +271,7 @@ internal static class HexaWidgetsDemo
 		}
 
 		ImGui.TableNextColumn();
-		if (ImGui.Button("Ask##hexaMessage"))
+		if (DemoProbe.Button("Ask##hexaMessage"))
 		{
 			ImGuiWidgets.ShowMessageBox("Confirm", "Keep both implementations?", MessageBoxButtons.YesNo,
 				outcome => sharedMessageAnswer = outcome.ToString());
@@ -297,13 +297,13 @@ internal static class HexaWidgetsDemo
 		ImGui.TextWrapped("Hexa widgets with no ktsu counterpart.");
 		ImGui.Separator();
 
-		if (ImGui.CollapsingHeader("Breadcrumb"))
+		if (DemoProbe.Header("Breadcrumb"))
 		{
 			ImGuiWidgets.Breadcrumb("##breadcrumb", ref breadcrumbPath);
 			ImGui.TextUnformatted(breadcrumbPath);
 		}
 
-		if (ImGui.CollapsingHeader("Buttons"))
+		if (DemoProbe.Header("Buttons"))
 		{
 			ImGuiWidgets.ToggleButton("Toggle me", ref toggleButtonState);
 			ImGui.SameLine();
@@ -313,7 +313,7 @@ internal static class HexaWidgetsDemo
 			}
 		}
 
-		if (ImGui.CollapsingHeader("Date and year pickers"))
+		if (DemoProbe.Header("Date and year pickers"))
 		{
 			ImGui.TextWrapped("The date picker's calendar button needs a Material Icons font in the atlas; drop MaterialIcons-Regular.ttf next to this demo's binary and it is picked up automatically. Without one it shows a placeholder box. The year picker below draws no icon glyphs and needs no icon font.");
 			ImGuiWidgets.DatePicker("Date", ref pickedDate);
@@ -321,23 +321,23 @@ internal static class HexaWidgetsDemo
 			ImGui.TextUnformatted($"Picked: {pickedDate:yyyy-MM-dd}, year {pickedYear:yyyy}");
 		}
 
-		if (ImGui.CollapsingHeader("Flame graph"))
+		if (DemoProbe.Header("Flame graph"))
 		{
 			ImGuiWidgets.FlameGraph("Frame timing", FlameSamples, ref flameSelected,
 				new FlameGraphOptions { GraphSize = new Vector2(0f, 120f) });
 			ImGui.TextUnformatted($"Selected: {flameSelected}");
 		}
 
-		if (ImGui.CollapsingHeader("File tree view"))
+		if (DemoProbe.Header("File tree view"))
 		{
 			ImGui.TextWrapped("Needs a Material Icons font in the atlas; drop MaterialIcons-Regular.ttf next to this demo's binary.");
 			ImGuiWidgets.FileTreeView("##fileTree", new Vector2(0f, 200f), ref treeFolder, treeFolder);
 			ImGui.TextUnformatted(treeFolder.ToString());
 		}
 
-		if (ImGui.CollapsingHeader("Rename and message dialogs"))
+		if (DemoProbe.Header("Rename and message dialogs"))
 		{
-			if (ImGui.Button("Rename a file"))
+			if (DemoProbe.Button("Rename a file"))
 			{
 				ImGuiWidgets.RenameDialog dialog = new(
 					AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>())
@@ -348,7 +348,7 @@ internal static class HexaWidgetsDemo
 			}
 
 			ImGui.SameLine();
-			if (ImGui.Button("Dialog message box"))
+			if (DemoProbe.Button("Dialog message box"))
 			{
 				ImGuiWidgets.DialogMessageBox box = new("Question", "Movable, unlike the modal message box.", MessageBoxButtons.YesNoCancel);
 				box.Show(outcome => renameResult = outcome.ToString());
@@ -357,7 +357,7 @@ internal static class HexaWidgetsDemo
 			ImGui.TextUnformatted(renameResult);
 		}
 
-		if (ImGui.CollapsingHeader("Curve and bezier fields"))
+		if (DemoProbe.Header("Curve and bezier fields"))
 		{
 			// Both curve editors need an explicit width. The Vector2(0f, h) idiom used above for
 			// FlameGraph and FileTreeView does not transfer: neither vendor curve widget treats a
@@ -369,13 +369,13 @@ internal static class HexaWidgetsDemo
 			ImGui.TextUnformatted($"Control points: {demoBezier.First:F2} {demoBezier.Second:F2}");
 		}
 
-		if (ImGui.CollapsingHeader("Multi-curve editor"))
+		if (DemoProbe.Header("Multi-curve editor"))
 		{
 			ImGui.TextWrapped("Two curves over one view range. Drag a point to move it.");
 			_ = ImGuiWidgets.CurveEditor(MultiCurve, new Vector2(AvailableEditorWidth(), 160f), "##multiCurve");
 		}
 
-		if (ImGui.CollapsingHeader("Sequencer"))
+		if (DemoProbe.Header("Sequencer"))
 		{
 			ImGui.TextWrapped("Drag a clip's edges to retime it. Edits are written back through SetItemRange, which is what the line below reports.");
 			_ = ImGuiWidgets.Sequencer(Timeline, ref timelineFrame, ref timelineExpanded, ref timelineSelected, ref timelineFirstFrame);

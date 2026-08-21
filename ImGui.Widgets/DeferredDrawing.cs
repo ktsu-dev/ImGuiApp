@@ -89,17 +89,18 @@ public static partial class ImGuiWidgets
 	/// dialog twice.
 	/// </para>
 	/// <para>
-	/// Enables <see cref="ImGuiConfigFlags.DockingEnable"/> if it is not already set. Hexa's
-	/// <c>WidgetManager.Draw()</c> calls <c>DockSpaceOverViewport</c> without checking the flag, so
-	/// without it the dockspace is a no-op. The flag is set here rather than in <c>ImGui.App</c>
-	/// because this is the opt-in path whose contract requires docking; enabling it globally would
-	/// change behavior for every consumer, including those that never draw a docked window.
+	/// Requires <see cref="ImGuiConfigFlags.DockingEnable"/>, which is set by
+	/// <c>ImGuiAppConfig.EnableDocking</c>. Hexa's <c>WidgetManager.Draw()</c> calls
+	/// <c>DockSpaceOverViewport</c> without checking the flag, so without it the dockspace is a
+	/// no-op. The flag cannot be set from here: ImGui only accepts it before the first frame, and
+	/// changing it mid-frame aborts the process on the next one. Docking stays opt-in through the
+	/// config rather than being enabled globally, so applications that never dock are unaffected.
 	/// </para>
 	/// </remarks>
 	public static void DrawDeferredDocked()
 	{
 		ReportPumpState();
-		EnableDocking();
+		RequireDocking();
 
 		// WidgetManager.Draw internally calls DialogManager.Draw, MessageBoxes.Draw,
 		// PopupManager.Draw and AnimationManager.Tick, so this must not also call them.
@@ -107,14 +108,23 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>
-	/// Enables ImGui's docking config flag if it is not already enabled.
+	/// Verifies that ImGui's docking config flag is set.
 	/// </summary>
-	private static void EnableDocking()
+	/// <remarks>
+	/// This used to set the flag itself, which cannot work: ImGui requires it before the first
+	/// NewFrame, and this only ever runs inside a frame. Setting it here left the flag disagreeing
+	/// with the previous frame's, and ImGui aborted the process on the very next frame. Reporting
+	/// the misconfiguration is the most this can do from where it runs.
+	/// </remarks>
+	/// <exception cref="InvalidOperationException">Docking is not enabled.</exception>
+	private static void RequireDocking()
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
 		if ((io.ConfigFlags & ImGuiConfigFlags.DockingEnable) == 0)
 		{
-			io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+			throw new InvalidOperationException(
+				"DrawDeferredDocked() requires docking, which is off. Set ImGuiAppConfig.EnableDocking = true. " +
+				"ImGui only accepts the docking flag before the first frame, so it cannot be turned on from here.");
 		}
 	}
 

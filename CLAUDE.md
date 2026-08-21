@@ -47,6 +47,10 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 
 - `tests/ImGui.App.Tests/` - App framework tests with mock OpenGL provider
 - `tests/NodeGraph.Tests/` - Node graph attribute and type utility tests
+- `tests/<Demo>.UITests/` - One headless UI test project per example, driving the demo's real
+  `BuildConfig()` through `ImGuiAppHarness`: `ImGuiAppDemo.UITests`, `ImGuiWidgetsDemo.UITests`,
+  `ImGuiStylerDemo.UITests`, `ImGuiPopupsDemo.UITests`, `ImGuiMarkdownDemo.UITests`. See
+  [Demo UI tests](#demo-ui-tests) below.
 
 ### Key Files
 
@@ -153,11 +157,14 @@ manager, and it is only drawn by a per-frame pump. Call one of these once per fr
 
 - `ImGuiWidgets.DrawDeferred()` — draws every open dialog, message box and popup, and advances
   Hexa's animation clock. No layout opinion.
-- `ImGuiWidgets.DrawDeferredDocked()` — additionally enables `ImGuiConfigFlags.DockingEnable` if it
-  is not already set, creates a dockspace over the main viewport, and draws every registered
-  `DockedWindow`. The flag is set here rather than in `ImGui.App` because this is the opt-in path
-  whose contract requires docking, and Hexa's `WidgetManager.Draw()` calls `DockSpaceOverViewport`
-  without checking the flag — without it the dockspace silently does nothing. Internally it does
+- `ImGuiWidgets.DrawDeferredDocked()` — additionally creates a dockspace over the main viewport and
+  draws every registered `DockedWindow`. It **requires** `ImGuiConfigFlags.DockingEnable`, which is
+  set by `ImGuiAppConfig.EnableDocking = true`; without it the pump throws
+  `InvalidOperationException`. The flag cannot be turned on from the pump: ImGui only accepts it
+  before the first `NewFrame()`, and changing it mid-frame aborts the process on the *next* frame
+  with `"Please set DockingEnable before the first call to NewFrame()!"`. Hexa's
+  `WidgetManager.Draw()` calls `DockSpaceOverViewport` without checking the flag, so without it the
+  dockspace would silently do nothing anyway. Internally it does
   everything `DrawDeferred()` does (via Hexa's `WidgetManager.Draw()`, which itself calls Hexa's
   `DialogManager.Draw()`, `MessageBoxes.Draw()`, `PopupManager.Draw()` and `AnimationManager.Tick()`),
   so `DrawDeferred()` must not also be called. `DockedWindow` only renders under this pump — under
@@ -285,6 +292,58 @@ Tests use **MSTest.Sdk** with the Microsoft Testing Platform. The ImGui.App test
 dotnet test                                          # Run all tests
 dotnet test --filter "FullyQualifiedName~TestGL"    # Run specific test class
 ```
+
+Do **not** pass `--nologo` to `dotnet test`. On Microsoft Testing Platform projects it reports
+`Zero tests ran` and exit code 5 instead of running anything, which looks exactly like a broken test
+project (dotnet/sdk#55309). Running the produced test executable directly is the way to confirm.
+
+### Demo UI tests
+
+Each example has a headless UI test project under `tests/<Demo>.UITests/`, built on
+`ktsu.ImGui.App.Testing`. They render through the CPU rasterizer with no window and no GPU, inject
+input straight into ImGui, and advance frames under the test's control, so they neither steal focus
+nor need a display.
+
+The pattern each suite follows:
+
+```csharp
+[assembly: DoNotParallelize]   // ImGui contexts are global; only one harness may be live
+
+[TestInitialize]
+public void SetUp()
+{
+    ImGuiPopupsDemo.ResetState();   // demo state lives in statics that outlive a harness
+    harness = ImGuiAppHarness.Start(ImGuiPopupsDemo.BuildConfig(), DemoViewport);
+    harness.Step(2);
+}
+
+harness.Click("Show Custom Prompt");
+harness.Step(2);
+harness.Click("prompt/Maybe");
+Assert.AreEqual("User clicked Maybe", ImGuiPopupsDemo.lastPromptResult);
+```
+
+Things that bite when writing these:
+
+- **Each demo exposes `BuildConfig()`** (internal, with `InternalsVisibleTo` for its UITests
+  assembly) so a test drives the real configuration rather than a copy, plus `ResetState()` because
+  demo state is static and outlives the harness.
+- **Use `WasSeenInFrame`, not `Rect`, to ask "is this on screen now".** `ItemProbe.Rect` returns the
+  last position an item *ever* occupied and never expires, so it cannot tell a closed popup from an
+  open one. Every suite wraps this as
+  `IsVisible(name) => harness.Probe.WasSeenInFrame(name, harness.FrameCount - 1)`.
+- **Give the harness a viewport tall enough for the whole demo.** Items below the fold are still
+  recorded by the probe, but clicking their recorded position lands on whatever is actually there,
+  so the click silently does nothing. The tabbed demos use 1600x1200 or larger.
+- **Run in Release.** The software rasterizer is roughly 17x faster there — about 180 ms per frame
+  versus 3 s in Debug — so keep frame counts modest either way.
+- **The demos mark their own controls.** `ktsu.ImGui.Widgets` and `ktsu.ImGui.Popups` mark items
+  themselves; the plain ImGui buttons, headers, tabs and sliders the demos draw go through a small
+  `DemoProbe` helper (or a local `DemoButton`/`DemoHeader`/`DemoTab`) that calls
+  `ImGuiProbes.MarkItem` right after submitting the widget.
+- **Names are qualified by window and scope**, and lookups match trailing segments. A leaf name that
+  appears in two windows is ambiguous and `Rect` throws rather than guessing, so qualify it
+  (`harness.Probe.Matches("Username").Single(n => n.Contains("FormExample"))`) or pick a distinct one.
 
 ## Adding Components
 

@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Strings;
 
 public static partial class ImGuiWidgets
@@ -22,7 +23,9 @@ public static partial class ImGuiWidgets
 		Array possibleValues = Enum.GetValues(typeof(TEnum));
 		int currentIndex = Array.IndexOf(possibleValues, selectedValue);
 		string[] possibleValuesNames = Enum.GetNames(typeof(TEnum));
-		if (ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length))
+		bool changed = ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length);
+		ImGuiProbes.MarkItem(label);
+		if (changed)
 		{
 			selectedValue = (TEnum)possibleValues.GetValue(currentIndex)!;
 			return true;
@@ -45,7 +48,9 @@ public static partial class ImGuiWidgets
 
 		int currentIndex = possibleValues.IndexOf(selectedValue);
 		string[] possibleValuesNames = [.. possibleValues.Select(e => e.ToString(CultureInfo.InvariantCulture))];
-		if (ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length))
+		bool changed = ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length);
+		ImGuiProbes.MarkItem(label);
+		if (changed)
 		{
 			selectedValue = possibleValues[currentIndex];
 			return true;
@@ -67,7 +72,9 @@ public static partial class ImGuiWidgets
 
 		int currentIndex = possibleValues.IndexOf(selectedValue);
 		string[] possibleValuesNames = [.. possibleValues];
-		if (ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length))
+		bool changed = ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length);
+		ImGuiProbes.MarkItem(label);
+		if (changed)
 		{
 			selectedValue = possibleValues[currentIndex];
 			return true;

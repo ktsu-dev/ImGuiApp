@@ -128,6 +128,7 @@ public partial class ImGuiPopups
 		protected override bool ShowEdit(ref int value)
 		{
 			ImGui.InputInt($"###{Modal.Title.ToSnakeCase()}_INPUT", ref value);
+			ImGuiProbes.MarkItem("input/field");
 			return false;
 		}
 	}
@@ -145,6 +146,7 @@ public partial class ImGuiPopups
 		protected override bool ShowEdit(ref float value)
 		{
 			ImGui.InputFloat($"###{Modal.Title.ToSnakeCase()}_INPUT", ref value);
+			ImGuiProbes.MarkItem("input/field");
 			return false;
 		}
 	}

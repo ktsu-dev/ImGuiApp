@@ -55,7 +55,7 @@ internal sealed class ImPlotDemo : IDemoTab
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImPlot interop; pointers are scoped to fixed blocks and not retained.")]
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -63,7 +63,7 @@ internal sealed class ImPlotDemo : IDemoTab
 				ImGui.Separator();
 
 				// Plot controls
-				if (ImGui.Button("Generate New Data"))
+				if (DemoProbe.Button("Generate New Data"))
 				{
 					sinData.Clear();
 					cosData.Clear();

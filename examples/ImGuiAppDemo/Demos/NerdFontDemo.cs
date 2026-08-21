@@ -18,7 +18,7 @@ internal sealed class NerdFontDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{

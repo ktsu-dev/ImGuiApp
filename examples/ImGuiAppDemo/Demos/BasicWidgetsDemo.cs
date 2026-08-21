@@ -33,7 +33,7 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -41,13 +41,13 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 
 				// Buttons
 				ImGui.SeparatorText("Buttons:");
-				if (ImGui.Button("Regular Button"))
+				if (DemoProbe.Button("Regular Button"))
 				{
 					counter++;
 				}
 
 				ImGui.SameLine();
-				if (ImGui.SmallButton("Small"))
+				if (DemoProbe.SmallButton("Small"))
 				{
 					counter++;
 				}
@@ -69,7 +69,7 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 
 				// Checkboxes and Radio buttons
 				ImGui.SeparatorText("Selection Controls");
-				ImGui.Checkbox("Checkbox", ref checkboxState);
+				DemoProbe.Checkbox("Checkbox", ref checkboxState);
 
 				ImGui.RadioButton("Option 1", ref radioSelection, 0);
 				ImGui.SameLine();
@@ -79,14 +79,14 @@ internal sealed class BasicWidgetsDemo : IDemoTab
 
 				// Sliders
 				ImGui.SeparatorText("Sliders");
-				ImGui.SliderFloat("Float Slider", ref sliderValue, 0.0f, 1.0f);
-				ImGui.SliderFloat("Angle", ref angle, 0.0f, 360.0f, "%.1f deg");
-				ImGui.SliderInt("Int Slider", ref dragInt, 0, 100);
+				DemoProbe.SliderFloat("Float Slider", ref sliderValue, 0.0f, 1.0f);
+				DemoProbe.SliderFloat("Angle", ref angle, 0.0f, 360.0f, "%.1f deg");
+				DemoProbe.SliderInt("Int Slider", ref dragInt, 0, 100);
 
 				// Input fields
 				ImGui.SeparatorText("Input Fields");
 				ImGui.InputText("Text Input", ref inputText, 100);
-				ImGui.InputFloat("Float Input", ref dragFloat);
+				DemoProbe.InputFloat("Float Input", ref dragFloat);
 				ImGui.InputFloat3("Vector3 Input", ref dragVector);
 
 				// Combo boxes

@@ -78,6 +78,17 @@ file is never read or written, so one test cannot inherit state from another.
 Two runs of the same scenario produce byte-identical frames. That property is what makes pixel
 measurements worth asserting on, and it is covered by a test.
 
+## Extensions and Docking
+
+The harness stands in for `ImGuiController`, so it performs the same setup that a windowed
+application gets: ImGuizmo, ImNodes and ImPlot are detected, handed the ImGui context, given their
+own contexts, and ticked once per frame. An application that draws with any of them renders under
+the harness rather than faulting inside native code.
+
+`ImGuiAppConfig.EnableDocking` is honored too, and applied before the first frame, which is the only
+point ImGui accepts it. A configuration that sets it can therefore use
+`ImGuiWidgets.DrawDeferredDocked()` in a test exactly as it does in the application.
+
 ## Known Limitations
 
 Rendering is a CPU rasterizer, not the OpenGL backend the application ships with. That is what makes

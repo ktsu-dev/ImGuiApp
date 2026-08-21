@@ -30,7 +30,7 @@ internal sealed class AnimationDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -53,7 +53,7 @@ internal sealed class AnimationDemo : IDemoTab
 				ImGui.Dummy(new Vector2(100, 100));
 
 				ImGui.SeparatorText("Animated Text:");
-				ImGui.SliderFloat("Text Speed", ref textSpeed, 10.0f, 200.0f);
+				DemoProbe.SliderFloat("Text Speed", ref textSpeed, 10.0f, 200.0f);
 
 				for (int i = 0; i < 20; i++)
 				{
