@@ -117,34 +117,25 @@ jobs:
             echo "has_tests=false" >> "$GITHUB_OUTPUT"
           fi
 
-  build:
-    name: Build, Test & Release
-    runs-on: windows-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write # For creating releases and committing metadata
-      packages: write # For publishing packages
+  test:
+    name: Test ${{ matrix.name }} (${{ matrix.os }})
+    needs: discover
+    if: needs.discover.outputs.has_tests == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
 
-    outputs:
-      version: ${{ steps.pipeline.outputs.version }}
-      release_hash: ${{ steps.pipeline.outputs.release_hash }}
-      should_release: ${{ steps.pipeline.outputs.should_release }}
+    strategy:
+      # One platform's failure must not cancel the others. Knowing that a project fails on
+      # macOS only is the point of running the matrix at all.
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
 
     steps:
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          java-version: 17
-          distribution: "zulu" # Alternative distribution options are available.
-
       - name: Checkout Repository
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # Full history for versioning
-          fetch-tags: true
           lfs: true
           submodules: recursive
-          persist-credentials: true
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v6
@@ -156,94 +147,29 @@ jobs:
             **/Directory.Packages.props
             **/global.json
 
-      # Ensure NuGet packages directory exists for caching (prevents error when pipeline exits early)
-      - name: Ensure NuGet cache directory exists
-        run: New-Item -Path "$env:USERPROFILE\.nuget\packages" -ItemType Directory -Force
-        shell: pwsh
-
-      - name: Cache SonarQube Cloud packages
-        if: ${{ env.SONAR_TOKEN != '' }}
-        uses: actions/cache@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          path: ~\sonar\cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Cache SonarQube Cloud scanner
-        if: ${{ env.SONAR_TOKEN != '' }}
-        id: cache-sonar-scanner
-        uses: actions/cache@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          path: .\.sonar\scanner
-          key: ${{ runner.os }}-sonar-scanner
-          restore-keys: ${{ runner.os }}-sonar-scanner
-
-      - name: Install SonarQube Cloud scanner
-        if: ${{ env.SONAR_TOKEN != '' && steps.cache-sonar-scanner.outputs.cache-hit != 'true' }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
-        run: |
-          New-Item -Path .\.sonar\scanner -ItemType Directory
-          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
-
       - name: Install KtsuBuild
-        shell: pwsh
+        shell: bash
         run: |
           dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
+          echo "${{ runner.temp }}/ktsubuild" >> "$GITHUB_PATH"
 
-      - name: Begin SonarQube
-        if: ${{ env.SONAR_TOKEN != '' }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
+      # One test project per invocation. Besides parallelizing the suite, this removes the
+      # condition behind a coverage-collector flake that KtsuBuild otherwise retries around:
+      # the instrumentation pipe drops during teardown when several assemblies run together.
+      - name: Run Tests
+        shell: bash
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          set -euo pipefail
+          ktsubuild test run --project "${{ matrix.project }}" --workspace "$GITHUB_WORKSPACE" --verbose
 
-      - name: Run KtsuBuild CI Pipeline
-        id: pipeline
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NUGET_API_KEY: ${{ secrets.NUGET_KEY }}
-          KTSU_PACKAGE_KEY: ${{ secrets.KTSU_PACKAGE_KEY }}
-          EXPECTED_OWNER: ktsu-dev
-        run: |
-          # Run the CI pipeline
-          $versionBump = "${{ github.event.inputs.version-bump }}"
-
-          # Build arguments array - only add --version-bump if explicitly set (for backward compatibility during bootstrap)
-          $args = @("ci", "--workspace", "${{ github.workspace }}", "--verbose")
-          if (![string]::IsNullOrEmpty($versionBump) -and $versionBump -ne "auto") {
-            $args += @("--version-bump", $versionBump)
-          }
-
-          & ktsubuild @args
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: End SonarQube
-        if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.build_skipped != 'true'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: pwsh
-        run: |
-          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
-
-      - name: Upload Coverage Report
+      - name: Upload Coverage
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: coverage-report
-          path: |
-            ./coverage/*
+          name: coverage-${{ matrix.slug }}-${{ matrix.os }}
+          path: ./coverage/*
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   winget:
     name: Update Winget Manifests
