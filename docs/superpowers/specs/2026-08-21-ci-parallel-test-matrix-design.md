@@ -22,7 +22,7 @@ The cap can't simply be raised. It's the wrong shape: everything is serial, one 
 
 **One Sonar analysis, in the release job.** SonarCloud replaces the previous analysis for a project key rather than merging, so a Sonar block inside each cell would submit 15 competing analyses of the same project. Whichever finished last would win and report every project it didn't run as uncovered. Instead each cell uploads its coverage XML, and one job imports them all.
 
-**Sonar and release are one job.** Both need a build on Linux, so merging them saves one. Pack and push run after `sonarscanner end`, which means a failed quality gate stops the release — a change from today, where `ktsubuild ci` releases first and Sonar reports afterward. A release that fails the project's own quality bar is worth stopping, and nothing has consumed it at that point.
+**Sonar and release are one job, and it stays on `windows-latest`.** (Revised 2026-08-21, see Revisions.) Both need a build, so merging them saves a job. Pack and push run after `sonarscanner end`, which means a failed quality gate stops the release — a change from today, where `ktsubuild ci` releases first and Sonar reports afterward. A release that fails the project's own quality bar is worth stopping, and nothing has consumed it at that point.
 
 ## Job graph
 
@@ -33,7 +33,7 @@ test (matrix: {ubuntu, windows, macos} x N projects)
                     restore -> build -> test one project
                     upload coverage-<platform>-<project>.xml
 
-release (ubuntu, needs: test)
+release (windows, needs: discover + test)
                     download every coverage artifact
                     sonar begin
                     -> ktsubuild ci --no-test --no-release
@@ -120,6 +120,8 @@ CI changes can't be proven by reasoning about YAML. Before this syncs anywhere:
 **2026-08-21, the release job.** The original decision to stop calling `ktsubuild ci` rested on the claim that "`ktsubuild release` still handles pack, publish, and release, so no release automation is lost." Reading `CiCommand` against `ReleaseCommand` showed that false. `ci` does five things `release` does not: update and commit the metadata files, update the repository topics from TAGS.md, gate the release on the version increment (which is how `[skip ci]` works), honor a forced version bump, and write the four step outputs. `ReleaseService.ExecuteReleaseAsync` packs, publishes, and creates the GitHub release unconditionally once called, gated only on `ShouldRelease`, which means "on main, untagged, official repo" and nothing about whether the version moved.
 
 Dropping the step outputs would have silently disabled the `winget` and `security` jobs, since both gate on `should_release`. That is the failure mode this design exists to remove, so `ci` stays and gained two skip flags instead. Shipped in `ktsu.KtsuBuild.Tool` 2.3.0.
+
+**2026-08-21, the release job's runner.** The original graph put it on ubuntu. Keeping it on `windows-latest`, which is what runs today, for two reasons. `GetBuildableProjects` filters by host, so a Linux release job would build and publish a smaller set of projects than today in any repo holding a Windows-tied target framework, and this file reaches sixty repos verbatim. ImGuiApp itself has none (its only host-tied projects are iOS ones, conditional on a macOS host), but the repos it syncs to were not surveyed. Staying on Windows also leaves the existing SonarCloud cache and scanner steps untouched, since they are written in PowerShell with Windows paths. The cost is one Windows runner instead of one Linux runner, against a 3N matrix where the test cells dominate.
 
 **2026-08-21, the `security` job.** The original job graph omitted it. It exists, it is `needs: build`, and it consumes the same two outputs `winget` does.
 
