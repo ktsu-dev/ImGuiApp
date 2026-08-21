@@ -35,6 +35,88 @@ env:
   DOTNET_VERSION: "10.0" # Only needed for actions/setup-dotnet
 
 jobs:
+  discover:
+    name: Discover Test Projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has_tests: ${{ steps.discover.outputs.has_tests }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Install KtsuBuild
+        shell: bash
+        run: |
+          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
+          echo "${{ runner.temp }}/ktsubuild" >> "$GITHUB_PATH"
+
+      # `test list` reports every test project regardless of the host it runs on, unlike the
+      # filter `build` and `ci` apply, so one Linux job can enumerate cells that Windows and
+      # macOS runners will execute. It writes failures to stdout rather than stderr, so the
+      # exit code is the only reliable signal and has to be checked before parsing.
+      - name: Discover Test Projects
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! projects=$(ktsubuild test list --workspace "$GITHUB_WORKSPACE"); then
+            echo "::error::ktsubuild test list failed:"
+            echo "$projects"
+            exit 1
+          fi
+
+          echo "Discovered test projects:"
+          echo "$projects" | jq .
+
+          # An unrecognized platform must stop the run rather than drop the project. Dropping
+          # it would produce a smaller matrix that still reports success, which is the failure
+          # this design exists to remove.
+          unknown=$(echo "$projects" | jq -r '[.[] | select(.platform as $p | ["neutral","windows","ios"] | index($p) | not) | .platform] | unique | join(", ")')
+          if [ -n "$unknown" ]; then
+            echo "::error::ktsubuild test list reported unrecognized platform(s): $unknown"
+            exit 1
+          fi
+
+          matrix=$(echo "$projects" | jq -c '
+            {
+              include: [
+                .[]
+                | . as $p
+                | {
+                    neutral: ["ubuntu-latest", "windows-latest", "macos-latest"],
+                    windows: ["windows-latest"],
+                    ios: ["macos-latest"]
+                  }[$p.platform][]
+                | {
+                    os: .,
+                    project: $p.project,
+                    name: ($p.project | split("/") | last | rtrimstr(".csproj")),
+                    slug: ($p.project | rtrimstr(".csproj") | gsub("[^A-Za-z0-9]"; "-"))
+                  }
+              ]
+            }')
+
+          count=$(echo "$matrix" | jq '.include | length')
+          echo "Matrix has $count cell(s)."
+          echo "$matrix" | jq .
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build, Test & Release
     runs-on: windows-latest
