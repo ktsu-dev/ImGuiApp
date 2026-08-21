@@ -162,6 +162,9 @@ jobs:
           set -euo pipefail
           ktsubuild test run --project "${{ matrix.project }}" --workspace "$GITHUB_WORKSPACE" --verbose
 
+      # `warn` rather than `error`, because this step runs with `if: always()` and a cell that
+      # genuinely failed its tests legitimately produces no coverage. `error` here would break
+      # the failure path instead of just reporting it.
       - name: Upload Coverage
         uses: actions/upload-artifact@v7
         if: always()
@@ -174,11 +177,12 @@ jobs:
   release:
     name: Analyze & Release
     needs: [discover, test]
-    # `always()` is required because `test` is skipped when a repo has no test projects, and a
-    # skipped dependency would otherwise skip this job too. The explicit result checks are what
-    # keep a genuine test failure from releasing anyway.
+    # `!cancelled()` is required because `test` is skipped when a repo has no test projects, and
+    # a skipped dependency would otherwise skip this job too. It also stops a run that
+    # `concurrency.cancel-in-progress` superseded from reaching `Release` and racing the newer
+    # run. The explicit result checks are what keep a genuine test failure from releasing anyway.
     if: |
-      always()
+      !cancelled()
       && needs.discover.result == 'success'
       && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: windows-latest
@@ -276,7 +280,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
 
       # `ci` rather than restore and build directly, because it is the only place that updates
       # and commits the metadata files, updates the repository topics, applies the version gate
@@ -328,7 +332,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: coverage-report
+          name: analysis-coverage-report
           path: |
             ./coverage/*
           retention-days: 7
