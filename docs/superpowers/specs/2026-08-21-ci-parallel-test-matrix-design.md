@@ -45,19 +45,34 @@ With three platforms and N test projects the matrix runs 3N builds, plus one in 
 
 The lever, if that cost bites before self-hosted runners land: build once per platform and have that platform's test cells download its output. The transfer is same-OS, so the `project.assets.json` paths still resolve and none of the cross-platform problems return. It trades 3N builds for 3 builds plus 3N artifact round-trips, and it reintroduces artifact machinery this design deliberately avoided. Not worth doing until the numbers say so.
 
-## Discovering the test projects
+## Extending ktsubuild rather than working around it
 
-The matrix can't be hardcoded, because this file lands in every ktsu repo. A `discover` job lists the projects in the solution and selects the test ones by the rules `KtsuBuild.DotNetService.IsTestProject` already uses: a file or directory name ending in `.Test` or `.Tests`, a directory named exactly `Test` or `Tests`, or project content containing `<IsTestProject>true</IsTestProject>`, `Sdk="Microsoft.NET.Sdk.Test"`, or an MSTest SDK reference.
+The workflow needs three things `ktsubuild` doesn't expose yet. All three are already implemented inside it — they're just not reachable from a command line. Reimplementing them in the workflow would put a second copy of each rule in a YAML file, and the second copy is the one that goes stale.
 
-That last clause matters here: the five `*.UITests` projects match on content, not on name.
+**`ktsubuild test list --json`** emits the test projects with the platform each is tied to:
 
-**Two implementations of one rule is the failure this repo has already paid for.** The preferred fix is a `ktsubuild list-test-projects --json` command, so the workflow and the build tool share one definition. Until that exists, the discovery step reimplements the rule in PowerShell, and drift between the two is a recorded risk rather than a surprise.
+```json
+[
+  { "project": "tests/ImGui.Widgets.Tests/ImGui.Widgets.Tests.csproj", "platform": "neutral" },
+  { "project": "tests/ImGui.App.iOS.SmokeTest/ImGui.App.iOS.SmokeTest.csproj", "platform": "ios" }
+]
+```
 
-When the solution has no test projects, `discover` emits an empty matrix and the test job is skipped. The release job must not require a non-empty matrix.
+`DotNetService.IsTestProject` and `GetProjectPlatform` already produce both fields. The `discover` job turns this into the matrix, expanding neutral projects across all three platforms and platform-tied ones only onto hosts that can build them.
+
+Detection matters more than it looks: the five `*.UITests` projects don't end in `.Test` or `.Tests`, so they match only on project content. A name-based filter in YAML would silently drop all 107 tests — green, and testing nothing.
+
+**`ktsubuild test run --project <path>`** runs one project with the coverage flags the pipeline already uses, instead of the workflow assembling a `dotnet test` invocation of its own. `TestAsync` takes the project list already; this exposes a scoped call.
+
+**`ktsubuild build --no-test`** restores and builds without testing, for the release job, which needs a compilation between `sonarscanner begin` and `end` but runs no tests.
+
+Each is a thin command over existing service methods. None changes what `ci` does, so repos still on `ci` are unaffected.
+
+When a solution has no test projects, `test list` emits an empty array, the matrix is empty, and the test job is skipped. The release job must not require a non-empty matrix.
 
 ## Running the tests
 
-Each cell runs `dotnet test <project> --coverage --coverage-output-format xml`, scoped to a single project.
+Each cell runs `ktsubuild test run --project <path>`, which applies the same coverage flags the current pipeline uses.
 
 **Do not pass `--nologo`.** It makes the runner report `total: 0` with exit code 5 while every test passes — verified on 2026-08-21 against `ImageGui.Core.Tests`, which reports 163 passing without the flag and zero with it. A CI step that passes it looks green and tests nothing.
 
@@ -65,7 +80,7 @@ Fanning out also sidesteps a flake that `KtsuBuild` currently retries around: th
 
 ## Risks
 
-**Rule drift in test discovery.** The workflow's PowerShell filter and `KtsuBuild.IsTestProject` must agree. If they diverge, a project silently stops being tested — the failure is invisible, because a skipped project reports nothing. Closing this properly means the `ktsubuild list-test-projects` command above.
+**The workflow can't use commands that aren't published yet.** CI installs the tool with `dotnet tool install ktsu.KtsuBuild.Tool`, so the three new commands must be released to nuget.org before any repo's workflow calls them. That makes this a two-repo delivery in a fixed order: extend and release KtsuBuild, then restructure the workflow. A workflow synced ahead of the tool release fails everywhere at once.
 
 **Platform-tied projects can't build everywhere.** `GetBuildableProjects` exists because some projects are tied to a host: iOS needs macOS, `net10.0-windows` needs Windows. ImGuiApp has no Windows-tied targets, and its iOS targets are added conditionally on macOS hosts and covered by a separate workflow. Across sixty repos that won't hold universally.
 
@@ -87,6 +102,12 @@ CI changes can't be proven by reasoning about YAML. Before this syncs anywhere:
 - Confirm the release job runs `ktsubuild release` only under the existing release condition, and that a PR run analyses without publishing.
 - Confirm the wall clock is under the cap with room to spare, and record the number.
 
+## Sequence
+
+1. `KtsuBuild`: add `test list --json`, `test run --project`, and `build --no-test`. Release to nuget.org.
+2. `ImGuiApp`: restructure `dotnet.yml` against the released tool. Validate on a branch.
+3. Sync to the other repos once the numbers from step 2 are known.
+
 ## Out of scope
 
-The iOS workflow, the winget job, the dependabot-merge workflow, and any change to `KtsuBuild` beyond the `list-test-projects` command named above as the preferred fix for rule drift.
+The iOS workflow, the winget job, the dependabot-merge workflow, and any change to what `ktsubuild ci` does — it stays as it is for repos that haven't moved.
