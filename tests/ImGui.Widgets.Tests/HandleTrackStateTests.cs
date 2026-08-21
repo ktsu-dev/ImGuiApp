@@ -1,0 +1,354 @@
+// Copyright (c) 2023-2026 ktsu-dev contributors
+
+namespace ktsu.ImGui.Widgets.Tests;
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+/// <summary>
+/// Tests the interaction behind HandleTrack and RangeSlider. All pure — no ImGui context required.
+/// </summary>
+[TestClass]
+public class HandleTrackStateTests
+{
+	[TestMethod]
+	public void Normalize_ClampsHandlesIntoTheBounds()
+	{
+		float[] handles = [-3f, 0.5f, 9f];
+
+		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0f);
+
+		Assert.AreEqual(0f, handles[0], 1e-6f);
+		Assert.AreEqual(0.5f, handles[1], 1e-6f);
+		Assert.AreEqual(1f, handles[2], 1e-6f);
+	}
+
+	[TestMethod]
+	public void Normalize_SortsHandlesAscending()
+	{
+		float[] handles = [0.9f, 0.1f, 0.5f];
+
+		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0f);
+
+		Assert.AreEqual(0.1f, handles[0], 1e-6f);
+		Assert.AreEqual(0.5f, handles[1], 1e-6f);
+		Assert.AreEqual(0.9f, handles[2], 1e-6f);
+	}
+
+	[TestMethod]
+	public void Normalize_OpensCollapsedHandlesToTheMinimumGap()
+	{
+		float[] handles = [0.5f, 0.5f, 0.5f];
+
+		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0.1f);
+
+		// Tolerance because the gap is opened by repeated float addition; asserting the exact
+		// bound would be testing rounding, not Normalize.
+		Assert.IsGreaterThanOrEqualTo(0.1f - 1e-6f, handles[1] - handles[0], "The first pair is closer than minGap.");
+		Assert.IsGreaterThanOrEqualTo(0.1f - 1e-6f, handles[2] - handles[1], "The second pair is closer than minGap.");
+	}
+
+	[TestMethod]
+	public void Normalize_SettlesDownWhenHandlesAreClusteredAtTheTop()
+	{
+		// Three handles piled against the top with a minGap that fits comfortably. The upward
+		// pass separates them; the downward settle ensures none escape upperBound.
+		float[] handles = [1f, 1f, 1f];
+
+		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0.25f);
+
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "A handle was pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "A handle was pushed above upperBound.");
+	}
+
+	[TestMethod]
+	public void Normalize_NarrowsMinGapWhenItCannotFit()
+	{
+		// Three handles in a span of 1 with minGap = 0.6 require spread of 1.2, which exceeds
+		// the available range. The gap is narrowed to spread evenly (0.5 each) with all handles
+		// kept strictly inside bounds.
+		float[] handles = [1f, 1f, 1f];
+
+		ImGuiWidgets.HandleTrackState.Normalize(handles, 0f, 1f, 0.6f);
+
+		// Verify all handles are strictly inside bounds
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "First handle pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "Last handle pushed above upperBound.");
+
+		// Verify handles are evenly spread
+		float gap1 = handles[1] - handles[0];
+		float gap2 = handles[2] - handles[1];
+		Assert.AreEqual(gap1, gap2, 1e-6f, "Gaps should be equal when minGap is narrowed.");
+	}
+
+	[TestMethod]
+	public void Activate_SelectsTheNearestHandle()
+	{
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+
+		state.Activate(handles, 0.55f);
+
+		Assert.AreEqual(1, state.ActiveHandle);
+	}
+
+	[TestMethod]
+	public void Activate_TieGoesToTheLowerHandle()
+	{
+		// Exactly between two handles. These values are exactly representable in binary floating
+		// point, so the two distances really are equal and the tie rule is genuinely exercised —
+		// with values like 0.2/0.4/0.3 the distances differ in the last bits and the test would
+		// pass without the rule holding at all.
+		float[] handles = [0.25f, 0.75f];
+		ImGuiWidgets.HandleTrackState state = new();
+
+		state.Activate(handles, 0.5f);
+
+		Assert.AreEqual(0, state.ActiveHandle);
+	}
+
+	[TestMethod]
+	public void Drag_MovesOnlyTheActiveHandle()
+	{
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		bool changed = state.Drag(handles, 0.6f, 0f, 1f, 0f);
+
+		Assert.IsTrue(changed);
+		Assert.AreEqual(0.1f, handles[0], 1e-6f, "The lower handle moved.");
+		Assert.AreEqual(0.6f, handles[1], 1e-6f);
+		Assert.AreEqual(0.9f, handles[2], 1e-6f, "The upper handle moved.");
+	}
+
+	[TestMethod]
+	public void Drag_StopsAtTheMinimumGapFromItsNeighbor()
+	{
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, 0.95f, 0f, 1f, 0.1f);
+
+		Assert.AreEqual(0.8f, handles[1], 1e-6f, "The middle handle did not stop a gap short of the upper one.");
+		Assert.AreEqual(0.9f, handles[2], 1e-6f, "Dragging into a neighbor pushed it instead of stopping.");
+	}
+
+	[TestMethod]
+	public void Drag_ClampsToTheBoundsRatherThanWrapping()
+	{
+		float[] handles = [0.5f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, 4f, 0f, 1f, 0f);
+
+		Assert.AreEqual(1f, handles[0], 1e-6f);
+	}
+
+	[TestMethod]
+	public void Drag_ReportsNoChangeWhenTheValueIsWhereItAlreadyWas()
+	{
+		// A drag that resolves to the same clamped value must not report a change, or a consumer
+		// turning changes into undo entries records one per frame for a stationary mouse.
+		float[] handles = [0.5f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		bool changed = state.Drag(handles, 0.5f, 0f, 1f, 0f);
+
+		Assert.IsFalse(changed);
+	}
+
+	[TestMethod]
+	public void Drag_WithoutActivationChangesNothing()
+	{
+		float[] handles = [0.5f];
+		ImGuiWidgets.HandleTrackState state = new();
+
+		bool changed = state.Drag(handles, 0.9f, 0f, 1f, 0f);
+
+		Assert.IsFalse(changed);
+		Assert.AreEqual(0.5f, handles[0], 1e-6f);
+	}
+
+	[TestMethod]
+	public void Release_ClearsTheActiveHandle()
+	{
+		float[] handles = [0.1f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.1f);
+
+		state.Release();
+
+		Assert.AreEqual(-1, state.ActiveHandle);
+	}
+
+	[TestMethod]
+	public void Drag_KeepsHandlesOnTheTrackWhenMinGapIsTooWide()
+	{
+		// Two handles at the top with a minGap so wide it cannot fit between bounds.
+		// The active handle must not be pushed outside the track. This reproduces a case where
+		// Normalize narrowed the gap but Drag received the caller's original value, causing
+		// derived floor/ceiling to exceed the bounds.
+		float[] handles = [0.9f, 0.95f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.95f);
+
+		state.Drag(handles, 1.5f, 0f, 1f, 0.5f);
+
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "First handle pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[1], "Active handle pushed above upperBound.");
+		Assert.IsGreaterThanOrEqualTo(handles[0], handles[1], "Handles are not in ascending order.");
+	}
+
+	[TestMethod]
+	public void Drag_PreservesHandleOrderWhenNeighborsAreAlreadyCloserThanMinGap()
+	{
+		// Three handles clustered together with a minGap so wide the neighbors are already
+		// closer than it allows. The middle handle must stay between its neighbors and remain
+		// on the track. This reproduces the case where Normalize narrowed the gap internally
+		// but Drag received the original value, causing inversion.
+		float[] handles = [0.85f, 0.9f, 0.95f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.9f);
+
+		state.Drag(handles, 1.5f, 0f, 1f, 0.6f);
+
+		Assert.IsGreaterThanOrEqualTo(handles[0], handles[1], "Handles are not in ascending order.");
+		Assert.IsGreaterThanOrEqualTo(handles[1], handles[2], "Handles are not in ascending order.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "First handle pushed below lowerBound.");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "Last handle pushed above upperBound.");
+	}
+
+	[TestMethod]
+	public void Drag_AllowsEdgeHandleToReachItsTrackBoundWithNonzeroMinGap()
+	{
+		// minGap separates handles from each other, not from the track ends. An edge handle
+		// with a nonzero minGap must still be able to reach its own bound. This protects against
+		// regression 1: minGap being incorrectly applied to bounds.
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.1f);
+
+		state.Drag(handles, -5f, 0f, 1f, 0.05f);
+
+		Assert.AreEqual(0f, handles[0], 1e-6f, "Edge handle should reach its track bound.");
+	}
+
+	[TestMethod]
+	public void Drag_AllowsSingleHandleToReachBothBoundsWithNonzeroMinGap()
+	{
+		// A single handle has no neighbors, so minGap never applies. With or without minGap,
+		// it should still reach both bounds. This protects against regression 1.
+		float[] handles = [0.5f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, -5f, 0f, 1f, 0.2f);
+
+		Assert.AreEqual(0f, handles[0], 1e-6f, "Single handle should reach lowerBound.");
+
+		state.Drag(handles, 5f, 0f, 1f, 0.2f);
+
+		Assert.AreEqual(1f, handles[0], 1e-6f, "Single handle should reach upperBound.");
+	}
+
+	[TestMethod]
+	public void Drag_AcceptsInvertedBoundsWithoutThrowing()
+	{
+		// Drag must handle inverted bounds the same way Normalize does: swap them. It must not
+		// throw ArgumentException. This protects against regression 2.
+		float[] handles = [0.7f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.7f);
+
+		// Should not throw, and should clamp to the (swapped) bounds [0, 1]
+		state.Drag(handles, 0.7f, 1f, 0f, 0f);
+
+		Assert.AreEqual(0.7f, handles[0], 1e-6f, "Handle should remain in the (swapped) bounds.");
+	}
+
+	[TestMethod]
+	public void Drag_HandlesNegativeMinGapByClampingToZero()
+	{
+		// A negative minGap is invalid and inverts handle order. Drag must clamp it to zero,
+		// matching Normalize. This protects against negative minGap being treated as license to overlap.
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, 0f, 0f, 1f, -0.2f);
+
+		Assert.IsLessThanOrEqualTo(handles[1], handles[0], "handles[0] must not exceed handles[1] after drag with negative minGap.");
+		Assert.IsLessThanOrEqualTo(handles[2], handles[1], "handles[1] must not exceed handles[2] after drag with negative minGap.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "handles[0] must remain on track (at or above lowerBound).");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "handles[2] must remain on track (at or below upperBound).");
+	}
+
+	[TestMethod]
+	public void Drag_KeepsHandlesAscendingWhenNegativeMinGapDragsToUpperBound()
+	{
+		// A negative minGap should not invert order even when dragging toward the upper bound.
+		// Verify ascending order is maintained.
+		float[] handles = [0.1f, 0.5f, 0.9f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.5f);
+
+		state.Drag(handles, 1f, 0f, 1f, -0.2f);
+
+		Assert.IsLessThanOrEqualTo(handles[1], handles[0], "handles[0] must not exceed handles[1] after drag with negative minGap.");
+		Assert.IsLessThanOrEqualTo(handles[2], handles[1], "handles[1] must not exceed handles[2] after drag with negative minGap.");
+		Assert.IsGreaterThanOrEqualTo(0f, handles[0], "handles[0] must remain on track (at or above lowerBound).");
+		Assert.IsLessThanOrEqualTo(1f, handles[2], "handles[2] must remain on track (at or below upperBound).");
+	}
+
+	// These three tests pin the shared two-handle interaction rules that RangeSlider now depends
+	// on via HandleTrackState. RangeSlider's own refactor commit does not modify HandleTrackState,
+	// so these tests passed before that refactor and would pass even if RangeSlider's wiring to it
+	// were wrong. They do not observe RangeSlider's wiring — its mouseValue formula, the order it
+	// calls Activate/Drag/Release in, writing handles[0]/handles[1] back to lower/upper, or drawing
+	// only after interaction — and RangeSlider has no test covering that wiring, before or after
+	// this branch.
+
+	[TestMethod]
+	public void TwoHandles_LowerCannotCrossUpper()
+	{
+		float[] handles = [0.2f, 0.6f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.2f);
+
+		state.Drag(handles, 0.95f, 0f, 1f, 0f);
+
+		Assert.AreEqual(0.6f, handles[0], 1e-6f, "The lower handle crossed the upper one.");
+		Assert.AreEqual(0.6f, handles[1], 1e-6f, "The upper handle moved.");
+	}
+
+	[TestMethod]
+	public void TwoHandles_UpperCannotCrossLower()
+	{
+		float[] handles = [0.4f, 0.8f];
+		ImGuiWidgets.HandleTrackState state = new();
+		state.Activate(handles, 0.8f);
+
+		state.Drag(handles, 0.05f, 0f, 1f, 0f);
+
+		Assert.AreEqual(0.4f, handles[0], 1e-6f, "The lower handle moved.");
+		Assert.AreEqual(0.4f, handles[1], 1e-6f, "The upper handle crossed the lower one.");
+	}
+
+	[TestMethod]
+	public void TwoHandles_MinGapIsHeldOnBothSides()
+	{
+		float[] handles = [0.4f, 0.6f];
+		ImGuiWidgets.HandleTrackState state = new();
+
+		state.Activate(handles, 0.4f);
+		state.Drag(handles, 0.9f, 0f, 1f, 0.2f);
+		Assert.AreEqual(0.4f, handles[0], 1e-6f, "The lower handle came closer than minGap.");
+
+		state.Activate(handles, 0.6f);
+		state.Drag(handles, 0.1f, 0f, 1f, 0.2f);
+		Assert.AreEqual(0.6f, handles[1], 1e-6f, "The upper handle came closer than minGap.");
+	}
+}
