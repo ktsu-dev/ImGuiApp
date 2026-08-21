@@ -171,10 +171,173 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  release:
+    name: Analyze & Release
+    needs: [discover, test]
+    # `always()` is required because `test` is skipped when a repo has no test projects, and a
+    # skipped dependency would otherwise skip this job too. The explicit result checks are what
+    # keep a genuine test failure from releasing anyway.
+    if: |
+      always()
+      && needs.discover.result == 'success'
+      && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # For creating releases and committing metadata
+      packages: write # For publishing packages
+
+    outputs:
+      version: ${{ steps.pipeline.outputs.version }}
+      release_hash: ${{ steps.pipeline.outputs.release_hash }}
+      should_release: ${{ steps.pipeline.outputs.should_release }}
+
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: "zulu" # Alternative distribution options are available.
+
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Full history for versioning
+          fetch-tags: true
+          lfs: true
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
+
+      # Ensure NuGet packages directory exists for caching (prevents error when pipeline exits early)
+      - name: Ensure NuGet cache directory exists
+        run: New-Item -Path "$env:USERPROFILE\.nuget\packages" -ItemType Directory -Force
+        shell: pwsh
+
+      - name: Cache SonarQube Cloud packages
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: actions/cache@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache SonarQube Cloud scanner
+        if: ${{ env.SONAR_TOKEN != '' }}
+        id: cache-sonar-scanner
+        uses: actions/cache@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          path: .\.sonar\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      - name: Install SonarQube Cloud scanner
+        if: ${{ env.SONAR_TOKEN != '' && steps.cache-sonar-scanner.outputs.cache-hit != 'true' }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: pwsh
+        run: |
+          New-Item -Path .\.sonar\scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+
+      - name: Install KtsuBuild
+        shell: pwsh
+        run: |
+          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
+
+      # Every cell wrote a file named coverage.xml, so the downloads must stay in their own
+      # per-artifact directories. Merging them would leave one file and report the coverage of
+      # a single test project as though it were the whole repository's.
+      - name: Download Coverage
+        if: needs.discover.outputs.has_tests == 'true'
+        uses: actions/download-artifact@v7
+        with:
+          pattern: coverage-*
+          path: coverage
+
+      - name: Begin SonarQube
+        if: ${{ env.SONAR_TOKEN != '' }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: pwsh
+        run: |
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+
+      # `ci` rather than restore and build directly, because it is the only place that updates
+      # and commits the metadata files, updates the repository topics, applies the version gate
+      # behind `[skip ci]`, and writes the step outputs the winget and security jobs read.
+      # The tests already ran in the matrix, and the release waits for the quality gate below.
+      - name: Run KtsuBuild Pipeline
+        id: pipeline
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUGET_API_KEY: ${{ secrets.NUGET_KEY }}
+          KTSU_PACKAGE_KEY: ${{ secrets.KTSU_PACKAGE_KEY }}
+          EXPECTED_OWNER: ktsu-dev
+        run: |
+          $versionBump = "${{ github.event.inputs.version-bump }}"
+
+          $args = @("ci", "--workspace", "${{ github.workspace }}", "--no-test", "--no-release", "--verbose")
+          if (![string]::IsNullOrEmpty($versionBump) -and $versionBump -ne "auto") {
+            $args += @("--version-bump", $versionBump)
+          }
+
+          & ktsubuild @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: End SonarQube
+        if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.build_skipped != 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: pwsh
+        run: |
+          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+      # After the gate, not before. A failed quality gate fails the step above and this never
+      # runs, which is a deliberate change from the old shape where `ci` released first and
+      # Sonar reported afterward.
+      - name: Release
+        if: steps.pipeline.outputs.should_release == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUGET_API_KEY: ${{ secrets.NUGET_KEY }}
+          KTSU_PACKAGE_KEY: ${{ secrets.KTSU_PACKAGE_KEY }}
+          EXPECTED_OWNER: ktsu-dev
+        run: |
+          ktsubuild release --workspace "${{ github.workspace }}" --verbose
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-report
+          path: |
+            ./coverage/*
+          retention-days: 7
+          if-no-files-found: ignore
+
   winget:
     name: Update Winget Manifests
-    needs: build
-    if: needs.build.outputs.should_release == 'true'
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -184,7 +347,7 @@ jobs:
       - name: Checkout Release Commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.release_hash }}
+          ref: ${{ needs.release.outputs.release_hash }}
           fetch-depth: 0 # Full history for better auto-detection
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
@@ -205,19 +368,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ktsubuild winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
+          ktsubuild winget generate --version "${{ needs.release.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
         uses: actions/upload-artifact@v7
         with:
-          name: winget-manifests-${{ needs.build.outputs.version }}
+          name: winget-manifests-${{ needs.release.outputs.version }}
           path: winget/*.yaml
           retention-days: 30
 
   security:
     name: Security Scanning
-    needs: build
-    if: needs.build.outputs.should_release == 'true'
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -228,6 +391,6 @@ jobs:
       - name: Checkout Release Commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.release_hash }}
+          ref: ${{ needs.release.outputs.release_hash }}
       - name: Detect Dependencies
         uses: advanced-security/component-detection-dependency-submission-action@31f25a8de68ae5ce2ca274bc28546a78683c15ce # v0.1.4
