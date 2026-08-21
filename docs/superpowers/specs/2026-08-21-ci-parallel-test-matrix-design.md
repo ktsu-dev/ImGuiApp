@@ -12,7 +12,7 @@ The cap can't simply be raised. It's the wrong shape: everything is serial, one 
 
 ## Decisions
 
-**Stop calling `ktsubuild ci`; call restore, build, and test directly.** `CiCommand` is a thin orchestrator — version, restore, build, test, release — with no way to skip or scope the test step. Calling the parts directly lets the workflow decide what runs where. `ktsubuild release` still handles pack, publish, and release, so no release automation is lost.
+**Keep calling `ktsubuild ci`, with its two new skip flags.** (Revised 2026-08-21. The original decision was to stop calling `ci` and invoke restore, build, and test directly, on the grounds that `ktsubuild release` covered everything else. That was wrong, and the correction is recorded under Revisions.) The release job runs `ktsubuild ci --no-test --no-release` inside the SonarCloud begin and end window, then `ktsubuild release` after the gate passes. `ci` remains the only place that updates and commits the metadata files, updates the repository topics, applies the version gate that makes `[skip ci]` work, honors a forced version bump, and writes the `version`, `release_hash`, `should_release`, and `build_skipped` step outputs.
 
 **Fan out over platform × test project.** Each cell restores, builds, and runs one test project on one platform. This is what fixes the timeout: each cell carries its own budget, and the wall clock becomes the slowest single project rather than the sum of all of them.
 
@@ -34,12 +34,19 @@ test (matrix: {ubuntu, windows, macos} x N projects)
                     upload coverage-<platform>-<project>.xml
 
 release (ubuntu, needs: test)
-                    sonar begin -> restore -> build -> sonar end (imports coverage)
-                    -> ktsubuild release   [only when the release condition holds]
+                    download every coverage artifact
+                    sonar begin
+                    -> ktsubuild ci --no-test --no-release
+                       (metadata, topics, version gate, restore, build, step outputs)
+                    -> sonar end (imports the downloaded coverage)
+                    -> ktsubuild release   [if should_release == 'true']
 
-winget (windows, needs: release)    unchanged
-ios (separate workflow)             unchanged
+winget   (windows, needs: release)  unchanged apart from where it reads its outputs
+security (windows, needs: release)  unchanged apart from where it reads its outputs
+ios      (separate workflow)        unchanged
 ```
+
+`winget` and `security` both gate on `should_release` and both check out `release_hash`. Today they read those from the `build` job. They must be repointed at whichever job replaces it, or they stop running and report nothing.
 
 With three platforms and N test projects the matrix runs 3N builds, plus one in the release job. For ImGuiApp that's 30 plus 1 rather than the single build today. Wall clock doesn't suffer, because they're parallel, but the runner minutes are real.
 
@@ -64,7 +71,9 @@ Detection matters more than it looks: the five `*.UITests` projects don't end in
 
 **`ktsubuild test run --project <path>`** runs one project with the coverage flags the pipeline already uses, instead of the workflow assembling a `dotnet test` invocation of its own. `TestAsync` takes the project list already; this exposes a scoped call.
 
-**`ktsubuild build --no-test`** restores and builds without testing, for the release job, which needs a compilation between `sonarscanner begin` and `end` but runs no tests.
+**`ktsubuild build --no-test`** restores and builds without testing. Shipped in 2.2.0, and useful generally, though the release job uses `ci --no-test --no-release` instead so that it keeps the metadata, version-gate, and step-output behavior that lives only in `ci`.
+
+**`ktsubuild ci --no-test` and `ktsubuild ci --no-release`** run the full pipeline while suppressing one step each. `--no-release` suppresses this run's release without changing what the `should_release` output reports, because the job reading that output is the one performing the release. Shipped in 2.3.0.
 
 Each is a thin command over existing service methods. None changes what `ci` does, so repos still on `ci` are unaffected.
 
@@ -86,6 +95,10 @@ Fanning out also sidesteps a flake that `KtsuBuild` currently retries around: th
 
 Handle it at discovery, not in the cell. The `discover` job classifies each test project the way `GetProjectPlatform` does — neutral, Windows, or iOS — and emits the platform pairs that can actually build, so a Windows-only test project produces one cell rather than three, two of which fail. A cell that skips its own work reports green while testing nothing, which is the failure mode this whole design is trying to remove.
 
+**The synced file propagates verbatim.** `ktsu sync` hashes every copy of a filename across the tree and propagates whichever group is chosen, so the restructured workflow reaches sixty repos byte for byte. Nothing in it may be specific to ImGuiApp: no hardcoded project names, no hardcoded test counts, no repo name outside the expressions GitHub already substitutes. The matrix has to be discovered at runtime for correctness, not only for elegance.
+
+**NuGet has two indexes and they lag apart.** Verified on 2026-08-21 releasing 2.3.0: the package blob appeared in nuget.org's flat container 210 seconds after the GitHub release, but `dotnet tool install` still could not resolve it, and needed roughly another 30 seconds for the registration index the client reads. A workflow synced immediately after a tool release can fail to resolve a version whose release page already says published. The install step should tolerate that rather than fail the run outright.
+
 **Blast radius.** This restructure reaches every ktsu repo on the next `ktsu sync`. A repo with two test projects pays six builds and six runner starts to parallelize work that took two minutes serially, and gets slower in wall clock once job startup is counted. The shape is right for repos with heavy suites and mildly negative for small ones — which is most of them. Worth deciding whether that trade holds org-wide before syncing, rather than after.
 
 **Quality gate now blocks release.** Deliberate, and a behavior change. A SonarCloud outage would stop publishing; `continue-on-error` on the `end` step is the escape hatch if that ever happens.
@@ -101,6 +114,14 @@ CI changes can't be proven by reasoning about YAML. Before this syncs anywhere:
 - Confirm SonarCloud receives coverage from all three platforms' uploads and reports a figure comparable to today's.
 - Confirm the release job runs `ktsubuild release` only under the existing release condition, and that a PR run analyses without publishing.
 - Confirm the wall clock is under the cap with room to spare, and record the number.
+
+## Revisions
+
+**2026-08-21, the release job.** The original decision to stop calling `ktsubuild ci` rested on the claim that "`ktsubuild release` still handles pack, publish, and release, so no release automation is lost." Reading `CiCommand` against `ReleaseCommand` showed that false. `ci` does five things `release` does not: update and commit the metadata files, update the repository topics from TAGS.md, gate the release on the version increment (which is how `[skip ci]` works), honor a forced version bump, and write the four step outputs. `ReleaseService.ExecuteReleaseAsync` packs, publishes, and creates the GitHub release unconditionally once called, gated only on `ShouldRelease`, which means "on main, untagged, official repo" and nothing about whether the version moved.
+
+Dropping the step outputs would have silently disabled the `winget` and `security` jobs, since both gate on `should_release`. That is the failure mode this design exists to remove, so `ci` stays and gained two skip flags instead. Shipped in `ktsu.KtsuBuild.Tool` 2.3.0.
+
+**2026-08-21, the `security` job.** The original job graph omitted it. It exists, it is `needs: build`, and it consumes the same two outputs `winget` does.
 
 ## Sequence
 
