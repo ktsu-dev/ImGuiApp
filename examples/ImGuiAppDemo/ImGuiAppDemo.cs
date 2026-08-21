@@ -44,7 +44,12 @@ internal static class ImGuiAppDemo
 		demoTabs.Add(new UtilityDemo());
 	}
 
-	private static void Main() => ImGuiApp.Start(new()
+	/// <summary>
+	/// Builds the configuration the demo runs on. Extracted from <c>Main</c> so a UI test drives the
+	/// real configuration rather than a parallel one written for testing.
+	/// </summary>
+	/// <returns>The application configuration.</returns>
+	internal static ImGuiAppConfig BuildConfig() => new()
 	{
 		Title = "ImGuiApp Demo",
 		IconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>(),
@@ -53,6 +58,9 @@ internal static class ImGuiAppDemo
 		OnRender = OnRender,
 		OnAppMenu = OnAppMenu,
 		SaveIniSettings = false,
+		// DrawDeferredDocked below draws the DockedWindow demo into a dockspace, which ImGui only
+		// permits when docking was enabled before the first frame.
+		EnableDocking = true,
 		// Note: EnableUnicodeSupport = true by default, so Unicode and emojis are automatically enabled!
 		Fonts = new Dictionary<string, byte[]>
 		{
@@ -72,7 +80,32 @@ internal static class ImGuiAppDemo
 			// But with a shorter idle timeout for demo purposes
 			IdleTimeoutSeconds = 5.0, // Consider idle after 5 seconds (default is 30)
 		},
-	});
+	};
+
+	private static void Main() => ImGuiApp.Start(BuildConfig());
+
+	/// <summary>
+	/// Returns the demo state a test can disturb to its starting value. The demo keeps its state in
+	/// statics, which outlive a harness, so a test that ran before this one would otherwise decide
+	/// what this one starts from.
+	/// </summary>
+	internal static void ResetState()
+	{
+		showAbout = false;
+		overlayEnabled = false;
+		overlayOpacity = 0.9f;
+		overlayClickThrough = false;
+		overlayCorner = OverlayCorner.TopRight;
+	}
+
+	/// <summary>Gets the names of the tabs the demo registers, in the order they are drawn.</summary>
+	internal static IReadOnlyList<string> TabNames => [.. demoTabs.Select(tab => tab.TabName)];
+
+	/// <summary>Gets a value indicating whether the About window is showing.</summary>
+	internal static bool ShowAbout => showAbout;
+
+	/// <summary>Gets a value indicating whether overlay mode is engaged.</summary>
+	internal static bool OverlayEnabled => overlayEnabled;
 
 	// Loading textures from OnStart exercises the texture-upload path while the renderer backend
 	// is still being constructed (OnStart runs inside the ImGuiController ctor, before the
@@ -168,8 +201,8 @@ internal static class ImGuiAppDemo
 		ImGui.TextUnformatted("Overlay mode");
 		ImGui.Separator();
 
-		_ = ImGui.SliderFloat("Opacity", ref overlayOpacity, 0.2f, 1.0f, "%.2f");
-		_ = ImGui.Checkbox("Click-through", ref overlayClickThrough);
+		_ = DemoProbe.SliderFloat("Opacity", ref overlayOpacity, 0.2f, 1.0f, "%.2f");
+		_ = DemoProbe.Checkbox("Click-through", ref overlayClickThrough);
 
 		int corner = (int)overlayCorner;
 		if (ImGui.Combo("Corner", ref corner, "Top-left\0Top-right\0Bottom-left\0Bottom-right\0"))
@@ -182,7 +215,7 @@ internal static class ImGuiAppDemo
 			ImGui.TextDisabled("Click-through is on — toggle it from the View menu to interact.");
 		}
 
-		if (ImGui.Button("Exit overlay"))
+		if (DemoProbe.Button("Exit overlay"))
 		{
 			overlayEnabled = false;
 		}
@@ -229,19 +262,19 @@ internal static class ImGuiAppDemo
 
 	private static void OnAppMenu()
 	{
-		if (ImGui.BeginMenu("View"))
+		if (DemoProbe.BeginMenu("View"))
 		{
-			ImGui.MenuItem("Overlay mode", string.Empty, ref overlayEnabled);
+			DemoProbe.MenuItem("Overlay mode", string.Empty, ref overlayEnabled);
 			if (overlayEnabled)
 			{
-				ImGui.MenuItem("Overlay click-through", string.Empty, ref overlayClickThrough);
+				DemoProbe.MenuItem("Overlay click-through", string.Empty, ref overlayClickThrough);
 			}
 			ImGui.EndMenu();
 		}
 
-		if (ImGui.BeginMenu("Help"))
+		if (DemoProbe.BeginMenu("Help"))
 		{
-			ImGui.MenuItem("About", string.Empty, ref showAbout);
+			DemoProbe.MenuItem("About", string.Empty, ref showAbout);
 			ImGui.EndMenu();
 		}
 	}

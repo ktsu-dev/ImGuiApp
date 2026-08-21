@@ -21,7 +21,7 @@ internal sealed class DockedWindowDemo : ImGuiWidgets.DockedWindow
 	{
 		ImGui.TextWrapped("This window is managed by Hexa's WidgetManager. It opens floating, not docked -- drag its title bar into the dockspace that DrawDeferredDocked creates to dock it.");
 
-		if (ImGui.Button("Click me"))
+		if (DemoProbe.Button("Click me"))
 		{
 			clicks++;
 		}

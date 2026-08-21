@@ -170,6 +170,18 @@ public class ImGuiAppConfig
 	public bool SaveIniSettings { get; init; } = true;
 
 	/// <summary>
+	/// Gets or sets a value indicating whether ImGui's docking support is enabled.
+	/// </summary>
+	/// <remarks>
+	/// Required by <c>ImGuiWidgets.DrawDeferredDocked()</c>, which draws docked windows into a
+	/// dockspace over the main viewport. ImGui only accepts the docking flag before the first
+	/// frame -- setting it later aborts the process on the following frame -- so it has to be
+	/// declared here rather than turned on by the code that wants it. Default is false, which
+	/// leaves behavior unchanged for applications that never dock anything.
+	/// </remarks>
+	public bool EnableDocking { get; init; }
+
+	/// <summary>
 	/// Gets or sets a value indicating whether to auto-discover ImGui extensions (ImGuizmo, ImNodes,
 	/// ImPlot) by reflecting over loaded assemblies at startup. Default is true.
 	/// <para>

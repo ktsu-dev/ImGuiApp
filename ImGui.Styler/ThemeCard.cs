@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Color;
 using ktsu.ThemeProvider;
 
@@ -132,6 +133,7 @@ public static class ThemeCard
 
 			// Use invisible button for interaction
 			clicked = ImGui.InvisibleButton($"##card_{theme.Name}", cardSize);
+			ImGuiProbes.MarkItem("theme-card", theme.Name);
 
 			// Get button bounds for custom drawing
 			Vector2 cardMin = ImGui.GetItemRectMin();

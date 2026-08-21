@@ -93,6 +93,21 @@ public sealed class ImGuiAppHarness : IDisposable
 			throw;
 		}
 
+		// ImGui only accepts the docking flag before the first NewFrame, and Start does not render a
+		// frame -- Step does -- so this is the right side of that boundary.
+		if (config.EnableDocking)
+		{
+			Hexa.NET.ImGui.ImGui.GetIO().ConfigFlags |= Hexa.NET.ImGui.ImGuiConfigFlags.DockingEnable;
+		}
+
+		// ImGuiController does this for a windowed application, and the harness replaces the
+		// controller. Without it ImGuizmo, ImNodes and ImPlot never learn the ImGui context and an
+		// application that draws with any of them faults inside native code rather than failing as
+		// a test. This is reflection-based detection, so it costs nothing when none are referenced.
+		ImGuiExtensionManager.Initialize();
+		ImGuiExtensionManager.SetImGuiContext();
+		ImGuiExtensionManager.CreateExtensionContexts();
+
 		live = harness;
 
 		// Items are recorded against the frame being rendered, which is FrameCount until the step
@@ -121,6 +136,9 @@ public sealed class ImGuiAppHarness : IDisposable
 			try
 			{
 				context.BeginFrame(Options.FrameDelta);
+
+				// Must follow NewFrame, as it does in ImGuiController.
+				ImGuiExtensionManager.BeginFrame();
 
 				// Anything marshaled onto the UI thread has to run, or work queued from a worker
 				// never lands. An application that uploads a texture through the invoker would
@@ -230,6 +248,13 @@ public sealed class ImGuiAppHarness : IDisposable
 		if (disposed)
 		{
 			return;
+		}
+
+		// Extension teardown reaches into ImGui's context, so it has to happen while that context
+		// is still alive. Destroying the ImPlot context after ImGui's has gone faults in native code.
+		if (ReferenceEquals(live, this))
+		{
+			ImGuiExtensionManager.Cleanup();
 		}
 
 		context.Dispose();

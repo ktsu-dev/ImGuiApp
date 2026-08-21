@@ -33,7 +33,7 @@ internal sealed class InputHandlingDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -47,14 +47,14 @@ internal sealed class InputHandlingDemo : IDemoTab
 
 				// Simple drag demonstration
 				ImGui.SeparatorText("Drag & Drop:");
-				ImGui.Button("Drag Source", new Vector2(100, 50));
+				DemoProbe.Button("Drag Source", new Vector2(100, 50));
 				ImGui.SameLine();
-				ImGui.Button("Drop Target", new Vector2(100, 50));
+				DemoProbe.Button("Drop Target", new Vector2(100, 50));
 				ImGui.Text("(Drag and drop functionality would require more complex implementation)");
 
 				// Text editing
 				ImGui.SeparatorText("Multi-line Text Editor:");
-				ImGui.Checkbox("Word Wrap", ref wrapText);
+				DemoProbe.Checkbox("Word Wrap", ref wrapText);
 				ImGuiInputTextFlags textFlags = ImGuiInputTextFlags.AllowTabInput;
 				if (!wrapText)
 				{
@@ -70,14 +70,14 @@ internal sealed class InputHandlingDemo : IDemoTab
 
 				// Popup and modal buttons
 				ImGui.SeparatorText("Popups and Modals:");
-				if (ImGui.Button("Show Modal"))
+				if (DemoProbe.Button("Show Modal"))
 				{
 					showModal = true;
 					modalResult = "";
 				}
 
 				ImGui.SameLine();
-				if (ImGui.Button("Show Popup"))
+				if (DemoProbe.Button("Show Popup"))
 				{
 					showPopup = true;
 				}
@@ -110,13 +110,13 @@ internal sealed class InputHandlingDemo : IDemoTab
 
 			ImGui.InputText("Input", ref modalInputBuffer, 100);
 
-			if (ImGui.Button("OK"))
+			if (DemoProbe.Button("OK"))
 			{
 				modalResult = $"You entered: {modalInputBuffer}";
 				ImGui.CloseCurrentPopup();
 			}
 			ImGui.SameLine();
-			if (ImGui.Button("Cancel"))
+			if (DemoProbe.Button("Cancel"))
 			{
 				modalResult = "Canceled";
 				ImGui.CloseCurrentPopup();
@@ -135,16 +135,16 @@ internal sealed class InputHandlingDemo : IDemoTab
 		if (ImGui.BeginPopup("Demo Popup"))
 		{
 			ImGui.Text("This is a popup menu");
-			if (ImGui.MenuItem("Option 1"))
+			if (DemoProbe.MenuItem("Option 1"))
 			{
 				// Handle option 1
 			}
-			if (ImGui.MenuItem("Option 2"))
+			if (DemoProbe.MenuItem("Option 2"))
 			{
 				// Handle option 2
 			}
 			ImGui.Separator();
-			if (ImGui.MenuItem("Close"))
+			if (DemoProbe.MenuItem("Close"))
 			{
 				// Handle close
 			}

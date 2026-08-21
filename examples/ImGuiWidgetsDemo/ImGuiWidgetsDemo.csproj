@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
   <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
   <Sdk Name="ktsu.Sdk.App" />
@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
     <ProjectReference Include="..\..\ImGui.Popups\ImGui.Popups.csproj" />
     <ProjectReference Include="..\..\ImGui.Widgets\ImGui.Widgets.csproj" />
+    <ProjectReference Include="..\..\ImGui.Probes\ImGui.Probes.csproj" />
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Semantics.Color" />
     <PackageReference Include="ktsu.Semantics.Paths" />

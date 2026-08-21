@@ -18,7 +18,7 @@ internal sealed class UnicodeDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{

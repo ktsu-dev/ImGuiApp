@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
   <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
 
@@ -14,6 +14,7 @@
     <PackageReference Include="ktsu.ThemeProvider.ImGui" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
     <ProjectReference Include="..\ImGui.Popups\ImGui.Popups.csproj" />
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 

@@ -450,7 +450,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			ImGui.SeparatorText("Link Fix Results:");
 			ImGui.TextColored(new Vector4(0.0f, 1.0f, 0.0f, 1.0f), linkFixSummary);
 
-			if (linkFixLog.Count > 0 && ImGui.CollapsingHeader("Fix Details"))
+			if (linkFixLog.Count > 0 && DemoProbe.Header("Fix Details"))
 			{
 				foreach (string logEntry in linkFixLog)
 				{
@@ -755,7 +755,7 @@ internal sealed class ImNodesDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -778,7 +778,7 @@ internal sealed class ImNodesDemo : IDemoTab
 
 	private void RenderControls()
 	{
-		if (ImGui.Button("Add Node"))
+		if (DemoProbe.Button("Add Node"))
 		{
 			// Place new nodes in a grid pattern to avoid overlap
 			int nodeIndex = nodes.Count;
@@ -798,19 +798,19 @@ internal sealed class ImNodesDemo : IDemoTab
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Clear All"))
+		if (DemoProbe.Button("Clear All"))
 		{
 			ClearAllNodes();
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Reset Demo"))
+		if (DemoProbe.Button("Reset Demo"))
 		{
 			ResetToDemo();
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Fix Links"))
+		if (DemoProbe.Button("Fix Links"))
 		{
 			FixCorruptedLinks();
 		}
@@ -822,7 +822,7 @@ internal sealed class ImNodesDemo : IDemoTab
 		if (!string.IsNullOrEmpty(linkFixSummary))
 		{
 			ImGui.SameLine();
-			if (ImGui.Button("Clear Log"))
+			if (DemoProbe.Button("Clear Log"))
 			{
 				linkFixLog.Clear();
 				linkFixSummary = "";
@@ -1064,7 +1064,7 @@ internal sealed class ImNodesDemo : IDemoTab
 	{
 		// Debug Visualization (always available)
 		ImGui.SeparatorText("Debug Visualization:");
-		ImGui.Checkbox("Show Debug Visualization", ref showDebugVisualization);
+		DemoProbe.Checkbox("Show Debug Visualization", ref showDebugVisualization);
 		if (ImGui.IsItemHovered())
 		{
 			ImGui.SetTooltip("Show visual overlays: canvas origin, node bounding box, center of mass, and physics data (if enabled)");
@@ -1079,7 +1079,7 @@ internal sealed class ImNodesDemo : IDemoTab
 		ImGui.SeparatorText("Physics Layout:");
 
 		// Physics layout toggle
-		ImGui.Checkbox("Automatic Layout", ref automaticLayout);
+		DemoProbe.Checkbox("Automatic Layout", ref automaticLayout);
 		ImGui.SameLine();
 		ImGui.TextDisabled("(?)");
 		if (ImGui.IsItemHovered())
@@ -1110,7 +1110,7 @@ internal sealed class ImNodesDemo : IDemoTab
 		// Canvas Navigation Controls
 		ImGui.SeparatorText("Canvas Navigation:");
 
-		if (ImGui.Button("Reset Canvas to Origin"))
+		if (DemoProbe.Button("Reset Canvas to Origin"))
 		{
 			// Reset canvas panning to origin (0,0)
 			ImNodes.EditorContextResetPanning(new Vector2(0.0f, 0.0f));
@@ -1120,7 +1120,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			ImGui.SetTooltip("Pan the canvas so origin (0,0) is visible");
 		}
 
-		if (ImGui.Button("Center Canvas on Nodes") && nodes.Count > 0)
+		if (DemoProbe.Button("Center Canvas on Nodes") && nodes.Count > 0)
 		{
 			// Calculate area-weighted center of mass of all nodes using cached dimensions
 			Vector2 weightedCenterSum = Vector2.Zero;
@@ -1152,7 +1152,7 @@ internal sealed class ImNodesDemo : IDemoTab
 
 	private void RenderPhysicsInputs()
 	{
-		ImGui.InputFloat("Repulsion Strength", ref repulsionStrength, 100.0f, 1000.0f, "%.0f");
+		DemoProbe.InputFloat("Repulsion Strength", ref repulsionStrength, 100.0f, 1000.0f, "%.0f");
 		if (ImGui.IsItemHovered())
 		{
 			if (showDebugVisualization)
@@ -1171,7 +1171,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 		}
 
-		ImGui.InputFloat("Attraction Strength", ref attractionStrength, 0.01f, 0.1f, "%.3f");
+		DemoProbe.InputFloat("Attraction Strength", ref attractionStrength, 0.01f, 0.1f, "%.3f");
 		if (ImGui.IsItemHovered())
 		{
 			if (showDebugVisualization)
@@ -1190,7 +1190,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 		}
 
-		ImGui.InputFloat("Center Force", ref centerForce, 0.001f, 0.01f, "%.4f");
+		DemoProbe.InputFloat("Center Force", ref centerForce, 0.001f, 0.01f, "%.4f");
 		if (ImGui.IsItemHovered())
 		{
 			if (showDebugVisualization)
@@ -1210,7 +1210,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 		}
 
-		ImGui.InputFloat("Ideal Link Distance", ref idealLinkDistance, 10.0f, 50.0f, "%.0f px");
+		DemoProbe.InputFloat("Ideal Link Distance", ref idealLinkDistance, 10.0f, 50.0f, "%.0f px");
 		if (ImGui.IsItemHovered())
 		{
 			if (showDebugVisualization)
@@ -1230,7 +1230,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 		}
 
-		ImGui.InputFloat("Damping", ref damping, 0.01f, 0.1f, "%.3f");
+		DemoProbe.InputFloat("Damping", ref damping, 0.01f, 0.1f, "%.3f");
 		if (ImGui.IsItemHovered())
 		{
 			if (showDebugVisualization)
@@ -1250,7 +1250,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 		}
 
-		ImGui.InputFloat("Max Velocity", ref maxVelocity, 10.0f, 100.0f, "%.0f px/s");
+		DemoProbe.InputFloat("Max Velocity", ref maxVelocity, 10.0f, 100.0f, "%.0f px/s");
 		if (ImGui.IsItemHovered())
 		{
 			if (showDebugVisualization)
@@ -1270,7 +1270,7 @@ internal sealed class ImNodesDemo : IDemoTab
 			}
 		}
 
-		if (ImGui.Button("Reset Parameters"))
+		if (DemoProbe.Button("Reset Parameters"))
 		{
 			repulsionStrength = 5000.0f;
 			attractionStrength = 0.5f;

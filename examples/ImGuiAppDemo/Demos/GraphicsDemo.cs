@@ -24,7 +24,7 @@ internal sealed class GraphicsDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -53,9 +53,9 @@ internal sealed class GraphicsDemo : IDemoTab
 				// Custom drawing with ImDrawList
 				ImGui.SeparatorText("Custom Drawing Canvas:");
 				ImGui.ColorEdit4("Draw Color", ref drawColor);
-				ImGui.SliderFloat("Brush Size", ref brushSize, 1.0f, 20.0f);
+				DemoProbe.SliderFloat("Brush Size", ref brushSize, 1.0f, 20.0f);
 
-				if (ImGui.Button("Clear Canvas"))
+				if (DemoProbe.Button("Clear Canvas"))
 				{
 					canvasPoints.Clear();
 				}

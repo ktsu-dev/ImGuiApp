@@ -33,7 +33,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -41,7 +41,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 
 				// Gizmo controls
 				ImGui.SeparatorText("Gizmo Controls:");
-				ImGui.Checkbox("Enable Gizmo", ref gizmoEnabled);
+				DemoProbe.Checkbox("Enable Gizmo", ref gizmoEnabled);
 
 				// Operation selection
 				string[] operationNames = Enum.GetNames<ImGuizmoOperation>();
@@ -68,7 +68,7 @@ internal sealed class ImGuizmoDemo : IDemoTab
 				ImGui.Text($"[{gizmoTransform.M31:F2}, {gizmoTransform.M32:F2}, {gizmoTransform.M33:F2}, {gizmoTransform.M34:F2}]");
 				ImGui.Text($"[{gizmoTransform.M41:F2}, {gizmoTransform.M42:F2}, {gizmoTransform.M43:F2}, {gizmoTransform.M44:F2}]");
 
-				if (ImGui.Button("Reset Transform"))
+				if (DemoProbe.Button("Reset Transform"))
 				{
 					gizmoTransform = Matrix4x4.Identity;
 				}

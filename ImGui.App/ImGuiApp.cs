@@ -328,6 +328,14 @@ public static partial class ImGuiApp
 							io.IniFilename = null;
 						}
 
+						// ImGui only accepts the docking flag before the first NewFrame, so this is
+						// the last point at which it can be set. Enabling it later aborts the
+						// process on the frame after the change.
+						if (config.EnableDocking)
+						{
+							io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+						}
+
 						io.ConfigDebugIsDebuggerPresent = Debugger.IsAttached;
 						io.ConfigErrorRecoveryEnableAssert = false;
 						io.ConfigErrorRecoveryEnableTooltip = true;

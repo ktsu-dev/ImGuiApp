@@ -54,7 +54,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -186,27 +186,27 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		ImGui.SeparatorText("Node Editor Controls");
 
 		// Action buttons
-		if (ImGui.Button("Add Input Node"))
+		if (DemoProbe.Button("Add Input Node"))
 		{
 			Vector2 position = new(100, 100 + (engine.Nodes.Count * 50));
 			engine.CreateNode(position, $"Input {engine.Nodes.Count + 1}", 0, 2);
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Add Process Node"))
+		if (DemoProbe.Button("Add Process Node"))
 		{
 			Vector2 position = new(300, 100 + (engine.Nodes.Count * 50));
 			engine.CreateNode(position, $"Process {engine.Nodes.Count + 1}", 2, 2);
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Add Output Node"))
+		if (DemoProbe.Button("Add Output Node"))
 		{
 			Vector2 position = new(500, 100 + (engine.Nodes.Count * 50));
 			engine.CreateNode(position, $"Output {engine.Nodes.Count + 1}", 2, 0);
 		}
 
-		if (ImGui.Button("Reset Demo"))
+		if (DemoProbe.Button("Reset Demo"))
 		{
 			engine.Clear();
 			CreateDemoData();
@@ -216,7 +216,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Clear All"))
+		if (DemoProbe.Button("Clear All"))
 		{
 			engine.Clear();
 			lastActionMessage = "All nodes and links cleared";
@@ -229,7 +229,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 		// Debug visualization toggle
 		ImGui.Separator();
-		ImGui.Checkbox("Show Debug Visualization", ref showDebugVisualization);
+		DemoProbe.Checkbox("Show Debug Visualization", ref showDebugVisualization);
 
 		// Status information
 		ImGui.SeparatorText("Status");
@@ -253,7 +253,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		ImGui.SeparatorText("Debug Information");
 
 		// Node information
-		if (ImGui.CollapsingHeader("Nodes"))
+		if (DemoProbe.Header("Nodes"))
 		{
 			foreach (Node node in engine.Nodes)
 			{
@@ -274,7 +274,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 
 		// Link information
-		if (ImGui.CollapsingHeader("Links"))
+		if (DemoProbe.Header("Links"))
 		{
 			foreach (Link link in engine.Links)
 			{
@@ -296,7 +296,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 		// Physics enabled checkbox
 		bool enabled = currentSettings.Enabled;
-		if (ImGui.Checkbox("Enable Physics", ref enabled))
+		if (DemoProbe.Checkbox("Enable Physics", ref enabled))
 		{
 			currentSettings = currentSettings with { Enabled = enabled };
 			settingsChanged = true;
@@ -308,17 +308,17 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 
 		// Repulsion settings
-		if (ImGui.CollapsingHeader("Repulsion Forces"))
+		if (DemoProbe.Header("Repulsion Forces"))
 		{
 			float repulsionStrength = (float)currentSettings.RepulsionStrength;
-			if (ImGui.SliderFloat("Repulsion Strength (N)", ref repulsionStrength, 100_000.0f, 50_000_000.0f))
+			if (DemoProbe.SliderFloat("Repulsion Strength (N)", ref repulsionStrength, 100_000.0f, 50_000_000.0f))
 			{
 				currentSettings = currentSettings with { RepulsionStrength = repulsionStrength };
 				settingsChanged = true;
 			}
 
 			float minRepulsionDistance = (float)currentSettings.MinRepulsionDistance;
-			if (ImGui.SliderFloat("Min Repulsion Clamp (px)", ref minRepulsionDistance, 10.0f, 200.0f))
+			if (DemoProbe.SliderFloat("Min Repulsion Clamp (px)", ref minRepulsionDistance, 10.0f, 200.0f))
 			{
 				currentSettings = currentSettings with { MinRepulsionDistance = minRepulsionDistance };
 				settingsChanged = true;
@@ -326,24 +326,24 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 
 		// Link spring settings
-		if (ImGui.CollapsingHeader("Link Springs"))
+		if (DemoProbe.Header("Link Springs"))
 		{
 			float linkSpringStrength = (float)currentSettings.LinkSpringStrength;
-			if (ImGui.SliderFloat("Spring Strength (dimensionless)", ref linkSpringStrength, 0.1f, 2.0f))
+			if (DemoProbe.SliderFloat("Spring Strength (dimensionless)", ref linkSpringStrength, 0.1f, 2.0f))
 			{
 				currentSettings = currentSettings with { LinkSpringStrength = linkSpringStrength };
 				settingsChanged = true;
 			}
 
 			float restLinkLength = (float)currentSettings.RestLinkLength;
-			if (ImGui.SliderFloat("Rest Length (m)", ref restLinkLength, 100.0f, 400.0f))
+			if (DemoProbe.SliderFloat("Rest Length (m)", ref restLinkLength, 100.0f, 400.0f))
 			{
 				currentSettings = currentSettings with { RestLinkLength = restLinkLength };
 				settingsChanged = true;
 			}
 
 			float directionalBias = (float)currentSettings.DirectionalBias;
-			if (ImGui.SliderFloat("Directional Bias (L→R)", ref directionalBias, 0.0f, 2.0f))
+			if (DemoProbe.SliderFloat("Directional Bias (L→R)", ref directionalBias, 0.0f, 2.0f))
 			{
 				currentSettings = currentSettings with { DirectionalBias = directionalBias };
 				settingsChanged = true;
@@ -351,17 +351,17 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 
 		// Gravity settings
-		if (ImGui.CollapsingHeader("Gravity"))
+		if (DemoProbe.Header("Gravity"))
 		{
 			float gravityStrength = (float)currentSettings.GravityStrength;
-			if (ImGui.SliderFloat("Gravity Strength (N)", ref gravityStrength, 0.0f, 200.0f))
+			if (DemoProbe.SliderFloat("Gravity Strength (N)", ref gravityStrength, 0.0f, 200.0f))
 			{
 				currentSettings = currentSettings with { GravityStrength = gravityStrength };
 				settingsChanged = true;
 			}
 
 			float originAnchorWeight = (float)currentSettings.OriginAnchorWeight;
-			if (ImGui.SliderFloat("Origin Anchor Weight", ref originAnchorWeight, 0.0f, 1.0f))
+			if (DemoProbe.SliderFloat("Origin Anchor Weight", ref originAnchorWeight, 0.0f, 1.0f))
 			{
 				currentSettings = currentSettings with { OriginAnchorWeight = originAnchorWeight };
 				settingsChanged = true;
@@ -372,7 +372,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		(currentSettings, settingsChanged) = RenderDampingAndLimitsControls(currentSettings, settingsChanged, enabled);
 
 		// Quick presets
-		if (ImGui.Button("Gentle Physics"))
+		if (DemoProbe.Button("Gentle Physics"))
 		{
 			currentSettings = new PhysicsSettings
 			{
@@ -393,7 +393,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 
 		ImGui.SameLine();
-		if (ImGui.Button("Strong Physics"))
+		if (DemoProbe.Button("Strong Physics"))
 		{
 			currentSettings = new PhysicsSettings
 			{
@@ -426,31 +426,31 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 	private (PhysicsSettings Settings, bool Changed) RenderDampingAndLimitsControls(PhysicsSettings currentSettings, bool settingsChanged, bool enabled)
 	{
-		if (ImGui.CollapsingHeader("Damping & Limits"))
+		if (DemoProbe.Header("Damping & Limits"))
 		{
 			float dampingFactor = (float)currentSettings.DampingFactor;
-			if (ImGui.SliderFloat("Damping Factor (dimensionless)", ref dampingFactor, 0.1f, 0.99f))
+			if (DemoProbe.SliderFloat("Damping Factor (dimensionless)", ref dampingFactor, 0.1f, 0.99f))
 			{
 				currentSettings = currentSettings with { DampingFactor = dampingFactor };
 				settingsChanged = true;
 			}
 
 			float maxForce = (float)currentSettings.MaxForce;
-			if (ImGui.SliderFloat("Max Force (N)", ref maxForce, 100.0f, 50000.0f))
+			if (DemoProbe.SliderFloat("Max Force (N)", ref maxForce, 100.0f, 50000.0f))
 			{
 				currentSettings = currentSettings with { MaxForce = maxForce };
 				settingsChanged = true;
 			}
 
 			float maxVelocity = (float)currentSettings.MaxVelocity;
-			if (ImGui.SliderFloat("Max Velocity (m/s)", ref maxVelocity, 5.0f, 500.0f))
+			if (DemoProbe.SliderFloat("Max Velocity (m/s)", ref maxVelocity, 5.0f, 500.0f))
 			{
 				currentSettings = currentSettings with { MaxVelocity = maxVelocity };
 				settingsChanged = true;
 			}
 
 			float targetPhysicsHz = (float)currentSettings.TargetPhysicsHz;
-			if (ImGui.SliderFloat("Target Physics Hz", ref targetPhysicsHz, 60.0f, 240.0f))
+			if (DemoProbe.SliderFloat("Target Physics Hz", ref targetPhysicsHz, 60.0f, 240.0f))
 			{
 				currentSettings = currentSettings with { TargetPhysicsHz = targetPhysicsHz };
 				settingsChanged = true;

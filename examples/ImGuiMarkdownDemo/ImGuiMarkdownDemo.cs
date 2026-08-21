@@ -8,12 +8,15 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.Markdown;
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 
 internal static class ImGuiMarkdownDemo
 {
-	private const string Sample = """
+	/// <summary>The markdown exercised by the demo. Internal so a UI test can assert against the
+	/// same source the demo renders rather than a copy that could drift from it.</summary>
+	internal const string Sample = """
 		# ImGui.Markdown
 
 		A **CommonMark** renderer for *Dear ImGui*, with `inline code`, [links](https://github.com/ktsu-dev), and more.
@@ -55,25 +58,53 @@ internal static class ImGuiMarkdownDemo
 		That's the tour.
 		""";
 
-	private static void Main()
-	{
-		MarkdownConfig config = new()
-		{
-			FontResolver = ResolveFont,
-			OnLinkClicked = null, // fall back to OS open for http/https/mailto
-			ImageResolver = ResolveImage,
-		};
+	/// <summary>The name of the ImGui window the markdown is rendered into.</summary>
+	internal const string WindowTitle = "Markdown";
 
-		ImGuiApp.Start(new ImGuiAppConfig
-		{
-			Title = "ImGui.Markdown - Demo",
-			OnRender = _ =>
-			{
-				ImGui.Begin("Markdown");
-				ImGuiMarkdown.Render(Sample, config);
-				ImGui.End();
-			},
-		});
+	/// <summary>
+	/// Builds the configuration the demo runs on. Extracted from <c>Main</c> so a UI test drives the
+	/// real configuration rather than a parallel one written for testing.
+	/// </summary>
+	/// <returns>The application configuration.</returns>
+	internal static ImGuiAppConfig BuildConfig() => new()
+	{
+		Title = "ImGui.Markdown - Demo",
+		OnRender = _ => RenderMarkdownWindow(),
+	};
+
+	/// <summary>The markdown configuration the demo renders with.</summary>
+	internal static MarkdownConfig BuildMarkdownConfig() => new()
+	{
+		FontResolver = ResolveFont,
+		OnLinkClicked = null, // fall back to OS open for http/https/mailto
+		ImageResolver = ResolveImage,
+	};
+
+	private static readonly MarkdownConfig Config = BuildMarkdownConfig();
+
+	private static void Main() => ImGuiApp.Start(BuildConfig());
+
+	private static void RenderMarkdownWindow()
+	{
+		// Without a starting size the window opens at ImGui's 32px default, which leaves ~16px of
+		// content width. The renderer wraps to that width, the window auto-fits to the resulting sliver,
+		// and the layout never recovers on later frames. A first-use size breaks that feedback loop.
+		ImGui.SetNextWindowSize(new Vector2(760, 640), ImGuiCond.FirstUseEver);
+		ImGui.Begin(WindowTitle);
+
+		// Width has to be sampled before rendering: afterwards the cursor sits at the end of the
+		// document and the remaining region no longer describes the span the document was laid out in.
+		Vector2 contentMin = ImGui.GetCursorScreenPos();
+		float contentWidth = ImGui.GetContentRegionAvail().X;
+		ImGuiMarkdown.Render(Sample, Config);
+		Vector2 contentMax = new(contentMin.X + contentWidth, ImGui.GetCursorScreenPos().Y);
+
+		// The markdown renderer submits draw commands rather than named ImGui items, so nothing
+		// inside it is addressable on its own. Recording the span the document occupied gives a
+		// test a stable handle on "the rendered document" without reaching into the renderer.
+		ImGuiProbes.MarkRegion("markdown", contentMin, contentMax);
+
+		ImGui.End();
 	}
 
 	// Map markdown roles to app fonts. Body/emphasis reuse the default font (faux bold applies);
@@ -87,7 +118,7 @@ internal static class ImGuiMarkdownDemo
 	// Resolves image sources referenced from markdown (e.g. "![logo](ktsu.png)") to a loaded
 	// GPU texture via ImGuiApp's texture cache, demonstrating the real ImageResolver extension
 	// point rather than falling back to a placeholder box.
-	private static MarkdownImageResult? ResolveImage(string source)
+	internal static MarkdownImageResult? ResolveImage(string source)
 	{
 		AbsoluteFilePath imagePath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / source.As<FileName>();
 		if (!File.Exists(imagePath))

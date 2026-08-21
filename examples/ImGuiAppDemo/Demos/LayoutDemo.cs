@@ -43,7 +43,7 @@ internal sealed class LayoutDemo : IDemoTab
 
 	public void Render()
 	{
-		if (ImGui.BeginTabItem(TabName))
+		if (DemoProbe.TabItem(TabName))
 		{
 			if (ImGui.BeginChild("##content"))
 			{
@@ -67,9 +67,9 @@ internal sealed class LayoutDemo : IDemoTab
 
 				// Tables
 				ImGui.SeparatorText("Advanced Tables:");
-				ImGui.Checkbox("Show Headers", ref showTableHeaders);
+				DemoProbe.Checkbox("Show Headers", ref showTableHeaders);
 				ImGui.SameLine();
-				ImGui.Checkbox("Show Borders", ref showTableBorders);
+				DemoProbe.Checkbox("Show Borders", ref showTableBorders);
 
 				ImGuiTableFlags tableFlags = ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable;
 				if (showTableHeaders)

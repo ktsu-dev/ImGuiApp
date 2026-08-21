@@ -10,6 +10,7 @@ using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Popups;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 using ktsu.ImGui.Widgets;
 using ktsu.Semantics.Paths;
@@ -42,18 +43,86 @@ public enum EnumValues
 
 internal static class ImGuiWidgetsDemo
 {
-	private static void Main()
+	/// <summary>
+	/// Builds the configuration the demo runs on. Extracted from <c>Main</c> so a UI test drives the
+	/// real configuration rather than a parallel one written for testing.
+	/// </summary>
+	/// <returns>The application configuration.</returns>
+	internal static ImGuiAppConfig BuildConfig() => new()
 	{
-		ImGuiApp.Start(new()
-		{
-			Title = "ImGuiWidgets - Complete Library Demo",
-			OnStart = OnStart,
-			OnConfigureFonts = OnConfigureFonts,
-			OnAppMenu = OnAppMenu,
-			OnMoveOrResize = OnMoveOrResize,
-			OnRender = OnRender,
-		});
+		Title = "ImGuiWidgets - Complete Library Demo",
+		OnStart = OnStart,
+		OnConfigureFonts = OnConfigureFonts,
+		OnAppMenu = OnAppMenu,
+		OnMoveOrResize = OnMoveOrResize,
+		OnRender = OnRender,
+	};
+
+	private static void Main() => ImGuiApp.Start(BuildConfig());
+
+	/// <summary>
+	/// Returns the demo state a test can disturb to its starting value. The demo keeps its state in
+	/// statics, which outlive a harness, so a test that ran before this one would otherwise decide
+	/// what this one starts from.
+	/// </summary>
+	internal static void ResetState()
+	{
+		value = 0.5f;
+		tab2Value = 0.5f;
+		switchWifi = true;
+		switchBluetooth = false;
+		segmentSelected = 0;
+		chipGroupSelected = 1;
+		stepperQuantity = 3;
+		rangeLower = 25.0f;
+		rangeUpper = 75.0f;
+		progressValue = 0.65f;
+		progressAnimating = false;
+		progressAnimationSpeed = 0.3f;
+		countdownTime = CountdownTotal;
+		countdownRunning = false;
+		countupTime = 0.0f;
+		countupRunning = false;
+		ratingValue = 3.0f;
+		halfRatingValue = 3.5f;
+		notificationCount = 5;
+		carouselPage = 0;
+		pinValue = string.Empty;
+		otpValue = string.Empty;
+		skeletonLoading = true;
+		selectedEnumValue = EnumValues.Value1;
+		selectedStringValue = "Hello";
+		selectedStrongString = "Strong Hello".As<StrongStringExample>();
+		BasicSearchTerm = string.Empty;
+		FilteredSearchTerm = string.Empty;
+		RankedSearchTerm = string.Empty;
+		GlobSearchTerm = string.Empty;
+		RegexSearchTerm = string.Empty;
+		GridItemsToShow = InitialGridItemCount;
+		GridHeight = 500f;
+		GridOrder = ImGuiWidgets.GridOrder.RowMajor;
+		GridIconAlignment = ImGuiWidgets.IconAlignment.Vertical;
+		GridIconSizeBig = true;
+		GridFitToContents = false;
 	}
+
+	/// <summary>Gets the value of the Wi-Fi switch in the mobile form-control section.</summary>
+	internal static bool SwitchWifi => switchWifi;
+
+	/// <summary>Gets the quantity held by the stepper in the mobile form-control section.</summary>
+	internal static int StepperQuantity => stepperQuantity;
+
+	/// <summary>Gets the rating currently shown by the decorator section.</summary>
+	internal static float RatingValue => ratingValue;
+
+	/// <summary>Gets the value driven by the knob and radial progress sections.</summary>
+	internal static float ProgressValue => progressValue;
+
+	/// <summary>Gets the number of grid items the grid demo is currently showing.</summary>
+	internal static int GridItemCount => GridItemsToShow;
+
+	/// <summary>Gets the tab panel the advanced section demonstrates.</summary>
+	internal static ImGuiWidgets.TabPanel TabPanel => DemoTabPanel;
 
 	private static float value = 0.5f;
 	private static float tab2Value = 0.5f;
@@ -253,7 +322,7 @@ internal static class ImGuiWidgetsDemo
 	/// <param name="content">The tab's contents, drawn only while the tab is active.</param>
 	private static void ShowTab(string label, Action content)
 	{
-		if (ImGui.BeginTabItem(label))
+		if (DemoProbe.TabItem(label))
 		{
 			// BeginChild must be paired with EndChild whatever it returns, so the result is ignored.
 			ImGui.BeginChild($"{label}Content", Vector2.Zero, ImGuiChildFlags.None);
@@ -311,7 +380,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowImageCanvasDemo(ImGuiAppTextureInfo ktsuTexture)
 	{
-		if (ImGui.CollapsingHeader("ImageCanvas"))
+		if (DemoProbe.Header("ImageCanvas"))
 		{
 			ImGui.TextUnformatted("Pannable, zoomable image canvas with a checkerboard behind transparency:");
 			ImGui.BulletText("Drag to pan");
@@ -319,12 +388,12 @@ internal static class ImGuiWidgetsDemo
 			ImGui.BulletText("Double-click to fit the image to the canvas");
 			ImGui.Separator();
 
-			if (ImGui.Button("Fit"))
+			if (DemoProbe.Button("Fit"))
 			{
 				ImageCanvasDemoState.FitToViewport(new Vector2(ktsuTexture.Width, ktsuTexture.Height), new Vector2(ImGui.GetContentRegionAvail().X, 300f));
 			}
 			ImGui.SameLine();
-			if (ImGui.Button("1:1"))
+			if (DemoProbe.Button("1:1"))
 			{
 				ImageCanvasDemoState.ResetToActualSize();
 			}
@@ -339,24 +408,24 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowTabPanelDemo()
 	{
-		if (ImGui.CollapsingHeader("TabPanel"))
+		if (DemoProbe.Header("TabPanel"))
 		{
 			ImGui.TextUnformatted("Tabbed interface with dirty state tracking:");
 			ImGui.Separator();
 
 			// Tab Panel controls
 			ImGui.TextUnformatted("Tab Management:");
-			if (ImGui.Button("Mark Active Tab Dirty"))
+			if (DemoProbe.Button("Mark Active Tab Dirty"))
 			{
 				DemoTabPanel.MarkActiveTabDirty();
 			}
 			ImGui.SameLine();
-			if (ImGui.Button("Mark Active Tab Clean"))
+			if (DemoProbe.Button("Mark Active Tab Clean"))
 			{
 				DemoTabPanel.MarkActiveTabClean();
 			}
 			ImGui.SameLine();
-			if (ImGui.Button("Add New Tab"))
+			if (DemoProbe.Button("Add New Tab"))
 			{
 				int tabIndex = NextDynamicTabId++;
 				string tabKey = $"dynamic{tabIndex}";
@@ -380,7 +449,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowSearchBoxDemo()
 	{
-		if (ImGui.CollapsingHeader("SearchBox"))
+		if (DemoProbe.Header("SearchBox"))
 		{
 			ImGui.TextUnformatted("Powerful search functionality with multiple filter types:");
 			ImGui.Separator();
@@ -394,14 +463,14 @@ internal static class ImGuiWidgetsDemo
 
 			// Toggle whether an empty filter returns all items or none
 			bool returnAllWhenEmpty = FilteredSearchOptions.ReturnAllWhenEmpty;
-			if (ImGui.Checkbox("Return all items when the filter is empty", ref returnAllWhenEmpty))
+			if (DemoProbe.Checkbox("Return all items when the filter is empty", ref returnAllWhenEmpty))
 			{
 				FilteredSearchOptions = FilteredSearchOptions with { ReturnAllWhenEmpty = returnAllWhenEmpty };
 			}
 
 			// Toggle whether the input stretches to the full available content width
 			bool fullWidth = FilteredSearchOptions.FullWidth;
-			if (ImGui.Checkbox("Stretch input to full content width", ref fullWidth))
+			if (DemoProbe.Checkbox("Stretch input to full content width", ref fullWidth))
 			{
 				FilteredSearchOptions = FilteredSearchOptions with { FullWidth = fullWidth };
 			}
@@ -510,7 +579,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowGridDemo(ImGuiAppTextureInfo ktsuTexture)
 	{
-		if (ImGui.CollapsingHeader("Grid Layout"))
+		if (DemoProbe.Header("Grid Layout"))
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
 			Vector2 itemSpacing = style.ItemSpacing;
@@ -523,14 +592,14 @@ internal static class ImGuiWidgetsDemo
 			ImGui.TextUnformatted("Grid Configuration:");
 
 			bool showGridDebug = ImGuiWidgets.EnableGridDebugDraw;
-			if (ImGui.Checkbox("Show Grid Debug Draw", ref showGridDebug))
+			if (DemoProbe.Checkbox("Show Grid Debug Draw", ref showGridDebug))
 			{
 				ImGuiWidgets.EnableGridDebugDraw = showGridDebug;
 			}
 			ImGui.SameLine();
 
 			bool showIconDebug = ImGuiWidgets.EnableIconDebugDraw;
-			if (ImGui.Checkbox("Show Icon Debug Draw", ref showIconDebug))
+			if (DemoProbe.Checkbox("Show Icon Debug Draw", ref showIconDebug))
 			{
 				ImGuiWidgets.EnableIconDebugDraw = showIconDebug;
 			}
@@ -538,13 +607,13 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Columns(3, "GridSettings");
 
 			bool gridIconSizeBig = GridIconSizeBig;
-			if (ImGui.Checkbox("Big Icons", ref gridIconSizeBig))
+			if (DemoProbe.Checkbox("Big Icons", ref gridIconSizeBig))
 			{
 				GridIconSizeBig = gridIconSizeBig;
 			}
 
 			bool gridFitToContents = GridFitToContents;
-			if (ImGui.Checkbox("Fit to Contents", ref gridFitToContents))
+			if (DemoProbe.Checkbox("Fit to Contents", ref gridFitToContents))
 			{
 				GridFitToContents = gridFitToContents;
 			}
@@ -552,7 +621,7 @@ internal static class ImGuiWidgetsDemo
 			ImGui.NextColumn();
 
 			int gridItemsToShow = GridItemsToShow;
-			if (ImGui.SliderInt("Items", ref gridItemsToShow, 0, GridStrings.Count))
+			if (DemoProbe.SliderInt("Items", ref gridItemsToShow, 0, GridStrings.Count))
 			{
 				GridItemsToShow = gridItemsToShow;
 			}
@@ -572,7 +641,7 @@ internal static class ImGuiWidgetsDemo
 			}
 
 			float gridHeight = GridHeight;
-			if (ImGui.SliderFloat("Height", ref gridHeight, 100f, 800f))
+			if (DemoProbe.SliderFloat("Height", ref gridHeight, 100f, 800f))
 			{
 				GridHeight = gridHeight;
 			}
@@ -623,7 +692,7 @@ internal static class ImGuiWidgetsDemo
 	// Individual widget demo methods
 	private static void ShowMobileFormControlsDemo()
 	{
-		if (ImGui.CollapsingHeader("Mobile - Form Controls"))
+		if (DemoProbe.Header("Mobile - Form Controls"))
 		{
 			ImGui.TextUnformatted("Mobile-style form controls (Switch, SegmentedControl, Chip, Stepper, RangeSlider):");
 			ImGui.Separator();
@@ -656,7 +725,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowKnobDemo()
 	{
-		if (ImGui.CollapsingHeader("Knobs"))
+		if (DemoProbe.Header("Knobs"))
 		{
 			ImGui.TextUnformatted("All knob variants with interactive controls:");
 			ImGui.Separator();
@@ -682,7 +751,7 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 			ImGui.TextUnformatted($"Current Value: {value:F3}");
 
-			if (ImGui.Button("Reset to 0.5"))
+			if (DemoProbe.Button("Reset to 0.5"))
 			{
 				value = 0.5f;
 			}
@@ -691,17 +760,17 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowRadialProgressBarDemo()
 	{
-		if (ImGui.CollapsingHeader("Radial Progress Bar"))
+		if (DemoProbe.Header("Radial Progress Bar"))
 		{
 			ImGui.TextUnformatted("Circular progress indicators for loading and progress tracking:");
 			ImGui.Separator();
 
 			// Animation controls
 			ImGui.TextUnformatted("Animation:");
-			ImGui.Checkbox("Animate", ref progressAnimating);
+			DemoProbe.Checkbox("Animate", ref progressAnimating);
 			ImGui.SameLine();
 			ImGui.SetNextItemWidth(150);
-			ImGui.SliderFloat("Speed", ref progressAnimationSpeed, 0.1f, 2.0f, "%.1fx");
+			DemoProbe.SliderFloat("Speed", ref progressAnimationSpeed, 0.1f, 2.0f, "%.1fx");
 
 			// Update animation
 			if (progressAnimating)
@@ -717,7 +786,7 @@ internal static class ImGuiWidgetsDemo
 
 			// Manual progress control
 			ImGui.TextUnformatted("Manual Control:");
-			if (ImGui.SliderFloat("Progress", ref progressValue, 0.0f, 1.0f, "%.2f"))
+			if (DemoProbe.SliderFloat("Progress", ref progressValue, 0.0f, 1.0f, "%.2f"))
 			{
 				progressAnimating = false;
 			}
@@ -770,19 +839,19 @@ internal static class ImGuiWidgetsDemo
 			ImGui.Separator();
 			ImGui.TextUnformatted($"Current Progress: {progressValue * 100.0f:F1}%");
 
-			if (ImGui.Button("Reset to 0%"))
+			if (DemoProbe.Button("Reset to 0%"))
 			{
 				progressValue = 0.0f;
 				progressAnimating = false;
 			}
 			ImGui.SameLine();
-			if (ImGui.Button("Set to 50%"))
+			if (DemoProbe.Button("Set to 50%"))
 			{
 				progressValue = 0.5f;
 				progressAnimating = false;
 			}
 			ImGui.SameLine();
-			if (ImGui.Button("Set to 100%"))
+			if (DemoProbe.Button("Set to 100%"))
 			{
 				progressValue = 1.0f;
 				progressAnimating = false;
@@ -792,9 +861,9 @@ internal static class ImGuiWidgetsDemo
 
 			// Countdown Timer Demo
 			ImGui.TextUnformatted("Countdown Timer:");
-			ImGui.Checkbox("Run Countdown", ref countdownRunning);
+			DemoProbe.Checkbox("Run Countdown", ref countdownRunning);
 			ImGui.SameLine();
-			if (ImGui.Button("Reset Countdown"))
+			if (DemoProbe.Button("Reset Countdown"))
 			{
 				countdownTime = CountdownTotal;
 				countdownRunning = false;
@@ -827,9 +896,9 @@ internal static class ImGuiWidgetsDemo
 
 			// Count-Up Timer Demo
 			ImGui.TextUnformatted("Count-Up Timer:");
-			ImGui.Checkbox("Run Count-Up", ref countupRunning);
+			DemoProbe.Checkbox("Run Count-Up", ref countupRunning);
 			ImGui.SameLine();
-			if (ImGui.Button("Reset Count-Up"))
+			if (DemoProbe.Button("Reset Count-Up"))
 			{
 				countupTime = 0.0f;
 				countupRunning = false;
@@ -858,7 +927,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowColorIndicatorDemo()
 	{
-		if (ImGui.CollapsingHeader("Color Indicators"))
+		if (DemoProbe.Header("Color Indicators"))
 		{
 			ImGui.TextUnformatted("Color indicators show enabled/disabled states:");
 			ImGui.Separator();
@@ -890,7 +959,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowMobileDecoratorsDemo()
 	{
-		if (ImGui.CollapsingHeader("Mobile - Decorators"))
+		if (DemoProbe.Header("Mobile - Decorators"))
 		{
 			AbsoluteFilePath ktsuIconPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "ktsu.png".As<FileName>();
 			ImGuiAppTextureInfo ktsuTexture = ImGuiApp.GetOrLoadTexture(ktsuIconPath);
@@ -907,15 +976,15 @@ internal static class ImGuiWidgetsDemo
 
 			ImGui.Separator();
 			ImGui.TextUnformatted("Badges (overlay the previously drawn item):");
-			ImGui.Button("Inbox");
+			DemoProbe.Button("Inbox");
 			ImGuiWidgets.Badge(notificationCount);
 			ImGui.SameLine(0, 30);
-			ImGui.Button("Messages");
+			DemoProbe.Button("Messages");
 			ImGuiWidgets.Badge(150);
 			ImGui.SameLine(0, 30);
-			ImGui.Button("Updates");
+			DemoProbe.Button("Updates");
 			ImGuiWidgets.BadgeDot();
-			ImGui.SliderInt("Count", ref notificationCount, 0, 200);
+			DemoProbe.SliderInt("Count", ref notificationCount, 0, 200);
 
 			ImGui.Separator();
 			ImGui.TextUnformatted("Rating (click to set):");
@@ -936,7 +1005,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowMobileContainersDemo()
 	{
-		if (ImGui.CollapsingHeader("Mobile - Containers & Loaders"))
+		if (DemoProbe.Header("Mobile - Containers & Loaders"))
 		{
 			ImGui.TextUnformatted("Card (scoped, shadowed, elevated container):");
 			ImGui.Separator();
@@ -945,7 +1014,7 @@ internal static class ImGuiWidgetsDemo
 			{
 				ImGui.TextUnformatted("Card title");
 				ImGui.TextWrapped("Cards group related content on an elevated surface with a soft drop shadow. Padding and rounding scale with the theme.");
-				if (ImGui.Button("Action##cardAction"))
+				if (DemoProbe.Button("Action##cardAction"))
 				{
 					notificationCount++;
 				}
@@ -960,7 +1029,7 @@ internal static class ImGuiWidgetsDemo
 			ImGuiWidgets.PinInput("Otp##otp", ref otpValue, length: 6, masked: true);
 
 			ImGui.Separator();
-			ImGui.Checkbox("Loading##skeletonToggle", ref skeletonLoading);
+			DemoProbe.Checkbox("Loading##skeletonToggle", ref skeletonLoading);
 			ImGui.TextUnformatted("Skeleton loaders (shimmer placeholders):");
 			if (skeletonLoading)
 			{
@@ -1016,7 +1085,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowComboDemo()
 	{
-		if (ImGui.CollapsingHeader("Combo Boxes"))
+		if (DemoProbe.Header("Combo Boxes"))
 		{
 			ImGui.TextUnformatted("Type-safe combo boxes for enums and collections:");
 			ImGui.Separator();
@@ -1036,7 +1105,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowTextDemo()
 	{
-		if (ImGui.CollapsingHeader("Text Utilities"))
+		if (DemoProbe.Header("Text Utilities"))
 		{
 			ImGui.TextUnformatted("Enhanced text rendering with alignment and clipping:");
 			ImGui.Separator();
@@ -1093,7 +1162,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowScopedWidgetsDemo()
 	{
-		if (ImGui.CollapsingHeader("Scoped Utilities"))
+		if (DemoProbe.Header("Scoped Utilities"))
 		{
 			ImGui.TextUnformatted("Scoped helpers for ImGui state management:");
 			ImGui.Separator();
@@ -1106,9 +1175,10 @@ internal static class ImGuiWidgetsDemo
 				int dummyInt = 0;
 				string[] items = ["Item 1", "Item 2", "Item 3"];
 
-				ImGui.Checkbox("Disabled Checkbox", ref dummyBool);
+				DemoProbe.Checkbox("Disabled Checkbox", ref dummyBool);
 				ImGui.Combo("Disabled Combo", ref dummyInt, items, items.Length);
-				ImGui.Button("Disabled Button");
+				ImGuiProbes.MarkItem("Disabled Combo");
+				DemoProbe.Button("Disabled Button");
 			}
 
 			ImGui.Separator();
@@ -1120,7 +1190,7 @@ internal static class ImGuiWidgetsDemo
 				using (new ImGuiWidgets.ScopedId(i))
 				{
 					bool state = false;
-					ImGui.Checkbox("Same Label", ref state);
+					DemoProbe.Checkbox("Same Label", ref state);
 				}
 			}
 			ImGui.TextUnformatted("↑ Three checkboxes with same label using ScopedId");
@@ -1129,7 +1199,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowTreeDemo()
 	{
-		if (ImGui.CollapsingHeader("Tree View"))
+		if (DemoProbe.Header("Tree View"))
 		{
 			ImGui.TextUnformatted("Hierarchical tree structure with automatic cleanup:");
 			ImGui.Separator();
@@ -1139,21 +1209,21 @@ internal static class ImGuiWidgetsDemo
 			{
 				using (tree.Child)
 				{
-					ImGui.Button($"Parent Node {i + 1}");
+					DemoProbe.Button($"Parent Node {i + 1}");
 
 					using ImGuiWidgets.Tree subtree = new();
 					for (int j = 0; j < 2; j++)
 					{
 						using (subtree.Child)
 						{
-							ImGui.Button($"Child {j + 1}");
+							DemoProbe.Button($"Child {j + 1}");
 
 							if (i == 0 && j == 0) // Show deeper nesting for first item
 							{
 								using ImGuiWidgets.Tree deepTree = new();
 								using (deepTree.Child)
 								{
-									ImGui.Button("Grandchild");
+									DemoProbe.Button("Grandchild");
 								}
 							}
 						}
@@ -1165,7 +1235,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowImageAndIconDemo(ImGuiAppTextureInfo ktsuTexture)
 	{
-		if (ImGui.CollapsingHeader("Images & Icons"))
+		if (DemoProbe.Header("Images & Icons"))
 		{
 			ImGui.TextUnformatted("Interactive images and icons with events:");
 			ImGui.Separator();
@@ -1245,7 +1315,7 @@ internal static class ImGuiWidgetsDemo
 
 	private static void ShowDividerDemo()
 	{
-		if (ImGui.CollapsingHeader("Divider Container"))
+		if (DemoProbe.Header("Divider Container"))
 		{
 			ImGui.TextUnformatted("DividerContainer features:");
 			ImGui.BulletText("Resizable panes with drag handle");
@@ -1268,12 +1338,12 @@ internal static class ImGuiWidgetsDemo
 	{
 		ImGui.TextUnformatted("This is the content of Tab 1");
 
-		if (ImGui.Button("Edit Content"))
+		if (DemoProbe.Button("Edit Content"))
 		{
 			DemoTabPanel.MarkTabDirty(TabIds["tab1"]);
 		}
 
-		if (ImGui.Button("Save Content"))
+		if (DemoProbe.Button("Save Content"))
 		{
 			DemoTabPanel.MarkTabClean(TabIds["tab1"]);
 		}
@@ -1285,13 +1355,13 @@ internal static class ImGuiWidgetsDemo
 	{
 		ImGui.TextUnformatted("This is the content of Tab 2");
 
-		if (ImGui.SliderFloat("Value", ref tab2Value, 0.0f, 1.0f))
+		if (DemoProbe.SliderFloat("Value", ref tab2Value, 0.0f, 1.0f))
 		{
 			// Mark tab as dirty when slider value changes
 			DemoTabPanel.MarkTabDirty(TabIds["tab2"]);
 		}
 
-		if (ImGui.Button("Reset"))
+		if (DemoProbe.Button("Reset"))
 		{
 			tab2Value = 0.5f;
 			DemoTabPanel.MarkTabClean(TabIds["tab2"]);
@@ -1304,7 +1374,7 @@ internal static class ImGuiWidgetsDemo
 		ImGui.TextUnformatted("Try clicking 'Mark Active Tab Dirty' button above");
 		ImGui.TextUnformatted("to see the dirty indicator (*) appear next to the tab name.");
 
-		if (ImGui.Button("Toggle Dirty State"))
+		if (DemoProbe.Button("Toggle Dirty State"))
 		{
 			if (DemoTabPanel.IsTabDirty(TabIds["tab3"]))
 			{
@@ -1323,7 +1393,7 @@ internal static class ImGuiWidgetsDemo
 		ImGui.TextUnformatted($"This is a dynamically added tab ({tabIndex})");
 		ImGui.TextUnformatted("The (*) indicator shows when content has been modified.");
 
-		if (ImGui.Button("Toggle Dirty State"))
+		if (DemoProbe.Button("Toggle Dirty State"))
 		{
 			if (DemoTabPanel.IsTabDirty(TabIds[tabKey]))
 			{
