@@ -81,21 +81,28 @@ jobs:
           # An unrecognized platform must stop the run rather than drop the project. Dropping
           # it would produce a smaller matrix that still reports success, which is the failure
           # this design exists to remove.
-          unknown=$(echo "$projects" | jq -r '[.[] | select(.platform as $p | ["neutral","windows","ios"] | index($p) | not) | .platform] | unique | join(", ")')
+          unknown=$(echo "$projects" | jq -r '[.[] | select(.platform as $p | ["neutral","windows"] | index($p) | not) | .platform] | unique | join(", ")')
           if [ -n "$unknown" ]; then
-            echo "::error::ktsubuild test list reported unrecognized platform(s): $unknown"
+            echo "::error::Cannot place test project(s) on a runner. Unhandled platform(s): $unknown"
+            echo "::error::macOS is currently excluded from the matrix, so an ios-tied test project has nowhere to run."
             exit 1
           fi
 
+          # macOS is deliberately absent from this mapping. A macOS runner builds any project
+          # whose target frameworks are widened on that host, and in a repo with an iOS head that
+          # pulls in a target framework needing a workload this job does not install, so every
+          # macOS cell fails during its build. Restoring the workload on each cell is slow and
+          # macOS runner minutes are billed at a premium, so the platform is excluded until the
+          # underlying problem is fixed rather than papered over. An ios-tied test project now
+          # fails the guard above instead of silently finding no runner.
           matrix=$(echo "$projects" | jq -c '
             {
               include: [
                 .[]
                 | . as $p
                 | {
-                    neutral: ["ubuntu-latest", "windows-latest", "macos-latest"],
-                    windows: ["windows-latest"],
-                    ios: ["macos-latest"]
+                    neutral: ["ubuntu-latest", "windows-latest"],
+                    windows: ["windows-latest"]
                   }[$p.platform][]
                 | {
                     os: .,
