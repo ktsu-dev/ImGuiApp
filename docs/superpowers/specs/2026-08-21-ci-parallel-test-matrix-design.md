@@ -134,3 +134,31 @@ Dropping the step outputs would have silently disabled the `winget` and `securit
 ## Out of scope
 
 The iOS workflow, the winget job, the dependabot-merge workflow, and any change to what `ktsubuild ci` does — it stays as it is for repos that haven't moved.
+
+## Measured
+
+Measured on PR #325, run 32577299711, the first green run of the restructured workflow. macOS is excluded from this matrix, see issue #327, so these figures cover Linux and Windows only.
+
+**Shape.** 14 test projects, 2 platforms, 28 cells. Discovery took 0.2 minutes. No failures.
+
+**Wall clock: 24.2 minutes, against 13.6 to 19.9 for the old serial job.** End to end the restructure is slower, not faster, and the reason is visible in the breakdown: the slowest cell is 15.8 minutes and the release job adds another 8.1 after the matrix finishes, where previously everything shared one 20 minute job.
+
+What the restructure did fix is the failure that prompted it. The old job died on its own `timeout-minutes: 20`. No cell now approaches its 30 minute limit, so runs stop being cancelled. That was the emergency. The wall clock improvement the design expected did not materialize.
+
+**One project dominates.** `ImGuiWidgetsDemo.UITests` takes 15.8 minutes on Windows by itself, and `ImGuiAppDemo.UITests` 14.5. The design's premise, that wall clock becomes the slowest single project rather than the sum, holds exactly. The constant is simply much larger than this document assumed when it estimated the five demo suites at roughly 9.6 minutes in total.
+
+**Build duplication is the bulk of the cost.** Every cell restores and builds before testing. On Windows the cheapest cell still costs several minutes while doing almost no testing, so most of the 84.5 Windows cell-minutes is the same tree being rebuilt 14 times.
+
+| Platform | Cells | Cell minutes | Billed, at GitHub's multipliers |
+| --- | --- | --- | --- |
+| ubuntu-latest | 14 | 24.4 | ~24 |
+| windows-latest | 14 | 84.5 | ~169 |
+| Total | 28 | 108.9 | ~193 |
+
+Against roughly 30 to 40 billed minutes for the old single Windows job, that is close to a fivefold increase with macOS already removed. The earlier run including macOS came to roughly 375 billed minutes, and its macOS cells failed within a minute, so a working macOS leg would cost far more than that figure suggests.
+
+**Coverage fan-in works.** SonarCloud parsed coverage from both platforms in equal numbers and imported 28 trx files for 28 cells, confirming the `coverage/**/coverage.xml` glob matches the per-artifact directory layout rather than collapsing to one file.
+
+**A pull request run analyzes without publishing.** `Begin SonarQube` and `End SonarQube` both ran, `Download Coverage` succeeded, and `Release` was correctly skipped. `End SonarQube` succeeded with `sonar.qualitygate.wait=true` now set, so the gate is genuinely being waited on rather than reported after the fact.
+
+**Conclusion on the blast-radius question this document raised.** The trade does not look good for a small repo on these numbers. A repo with two test projects would pay four builds and four runner starts to parallelize work that took two minutes serially, and would get slower end to end once job startup is counted, exactly as feared. Recommend not syncing this shape to the other repos until the build duplication is removed. The lever this document already described, building once per platform and having that platform's cells download the output, is what removes it, and it now has numbers behind it. That lever needs `ktsubuild test run` to grow a `--no-build` option first, because the command currently always builds and offers no pass-through for extra arguments.
