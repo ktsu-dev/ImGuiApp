@@ -35,10 +35,165 @@ env:
   DOTNET_VERSION: "10.0" # Only needed for actions/setup-dotnet
 
 jobs:
-  build:
-    name: Build, Test & Release
+  discover:
+    name: Discover Test Projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has_tests: ${{ steps.discover.outputs.has_tests }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Install KtsuBuild
+        shell: bash
+        run: |
+          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
+          echo "${{ runner.temp }}/ktsubuild" >> "$GITHUB_PATH"
+
+      # `test list` reports every test project regardless of the host it runs on, unlike the
+      # filter `build` and `ci` apply, so one Linux job can enumerate cells that Windows and
+      # macOS runners will execute. It writes failures to stdout rather than stderr, so the
+      # exit code is the only reliable signal and has to be checked before parsing.
+      - name: Discover Test Projects
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! projects=$(ktsubuild test list --workspace "$GITHUB_WORKSPACE"); then
+            echo "::error::ktsubuild test list failed:"
+            echo "$projects"
+            exit 1
+          fi
+
+          echo "Discovered test projects:"
+          echo "$projects" | jq .
+
+          # An unrecognized platform must stop the run rather than drop the project. Dropping
+          # it would produce a smaller matrix that still reports success, which is the failure
+          # this design exists to remove.
+          unknown=$(echo "$projects" | jq -r '[.[] | select(.platform as $p | ["neutral","windows"] | index($p) | not) | .platform] | unique | join(", ")')
+          if [ -n "$unknown" ]; then
+            echo "::error::Cannot place test project(s) on a runner. Unhandled platform(s): $unknown"
+            echo "::error::macOS is currently excluded from the matrix, so an ios-tied test project has nowhere to run."
+            exit 1
+          fi
+
+          # macOS is deliberately absent from this mapping. A macOS runner builds any project
+          # whose target frameworks are widened on that host, and in a repo with an iOS head that
+          # pulls in a target framework needing a workload this job does not install, so every
+          # macOS cell fails during its build. Restoring the workload on each cell is slow and
+          # macOS runner minutes are billed at a premium, so the platform is excluded until the
+          # underlying problem is fixed rather than papered over. An ios-tied test project now
+          # fails the guard above instead of silently finding no runner.
+          matrix=$(echo "$projects" | jq -c '
+            {
+              include: [
+                .[]
+                | . as $p
+                | {
+                    neutral: ["ubuntu-latest", "windows-latest"],
+                    windows: ["windows-latest"]
+                  }[$p.platform][]
+                | {
+                    os: .,
+                    project: $p.project,
+                    name: ($p.project | split("/") | last | rtrimstr(".csproj")),
+                    slug: ($p.project | rtrimstr(".csproj") | gsub("[^A-Za-z0-9]"; "-"))
+                  }
+              ]
+            }')
+
+          count=$(echo "$matrix" | jq '.include | length')
+          echo "Matrix has $count cell(s)."
+          echo "$matrix" | jq .
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    name: Test ${{ matrix.name }} (${{ matrix.os }})
+    needs: discover
+    if: needs.discover.outputs.has_tests == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      # One platform's failure must not cancel the others. Knowing that a project fails on
+      # macOS only is the point of running the matrix at all.
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          lfs: true
+          submodules: recursive
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
+
+      - name: Install KtsuBuild
+        shell: bash
+        run: |
+          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
+          echo "${{ runner.temp }}/ktsubuild" >> "$GITHUB_PATH"
+
+      # One test project per invocation. Besides parallelizing the suite, this removes the
+      # condition behind a coverage-collector flake that KtsuBuild otherwise retries around:
+      # the instrumentation pipe drops during teardown when several assemblies run together.
+      - name: Run Tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ktsubuild test run --project "${{ matrix.project }}" --workspace "$GITHUB_WORKSPACE" --verbose
+
+      # `warn` rather than `error`, because this step runs with `if: always()` and a cell that
+      # genuinely failed its tests legitimately produces no coverage. `error` here would break
+      # the failure path instead of just reporting it.
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-${{ matrix.slug }}-${{ matrix.os }}
+          path: ./coverage/*
+          retention-days: 7
+          if-no-files-found: warn
+
+  release:
+    name: Analyze & Release
+    needs: [discover, test]
+    # `!cancelled()` is required because `test` is skipped when a repo has no test projects, and
+    # a skipped dependency would otherwise skip this job too. It also stops a run that
+    # `concurrency.cancel-in-progress` superseded from reaching `Release` and racing the newer
+    # run. The explicit result checks are what keep a genuine test failure from releasing anyway.
+    if: |
+      !cancelled()
+      && needs.discover.result == 'success'
+      && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write # For creating releases and committing metadata
       packages: write # For publishing packages
@@ -116,15 +271,29 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
 
+      # Every cell wrote a file named coverage.xml, so the downloads must stay in their own
+      # per-artifact directories. Merging them would leave one file and report the coverage of
+      # a single test project as though it were the whole repository's.
+      - name: Download Coverage
+        if: needs.discover.outputs.has_tests == 'true'
+        uses: actions/download-artifact@v7
+        with:
+          pattern: coverage-*
+          path: coverage
+
       - name: Begin SonarQube
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.cs.vscoveragexml.reportsPaths="coverage/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/TestResults/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
 
-      - name: Run KtsuBuild CI Pipeline
+      # `ci` rather than restore and build directly, because it is the only place that updates
+      # and commits the metadata files, updates the repository topics, applies the version gate
+      # behind `[skip ci]`, and writes the step outputs the winget and security jobs read.
+      # The tests already ran in the matrix, and the release waits for the quality gate below.
+      - name: Run KtsuBuild Pipeline
         id: pipeline
         shell: pwsh
         env:
@@ -133,11 +302,9 @@ jobs:
           KTSU_PACKAGE_KEY: ${{ secrets.KTSU_PACKAGE_KEY }}
           EXPECTED_OWNER: ktsu-dev
         run: |
-          # Run the CI pipeline
           $versionBump = "${{ github.event.inputs.version-bump }}"
 
-          # Build arguments array - only add --version-bump if explicitly set (for backward compatibility during bootstrap)
-          $args = @("ci", "--workspace", "${{ github.workspace }}", "--verbose")
+          $args = @("ci", "--workspace", "${{ github.workspace }}", "--no-test", "--no-release", "--verbose")
           if (![string]::IsNullOrEmpty($versionBump) -and $versionBump -ne "auto") {
             $args += @("--version-bump", $versionBump)
           }
@@ -153,11 +320,26 @@ jobs:
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
+      # After the gate, not before. A failed quality gate fails the step above and this never
+      # runs, which is a deliberate change from the old shape where `ci` released first and
+      # Sonar reported afterward.
+      - name: Release
+        if: steps.pipeline.outputs.should_release == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUGET_API_KEY: ${{ secrets.NUGET_KEY }}
+          KTSU_PACKAGE_KEY: ${{ secrets.KTSU_PACKAGE_KEY }}
+          EXPECTED_OWNER: ktsu-dev
+        run: |
+          ktsubuild release --workspace "${{ github.workspace }}" --verbose
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: coverage-report
+          name: analysis-coverage-report
           path: |
             ./coverage/*
           retention-days: 7
@@ -165,8 +347,8 @@ jobs:
 
   winget:
     name: Update Winget Manifests
-    needs: build
-    if: needs.build.outputs.should_release == 'true'
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -176,7 +358,7 @@ jobs:
       - name: Checkout Release Commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.release_hash }}
+          ref: ${{ needs.release.outputs.release_hash }}
           fetch-depth: 0 # Full history for better auto-detection
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
@@ -197,19 +379,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ktsubuild winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
+          ktsubuild winget generate --version "${{ needs.release.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
         uses: actions/upload-artifact@v7
         with:
-          name: winget-manifests-${{ needs.build.outputs.version }}
+          name: winget-manifests-${{ needs.release.outputs.version }}
           path: winget/*.yaml
           retention-days: 30
 
   security:
     name: Security Scanning
-    needs: build
-    if: needs.build.outputs.should_release == 'true'
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -220,6 +402,6 @@ jobs:
       - name: Checkout Release Commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.release_hash }}
+          ref: ${{ needs.release.outputs.release_hash }}
       - name: Detect Dependencies
         uses: advanced-security/component-detection-dependency-submission-action@31f25a8de68ae5ce2ca274bc28546a78683c15ce # v0.1.4
