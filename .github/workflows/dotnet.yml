@@ -281,13 +281,32 @@ jobs:
           pattern: coverage-*
           path: coverage
 
+      # SonarCloud's "previous version" new-code period needs recorded version boundaries to
+      # anchor to. Without /v: the scanner reports the version as "not provided", so the period
+      # has nothing to anchor against and widens to the whole history, which makes the new-code
+      # coverage condition measure the entire codebase instead of what this change touched.
+      # `version bump` prints the computed version as its only bare semver line.
+      - name: Resolve Version for Analysis
+        id: analysis_version
+        shell: pwsh
+        run: |
+          $output = & ktsubuild version bump --workspace "${{ github.workspace }}" 2>&1
+          if ($LASTEXITCODE -ne 0) { $output; exit $LASTEXITCODE }
+          $matches = @($output | Where-Object { $_ -match '^\d+\.\d+\.\d+' })
+          if ($matches.Count -ne 1) {
+            $output
+            Write-Error "Expected exactly one bare version line from 'version bump', got $($matches.Count)."
+            exit 1
+          }
+          "version=$($matches[0].Trim())" >> $env:GITHUB_OUTPUT
+
       - name: Begin SonarQube
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /v:"${{ steps.analysis_version.outputs.version }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
 
       # `ci` rather than restore and build directly, because it is the only place that updates
       # and commits the metadata files, updates the repository topics, applies the version gate
