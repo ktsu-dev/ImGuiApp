@@ -331,17 +331,27 @@ jobs:
           & ktsubuild @args
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # TEMPORARY, REMOVE AFTER ONE RELEASE. `continue-on-error` makes a failed quality gate
+      # advisory again, which is the behavior this workflow deliberately replaced. It is here
+      # only to bootstrap the new-code period: until two analyses carry different versions,
+      # SonarCloud's "previous version" period spans the whole history and the new-code coverage
+      # condition measures the entire codebase rather than what changed. See issue #328.
+      #
+      # Remove this line once an analysis reports a new-code period narrower than the full
+      # history, which is the run after the next version bump. Leaving it in place silently
+      # restores the old behavior where a release could ship having failed the project's own
+      # quality bar.
       - name: End SonarQube
         if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.build_skipped != 'true'
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
-      # After the gate, not before. A failed quality gate fails the step above and this never
-      # runs, which is a deliberate change from the old shape where `ci` released first and
-      # Sonar reported afterward.
+      # Normally gated by the step above. While that step carries `continue-on-error` this
+      # gate is advisory, so a release can proceed despite a failing gate. That is temporary.
       - name: Release
         if: steps.pipeline.outputs.should_release == 'true'
         shell: pwsh
