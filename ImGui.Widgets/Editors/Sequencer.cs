@@ -101,6 +101,7 @@ public static partial class ImGuiWidgets
 	/// type never reaches this library's public surface.
 	/// </summary>
 	/// <param name="source">The source to forward to.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Hexa's SequenceInterface is pointer based, so the adapter cannot avoid unsafe. The stored pointer never outlives its pin: Bind is called inside the fixed block and Unbind runs in a finally before that block exits, so the field is null whenever the buffer is unpinned.")]
 	private sealed unsafe class SequenceAdapter(SequenceSource source) : HexaSequenceInterface
 	{
 		private SequenceRange* ranges;
