@@ -281,13 +281,32 @@ jobs:
           pattern: coverage-*
           path: coverage
 
+      # SonarCloud's "previous version" new-code period needs recorded version boundaries to
+      # anchor to. Without /v: the scanner reports the version as "not provided", so the period
+      # has nothing to anchor against and widens to the whole history, which makes the new-code
+      # coverage condition measure the entire codebase instead of what this change touched.
+      # `version bump` prints the computed version as its only bare semver line.
+      - name: Resolve Version for Analysis
+        id: analysis_version
+        shell: pwsh
+        run: |
+          $output = & ktsubuild version bump --workspace "${{ github.workspace }}" 2>&1
+          if ($LASTEXITCODE -ne 0) { $output; exit $LASTEXITCODE }
+          $matches = @($output | Where-Object { $_ -match '^\d+\.\d+\.\d+' })
+          if ($matches.Count -ne 1) {
+            $output
+            Write-Error "Expected exactly one bare version line from 'version bump', got $($matches.Count)."
+            exit 1
+          }
+          "version=$($matches[0].Trim())" >> $env:GITHUB_OUTPUT
+
       - name: Begin SonarQube
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /v:"${{ steps.analysis_version.outputs.version }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
 
       # `ci` rather than restore and build directly, because it is the only place that updates
       # and commits the metadata files, updates the repository topics, applies the version gate
@@ -312,17 +331,27 @@ jobs:
           & ktsubuild @args
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # TEMPORARY, REMOVE AFTER ONE RELEASE. `continue-on-error` makes a failed quality gate
+      # advisory again, which is the behavior this workflow deliberately replaced. It is here
+      # only to bootstrap the new-code period: until two analyses carry different versions,
+      # SonarCloud's "previous version" period spans the whole history and the new-code coverage
+      # condition measures the entire codebase rather than what changed. See issue #328.
+      #
+      # Remove this line once an analysis reports a new-code period narrower than the full
+      # history, which is the run after the next version bump. Leaving it in place silently
+      # restores the old behavior where a release could ship having failed the project's own
+      # quality bar.
       - name: End SonarQube
         if: env.SONAR_TOKEN != '' && steps.pipeline.outputs.build_skipped != 'true'
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
-      # After the gate, not before. A failed quality gate fails the step above and this never
-      # runs, which is a deliberate change from the old shape where `ci` released first and
-      # Sonar reported afterward.
+      # Normally gated by the step above. While that step carries `continue-on-error` this
+      # gate is advisory, so a release can proceed despite a failing gate. That is temporary.
       - name: Release
         if: steps.pipeline.outputs.should_release == 'true'
         shell: pwsh
