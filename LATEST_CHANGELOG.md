@@ -2,6 +2,9 @@
 
 Changes since v3.10.0:
 
+- ci: make the quality gate advisory for one release while the period bootstraps [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- ci: pass the computed version to the Sonar scanner [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: resolve the two security conditions failing the quality gate [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - docs: record the measured results of the parallel test matrix [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - ci: drop macOS from the matrix pending the iOS workload problem [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - ci: gate the release on the quality gate and harden the release conditions [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
