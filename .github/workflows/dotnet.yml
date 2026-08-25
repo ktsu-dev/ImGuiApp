@@ -180,7 +180,13 @@ jobs:
 
       # One test project per `dotnet test` invocation, which is what keeps the coverage
       # collector from dropping its instrumentation pipe when several assemblies run together.
-      # `--no-build` is what lets that stay cheap now that the build above already happened.
+      #
+      # Deliberately NOT `--no-build`. That was tried and 13 of 14 projects reported zero tests
+      # and exit code 5 on this runner, while the same command works locally, so something about
+      # the hosted environment defeats it. Since the step above already built everything, each
+      # invocation here does a near-empty incremental build instead. Measured locally that costs
+      # about five seconds a project against a build the whole job pays once, which is a small
+      # price for not depending on behavior that has already failed once in CI.
       #
       # Every invocation writes to the same `coverage` directory with a fixed trx filename, so
       # each project's output is moved aside before the next one runs. Without that the last
@@ -208,7 +214,7 @@ jobs:
           while IFS= read -r project; do
             [ -n "$project" ] || continue
             echo "::group::$project"
-            if ktsubuild test run --project "$project" --workspace "$GITHUB_WORKSPACE" --no-build --verbose; then
+            if ktsubuild test run --project "$project" --workspace "$GITHUB_WORKSPACE" --verbose; then
               echo "$project passed"
             else
               echo "::error::Tests failed for $project"
