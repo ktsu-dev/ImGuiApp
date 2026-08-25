@@ -169,76 +169,25 @@ jobs:
           dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
           echo "${{ runner.temp }}/ktsubuild" >> "$GITHUB_PATH"
 
-      # Build once for the whole platform, then test each project against that output. Building
-      # per project instead meant every project rebuilt its own dependency chain, which for this
-      # repository was most of the cost of the run.
-      - name: Build
+      # `build` is restore, build, and test in one command, and it is the path every ktsu repo
+      # has exercised for years through `ci`. Hand-rolling the same thing in YAML meant a loop
+      # calling `test run` per project, which is a second copy of a rule the tool already owns.
+      #
+      # Deliberately not `ci --no-release`: `ci` commits and pushes the metadata files when the
+      # build is official and on main, so with one job per platform both jobs would race to
+      # commit on every push to main. `build` does no metadata, version, or release work.
+      - name: Build and Test
         shell: bash
         run: |
           set -euo pipefail
-          ktsubuild build --no-test --workspace "$GITHUB_WORKSPACE" --verbose
-
-      # One test project per `dotnet test` invocation, which is what keeps the coverage
-      # collector from dropping its instrumentation pipe when several assemblies run together.
-      #
-      # Deliberately NOT `--no-build`. That was tried and 13 of 14 projects reported zero tests
-      # and exit code 5 on this runner, while the same command works locally, so something about
-      # the hosted environment defeats it. Since the step above already built everything, each
-      # invocation here does a near-empty incremental build instead. Measured locally that costs
-      # about five seconds a project against a build the whole job pays once, which is a small
-      # price for not depending on behavior that has already failed once in CI.
-      #
-      # Every invocation writes to the same `coverage` directory with a fixed trx filename, so
-      # each project's output is moved aside before the next one runs. Without that the last
-      # project's coverage would be all that survived.
-      #
-      # A failing project must not stop the ones after it. The loop records the failure, keeps
-      # going, and fails the step at the end, so one run reports every broken project rather
-      # than only the first.
-      - name: Test
-        shell: bash
-        run: |
-          set -uo pipefail
-
-          projects=$(echo '${{ needs.discover.outputs.matrix }}'             | jq -r --arg os "${{ matrix.os }}" '.include[] | select(.os == $os) | .project')
-
-          if [ -z "$projects" ]; then
-            echo "::error::No test projects were assigned to ${{ matrix.os }}, but this job was scheduled."
-            exit 1
-          fi
-
-          echo "Testing $(echo "$projects" | wc -l) project(s) on ${{ matrix.os }}."
-          mkdir -p "$GITHUB_WORKSPACE/coverage-collected"
-          failed=""
-
-          while IFS= read -r project; do
-            [ -n "$project" ] || continue
-            echo "::group::$project"
-            if ktsubuild test run --project "$project" --workspace "$GITHUB_WORKSPACE" --verbose; then
-              echo "$project passed"
-            else
-              echo "::error::Tests failed for $project"
-              failed="$failed $project"
-            fi
-            slug=$(echo "$project" | sed 's/\.csproj$//; s/[^A-Za-z0-9]/-/g')
-            mkdir -p "$GITHUB_WORKSPACE/coverage-collected/$slug"
-            if [ -d "$GITHUB_WORKSPACE/coverage" ]; then
-              mv "$GITHUB_WORKSPACE/coverage"/* "$GITHUB_WORKSPACE/coverage-collected/$slug/" 2>/dev/null || true
-            fi
-            echo "::endgroup::"
-          done <<< "$projects"
-
-          if [ -n "$failed" ]; then
-            echo "::error::Failing project(s):$failed"
-            exit 1
-          fi
+          ktsubuild build --workspace "$GITHUB_WORKSPACE" --verbose
 
       - name: Upload Coverage
         uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-${{ matrix.os }}
-          path: ./coverage-collected/*
+          path: ./coverage/*
           retention-days: 7
           if-no-files-found: warn
 
