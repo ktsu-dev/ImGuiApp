@@ -42,6 +42,7 @@ jobs:
 
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
+      platforms: ${{ steps.discover.outputs.platforms }}
       has_tests: ${{ steps.discover.outputs.has_tests }}
 
     steps:
@@ -117,7 +118,14 @@ jobs:
           echo "Matrix has $count cell(s)."
           echo "$matrix" | jq .
 
+          # The distinct hosts the cells land on. One test job runs per platform and builds once,
+          # so this is what that job fans out over, while `matrix` tells each job which projects
+          # are its own.
+          platforms=$(echo "$matrix" | jq -c '[.include[].os] | unique')
+          echo "Platforms: $platforms"
+
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
           if [ "$count" -gt 0 ]; then
             echo "has_tests=true" >> "$GITHUB_OUTPUT"
           else
@@ -125,17 +133,18 @@ jobs:
           fi
 
   test:
-    name: Test ${{ matrix.name }} (${{ matrix.os }})
+    name: Test on ${{ matrix.os }}
     needs: discover
     if: needs.discover.outputs.has_tests == 'true'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     strategy:
-      # One platform's failure must not cancel the others. Knowing that a project fails on
-      # macOS only is the point of running the matrix at all.
+      # One platform's failure must not cancel the others. Knowing that a project fails on one
+      # host only is the point of testing on more than one.
       fail-fast: false
-      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+      matrix:
+        os: ${{ fromJson(needs.discover.outputs.platforms) }}
 
     steps:
       - name: Checkout Repository
@@ -160,24 +169,70 @@ jobs:
           dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
           echo "${{ runner.temp }}/ktsubuild" >> "$GITHUB_PATH"
 
-      # One test project per invocation. Besides parallelizing the suite, this removes the
-      # condition behind a coverage-collector flake that KtsuBuild otherwise retries around:
-      # the instrumentation pipe drops during teardown when several assemblies run together.
-      - name: Run Tests
+      # Build once for the whole platform, then test each project against that output. Building
+      # per project instead meant every project rebuilt its own dependency chain, which for this
+      # repository was most of the cost of the run.
+      - name: Build
         shell: bash
         run: |
           set -euo pipefail
-          ktsubuild test run --project "${{ matrix.project }}" --workspace "$GITHUB_WORKSPACE" --verbose
+          ktsubuild build --no-test --workspace "$GITHUB_WORKSPACE" --verbose
 
-      # `warn` rather than `error`, because this step runs with `if: always()` and a cell that
-      # genuinely failed its tests legitimately produces no coverage. `error` here would break
-      # the failure path instead of just reporting it.
+      # One test project per `dotnet test` invocation, which is what keeps the coverage
+      # collector from dropping its instrumentation pipe when several assemblies run together.
+      # `--no-build` is what lets that stay cheap now that the build above already happened.
+      #
+      # Every invocation writes to the same `coverage` directory with a fixed trx filename, so
+      # each project's output is moved aside before the next one runs. Without that the last
+      # project's coverage would be all that survived.
+      #
+      # A failing project must not stop the ones after it. The loop records the failure, keeps
+      # going, and fails the step at the end, so one run reports every broken project rather
+      # than only the first.
+      - name: Test
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          projects=$(echo '${{ needs.discover.outputs.matrix }}'             | jq -r --arg os "${{ matrix.os }}" '.include[] | select(.os == $os) | .project')
+
+          if [ -z "$projects" ]; then
+            echo "::error::No test projects were assigned to ${{ matrix.os }}, but this job was scheduled."
+            exit 1
+          fi
+
+          echo "Testing $(echo "$projects" | wc -l) project(s) on ${{ matrix.os }}."
+          mkdir -p "$GITHUB_WORKSPACE/coverage-collected"
+          failed=""
+
+          while IFS= read -r project; do
+            [ -n "$project" ] || continue
+            echo "::group::$project"
+            if ktsubuild test run --project "$project" --workspace "$GITHUB_WORKSPACE" --no-build --verbose; then
+              echo "$project passed"
+            else
+              echo "::error::Tests failed for $project"
+              failed="$failed $project"
+            fi
+            slug=$(echo "$project" | sed 's/\.csproj$//; s/[^A-Za-z0-9]/-/g')
+            mkdir -p "$GITHUB_WORKSPACE/coverage-collected/$slug"
+            if [ -d "$GITHUB_WORKSPACE/coverage" ]; then
+              mv "$GITHUB_WORKSPACE/coverage"/* "$GITHUB_WORKSPACE/coverage-collected/$slug/" 2>/dev/null || true
+            fi
+            echo "::endgroup::"
+          done <<< "$projects"
+
+          if [ -n "$failed" ]; then
+            echo "::error::Failing project(s):$failed"
+            exit 1
+          fi
+
       - name: Upload Coverage
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: coverage-${{ matrix.slug }}-${{ matrix.os }}
-          path: ./coverage/*
+          name: coverage-${{ matrix.os }}
+          path: ./coverage-collected/*
           retention-days: 7
           if-no-files-found: warn
 
