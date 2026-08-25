@@ -1,4 +1,6 @@
-## v3.11.0
+## v3.11.1 (patch)
 
-No significant changes detected since v3.11.0.
+Changes since v3.11.0:
+
+- ci: restore the quality gate as blocking [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 
