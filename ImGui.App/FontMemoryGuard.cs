@@ -15,6 +15,14 @@ using Silk.NET.OpenGL;
 /// Provides memory guards and limits for font loading to prevent excessive texture memory allocation
 /// on small GPUs or high-resolution displays.
 ///
+/// <para><strong>Scope:</strong></para>
+/// <para>This guard once decided how many font sizes to bake into a single fixed atlas. It no longer
+/// does: the renderer advertises <c>ImGuiBackendFlags.RendererHasTextures</c>, so each font is
+/// registered once and ImGui rasterizes it at whatever size is drawn, growing and repacking the
+/// atlas itself. What the estimate still informs is what is requested eagerly -- emoji and the
+/// extended Unicode ranges. The size and dimension figures below describe a budget for that
+/// up-front request, not a ceiling on what can be drawn.</para>
+///
 /// <para><strong>Intel &amp; AMD Integrated GPU Support:</strong></para>
 /// <para>Special handling for integrated graphics which are the primary targets for memory constraints:</para>
 /// <list type="bullet">

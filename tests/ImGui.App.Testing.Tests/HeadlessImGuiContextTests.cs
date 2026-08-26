@@ -22,12 +22,78 @@ public sealed class HeadlessImGuiContextTests
 	}
 
 	[TestMethod]
-	public void Constructor_BuildsAFontAtlasTexture()
+	public void Dispose_IsIdempotent()
+	{
+		using SoftwareRenderer renderer = new(64, 64);
+		HeadlessImGuiContext context = new(64, 64, 1.0f, renderer);
+
+		context.Dispose();
+
+		// A second dispose must not destroy the ImGui context twice; the harness is held in using
+		// blocks that can overlap an explicit dispose in a failing test.
+		context.Dispose();
+	}
+
+	[TestMethod]
+	public void Constructor_AdvertisesDynamicTextures()
 	{
 		using SoftwareRenderer renderer = new(64, 64);
 		using HeadlessImGuiContext context = new(64, 64, 1.0f, renderer);
 
-		Assert.IsTrue(HeadlessImGuiContext.IO.Fonts.TexIsBuilt, "The font atlas must be built before the first frame.");
+		Assert.IsTrue(
+			HeadlessImGuiContext.IO.BackendFlags.HasFlag(ImGuiBackendFlags.RendererHasTextures),
+			"Without this flag ImGui bakes one atlas up front and no glyph can be rasterized at a size that was not registered.");
+	}
+
+	[TestMethod]
+	public void FirstFrame_CreatesTheAtlasTexture()
+	{
+		using SoftwareRenderer renderer = new(200, 120);
+		using HeadlessImGuiContext context = new(200, 120, 1.0f, renderer);
+
+		DrawText(context, sizePixels: null);
+
+		Assert.AreEqual(ImTextureStatus.Ok, HeadlessImGuiContext.IO.Fonts.TexData.Status, "The renderer should have reconciled the atlas texture.");
+		Assert.AreNotEqual(0, (nint)(nuint)HeadlessImGuiContext.IO.Fonts.TexData.GetTexID(), "The renderer should have been handed a texture id.");
+	}
+
+	[TestMethod]
+	public void DrawingAtAnUnseenSize_RasterizesOnDemand()
+	{
+		using SoftwareRenderer renderer = new(200, 200);
+		using HeadlessImGuiContext context = new(200, 200, 1.0f, renderer);
+
+		// Settle: the atlas is created on the first frame and holds the body size after the second.
+		DrawText(context, sizePixels: null);
+		DrawText(context, sizePixels: null);
+		int settled = context.TextureUploadCount;
+
+		DrawText(context, sizePixels: 48f);
+
+		Assert.IsGreaterThan(settled, context.TextureUploadCount, "A size never drawn before should have been rasterized into the atlas, which no baked-up-front atlas could do.");
+
+		DrawText(context, sizePixels: 48f);
+
+		Assert.AreEqual(settled + 1, context.TextureUploadCount, "Drawing the same size again should not re-rasterize anything.");
+	}
+
+	private static void DrawText(HeadlessImGuiContext context, float? sizePixels)
+	{
+		context.BeginFrame(1f / 60f);
+		ImGui.Begin("probe", ImGuiWindowFlags.NoSavedSettings);
+		if (sizePixels.HasValue)
+		{
+			ImGui.PushFont(ImGui.GetFont(), sizePixels.Value);
+		}
+
+		ImGui.TextUnformatted("hello");
+		if (sizePixels.HasValue)
+		{
+			ImGui.PopFont();
+		}
+
+		ImGui.End();
+		context.EndFrame();
 	}
 
 	[TestMethod]

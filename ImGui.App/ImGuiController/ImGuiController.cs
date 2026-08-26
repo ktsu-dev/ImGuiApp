@@ -33,8 +33,10 @@ internal sealed class ImGuiController : IRendererBackend
 	internal uint _elementsHandle;
 	internal uint _vertexArrayObject;
 
-	internal Texture? _fontTexture;
 	internal Shader? _shader;
+
+	// Decides what ImGui's texture requests mean; this class supplies the OpenGL calls behind them.
+	private TextureReconciler? _textureReconciler;
 
 	internal int _windowWidth;
 	internal int _windowHeight;
@@ -101,7 +103,12 @@ internal sealed class ImGuiController : IRendererBackend
 		onConfigureIO?.Invoke();
 		DebugLogger.Log("ImGuiController: onConfigureIO completed");
 
-		io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
+		// RendererHasTextures hands texture lifetime to ImGui: instead of one atlas baked at
+		// startup, it asks the backend to create, update, and destroy textures through
+		// UpdateTexture as the frame's needs change. That is what lets the font atlas grow and
+		// repack at runtime, so glyphs can be rasterized at whatever size a caller pushes rather
+		// than only at sizes registered up front.
+		io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset | ImGuiBackendFlags.RendererHasTextures;
 
 		DebugLogger.Log("ImGuiController: Creating device resources");
 		CreateDeviceResources();
@@ -114,9 +121,14 @@ internal sealed class ImGuiController : IRendererBackend
 		DebugLogger.Log("ImGuiController: Initialization completed");
 	}
 
+	[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The GLWrapper adapts a context this class does not own -- ImGuiApp creates and disposes it, and _gl is likewise never disposed here. Disposing the wrapper would tear down the caller's GL context, so it deliberately lives as long as this controller.")]
 	internal void Init(GL gl, IView view, IInputContext input)
 	{
 		_gl = gl;
+
+		// Wrapped rather than used directly so the uploader depends on IGL, which is what lets the
+		// texture calls be exercised without a graphics context.
+		_textureReconciler = new TextureReconciler(new GLTextureUploader(new GLWrapper(gl)));
 		_view = view;
 		_input = input;
 		_windowWidth = view.Size.X;
@@ -713,6 +725,11 @@ internal sealed class ImGuiController : IRendererBackend
 		bool lastEnablePrimitiveRestart = _gl.IsEnabled(GLEnum.PrimitiveRestart);
 #endif
 
+		// Catch up with texture creations, atlas repacks, and destructions requested since the last
+		// frame. Usually there is nothing to do; when a new glyph size is first drawn, this is where
+		// the grown atlas reaches the GPU.
+		_textureReconciler?.ReconcileFrame(drawDataPtr.Textures);
+
 		SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
 
 		// Will project scissor/clipping rectangles into framebuffer space
@@ -906,7 +923,10 @@ internal sealed class ImGuiController : IRendererBackend
 		_vboHandle = _gl.GenBuffer();
 		_elementsHandle = _gl.GenBuffer();
 
-		RecreateFontDeviceTexture();
+		// The font atlas is no longer uploaded here. Under RendererHasTextures ImGui creates it on
+		// the first frame that draws text, so what this method readies is the pipeline, and fonts
+		// count as configured once the pipeline can carry them.
+		FontsConfigured = true;
 
 		// Restore modified GL state
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
@@ -918,91 +938,9 @@ internal sealed class ImGuiController : IRendererBackend
 	}
 
 	/// <summary>
-	/// Creates the texture used to render text.
+	/// Releases every texture ImGui still owns.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font atlas texture upload; unsafe pointer is read-only access to ImGui-owned texture pixels.")]
-	internal void RecreateFontDeviceTexture()
-	{
-		DebugLogger.Log("RecreateFontDeviceTexture: Starting");
-		if (_gl is null)
-		{
-			DebugLogger.Log("RecreateFontDeviceTexture: OpenGL is null, returning");
-			return;
-		}
-
-		// Build texture atlas
-		ImGuiIOPtr io = ImGui.GetIO();
-		DebugLogger.Log("RecreateFontDeviceTexture: Got ImGui IO");
-		unsafe
-		{
-			// Build font atlas if it's not already built
-			if (!io.Fonts.TexIsBuilt)
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, building now");
-
-				// Build the font atlas using ImFontAtlasBuildMain
-				// This is required when the backend doesn't support ImGuiBackendFlags_RendererHasTextures
-				ImGuiP.ImFontAtlasBuildMain(io.Fonts);
-
-				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas built successfully");
-			}
-			else
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas already built");
-			}
-
-			// Get texture data using the correct API for Hexa.NET.ImGui 2.2.8
-			ImTextureDataPtr texData = io.Fonts.TexData;
-			DebugLogger.Log($"RecreateFontDeviceTexture: Got texture data - Width: {texData.Width}, Height: {texData.Height}");
-
-			// Only proceed if we have valid texture data
-			if (texData.Pixels != null && texData.Width > 0 && texData.Height > 0)
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture data is valid, creating OpenGL texture");
-
-				// Create OpenGL texture from font atlas data
-				_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
-				DebugLogger.Log("RecreateFontDeviceTexture: Got last texture binding");
-
-				// Create texture with the font atlas data
-				DebugLogger.Log("RecreateFontDeviceTexture: Creating Texture object");
-				_fontTexture = new Texture(_gl, texData.Width, texData.Height,
-					(nint)texData.Pixels, false, false, PixelFormat.Rgba);
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture object created");
-
-				// Store texture ID in ImGui's font atlas
-				DebugLogger.Log("RecreateFontDeviceTexture: Setting texture ID");
-				texData.SetTexID((nint)_fontTexture.GlTexture);
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture ID set");
-
-				// Set texture filtering
-				DebugLogger.Log("RecreateFontDeviceTexture: Setting texture filtering");
-				_fontTexture.Bind();
-				_fontTexture.SetMagFilter(TextureMagFilter.Nearest);
-				_fontTexture.SetMinFilter(TextureMinFilter.Nearest);
-				_fontTexture.SetWrap(TextureCoordinate.S, TextureWrapMode.ClampToEdge);
-				_fontTexture.SetWrap(TextureCoordinate.T, TextureWrapMode.ClampToEdge);
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture filtering set");
-
-				// Restore previous texture binding
-				_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
-				DebugLogger.Log("RecreateFontDeviceTexture: Restored previous texture binding");
-
-				// Clear font atlas texture data to save memory
-				io.Fonts.ClearTexData();
-				DebugLogger.Log("RecreateFontDeviceTexture: Cleared font atlas texture data");
-
-				// Mark fonts as configured
-				FontsConfigured = true;
-				DebugLogger.Log("RecreateFontDeviceTexture: Marked fonts as configured");
-			}
-			else
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Invalid texture data - skipping");
-			}
-		}
-		DebugLogger.Log("RecreateFontDeviceTexture: Completed");
-	}
+	internal void DestroyAllTextures() => _textureReconciler?.DestroyAll(ImGui.GetPlatformIO().Textures);
 
 	/// <summary>
 	/// Frees all graphics resources used by the renderer.
@@ -1024,7 +962,7 @@ internal sealed class ImGuiController : IRendererBackend
 			return;
 		}
 
-		if (disposing && _gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _fontTexture is not null && _shader is not null)
+		if (disposing && _gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _shader is not null)
 		{
 			// Dispose managed resources
 			_view.Resize -= WindowResized;
@@ -1040,7 +978,7 @@ internal sealed class ImGuiController : IRendererBackend
 			_gl.DeleteBuffer(_elementsHandle);
 			_gl.DeleteVertexArray(_vertexArrayObject);
 
-			_fontTexture.Dispose();
+			DestroyAllTextures();
 			_shader.Dispose();
 
 			ImGuiExtensionManager.Cleanup();

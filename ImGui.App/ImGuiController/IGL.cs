@@ -85,6 +85,19 @@ public interface IGL : IDisposable
 	public void TexParameter(GLEnum target, GLEnum pname, int param);
 
 	/// <summary>
+	/// Sets a pixel storage mode.
+	/// </summary>
+	/// <param name="pname">The parameter to set.</param>
+	/// <param name="param">The value to set it to.</param>
+	public void PixelStore(GLEnum pname, int param);
+
+	/// <summary>
+	/// Reports any outstanding OpenGL error against a label.
+	/// </summary>
+	/// <param name="title">A label identifying the call being checked.</param>
+	public void CheckError(string title);
+
+	/// <summary>
 	/// Specifies a two-dimensional texture image.
 	/// </summary>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native OpenGL interop; pointer is scoped to the call and not retained.")]
