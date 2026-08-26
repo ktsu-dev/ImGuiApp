@@ -343,7 +343,7 @@ jobs:
 
       # `ci` rather than restore and build directly, because it is the only place that updates
       # and commits the metadata files, updates the repository topics, applies the version gate
-      # behind `[skip ci]`, and writes the step outputs the winget and security jobs read.
+      # behind `[skip ci]`, and writes the step outputs the security job reads.
       # The tests already ran in the matrix, and the release waits for the quality gate below.
       - name: Run KtsuBuild Pipeline
         id: pipeline
@@ -396,49 +396,6 @@ jobs:
             ./coverage/*
           retention-days: 7
           if-no-files-found: ignore
-
-  winget:
-    name: Update Winget Manifests
-    needs: release
-    if: needs.release.outputs.should_release == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout Release Commit
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.release.outputs.release_hash }}
-          fetch-depth: 0 # Full history for better auto-detection
-
-      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}.x
-
-      # PATH is not shared between jobs, so this job installs the tool for itself.
-      - name: Install KtsuBuild
-        shell: pwsh
-        run: |
-          dotnet tool install ktsu.KtsuBuild.Tool --tool-path "${{ runner.temp }}/ktsubuild"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
-
-      - name: Update Winget Manifests
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          ktsubuild winget generate --version "${{ needs.release.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
-
-      - name: Upload Updated Manifests
-        uses: actions/upload-artifact@v7
-        with:
-          name: winget-manifests-${{ needs.release.outputs.version }}
-          path: winget/*.yaml
-          retention-days: 30
 
   security:
     name: Security Scanning
