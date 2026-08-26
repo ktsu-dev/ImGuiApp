@@ -22,6 +22,19 @@ public sealed class HeadlessImGuiContextTests
 	}
 
 	[TestMethod]
+	public void Dispose_IsIdempotent()
+	{
+		using SoftwareRenderer renderer = new(64, 64);
+		HeadlessImGuiContext context = new(64, 64, 1.0f, renderer);
+
+		context.Dispose();
+
+		// A second dispose must not destroy the ImGui context twice; the harness is held in using
+		// blocks that can overlap an explicit dispose in a failing test.
+		context.Dispose();
+	}
+
+	[TestMethod]
 	public void Constructor_AdvertisesDynamicTextures()
 	{
 		using SoftwareRenderer renderer = new(64, 64);

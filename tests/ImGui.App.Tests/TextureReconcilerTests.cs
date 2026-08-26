@@ -204,6 +204,19 @@ public sealed unsafe class TextureReconcilerTests
 	}
 
 	[TestMethod]
+	public void DestroyAll_ToleratesAnAbsentTextureList()
+	{
+		FakeUploader uploader = new();
+		TextureReconciler reconciler = new(uploader);
+
+		// Shutdown can come before ImGui has ever produced a texture list, so this must not
+		// dereference it.
+		reconciler.DestroyAll(default);
+
+		Assert.IsEmpty(uploader.Calls);
+	}
+
+	[TestMethod]
 	public void DestroyAll_ReleasesOnlyTexturesNothingElseHolds()
 	{
 		FakeUploader uploader = new();
