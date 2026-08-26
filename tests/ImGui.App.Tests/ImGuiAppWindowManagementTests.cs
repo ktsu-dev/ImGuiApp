@@ -847,14 +847,6 @@ public sealed class ImGuiAppWindowManagementTests
 		Assert.AreEqual(24, result);
 	}
 
-	[TestMethod]
-	public void CommonFontSizes_ContainsExpectedSizes()
-	{
-		int[] expectedSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
-
-		CollectionAssert.AreEqual(expectedSizes, ImGuiApp.CommonFontSizes);
-	}
-
 	#endregion
 
 	#region Context Change Tests

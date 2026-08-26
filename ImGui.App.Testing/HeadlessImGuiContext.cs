@@ -21,7 +21,6 @@ internal sealed class HeadlessImGuiContext : IDisposable
 {
 	private readonly SoftwareRenderer renderer;
 	private ImGuiContextPtr context;
-	private nint fontTextureId;
 	private bool disposed;
 
 	/// <summary>Initializes the context, display metrics and font atlas.</summary>
@@ -51,11 +50,24 @@ internal sealed class HeadlessImGuiContext : IDisposable
 			io.LogFilename = null;
 		}
 
-		BuildFontAtlas(io);
+		// Same contract as the OpenGL backend: ImGui owns the atlas and asks for texture work
+		// through the frame's texture list, which is what lets it rasterize new glyph sizes on
+		// demand. A harness that baked one atlas up front could not exercise that.
+		io.BackendFlags |= ImGuiBackendFlags.RendererHasTextures;
 	}
 
 	/// <summary>Gets the ImGui IO block for this context.</summary>
 	public static ImGuiIOPtr IO => ImGui.GetIO();
+
+	/// <summary>
+	/// Gets the number of texture creations and uploads the renderer has been asked to perform.
+	/// </summary>
+	/// <remarks>
+	/// This rises whenever ImGui rasterizes something it did not have before, which is the only
+	/// outward sign that a glyph was baked on demand rather than taken from a size registered up
+	/// front.
+	/// </remarks>
+	public int TextureUploadCount { get; private set; }
 
 	/// <summary>Begins a frame.</summary>
 	/// <param name="delta">Seconds elapsed since the previous frame.</param>
@@ -70,7 +82,9 @@ internal sealed class HeadlessImGuiContext : IDisposable
 	public void EndFrame()
 	{
 		ImGui.Render();
-		renderer.RenderDrawData(ImGui.GetDrawData());
+		ImDrawDataPtr drawData = ImGui.GetDrawData();
+		ProcessTextureUpdates(drawData);
+		renderer.RenderDrawData(drawData);
 	}
 
 	/// <inheritdoc/>
@@ -82,10 +96,14 @@ internal sealed class HeadlessImGuiContext : IDisposable
 			return;
 		}
 
-		if (fontTextureId != 0)
+		ImVector<ImTextureDataPtr> textures = ImGui.GetPlatformIO().Textures;
+		for (int i = 0; i < textures.Size; i++)
 		{
-			renderer.DeleteTexture(fontTextureId);
-			fontTextureId = 0;
+			ImTextureDataPtr tex = textures[i];
+			if (tex.RefCount == 1)
+			{
+				DestroyTexture(tex);
+			}
 		}
 
 		unsafe
@@ -100,24 +118,60 @@ internal sealed class HeadlessImGuiContext : IDisposable
 		disposed = true;
 	}
 
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The font atlas is produced by ImGui as a raw pixel pointer; copying it out is the only way to upload it, and the span is scoped to this call.")]
-	private unsafe void BuildFontAtlas(ImGuiIOPtr io)
+	/// <summary>
+	/// Reconciles the frame's ImGui-owned textures with the software renderer.
+	/// </summary>
+	/// <remarks>
+	/// The renderer stores whole images, so a partial update is answered by re-uploading the
+	/// texture. That is wasteful and entirely fine here: correctness is what a test harness owes,
+	/// and it keeps this free of the dirty-rectangle bookkeeping the GPU backend needs.
+	/// </remarks>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui exposes texture pixels as a raw pointer; the span wrapping it is scoped to this call.")]
+	private unsafe void ProcessTextureUpdates(ImDrawDataPtr drawData)
 	{
-		// Matches what ImGuiController.RecreateFontDeviceTexture does for the bound ImGui version,
-		// which is the authoritative reference for this atlas API.
-		if (!io.Fonts.TexIsBuilt)
+		ImVector<ImTextureDataPtr> textures = drawData.Textures;
+		if (textures.Data is null)
 		{
-			ImGuiP.ImFontAtlasBuildMain(io.Fonts);
+			return;
 		}
 
-		ImTextureDataPtr texData = io.Fonts.TexData;
-		if (texData.Handle is null || texData.Pixels is null || texData.Width <= 0 || texData.Height <= 0)
+		for (int i = 0; i < textures.Size; i++)
 		{
-			throw new InvalidOperationException("ImGui produced no font atlas pixels, so no text could be rendered.");
-		}
+			ImTextureDataPtr tex = textures[i];
+			switch (tex.Status)
+			{
+				case ImTextureStatus.WantCreate:
+					tex.SetTexID(renderer.CreateTexture(PixelsOf(tex), tex.Width, tex.Height));
+					tex.SetStatus(ImTextureStatus.Ok);
+					TextureUploadCount++;
+					break;
 
-		ReadOnlySpan<byte> pixels = new(texData.Pixels, texData.Width * texData.Height * 4);
-		fontTextureId = renderer.CreateTexture(pixels, texData.Width, texData.Height);
-		texData.SetTexID(fontTextureId);
+				case ImTextureStatus.WantUpdates:
+					renderer.UpdateTexture((nint)(nuint)tex.GetTexID(), PixelsOf(tex), tex.Width, tex.Height);
+					tex.SetStatus(ImTextureStatus.Ok);
+					TextureUploadCount++;
+					break;
+
+				case ImTextureStatus.WantDestroy when tex.UnusedFrames > 0:
+					DestroyTexture(tex);
+					break;
+
+				default:
+					break;
+			}
+		}
 	}
+
+	/// <summary>Releases the renderer's copy of an ImGui-owned texture.</summary>
+	private void DestroyTexture(ImTextureDataPtr tex)
+	{
+		renderer.DeleteTexture((nint)(nuint)tex.GetTexID());
+		tex.SetTexID((nint)0);
+		tex.SetStatus(ImTextureStatus.Destroyed);
+	}
+
+	/// <summary>Wraps an ImGui texture's pixel buffer without copying it.</summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui exposes texture pixels as a raw pointer; the span wrapping it is scoped to the caller.")]
+	private static unsafe ReadOnlySpan<byte> PixelsOf(ImTextureDataPtr tex) =>
+		new(tex.GetPixels(), tex.GetSizeInBytes());
 }

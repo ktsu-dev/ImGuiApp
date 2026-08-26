@@ -180,16 +180,6 @@ public class ImGuiAppCoreTests
 	#region Internal Structure Tests
 
 	[TestMethod]
-	public void CommonFontSizes_ContainsExpectedValues()
-	{
-		int[] sizes = ImGuiApp.CommonFontSizes;
-		Assert.IsNotNull(sizes);
-
-		int[] expectedSizes = [10, 12, 14, 16, 18, 20, 24, 32, 48];
-		CollectionAssert.AreEqual(expectedSizes, sizes);
-	}
-
-	[TestMethod]
 	public void DebugLogger_IsInternalStaticClass()
 	{
 		// Test DebugLogger functionality through direct access

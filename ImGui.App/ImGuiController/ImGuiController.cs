@@ -33,7 +33,6 @@ internal sealed class ImGuiController : IRendererBackend
 	internal uint _elementsHandle;
 	internal uint _vertexArrayObject;
 
-	internal Texture? _fontTexture;
 	internal Shader? _shader;
 
 	internal int _windowWidth;
@@ -101,7 +100,12 @@ internal sealed class ImGuiController : IRendererBackend
 		onConfigureIO?.Invoke();
 		DebugLogger.Log("ImGuiController: onConfigureIO completed");
 
-		io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
+		// RendererHasTextures hands texture lifetime to ImGui: instead of one atlas baked at
+		// startup, it asks the backend to create, update, and destroy textures through
+		// UpdateTexture as the frame's needs change. That is what lets the font atlas grow and
+		// repack at runtime, so glyphs can be rasterized at whatever size a caller pushes rather
+		// than only at sizes registered up front.
+		io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset | ImGuiBackendFlags.RendererHasTextures;
 
 		DebugLogger.Log("ImGuiController: Creating device resources");
 		CreateDeviceResources();
@@ -330,6 +334,88 @@ internal sealed class ImGuiController : IRendererBackend
 	/// <inheritdoc />
 	// _gl can be null if the context has already been torn down; callers expect a no-op then.
 	public void DeleteTexture(nint id) => _gl?.DeleteTexture((uint)id);
+
+	/// <summary>
+	/// Reconciles one ImGui-owned texture with the GPU, creating, updating, or destroying it as
+	/// the texture's status asks.
+	/// </summary>
+	/// <remarks>
+	/// This is the backend half of <see cref="ImGuiBackendFlags.RendererHasTextures"/>. ImGui
+	/// keeps the pixels and tells the backend what changed; the backend owns only the GL name,
+	/// which it hands back through <see cref="ImTextureDataPtr.SetTexID"/>.
+	/// </remarks>
+	/// <param name="tex">The texture ImGui wants brought up to date.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the pixel pointers belong to ImGui and are read within the upload call only.")]
+	internal unsafe void UpdateTexture(ImTextureDataPtr tex)
+	{
+		if (_gl is null)
+		{
+			return;
+		}
+
+		// The shader samples all four channels, so an Alpha8 atlas would upload as garbage rather
+		// than fail. ImGui asks for RGBA32 by default; anything else is a configuration mistake
+		// worth surfacing at the point it happens.
+		if (tex.Format != ImTextureFormat.Rgba32)
+		{
+			throw new InvalidOperationException($"ImGui requested a {tex.Format} texture, but this backend only uploads {ImTextureFormat.Rgba32}.");
+		}
+
+		switch (tex.Status)
+		{
+			case ImTextureStatus.WantCreate:
+				uint created = _gl.GenTexture();
+				_gl.BindTexture(GLEnum.Texture2D, created);
+				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
+				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
+				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
+				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
+				_gl.PixelStore(GLEnum.UnpackRowLength, 0);
+				_gl.TexImage2D(GLEnum.Texture2D, 0, (int)GLEnum.Rgba8, (uint)tex.Width, (uint)tex.Height, 0, GLEnum.Rgba, GLEnum.UnsignedByte, tex.GetPixels());
+				_gl.CheckGlError("Create ImGui texture");
+				tex.SetTexID(created);
+				tex.SetStatus(ImTextureStatus.Ok);
+				break;
+
+			case ImTextureStatus.WantUpdates:
+				_gl.BindTexture(GLEnum.Texture2D, (uint)(nuint)tex.GetTexID());
+
+				// Each dirty rectangle is read out of the middle of the full-atlas pixel buffer, so
+				// the unpack stride has to describe the whole atlas rather than the rectangle.
+				_gl.PixelStore(GLEnum.UnpackRowLength, tex.Width);
+				for (int i = 0; i < tex.Updates.Size; i++)
+				{
+					ImTextureRect rect = tex.Updates[i];
+					_gl.TexSubImage2D(GLEnum.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, GLEnum.Rgba, GLEnum.UnsignedByte, tex.GetPixelsAt(rect.X, rect.Y));
+				}
+
+				_gl.PixelStore(GLEnum.UnpackRowLength, 0);
+				_gl.CheckGlError("Update ImGui texture");
+				tex.SetStatus(ImTextureStatus.Ok);
+				break;
+
+			// UnusedFrames guards against deleting a texture the GPU is still reading from: ImGui
+			// asks for destruction as soon as a texture falls out of use, which can be the same
+			// frame it was last drawn with.
+			case ImTextureStatus.WantDestroy when tex.UnusedFrames > 0:
+				DestroyTexture(tex);
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	/// <summary>
+	/// Releases the GL texture behind an ImGui-owned texture and marks it destroyed.
+	/// </summary>
+	/// <param name="tex">The texture to release.</param>
+	internal void DestroyTexture(ImTextureDataPtr tex)
+	{
+		_gl?.DeleteTexture((uint)(nuint)tex.GetTexID());
+		tex.SetTexID((nint)0);
+		tex.SetStatus(ImTextureStatus.Destroyed);
+	}
 
 	/// <summary>
 	/// Updates ImGui input and IO configuration state.
@@ -713,6 +799,11 @@ internal sealed class ImGuiController : IRendererBackend
 		bool lastEnablePrimitiveRestart = _gl.IsEnabled(GLEnum.PrimitiveRestart);
 #endif
 
+		// Catch up with texture creations, atlas repacks, and destructions requested since the last
+		// frame. Usually there is nothing to do; when a new glyph size is first drawn, this is where
+		// the grown atlas reaches the GPU.
+		ProcessTextureUpdates(drawDataPtr);
+
 		SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
 
 		// Will project scissor/clipping rectangles into framebuffer space
@@ -753,6 +844,29 @@ internal sealed class ImGuiController : IRendererBackend
 #endif
 
 		_gl.Scissor(lastScissorBox[0], lastScissorBox[1], (uint)lastScissorBox[2], (uint)lastScissorBox[3]);
+	}
+
+	/// <summary>
+	/// Brings every texture referenced by this frame's draw data up to date on the GPU.
+	/// </summary>
+	/// <param name="drawDataPtr">The frame's draw data.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the texture list is an ImGui-owned vector read within this call.")]
+	private unsafe void ProcessTextureUpdates(ImDrawDataPtr drawDataPtr)
+	{
+		ImVector<ImTextureDataPtr> textures = drawDataPtr.Textures;
+		if (textures.Data is null)
+		{
+			return;
+		}
+
+		for (int i = 0; i < textures.Size; i++)
+		{
+			ImTextureDataPtr tex = textures[i];
+			if (tex.Status != ImTextureStatus.Ok)
+			{
+				UpdateTexture(tex);
+			}
+		}
 	}
 
 	/// <summary>
@@ -906,7 +1020,10 @@ internal sealed class ImGuiController : IRendererBackend
 		_vboHandle = _gl.GenBuffer();
 		_elementsHandle = _gl.GenBuffer();
 
-		RecreateFontDeviceTexture();
+		// The font atlas is no longer uploaded here. Under RendererHasTextures ImGui creates it on
+		// the first frame that draws text, so what this method readies is the pipeline, and fonts
+		// count as configured once the pipeline can carry them.
+		FontsConfigured = true;
 
 		// Restore modified GL state
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
@@ -918,90 +1035,23 @@ internal sealed class ImGuiController : IRendererBackend
 	}
 
 	/// <summary>
-	/// Creates the texture used to render text.
+	/// Releases every texture ImGui still owns.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font atlas texture upload; unsafe pointer is read-only access to ImGui-owned texture pixels.")]
-	internal void RecreateFontDeviceTexture()
+	/// <remarks>
+	/// A RefCount of 1 means this backend holds the only remaining reference, so the GL name is
+	/// ours to delete. Anything still referenced elsewhere is left for its owner.
+	/// </remarks>
+	internal void DestroyAllTextures()
 	{
-		DebugLogger.Log("RecreateFontDeviceTexture: Starting");
-		if (_gl is null)
+		ImVector<ImTextureDataPtr> textures = ImGui.GetPlatformIO().Textures;
+		for (int i = 0; i < textures.Size; i++)
 		{
-			DebugLogger.Log("RecreateFontDeviceTexture: OpenGL is null, returning");
-			return;
-		}
-
-		// Build texture atlas
-		ImGuiIOPtr io = ImGui.GetIO();
-		DebugLogger.Log("RecreateFontDeviceTexture: Got ImGui IO");
-		unsafe
-		{
-			// Build font atlas if it's not already built
-			if (!io.Fonts.TexIsBuilt)
+			ImTextureDataPtr tex = textures[i];
+			if (tex.RefCount == 1)
 			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas not built yet, building now");
-
-				// Build the font atlas using ImFontAtlasBuildMain
-				// This is required when the backend doesn't support ImGuiBackendFlags_RendererHasTextures
-				ImGuiP.ImFontAtlasBuildMain(io.Fonts);
-
-				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas built successfully");
-			}
-			else
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Font atlas already built");
-			}
-
-			// Get texture data using the correct API for Hexa.NET.ImGui 2.2.8
-			ImTextureDataPtr texData = io.Fonts.TexData;
-			DebugLogger.Log($"RecreateFontDeviceTexture: Got texture data - Width: {texData.Width}, Height: {texData.Height}");
-
-			// Only proceed if we have valid texture data
-			if (texData.Pixels != null && texData.Width > 0 && texData.Height > 0)
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture data is valid, creating OpenGL texture");
-
-				// Create OpenGL texture from font atlas data
-				_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
-				DebugLogger.Log("RecreateFontDeviceTexture: Got last texture binding");
-
-				// Create texture with the font atlas data
-				DebugLogger.Log("RecreateFontDeviceTexture: Creating Texture object");
-				_fontTexture = new Texture(_gl, texData.Width, texData.Height,
-					(nint)texData.Pixels, false, false, PixelFormat.Rgba);
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture object created");
-
-				// Store texture ID in ImGui's font atlas
-				DebugLogger.Log("RecreateFontDeviceTexture: Setting texture ID");
-				texData.SetTexID((nint)_fontTexture.GlTexture);
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture ID set");
-
-				// Set texture filtering
-				DebugLogger.Log("RecreateFontDeviceTexture: Setting texture filtering");
-				_fontTexture.Bind();
-				_fontTexture.SetMagFilter(TextureMagFilter.Nearest);
-				_fontTexture.SetMinFilter(TextureMinFilter.Nearest);
-				_fontTexture.SetWrap(TextureCoordinate.S, TextureWrapMode.ClampToEdge);
-				_fontTexture.SetWrap(TextureCoordinate.T, TextureWrapMode.ClampToEdge);
-				DebugLogger.Log("RecreateFontDeviceTexture: Texture filtering set");
-
-				// Restore previous texture binding
-				_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
-				DebugLogger.Log("RecreateFontDeviceTexture: Restored previous texture binding");
-
-				// Clear font atlas texture data to save memory
-				io.Fonts.ClearTexData();
-				DebugLogger.Log("RecreateFontDeviceTexture: Cleared font atlas texture data");
-
-				// Mark fonts as configured
-				FontsConfigured = true;
-				DebugLogger.Log("RecreateFontDeviceTexture: Marked fonts as configured");
-			}
-			else
-			{
-				DebugLogger.Log("RecreateFontDeviceTexture: Invalid texture data - skipping");
+				DestroyTexture(tex);
 			}
 		}
-		DebugLogger.Log("RecreateFontDeviceTexture: Completed");
 	}
 
 	/// <summary>
@@ -1024,7 +1074,7 @@ internal sealed class ImGuiController : IRendererBackend
 			return;
 		}
 
-		if (disposing && _gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _fontTexture is not null && _shader is not null)
+		if (disposing && _gl is not null && _view is not null && _keyboard is not null && _mouse is not null && _shader is not null)
 		{
 			// Dispose managed resources
 			_view.Resize -= WindowResized;
@@ -1040,7 +1090,7 @@ internal sealed class ImGuiController : IRendererBackend
 			_gl.DeleteBuffer(_elementsHandle);
 			_gl.DeleteVertexArray(_vertexArrayObject);
 
-			_fontTexture.Dispose();
+			DestroyAllTextures();
 			_shader.Dispose();
 
 			ImGuiExtensionManager.Cleanup();
