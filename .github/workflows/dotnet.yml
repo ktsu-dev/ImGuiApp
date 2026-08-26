@@ -333,18 +333,47 @@ jobs:
           }
           "version=$($matches[0].Trim())" >> $env:GITHUB_OUTPUT
 
+      # The quality gate blocks the release only where a repository opts in, by setting the
+      # SONAR_BLOCKING_GATE repository variable to true. It is not on by default because most of
+      # these repositories carry security hotspots that have never been reviewed, and a gate they
+      # have never been held to would stop every release at once rather than improve anything. The
+      # analysis is still uploaded and the gate is still evaluated either way, so turning a
+      # repository on is a variable away once its findings are triaged.
       - name: Begin SonarQube
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_BLOCKING_GATE: ${{ vars.SONAR_BLOCKING_GATE }}
         shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /v:"${{ steps.analysis_version.outputs.version }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          $sonarArgs = @(
+            'begin'
+            '/k:${{ github.repository_owner }}_${{ github.event.repository.name }}'
+            '/o:${{ github.repository_owner }}'
+            '/v:${{ steps.analysis_version.outputs.version }}'
+            "/d:sonar.token=$env:SONAR_TOKEN"
+            '/d:sonar.host.url=https://sonarcloud.io'
+            '/d:sonar.projectBaseDir=${{ github.workspace }}'
+            '/d:sonar.cs.vscoveragexml.reportsPaths=coverage/**/coverage.xml'
+            '/d:sonar.coverage.exclusions=**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs'
+            '/d:sonar.cs.vstest.reportsPaths=coverage/**/*.trx'
+            '/d:sonar.exclusions=**/NativeExports.cs'
+          )
+
+          if ($env:SONAR_BLOCKING_GATE -eq 'true') {
+            $sonarArgs += '/d:sonar.qualitygate.wait=true'
+            Write-Host 'Quality gate is blocking for this repository.'
+          } else {
+            Write-Host 'Quality gate is advisory for this repository. Set the SONAR_BLOCKING_GATE variable to true to enforce it.'
+          }
+
+          & .\.sonar\scanner\dotnet-sonarscanner @sonarArgs
 
       # `ci` rather than restore and build directly, because it is the only place that updates
       # and commits the metadata files, updates the repository topics, applies the version gate
       # behind `[skip ci]`, and writes the step outputs the security job reads.
-      # The tests already ran in the matrix, and the release waits for the quality gate below.
+      # The tests already ran in the matrix, and where the gate is blocking the release waits for
+      # it below.
       - name: Run KtsuBuild Pipeline
         id: pipeline
         shell: pwsh
@@ -372,9 +401,11 @@ jobs:
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
-      # Gated by the step above. `sonar.qualitygate.wait=true` makes a failed gate fail that
-      # step, and a step whose `if:` names no status function is implicitly gated on success, so
-      # a release cannot proceed past a gate the project did not pass.
+      # Gated by the step above, but only where the gate is blocking. With SONAR_BLOCKING_GATE
+      # set, `sonar.qualitygate.wait=true` makes a failed gate fail that step, and a step whose
+      # `if:` names no status function is implicitly gated on success, so a release cannot proceed
+      # past a gate the project did not pass. Without it the analysis is still published and the
+      # gate still evaluated, it just does not hold up the release.
       - name: Release
         if: steps.pipeline.outputs.should_release == 'true'
         shell: pwsh
