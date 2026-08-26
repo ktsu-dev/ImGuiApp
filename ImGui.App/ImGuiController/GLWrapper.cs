@@ -110,6 +110,20 @@ public sealed class GLWrapper(GL gl) : IGL
 	}
 
 	/// <inheritdoc/>
+	public void PixelStore(GLEnum pname, int param)
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		UnderlyingGL.PixelStore(pname, param);
+	}
+
+	/// <inheritdoc/>
+	public void CheckError(string title)
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		UnderlyingGL.CheckGlError(title);
+	}
+
+	/// <inheritdoc/>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImGui/OpenGL interop; pointer is scoped to the call and not retained.")]
 	public unsafe void TexImage2D(GLEnum target, int level, int internalformat, uint width, uint height, int border, GLEnum format, GLEnum type, void* pixels)
 	{

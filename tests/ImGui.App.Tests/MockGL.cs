@@ -98,6 +98,18 @@ public sealed unsafe class MockGL(TestGL testGL) : IGL
 		_testGL.TexParameter(target, pname, param);
 	}
 
+	public void PixelStore(GLEnum pname, int param)
+	{
+		ThrowIfDisposed();
+		_testGL.PixelStore(pname, param);
+	}
+
+	public void CheckError(string title)
+	{
+		ThrowIfDisposed();
+		_testGL.CheckError(title);
+	}
+
 	public void TexImage2D(GLEnum target, int level, int internalformat, uint width, uint height, int border, GLEnum format, GLEnum type, void* pixels)
 	{
 		ThrowIfDisposed();

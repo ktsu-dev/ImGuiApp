@@ -13,7 +13,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-internal sealed class ImGuiController : IRendererBackend, ITextureUploader
+internal sealed class ImGuiController : IRendererBackend
 {
 
 	internal GL? _gl;
@@ -36,7 +36,7 @@ internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 	internal Shader? _shader;
 
 	// Decides what ImGui's texture requests mean; this class supplies the OpenGL calls behind them.
-	private readonly TextureReconciler _textureReconciler;
+	private TextureReconciler? _textureReconciler;
 
 	internal int _windowWidth;
 	internal int _windowHeight;
@@ -74,10 +74,6 @@ internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 	[SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Registering this controller as the global ImGuiApp.renderer must happen here, before onConfigureIO runs, because user OnStart code resolves the backend via ImGuiApp.renderer and the ImGuiApp.controller field is not yet assigned. See the inline comment.")]
 	public ImGuiController(GL gl, IView view, IInputContext input, ImGuiFontConfig? imGuiFontConfig = null, Action? onConfigureIO = null)
 	{
-		// Safe to hand over this before construction finishes: the reconciler only stores the
-		// reference and does not call back until a frame is rendered.
-		_textureReconciler = new TextureReconciler(this);
-
 		DebugLogger.Log("ImGuiController: Starting initialization");
 		Init(gl, view, input);
 		DebugLogger.Log("ImGuiController: Init completed");
@@ -125,9 +121,14 @@ internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 		DebugLogger.Log("ImGuiController: Initialization completed");
 	}
 
+	[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The GLWrapper adapts a context this class does not own -- ImGuiApp creates and disposes it, and _gl is likewise never disposed here. Disposing the wrapper would tear down the caller's GL context, so it deliberately lives as long as this controller.")]
 	internal void Init(GL gl, IView view, IInputContext input)
 	{
 		_gl = gl;
+
+		// Wrapped rather than used directly so the uploader depends on IGL, which is what lets the
+		// texture calls be exercised without a graphics context.
+		_textureReconciler = new TextureReconciler(new GLTextureUploader(new GLWrapper(gl)));
 		_view = view;
 		_input = input;
 		_windowWidth = view.Size.X;
@@ -341,44 +342,6 @@ internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 	/// <inheritdoc />
 	// _gl can be null if the context has already been torn down; callers expect a no-op then.
 	public void DeleteTexture(nint id) => _gl?.DeleteTexture((uint)id);
-
-	/// <inheritdoc />
-	/// <remarks>
-	/// Part of the <see cref="ITextureUploader"/> seam: <see cref="TextureReconciler"/> decides what
-	/// ImGui is asking for, and these three members are the OpenGL calls that carry it out.
-	/// </remarks>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; the pixel pointer belongs to ImGui and is read within the upload call only.")]
-	unsafe nint ITextureUploader.Create(int width, int height, nint pixels)
-	{
-		uint created = _gl!.GenTexture();
-		_gl.BindTexture(GLEnum.Texture2D, created);
-		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
-		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
-		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
-		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
-		_gl.PixelStore(GLEnum.UnpackRowLength, 0);
-		_gl.TexImage2D(GLEnum.Texture2D, 0, (int)GLEnum.Rgba8, (uint)width, (uint)height, 0, GLEnum.Rgba, GLEnum.UnsignedByte, (void*)pixels);
-		_gl.CheckGlError("Create ImGui texture");
-		return (nint)created;
-	}
-
-	/// <inheritdoc />
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; the pixel pointer belongs to ImGui and is read within the upload call only.")]
-	unsafe void ITextureUploader.Update(nint textureId, int sourceRowPixels, ImTextureRect rect, nint pixels)
-	{
-		_gl!.BindTexture(GLEnum.Texture2D, (uint)textureId);
-
-		// The rectangle is read out of the middle of a full-atlas buffer, so the unpack stride has
-		// to describe that buffer rather than the rectangle.
-		_gl.PixelStore(GLEnum.UnpackRowLength, sourceRowPixels);
-		_gl.TexSubImage2D(GLEnum.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, GLEnum.Rgba, GLEnum.UnsignedByte, (void*)pixels);
-		_gl.PixelStore(GLEnum.UnpackRowLength, 0);
-		_gl.CheckGlError("Update ImGui texture");
-	}
-
-	/// <inheritdoc />
-	// _gl can be null if the context has already been torn down; there is nothing to release then.
-	void ITextureUploader.Destroy(nint textureId) => _gl?.DeleteTexture((uint)textureId);
 
 	/// <summary>
 	/// Updates ImGui input and IO configuration state.
@@ -765,7 +728,7 @@ internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 		// Catch up with texture creations, atlas repacks, and destructions requested since the last
 		// frame. Usually there is nothing to do; when a new glyph size is first drawn, this is where
 		// the grown atlas reaches the GPU.
-		_textureReconciler.ReconcileFrame(drawDataPtr.Textures);
+		_textureReconciler?.ReconcileFrame(drawDataPtr.Textures);
 
 		SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
 
@@ -977,7 +940,7 @@ internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 	/// <summary>
 	/// Releases every texture ImGui still owns.
 	/// </summary>
-	internal void DestroyAllTextures() => _textureReconciler.DestroyAll(ImGui.GetPlatformIO().Textures);
+	internal void DestroyAllTextures() => _textureReconciler?.DestroyAll(ImGui.GetPlatformIO().Textures);
 
 	/// <summary>
 	/// Frees all graphics resources used by the renderer.
