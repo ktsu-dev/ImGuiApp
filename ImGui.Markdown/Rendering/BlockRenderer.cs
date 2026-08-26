@@ -36,7 +36,11 @@ internal static class BlockRenderer
 
 			case ParagraphBlock paragraph:
 				InlineRenderer.Render(paragraph.Inline, config);
-				ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
+				if (BlockSpacing.ShouldSpaceAfter(paragraph))
+				{
+					ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
+				}
+
 				break;
 
 			case ListBlock list:
@@ -123,6 +127,11 @@ internal static class BlockRenderer
 				ImGui.Unindent(gutter);
 				index++;
 			}
+		}
+
+		if (BlockSpacing.ShouldSpaceAfter(list))
+		{
+			ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
 		}
 	}
 
