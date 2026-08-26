@@ -6,6 +6,8 @@
 
 namespace ktsu.examples.ImGuiWidgetsDemo.UITests;
 
+using System;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.Widgets;
@@ -73,23 +75,85 @@ public sealed class WidgetsDemoUITests
 	/// </summary>
 	private bool IsVisible(string name) => harness.Probe.WasSeenInFrame(name, harness.FrameCount - 1);
 
+	// A click renders three frames of its own -- the pointer move, the press and the release -- and
+	// the demo animates nothing between frames, so the layout has already settled by the time the
+	// release frame is drawn and one further frame is enough to confirm it. Measured across all
+	// twenty-five sections: every one of them expands to a pixel-identical result at this depth,
+	// while the suite renders a third fewer frames. Raising this back to three costs about a third
+	// of the run time and buys nothing.
+	private const int SettleFrames = 1;
+
 	private void OpenTab(string tab)
 	{
 		harness.Click(tab);
-		harness.Step(3);
+		harness.Step(SettleFrames);
 	}
 
 	/// <summary>Expands a collapsing header. The demo's headers all start collapsed.</summary>
 	private void ExpandSection(string header)
 	{
 		harness.Click(header);
-		harness.Step(3);
+		harness.Step(SettleFrames);
 	}
 
 	private void OpenSection(string tab, string header)
 	{
 		OpenTab(tab);
 		ExpandSection(header);
+	}
+
+	/// <summary>Copies the pixels of the frame just rendered, so a later frame can be compared to it.</summary>
+	private byte[] Snapshot() => harness.Target.Pixels.ToArray();
+
+	/// <summary>
+	/// Asserts that expanding a section drew something beyond the header itself.
+	/// </summary>
+	/// <remarks>
+	/// A header scrolled outside the tab's scrolling region is still submitted every frame, so it
+	/// stays "visible" and a click on it silently does nothing. An assertion on the header alone
+	/// therefore passes whether or not the section ever opened, which is what makes it a weak
+	/// guard. A section's content is drawn below its header, so requiring a change outside the
+	/// header's own rectangle is what separates a real expansion from a click that went nowhere.
+	/// The demo animates nothing between frames, so in the collapsed case the two frames are
+	/// byte for byte identical outside that rectangle.
+	/// </remarks>
+	/// <param name="section">The section that was just expanded.</param>
+	/// <param name="collapsed">The frame captured before the section was expanded.</param>
+	private void AssertSectionDrewContent(string section, byte[] collapsed)
+	{
+		Rectangle header = harness.Probe.Rect(section)
+			?? throw new InvalidOperationException($"Section '{section}' was never recorded by the probe.");
+
+		Span<byte> expanded = harness.Target.Pixels;
+		int width = harness.Options.Width;
+		int height = harness.Options.Height;
+
+		for (int y = 0; y < height; y++)
+		{
+			bool rowInHeader = y >= header.MinY && y < header.MaxY;
+
+			for (int x = 0; x < width; x++)
+			{
+				if (rowInHeader && x >= header.MinX && x < header.MaxX)
+				{
+					continue;
+				}
+
+				int i = ((y * width) + x) * 4;
+
+				if (collapsed[i] != expanded[i]
+					|| collapsed[i + 1] != expanded[i + 1]
+					|| collapsed[i + 2] != expanded[i + 2]
+					|| collapsed[i + 3] != expanded[i + 3])
+				{
+					return;
+				}
+			}
+		}
+
+		Assert.Fail(
+			$"Section '{section}' drew nothing outside its own header when expanded, so it never opened. "
+			+ "The click most likely landed outside the tab's scrolling region.");
 	}
 
 	[TestMethod]
@@ -174,11 +238,16 @@ public sealed class WidgetsDemoUITests
 
 			foreach (string section in sections)
 			{
+				byte[] collapsed = Snapshot();
 				ExpandSection(section);
 				Assert.IsTrue(IsVisible(section), $"Section '{section}' vanished when expanded.");
+				AssertSectionDrewContent(section, collapsed);
 
 				// Collapse again so the next section starts from a comparable layout, rather than
-				// being pushed off the bottom by everything expanded above it.
+				// being pushed off the bottom by everything expanded above it. This is load
+				// bearing, not tidiness: with it removed, later sections are pushed outside the
+				// tab's scrolling region, their headers stop being clickable, and eight of the
+				// twenty-five stop opening at all.
 				ExpandSection(section);
 			}
 		}
