@@ -181,11 +181,29 @@ jobs:
       #
       # A project the host cannot build is skipped and named before anything is built, and a
       # project that fails does not stop the ones after it, so one run reports everything broken.
+      #
+      # The five UI suites are effectively the whole cost of this job. They run in parallel, so the
+      # slowest of them sets the job's duration, while all nine other test projects finish in about
+      # thirty-four seconds combined. They are therefore run on Linux only:
+      #
+      #   * measured per assembly on Windows: 17m28s, 14m32s, 10m05s, 8m20s, 1m01s against ~34s for
+      #     everything else, in a job whose test phase took 17m45s.
+      #   * what they exercise is a pure managed CPU rasterizer with no window, GPU or driver. Timed
+      #     on one machine, self-contained for each runtime, it renders the same workload in 482.6ms
+      #     on Windows against 476.0ms on Linux, so running it on one platform covers the same ground.
+      #   * Linux is the faster host for this work, so it keeps them.
+      #
+      # Only the UI test projects are excluded. The example applications they drive stay in the
+      # build on both platforms, so a change that breaks one still fails here.
       - name: Test
         shell: bash
         run: |
           set -euo pipefail
-          ktsubuild test all --workspace "$GITHUB_WORKSPACE" --verbose
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            ktsubuild test all --workspace "$GITHUB_WORKSPACE" --verbose --exclude "**/*.UITests/*"
+          else
+            ktsubuild test all --workspace "$GITHUB_WORKSPACE" --verbose
+          fi
 
       - name: Upload Coverage
         uses: actions/upload-artifact@v7
