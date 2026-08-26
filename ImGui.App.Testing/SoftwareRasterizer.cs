@@ -71,34 +71,116 @@ public static class SoftwareRasterizer
 		int maxX = Math.Min(Math.Min(scissor.MaxX, target.Width), (int)MathF.Ceiling(Max3(v0.Position.X, v1.Position.X, v2.Position.X)));
 		int maxY = Math.Min(Math.Min(scissor.MaxY, target.Height), (int)MathF.Ceiling(Max3(v0.Position.Y, v1.Position.Y, v2.Position.Y)));
 
+		if (minX >= maxX || minY >= maxY)
+		{
+			return;
+		}
+
+		// Most of what ImGui emits is a solid rectangle: window backgrounds, frames, separators,
+		// table rows, button fills. Every vertex of one carries the same color and the same texture
+		// coordinate, the atlas's white texel, so the color it contributes is constant across the
+		// triangle and can be resolved once instead of per pixel. Hoisting it matters because the
+		// atlas is bound for essentially every draw command, which is why keying this off a null
+		// texture alone would almost never fire.
+		//
+		// Both of the shortcuts below are exact rather than approximate:
+		//   * three equal vertex colors: the barycentric weights sum to one, so interpolating
+		//     between three copies of a value returns that value to well inside half a unit of a
+		//     byte channel.
+		//   * an opaque source: straight-alpha source-over with an alpha of one reduces
+		//     algebraically to the source color, and rounding a byte-valued float returns it.
+		// The arithmetic is otherwise untouched. In particular the divides are not turned into a
+		// reciprocal multiply and the edge functions are not stepped incrementally, because both
+		// change rounding and can move a pixel at a triangle's edge.
+		bool uniformColor = v0.Color == v1.Color && v1.Color == v2.Color;
+		bool uniformUv = v0.Uv == v1.Uv && v1.Uv == v2.Uv;
+		bool constantSource = uniformColor && (texture is null || uniformUv);
+
+		Rgba32 flat = default;
+		if (constantSource)
+		{
+			flat = texture is null ? v0.Color : Modulate(v0.Color, texture.Sample(v0.Uv.X, v0.Uv.Y));
+		}
+
+		bool opaqueFlat = constantSource && flat.A == 255;
+
+		Span<byte> pixels = target.Pixels;
+		int width = target.Width;
+
 		for (int y = minY; y < maxY; y++)
 		{
+			int row = y * width * 4;
+
 			for (int x = minX; x < maxX; x++)
 			{
 				Vector2 p = new(x + 0.5f, y + 0.5f);
 
+				// Tested one at a time so a pixel outside the triangle costs one edge function
+				// rather than three. Most pixels in a triangle's bounding box are outside it.
 				float w0 = Edge(v1.Position, v2.Position, p);
-				float w1 = Edge(v2.Position, v0.Position, p);
-				float w2 = Edge(v0.Position, v1.Position, p);
-
-				if (w0 < 0 || w1 < 0 || w2 < 0)
+				if (w0 < 0)
 				{
 					continue;
 				}
 
-				float l0 = w0 / area;
-				float l1 = w1 / area;
-				float l2 = w2 / area;
-
-				Rgba32 source = Interpolate(v0.Color, v1.Color, v2.Color, l0, l1, l2);
-
-				if (texture is not null)
+				float w1 = Edge(v2.Position, v0.Position, p);
+				if (w1 < 0)
 				{
-					Vector2 uv = (v0.Uv * l0) + (v1.Uv * l1) + (v2.Uv * l2);
-					source = Modulate(source, texture.Sample(uv.X, uv.Y));
+					continue;
 				}
 
-				target.SetPixel(x, y, BlendOver(source, target.GetPixel(x, y)));
+				float w2 = Edge(v0.Position, v1.Position, p);
+				if (w2 < 0)
+				{
+					continue;
+				}
+
+				int i = row + (x * 4);
+
+				if (opaqueFlat)
+				{
+					pixels[i] = flat.R;
+					pixels[i + 1] = flat.G;
+					pixels[i + 2] = flat.B;
+					pixels[i + 3] = 255;
+					continue;
+				}
+
+				Rgba32 source;
+
+				if (constantSource)
+				{
+					source = flat;
+				}
+				else
+				{
+					float l0 = w0 / area;
+					float l1 = w1 / area;
+					float l2 = w2 / area;
+
+					source = uniformColor ? v0.Color : Interpolate(v0.Color, v1.Color, v2.Color, l0, l1, l2);
+
+					if (texture is not null)
+					{
+						Vector2 uv = (v0.Uv * l0) + (v1.Uv * l1) + (v2.Uv * l2);
+						source = Modulate(source, texture.Sample(uv.X, uv.Y));
+					}
+				}
+
+				if (source.A == 255)
+				{
+					pixels[i] = source.R;
+					pixels[i + 1] = source.G;
+					pixels[i + 2] = source.B;
+					pixels[i + 3] = 255;
+					continue;
+				}
+
+				Rgba32 blended = BlendOver(source, new Rgba32(pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]));
+				pixels[i] = blended.R;
+				pixels[i + 1] = blended.G;
+				pixels[i + 2] = blended.B;
+				pixels[i + 3] = blended.A;
 			}
 		}
 	}
