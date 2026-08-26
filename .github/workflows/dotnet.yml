@@ -314,6 +314,36 @@ jobs:
           pattern: coverage-*
           path: coverage
 
+      # Each test project writes its own report, and every one of them is named coverage.xml while
+      # listing every source file in the solution -- marking covered only what that project ran.
+      # Handing the scanner a pile of identically named reports let one of them decide a file's
+      # coverage: a class covered by its own project's report read as 0% when another project's
+      # report won instead, and the reported number moved between runs while the tests only grew.
+      #
+      # Naming each report after its content makes them distinguishable. Byte-identical reports
+      # would collapse to one, though in practice they differ even where their sizes match.
+      - name: Give Each Coverage Report a Distinct Name
+        if: needs.discover.outputs.has_tests == 'true'
+        shell: pwsh
+        run: |
+          $reports = @(Get-ChildItem -Path coverage -Recurse -Filter coverage.xml)
+          if ($reports.Count -eq 0) {
+            Write-Error "No coverage reports were downloaded, so the scanner would report no coverage at all."
+            exit 1
+          }
+          $kept = 0
+          foreach ($report in $reports) {
+            $hash = (Get-FileHash $report.FullName -Algorithm SHA256).Hash.Substring(0, 16)
+            $unique = Join-Path $report.DirectoryName "$hash.coveragexml"
+            if (Test-Path $unique) {
+              Remove-Item $report.FullName -Force
+            } else {
+              Move-Item $report.FullName $unique
+              $kept++
+            }
+          }
+          Write-Output "Kept $kept distinct coverage reports out of $($reports.Count)."
+
       # SonarCloud's "previous version" new-code period needs recorded version boundaries to
       # anchor to. Without /v: the scanner reports the version as "not provided", so the period
       # has nothing to anchor against and widens to the whole history, which makes the new-code
@@ -339,7 +369,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /v:"${{ steps.analysis_version.outputs.version }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/coverage.xml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" /o:"${{ github.repository_owner }}" /v:"${{ steps.analysis_version.outputs.version }}" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.projectBaseDir="${{ github.workspace }}" /d:sonar.qualitygate.wait=true /d:sonar.cs.vscoveragexml.reportsPaths="coverage/**/*.coveragexml" /d:sonar.coverage.exclusions="**/*Test*.cs,**/*.Tests.cs,**/*.Tests/**/*,**/obj/**/*,**/*.dll,**/NativeExports.cs" /d:sonar.cs.vstest.reportsPaths="coverage/**/*.trx" /d:sonar.exclusions="**/NativeExports.cs"
 
       # `ci` rather than restore and build directly, because it is the only place that updates
       # and commits the metadata files, updates the repository topics, applies the version gate
