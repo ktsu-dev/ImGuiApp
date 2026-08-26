@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.App.ImGuiController;
 
+using System.Diagnostics.CodeAnalysis;
+
 using Hexa.NET.ImGui;
 
 /// <summary>
@@ -37,6 +39,7 @@ internal sealed class TextureReconciler
 
 	/// <summary>Brings every texture in a frame's list up to date, skipping those already settled.</summary>
 	/// <param name="textures">The frame's texture list, from <c>ImDrawData.Textures</c>.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to test whether ImGui's texture vector is present; the pointer is compared and never dereferenced here.")]
 	public unsafe void ReconcileFrame(ImVector<ImTextureDataPtr> textures)
 	{
 		if (textures.Data is null)
@@ -57,6 +60,7 @@ internal sealed class TextureReconciler
 	/// <summary>Acts on one texture's outstanding request.</summary>
 	/// <param name="tex">The texture ImGui wants brought up to date.</param>
 	/// <exception cref="InvalidOperationException">The texture is not RGBA32.</exception>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the pixel pointers belong to ImGui and are passed straight to the uploader without being dereferenced here.")]
 	public unsafe void Reconcile(ImTextureDataPtr tex)
 	{
 		// Uploaders write four channels per pixel, so an Alpha8 texture would go up as garbage
@@ -104,6 +108,7 @@ internal sealed class TextureReconciler
 	/// ours to release. Anything still referenced elsewhere is left to its owner.
 	/// </remarks>
 	/// <param name="textures">The platform texture list, from <c>ImGuiPlatformIO.Textures</c>.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to test whether ImGui's texture vector is present; the pointer is compared and never dereferenced here.")]
 	public unsafe void DestroyAll(ImVector<ImTextureDataPtr> textures)
 	{
 		if (textures.Data is null)
