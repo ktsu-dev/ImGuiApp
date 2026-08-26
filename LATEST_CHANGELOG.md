@@ -1,6 +1,8 @@
-## v3.13.0 (minor)
+## v3.13.1 (patch)
 
-Changes since v3.12.0:
+Changes since v3.13.0:
 
-- Add BlockSpacing class and tests for paragraph spacing logic ([@matt-edmondson](https://github.com/matt-edmondson))
+- ci: run the UI suites on Linux only [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- test: settle in one frame and prove a section really expanded [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- perf: take the flat-fill path through the rasterizer [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 
