@@ -13,7 +13,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-internal sealed class ImGuiController : IRendererBackend
+internal sealed class ImGuiController : IRendererBackend, ITextureUploader
 {
 
 	internal GL? _gl;
@@ -34,6 +34,9 @@ internal sealed class ImGuiController : IRendererBackend
 	internal uint _vertexArrayObject;
 
 	internal Shader? _shader;
+
+	// Decides what ImGui's texture requests mean; this class supplies the OpenGL calls behind them.
+	private readonly TextureReconciler _textureReconciler;
 
 	internal int _windowWidth;
 	internal int _windowHeight;
@@ -71,6 +74,10 @@ internal sealed class ImGuiController : IRendererBackend
 	[SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Registering this controller as the global ImGuiApp.renderer must happen here, before onConfigureIO runs, because user OnStart code resolves the backend via ImGuiApp.renderer and the ImGuiApp.controller field is not yet assigned. See the inline comment.")]
 	public ImGuiController(GL gl, IView view, IInputContext input, ImGuiFontConfig? imGuiFontConfig = null, Action? onConfigureIO = null)
 	{
+		// Safe to hand over this before construction finishes: the reconciler only stores the
+		// reference and does not call back until a frame is rendered.
+		_textureReconciler = new TextureReconciler(this);
+
 		DebugLogger.Log("ImGuiController: Starting initialization");
 		Init(gl, view, input);
 		DebugLogger.Log("ImGuiController: Init completed");
@@ -335,87 +342,43 @@ internal sealed class ImGuiController : IRendererBackend
 	// _gl can be null if the context has already been torn down; callers expect a no-op then.
 	public void DeleteTexture(nint id) => _gl?.DeleteTexture((uint)id);
 
-	/// <summary>
-	/// Reconciles one ImGui-owned texture with the GPU, creating, updating, or destroying it as
-	/// the texture's status asks.
-	/// </summary>
+	/// <inheritdoc />
 	/// <remarks>
-	/// This is the backend half of <see cref="ImGuiBackendFlags.RendererHasTextures"/>. ImGui
-	/// keeps the pixels and tells the backend what changed; the backend owns only the GL name,
-	/// which it hands back through <see cref="ImTextureDataPtr.SetTexID"/>.
+	/// Part of the <see cref="ITextureUploader"/> seam: <see cref="TextureReconciler"/> decides what
+	/// ImGui is asking for, and these three members are the OpenGL calls that carry it out.
 	/// </remarks>
-	/// <param name="tex">The texture ImGui wants brought up to date.</param>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the pixel pointers belong to ImGui and are read within the upload call only.")]
-	internal unsafe void UpdateTexture(ImTextureDataPtr tex)
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; the pixel pointer belongs to ImGui and is read within the upload call only.")]
+	unsafe nint ITextureUploader.Create(int width, int height, nint pixels)
 	{
-		if (_gl is null)
-		{
-			return;
-		}
-
-		// The shader samples all four channels, so an Alpha8 atlas would upload as garbage rather
-		// than fail. ImGui asks for RGBA32 by default; anything else is a configuration mistake
-		// worth surfacing at the point it happens.
-		if (tex.Format != ImTextureFormat.Rgba32)
-		{
-			throw new InvalidOperationException($"ImGui requested a {tex.Format} texture, but this backend only uploads {ImTextureFormat.Rgba32}.");
-		}
-
-		switch (tex.Status)
-		{
-			case ImTextureStatus.WantCreate:
-				uint created = _gl.GenTexture();
-				_gl.BindTexture(GLEnum.Texture2D, created);
-				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
-				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
-				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
-				_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
-				_gl.PixelStore(GLEnum.UnpackRowLength, 0);
-				_gl.TexImage2D(GLEnum.Texture2D, 0, (int)GLEnum.Rgba8, (uint)tex.Width, (uint)tex.Height, 0, GLEnum.Rgba, GLEnum.UnsignedByte, tex.GetPixels());
-				_gl.CheckGlError("Create ImGui texture");
-				tex.SetTexID(created);
-				tex.SetStatus(ImTextureStatus.Ok);
-				break;
-
-			case ImTextureStatus.WantUpdates:
-				_gl.BindTexture(GLEnum.Texture2D, (uint)(nuint)tex.GetTexID());
-
-				// Each dirty rectangle is read out of the middle of the full-atlas pixel buffer, so
-				// the unpack stride has to describe the whole atlas rather than the rectangle.
-				_gl.PixelStore(GLEnum.UnpackRowLength, tex.Width);
-				for (int i = 0; i < tex.Updates.Size; i++)
-				{
-					ImTextureRect rect = tex.Updates[i];
-					_gl.TexSubImage2D(GLEnum.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, GLEnum.Rgba, GLEnum.UnsignedByte, tex.GetPixelsAt(rect.X, rect.Y));
-				}
-
-				_gl.PixelStore(GLEnum.UnpackRowLength, 0);
-				_gl.CheckGlError("Update ImGui texture");
-				tex.SetStatus(ImTextureStatus.Ok);
-				break;
-
-			// UnusedFrames guards against deleting a texture the GPU is still reading from: ImGui
-			// asks for destruction as soon as a texture falls out of use, which can be the same
-			// frame it was last drawn with.
-			case ImTextureStatus.WantDestroy when tex.UnusedFrames > 0:
-				DestroyTexture(tex);
-				break;
-
-			default:
-				break;
-		}
+		uint created = _gl!.GenTexture();
+		_gl.BindTexture(GLEnum.Texture2D, created);
+		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
+		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
+		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
+		_gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
+		_gl.PixelStore(GLEnum.UnpackRowLength, 0);
+		_gl.TexImage2D(GLEnum.Texture2D, 0, (int)GLEnum.Rgba8, (uint)width, (uint)height, 0, GLEnum.Rgba, GLEnum.UnsignedByte, (void*)pixels);
+		_gl.CheckGlError("Create ImGui texture");
+		return (nint)created;
 	}
 
-	/// <summary>
-	/// Releases the GL texture behind an ImGui-owned texture and marks it destroyed.
-	/// </summary>
-	/// <param name="tex">The texture to release.</param>
-	internal void DestroyTexture(ImTextureDataPtr tex)
+	/// <inheritdoc />
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; the pixel pointer belongs to ImGui and is read within the upload call only.")]
+	unsafe void ITextureUploader.Update(nint textureId, int sourceRowPixels, ImTextureRect rect, nint pixels)
 	{
-		_gl?.DeleteTexture((uint)(nuint)tex.GetTexID());
-		tex.SetTexID((nint)0);
-		tex.SetStatus(ImTextureStatus.Destroyed);
+		_gl!.BindTexture(GLEnum.Texture2D, (uint)textureId);
+
+		// The rectangle is read out of the middle of a full-atlas buffer, so the unpack stride has
+		// to describe that buffer rather than the rectangle.
+		_gl.PixelStore(GLEnum.UnpackRowLength, sourceRowPixels);
+		_gl.TexSubImage2D(GLEnum.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, GLEnum.Rgba, GLEnum.UnsignedByte, (void*)pixels);
+		_gl.PixelStore(GLEnum.UnpackRowLength, 0);
+		_gl.CheckGlError("Update ImGui texture");
 	}
+
+	/// <inheritdoc />
+	// _gl can be null if the context has already been torn down; there is nothing to release then.
+	void ITextureUploader.Destroy(nint textureId) => _gl?.DeleteTexture((uint)textureId);
 
 	/// <summary>
 	/// Updates ImGui input and IO configuration state.
@@ -802,7 +765,7 @@ internal sealed class ImGuiController : IRendererBackend
 		// Catch up with texture creations, atlas repacks, and destructions requested since the last
 		// frame. Usually there is nothing to do; when a new glyph size is first drawn, this is where
 		// the grown atlas reaches the GPU.
-		ProcessTextureUpdates(drawDataPtr);
+		_textureReconciler.ReconcileFrame(drawDataPtr.Textures);
 
 		SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
 
@@ -844,29 +807,6 @@ internal sealed class ImGuiController : IRendererBackend
 #endif
 
 		_gl.Scissor(lastScissorBox[0], lastScissorBox[1], (uint)lastScissorBox[2], (uint)lastScissorBox[3]);
-	}
-
-	/// <summary>
-	/// Brings every texture referenced by this frame's draw data up to date on the GPU.
-	/// </summary>
-	/// <param name="drawDataPtr">The frame's draw data.</param>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the texture list is an ImGui-owned vector read within this call.")]
-	private unsafe void ProcessTextureUpdates(ImDrawDataPtr drawDataPtr)
-	{
-		ImVector<ImTextureDataPtr> textures = drawDataPtr.Textures;
-		if (textures.Data is null)
-		{
-			return;
-		}
-
-		for (int i = 0; i < textures.Size; i++)
-		{
-			ImTextureDataPtr tex = textures[i];
-			if (tex.Status != ImTextureStatus.Ok)
-			{
-				UpdateTexture(tex);
-			}
-		}
 	}
 
 	/// <summary>
@@ -1037,22 +977,7 @@ internal sealed class ImGuiController : IRendererBackend
 	/// <summary>
 	/// Releases every texture ImGui still owns.
 	/// </summary>
-	/// <remarks>
-	/// A RefCount of 1 means this backend holds the only remaining reference, so the GL name is
-	/// ours to delete. Anything still referenced elsewhere is left for its owner.
-	/// </remarks>
-	internal void DestroyAllTextures()
-	{
-		ImVector<ImTextureDataPtr> textures = ImGui.GetPlatformIO().Textures;
-		for (int i = 0; i < textures.Size; i++)
-		{
-			ImTextureDataPtr tex = textures[i];
-			if (tex.RefCount == 1)
-			{
-				DestroyTexture(tex);
-			}
-		}
-	}
+	internal void DestroyAllTextures() => _textureReconciler.DestroyAll(ImGui.GetPlatformIO().Textures);
 
 	/// <summary>
 	/// Frees all graphics resources used by the renderer.
