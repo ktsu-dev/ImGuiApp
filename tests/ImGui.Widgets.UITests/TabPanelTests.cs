@@ -61,8 +61,9 @@ public sealed class TabPanelTests : WidgetTest
 
 		foreach (string label in Labels)
 		{
-			string captured = label;
-			built.AddTab(captured, () => Mark($"content-{captured}"));
+			// The loop variable is per-iteration in C#, so the closure captures this label rather
+			// than whichever one the loop ends on; no copy of it is needed.
+			built.AddTab(label, () => Mark($"content-{label}"));
 		}
 
 		return built;

@@ -36,10 +36,10 @@ public sealed class FileTreeViewTests : WidgetTest
 	[TestInitialize]
 	public void CreateTree()
 	{
-		root = Path.Combine(Path.GetTempPath(), "widget-uitests-" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(Path.Combine(root, "alpha"));
-		Directory.CreateDirectory(Path.Combine(root, "beta"));
-		File.WriteAllText(Path.Combine(root, "readme.txt"), "hello");
+		root = Path.Join(Path.GetTempPath(), "widget-uitests-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(Path.Join(root, "alpha"));
+		Directory.CreateDirectory(Path.Join(root, "beta"));
+		File.WriteAllText(Path.Join(root, "readme.txt"), "hello");
 
 		current = root.As<AbsoluteDirectoryPath>();
 		home = root.As<AbsoluteDirectoryPath>();

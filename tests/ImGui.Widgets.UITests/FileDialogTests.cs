@@ -38,9 +38,9 @@ public sealed class FileDialogTests : WidgetTest
 	[TestInitialize]
 	public void CreateTree()
 	{
-		root = Path.Combine(Path.GetTempPath(), "filedialog-uitests-" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(Path.Combine(root, "nested"));
-		File.WriteAllText(Path.Combine(root, "document.txt"), "hello");
+		root = Path.Join(Path.GetTempPath(), "filedialog-uitests-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(Path.Join(root, "nested"));
+		File.WriteAllText(Path.Join(root, "document.txt"), "hello");
 
 		fileOutcomes.Clear();
 		folderOutcomes.Clear();

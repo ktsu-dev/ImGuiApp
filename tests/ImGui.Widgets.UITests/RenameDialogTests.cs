@@ -29,10 +29,10 @@ public sealed class RenameDialogTests : WidgetTest
 	[TestInitialize]
 	public void CreateFile()
 	{
-		root = Path.Combine(Path.GetTempPath(), "rename-uitests-" + Guid.NewGuid().ToString("N"));
+		root = Path.Join(Path.GetTempPath(), "rename-uitests-" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(root);
 
-		string path = Path.Combine(root, "notes.txt");
+		string path = Path.Join(root, "notes.txt");
 		File.WriteAllText(path, "hello");
 		source = path.As<AbsoluteFilePath>();
 
