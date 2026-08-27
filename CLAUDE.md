@@ -51,6 +51,8 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
   `BuildConfig()` through `ImGuiAppHarness`: `ImGuiAppDemo.UITests`, `ImGuiWidgetsDemo.UITests`,
   `ImGuiStylerDemo.UITests`, `ImGuiPopupsDemo.UITests`, `ImGuiMarkdownDemo.UITests`. See
   [Demo UI tests](#demo-ui-tests) below.
+- `tests/ImGui.Widgets.UITests/` - One headless UI test class per widget, each driving that widget
+  alone with nothing else on screen. See [Widget UI tests](#widget-ui-tests) below.
 
 ### Key Files
 
@@ -345,6 +347,65 @@ Things that bite when writing these:
   appears in two windows is ambiguous and `Rect` throws rather than guessing, so qualify it
   (`harness.Probe.Matches("Username").Single(n => n.Contains("FormExample"))`) or pick a distinct one.
 
+### Widget UI tests
+
+`tests/ImGui.Widgets.UITests/` covers every widget in `ktsu.ImGui.Widgets` **in isolation**: one
+test class per widget, whose harness renders that widget and nothing else. The per-demo suites above
+prove the examples work; these prove each widget works whether or not any example happens to use it,
+and a failure names the widget rather than a demo page containing it.
+
+Tests derive from `WidgetTest`, which starts a harness around a bare `ImGuiAppConfig` whose
+`OnRender` is the widget under test, and disposes it on cleanup:
+
+```csharp
+[TestClass]
+public sealed class SwitchTests : WidgetTest
+{
+    private bool value;
+
+    [TestMethod]
+    public void Switch_ClickTogglesOn()
+    {
+        Start(() => ImGuiWidgets.Switch("Wi-Fi", ref value));
+        Click("Wi-Fi");
+        Assert.IsTrue(value);
+    }
+}
+```
+
+`WidgetTest` offers `Start`/`Step`, `Click`/`ClickFraction`/`DragAcross`/`Hover`, `IsVisible`,
+`RectOf`/`CenterOf`, `Mark`/`MarkSpan`, `Snapshot`/`PixelsChangedSince`/`BoundsOfDifference`,
+`CreateTestTexture`, and the dialog helpers `FindDialogButtons`/`ClickDialogButton`/
+`DismissOpenDialogs`.
+
+Things that bite here, beyond the demo-suite list above:
+
+- **A widget's probe mark is not always the thing it drew.** The alignment helpers (`TextCentered`,
+  `ImageCenteredWithin`, `TextCenteredH`, …) position the cursor and leave a zero-width spacer as
+  the last submitted item, so a mark taken after the call measures the spacer. Measure those from
+  the pixels with `BoundsOfDifference` against a frame drawn without the widget.
+- **Widgets that submit several items, or none, need `MarkSpan`.** `PinInput` is a row of separate
+  text boxes; `BufferingBar` paints straight into the draw list. `MarkSpan(name, cursorBefore)`
+  records from the cursor position to the last item's rectangle so a test can aim inside it.
+- **Latch return values.** A widget reports a click for the single frame it happens on, and `Click`
+  renders a further frame after the release, so capture with `clicked |= ImGuiWidgets.Chip(...)`
+  rather than a plain assignment.
+- **Hexa's dialog managers are process-static.** A dialog left unanswered outlives the harness that
+  showed it and is drawn again over the next test. Any suite that opens one calls
+  `DismissOpenDialogs()` from a `[TestCleanup]`.
+- **Some state is process-global and cannot be tested from here.** The pumpless animation-clock
+  fallback (`TickAnimationClockIfUnpumped`) latches off as soon as any test in the assembly runs a
+  pump, so it is covered by the unit tests around `EvaluateFallbackTick` instead.
+- **Vendor widgets are reached by geometry, not by name.** Hexa's dialogs mark nothing:
+  `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
+  pixels, and the file pickers — whose action row is not blue enough to find that way — are
+  cancelled at a fixed offset from the picker window's corner, which is stable because the harness
+  pins the viewport.
+- **Where a click has to land was measured, not assumed.** The flame graph's bars sit in a band near
+  the top of the graph rather than filling it; the sequencer's clips sit just under its header; the
+  page indicator's dots do not divide its row into equal columns. Those coordinates are commented
+  where they appear.
+
 ## Adding Components
 
 ### New Widget
@@ -352,6 +413,7 @@ Things that bite when writing these:
 1. Add class to `ImGui.Widgets/`
 2. Follow existing widget patterns (static methods or instance classes)
 3. Add demo to `examples/ImGuiWidgetsDemo/`
+4. Add an isolation suite to `tests/ImGui.Widgets.UITests/`
 
 ### New Theme
 
