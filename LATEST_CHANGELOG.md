@@ -1,7 +1,6 @@
-## v3.15.0 (minor)
+## v3.15.1 (patch)
 
-Changes since v3.14.0:
+Changes since v3.15.0:
 
-- Address code-quality findings in the widget UI tests ([@Claude](https://github.com/Claude))
-- Add per-widget isolation UI tests for ktsu.ImGui.Widgets ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 6 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
