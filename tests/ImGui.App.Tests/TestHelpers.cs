@@ -43,6 +43,9 @@ public static class TestHelpers
 		// Setup IsClosing property
 		mockWindow.SetupProperty(w => w.IsClosing, false);
 
+		// Title is read and written by ImGuiApp.SetWindowTitle / WindowTitle.
+		mockWindow.SetupProperty(w => w.Title, nameof(ImGuiApp));
+
 		return mockWindow;
 	}
 
@@ -129,6 +132,30 @@ public static class TestHelpers
 
 		// Clean up
 		WindowHandlers.Remove(window);
+	}
+
+	/// <summary>
+	/// Raises just the window's Closing event, without the rest of the lifecycle, and without
+	/// unregistering the handlers so it can be raised again.
+	/// </summary>
+	/// <param name="window">The mock window whose Closing handlers should run.</param>
+	/// <exception cref="ArgumentNullException">Thrown when window is null.</exception>
+	/// <exception cref="ArgumentException">Thrown when window is not a mock window created by CreateMockWindow.</exception>
+	public static void SimulateClosing(IWindow window)
+	{
+		ArgumentNullException.ThrowIfNull(window);
+
+		if (!WindowHandlers.TryGetValue(window, out WindowEventHandlers? handlers))
+		{
+			throw new ArgumentException("Window is not a mock window created by CreateMockWindow", nameof(window));
+		}
+
+		// The backend sets this before raising Closing; a cancelling handler clears it again.
+		window.IsClosing = true;
+		foreach (Action handler in handlers.CloseHandlers)
+		{
+			handler();
+		}
 	}
 
 	/// <summary>

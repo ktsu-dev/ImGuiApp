@@ -57,6 +57,21 @@ public static partial class ImGuiApp
 	/// <param name="iconPath">Ignored on iOS; the bundle icon is used instead.</param>
 	public static void SetWindowIcon(string iconPath) =>
 		WarnIosNoOp(nameof(SetWindowIcon), $"the app icon comes from the iOS app bundle, not a runtime path ('{iconPath}').");
+
+	/// <summary>
+	/// No-op on iOS: there is no window title bar to write to. Logs a warning once. Present so
+	/// cross-platform code that calls <see cref="SetWindowTitle(string)"/> still compiles.
+	/// </summary>
+	/// <param name="title">Ignored on iOS.</param>
+	public static void SetWindowTitle(string title) =>
+		WarnIosNoOp(nameof(SetWindowTitle), $"iOS has no window title bar to display '{title}'.");
+
+	/// <summary>
+	/// Gets the configured title. On iOS this is whatever <see cref="ImGuiAppConfig.Title"/> was set
+	/// to: the value is never displayed, but reading it back is honest rather than a no-op, so it
+	/// does not warn.
+	/// </summary>
+	public static string WindowTitle => Config.Title;
 }
 
 #endif

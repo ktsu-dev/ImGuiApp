@@ -852,12 +852,89 @@ public static partial class ImGuiApp
 	{
 		window!.Closing += () =>
 		{
+			if (!ShouldClose())
+			{
+				return;
+			}
+
 			CleanupPinnedFontData();
 			FontHelper.CleanupCustomFonts();
 			CleanupController();
 			CleanupInputContext();
 			CleanupOpenGL();
 		};
+	}
+
+	/// <summary>
+	/// Consults <see cref="ImGuiAppConfig.OnClosing"/> and cancels the close if it declines.
+	/// </summary>
+	/// <remarks>
+	/// Cancelling means clearing <see cref="IWindow.IsClosing"/>, which the windowing backend reads
+	/// each iteration of the run loop; the loop therefore keeps running rather than unwinding. This
+	/// has to happen before any teardown, because teardown is not reversible — freeing the font
+	/// atlas and the GL context and then continuing to render would fault.
+	/// </remarks>
+	/// <returns><see langword="true"/> if the close should proceed; otherwise, <see langword="false"/>.</returns>
+	internal static bool ShouldClose()
+	{
+		if (Config.OnClosing is null || Config.OnClosing())
+		{
+			return true;
+		}
+
+		// Only reached from the Closing handler, where the window necessarily exists.
+		window!.IsClosing = false;
+		return false;
+	}
+
+	/// <summary>
+	/// Sets the window's title while the application is running.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="ImGuiAppConfig.Title"/> is read once when the window is created, so it cannot
+	/// carry something that changes — the name of the open document, or whether it has unsaved
+	/// changes. Safe to call from any thread, and safe to call every frame: the title is only
+	/// written through to the window when it actually differs.
+	/// </remarks>
+	/// <param name="title">The new window title.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="title"/> is null.</exception>
+	public static void SetWindowTitle(string title)
+	{
+		Ensure.NotNull(title);
+
+		if (window is null || string.Equals(window.Title, title, StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		// The window can be torn down between this check and the invoke running on the window
+		// thread, so re-check there rather than capturing the reference.
+		Invoker.Invoke(() => ApplyWindowTitle(title));
+	}
+
+	/// <summary>
+	/// Gets the window's current title, or the configured title if the window has not been created.
+	/// </summary>
+	public static string WindowTitle => window?.Title ?? Config.Title;
+
+	/// <summary>
+	/// Writes the title to the window, on the window thread.
+	/// </summary>
+	/// <remarks>
+	/// The null check is not redundant with the one in <see cref="SetWindowTitle(string)"/>: called
+	/// from another thread, that method queues this for the window thread rather than running it
+	/// inline, and the window can be torn down in between. Internal rather than private so the
+	/// dropped-write case can be tested directly.
+	/// </remarks>
+	/// <param name="title">The title to write.</param>
+	internal static void ApplyWindowTitle(string title)
+	{
+		if (window is null)
+		{
+			return;
+		}
+
+		window.Title = title;
 	}
 
 	internal static void CleanupPinnedFontData()

@@ -32,8 +32,13 @@ public class ImGuiAppConfig
 #endif
 
 	/// <summary>
-	/// Gets or sets the title of the application window.
+	/// Gets or sets the title the application window starts with.
 	/// </summary>
+	/// <remarks>
+	/// This is read once, when the window is created. To change the title while the application is
+	/// running — to show the open document and whether it has unsaved changes, for instance — call
+	/// <see cref="ImGuiApp.SetWindowTitle(string)"/>.
+	/// </remarks>
 	public string Title { get; init; } = nameof(ImGuiApp);
 
 	/// <summary>
@@ -93,6 +98,35 @@ public class ImGuiAppConfig
 	/// on other platforms the window closes normally.
 	/// </summary>
 	public bool HideOnClose { get; init; }
+
+	/// <summary>
+	/// Gets or sets a callback consulted when the window is about to close, which can cancel the
+	/// close by returning <see langword="false"/>.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// This is what an application with unsaved work needs in order to prompt before exiting: return
+	/// <see langword="false"/> to keep the application running, then call
+	/// <see cref="ImGuiApp.Stop"/> once the user has decided.
+	/// </para>
+	/// <para>
+	/// It runs on the window thread, before any teardown, so it is safe to inspect application state
+	/// from it. It fires for every close: the window's close button, <see cref="ImGuiApp.Stop"/>, and
+	/// a close initiated by the operating system. Because <see cref="ImGuiApp.Stop"/> also goes
+	/// through it, a handler that unconditionally returns <see langword="false"/> makes the
+	/// application impossible to exit.
+	/// </para>
+	/// <para>
+	/// A modal prompt cannot be drawn from this callback — it returns before the next frame is
+	/// rendered. Set a flag here, return <see langword="false"/>, draw the prompt from
+	/// <see cref="OnRender"/>, and call <see cref="ImGuiApp.Stop"/> when the user confirms.
+	/// </para>
+	/// <para>
+	/// When <see cref="HideOnClose"/> is also set, the close button is intercepted before this
+	/// callback is reached and the window is hidden instead, so this is not consulted for that path.
+	/// </para>
+	/// </remarks>
+	public Func<bool>? OnClosing { get; init; }
 
 	/// <summary>
 	/// Gets or sets the action to be performed when the application starts.
