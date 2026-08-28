@@ -43,6 +43,9 @@ public static class TestHelpers
 		// Setup IsClosing property
 		mockWindow.SetupProperty(w => w.IsClosing, false);
 
+		// Title is read and written by ImGuiApp.SetWindowTitle / WindowTitle.
+		mockWindow.SetupProperty(w => w.Title, nameof(ImGuiApp));
+
 		return mockWindow;
 	}
 
