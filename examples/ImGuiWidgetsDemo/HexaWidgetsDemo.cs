@@ -99,6 +99,7 @@ internal static class HexaWidgetsDemo
 	internal static void ShowComparison()
 	{
 		ImGui.TextWrapped("Both columns of each row are bound to the same value. Change one and the other follows.");
+		ImGui.TextWrapped("Most of these rows are not duplicates on inspection -- only Toggle and Enum combo are the same widget twice. See the \"Hexa-backed vs ktsu widgets\" section of CLAUDE.md for the pair-by-pair verdict.");
 		ImGui.Separator();
 
 		if (!ImGui.BeginTable("HexaComparison", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
