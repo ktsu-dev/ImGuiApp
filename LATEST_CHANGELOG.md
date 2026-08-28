@@ -1,6 +1,6 @@
-## v3.16.1 (patch)
+## v3.16.2 (patch)
 
-Changes since v3.16.0:
+Changes since v3.16.1:
 
-- [patch] Record the Hexa vs ktsu widget verdict ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
