@@ -917,7 +917,17 @@ public static partial class ImGuiApp
 	/// </summary>
 	public static string WindowTitle => window?.Title ?? Config.Title;
 
-	private static void ApplyWindowTitle(string title)
+	/// <summary>
+	/// Writes the title to the window, on the window thread.
+	/// </summary>
+	/// <remarks>
+	/// The null check is not redundant with the one in <see cref="SetWindowTitle(string)"/>: called
+	/// from another thread, that method queues this for the window thread rather than running it
+	/// inline, and the window can be torn down in between. Internal rather than private so the
+	/// dropped-write case can be tested directly.
+	/// </remarks>
+	/// <param name="title">The title to write.</param>
+	internal static void ApplyWindowTitle(string title)
 	{
 		if (window is null)
 		{

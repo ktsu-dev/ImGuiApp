@@ -135,6 +135,30 @@ public static class TestHelpers
 	}
 
 	/// <summary>
+	/// Raises just the window's Closing event, without the rest of the lifecycle, and without
+	/// unregistering the handlers so it can be raised again.
+	/// </summary>
+	/// <param name="window">The mock window whose Closing handlers should run.</param>
+	/// <exception cref="ArgumentNullException">Thrown when window is null.</exception>
+	/// <exception cref="ArgumentException">Thrown when window is not a mock window created by CreateMockWindow.</exception>
+	public static void SimulateClosing(IWindow window)
+	{
+		ArgumentNullException.ThrowIfNull(window);
+
+		if (!WindowHandlers.TryGetValue(window, out WindowEventHandlers? handlers))
+		{
+			throw new ArgumentException("Window is not a mock window created by CreateMockWindow", nameof(window));
+		}
+
+		// The backend sets this before raising Closing; a cancelling handler clears it again.
+		window.IsClosing = true;
+		foreach (Action handler in handlers.CloseHandlers)
+		{
+			handler();
+		}
+	}
+
+	/// <summary>
 	/// Verifies that a window's properties match the expected values.
 	/// </summary>
 	/// <param name="window">The window to verify.</param>

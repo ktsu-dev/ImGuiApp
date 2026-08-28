@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.App.Tests;
 
+using System.Runtime.InteropServices;
 using ktsu.Invoker;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -126,6 +127,76 @@ public sealed class WindowTitleAndClosingTests
 		ImGuiApp.ShouldClose();
 
 		Assert.AreEqual(1, calls);
+	}
+
+	/// <summary>
+	/// SetWindowTitle is safe from any thread, so off the window thread the write is queued rather
+	/// than run inline, and the window can be torn down before the queued work runs. The write must
+	/// drop rather than fault.
+	/// </summary>
+	/// <remarks>
+	/// Exercised directly instead of by staging the thread race: the Invoker runs work inline for
+	/// its own thread, so reaching the queued path means owning the Invoker from another thread,
+	/// and Invoke then blocks the caller until that thread pumps — leaving no window in which a
+	/// test can null the field. Calling the applier is the same code under the same precondition.
+	/// </remarks>
+	[TestMethod]
+	public void ApplyingAQueuedTitleAfterTheWindowIsGoneDoesNothing()
+	{
+		ImGuiApp.window = null;
+
+		ImGuiApp.ApplyWindowTitle("Queued");
+
+		Assert.AreEqual(ImGuiApp.Config.Title, ImGuiApp.WindowTitle);
+	}
+
+	/// <summary>
+	/// A cancelled close must not tear anything down: the Closing handler frees the pinned font
+	/// data, the controller, the input context and the GL context, none of which is reversible, so
+	/// a cancelled close would afterwards be rendering into a released context.
+	/// </summary>
+	[TestMethod]
+	public void ACancelledCloseSkipsTeardown()
+	{
+		ImGuiApp.Config = new ImGuiAppConfig { OnClosing = () => false };
+		ImGuiApp.SetupWindowClosingHandler();
+
+		GCHandle pinned = GCHandle.Alloc(new byte[] { 1, 2, 3 }, GCHandleType.Pinned);
+		ImGuiApp.currentPinnedFontData.Add(pinned);
+		try
+		{
+			TestHelpers.SimulateClosing(mockWindow.Object);
+
+			Assert.AreEqual(1, ImGuiApp.currentPinnedFontData.Count,
+				"The pinned font data is still held, so teardown did not run.");
+			Assert.IsFalse(mockWindow.Object.IsClosing, "The close was cancelled.");
+		}
+		finally
+		{
+			if (ImGuiApp.currentPinnedFontData.Remove(pinned) && pinned.IsAllocated)
+			{
+				pinned.Free();
+			}
+		}
+	}
+
+	/// <summary>
+	/// An allowed close runs the teardown the cancelled one skips.
+	/// </summary>
+	[TestMethod]
+	public void AnAllowedCloseRunsTeardown()
+	{
+		ImGuiApp.Config = new ImGuiAppConfig { OnClosing = () => true };
+		ImGuiApp.SetupWindowClosingHandler();
+
+		// Freed by the teardown this test is asserting runs.
+		ImGuiApp.currentPinnedFontData.Add(GCHandle.Alloc(new byte[] { 1, 2, 3 }, GCHandleType.Pinned));
+
+		TestHelpers.SimulateClosing(mockWindow.Object);
+
+		Assert.AreEqual(0, ImGuiApp.currentPinnedFontData.Count,
+			"Teardown ran and released the pinned font data.");
+		Assert.IsTrue(mockWindow.Object.IsClosing, "Nothing cancelled the close.");
 	}
 
 	[TestMethod]
