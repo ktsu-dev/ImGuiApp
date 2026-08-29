@@ -304,9 +304,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "${{ runner.temp }}/ktsubuild" >> $env:GITHUB_PATH
 
-      # Every cell wrote a file named coverage.xml, so the downloads must stay in their own
-      # per-artifact directories. Merging them would leave one file and report the coverage of
-      # a single test project as though it were the whole repository's.
+      # Each platform's artifact holds one coverage.xml, already merged across that platform's test
+      # projects by `test all`. The downloads must stay in their own per-artifact directories so
+      # both survive: flattened, one platform's report would overwrite the other's and the scanner
+      # would see a single platform's coverage as though it were the whole matrix's.
       - name: Download Coverage
         if: needs.discover.outputs.has_tests == 'true'
         uses: actions/download-artifact@v7
