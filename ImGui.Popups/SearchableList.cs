@@ -22,6 +22,7 @@ public partial class ImGuiPopups
 	{
 		private TItem? cachedValue;
 		private TItem? selectedItem;
+		private bool itemChosen;
 		private string searchTerm = string.Empty;
 		private Action<TItem> OnConfirm { get; set; } = null!;
 		private Func<TItem, string>? GetText { get; set; }
@@ -42,6 +43,7 @@ public partial class ImGuiPopups
 		public void Open(string title, string label, IEnumerable<TItem> items, TItem? defaultItem, Func<TItem, string>? getText, Action<TItem> onConfirm, Vector2 customSize)
 		{
 			searchTerm = string.Empty;
+			itemChosen = false;
 			Label = label;
 			OnConfirm = onConfirm;
 			GetText = getText;
@@ -99,7 +101,11 @@ public partial class ImGuiPopups
 				ConfirmSelectedItem();
 			}
 
-			Dictionary<string, TItem> itemLookup = Items.Select(item => (item, itemString: item.ToString() ?? string.Empty))
+			// Keyed on the text the item is drawn with, not on ToString(): items that share a
+			// ToString() but display differently (Array(Int) and Array(String), say) stay distinct
+			// entries, and the search ranks what is on screen rather than something the user
+			// cannot see.
+			Dictionary<string, TItem> itemLookup = Items.Select(item => (item, itemString: GetText?.Invoke(item) ?? item.ToString() ?? string.Empty))
 				.Where(x => !string.IsNullOrEmpty(x.itemString))
 				.DistinctBy(x => x.itemString)
 				.ToDictionary(x => x.itemString, x => x.item);
@@ -110,6 +116,15 @@ public partial class ImGuiPopups
 			{
 				DrawItemList(sortedStrings, itemLookup);
 				ImGui.EndListBox();
+			}
+
+			// Picking an item is the choice, so it confirms rather than waiting for OK. Confirmed
+			// after the list box has ended, because closing the popup from inside a child window
+			// leaves the child's begin/end unbalanced.
+			if (itemChosen)
+			{
+				itemChosen = false;
+				ConfirmSelectedItem();
 			}
 
 			bool okClicked = ImGui.Button($"OK###{Modal.Title.ToSnakeCase()}_OK");
@@ -162,13 +177,16 @@ public partial class ImGuiPopups
 					selectedItem = item;
 				}
 
-				string displayText = GetText?.Invoke(item) ?? item.ToString() ?? string.Empty;
-
-				bool itemClicked = ImGui.Selectable(displayText, item == (cachedValue ?? selectedItem));
-				ImGuiProbes.MarkItem("searchable-list", displayText);
+				// Compared with the default comparer rather than ==, which on an unconstrained type
+				// parameter is reference equality: a caller whose list is rebuilt each frame passes
+				// an equal but different instance, and the selection never draws as selected.
+				bool isSelected = EqualityComparer<TItem>.Default.Equals(item, cachedValue ?? selectedItem);
+				bool itemClicked = ImGui.Selectable(itemString, isSelected);
+				ImGuiProbes.MarkItem("searchable-list", itemString);
 				if (itemClicked)
 				{
 					cachedValue = item;
+					itemChosen = true;
 				}
 			}
 		}
