@@ -86,6 +86,15 @@ public class NodeEditorRenderer
 		ImGui.Text(node.Name);
 		ImNodes.EndNodeTitleBar();
 
+		// A node with no pins has nothing to draw under its title, and ImNodes ends the title bar
+		// by moving the cursor to where the node's content starts. ImGui reports a cursor left
+		// past the content with no item submitted after it ("code uses SetCursorPos() to extend
+		// window/parent boundaries"), so an empty node claims its content origin explicitly.
+		if (node.InputPins.Count == 0 && node.OutputPins.Count == 0)
+		{
+			ImGui.Dummy(Vector2.Zero);
+		}
+
 		// Input pins
 		foreach (Pin pin in node.InputPins)
 		{
