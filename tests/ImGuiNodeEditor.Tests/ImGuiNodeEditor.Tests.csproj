@@ -6,7 +6,7 @@
     <IsTestProject>true</IsTestProject>
     <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
-    <RootNamespace>ktsu.ImGuiNodeEditor.UITests</RootNamespace>
+    <RootNamespace>ktsu.ImGuiNodeEditor.Tests</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <EnableSourceLink>false</EnableSourceLink>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

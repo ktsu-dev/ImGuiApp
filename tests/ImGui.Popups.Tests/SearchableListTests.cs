@@ -4,7 +4,7 @@
 // in this assembly must have the process to itself.
 [assembly: Microsoft.VisualStudio.TestTools.UnitTesting.DoNotParallelize]
 
-namespace ktsu.ImGui.Popups.UITests;
+namespace ktsu.ImGui.Popups.Tests;
 
 using System;
 using System.Collections.Generic;

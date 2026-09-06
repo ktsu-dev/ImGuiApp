@@ -4,7 +4,7 @@
 // in this assembly must have the process to itself.
 [assembly: Microsoft.VisualStudio.TestTools.UnitTesting.DoNotParallelize]
 
-namespace ktsu.ImGuiNodeEditor.UITests;
+namespace ktsu.ImGuiNodeEditor.Tests;
 
 using System.Collections.Generic;
 using System.Numerics;
