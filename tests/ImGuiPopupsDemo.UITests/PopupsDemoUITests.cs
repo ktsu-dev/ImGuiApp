@@ -201,10 +201,11 @@ public sealed class PopupsDemoUITests
 		ClickAndSettle("Choose Friend");
 		Assert.IsTrue(IsVisible("searchable-list/search"), "The searchable list did not open.");
 
+		// Picking an item is the choice: it confirms and closes, so there is no OK to click after.
 		ClickAndSettle("searchable-list/Charlie");
-		ClickAndSettle("searchable-list/ok");
 
 		Assert.AreEqual("Charlie", ImGuiPopupsDemo.selectedFriend);
+		Assert.IsFalse(IsVisible("searchable-list/search"), "Picking an item should close the list.");
 	}
 
 	[TestMethod]
