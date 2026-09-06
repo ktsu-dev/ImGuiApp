@@ -315,6 +315,45 @@ jobs:
           pattern: coverage-*
           path: coverage
 
+      # The UI suites are excluded from the Windows test job, so their coverage exists only in the
+      # Linux report, which records the paths that runner checked out to. This job analyses a
+      # Windows checkout, and Sonar matches coverage to source files by path, so every entry from
+      # that report was dropped without a word: five suites' worth of coverage, and with it every
+      # file only they exercise, reported as untested. Pointing those paths at this workspace is
+      # what makes them count.
+      - name: Point Linux Coverage Paths at This Workspace
+        if: needs.discover.outputs.has_tests == 'true'
+        shell: pwsh
+        run: |
+          $report = Join-Path $env:GITHUB_WORKSPACE 'coverage/coverage-ubuntu-latest/coverage.xml'
+          if (-not (Test-Path $report)) {
+            Write-Host 'No Linux coverage report to rewrite.'
+            exit 0
+          }
+
+          # Where the Linux runner checks out to. Fixed by the runner image, and not reported to
+          # this job, so it is rebuilt from the repository name rather than read.
+          $repository = ($env:GITHUB_REPOSITORY -split '/')[1]
+          $linuxRoot = "/home/runner/work/$repository/$repository"
+
+          $text = [IO.File]::ReadAllText($report)
+          $pattern = 'path="' + [regex]::Escape($linuxRoot) + '([^"]*)"'
+          $found = [regex]::Matches($text, $pattern).Count
+
+          if ($found -eq 0) {
+            Write-Host "::warning::No coverage paths under '$linuxRoot' were found, so the Linux suites' coverage will not be counted. The runner's checkout path has probably changed."
+            exit 0
+          }
+
+          $workspace = $env:GITHUB_WORKSPACE
+          $text = [regex]::Replace($text, $pattern, {
+            param($match)
+            'path="' + $workspace + $match.Groups[1].Value.Replace('/', '\') + '"'
+          })
+
+          [IO.File]::WriteAllText($report, $text)
+          Write-Host "Pointed $found coverage path(s) at $workspace."
+
       # SonarCloud's "previous version" new-code period needs recorded version boundaries to
       # anchor to. Without /v: the scanner reports the version as "not provided", so the period
       # has nothing to anchor against and widens to the whole history, which makes the new-code
