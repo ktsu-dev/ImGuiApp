@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.App.Testing;
 
@@ -99,6 +99,15 @@ public sealed class ImGuiAppHarness : IDisposable
 		{
 			Hexa.NET.ImGui.ImGui.GetIO().ConfigFlags |= Hexa.NET.ImGui.ImGuiConfigFlags.DockingEnable;
 		}
+
+		// Dear ImGui defaults ConfigMacOSXBehaviors to true on Apple platforms, and one of those
+		// behaviours swaps Ctrl and Super so that Cmd drives shortcuts. An injected ImGuiKey.ModCtrl
+		// therefore reaches the application as KeySuper on macOS and as KeyCtrl everywhere else, so
+		// the same test asserts different things depending on the host. The harness exists to inject
+		// input deterministically, so it pins the behaviour off and Ctrl means Ctrl on every
+		// platform. A test that wants the macOS mapping can set the flag itself; it is read afresh
+		// each frame.
+		Hexa.NET.ImGui.ImGui.GetIO().ConfigMacOSXBehaviors = false;
 
 		// ImGuiController does this for a windowed application, and the harness replaces the
 		// controller. Without it ImGuizmo, ImNodes and ImPlot never learn the ImGui context and an

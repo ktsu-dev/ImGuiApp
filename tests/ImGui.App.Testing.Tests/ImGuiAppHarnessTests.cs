@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.App.Testing.Tests;
 
@@ -244,6 +244,26 @@ public sealed class ImGuiAppHarnessTests
 		harness.Keyboard.Press(ImGuiKey.Z, ctrl: true);
 
 		Assert.IsTrue(sawCtrlZ, "Ctrl and Z should arrive together, which is what a shortcut needs.");
+	}
+
+	/// <summary>
+	/// Regression test for the macOS Ctrl/Super swap. Dear ImGui defaults
+	/// <c>ConfigMacOSXBehaviors</c> to true on Apple platforms, which swaps Ctrl and Super so Cmd
+	/// drives shortcuts; an injected <see cref="ImGuiKey.ModCtrl"/> then arrives as
+	/// <c>KeySuper</c>. The harness pins the behaviour off, so this asserts the modifier lands
+	/// where the caller asked and nowhere else.
+	/// </summary>
+	[TestMethod]
+	public void Keyboard_PressWithCtrl_DoesNotArriveAsSuper()
+	{
+		bool sawSuper = false;
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(
+			new ImGuiAppConfig { OnRender = _ => sawSuper |= ImGui.GetIO().KeySuper },
+			Window());
+
+		harness.Keyboard.Press(ImGuiKey.Z, ctrl: true);
+
+		Assert.IsFalse(sawSuper, "Ctrl must not be remapped to Super, which is what macOS behaviours would do.");
 	}
 
 	[TestMethod]
