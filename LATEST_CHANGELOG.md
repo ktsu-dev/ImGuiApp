@@ -1,7 +1,6 @@
-## v3.16.10 (patch)
+## v3.16.11 (patch)
 
-Changes since v3.16.9:
+Changes since v3.16.10:
 
-- fix: stop macOS remapping the harness's Ctrl to Super [patch] ([@Claude](https://github.com/Claude))
-- ci: make the iOS target framework opt-in and put macOS back in the matrix [patch] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 7 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
