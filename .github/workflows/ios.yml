@@ -34,6 +34,16 @@ jobs:
     permissions:
       contents: read
 
+    # This workflow is the only one that builds the iOS head, and the only one that installs the
+    # workload it needs. The csprojs default IncludeIosTargets to false, so a macOS host without
+    # that workload -- every macOS cell of the test matrix -- builds the same target frameworks as
+    # Linux and Windows instead of failing with NETSDK1147 (#327). MSBuild reads environment
+    # variables as properties, so setting it at job level opts every dotnet invocation in the job
+    # in, including the ones that reach ImGui.App through a ProjectReference and would otherwise
+    # resolve its net10.0 head rather than its net10.0-ios one.
+    env:
+      IncludeIosTargets: "true"
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -113,6 +123,10 @@ jobs:
     # longer holds is the claim that it gates the PR: see the `if:` above.
     permissions:
       contents: read
+
+    # See the ios-build job: the iOS head is opt-in, and this is the other job that opts in.
+    env:
+      IncludeIosTargets: "true"
 
     steps:
       - name: Checkout Repository

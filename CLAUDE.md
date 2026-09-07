@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -472,6 +472,20 @@ All C# files require this header:
 ```
 
 ## CI/CD
+
+The iOS target framework is opt-in. `ImGui.App`, `ImGuiAppDemo.iOS` and `ImGui.App.iOS.SmokeTest`
+add their `net10.0-ios` head only when `IncludeIosTargets` is `true` **and** the host is macOS;
+otherwise `ImGui.App` cross-targets `net10.0;net9.0;net8.0` and the two app projects degrade to a
+plain `net10.0` console exe. Only `.github/workflows/ios.yml` opts in, at job level, and it is the
+only workflow that runs `dotnet workload install ios`. Without the gate, every macOS build widened
+itself to `net10.0-ios` and failed with `NETSDK1147` before reaching a test, which is why macOS was
+excluded from the test matrix (#327). If you add a step that has to build the iOS head, set
+`IncludeIosTargets` — an environment variable works, MSBuild reads it as a property.
+
+The test matrix in `dotnet.yml` fans out over Linux, Windows and macOS. The five UI suites run on
+Linux only: they are the whole cost of the job, and the CPU rasterizer they drive measures the same
+on either host. The `Test` step tests for Linux rather than against Windows, so any platform added
+later gets that cheap treatment by default.
 
 Uses `scripts/PSBuild.psm1` PowerShell module for CI pipeline. Version increments are controlled by commit message tags: `[major]`, `[minor]`, `[patch]`, `[pre]`. Auto-generated files (VERSION.md, CHANGELOG.md, LICENSE.md) should not be manually edited. CI runs on Windows, publishes to NuGet, uses SonarQube for analysis.
 

@@ -82,28 +82,28 @@ jobs:
           # An unrecognized platform must stop the run rather than drop the project. Dropping
           # it would produce a smaller matrix that still reports success, which is the failure
           # this design exists to remove.
-          unknown=$(echo "$projects" | jq -r '[.[] | select(.platform as $p | ["neutral","windows"] | index($p) | not) | .platform] | unique | join(", ")')
+          unknown=$(echo "$projects" | jq -r '[.[] | select(.platform as $p | ["neutral","windows","macos"] | index($p) | not) | .platform] | unique | join(", ")')
           if [ -n "$unknown" ]; then
             echo "::error::Cannot place test project(s) on a runner. Unhandled platform(s): $unknown"
-            echo "::error::macOS is currently excluded from the matrix, so an ios-tied test project has nowhere to run."
+            echo "::error::An ios-tied test project needs 'dotnet workload install ios', which this job does not run; the iOS workflow is where iOS builds happen."
             exit 1
           fi
 
-          # macOS is deliberately absent from this mapping. A macOS runner builds any project
-          # whose target frameworks are widened on that host, and in a repo with an iOS head that
-          # pulls in a target framework needing a workload this job does not install, so every
-          # macOS cell fails during its build. Restoring the workload on each cell is slow and
-          # macOS runner minutes are billed at a premium, so the platform is excluded until the
-          # underlying problem is fixed rather than papered over. An ios-tied test project now
-          # fails the guard above instead of silently finding no runner.
+          # macOS is back in this mapping. It was excluded because a macOS runner widened
+          # ImGui.App's target frameworks to include net10.0-ios, which needs a workload this job
+          # does not install, so every macOS cell failed during its build with NETSDK1147. That
+          # widening is now opt-in (IncludeIosTargets, set only by the iOS workflow), so a macOS
+          # cell builds exactly what Linux and Windows build. An ios-tied test project would still
+          # have nowhere to run and fails the guard above rather than silently disappearing.
           matrix=$(echo "$projects" | jq -c '
             {
               include: [
                 .[]
                 | . as $p
                 | {
-                    neutral: ["ubuntu-latest", "windows-latest"],
-                    windows: ["windows-latest"]
+                    neutral: ["ubuntu-latest", "windows-latest", "macos-latest"],
+                    windows: ["windows-latest"],
+                    macos: ["macos-latest"]
                   }[$p.platform][]
                 | {
                     os: .,
@@ -184,7 +184,9 @@ jobs:
       #
       # The five UI suites are effectively the whole cost of this job. They run in parallel, so the
       # slowest of them sets the job's duration, while all nine other test projects finish in about
-      # thirty-four seconds combined. They are therefore run on Linux only:
+      # thirty-four seconds combined. They are therefore run on Linux only -- which is also what
+      # keeps macOS affordable now that it is back in the matrix, since macOS runner minutes are
+      # billed at roughly ten times Linux:
       #
       #   * measured per assembly on Windows: 17m28s, 14m32s, 10m05s, 8m20s, 1m01s against ~34s for
       #     everything else, in a job whose test phase took 17m45s.
@@ -194,15 +196,18 @@ jobs:
       #   * Linux is the faster host for this work, so it keeps them.
       #
       # Only the UI test projects are excluded. The example applications they drive stay in the
-      # build on both platforms, so a change that breaks one still fails here.
+      # build on every platform, so a change that breaks one still fails here.
+      #
+      # The test is on Linux rather than against Windows, so a platform added to the matrix later
+      # gets the cheap treatment by default rather than silently inheriting the expensive one.
       - name: Test
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            ktsubuild test all --workspace "$GITHUB_WORKSPACE" --verbose --exclude "**/*.UITests/*"
-          else
+          if [ "${{ runner.os }}" = "Linux" ]; then
             ktsubuild test all --workspace "$GITHUB_WORKSPACE" --verbose
+          else
+            ktsubuild test all --workspace "$GITHUB_WORKSPACE" --verbose --exclude "**/*.UITests/*"
           fi
 
       - name: Upload Coverage
@@ -306,8 +311,8 @@ jobs:
 
       # Each platform's artifact holds one coverage.xml, already merged across that platform's test
       # projects by `test all`. The downloads must stay in their own per-artifact directories so
-      # both survive: flattened, one platform's report would overwrite the other's and the scanner
-      # would see a single platform's coverage as though it were the whole matrix's.
+      # they all survive: flattened, one platform's report would overwrite the others' and the
+      # scanner would see a single platform's coverage as though it were the whole matrix's.
       - name: Download Coverage
         if: needs.discover.outputs.has_tests == 'true'
         uses: actions/download-artifact@v7
@@ -315,8 +320,8 @@ jobs:
           pattern: coverage-*
           path: coverage
 
-      # The UI suites are excluded from the Windows test job, so their coverage exists only in the
-      # Linux report, which records the paths that runner checked out to. This job analyses a
+      # The UI suites run on Linux only, so their coverage exists only in the Linux report, which
+      # records the paths that runner checked out to. This job analyses a
       # Windows checkout, and Sonar matches coverage to source files by path, so every entry from
       # that report was dropped without a word: five suites' worth of coverage, and with it every
       # file only they exercise, reported as untested. Pointing those paths at this workspace is

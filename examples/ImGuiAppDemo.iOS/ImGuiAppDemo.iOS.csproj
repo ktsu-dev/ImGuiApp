@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,13 +9,15 @@
     <RootNamespace>ktsu.ImGui.Examples.App.iOS</RootNamespace>
     <AssemblyName>ImGuiAppDemoiOS</AssemblyName>
 
-    <!-- Like the smoke app: this is an iOS application only on macOS (where the iOS workload exists).
-         On any other OS it degrades to a plain net10.0 console exe so the Windows CI pipeline can still
-         restore/build it without the iOS workload. The simulator job always builds -f net10.0-ios.
+    <!-- This project is an iOS application only when the iOS workload is present, which the iOS
+         workflow guarantees by setting IncludeIosTargets=true. Everywhere else — including an
+         ordinary macOS build — it degrades to a plain net10.0 console exe, so a host without the
+         workload can still restore and build it. The simulator job always builds -f net10.0-ios.
          We deliberately use the plain Microsoft.NET.Sdk (not ktsu.Sdk.App) because the desktop-app SDK
          forces a RID matrix that fights the iOS build; the smoke app proved this minimal SDK works. -->
-    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('OSX'))">net10.0-ios</TargetFramework>
-    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('OSX'))">net10.0</TargetFramework>
+    <IncludeIosTargets Condition="'$(IncludeIosTargets)' == ''">false</IncludeIosTargets>
+    <TargetFramework Condition="'$(IncludeIosTargets)' == 'true' and $([MSBuild]::IsOSPlatform('OSX'))">net10.0-ios</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">

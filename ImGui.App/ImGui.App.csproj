@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
   <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
 
@@ -8,8 +8,15 @@
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- The iOS head is opt-in rather than implied by the host OS. Building net10.0-ios needs
+         `dotnet workload install ios`, which only the iOS workflow installs, so widening the
+         target frameworks on every macOS host made ordinary macOS builds fail with NETSDK1147
+         before they reached a single test. Only the iOS workflow sets IncludeIosTargets=true. -->
+    <IncludeIosTargets Condition="'$(IncludeIosTargets)' == ''">false</IncludeIosTargets>
+
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
+    <TargetFrameworks Condition="'$(IncludeIosTargets)' == 'true' and $([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
