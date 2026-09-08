@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGuiNodeEditor;
+namespace ktsu.ImGui.NodeEditor;
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;

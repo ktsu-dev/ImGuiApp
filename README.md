@@ -18,10 +18,10 @@
 
 - **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, and DPI awareness via `ktsu.ImGui.App`
 - **PID Frame Limiting**: High-precision PID-controlled frame rate limiting with auto-tuning and adaptive throttling for focused, unfocused, idle, and minimized states
-- **Custom Widgets**: Rich collection of UI components including TabPanel, Knob, SearchBox with fuzzy matching, RadialProgressBar with countdown/count-up timers, Grid layouts, DividerContainer with resizable sections, Combo, Tree, and Icons via `ktsu.ImGui.Widgets`
+- **Custom Widgets**: Around sixty UI components via `ktsu.ImGui.Widgets` — controls (Switch, SegmentedControl, Stepper, RangeSlider, XYPad, Knob, Rating, Chip, PinInput, SearchBox with fuzzy matching), layout (DividerContainer, Grid, TabPanel, Card, Tree, ImageCanvas, overlays), feedback (RadialProgressBar with countdown/count-up timers, spinners, skeleton placeholders, badges), signal views (Histogram, FlameGraph, DbMeter, oscilloscope), motion (tweens, springs, inertial scrolling, gesture detection), and callback-driven Sequencer, CurveEditor and BezierEditor
 - **Modal Dialogs**: Professional popup system with MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, and SearchableList via `ktsu.ImGui.Popups`
 - **Theming System**: 50+ built-in themes (Catppuccin, Tokyo Night, Gruvbox, Dracula, and more) with scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser via `ktsu.ImGui.Styler`
-- **Node Graph Framework**: Attribute-based node declaration system with UI-agnostic `ktsu.NodeGraph` metadata library and ImNodes-based visual editor `ktsu.ImGuiNodeEditor` with physics-based layout
+- **Node Graph Framework**: Attribute-based node declaration system with UI-agnostic `ktsu.NodeGraph` metadata library and ImNodes-based visual editor `ktsu.ImGui.NodeEditor` with physics-based layout
 - **Font Management**: Unicode, emoji, and Nerd Font support with GPU memory management via `FontMemoryGuard` and dynamic font scaling
 - **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
 - **Color Utilities**: HSL/HSLA color creation, accessibility-focused contrast calculations, color manipulation extensions, and semantic color palettes
@@ -40,7 +40,7 @@ Complete application scaffolding for Dear ImGui applications with windowing, ren
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Widgets?label=ktsu.ImGui.Widgets&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Widgets)
 
-Rich collection of custom widgets: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, and ScopedId.
+Rich collection of custom widgets, grouped by what they are for: input and controls (Switch, SegmentedControl, Stepper, RangeSlider, XYPad, Knob, Rating, Chip, PinInput, SearchBox, Combo), display and status (Avatar, Badge, ColorIndicator, Icon, Text, Image, PageIndicator, Tooltip, Breadcrumb), progress and loading (RadialProgressBar, BufferingBar, Spinner, skeleton placeholders), data and signals (Histogram, HandleTrack, FlameGraph, DbMeter, Scope), layout and containers (DividerContainer, Grid, TabPanel, Card, Tree, ImageCanvas, OverlayHost, ScopedId, ScopedDisable), motion and gestures (Tween, Spring, Easing, InertialScroll, GestureDetector), callback-driven editors (Sequencer, CurveEditor, BezierEditor), and stateful dialogs.
 
 ### ImGui.Popups - Modal Dialogs
 
@@ -66,9 +66,9 @@ Advanced theming system with 50+ built-in themes, scoped styling, semantic text 
 
 Generic attribute-based system for declaring node graphs. Decorate classes, structs, and methods with node metadata (pins, execution modes, visibility, deprecation) without coupling to a specific editor implementation.
 
-### ImGuiNodeEditor - Visual Node Editor
+### ImGui.NodeEditor - Visual Node Editor
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiNodeEditor?label=ktsu.ImGuiNodeEditor&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiNodeEditor)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.NodeEditor?label=ktsu.ImGui.NodeEditor&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.NodeEditor)
 
 Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine` for business logic, `AttributeBasedNodeFactory` for node creation from decorated types, physics-based layout simulation, and `NodeEditorRenderer`/`NodeEditorInputHandler` for rendering and interaction.
 
@@ -88,7 +88,7 @@ Syntax-highlighted source code rendered inside Dear ImGui, with built-in definit
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?label=ktsu.ForceDirectedLayout&logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
 
-Renderer-agnostic force-directed layout: bodies repel, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGuiNodeEditor` uses it to lay out node graphs.
+Renderer-agnostic force-directed layout: bodies repel, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGui.NodeEditor` uses it to lay out node graphs.
 
 ### ImGui.Probes - Item Recording for Tests
 
@@ -364,7 +364,7 @@ public class AddNode
 ### Visual Node Editor
 
 ```csharp
-using ktsu.ImGuiNodeEditor;
+using ktsu.ImGui.NodeEditor;
 
 // Create engine and factory
 NodeEditorEngine engine = new();

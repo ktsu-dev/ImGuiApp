@@ -1,9 +1,9 @@
-# ktsu.ImGuiNodeEditor
+# ktsu.ImGui.NodeEditor
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiNodeEditor?logo=nuget)](https://nuget.org/packages/ktsu.ImGuiNodeEditor)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.NodeEditor?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.NodeEditor)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-ImGuiNodeEditor is a visual node editor built on ImNodes, with the graph itself kept away from the drawing. `NodeEditorEngine` owns nodes, links and the physics that lays them out and knows nothing about ImGui; `NodeEditorRenderer` draws whatever the engine holds; `NodeEditorInputHandler` turns a frame's interactions into requests the engine can accept or refuse. Nodes can be declared as ordinary types decorated with [`ktsu.NodeGraph`](https://github.com/ktsu-dev/ImGuiApp) attributes and instantiated by reflection.
+ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself kept away from the drawing. `NodeEditorEngine` owns nodes, links and the physics that lays them out and knows nothing about ImGui; `NodeEditorRenderer` draws whatever the engine holds; `NodeEditorInputHandler` turns a frame's interactions into requests the engine can accept or refuse. Nodes can be declared as ordinary types decorated with [`ktsu.NodeGraph`](https://github.com/ktsu-dev/ImGuiApp) attributes and instantiated by reflection.
 
 ## Features
 
@@ -18,19 +18,19 @@ ImGuiNodeEditor is a visual node editor built on ImNodes, with the graph itself 
 ### Package Manager Console
 
 ```powershell
-Install-Package ktsu.ImGuiNodeEditor
+Install-Package ktsu.ImGui.NodeEditor
 ```
 
 ### .NET CLI
 
 ```bash
-dotnet add package ktsu.ImGuiNodeEditor
+dotnet add package ktsu.ImGui.NodeEditor
 ```
 
 ### Package Reference
 
 ```xml
-<PackageReference Include="ktsu.ImGuiNodeEditor" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.NodeEditor" Version="x.y.z" />
 ```
 
 ImNodes must be initialized before the editor draws. `ktsu.ImGui.App` detects and sets up the extension automatically; in a host that does not, initialize ImNodes yourself as its bindings document.
@@ -44,7 +44,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGuiNodeEditor;
+using ktsu.ImGui.NodeEditor;
 
 private readonly NodeEditorEngine engine = new();
 private readonly NodeEditorRenderer renderer = new();
@@ -195,4 +195,4 @@ Contributions are welcome! For feature requests, bug reports, or questions, plea
 
 ## License
 
-ImGuiNodeEditor is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
+ImGui.NodeEditor is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
