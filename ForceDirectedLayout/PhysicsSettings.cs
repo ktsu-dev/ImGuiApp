@@ -49,8 +49,12 @@ public sealed record PhysicsSettings
 	/// <summary>Per-body force magnitude cap (applied before integration).</summary>
 	public double MaxForce { get; init; } = 5000.0;
 
-	/// <summary>Per-body velocity magnitude cap (applied after integration).</summary>
-	public double MaxVelocity { get; init; } = 50.0;
+	/// <summary>
+	/// Per-body velocity magnitude cap (applied after integration). This is what bounds how long a
+	/// graph takes to settle: a body has to travel hundreds of units to reach its place, so too low a
+	/// cap leaves a graph still visibly unfolding many seconds after it opens.
+	/// </summary>
+	public double MaxVelocity { get; init; } = 250.0;
 
 	/// <summary>Target substep frequency. Per-frame substep count is ceil(deltaTime * TargetPhysicsHz).</summary>
 	public double TargetPhysicsHz { get; init; } = 120.0;

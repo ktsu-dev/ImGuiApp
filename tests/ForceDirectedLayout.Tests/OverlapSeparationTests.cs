@@ -115,8 +115,15 @@ public class OverlapSeparationTests
 	{
 		// Opting out has to be possible for a consumer that arranges its own bodies, and leaving them
 		// overlapping is what says the separation is this pass's doing rather than the forces'.
+		// Repulsion and the ordering bias both push a pair apart on their own - the ordering bias alone
+		// targets halfWidths + 20, which for these bodies is wider than they are - so they are turned
+		// off here. Otherwise this measures how far the pair has travelled rather than whether the pass
+		// is what separates them.
 		LayoutSettings settings = EnabledDefaults();
 		settings.OverlapMargin = 0.0;
+		settings.RepulsionStrength = 0.0;
+		settings.DirectionalBias = 0.0;
+		settings.LinkFlatteningStrength = 0.0;
 
 		Vec2D[] dimensions = [new Vec2D(400, 100), new Vec2D(400, 100)];
 		ForceLayout layout = new(settings);
