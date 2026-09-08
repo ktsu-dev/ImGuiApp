@@ -1,6 +1,9 @@
 # ktsu.ImGui.Widgets
 
-ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provides a variety of widgets and utilities to enhance your ImGui-based applications.
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Widgets?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Widgets)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
+
+`ktsu.ImGui.Widgets` is a library of custom widgets for Dear ImGui, built on the Hexa.NET.ImGui bindings. It provides a variety of widgets and utilities to enhance your ImGui-based applications.
 
 ## Features
 
@@ -613,9 +616,9 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 
 **Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same font for their toolbar, breadcrumb and file-tree glyphs. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker`, `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` require no icon font.
 
-**Duplicate widgets**: Several Hexa-backed widgets deliberately coexist with an existing ktsu widget that covers similar ground: `HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, and `ImageCenteredV/H/VH` vs `ImageCentered`. Both sides of each pair remain until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which one to keep — that decision is a separate, breaking change.
+**Overlapping widgets**: Seven Hexa-backed widgets look like duplicates of an existing ktsu widget. Five are not: `HorizontalSplitter`/`VerticalSplitter` is a single drag handle where `DividerContainer` is a retained layout container; `IconTreeNode` is a collapsible node where `Tree` only draws connector lines around whatever is nested inside it; `BufferingBar`/`Spinner` are determinate-linear and indeterminate where `RadialProgressBar`/`SkeletonLine` are determinate-radial and a shimmering placeholder; and the `TextCentered*`/`ImageCentered*` families each cover axes and overloads the other does not. Two do overlap: prefer **`Switch`** over `ToggleSwitch` (it marks itself for probes, animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, and draws its own label), and prefer **`Combo`** over `EnumCombo` unless you need Hexa's display-name overrides. Nothing is obsoleted — that is a breaking change — but new code should reach for the preferred one, and the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` shows the pairs side by side. The through-line: the ktsu originals call `ImGuiProbes.MarkItem`, so a UI test can address them by name; the Hexa adapters have to be marked by the test itself.
 
-**Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it additionally enables `ImGuiConfigFlags.DockingEnable` (idempotently, since Hexa's dockspace is a no-op without it) and creates a dockspace over the main viewport, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
+**Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it creates a dockspace over the main viewport and draws every registered docked window, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). It *requires* `ImGuiConfigFlags.DockingEnable`, which `ImGuiAppConfig.EnableDocking = true` sets, and throws `InvalidOperationException` when the flag is off: ImGui only accepts that flag before the first frame, so the pump cannot turn it on itself, and Hexa's dockspace would silently do nothing without it. Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
 
 ### Callback-driven Editors
 
@@ -648,10 +651,6 @@ public static bool ImGuiWidgets.CurveEditor(CurveData curve, Vector2 size, Vecto
 public static bool ImGuiWidgets.BezierEditor(string label, ref BezierControlPoints points, float size = 128f);
 ```
 
-## Contributing
-
-Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
-
 ## Acknowledgments
 
 ImGuiWidgets is built on:
@@ -660,12 +659,20 @@ ImGuiWidgets is built on:
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui
 - [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors here, with `Hexa.NET.ImGui.Widgets.Extras` supplying the curve and bezier editors
 - [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - `Color`, path and string types used across the widget surface
+- [ktsu.TextFilter](https://github.com/ktsu-dev/TextFilter) - Glob, regex and fuzzy filtering behind `SearchBox`
+- [ktsu.Extensions](https://github.com/ktsu-dev/Extensions) - Collection extension methods
+- [ktsu.ScopedAction](https://github.com/ktsu-dev/ScopedAction) - The RAII scope type behind `ScopedId`, `ScopedDisable` and `Tree`
 
 and inspired by the following projects:
 
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
 - [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
 
+## Contributing
+
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
+
 ## License
 
-ImGuiWidgets is licensed under the MIT License. See [LICENSE](LICENSE) for more information.
+ImGui.Widgets is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.

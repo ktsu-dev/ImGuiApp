@@ -1,5 +1,8 @@
 # ktsu.ImGui.App.Testing
 
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App.Testing?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App.Testing)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
+
 Headless test harness for `ktsu.ImGui.App` applications. Renders through a CPU rasterizer with no
 window, no GPU and no graphics driver, injects input directly into ImGui rather than through the
 operating system, and advances frames under the test's control.
@@ -103,3 +106,11 @@ and the same remedy, which is to give them distinct identifiers.
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library the harness drives
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that the harness renders through
+
+## Contributing
+
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
+
+## License
+
+ImGui.App.Testing is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
