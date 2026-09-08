@@ -58,3 +58,8 @@ run a scenario twice and confirm the application behaves the same whether or not
 that costs something to build.
 
 `ktsu.ImGui.App.Testing` consumes this package to resolve names to rectangles and click them.
+
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library whose items are marked
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui, the package's only dependency

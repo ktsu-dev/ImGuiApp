@@ -98,3 +98,8 @@ be caught here.
 Only marked items can be addressed by name. Two identically labeled widgets in the same window with
 no scope between them collide, and are refused rather than guessed at. ImGui has the same limitation
 and the same remedy, which is to give them distinct identifiers.
+
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library the harness drives
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that the harness renders through

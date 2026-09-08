@@ -232,6 +232,11 @@ dotnet run --project examples/ImGuiPopupsDemo
 - [ktsu.TextFilter](https://www.nuget.org/packages/ktsu.TextFilter/) - Text filtering utilities
 - [Microsoft.Extensions.FileSystemGlobbing](https://www.nuget.org/packages/Microsoft.Extensions.FileSystemGlobbing/) - File pattern matching
 
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library these popups draw into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.

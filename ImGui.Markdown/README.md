@@ -156,6 +156,12 @@ See `examples/ImGuiMarkdownDemo/` for a runnable demo covering headings, emphasi
 dotnet run --project examples/ImGuiMarkdownDemo
 ```
 
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library this draws into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
+- [Markdig](https://github.com/xoofx/markdig) - The CommonMark parser behind the renderer
+
 ## Contributing
 
 Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.

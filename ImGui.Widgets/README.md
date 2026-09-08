@@ -654,9 +654,15 @@ Contributions are welcome! For feature requests, bug reports, or questions, plea
 
 ## Acknowledgments
 
-ImGuiWidgets is inspired by the following projects:
+ImGuiWidgets is built on:
 
-- [ocornut/ImGui](https://github.com/ocornut/imgui)
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library these widgets draw into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui
+- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors here, with `Hexa.NET.ImGui.Widgets.Extras` supplying the curve and bezier editors
+- [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
+
+and inspired by the following projects:
+
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
 - [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
 

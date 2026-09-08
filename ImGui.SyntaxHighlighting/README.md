@@ -144,6 +144,11 @@ See `examples/ImGuiSyntaxHighlightingDemo/` for a runnable demo covering the lan
 dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 ```
 
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library this draws into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
+
 ## Contributing
 
 Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
