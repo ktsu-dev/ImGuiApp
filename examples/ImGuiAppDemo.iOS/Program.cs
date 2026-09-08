@@ -53,7 +53,7 @@ ImGuiApp.Start(new ImGuiAppConfig
 			AbsoluteFilePath logoPath = AppContext.BaseDirectory.As<AbsoluteDirectoryPath>() / "icon.png".As<FileName>();
 			if (File.Exists(logoPath))
 			{
-				// ImageSharp decode + Metal upload. If iOS trimming/AOT breaks the decode path this throws,
+				// image decode + Metal upload. If iOS trimming/AOT breaks the decode path this throws,
 				// which surfaces the full stacktrace in the CI launch log and fails the "logo loaded"
 				// assert below — the signal we want, rather than silently shipping a broken texture path.
 				logo = ImGuiApp.GetOrLoadTexture(logoPath);

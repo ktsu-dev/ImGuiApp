@@ -7,10 +7,10 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
+using ktsu.ImGui.App.Images;
 using ktsu.Invoker;
 using ktsu.ScopedAction;
 using ktsu.Semantics.Paths;
@@ -18,9 +18,6 @@ using ktsu.Semantics.Strings;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Color = System.Drawing.Color;
 
 /// <summary>
@@ -1526,26 +1523,31 @@ public static partial class ImGuiApp
 	/// <param name="iconPath">The file path to the icon image.</param>
 	public static void SetWindowIcon(string iconPath)
 	{
-		using FileStream stream = File.OpenRead(iconPath);
-		using Image<Rgba32> sourceImage = Image.Load<Rgba32>(stream);
+		ImagePixels sourceImage = ImageDecoder.Load(iconPath);
 
 		int[] iconSizes = [128, 64, 48, 32, 28, 24, 22, 20, 18, 16];
+
+		// Crop once: every size is scaled from the same square, so the framing is identical across them.
+		ImagePixels square = sourceImage.CropToSquare();
+
+		// Scaling ten icons straight from a large source touches every source pixel ten times. One
+		// reduction to twice the largest icon costs a single pass and leaves enough detail that none
+		// of the sizes below is ever upscaled.
+		int workingSize = iconSizes[0] * 2;
+		if (square.Width > workingSize)
+		{
+			square = square.Resize(workingSize, workingSize);
+		}
 
 		Collection<Silk.NET.Core.RawImage> icons = [];
 
 		foreach (int size in iconSizes)
 		{
-			Image<Rgba32> resizeImage = sourceImage.Clone();
-			int sourceSize = Math.Min(sourceImage.Width, sourceImage.Height);
-			resizeImage.Mutate(x => x.Crop(sourceSize, sourceSize).Resize(size, size, KnownResamplers.Welch));
+			ImagePixels resized = square.Resize(size, size);
 
-			UseImageBytes(resizeImage, bytes =>
-			{
-				// Create a permanent copy since RawImage needs to keep the data
-				byte[] iconData = new byte[bytes.Length];
-				Array.Copy(bytes, iconData, bytes.Length);
-				icons.Add(new(size, size, new Memory<byte>(iconData)));
-			});
+			// RawImage keeps the data, so it gets the resized image's own buffer rather than a
+			// pooled one.
+			icons.Add(new(size, size, new Memory<byte>(resized.GetBuffer())));
 		}
 
 		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
@@ -1565,7 +1567,7 @@ public static partial class ImGuiApp
 			return existingTexture;
 		}
 
-		using Image<Rgba32> image = Image.Load<Rgba32>(path);
+		ImagePixels image = ImageDecoder.Load(path);
 
 		ImGuiAppTextureInfo textureInfo = new()
 		{
@@ -1593,12 +1595,12 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="image">The image to process.</param>
 	/// <param name="action">The action to perform with the image bytes.</param>
-	public static void UseImageBytes(Image<Rgba32> image, Action<byte[]> action)
+	public static void UseImageBytes(ImagePixels image, Action<byte[]> action)
 	{
 		Ensure.NotNull(image);
 		Ensure.NotNull(action);
 
-		int bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
+		int bufferSize = image.ByteLength;
 
 		// Rent buffer from pool
 		byte[] pooledBuffer = _bytePool.Rent(bufferSize);
@@ -2285,7 +2287,7 @@ public static partial class ImGuiApp
 				// Only reload from file if the path exists
 				if (File.Exists(path))
 				{
-					using Image<Rgba32> image = Image.Load<Rgba32>(path);
+					ImagePixels image = ImageDecoder.Load(path);
 					// Upload new texture
 					UseImageBytes(image, bytes =>
 					{
@@ -2299,11 +2301,12 @@ public static partial class ImGuiApp
 					// No need to delete old texture as the context is already gone
 				}
 			}
-			catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException)
+			catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or InvalidImageDataException)
 			{
-				// Intentionally swallowed: if a texture file is missing or unreadable during a context
-				// change, we skip it and continue reloading the remaining textures. The old context
-				// handle is already gone so there is nothing further to clean up.
+				// Intentionally swallowed: if a texture file is missing, unreadable or no longer
+				// decodable during a context change, we skip it and continue reloading the remaining
+				// textures. The old context handle is already gone so there is nothing further to
+				// clean up.
 				DebugLogger.Log($"ReloadAllTextures: Skipping texture due to error - {ex.Message}");
 			}
 		}

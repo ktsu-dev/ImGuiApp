@@ -746,7 +746,7 @@ public sealed class ImGuiAppWindowManagementTests
 	[TestMethod]
 	public void UseImageBytes_WithNullAction_ThrowsArgumentNullException()
 	{
-		using SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32> image = new(100, 100);
+		ktsu.ImGui.App.Images.ImagePixels image = new(100, 100);
 		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.UseImageBytes(image, null!));
 	}
 

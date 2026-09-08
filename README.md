@@ -16,7 +16,7 @@
 
 ## Features
 
-- **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, and DPI awareness via `ktsu.ImGui.App`
+- **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, dependency-free PNG/JPEG/BMP/TGA decoding, and DPI awareness via `ktsu.ImGui.App`
 - **PID Frame Limiting**: High-precision PID-controlled frame rate limiting with auto-tuning and adaptive throttling for focused, unfocused, idle, and minimized states
 - **Custom Widgets**: Around sixty UI components via `ktsu.ImGui.Widgets` — controls (Switch, SegmentedControl, Stepper, RangeSlider, XYPad, Knob, Rating, Chip, PinInput, SearchBox with fuzzy matching), layout (DividerContainer, Grid, TabPanel, Card, Tree, ImageCanvas, overlays), feedback (RadialProgressBar with countdown/count-up timers, spinners, skeleton placeholders, badges), signal views (Histogram, FlameGraph, DbMeter, oscilloscope), motion (tweens, springs, inertial scrolling, gesture detection), and callback-driven Sequencer, CurveEditor and BezierEditor
 - **Modal Dialogs**: Professional popup system with MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, and SearchableList via `ktsu.ImGui.Popups`
@@ -35,7 +35,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App?label=ktsu.ImGui.App&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
 
-Complete application scaffolding for Dear ImGui applications with windowing, rendering, font/texture management, and performance tuning.
+Complete application scaffolding for Dear ImGui applications with windowing, rendering, font/texture management, and performance tuning. Image decoding for PNG, JPEG, BMP and TGA is built in, so the package carries no imaging dependency.
 
 ### ImGui.Widgets - Custom UI Components
 
@@ -711,7 +711,6 @@ and on the libraries they wrap or sit beside:
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library everything here draws into
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - Cross-platform windowing and OpenGL
-- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Image loading behind the texture cache
 - [Markdig](https://github.com/xoofx/markdig) - The CommonMark parser behind `ktsu.ImGui.Markdown`
 - [Polyfill](https://github.com/SimonCropp/Polyfill) - Backports newer .NET APIs to the older target frameworks, at build time only
 
