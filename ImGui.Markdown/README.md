@@ -1,5 +1,8 @@
 # ktsu.ImGui.Markdown
 
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Markdown?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Markdown)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
+
 ImGui.Markdown renders CommonMark markdown directly inside Dear ImGui, using [Markdig](https://github.com/xoofx/markdig) for parsing. It is a standalone package with no dependency on `ktsu.ImGui.App`, so it can be dropped into any Hexa.NET.ImGui application.
 
 ## Features
@@ -141,7 +144,7 @@ private static MarkdownImageResult? ResolveImage(string source)
 - Links, including autolinks
 - Images
 
-## v1 Limitations
+## Limitations
 
 - No built-in syntax highlighting; code blocks render in a plain monospace style unless a `CodeBlockRenderer` is supplied (for example `ktsu.ImGui.SyntaxHighlighting`)
 - No asynchronous remote image download; remote or unresolved image sources always show a placeholder box with the alt text
@@ -156,10 +159,17 @@ See `examples/ImGuiMarkdownDemo/` for a runnable demo covering headings, emphasi
 dotnet run --project examples/ImGuiMarkdownDemo
 ```
 
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library this draws into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
+- [Markdig](https://github.com/xoofx/markdig) - The CommonMark parser behind the renderer
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - The `Color` type behind `ktsu.ImGui.Color`, which resolves link and code colors
+
 ## Contributing
 
 Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
 
 ## License
 
-ImGui.Markdown is licensed under the MIT License. See [LICENSE](LICENSE) for more information.
+ImGui.Markdown is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.

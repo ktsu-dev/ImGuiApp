@@ -1,25 +1,70 @@
 # ktsu.ImGui.Widgets
 
-ImGuiWidgets is a library of custom widgets using ImGui.NET. This library provides a variety of widgets and utilities to enhance your ImGui-based applications.
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Widgets?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Widgets)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
+
+`ktsu.ImGui.Widgets` is a library of custom widgets for Dear ImGui, built on the Hexa.NET.ImGui bindings. It provides a variety of widgets and utilities to enhance your ImGui-based applications.
 
 ## Features
 
-- **Knobs**: Ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
-- **Radial Progress Bar**: Circular progress indicators for visualizing loading and progress with countdown/count-up timers
-- **Resizable Layout Dividers**: Draggable layout dividers for resizable layouts (DividerContainer)
-- **TabPanel**: Tabbed interface with closable, reorderable tabs and dirty indicator support
-- **Combo**: Type-safe combo boxes for enums, strings, and strong strings
-- **Icons**: Customizable icons with various alignment options and event delegates
-- **Grid**: Flexible grid layout for displaying items
-- **Color Indicator**: An indicator that displays a color when enabled
-- **Image**: An image widget with alignment options
-- **Text**: A text widget with alignment options
-- **Tree**: A tree widget for displaying hierarchical data
-- **Scoped Id**: A utility class for creating scoped IDs
-- **Scoped Disable**: Temporarily disable UI elements within a scope
-- **SearchBox**: A powerful search box with support for various filter types (Glob, Regex, Fuzzy) and matching options
-- **Histogram**: Draws one or more binned distributions as overlaid bars, scaled to the tallest bin, keeping the binning scan off the render thread by accepting pre-computed bins
-- **HandleTrack**: Draggable handles over a rectangle you supply, kept sorted and a minimum distance apart, drawing handles only for overlay on content you own
+The widgets below are grouped by what they are for. Everything is a static method on `ImGuiWidgets` unless it is named as a type.
+
+### Input and Controls
+
+- **`Switch`**: iOS-style toggle with an animated thumb, whose track interpolates between the frame background and the accent color
+- **`SegmentedControl`**: A row of mutually exclusive options with a sliding, animated highlight behind the selected one
+- **`Stepper`**: A `[-] value [+]` integer stepper with hold-to-repeat after a short delay
+- **`RangeSlider`**: Dual-handle slider for a span within a range; the handles cannot cross and stay a minimum distance apart
+- **`XYPad`**: Edits two normalized parameters at once from one pad
+- **`Knob`** / **`KnobWithDrag`**: Dial-style knobs in several variants, ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
+- **`Rating`**: Interactive star rating that previews the value under the cursor before it is committed
+- **`Chip`** / **`ChipGroup`**: Pill-shaped filter or choice tags, filled when selected, and a wrapping single-select group of them
+- **`PinInput`**: An N-box PIN or one-time-passcode entry that auto-advances, and steps back on backspace
+- **`SearchBox`** / **`SearchBoxRanked`**: Filters a collection with `ktsu.TextFilter` (glob, regex, fuzzy) or ranks it with a fuzzy match
+- **`Combo`**: Type-safe combo boxes for enums, strings, and semantic strings
+
+### Display and Status
+
+- **`Avatar`**: Circular initials avatar on a color derived deterministically from the name, with an optional presence dot
+- **`Badge`** / **`BadgeDot`**: A count badge (with a `maxCount+` cap) or a plain dot, overlaid on the corner of the item just submitted
+- **`ColorIndicator`**: A colored square that shows a state
+- **`Icon`**: Icons with alignment options and click, double-click and context-menu delegates
+- **`Text`**: Text with alignment (`TextCentered`, `TextCenteredWithin`) and ellipsis clipping
+- **`Image`**: Images with alignment (`ImageCentered`, `ImageCenteredWithin`), returning whether they were clicked
+- **`PageIndicator`**: A row of carousel dots, optionally clickable to jump to a page
+- **`Tooltip`** / **`Breadcrumb`**: A hover tooltip and a path-style breadcrumb trail
+
+### Progress and Loading
+
+- **`RadialProgressBar`**: Circular determinate progress, with `RadialCountdown` and `RadialCountUp` timer variants
+- **`BufferingBar`** / **`Spinner`**: Determinate linear progress, and an indeterminate spinner
+- **`SkeletonLine`** / **`SkeletonRect`** / **`SkeletonCircle`**: Shimmering placeholders for content that has not loaded, animated from `ImGui.GetTime()` so they need no per-widget state
+
+### Data and Signals
+
+- **`Histogram`**: One or more binned distributions as overlaid bars, scaled to the tallest bin; it takes pre-computed bins, so the binning scan stays off the render thread
+- **`HandleTrack`**: Draggable handles over a rectangle you supply — a histogram plot, say — kept ordered and a minimum distance apart
+- **`FlameGraph`**: A flame graph over managed sample data
+- **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
+- **`Scope`**: An oscilloscope-style waveform over a block of audio samples
+
+### Layout and Containers
+
+- **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
+- **`Grid`**: `RowMajorGrid` and `ColumnMajorGrid` layouts with measured, delegate-drawn cells
+- **`TabPanel`**: Tabbed interface with closable, reorderable tabs and dirty indicators
+- **`Card`**: A scoped elevated panel that draws its shadow and rounded background behind whatever the `using` block renders
+- **`Tree`**: Connector lines drawn around whatever is nested inside it
+- **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
+- **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
+- **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
+
+### Motion and Gestures
+
+- **`Tween`** / **`Spring`** / **`Easing`**: Frame-rate independent time-based interpolation, a damped harmonic oscillator that chases a target, and the easing curves to shape them
+- **`InertialScroll`**: A one-dimensional scroll offset that coasts after release, for carousels, pickers and long lists
+- **`GestureDetector`** / **`GestureMachine`**: Claims a region and reports tap, double-tap, long-press, swipe and pan over it
+
 - **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, a file tree view, stateful file/rename/message dialogs, and a docked-window base class. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
 - **Callback-driven editors**: `Sequencer` (an editable clip timeline), `CurveEditor` (a multi-curve graph, or a single `CurveData` curve), and `BezierEditor` (a cubic easing curve) — driven by a `SequenceSource`/`CurveSource` you subclass, or by a `CurveData`/`BezierControlPoints` value. See [Callback-driven Editors](#callback-driven-editors) below.
 
@@ -613,9 +658,9 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 
 **Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same font for their toolbar, breadcrumb and file-tree glyphs. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker`, `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` require no icon font.
 
-**Duplicate widgets**: Several Hexa-backed widgets deliberately coexist with an existing ktsu widget that covers similar ground: `HorizontalSplitter`/`VerticalSplitter` vs `DividerContainer`, `IconTreeNode` vs `Tree`, `ToggleSwitch` vs `Switch`, `BufferingBar`/`Spinner` vs `RadialProgressBar`/`SkeletonLoader`, `EnumCombo` vs `Combo`, `TextCenteredV/H/VH` vs `TextCentered`, and `ImageCenteredV/H/VH` vs `ImageCentered`. Both sides of each pair remain until the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` settles which one to keep — that decision is a separate, breaking change.
+**Overlapping widgets**: Seven Hexa-backed widgets look like duplicates of an existing ktsu widget. Five are not: `HorizontalSplitter`/`VerticalSplitter` is a single drag handle where `DividerContainer` is a retained layout container; `IconTreeNode` is a collapsible node where `Tree` only draws connector lines around whatever is nested inside it; `BufferingBar`/`Spinner` are determinate-linear and indeterminate where `RadialProgressBar`/`SkeletonLine` are determinate-radial and a shimmering placeholder; and the `TextCentered*`/`ImageCentered*` families each cover axes and overloads the other does not. Two do overlap: prefer **`Switch`** over `ToggleSwitch` (it marks itself for probes, animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, and draws its own label), and prefer **`Combo`** over `EnumCombo` unless you need Hexa's display-name overrides. Nothing is obsoleted — that is a breaking change — but new code should reach for the preferred one, and the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` shows the pairs side by side. The through-line: the ktsu originals call `ImGuiProbes.MarkItem`, so a UI test can address them by name; the Hexa adapters have to be marked by the test itself.
 
-**Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it additionally enables `ImGuiConfigFlags.DockingEnable` (idempotently, since Hexa's dockspace is a no-op without it) and creates a dockspace over the main viewport, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
+**Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it creates a dockspace over the main viewport and draws every registered docked window, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). It *requires* `ImGuiConfigFlags.DockingEnable`, which `ImGuiAppConfig.EnableDocking = true` sets, and throws `InvalidOperationException` when the flag is off: ImGui only accepts that flag before the first frame, so the pump cannot turn it on itself, and Hexa's dockspace would silently do nothing without it. Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
 
 ### Callback-driven Editors
 
@@ -648,18 +693,28 @@ public static bool ImGuiWidgets.CurveEditor(CurveData curve, Vector2 size, Vecto
 public static bool ImGuiWidgets.BezierEditor(string label, ref BezierControlPoints points, float size = 128f);
 ```
 
+## Acknowledgments
+
+ImGuiWidgets is built on:
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library these widgets draw into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui
+- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors here, with `Hexa.NET.ImGui.Widgets.Extras` supplying the curve and bezier editors
+- [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - `Color`, path and string types used across the widget surface
+- [ktsu.TextFilter](https://github.com/ktsu-dev/TextFilter) - Glob, regex and fuzzy filtering behind `SearchBox`
+- [ktsu.Extensions](https://github.com/ktsu-dev/Extensions) - Collection extension methods
+- [ktsu.ScopedAction](https://github.com/ktsu-dev/ScopedAction) - The RAII scope type behind `ScopedId`, `ScopedDisable` and `Tree`
+
+and inspired by the following projects:
+
+- [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
+- [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
+
 ## Contributing
 
 Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
 
-## Acknowledgments
-
-ImGuiWidgets is inspired by the following projects:
-
-- [ocornut/ImGui](https://github.com/ocornut/imgui)
-- [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
-- [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
-
 ## License
 
-ImGuiWidgets is licensed under the MIT License. See [LICENSE](LICENSE) for more information.
+ImGui.Widgets is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.

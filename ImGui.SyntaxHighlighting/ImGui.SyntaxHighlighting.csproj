@@ -7,13 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ktsu.ImGui.SyntaxHighlighting.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Semantics.Color" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
+    <ProjectReference Include="..\SyntaxHighlighting\SyntaxHighlighting.csproj" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 </Project>

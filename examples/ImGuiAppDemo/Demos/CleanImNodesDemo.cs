@@ -5,7 +5,7 @@ namespace ktsu.ImGui.Examples.App.Demos;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ForceDirectedLayout;
-using ktsu.ImGuiNodeEditor;
+using ktsu.ImGui.NodeEditor;
 using ktsu.NodeGraph.Library.Operations;
 using ktsu.NodeGraph.Library.Primitives;
 using ktsu.NodeGraph.Library.Utilities;

@@ -7,12 +7,14 @@
 namespace ktsu.examples.ImGuiSyntaxHighlightingDemo.UITests;
 
 using System.Collections.Generic;
+using System.Linq;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.SyntaxHighlighting;
 using ktsu.ImGui.Markdown;
 using ktsu.ImGui.SyntaxHighlighting;
+using ktsu.SyntaxHighlighting;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -128,11 +130,46 @@ public sealed class SyntaxHighlightingDemoUITests
 	}
 
 	[TestMethod]
+	public void TheEmbeddedTabDrawsEverySnippet()
+	{
+		harness.Click("Embedded");
+		harness.Step(3);
+
+		Assert.IsTrue(IsVisible("Embedded"), "The embedded-language tab was not on screen.");
+		foreach (ImGuiSyntaxHighlightingDemo.Snippet snippet in ImGuiSyntaxHighlightingDemo.EmbeddedSnippets)
+		{
+			if (harness.Probe.Rect($"embedded/{snippet.Label}") is not Rectangle block)
+			{
+				Assert.Fail($"'{snippet.Label}' was never rendered.");
+				return;
+			}
+
+			Assert.IsGreaterThan(block.MinY, block.MaxY, $"'{snippet.Label}' occupied no vertical space.");
+		}
+	}
+
+	[TestMethod]
+	public void TheEmbeddedSamplesActuallyCarryAnEmbeddedLanguage()
+	{
+		// The samples are the point of the tab, so a rewrite that dropped the embedded snippet would
+		// still draw a code block and still pass every pixel assertion above.
+		IReadOnlyList<HighlightedLine> lines =
+			ImGuiSyntaxHighlighting.Highlight(ImGuiSyntaxHighlightingDemo.EmbeddedSnippets[0].Sample, "csharp");
+
+		List<HighlightedToken> tokens = [.. lines.SelectMany(line => line.Tokens)];
+		Assert.IsTrue(tokens.Any(token => token.Kind == TokenKind.Tag), "No doc comment tag was classified as XML.");
+		Assert.IsTrue(tokens.Any(token => token.Kind == TokenKind.Property), "No JSON key was classified.");
+	}
+
+	[TestMethod]
 	public void EverySnippetNamesALanguageTheHighlighterKnows()
 	{
 		// Guards the samples themselves: a typo in a language name would still render, silently
 		// unstyled, and every pixel assertion above would keep passing.
-		foreach (ImGuiSyntaxHighlightingDemo.Snippet snippet in ImGuiSyntaxHighlightingDemo.Snippets)
+		List<ImGuiSyntaxHighlightingDemo.Snippet> samples =
+			[.. ImGuiSyntaxHighlightingDemo.Snippets, .. ImGuiSyntaxHighlightingDemo.EmbeddedSnippets];
+
+		foreach (ImGuiSyntaxHighlightingDemo.Snippet snippet in samples)
 		{
 			Assert.IsTrue(
 				LanguageRegistry.TryGet(snippet.Language, out LanguageDefinition _),

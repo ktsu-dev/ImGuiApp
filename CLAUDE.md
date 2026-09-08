@@ -27,14 +27,15 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 ### Libraries
 
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness
-- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId. Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
+- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `RangeSlider`, `XYPad`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `HandleTrack`, `DbMeter`, `Scope`); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ImageCanvas`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
-- **ImGuiNodeEditor** (`ktsu.ImGuiNodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`. ImNodes has no zoom of its own, so `NodeEditorRenderer.Zoom` supplies one and `FitToView` centres a graph and picks the zoom it fits at; the engine's positions and sizes stay at their own scale throughout, since that is the space the layout's lengths are measured in
+- **ImGui.NodeEditor** (`ktsu.ImGui.NodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`. ImNodes has no zoom of its own, so `NodeEditorRenderer.Zoom` supplies one and `FitToView` centres a graph and picks the zoom it fits at; the engine's positions and sizes stay at their own scale throughout, since that is the space the layout's lengths are measured in
 - **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). Fenced and indented code blocks go to `MarkdownConfig.CodeBlockRenderer` (`Action<string?, string>?` — the fence's info string and the block text) when one is supplied, which takes over drawing *and* reserving the block's layout space; `ImGui.SyntaxHighlighting` plugs into it, and neither library references the other. v1 has no built-in code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
-- **ImGui.SyntaxHighlighting** (`ktsu.ImGui.SyntaxHighlighting`) - Syntax-highlighted code rendering, layered on `ImGui.Color` only, with no dependency on `ImGui.App` and no third-party parser. Static `ImGuiSyntaxHighlighting.Render(string code, string language, SyntaxHighlightConfig?)` tokenizes with a cache keyed by source, language and tab width; `HighlightedCode` tokenizes once for hot render paths; `Highlight(code, language, tabWidth)` returns the classified `HighlightedLine`/`HighlightedToken` runs without drawing. Languages are data (`LanguageDefinition`: line/block comment, string, keyword, type, constant, operator and identifier rules) held in `LanguageRegistry`, which resolves names and aliases case-insensitively and falls back to plain text for unknown names rather than throwing. Fifteen built-ins in `BuiltInLanguages`: text, csharp, c, cpp, javascript, typescript, python, json, yaml, xml, html, css, sql, shell, lua. Two tokenizers back them — the general `CodeTokenizer`, and `MarkupTokenizer` for definitions with `IsMarkup` (XML/HTML), which classify structurally rather than by keyword. `SyntaxTheme` holds one `ktsu.Semantics.Color.Color` per `TokenKind`, with `Dark`/`Light` built in; leaving `Theme` null picks between them per frame from the window background's luminance, and unset `Background`/`Plain`/`LineNumber` come from `FrameBg`/`Text`/`TextDisabled`. Highlighting is lexical, code is never wrapped, and there is no scrolling, selection or editing.
+- **SyntaxHighlighting** (`ktsu.SyntaxHighlighting`) - Renderer-agnostic tokenizing: no ImGui, no graphics API, no third-party parser, so it can move to its own repository unchanged. `SyntaxHighlighter.Highlight(code, language, tabWidth)` returns the classified `HighlightedLine`/`HighlightedToken` runs; `SyntaxHighlighter.HighlightCached` goes through a bounded cache keyed by source, language and tab width; `HighlightedCode` tokenizes once for hot render paths. Languages are data (`LanguageDefinition`: line/block comment, string, keyword, type, constant, operator, identifier and embedded-language rules) held in `LanguageRegistry`, which resolves names and aliases case-insensitively and falls back to plain text for unknown names rather than throwing. Fifteen built-ins in `BuiltInLanguages`: text, csharp, c, cpp, javascript, typescript, python, json, yaml, xml, html, css, sql, shell, lua. Two tokenizers back them — the general `CodeTokenizer`, and `MarkupTokenizer` for definitions with `IsMarkup` (XML/HTML), which classify structurally rather than by keyword. `SyntaxTheme` holds one `ktsu.Semantics.Color.Color` per `TokenKind`, with `Dark`/`Light` built in and `Background`/`Plain`/`LineNumber` left unset for the host to fill. Comments and strings are searched for an embedded language; see [Embedded languages](#embedded-languages) below. Highlighting is lexical.
+- **ImGui.SyntaxHighlighting** (`ktsu.ImGui.SyntaxHighlighting`) - The Dear ImGui drawing layer over `ktsu.SyntaxHighlighting`, layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiSyntaxHighlighting.Render(code, language, SyntaxHighlightConfig?)` tokenizes through the shared cache and draws; `Render(HighlightedCode, config)` draws pre-tokenized code, and `HighlightedCodeExtensions` re-adds `code.Render(config)` as an extension since the tokenized type itself knows nothing about ImGui. `Highlight` forwards to `SyntaxHighlighter.Highlight`. Leaving `SyntaxHighlightConfig.Theme` null picks between `SyntaxTheme.Dark`/`Light` per frame from the window background's luminance, and unset `Background`/`Plain`/`LineNumber` come from `FrameBg`/`Text`/`TextDisabled`. Code is never wrapped, and there is no scrolling, selection or editing. `ImGui.Markdown`'s `CodeBlockRenderer` plugs into this, and neither library references the other.
 
 ### Examples
 
@@ -56,9 +57,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
   [Demo UI tests](#demo-ui-tests) below.
 - `tests/ImGui.Widgets.UITests/` - One headless UI test class per widget, each driving that widget
   alone with nothing else on screen. See [Widget UI tests](#widget-ui-tests) below.
-- `tests/ImGui.SyntaxHighlighting.Tests/` - Tokenizer, line-splitter, registry, theme and cache tests.
-  These are pure unit tests: everything but the draw calls in `CodeRenderer` is reachable without an
-  ImGui context, which is why `Highlight` is public.
+- `tests/SyntaxHighlighting.Tests/` - Tokenizer, line-splitter, registry, embedded-language, theme and
+  cache tests. These are pure unit tests against `ktsu.SyntaxHighlighting`, which has no ImGui
+  dependency at all; the ImGui drawing layer is covered by `ImGuiSyntaxHighlightingDemo.UITests`.
 
 ### Key Files
 
@@ -77,9 +78,12 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Widgets/DeferredDrawing.cs` - `DrawDeferred()`/`DrawDeferredDocked()` per-frame pumps, and the `ToggleSwitch` animation-clock fallback used when neither has ever run
 - `ImGui.Widgets/DockedWindow.cs` - Abstract base for windows drawn by `DrawDeferredDocked()`; composes Hexa's `ImWindow` via a private adapter instead of inheriting it
 - `ImGui.Widgets/Dialogs/` - Hexa-backed dialog wrappers: `FileDialogs.cs` (`OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`), `RenameDialog.cs`, `MessageDialogs.cs` (`DialogMessageBox`/`ShowMessageBox`), `DialogOutcome.cs` (shared `DialogOutcome` enum and result mapping)
-- `ImGui.SyntaxHighlighting/Tokenizing/CodeTokenizer.cs` - Single-pass lexer driven by a `LanguageDefinition`; emits tokens over the whole source, so block comments and multi-line strings stay whole
-- `ImGui.SyntaxHighlighting/Tokenizing/LineSplitter.cs` - Cuts those tokens into lines, normalizes CRLF, and expands tabs against the column they start at
-- `ImGui.SyntaxHighlighting/Languages/BuiltInLanguages.cs` - The fifteen built-in language definitions
+- `SyntaxHighlighting/SyntaxHighlighter.cs` - The renderer-agnostic entry point (`Highlight`, `HighlightCached`)
+- `SyntaxHighlighting/Tokenizing/CodeTokenizer.cs` - Single-pass lexer driven by a `LanguageDefinition`; emits tokens over the whole source, so block comments and multi-line strings stay whole
+- `SyntaxHighlighting/Tokenizing/LineSplitter.cs` - Cuts those tokens into lines, normalizes CRLF, and expands tabs against the column they start at
+- `SyntaxHighlighting/Tokenizing/EmbeddedExpander.cs` - Replaces a comment or string token with the token run of the language written inside it, and reads `lang=` hint comments
+- `SyntaxHighlighting/Languages/BuiltInLanguages.cs` - The fifteen built-in language definitions
+- `SyntaxHighlighting/Languages/EmbeddedContent.cs` - The recognizers behind the embedded-language rules (`LooksLikeJson` parses, it does not pattern match)
 - `ImGui.SyntaxHighlighting/Rendering/CodeRenderer.cs` - Draws the background, gutter and colored token runs, then reserves the footprint as one item
 - `ImGui.Color/ColorImGuiExtensions.cs` - `Color` ↔ ImColor/ImU32/Vector4 conversions (`ImColor.ToImGuiU32` applies global alpha; `Color.ToImGuiU32` is pure)
 - `ImGui.Color/SrgbImGuiExtensions.cs` - Direct `Srgb` → ImColor/ImGuiVector4/ImU32 conversions (no linear round-trip)
@@ -89,7 +93,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Styler/ScopedColor.cs` - RAII-pattern color styling (`ImColor`/`Color`/`Srgb` overloads; `ScopedTextColor` too)
 - `NodeGraph/NodeAttribute.cs` - Core node attributes
 - `NodeGraph/PinAttribute.cs` - Pin declaration attributes
-- `ImGuiNodeEditor/NodeEditorEngine.cs` - Node graph business logic
+- `ImGui.NodeEditor/NodeEditorEngine.cs` - Node graph business logic
 
 ### Dependencies
 
@@ -267,6 +271,41 @@ flag internally: every one of those mutators, the `Shape` setter, and an edit ma
 `CurveEditor(CurveData, ...)` overload all mark it dirty, so `Sample(float t)` recomputes the
 underlying sample cache on its next call rather than returning a stale value.
 
+### Embedded languages
+
+`ktsu.SyntaxHighlighting` looks inside comments and strings for another language, because XML doc
+comments, JSON fixtures and SQL queries are all written inside a host language's literals. Each
+`LanguageDefinition` carries `EmbeddedLanguages`, a list of `EmbeddedLanguageRule` tried in order,
+first match wins; an empty list turns the feature off for that language. The built-ins use
+`BuiltInEmbeddedRules.Default` (JSON, markup, SQL) for programming languages and `.Data` (JSON,
+markup) for JSON, YAML and SQL, plus `XmlDocComments` for C# only.
+
+Four properties are what make this safe to leave on by default, and are worth preserving when
+adding a rule:
+
+- **Recognition is strict.** `EmbeddedContent.LooksLikeJson` *parses* — a fragment, a trailing word,
+  or a brace-heavy sentence is rejected. Markup must open with a tag and end with `>`. SQL must open
+  with a statement keyword *and* use a second one, and its rule is `EmbeddedHosts.StringLiteral`
+  only, so "Update the cache and carry on" in a comment is never a query.
+- **Unclassified embedded text keeps its host's kind.** A `TokenKind.Plain` token from the inner
+  tokenizer is re-emitted as `Comment`, `DocComment` or `StringLiteral`, which is why prose between
+  doc comment tags still reads as a comment and why a false positive costs a few punctuation glyphs
+  rather than a paragraph.
+- **The rendered text is never rewritten.** Escapes are resolved so the inner tokenizer sees
+  `{"a": 1}` where the source holds `{\"a\": 1}`, but each token is re-sliced from the original
+  through an index map, and `EmbeddedExpander` verifies the run reconstructs the host token before
+  keeping it — falling back to the unexpanded token if it ever did not.
+- **Embedding is one level deep.** Expansion tokenizes with `expandEmbedded: false`, so definitions
+  cannot cycle however they refer to each other.
+
+A `// lang=json` or `/* language=sql */` comment names the language of the **next string literal**
+outright, for snippets no recognizer can catch. Hints are only read when the host language has at
+least one embedded rule, and each is spent on one literal.
+
+Two consequences to know: a `///` doc comment is a separate token per line, so an XML construct
+split across lines is classified per line; and the markup tokenizer ignores `EmbeddedLanguages`
+entirely, so `<script>` and `<style>` bodies in HTML are still markup text.
+
 ### Scoped Styling (RAII Pattern)
 
 ```csharp
@@ -303,7 +342,7 @@ using (Button.Alignment.Center())
 The node graph system follows a clean separation of concerns:
 
 - **NodeGraph** (UI-agnostic): Attribute-based metadata for declaring nodes, pins, execution modes, and type compatibility. No dependency on any rendering library.
-- **ImGuiNodeEditor**: Renders and interacts with the graph using ImNodes. Split into:
+- **ImGui.NodeEditor**: Renders and interacts with the graph using ImNodes. Split into:
   - `NodeEditorEngine` - Business logic (nodes, links, physics)
   - `AttributeBasedNodeFactory` - Creates nodes from attribute-decorated types
   - `NodeEditorRenderer` - Pure ImNodes rendering, and the view: `Zoom` and `FitToView`
@@ -455,10 +494,21 @@ Things that bite here, beyond the demo-suite list above:
 
 ### New Language (Syntax Highlighting)
 
-1. Add a `LanguageDefinition` to `ImGui.SyntaxHighlighting/Languages/BuiltInLanguages.cs` and list it in `All`
+1. Add a `LanguageDefinition` to `SyntaxHighlighting/Languages/BuiltInLanguages.cs` and list it in `All`
 2. Reuse the shared comment/string rule fields rather than re-declaring equivalent rules
-3. Add tokenizer tests to `tests/ImGui.SyntaxHighlighting.Tests/CodeTokenizerTests.cs`
-4. Add a snippet to `examples/ImGuiSyntaxHighlightingDemo/` if the language shows off something new
+3. Set `EmbeddedLanguages` to `BuiltInEmbeddedRules.Default` for a programming language, or `.Data` for a
+   data format (no SQL rule); leave it empty only when the language has no comments or strings worth looking in
+4. Add tokenizer tests to `tests/SyntaxHighlighting.Tests/CodeTokenizerTests.cs`
+5. Add a snippet to `examples/ImGuiSyntaxHighlightingDemo/` if the language shows off something new
+
+### New Embedded-Language Rule
+
+1. Add the recognizer to `SyntaxHighlighting/Languages/EmbeddedContent.cs` — strict enough that prose is
+   rejected, since a false positive recolors text that is not code
+2. Add the `EmbeddedLanguageRule` to `BuiltInEmbeddedRules` and list it in `Default`/`Data` as appropriate
+3. Choose `Hosts` deliberately: a rule whose recognizer could fire on English belongs in
+   `EmbeddedHosts.StringLiteral` only, the way the SQL rule does
+4. Add tests to `tests/SyntaxHighlighting.Tests/EmbeddedLanguageTests.cs`, including a negative one
 
 ### New Theme
 

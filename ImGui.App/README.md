@@ -2,10 +2,8 @@
 
 > A .NET library that provides application scaffolding for Dear ImGui, using Silk.NET and Hexa.NET.ImGui.
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App.svg)](https://www.nuget.org/packages/ktsu.ImGui.App/)
-[![License](https://img.shields.io/github/license/ktsu-dev/ImGuiApp.svg)](LICENSE.md)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.ImGui.App.svg)](https://www.nuget.org/packages/ktsu.ImGui.App/)
-[![GitHub Stars](https://img.shields.io/github/stars/ktsu-dev/ImGuiApp?style=social)](https://github.com/ktsu-dev/ImGuiApp/stargazers)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
 ## Introduction
 
@@ -567,9 +565,30 @@ The **Performance Monitor** includes:
 
 Perfect for seeing both the throttling system and PID controller work in real-time!
 
+## Versioning
+
+Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version changes.
+
+## Support
+
+If you encounter any issues or have questions, please [open an issue](https://github.com/ktsu-dev/ImGuiApp/issues).
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui, and for the ImGuizmo, ImNodes and ImPlot extensions this auto-detects (`Hexa.NET.ImGuizmo`, `Hexa.NET.ImNodes`, `Hexa.NET.ImPlot`, from the same project)
+- [HexaGen](https://github.com/JunaMeinhold/HexaGen) - The generator and the `HexaGen.Runtime` those bindings are built on
+- [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
+- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Image loading behind the texture cache
+- [ktsu.Invoker](https://github.com/ktsu-dev/Invoker) - Marshals work onto the render thread
+- [ktsu.ScopedAction](https://github.com/ktsu-dev/ScopedAction) - The RAII scope type behind the scoped helpers
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - Type-safe path and string types used across the configuration surface
+- All contributors and the .NET community for their support
+
 ## Contributing
 
-Contributions are welcome! Here's how you can help:
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
+
+If you are new to the repository, the usual flow is:
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -581,19 +600,5 @@ Please make sure to update tests as appropriate and adhere to the existing codin
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+ImGui.App is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
 
-## Versioning
-
-Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version changes.
-
-## Acknowledgments
-
-- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
-- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui
-- [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
-- All contributors and the .NET community for their support
-
-## Support
-
-If you encounter any issues or have questions, please [open an issue](https://github.com/ktsu-dev/ImGuiApp/issues).
