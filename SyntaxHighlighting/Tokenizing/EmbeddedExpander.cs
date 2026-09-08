@@ -4,6 +4,7 @@ namespace ktsu.SyntaxHighlighting;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -129,9 +130,11 @@ internal static class EmbeddedExpander
 			return LanguageRegistry.TryGet(forcedLanguage, out embedded);
 		}
 
-		foreach (EmbeddedLanguageRule rule in language.EmbeddedLanguages)
+		foreach (EmbeddedLanguageRule rule in language.EmbeddedLanguages.Where(candidate => candidate.AppliesTo(host, body)))
 		{
-			if (rule.AppliesTo(host, body) && LanguageRegistry.TryGet(rule.Language, out embedded))
+			// A matching rule whose language is not registered does not stop the search: the next
+			// rule still gets its turn, the way it would if the first had not matched.
+			if (LanguageRegistry.TryGet(rule.Language, out embedded))
 			{
 				return true;
 			}
@@ -214,11 +217,16 @@ internal static class EmbeddedExpander
 
 		public static UnescapedBody Of(string body, StringRule? rule)
 		{
-			bool escapes = rule is not null && (rule.Escape.HasValue || rule.DoubledCloseEscapes);
-			if (!escapes || !NeedsUnescaping(body, rule!))
+			// NeedsUnescaping already answers false for a rule with neither escape mechanism, so
+			// past here the rule is non-null and one of the two branches below can fire.
+			if (rule is null || !NeedsUnescaping(body, rule))
 			{
 				return new UnescapedBody(body, null);
 			}
+
+			char? escape = rule.Escape;
+			bool doubledCloseEscapes = rule.DoubledCloseEscapes;
+			string close = rule.Close;
 
 			StringBuilder content = new(body.Length);
 			List<int> map = new(body.Length + 1);
@@ -227,7 +235,7 @@ internal static class EmbeddedExpander
 			{
 				char current = body[index];
 
-				if (rule!.Escape.HasValue && current == rule.Escape.Value && index + 1 < body.Length)
+				if (escape is char escapeCharacter && current == escapeCharacter && index + 1 < body.Length)
 				{
 					char next = body[index + 1];
 					map.Add(index);
@@ -242,15 +250,15 @@ internal static class EmbeddedExpander
 					continue;
 				}
 
-				if (rule.DoubledCloseEscapes && Doubled(body, index, rule.Close))
+				if (doubledCloseEscapes && Doubled(body, index, close))
 				{
-					for (int offset = 0; offset < rule.Close.Length; offset++)
+					for (int offset = 0; offset < close.Length; offset++)
 					{
 						map.Add(index + offset);
-						content.Append(rule.Close[offset]);
+						content.Append(close[offset]);
 					}
 
-					index += rule.Close.Length * 2;
+					index += close.Length * 2;
 					continue;
 				}
 
