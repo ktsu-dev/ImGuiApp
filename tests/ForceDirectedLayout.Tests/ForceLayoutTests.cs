@@ -358,6 +358,28 @@ public class GenericFacadeTests
 	}
 
 	[TestMethod]
+	public void LinkFlattening_DanglingEdge_IsSkipped()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(FlatteningOnly());
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(0, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(0, 400), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+		];
+
+		// Node 999 does not exist, so the edge resolves to index -1 at both ends.
+		List<TestEdge> edges = [new TestEdge(1, 999), new TestEdge(999, 2)];
+
+		for (int i = 0; i < 20; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		Assert.AreEqual(new Vec2D(0, 0), bodies[0].Position, "A dangling edge must not push its resolvable end.");
+		Assert.AreEqual(new Vec2D(0, 400), bodies[1].Position, "A dangling edge must not push its resolvable end.");
+	}
+
+	[TestMethod]
 	public void LinkFlattening_AlreadyFlatPair_IsLeftAlone()
 	{
 		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(FlatteningOnly() with { LinkSpringStrength = 0 });
