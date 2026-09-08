@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 using System.Collections.Generic;
 
@@ -68,6 +68,7 @@ public static class BuiltInLanguages
 		],
 		Constants = ["true", "false", "null", "default"],
 		DirectivePrefix = '#',
+		EmbeddedLanguages = [.. BuiltInEmbeddedRules.Default, BuiltInEmbeddedRules.XmlDocComments],
 	};
 
 	/// <summary>C.</summary>
@@ -87,6 +88,7 @@ public static class BuiltInLanguages
 		Types = ["bool", "char", "double", "float", "int", "long", "short", "size_t", "void"],
 		Constants = ["NULL", "true", "false"],
 		DirectivePrefix = '#',
+		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
 	/// <summary>C++.</summary>
@@ -113,6 +115,7 @@ public static class BuiltInLanguages
 		Types = ["bool", "char", "double", "float", "int", "long", "short", "signed", "size_t", "void", "wchar_t"],
 		Constants = ["true", "false", "nullptr", "NULL"],
 		DirectivePrefix = '#',
+		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
 	/// <summary>JavaScript.</summary>
@@ -133,6 +136,7 @@ public static class BuiltInLanguages
 		Constants = ["true", "false", "null", "undefined", "NaN", "Infinity"],
 		IdentifierStartCharacters = "_$",
 		IdentifierCharacters = "_$",
+		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
 	/// <summary>TypeScript.</summary>
@@ -173,6 +177,7 @@ public static class BuiltInLanguages
 		ControlKeywords = ["break", "case", "continue", "elif", "else", "except", "finally", "for", "if", "raise", "return", "try", "while", "yield"],
 		Types = ["bool", "bytes", "dict", "float", "frozenset", "int", "list", "set", "str", "tuple"],
 		Constants = ["True", "False", "None", "self", "cls"],
+		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
 	/// <summary>JSON.</summary>
@@ -188,6 +193,7 @@ public static class BuiltInLanguages
 		HighlightPropertyNames = true,
 		OperatorCharacters = string.Empty,
 		PunctuationCharacters = "{}[],:",
+		EmbeddedLanguages = BuiltInEmbeddedRules.Data,
 	};
 
 	/// <summary>YAML. Block scalars and anchors are highlighted only as far as line structure allows.</summary>
@@ -205,6 +211,7 @@ public static class BuiltInLanguages
 		IdentifierStartCharacters = "_-.",
 		OperatorCharacters = "-",
 		PunctuationCharacters = "{}[],:",
+		EmbeddedLanguages = BuiltInEmbeddedRules.Data,
 	};
 
 	/// <summary>XML.</summary>
@@ -261,6 +268,7 @@ public static class BuiltInLanguages
 		ControlKeywords = ["begin", "case", "commit", "else", "end", "if", "return", "rollback", "then", "when", "while"],
 		Types = ["bigint", "bit", "blob", "boolean", "char", "date", "datetime", "decimal", "float", "int", "integer", "numeric", "real", "text", "time", "timestamp", "uuid", "varchar"],
 		Constants = ["null", "true", "false"],
+		EmbeddedLanguages = BuiltInEmbeddedRules.Data,
 	};
 
 	/// <summary>Shell scripts (bash, sh, zsh).</summary>
@@ -277,6 +285,7 @@ public static class BuiltInLanguages
 		IdentifierStartCharacters = "_$",
 		OperatorCharacters = "|&<>=!*",
 		PunctuationCharacters = "(){};",
+		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
 	/// <summary>Lua.</summary>
@@ -289,6 +298,7 @@ public static class BuiltInLanguages
 		Keywords = ["and", "function", "local", "not", "or", "self"],
 		ControlKeywords = ["break", "do", "else", "elseif", "end", "for", "goto", "if", "in", "repeat", "return", "then", "until", "while"],
 		Constants = ["true", "false", "nil"],
+		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
 	/// <summary>Every built-in definition, in registration order.</summary>

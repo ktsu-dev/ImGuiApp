@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 using System.Collections.Generic;
 
@@ -115,7 +115,21 @@ public sealed record LanguageDefinition
 
 	/// <summary>
 	/// Whether the language is angle-bracket markup (XML, HTML) and should use the markup tokenizer
-	/// rather than the general one. Markup definitions ignore the keyword, operator, and identifier members.
+	/// rather than the general one. Markup definitions ignore the keyword, operator, identifier, and
+	/// embedded-language members.
 	/// </summary>
 	public bool IsMarkup { get; init; }
+
+	/// <summary>
+	/// Languages to look for inside this one's comments and strings — XML in a doc comment, JSON in a
+	/// fixture, SQL in a query string. Rules are tried in order and the first match wins; an empty
+	/// list (the default) turns the feature off for this language.
+	/// </summary>
+	/// <remarks>
+	/// A non-empty list also enables hint comments: <c>// lang=json</c> or <c>// language=sql</c> names
+	/// the language of the next string literal outright, for a snippet the rules cannot recognize.
+	/// Text the embedded language does not classify keeps its host's color, so prose in a doc comment
+	/// still reads as a comment.
+	/// </remarks>
+	public IReadOnlyCollection<EmbeddedLanguageRule> EmbeddedLanguages { get; init; } = [];
 }

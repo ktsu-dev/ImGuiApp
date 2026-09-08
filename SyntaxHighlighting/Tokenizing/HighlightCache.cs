@@ -1,9 +1,10 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Caches highlighted lines keyed by language, tab width and source text, so the immediate-mode
@@ -30,7 +31,7 @@ internal static class HighlightCache
 	/// <returns>The highlighted lines.</returns>
 	public static IReadOnlyList<HighlightedLine> GetOrTokenize(string source, LanguageDefinition language, int tabWidth)
 	{
-		CacheKey key = new(source ?? string.Empty, language.Name, tabWidth);
+		CacheKey key = new(source ?? string.Empty, language, tabWidth);
 		lock (Gate)
 		{
 			if (Cache.TryGetValue(key, out IReadOnlyList<HighlightedLine>? cached))
@@ -72,14 +73,17 @@ internal static class HighlightCache
 		return LineSplitter.Split(tokens, tabWidth);
 	}
 
-	private readonly record struct CacheKey(string Source, string Language, int TabWidth)
+	// The definition is compared by reference, not by name or by value: re-registering a language
+	// hands out a new instance, which must miss rather than serve lines tokenized by the old rules,
+	// and a record's structural equality would walk every keyword collection on every lookup.
+	private readonly record struct CacheKey(string Source, LanguageDefinition Language, int TabWidth)
 	{
 		public bool Equals(CacheKey other) =>
 			TabWidth == other.TabWidth
-			&& string.Equals(Language, other.Language, StringComparison.OrdinalIgnoreCase)
+			&& ReferenceEquals(Language, other.Language)
 			&& string.Equals(Source, other.Source, StringComparison.Ordinal);
 
 		public override int GetHashCode() =>
-			HashCode.Combine(Source, StringComparer.OrdinalIgnoreCase.GetHashCode(Language), TabWidth);
+			HashCode.Combine(Source, RuntimeHelpers.GetHashCode(Language), TabWidth);
 	}
 }

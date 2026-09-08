@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting.Tests;
+namespace ktsu.SyntaxHighlighting.Tests;
 
 using System.Collections.Generic;
 
@@ -12,7 +12,7 @@ public sealed class LineSplitterTests
 	[TestMethod]
 	public void TabsExpandToTheNextTabStop()
 	{
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("ab\tc", "text", tabWidth: 4);
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("ab\tc", "text", tabWidth: 4);
 
 		Assert.AreEqual("ab  c", lines[0].ToText());
 	}
@@ -20,7 +20,7 @@ public sealed class LineSplitterTests
 	[TestMethod]
 	public void TabWidthIsHonored()
 	{
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("\tx", "text", tabWidth: 2);
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("\tx", "text", tabWidth: 2);
 
 		Assert.AreEqual("  x", lines[0].ToText());
 	}
@@ -30,7 +30,7 @@ public sealed class LineSplitterTests
 	{
 		// "int" is a token of its own in C#, so the tab that follows it must still expand against the
 		// column reached so far rather than restarting at zero.
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("int\tx;", "csharp", tabWidth: 4);
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("int\tx;", "csharp", tabWidth: 4);
 
 		Assert.AreEqual("int x;", lines[0].ToText());
 	}
@@ -38,7 +38,7 @@ public sealed class LineSplitterTests
 	[TestMethod]
 	public void WindowsLineEndingsAreNormalized()
 	{
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("a\r\nb", "text");
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("a\r\nb", "text");
 
 		Assert.AreEqual(2, lines.Count);
 		Assert.AreEqual("a", lines[0].ToText());
@@ -48,7 +48,7 @@ public sealed class LineSplitterTests
 	[TestMethod]
 	public void ATrailingNewlineDoesNotAddAPhantomLine()
 	{
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("a\nb\n", "text");
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("a\nb\n", "text");
 
 		Assert.AreEqual(2, lines.Count);
 	}
@@ -56,7 +56,7 @@ public sealed class LineSplitterTests
 	[TestMethod]
 	public void BlankLinesInsideTheSourceAreKept()
 	{
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("a\n\nb\n", "text");
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("a\n\nb\n", "text");
 
 		Assert.AreEqual(3, lines.Count);
 		Assert.IsEmpty(lines[1].Tokens);
@@ -65,13 +65,13 @@ public sealed class LineSplitterTests
 	[TestMethod]
 	public void EmptySourceProducesNoLines()
 	{
-		Assert.IsEmpty(ImGuiSyntaxHighlighting.Highlight(string.Empty, "csharp"));
+		Assert.IsEmpty(SyntaxHighlighter.Highlight(string.Empty, "csharp"));
 	}
 
 	[TestMethod]
 	public void MultiLineCommentsAreCutAtLineBoundaries()
 	{
-		IReadOnlyList<HighlightedLine> lines = ImGuiSyntaxHighlighting.Highlight("/* a\nb */", "csharp");
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("/* a\nb */", "csharp");
 
 		Assert.AreEqual(2, lines.Count);
 		foreach (HighlightedLine line in lines)

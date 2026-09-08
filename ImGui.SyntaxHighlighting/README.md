@@ -5,10 +5,13 @@
 
 ImGui.SyntaxHighlighting draws syntax-highlighted source code directly inside Dear ImGui. Like its sibling `ktsu.ImGui.Markdown`, it is a standalone package layered on `ktsu.ImGui.Color` only, with no dependency on `ktsu.ImGui.App`, so it can be dropped into any Hexa.NET.ImGui application.
 
+Tokenizing lives one layer down, in the renderer-agnostic [`ktsu.SyntaxHighlighting`](../SyntaxHighlighting/README.md): languages, themes, the token kinds and the embedded-language rules are all defined there and know nothing about ImGui. This package is the drawing half — a background panel, a line-number gutter, and colored token runs painted into the window draw list.
+
 ## Features
 
 - **Fifteen built-in languages**: C#, C, C++, JavaScript, TypeScript, Python, JSON, YAML, XML, HTML, CSS, SQL, shell, Lua, and plain text, each reachable by name or alias (`cs`, `c#`, `js`, `py`, `bash`, `yml`, …)
 - **Data-driven definitions**: a language is a `LanguageDefinition` record — comment, string, keyword and operator rules — so an application can register its own, or derive a variant of a built-in with a `with` expression
+- **Embedded languages**: XML in a doc comment, JSON in a fixture string and SQL in a query string are found inside the host language and highlighted in place, or named outright with a `// lang=json` hint comment
 - **Theme-aware colors**: by default the palette is picked per frame from the luminance of the ImGui window background, and unset palette entries (background, plain text, gutter) come from the active ImGui theme, so code keeps matching the surrounding UI
 - **Line numbers**: an optional right-aligned gutter that does not shift the code column as the digit count grows
 - **Cached tokenization**: the static `Render` caches by source text, and `HighlightedCode` tokenizes once for hot render paths
@@ -33,6 +36,7 @@ using Hexa.NET.ImGui;
 
 ImGui.Begin("Code");
 ImGuiSyntaxHighlighting.Render("""
+    /// <summary>Greets the world.</summary>
     public static void Main()
     {
         Console.WriteLine("Hello, ImGui");
@@ -41,9 +45,11 @@ ImGuiSyntaxHighlighting.Render("""
 ImGui.End();
 ```
 
+The doc comment's tags in that snippet are highlighted as XML while its prose stays comment-colored — see [embedded languages](../SyntaxHighlighting/README.md#embedded-languages) for what is recognized and how to change it.
+
 ### `HighlightedCode` for hot paths
 
-When the same source is rendered every frame, tokenize it once and render that instance instead of relying on the source-keyed cache.
+When the same source is rendered every frame, tokenize it once and render that instance instead of relying on the source-keyed cache. `HighlightedCode` comes from `ktsu.SyntaxHighlighting`; `Render` is an extension this package adds to it.
 
 ```csharp
 private static readonly HighlightedCode Snippet = new("SELECT * FROM users;", "sql");
@@ -53,6 +59,8 @@ Snippet.Render();
 ```
 
 ### Tokens without rendering
+
+`Highlight` forwards to `SyntaxHighlighter.Highlight`, so a caller with no ImGui context can reference `ktsu.SyntaxHighlighting` alone and skip this package entirely.
 
 ```csharp
 foreach (HighlightedLine line in ImGuiSyntaxHighlighting.Highlight(source, "python"))
@@ -104,7 +112,7 @@ Leaving `Background`, `Plain` or `LineNumber` unset makes the renderer take them
 
 ### Registering a language
 
-A language is plain data, so nothing needs to be subclassed:
+Definitions live in `ktsu.SyntaxHighlighting`, and a language is plain data, so nothing needs to be subclassed:
 
 ```csharp
 LanguageRegistry.Register(new LanguageDefinition
@@ -136,7 +144,7 @@ MarkdownConfig markdown = new()
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
-- Embedded languages are not switched into — script and style bodies inside HTML are treated as markup text
+- Embedded languages are found in comments and strings only, one level deep — script and style bodies inside HTML are still treated as markup text
 - Lines are not wrapped, and there is no built-in scrolling, selection, or editing; this renders code, it is not a text editor
 
 ## Demo
@@ -149,6 +157,7 @@ dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 
 ## Acknowledgments
 
+- [ktsu.SyntaxHighlighting](../SyntaxHighlighting/README.md) - The renderer-agnostic tokenizer, languages and themes this draws
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library this draws into
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
 - [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - The `Color` type each theme entry is held as, converted at the ImGui seam by `ktsu.ImGui.Color`

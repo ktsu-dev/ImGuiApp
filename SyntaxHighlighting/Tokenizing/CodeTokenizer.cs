@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 using System;
 using System.Collections.Generic;
@@ -21,14 +21,21 @@ internal static class CodeTokenizer
 	/// <summary>Tokenizes source text against a language definition.</summary>
 	/// <param name="source">The source text.</param>
 	/// <param name="language">The language definition.</param>
+	/// <param name="expandEmbedded">
+	/// Whether comments and strings are searched for an embedded language. Expansion tokenizes the
+	/// snippet with the embedded language and this flag off, which is what keeps embedding one level
+	/// deep however the definitions refer to each other.
+	/// </param>
 	/// <returns>The tokens, in source order; concatenating their text reproduces the source.</returns>
-	public static IReadOnlyList<HighlightedToken> Tokenize(string source, LanguageDefinition language)
+	public static IReadOnlyList<HighlightedToken> Tokenize(string source, LanguageDefinition language, bool expandEmbedded = true)
 	{
 		Ensure.NotNull(source);
 		Ensure.NotNull(language);
 
 		KeywordLookup lookup = Lookups.GetValue(language, KeywordLookup.Create);
+		bool embeds = expandEmbedded && language.EmbeddedLanguages.Count > 0;
 		List<HighlightedToken> tokens = [];
+		string? pendingHint = null;
 		int index = 0;
 		int plainStart = 0;
 
@@ -44,17 +51,27 @@ internal static class CodeTokenizer
 		{
 			int start = index;
 
-			if (TryReadBlockComment(source, lookup, ref index, out TokenKind kind)
-				|| TryReadLineComment(source, lookup, ref index, out kind)
-				|| TryReadString(source, lookup, ref index, out kind)
-				|| TryReadDirective(source, language, ref index, out kind)
-				|| TryReadNumber(source, ref index, out kind)
-				|| TryReadIdentifier(source, language, lookup, ref index, out kind)
-				|| TryReadSymbol(source, language, ref index, out kind))
+			if (TryReadBlockComment(source, lookup, ref index, out TokenKind kind, out TokenBody body)
+				|| TryReadLineComment(source, lookup, ref index, out kind, out body)
+				|| TryReadString(source, lookup, ref index, out kind, out body)
+				|| TryReadDirective(source, language, ref index, out kind, out body)
+				|| TryReadNumber(source, ref index, out kind, out body)
+				|| TryReadIdentifier(source, language, lookup, ref index, out kind, out body)
+				|| TryReadSymbol(source, language, ref index, out kind, out body))
 			{
 				FlushPlain(start);
 				string text = source[start..index];
-				tokens.Add(new HighlightedToken(Reclassify(kind, text, source, index, language), text));
+				TokenKind classified = Reclassify(kind, text, source, index, language);
+
+				if (embeds)
+				{
+					pendingHint = Embed(tokens, text, classified, body, language, pendingHint);
+				}
+				else
+				{
+					tokens.Add(new HighlightedToken(classified, text));
+				}
+
 				plainStart = index;
 				continue;
 			}
@@ -64,6 +81,32 @@ internal static class CodeTokenizer
 
 		FlushPlain(source.Length);
 		return tokens;
+	}
+
+	/// <summary>
+	/// Appends one token, expanded into an embedded language when one is found inside it, and
+	/// carries the language hint comments leave behind.
+	/// </summary>
+	/// <returns>The hint still waiting for a string literal to attach to.</returns>
+	private static string? Embed(
+		List<HighlightedToken> tokens,
+		string text,
+		TokenKind kind,
+		in TokenBody body,
+		LanguageDefinition language,
+		string? pendingHint)
+	{
+		// A hint names the language of the *next* string literal, so a comment carrying one sets the
+		// hint and the first literal after it spends it. Nothing in between clears it: the hint is
+		// written immediately above the literal it describes.
+		bool isComment = kind is TokenKind.Comment or TokenKind.DocComment;
+		bool isString = kind == TokenKind.StringLiteral;
+		string? hint = isComment
+			? EmbeddedExpander.ReadLanguageHint(text[body.OpenLength..(text.Length - body.CloseLength)]) ?? pendingHint
+			: pendingHint;
+
+		EmbeddedExpander.Append(tokens, text, kind, body, language, isString ? pendingHint : null);
+		return isString ? null : hint;
 	}
 
 	// A string or identifier that is immediately followed by ':' is a key in the object-shaped
@@ -99,9 +142,10 @@ internal static class CodeTokenizer
 		return scan < source.Length ? source[scan] : '\0';
 	}
 
-	private static bool TryReadBlockComment(string source, KeywordLookup lookup, ref int index, out TokenKind kind)
+	private static bool TryReadBlockComment(string source, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.Comment;
+		body = TokenBody.None;
 		foreach (BlockCommentRule rule in lookup.BlockComments)
 		{
 			if (!Matches(source, index, rule.Open))
@@ -131,15 +175,21 @@ internal static class CodeTokenizer
 
 			index = scan;
 			kind = rule.Kind;
+
+			// An unterminated block comment ran to the end of the source, so it has no closing
+			// delimiter to hold back from the body.
+			bool closed = depth == 0;
+			body = new TokenBody(rule.Open.Length, closed ? rule.Close.Length : 0, null);
 			return true;
 		}
 
 		return false;
 	}
 
-	private static bool TryReadLineComment(string source, KeywordLookup lookup, ref int index, out TokenKind kind)
+	private static bool TryReadLineComment(string source, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.Comment;
+		body = TokenBody.None;
 		foreach (LineCommentRule rule in lookup.LineComments)
 		{
 			if (!Matches(source, index, rule.Prefix))
@@ -155,15 +205,17 @@ internal static class CodeTokenizer
 
 			index = scan;
 			kind = rule.Kind;
+			body = new TokenBody(rule.Prefix.Length, 0, null);
 			return true;
 		}
 
 		return false;
 	}
 
-	private static bool TryReadString(string source, KeywordLookup lookup, ref int index, out TokenKind kind)
+	private static bool TryReadString(string source, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.StringLiteral;
+		body = TokenBody.None;
 		foreach (StringRule rule in lookup.Strings)
 		{
 			if (!Matches(source, index, rule.Open))
@@ -171,16 +223,19 @@ internal static class CodeTokenizer
 				continue;
 			}
 
-			index = ScanStringBody(source, index + rule.Open.Length, rule);
+			int start = index + rule.Open.Length;
+			index = ScanStringBody(source, start, rule, out bool closed);
 			kind = rule.Kind;
+			body = new TokenBody(rule.Open.Length, closed ? rule.Close.Length : 0, rule);
 			return true;
 		}
 
 		return false;
 	}
 
-	private static int ScanStringBody(string source, int start, StringRule rule)
+	private static int ScanStringBody(string source, int start, StringRule rule, out bool closed)
 	{
+		closed = false;
 		int scan = start;
 		while (scan < source.Length)
 		{
@@ -208,6 +263,7 @@ internal static class CodeTokenizer
 					continue;
 				}
 
+				closed = true;
 				return afterClose;
 			}
 
@@ -217,9 +273,10 @@ internal static class CodeTokenizer
 		return source.Length;
 	}
 
-	private static bool TryReadDirective(string source, LanguageDefinition language, ref int index, out TokenKind kind)
+	private static bool TryReadDirective(string source, LanguageDefinition language, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.Preprocessor;
+		body = TokenBody.None;
 		if (!language.DirectivePrefix.HasValue || source[index] != language.DirectivePrefix.Value || !AtLineStart(source, index))
 		{
 			return false;
@@ -246,9 +303,10 @@ internal static class CodeTokenizer
 		return scan < 0 || source[scan] == '\n';
 	}
 
-	private static bool TryReadNumber(string source, ref int index, out TokenKind kind)
+	private static bool TryReadNumber(string source, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.Number;
+		body = TokenBody.None;
 		char current = source[index];
 		bool leadingDot = current == '.' && index + 1 < source.Length && char.IsAsciiDigit(source[index + 1]);
 		if (!char.IsAsciiDigit(current) && !leadingDot)
@@ -280,9 +338,10 @@ internal static class CodeTokenizer
 		return true;
 	}
 
-	private static bool TryReadIdentifier(string source, LanguageDefinition language, KeywordLookup lookup, ref int index, out TokenKind kind)
+	private static bool TryReadIdentifier(string source, LanguageDefinition language, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.Plain;
+		body = TokenBody.None;
 		char current = source[index];
 		if (!char.IsLetter(current) && !language.IdentifierStartCharacters.Contains(current, StringComparison.Ordinal))
 		{
@@ -308,8 +367,9 @@ internal static class CodeTokenizer
 		return true;
 	}
 
-	private static bool TryReadSymbol(string source, LanguageDefinition language, ref int index, out TokenKind kind)
+	private static bool TryReadSymbol(string source, LanguageDefinition language, ref int index, out TokenKind kind, out TokenBody body)
 	{
+		body = TokenBody.None;
 		char current = source[index];
 
 		if (language.OperatorCharacters.Contains(current, StringComparison.Ordinal))

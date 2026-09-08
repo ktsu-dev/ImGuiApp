@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting.Tests;
+namespace ktsu.SyntaxHighlighting.Tests;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class CodeTokenizerTests
 {
 	private static IReadOnlyList<HighlightedLine> Highlight(string code, string language) =>
-		ImGuiSyntaxHighlighting.Highlight(code, language);
+		SyntaxHighlighter.Highlight(code, language);
 
 	[TestMethod]
 	public void CSharp_ClassifiesKeywordsTypesAndLiterals()
@@ -48,9 +48,12 @@ public sealed class CodeTokenizerTests
 	[TestMethod]
 	public void CSharp_DocCommentBeatsLineComment()
 	{
+		// The doc comment's tags are XML (see EmbeddedLanguageTests), so the prefix and the prose
+		// between them are what carries the DocComment kind.
 		IReadOnlyList<HighlightedLine> lines = Highlight("/// <summary>Doc.</summary>\n// plain\n", "csharp");
 
-		TokenAssert.HasToken(lines, "/// <summary>Doc.</summary>", TokenKind.DocComment);
+		TokenAssert.HasToken(lines, "/// ", TokenKind.DocComment);
+		TokenAssert.HasToken(lines, "Doc.", TokenKind.DocComment);
 		TokenAssert.HasToken(lines, "// plain", TokenKind.Comment);
 	}
 
