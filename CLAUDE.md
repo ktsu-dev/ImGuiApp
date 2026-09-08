@@ -26,7 +26,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 
 ### Libraries
 
-- **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness
+- **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness. Image decoding is self-contained (`ImGui.App/Images/`), so the package carries no imaging dependency; see [Image decoding](#image-decoding) below.
 - **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, ScopedId. Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
@@ -47,7 +47,10 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 
 ### Tests
 
-- `tests/ImGui.App.Tests/` - App framework tests with mock OpenGL provider
+- `tests/ImGui.App.Tests/` - App framework tests with mock OpenGL provider, plus `Images/` covering the
+  PNG, JPEG, BMP and TGA decoders and the resampler. `TestImageBuilder` encodes PNG, BMP and TGA files
+  in memory so the decoders can be driven over their whole feature matrix without binary fixtures; the
+  JPEG cases, which need a real encoder, are small base64 constants in `JpegDecoderTests`.
 - `tests/NodeGraph.Tests/` - Node graph attribute and type utility tests
 - `tests/<Demo>.UITests/` - One headless UI test project per example, driving the demo's real
   `BuildConfig()` through `ImGuiAppHarness`: `ImGuiAppDemo.UITests`, `ImGuiWidgetsDemo.UITests`,
@@ -70,6 +73,13 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/ForceDpiAware.cs` - Multi-platform DPI detection
 - `ImGui.App/WindowingEnvironment.cs` - Wayland / tiling window manager detection driving `ImGuiAppConfig.WindowGeometry`
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
+- `ImGui.App/Images/ImageDecoder.cs` - Front door for image loading; sniffs the format from the file's own bytes
+- `ImGui.App/Images/ImagePixels.cs` - The decoded RGBA8 buffer every decoder produces and the texture cache uploads
+- `ImGui.App/Images/PngDecoder.cs` - PNG, including every colour type and bit depth, `tRNS`, Adam7 and all five filters
+- `ImGui.App/Images/JpegDecoder.cs` - Baseline, extended sequential and progressive Huffman JPEG
+- `ImGui.App/Images/BmpDecoder.cs` - BMP: core and info headers, 1/4/8/16/24/32 bit, `BI_RGB` and `BI_BITFIELDS`
+- `ImGui.App/Images/TgaDecoder.cs` - TGA: colour-mapped, true-colour and greyscale, raw and run-length encoded
+- `ImGui.App/Images/ImageResampler.cs` - Separable Lanczos-3 scaling on premultiplied alpha, behind `SetWindowIcon`
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
 - `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshaling
@@ -98,7 +108,6 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **Hexa.NET.ImNodes** (2.2.9) - ImNodes node editor extension
 - **Hexa.NET.ImPlot** (2.2.9) - ImPlot charting extension
 - **Silk.NET** (2.23.0) - Cross-platform windowing and OpenGL
-- **SixLabors.ImageSharp** (3.1.12) - Image loading
 - **ktsu.ThemeProvider** (1.0.11) - Semantic theming foundation
 - **ktsu.ThemeProvider.ImGui** (1.0.11) - ImGui theming integration
 - **ktsu.TextFilter** (1.5.4) - Text filtering (Glob/Regex/Fuzzy)
@@ -160,6 +169,49 @@ OnConfigureFonts = () =>
 Do not register custom fonts from `OnStart` — that runs after the atlas has already built, so glyphs silently fail to rasterize. Routing via `ImGuiAppConfig.Fonts` also does not work for fonts with custom glyph ranges, since that path applies the Nerd Font ranges instead. The callback fires on every atlas rebuild — that means startup plus any DPI change greater than 5%, but *not* `SetGlobalScale`, which does not rebuild the atlas — so handlers must be safe to run repeatedly and re-register fonts each time. `InitFonts` releases the previous run's pinned font data before invoking the callback, so re-registering does not accumulate pinned memory.
 
 Note that `FontHelper.GetMaterialIconRanges()` claims the entire Private Use Area (U+E000–U+F8FF), which subsumes every Nerd Font range. Merging Material Icons last therefore replaces Nerd Font glyphs across Powerline, Font Awesome, Devicons, Octicons and the rest — not just one narrow span.
+
+### Image decoding
+
+`ImGui.App/Images/` decodes image files without a third-party imaging library. That is deliberate:
+`SixLabors.ImageSharp` moved to a split licence at 4.0, which broke the build for anyone who let the
+version float (#230) and left the package pinned to 3.1.x indefinitely. Issue #354 asked whether the
+dependency could be replaced with something more permissive or with code that only does what this
+library needs; this is that code, and `ktsu.ImGui.App` now has no imaging dependency at all.
+
+`ImageDecoder.Load(path)` / `Load(stream)` / `Decode(bytes)` return an `ImagePixels`: a tightly
+packed, straight-alpha RGBA8 buffer with no row padding, which is exactly what
+`UploadTextureRGBA` wants. The format is chosen by `ImageDecoder.Identify` from the file's own
+leading bytes, never from its extension, so a mislabelled file still loads. Anything unrecognised or
+malformed raises `InvalidImageDataException` naming what was found.
+
+What each decoder covers:
+
+| Format | Covered | Not covered |
+|---|---|---|
+| PNG | All five colour types, bit depths 1/2/4/8/16, palettes, `tRNS` in all three forms, Adam7 interlacing, all five scanline filters | Nothing in the base format. Ancillary chunks are skipped, so there is no colour management: `gAMA` and `iCCP` are ignored and pixels are taken at face value |
+| JPEG | Baseline and extended sequential (SOF0/SOF1) and progressive (SOF2) Huffman, any sampling factors, restart intervals, greyscale and three-component colour, the Adobe transform flag | Arithmetic coding, lossless and hierarchical modes, four-component CMYK/YCCK, 12-bit samples |
+| BMP | Core and info headers of every version, 1/4/8/16/24/32 bit, top-down and bottom-up, `BI_RGB` and `BI_BITFIELDS` | `BI_RLE4`/`BI_RLE8`, and headers embedding a PNG or JPEG payload |
+| TGA | Colour-mapped, true-colour and greyscale at 8/15/16/24/32 bit, raw and run-length encoded, the descriptor's origin and attribute-bit flags | Nothing in common use |
+
+Three details worth knowing before changing any of it:
+
+- **16-bit PNG samples are truncated to their high byte.** The destination is an RGBA8 texture, so
+  the low byte has nowhere to go.
+- **A 32-bit BMP or TGA whose alpha channel is entirely zero is treated as opaque.** `BI_RGB` leaves
+  the fourth byte undefined and plenty of encoders write zero there; taking that literally would make
+  the whole image invisible. An image with *any* non-zero alpha keeps its alpha as written.
+- **JPEG holds every coefficient until the last scan.** Progressive coding requires it, and sharing
+  the path with baseline keeps one block decoder rather than two. The cost is roughly two bytes per
+  sample of transient memory for the duration of the decode.
+
+Chroma is upsampled by bilinear interpolation on half-offset sample centres, which for the usual 2x
+factors is the same triangle filter a reference decoder applies. Against libjpeg the decoder lands
+within about three units per channel — the range such decoders differ by among themselves.
+
+`ImagePixels.Resize` (and so `ImGuiApp.SetWindowIcon`) goes through `ImageResampler`: a separable
+Lanczos-3 filter whose support widens by the reduction factor when downscaling, so shrinking averages
+rather than point-samples. It resamples premultiplied alpha and unpremultiplies afterwards, so the
+colour of fully transparent pixels does not bleed into their visible neighbours.
 
 ### Deferred Drawing (dialogs and docked windows)
 

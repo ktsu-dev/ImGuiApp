@@ -9,18 +9,16 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.App.Images;
 
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-
 /// <summary>
-/// iOS texture surface for <see cref="ImGuiApp"/>: loads images from disk via ImageSharp and uploads
+/// iOS texture surface for <see cref="ImGuiApp"/>: loads images from disk via <see cref="ImageDecoder"/> and uploads
 /// them to the GPU through the Metal <see cref="IRendererBackend"/>, mirroring the desktop public API
 /// (which lives in the iOS-excluded <c>ImGuiApp.cs</c>). The font atlas already exercises the same
 /// <c>Renderer.CreateTexture</c> path, so this adds the decode + cache + user-texture handles on top.
@@ -34,7 +32,7 @@ public static partial class ImGuiApp
 
 	/// <summary>
 	/// Gets a previously loaded texture, or loads it from <paramref name="path"/> (decoding with
-	/// ImageSharp and uploading to the GPU) and caches it.
+	/// <see cref="ImageDecoder"/> and uploading to the GPU) and caches it.
 	/// </summary>
 	/// <param name="path">Absolute path to the image file.</param>
 	/// <returns>The texture info, including the GPU handle and an <see cref="ImTextureRef"/> for drawing.</returns>
@@ -46,7 +44,7 @@ public static partial class ImGuiApp
 			return existingTexture;
 		}
 
-		using Image<Rgba32> image = Image.Load<Rgba32>(path);
+		ImagePixels image = ImageDecoder.Load(path);
 
 		ImGuiAppTextureInfo textureInfo = new()
 		{
@@ -89,12 +87,12 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <param name="image">The image to read.</param>
 	/// <param name="action">The action to run with the pooled byte buffer.</param>
-	public static void UseImageBytes(Image<Rgba32> image, Action<byte[]> action)
+	public static void UseImageBytes(ImagePixels image, Action<byte[]> action)
 	{
 		Ensure.NotNull(image);
 		Ensure.NotNull(action);
 
-		int bufferSize = image.Width * image.Height * Unsafe.SizeOf<Rgba32>();
+		int bufferSize = image.ByteLength;
 		byte[] pooledBuffer = bytePool.Rent(bufferSize);
 		try
 		{

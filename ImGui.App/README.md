@@ -22,6 +22,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Font Management**: Flexible font loading system with customization options and dynamic scaling
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
 - **Texture Support**: Built-in texture management with caching and automatic cleanup for ImGui
+- **Dependency-Free Image Loading**: PNG, JPEG, BMP and TGA decoding built into the package, so nothing here constrains your licensing
 - **Debug Logging**: Comprehensive debug logging system for troubleshooting crashes and performance issues
 - **Context Handling**: Automatic OpenGL context change detection and texture reloading
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
@@ -193,6 +194,39 @@ private static void OnRender(float deltaTime)
     // Clean up when done (optional - textures are cached and managed automatically)
     ImGuiApp.DeleteTexture(textureInfo);
 }
+```
+
+### Image Loading
+
+Textures and window icons are decoded by `ktsu.ImGui.App` itself rather than by a third-party imaging
+package, so nothing in this library's dependency graph constrains how you licence yours.
+
+| Format | Supported |
+| --- | --- |
+| PNG | All colour types, bit depths 1 through 16, palettes, `tRNS` transparency, Adam7 interlacing |
+| JPEG | Baseline, extended sequential and progressive Huffman; greyscale and colour; any chroma subsampling; restart intervals |
+| BMP | 1, 4, 8, 16, 24 and 32 bit; top-down and bottom-up; `BI_RGB` and `BI_BITFIELDS` |
+| TGA | Colour-mapped, true-colour and greyscale; 8, 15, 16, 24 and 32 bit; raw and run-length encoded |
+
+Not supported: arithmetic-coded, lossless or CMYK JPEG; run-length encoded BMP; GIF, WebP, TIFF.
+
+The format is detected from the file's own bytes, not its extension, so a mislabelled file still
+loads. A file that is malformed or in an unsupported format raises `InvalidImageDataException` with a
+message naming what was found.
+
+The decoder is also usable on its own, without starting an application:
+
+```csharp
+using ktsu.ImGui.App.Images;
+
+ImagePixels image = ImageDecoder.Load("photo.jpg");
+
+// Tightly packed RGBA8, four bytes per pixel, row major from the top left.
+Console.WriteLine($"{image.Width}x{image.Height}, {image.ByteLength} bytes");
+(byte r, byte g, byte b, byte a) = image.GetPixel(0, 0);
+
+// Cropping and scaling, as SetWindowIcon does to build its icon sizes.
+ImagePixels icon = image.CropToSquare().Resize(32, 32);
 ```
 
 ### PID Frame Limiting
@@ -387,7 +421,7 @@ The main entry point for creating and managing ImGui applications.
 | `SetWindowIcon` | `string iconPath` | `void` | Sets the window icon using the specified icon file path |
 | `EmsToPx` | `float ems` | `int` | Converts a value in ems to pixels based on current font size |
 | `PtsToPx` | `int pts` | `int` | Converts a value in points to pixels based on current scale factor |
-| `UseImageBytes` | `Image<Rgba32> image, Action<byte[]> action` | `void` | Executes an action with temporary access to image bytes using pooled memory |
+| `UseImageBytes` | `ImagePixels image, Action<byte[]> action` | `void` | Executes an action with temporary access to image bytes using pooled memory |
 
 ### `ImGuiAppConfig` Class
 
@@ -593,7 +627,6 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui, and for the ImGuizmo, ImNodes and ImPlot extensions this auto-detects (`Hexa.NET.ImGuizmo`, `Hexa.NET.ImNodes`, `Hexa.NET.ImPlot`, from the same project)
 - [HexaGen](https://github.com/JunaMeinhold/HexaGen) - The generator and the `HexaGen.Runtime` those bindings are built on
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
-- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Image loading behind the texture cache
 - All contributors and the .NET community for their support
 
 ## Support

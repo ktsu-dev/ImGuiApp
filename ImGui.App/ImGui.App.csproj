@@ -33,7 +33,6 @@
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
-    <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 
