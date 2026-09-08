@@ -114,7 +114,7 @@ PhysicsSettings settings = new()
     OriginAnchorWeight = 1.0,          // 0 = centroid, 1 = world origin
     DampingFactor = 0.5,               // velocity retained per second
     MaxForce = 5000.0,
-    MaxVelocity = 50.0,
+    MaxVelocity = 250.0,             // also bounds how fast a graph settles
     TargetPhysicsHz = 120.0,           // substep rate, independent of frame rate
     StabilityThreshold = 1.0,
     OverlapMargin = 20.0,

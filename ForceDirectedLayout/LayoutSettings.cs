@@ -57,7 +57,11 @@ public struct LayoutSettings
 	/// <summary>Per-body force magnitude cap (applied before integration).</summary>
 	public double MaxForce;
 
-	/// <summary>Per-body velocity magnitude cap (applied after integration).</summary>
+	/// <summary>
+	/// Per-body velocity magnitude cap (applied after integration). This is what bounds how long a
+	/// graph takes to settle: a body has to travel hundreds of units to reach its place, so too low a
+	/// cap leaves a graph still visibly unfolding many seconds after it opens.
+	/// </summary>
 	public double MaxVelocity;
 
 	/// <summary>Target substep frequency. Per-frame substep count is ceil(deltaTime * TargetPhysicsHz).</summary>
@@ -87,7 +91,7 @@ public struct LayoutSettings
 		MinRepulsionDistance = 50.0,
 		RestLinkLength = 225.0,
 		MaxForce = 5000.0,
-		MaxVelocity = 50.0,
+		MaxVelocity = 250.0,
 		TargetPhysicsHz = 120.0,
 		StabilityThreshold = 1.0,
 		OverlapMargin = 20.0,
