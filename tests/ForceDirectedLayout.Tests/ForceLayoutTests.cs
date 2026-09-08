@@ -180,6 +180,8 @@ public class ForceLayoutTests
 			MaxVelocity = 33.0,
 			TargetPhysicsHz = 144.0,
 			StabilityThreshold = 0.5,
+			OverlapMargin = 12.0,
+			MaxOverlapCorrection = 25.0,
 		};
 
 		LayoutSettings s = p.ToLayoutSettings();

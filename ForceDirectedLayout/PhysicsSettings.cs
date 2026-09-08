@@ -48,6 +48,12 @@ public sealed record PhysicsSettings
 	/// <summary>System energy threshold below which the simulation reports IsStable.</summary>
 	public double StabilityThreshold { get; init; } = 1.0;
 
+	/// <summary>Clear space kept between body rectangles by the overlap pass. 0 disables the pass.</summary>
+	public double OverlapMargin { get; init; } = 20.0;
+
+	/// <summary>Per-substep cap on how far an overlapping pair is pushed apart.</summary>
+	public double MaxOverlapCorrection { get; init; } = 40.0;
+
 	/// <summary>Convert to the POD <see cref="LayoutSettings"/> used by the AOT core.</summary>
 	public LayoutSettings ToLayoutSettings() => new()
 	{
@@ -64,6 +70,8 @@ public sealed record PhysicsSettings
 		MaxVelocity = MaxVelocity,
 		TargetPhysicsHz = TargetPhysicsHz,
 		StabilityThreshold = StabilityThreshold,
+		OverlapMargin = OverlapMargin,
+		MaxOverlapCorrection = MaxOverlapCorrection,
 	};
 
 	/// <summary>Construct a managed record from the POD <see cref="LayoutSettings"/>.</summary>
@@ -82,5 +90,7 @@ public sealed record PhysicsSettings
 		MaxVelocity = s.MaxVelocity,
 		TargetPhysicsHz = s.TargetPhysicsHz,
 		StabilityThreshold = s.StabilityThreshold,
+		OverlapMargin = s.OverlapMargin,
+		MaxOverlapCorrection = s.MaxOverlapCorrection,
 	};
 }

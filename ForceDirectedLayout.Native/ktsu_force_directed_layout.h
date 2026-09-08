@@ -56,6 +56,8 @@ typedef struct {
     double   max_velocity;
     double   target_physics_hz;
     double   stability_threshold;
+    double   overlap_margin;          /* clear space kept between body rectangles; 0 disables the pass */
+    double   max_overlap_correction;  /* per-substep cap on how far an overlapping pair is pushed apart */
 } LayoutSettings;
 
 typedef struct {
