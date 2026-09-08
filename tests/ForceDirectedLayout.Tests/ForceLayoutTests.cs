@@ -519,13 +519,129 @@ public class GenericFacadeTests
 	}
 
 	/// <summary>
-	/// Tests that repulsion is still what spreads a graph out, now that an overlap pass also keeps
-	/// bodies off one another.
+	/// Counts the (link, body) pairs where a link is drawn across a body it is not an end of.
 	/// </summary>
 	/// <remarks>
-	/// The overlap pass only guarantees bodies do not sit on top of each other; it creates no room
-	/// beyond that. Without repulsion a settled graph collapses into a tall column whose edges run
-	/// close to vertical, which is the shape the levelling force then cannot recover from.
+	/// Links are rendered beneath node backgrounds, so a link crossing a body it has nothing to do with
+	/// disappears for that body's width. The link's path is approximated by the straight line between its
+	/// pins, which is what the rendered curve stays close to once the flattening force has done its work.
+	/// </remarks>
+	private static int LinksOverBodies(List<TestBody> bodies, List<PinnedEdge> edges)
+	{
+		Dictionary<int, TestBody> byId = bodies.ToDictionary(b => b.Id);
+		int over = 0;
+
+		foreach (PinnedEdge edge in edges)
+		{
+			Vec2D from = byId[edge.SourceId].Position + edge.SourcePin;
+			Vec2D to = byId[edge.TargetId].Position + edge.TargetPin;
+
+			foreach (TestBody body in bodies)
+			{
+				if (body.Id == edge.SourceId || body.Id == edge.TargetId)
+				{
+					continue;
+				}
+
+				for (int step = 1; step < 40; step++)
+				{
+					Vec2D at = Vec2D.Lerp(from, to, step / 40.0);
+					if (at.X >= body.Position.X && at.X <= body.Position.X + body.Dimensions.X &&
+						at.Y >= body.Position.Y && at.Y <= body.Position.Y + body.Dimensions.Y)
+					{
+						over++;
+						break;
+					}
+				}
+			}
+		}
+
+		return over;
+	}
+
+	/// <summary>
+	/// Counts pairs of links meeting at a body whose far ends sit in the opposite vertical order to the
+	/// pins they meet at, which is exactly the arrangement in which the two are drawn crossing.
+	/// </summary>
+	private static int TwistedPairs(List<TestBody> bodies, List<PinnedEdge> edges)
+	{
+		Dictionary<int, TestBody> byId = bodies.ToDictionary(b => b.Id);
+		Vec2D Source(PinnedEdge e) => byId[e.SourceId].Position + e.SourcePin;
+		Vec2D Target(PinnedEdge e) => byId[e.TargetId].Position + e.TargetPin;
+
+		int twisted = 0;
+		for (int i = 0; i < edges.Count; i++)
+		{
+			for (int j = i + 1; j < edges.Count; j++)
+			{
+				double atPins;
+				double atFarEnds;
+
+				if (edges[i].TargetId == edges[j].TargetId && edges[i].SourceId != edges[j].SourceId)
+				{
+					atPins = Target(edges[i]).Y - Target(edges[j]).Y;
+					atFarEnds = Source(edges[i]).Y - Source(edges[j]).Y;
+				}
+				else if (edges[i].SourceId == edges[j].SourceId && edges[i].TargetId != edges[j].TargetId)
+				{
+					atPins = Source(edges[i]).Y - Source(edges[j]).Y;
+					atFarEnds = Target(edges[i]).Y - Target(edges[j]).Y;
+				}
+				else
+				{
+					continue;
+				}
+
+				if (atPins * atFarEnds < 0)
+				{
+					twisted++;
+				}
+			}
+		}
+
+		return twisted;
+	}
+
+	/// <summary>Deepest rectangle overlap between any two bodies.</summary>
+	private static double WorstOverlap(List<TestBody> bodies)
+	{
+		double worst = 0;
+		for (int i = 0; i < bodies.Count; i++)
+		{
+			for (int j = i + 1; j < bodies.Count; j++)
+			{
+				double acrossX = Math.Min(bodies[i].Position.X + bodies[i].Dimensions.X, bodies[j].Position.X + bodies[j].Dimensions.X)
+					- Math.Max(bodies[i].Position.X, bodies[j].Position.X);
+				double acrossY = Math.Min(bodies[i].Position.Y + bodies[i].Dimensions.Y, bodies[j].Position.Y + bodies[j].Dimensions.Y)
+					- Math.Max(bodies[i].Position.Y, bodies[j].Position.Y);
+
+				if (acrossX > 0 && acrossY > 0)
+				{
+					worst = Math.Max(worst, Math.Min(acrossX, acrossY));
+				}
+			}
+		}
+
+		return worst;
+	}
+
+	/// <summary>
+	/// Tests that repulsion is still what spreads a graph out, now that an overlap pass keeps bodies off
+	/// one another and an untwisting force reorders their far ends.
+	/// </summary>
+	/// <remarks>
+	/// The overlap pass only guarantees bodies do not sit on top of each other; it creates no room beyond
+	/// that, and untwisting only says which way round two of them go. Without repulsion a settled graph
+	/// collapses to about a third of its area, and the links then have nowhere to run but across the
+	/// bodies: measured over the graph below, six times as many links are drawn over a body they are not
+	/// an end of.
+	/// <para>
+	/// Neither shape nor edge angle can say this. Before there was an untwisting force the collapse was
+	/// into a tall column of near-vertical links, and both did; with one the collapse is into a flat
+	/// crushed ribbon whose links are flatter than the properly spread graph's. The graph is no better
+	/// for it - everything is simply drawn on top of everything - so what is asserted here is the room
+	/// itself, and what the want of it does to the links.
+	/// </para>
 	/// </remarks>
 	[TestMethod]
 	public void Repulsion_IsWhatSpreadsAGraphOut()
@@ -542,13 +658,177 @@ public class GenericFacadeTests
 			without.Step(withoutBodies, withoutEdges, 0.016);
 		}
 
-		(double withWidth, double withHeight, double withAngle) = Shape(withBodies, withEdges);
-		(double withoutWidth, double withoutHeight, double withoutAngle) = Shape(withoutBodies, withoutEdges);
+		(double withWidth, double withHeight, double _) = Shape(withBodies, withEdges);
+		(double withoutWidth, double withoutHeight, double _) = Shape(withoutBodies, withoutEdges);
 
-		Assert.IsTrue(withWidth / withHeight > withoutWidth / withoutHeight,
-			$"Repulsion should leave the graph wider; with {withWidth / withHeight:F2}, without {withoutWidth / withoutHeight:F2}.");
-		Assert.IsTrue(withAngle < withoutAngle - 15.0,
-			$"Repulsion should leave the edges far flatter; with {withAngle:F1} deg, without {withoutAngle:F1} deg.");
+		double withArea = withWidth * withHeight;
+		double withoutArea = withoutWidth * withoutHeight;
+
+		Assert.IsTrue(withArea > withoutArea * 2.0,
+			$"Repulsion should leave the graph far roomier; with {withArea:F0}, without {withoutArea:F0}.");
+		Assert.IsTrue(LinksOverBodies(withBodies, withEdges) * 3 < LinksOverBodies(withoutBodies, withoutEdges),
+			$"Without repulsion far more links should be drawn over bodies; with {LinksOverBodies(withBodies, withEdges)}, " +
+			$"without {LinksOverBodies(withoutBodies, withoutEdges)}.");
+	}
+
+	/// <summary>
+	/// Tests that two links arriving at one node from bodies in the wrong vertical order swap those
+	/// bodies over, so the links stop crossing.
+	/// </summary>
+	/// <remarks>
+	/// The two links here are individually perfect - short, level and well spaced - and every force that
+	/// existed before this one is satisfied by the starting arrangement. They are only wrong about each
+	/// other: the body feeding the upper pin starts below the body feeding the lower one, so its link has
+	/// to dive under the other's to reach its pin.
+	/// </remarks>
+	[TestMethod]
+	public void TwistedLinks_SwapTheirFarEndsIntoPinOrder()
+	{
+		// One target with two input pins, 60 apart, fed by two sources that start the wrong way round.
+		List<TestBody> bodies = [Body(1, 0, 260, 100, 60), Body(2, 0, 0, 100, 60), Body(3, 400, 100, 120, 140)];
+		List<PinnedEdge> edges =
+		[
+			new(1, 3, new Vec2D(100, 30), new Vec2D(0, 40)),
+			new(2, 3, new Vec2D(100, 30), new Vec2D(0, 100)),
+		];
+
+		Assert.AreEqual(1, TwistedPairs(bodies, edges), "the pair should start twisted");
+
+		ForceDirectedLayout<TestBody, PinnedEdge> layout = CreatePinnedLayout(new PhysicsSettings { Enabled = true });
+		for (int i = 0; i < 2000; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		Assert.AreEqual(0, TwistedPairs(bodies, edges),
+			$"The pair should have swapped; body 1 is at y {bodies[0].Position.Y:F0} and body 2 at y {bodies[1].Position.Y:F0}.");
+		Assert.IsTrue(bodies[0].Position.Y < bodies[1].Position.Y,
+			"the body feeding the upper pin should end up above the one feeding the lower pin");
+	}
+
+	/// <summary>
+	/// Tests that a graph with no pin offsets is left alone, since without them there is no pin order to
+	/// be wrong about.
+	/// </summary>
+	[TestMethod]
+	public void Untwisting_DoesNothingWithoutPinOffsets()
+	{
+		List<TestBody> bodies = [Body(1, 0, 260, 100, 60), Body(2, 0, 0, 100, 60), Body(3, 400, 100, 120, 140)];
+		List<TestEdge> edges = [new(1, 3), new(2, 3)];
+
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
+		for (int i = 0; i < 600; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		// Both links fall back to their bodies' mid-heights, giving the two the same pin height at the
+		// shared node, so neither ordering is the wrong one and the starting order survives.
+		Assert.IsTrue(bodies[0].Position.Y > bodies[1].Position.Y,
+			"with no pin offsets the two sources should keep the order they started in");
+	}
+
+	/// <summary>
+	/// Tests that untwisting reduces the crossings in a graph the size of a small class, and does not
+	/// pay for it by leaving bodies drawn over one another.
+	/// </summary>
+	/// <remarks>
+	/// Crossings between links that share a node are what a settled tangle is mostly made of - measured
+	/// over forty starting arrangements of this graph, 5.83 twisted pairs against 5.85 such crossings,
+	/// so nearly every one of them is a twist and this force can reach it.
+	/// <para>
+	/// The second assertion is the one that constrains the design. A twisted pair has to pass through
+	/// each other vertically to swap, and the overlap pass holding them apart on that axis is what
+	/// stalls the swap - so a body mid-untwist is allowed to overlap along Y. It is still pushed apart
+	/// on X, and the flag is recomputed every substep, so the exemption lasts exactly as long as the
+	/// untwist does and a settled graph is left with no overlaps at all.
+	/// </para>
+	/// </remarks>
+	[TestMethod]
+	public void Untwisting_ReducesCrossingsWithoutLeavingBodiesOverlapping()
+	{
+		// Several starting arrangements, because which local minimum one start happens to land in says
+		// nothing: the claim is about the shape of a settled graph in general, so it is measured the way
+		// it was established.
+		int withTwists = 0;
+		int withoutTwists = 0;
+		double worstOverlap = 0;
+
+		foreach (double spread in new[] { 0.05, 0.2, 0.35, 0.5, 0.7, 1.0 })
+		{
+			(List<TestBody> withBodies, List<PinnedEdge> withEdges) = CounterGraph(spread);
+			ForceDirectedLayout<TestBody, PinnedEdge> with = CreatePinnedLayout(new PhysicsSettings { Enabled = true });
+
+			(List<TestBody> withoutBodies, List<PinnedEdge> withoutEdges) = CounterGraph(spread);
+			ForceDirectedLayout<TestBody, PinnedEdge> without = CreatePinnedLayout(
+				new PhysicsSettings { Enabled = true, LinkUntwistStrength = 0 });
+
+			for (int i = 0; i < 4000; i++)
+			{
+				with.Step(withBodies, withEdges, 0.016);
+				without.Step(withoutBodies, withoutEdges, 0.016);
+			}
+
+			withTwists += TwistedPairs(withBodies, withEdges);
+			withoutTwists += TwistedPairs(withoutBodies, withoutEdges);
+			worstOverlap = Math.Max(worstOverlap, WorstOverlap(withBodies));
+		}
+
+		Assert.IsTrue(withTwists < withoutTwists,
+			$"Untwisting should leave fewer crossed pairs across the six starts; with {withTwists}, without {withoutTwists}.");
+		Assert.AreEqual(0.0, worstOverlap, 0.5,
+			"and no start should be left with bodies drawn over one another");
+	}
+
+	/// <summary>
+	/// Tests that the overlap pass leaves the untwist axis free, rather than holding a twisted pair
+	/// apart on the very axis its swap has to travel.
+	/// </summary>
+	/// <remarks>
+	/// This is the standoff a backward edge hits, on the other axis: a reorder travels along X so the
+	/// pair is pushed apart on Y, and a swap travels along Y so the pair is pushed apart on X.
+	/// <para>
+	/// The two bodies below are wide and short, so the overlap pass would rather separate them on Y -
+	/// the cheaper axis, and the one direction the swap needs. With nothing untwisting them that is
+	/// exactly what it does, and they come to rest 70 apart vertically, which is the clearance to the
+	/// pixel: half of each height plus the margin. With the untwist running they are allowed well
+	/// inside that, and the separation goes on X instead.
+	/// </para>
+	/// </remarks>
+	[TestMethod]
+	public void TwistedLinks_AreNotHeldApartOnTheAxisTheySwapAlong()
+	{
+		static (double Vertical, double Horizontal) Settle(double untwistStrength)
+		{
+			List<TestBody> bodies = [Body(1, 0, 150, 300, 50), Body(2, 0, 60, 300, 50), Body(3, 500, 60, 120, 140)];
+			List<PinnedEdge> edges =
+			[
+				new(1, 3, new Vec2D(300, 25), new Vec2D(0, 40)),
+				new(2, 3, new Vec2D(300, 25), new Vec2D(0, 100)),
+			];
+
+			ForceDirectedLayout<TestBody, PinnedEdge> layout = CreatePinnedLayout(
+				new PhysicsSettings { Enabled = true, LinkUntwistStrength = untwistStrength });
+
+			for (int i = 0; i < 3000; i++)
+			{
+				layout.Step(bodies, edges, 0.016);
+			}
+
+			return (Math.Abs(bodies[0].Position.Y - bodies[1].Position.Y),
+				Math.Abs(bodies[0].Position.X - bodies[1].Position.X));
+		}
+
+		(double heldVertical, double heldHorizontal) = Settle(0.0);
+		(double freeVertical, double freeHorizontal) = Settle(0.1);
+
+		double clearance = (50 * 0.5) + (50 * 0.5) + LayoutSettings.Defaults.OverlapMargin;
+		Assert.AreEqual(clearance, heldVertical, 1.0,
+			$"With nothing untwisting them the pair should be held exactly one clearance apart vertically; it was {heldVertical:F0}.");
+		Assert.IsTrue(freeVertical < clearance * 0.5,
+			$"A twisted pair should be allowed well inside that clearance vertically; it settled {freeVertical:F0} apart.");
+		Assert.IsTrue(freeHorizontal > heldHorizontal,
+			$"and should take the separation on X instead; {freeHorizontal:F0} against {heldHorizontal:F0}.");
 	}
 
 	[TestMethod]

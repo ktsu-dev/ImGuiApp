@@ -362,6 +362,13 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				currentSettings = currentSettings with { LinkFlatteningMargin = linkFlatteningMargin };
 				settingsChanged = true;
 			}
+
+			float linkUntwistStrength = (float)currentSettings.LinkUntwistStrength;
+			if (DemoProbe.SliderFloat("Link Untwisting", ref linkUntwistStrength, 0.0f, 1.0f))
+			{
+				currentSettings = currentSettings with { LinkUntwistStrength = linkUntwistStrength };
+				settingsChanged = true;
+			}
 		}
 
 		// Gravity settings
@@ -395,6 +402,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				LinkSpringStrength = 0.3,
 				DirectionalBias = 0.3,
 				LinkFlatteningStrength = 0.3,
+				LinkUntwistStrength = 0.05,
 				GravityStrength = 20.0,
 				OriginAnchorWeight = 0.2,
 				DampingFactor = 0.95,
@@ -417,6 +425,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				LinkSpringStrength = 1.0,
 				DirectionalBias = 0.8,
 				LinkFlatteningStrength = 1.0,
+				LinkUntwistStrength = 0.25,
 				GravityStrength = 100.0,
 				OriginAnchorWeight = 0.4,
 				DampingFactor = 0.85,

@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-ForceDirectedLayout settles a graph into a readable shape: bodies repel each other, edges pull like springs between the points they actually attach at, gravity keeps the whole thing together, edges are pulled towards horizontal and steep ones splayed apart so a renderer's curves stay clear of the bodies at their ends, and overlaps are pushed apart. Edges that run the wrong way reorder themselves: their endpoints slide around whatever stands between them rather than through it, so nothing is drawn overlapping on the way. It is a pure simulation with no rendering, no UI dependency, and no runtime package dependencies — double precision throughout, AOT- and trim-clean, and exposed at three levels so a caller can pick how much ceremony they want. The same core is published as a native shared library for consumers outside .NET.
+ForceDirectedLayout settles a graph into a readable shape: bodies repel each other, edges pull like springs between the points they actually attach at, gravity keeps the whole thing together, edges are pulled towards horizontal and steep ones splayed apart so a renderer's curves stay clear of the bodies at their ends, and overlaps are pushed apart. Two edges meeting at one node put their far ends into the same vertical order as the pins they arrive at, so they stop crossing each other. Edges that run the wrong way reorder themselves. Both untangles are given the axis they travel on: the overlap pass separates them on the other one, rather than holding a pair apart on the very axis its swap has to cross, so nothing is left drawn overlapping once an untangle is done. It is a pure simulation with no rendering, no UI dependency, and no runtime package dependencies — double precision throughout, AOT- and trim-clean, and exposed at three levels so a caller can pick how much ceremony they want. The same core is published as a native shared library for consumers outside .NET.
 
 ## Features
 
@@ -110,6 +110,7 @@ PhysicsSettings settings = new()
     DirectionalBias = 0.5,             // orders sources left of targets, reordering when needed
     LinkFlatteningStrength = 0.5,      // pulls edges towards horizontal, and keeps curves visible
     LinkFlatteningMargin = 0.0,        // extra clearance on top of the derived bound
+    LinkUntwistStrength = 0.1,         // swaps two links sharing a node into their pins' order
     GravityStrength = 50.0,            // pull toward the gravity target
     OriginAnchorWeight = 1.0,          // 0 = centroid, 1 = world origin
     DampingFactor = 0.5,               // velocity retained per second
