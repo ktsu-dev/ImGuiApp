@@ -1172,7 +1172,10 @@ internal static class JpegDecoder
 				double normalization = u == 0 ? Math.Sqrt(0.125) : 0.5;
 				for (int x = 0; x < 8; x++)
 				{
-					basis[(u * 8) + x] = (float)(normalization * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0));
+					// Built in double from the first operand: the frequency and position both stay
+					// under eight here, but an integer product feeding a cosine is worth not writing.
+					double angle = ((2.0 * x) + 1) * u * Math.PI / 16.0;
+					basis[(u * 8) + x] = (float)(normalization * Math.Cos(angle));
 				}
 			}
 

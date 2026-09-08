@@ -54,7 +54,7 @@ public class ImageDecoderTests
 	public void Decode_IgnoresTheFileExtension()
 	{
 		// A PNG named as a JPEG still decodes: the format comes from the bytes, not the name.
-		string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jpg");
+		string path = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.jpg");
 		File.WriteAllBytes(path, TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [9, 8, 7, 6]));
 
 		try
