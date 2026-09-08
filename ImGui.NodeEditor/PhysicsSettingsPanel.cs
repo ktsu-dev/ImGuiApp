@@ -2,7 +2,6 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
-using System;
 using System.Globalization;
 
 using Hexa.NET.ImGui;
@@ -36,7 +35,7 @@ public static class PhysicsSettingsPanel
 	/// <returns>True when <paramref name="settings"/> was changed by this frame's input.</returns>
 	public static bool Draw(ref PhysicsSettings settings)
 	{
-		ArgumentNullException.ThrowIfNull(settings);
+		Ensure.NotNull(settings);
 
 		bool changed = false;
 		PhysicsSettings working = settings;
@@ -82,7 +81,7 @@ public static class PhysicsSettingsPanel
 	/// </remarks>
 	public static void DrawDiagnostics(NodeEditorEngine engine)
 	{
-		ArgumentNullException.ThrowIfNull(engine);
+		Ensure.NotNull(engine);
 
 		(int substeps, float substepDelta) = engine.LastPhysicsStepInfo;
 
