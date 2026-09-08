@@ -30,8 +30,9 @@ public struct LayoutSettings
 	public double DirectionalBias;
 
 	/// <summary>
-	/// Strength of the horizontal splay that keeps an edge's rendered curve clear of its own endpoint
-	/// bodies. 0 disables it. See <see cref="LayoutCore.BezierClearanceRatio"/> for the geometry.
+	/// Strength of the preference for horizontal edges: it both levels an edge's two ends and, when the
+	/// rendered curve would otherwise hide, splays them apart horizontally. 0 disables both.
+	/// See <see cref="LayoutCore.BezierClearanceRatio"/> for the clearance geometry.
 	/// </summary>
 	public double LinkFlatteningStrength;
 
