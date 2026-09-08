@@ -29,8 +29,6 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	private bool showDebugVisualization;
 	private string lastActionMessage = "";
 	private Vector4 lastActionColor = new(1.0f, 1.0f, 1.0f, 1.0f);
-	private int lastSubstepCount;
-	private float lastSubstepDeltaTime;
 
 	public CleanImNodesDemo()
 	{
@@ -47,9 +45,6 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 		// Update physics simulation
 		engine.UpdatePhysics(deltaTime);
-
-		// Store debug info
-		(lastSubstepCount, lastSubstepDeltaTime) = engine.LastPhysicsStepInfo;
 	}
 
 	public void Render()
@@ -289,115 +284,25 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		}
 	}
 
+	/// <summary>
+	/// Draws the layout tuning, which the node editor library supplies whole.
+	/// </summary>
+	/// <remarks>
+	/// The panel covers every setting the simulation has and captions each one, so this demo shows the
+	/// same controls a consuming application gets rather than a copy of them that drifts.
+	/// </remarks>
 	private void RenderPhysicsControls()
 	{
-		PhysicsSettings currentSettings = engine.PhysicsSettings;
-		bool settingsChanged = false;
-
-		// Physics enabled checkbox
-		bool enabled = currentSettings.Enabled;
-		if (DemoProbe.Checkbox("Enable Physics", ref enabled))
+		PhysicsSettings settings = engine.PhysicsSettings;
+		if (PhysicsSettingsPanel.Draw(ref settings))
 		{
-			currentSettings = currentSettings with { Enabled = enabled };
-			settingsChanged = true;
+			engine.UpdatePhysicsSettings(settings);
 		}
 
-		if (!enabled)
-		{
-			ImGui.BeginDisabled();
-		}
-
-		// Repulsion settings
-		if (DemoProbe.Header("Repulsion Forces"))
-		{
-			float repulsionStrength = (float)currentSettings.RepulsionStrength;
-			if (DemoProbe.SliderFloat("Repulsion Strength (N)", ref repulsionStrength, 100_000.0f, 50_000_000.0f))
-			{
-				currentSettings = currentSettings with { RepulsionStrength = repulsionStrength };
-				settingsChanged = true;
-			}
-
-			float minRepulsionDistance = (float)currentSettings.MinRepulsionDistance;
-			if (DemoProbe.SliderFloat("Min Repulsion Clamp (px)", ref minRepulsionDistance, 10.0f, 200.0f))
-			{
-				currentSettings = currentSettings with { MinRepulsionDistance = minRepulsionDistance };
-				settingsChanged = true;
-			}
-		}
-
-		// Link spring settings
-		if (DemoProbe.Header("Link Springs"))
-		{
-			float linkSpringStrength = (float)currentSettings.LinkSpringStrength;
-			if (DemoProbe.SliderFloat("Spring Strength (dimensionless)", ref linkSpringStrength, 0.1f, 2.0f))
-			{
-				currentSettings = currentSettings with { LinkSpringStrength = linkSpringStrength };
-				settingsChanged = true;
-			}
-
-			float restLinkLength = (float)currentSettings.RestLinkLength;
-			if (DemoProbe.SliderFloat("Rest Length (m)", ref restLinkLength, 100.0f, 400.0f))
-			{
-				currentSettings = currentSettings with { RestLinkLength = restLinkLength };
-				settingsChanged = true;
-			}
-
-			float directionalBias = (float)currentSettings.DirectionalBias;
-			if (DemoProbe.SliderFloat("Directional Bias (L→R)", ref directionalBias, 0.0f, 2.0f))
-			{
-				currentSettings = currentSettings with { DirectionalBias = directionalBias };
-				settingsChanged = true;
-			}
-
-			float linkFlatteningStrength = (float)currentSettings.LinkFlatteningStrength;
-			if (DemoProbe.SliderFloat("Link Flattening", ref linkFlatteningStrength, 0.0f, 2.0f))
-			{
-				currentSettings = currentSettings with { LinkFlatteningStrength = linkFlatteningStrength };
-				settingsChanged = true;
-			}
-
-			float linkFlatteningMargin = (float)currentSettings.LinkFlatteningMargin;
-			if (DemoProbe.SliderFloat("Link Flattening Margin (px)", ref linkFlatteningMargin, 0.0f, 200.0f))
-			{
-				currentSettings = currentSettings with { LinkFlatteningMargin = linkFlatteningMargin };
-				settingsChanged = true;
-			}
-
-			float linkUntwistStrength = (float)currentSettings.LinkUntwistStrength;
-			if (DemoProbe.SliderFloat("Link Untwisting", ref linkUntwistStrength, 0.0f, 1.0f))
-			{
-				currentSettings = currentSettings with { LinkUntwistStrength = linkUntwistStrength };
-				settingsChanged = true;
-			}
-		}
-
-		// Gravity settings
-		if (DemoProbe.Header("Gravity"))
-		{
-			float gravityStrength = (float)currentSettings.GravityStrength;
-			if (DemoProbe.SliderFloat("Gravity Strength (N)", ref gravityStrength, 0.0f, 200.0f))
-			{
-				currentSettings = currentSettings with { GravityStrength = gravityStrength };
-				settingsChanged = true;
-			}
-
-			float originAnchorWeight = (float)currentSettings.OriginAnchorWeight;
-			if (DemoProbe.SliderFloat("Origin Anchor Weight", ref originAnchorWeight, 0.0f, 1.0f))
-			{
-				currentSettings = currentSettings with { OriginAnchorWeight = originAnchorWeight };
-				settingsChanged = true;
-			}
-		}
-
-		// Damping and limits
-		(currentSettings, settingsChanged) = RenderDampingAndLimitsControls(currentSettings, settingsChanged, enabled);
-
-		// Quick presets
 		if (DemoProbe.Button("Gentle Physics"))
 		{
-			currentSettings = new PhysicsSettings
+			engine.UpdatePhysicsSettings(settings with
 			{
-				Enabled = true,
 				RepulsionStrength = 2_000_000.0,
 				LinkSpringStrength = 0.3,
 				DirectionalBias = 0.3,
@@ -406,21 +311,17 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				GravityStrength = 20.0,
 				OriginAnchorWeight = 0.2,
 				DampingFactor = 0.95,
-				MinRepulsionDistance = 50.0,
 				RestLinkLength = 250.0,
 				MaxForce = 3000.0,
 				MaxVelocity = 100.0,
-				TargetPhysicsHz = 120.0,
-			};
-			settingsChanged = true;
+			});
 		}
 
 		ImGui.SameLine();
 		if (DemoProbe.Button("Strong Physics"))
 		{
-			currentSettings = new PhysicsSettings
+			engine.UpdatePhysicsSettings(settings with
 			{
-				Enabled = true,
 				RepulsionStrength = 10_000_000.0,
 				LinkSpringStrength = 1.0,
 				DirectionalBias = 0.8,
@@ -433,83 +334,11 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				RestLinkLength = 200.0,
 				MaxForce = 10000.0,
 				MaxVelocity = 300.0,
-				TargetPhysicsHz = 120.0,
-			};
-			settingsChanged = true;
+			});
 		}
 
-		if (!enabled)
-		{
-			ImGui.EndDisabled();
-		}
-
-		if (settingsChanged)
-		{
-			engine.UpdatePhysicsSettings(currentSettings);
-		}
-	}
-
-	private (PhysicsSettings Settings, bool Changed) RenderDampingAndLimitsControls(PhysicsSettings currentSettings, bool settingsChanged, bool enabled)
-	{
-		if (DemoProbe.Header("Damping & Limits"))
-		{
-			float dampingFactor = (float)currentSettings.DampingFactor;
-			if (DemoProbe.SliderFloat("Damping Factor (dimensionless)", ref dampingFactor, 0.1f, 0.99f))
-			{
-				currentSettings = currentSettings with { DampingFactor = dampingFactor };
-				settingsChanged = true;
-			}
-
-			float maxForce = (float)currentSettings.MaxForce;
-			if (DemoProbe.SliderFloat("Max Force (N)", ref maxForce, 100.0f, 50000.0f))
-			{
-				currentSettings = currentSettings with { MaxForce = maxForce };
-				settingsChanged = true;
-			}
-
-			float maxVelocity = (float)currentSettings.MaxVelocity;
-			if (DemoProbe.SliderFloat("Max Velocity (m/s)", ref maxVelocity, 5.0f, 500.0f))
-			{
-				currentSettings = currentSettings with { MaxVelocity = maxVelocity };
-				settingsChanged = true;
-			}
-
-			float targetPhysicsHz = (float)currentSettings.TargetPhysicsHz;
-			if (DemoProbe.SliderFloat("Target Physics Hz", ref targetPhysicsHz, 60.0f, 240.0f))
-			{
-				currentSettings = currentSettings with { TargetPhysicsHz = targetPhysicsHz };
-				settingsChanged = true;
-			}
-
-			// Show actual physics timing info
-			if (enabled && lastSubstepCount > 0)
-			{
-				ImGui.Separator();
-				ImGui.Text($"Actual Substeps: {lastSubstepCount}");
-				ImGui.Text($"Substep Δt: {lastSubstepDeltaTime * 1000.0f:F2}ms");
-
-				float effectiveHz = 1.0f / lastSubstepDeltaTime;
-				ImGui.Text($"Effective Hz: {effectiveHz:F1}");
-
-				// Visual indicator of physics quality
-				bool targetAchieved = effectiveHz >= currentSettings.TargetPhysicsHz;
-				Vector4 qualityColor = targetAchieved ?
-					new Vector4(0.0f, 1.0f, 0.0f, 1.0f) : // Green - target achieved
-					new Vector4(1.0f, 0.5f, 0.0f, 1.0f);   // Orange - below target
-
-				ImGui.TextColored(qualityColor, targetAchieved ?
-					"✓ Target achieved" : "⚠ Below target");
-
-				// Stability detection
-				ImGui.Text($"System Energy: {engine.TotalSystemEnergy:F2}");
-				if (engine.IsStable)
-				{
-					ImGui.TextColored(new Vector4(0.0f, 1.0f, 0.0f, 1.0f), "Layout stable");
-				}
-			}
-		}
-
-		return (currentSettings, settingsChanged);
+		ImGui.Separator();
+		PhysicsSettingsPanel.DrawDiagnostics(engine);
 	}
 
 	private void RegisterNodeTypes()
