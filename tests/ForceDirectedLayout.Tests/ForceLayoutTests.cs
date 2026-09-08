@@ -381,6 +381,47 @@ public class GenericFacadeTests
 	}
 
 	[TestMethod]
+	public void LinkFlattening_PullsAForwardEdgeTowardsHorizontal()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
+		List<TestBody> bodies = [Body(1, 0, 0, 160, 60), Body(2, 300, 400, 160, 60)];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		double before = Math.Abs(bodies[1].Position.Y - bodies[0].Position.Y);
+
+		for (int i = 0; i < 2000; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double after = Math.Abs(bodies[1].Position.Y - bodies[0].Position.Y);
+
+		Assert.IsTrue(after < before * 0.25,
+			$"A forward edge should settle close to level; vertical offset went from {before} to {after}.");
+	}
+
+	[TestMethod]
+	public void LinkFlattening_ZeroStrength_LeavesAnEdgeAsSteepAsItStarted()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(
+			new PhysicsSettings { Enabled = true, LinkFlatteningStrength = 0, GravityStrength = 0, RepulsionStrength = 0, DirectionalBias = 0 });
+		List<TestBody> bodies = [Body(1, 0, 0, 160, 60), Body(2, 300, 400, 160, 60)];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		for (int i = 0; i < 2000; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		// Both bodies are the same size, so the centre offsets cancel.
+		double dx = bodies[1].Position.X - bodies[0].Position.X;
+		double dy = bodies[1].Position.Y - bodies[0].Position.Y;
+
+		Assert.IsTrue(Math.Abs(dy) > Math.Abs(dx),
+			$"With the preference off, the spring alone should leave this edge steeper than it is wide; dx {dx}, dy {dy}.");
+	}
+
+	[TestMethod]
 	public void BackwardEdge_SwapsTheEndpointsIntoOrder()
 	{
 		// Mirrors the node editor: a small "param value" body sits to the right of the big "function"

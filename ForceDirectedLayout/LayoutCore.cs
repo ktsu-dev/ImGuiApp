@@ -245,11 +245,13 @@ public sealed class LayoutCore
 	}
 
 	/// <summary>
-	/// Splay an edge's endpoints apart horizontally until the clear span between their facing edges is
-	/// wide enough for the rendered curve, per <see cref="BezierClearanceRatio"/>. Steep edges are the
-	/// ones that need it; once an edge is flat enough the force switches off, so this shapes angles
-	/// rather than stretching the graph. It is a soft constraint balanced against the link spring, so
-	/// equilibrium settles just inside the bound rather than exactly on it.
+	/// Pull an edge towards horizontal, by two means. A levelling force closes the vertical offset
+	/// between its two ends continuously, which is what makes a link lie flat. On top of that, a
+	/// horizontal splay opens the clear span between their facing edges whenever it is too narrow for
+	/// the rendered curve, per <see cref="BezierClearanceRatio"/> - that one is a floor, switching off
+	/// once the curve is safe, so it guarantees a link stays visible without ever levelling it.
+	/// Both are soft, balanced against the link spring, so equilibrium settles near the target rather
+	/// than exactly on it, and neither can make every edge in a graph horizontal at once.
 	/// </summary>
 	private void CalculateLinkFlatteningForces()
 	{
@@ -275,9 +277,24 @@ public sealed class LayoutCore
 			double targetLeft = bodies[t].Position.X;
 			double gap = targetLeft - sourceRight;
 
+			double sourceCenterX = bodies[s].Position.X + (bodies[s].Dimensions.X * 0.5);
+			double targetCenterX = bodies[t].Position.X + (bodies[t].Dimensions.X * 0.5);
+
 			double sourceCenterY = bodies[s].Position.Y + (bodies[s].Dimensions.Y * 0.5);
 			double targetCenterY = bodies[t].Position.Y + (bodies[t].Dimensions.Y * 0.5);
 			double verticalDrop = Math.Abs(targetCenterY - sourceCenterY);
+
+			// Prefer horizontal: close the vertical offset between the two ends, always, in proportion to
+			// how far apart they sit. The clearance splay below only fires once a curve is at risk of
+			// hiding, which keeps a link legal without ever making it flat; this is what lays it flat.
+			// A backward edge is exempt - it is still being reordered, and pulling it level would fight
+			// the vertical slide that reorder needs.
+			if (targetCenterX > sourceCenterX)
+			{
+				double levelling = strength * (targetCenterY - sourceCenterY);
+				bodies[s].Force += new Vec2D(0, levelling);
+				bodies[t].Force += new Vec2D(0, -levelling);
+			}
 
 			double required = (verticalDrop * BezierClearanceRatio) + margin;
 			double violation = required - gap;
