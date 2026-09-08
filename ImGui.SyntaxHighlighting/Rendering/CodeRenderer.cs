@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.SyntaxHighlighting;
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
@@ -85,16 +86,7 @@ internal static class CodeRenderer
 		ImGui.Dummy(new Vector2(width, height));
 	}
 
-	private static bool IsBlank(string text)
-	{
-		foreach (char character in text)
-		{
-			if (character != ' ')
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
+	// Tabs are already expanded by the line splitter, so a run is blank exactly when it is all spaces.
+	// The span check reads the string in place rather than allocating on the per-token draw path.
+	private static bool IsBlank(string text) => !text.AsSpan().ContainsAnyExcept(' ');
 }

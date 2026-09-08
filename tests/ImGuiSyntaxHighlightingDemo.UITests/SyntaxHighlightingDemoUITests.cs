@@ -52,10 +52,13 @@ public sealed class SyntaxHighlightingDemoUITests
 	[TestMethod]
 	public void Demo_RendersACodeBlock()
 	{
-		Rectangle? code = harness.Probe.Rect("code");
+		if (harness.Probe.Rect("code") is not Rectangle code)
+		{
+			Assert.Fail("The demo never rendered a code block.");
+			return;
+		}
 
-		Assert.IsNotNull(code, "The demo never rendered a code block.");
-		Assert.IsGreaterThan(code.Value.MinY, code.Value.MaxY, "The code block occupied no vertical space.");
+		Assert.IsGreaterThan(code.MinY, code.MaxY, "The code block occupied no vertical space.");
 	}
 
 	[TestMethod]
