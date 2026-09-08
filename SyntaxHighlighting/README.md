@@ -60,7 +60,14 @@ When recognition cannot work — a fragment, a heavily interpolated string — n
 ```csharp
 // lang=sql
 string tail = "ORDER BY total DESC";
+
+/* language=sql */
+string other = "ORDER BY total DESC";
+
+Post(/* lang=json */ "{\"id\": 7}");
 ```
+
+The hint is read from the comment's body, so either comment style works, `lang` and `language` are interchangeable, and an inline block comment hints the string beside it. The name runs to the next whitespace, so write `lang=json` rather than `lang=json,`.
 
 Embedding is one level deep, and applies to `LanguageDefinition.EmbeddedLanguages` on the host language only. Turn it off, or change it, by deriving a definition:
 

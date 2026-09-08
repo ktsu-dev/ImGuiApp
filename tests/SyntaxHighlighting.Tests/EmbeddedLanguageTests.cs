@@ -131,6 +131,23 @@ public sealed class EmbeddedLanguageTests
 	}
 
 	[TestMethod]
+	public void AHintWorksInABlockCommentToo()
+	{
+		// The hint is read from the comment's body, so the delimiters around it do not matter.
+		IReadOnlyList<HighlightedLine> lines = Highlight("/* lang=sql */\nvar tail = \"ORDER BY id DESC\";", "csharp");
+
+		TokenAssert.HasToken(lines, "ORDER", TokenKind.Keyword);
+	}
+
+	[TestMethod]
+	public void AnInlineBlockCommentHintsTheStringBesideIt()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("Post(/* language=sql */ \"ORDER BY id DESC\");", "csharp");
+
+		TokenAssert.HasToken(lines, "ORDER", TokenKind.Keyword);
+	}
+
+	[TestMethod]
 	public void AnUnknownHintLeavesTheStringAlone()
 	{
 		IReadOnlyList<HighlightedLine> lines = Highlight("// lang=klingon\nvar a = \"ORDER BY id\";", "csharp");
