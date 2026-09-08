@@ -331,7 +331,7 @@ public sealed class AppDemoUITests
 	{
 		OpenTab(CleanImNodesTab);
 
-		foreach (string control in new[] { "Enable Physics", "Gentle Physics", "Strong Physics" })
+		foreach (string control in new[] { "Run simulation", "Reset all", "Gentle Physics", "Strong Physics" })
 		{
 			Assert.IsTrue(IsVisible(control), $"The clean ImNodes tab is missing '{control}'.");
 		}
@@ -345,27 +345,60 @@ public sealed class AppDemoUITests
 	}
 
 	/// <summary>
-	/// The link-flattening sliders live under a collapsed header inside a panel that is disabled until
-	/// physics is on, so reaching them takes both a toggle and an expand.
+	/// Every tunable the simulation has is on this panel, grouped under collapsing headers by the
+	/// force it belongs to, so reaching one takes an expand first.
 	/// </summary>
+	/// <remarks>
+	/// The panel itself comes from ktsu.ImGui.NodeEditor rather than this demo, so what this covers is
+	/// that a consuming application gets working controls, not just that the demo drew some.
+	/// </remarks>
 	[TestMethod]
-	public void CleanImNodes_LinkShapingSlidersRespond()
+	public void CleanImNodes_EverySettingGroupOffersItsSliders()
 	{
 		OpenTab(CleanImNodesTab);
 
-		harness.Click("Enable Physics");
-		harness.Step(2);
-		harness.Click("Link Springs");
-		harness.Step(2);
+		(string Header, string[] Sliders)[] groups =
+		[
+			("Repulsion", ["Repulsion strength", "Minimum distance"]),
+			("Link springs", ["Spring strength", "Rest length", "Left-to-right bias"]),
+			("Link shaping", ["Flattening", "Flattening margin", "Untwisting"]),
+			("Gravity", ["Gravity strength", "Origin anchor"]),
+			("Overlap", ["Clearance", "Maximum correction"]),
+			("Motion and limits", ["Damping", "Maximum force", "Maximum speed", "Substep rate", "Settled below"]),
+		];
 
-		foreach (string slider in new[] { "Link Flattening", "Link Flattening Margin (px)", "Link Untwisting" })
+		foreach ((string header, string[] sliders) in groups)
 		{
-			Assert.IsTrue(IsVisible(slider), $"Expanding Link Springs should reveal '{slider}'.");
-			DragSliderTrack(slider);
+			Assert.IsTrue(IsVisible(header), $"The tuning panel is missing its '{header}' group.");
+			harness.Click(header);
+			harness.Step(2);
+
+			foreach (string slider in sliders)
+			{
+				Assert.IsTrue(IsVisible(slider), $"Expanding '{header}' should reveal '{slider}'.");
+				DragSliderTrack(slider);
+				harness.Step(2);
+			}
+
+			// Collapse it again, so the next group's controls are not pushed below the fold.
+			harness.Click(header);
 			harness.Step(2);
 		}
+	}
 
-		Assert.IsTrue(IsVisible("Link Flattening"), "The link-shaping sliders should survive being dragged.");
+	/// <summary>
+	/// Tests that the panel reports what the simulation is doing, which is what says whether a change
+	/// to a setting helped.
+	/// </summary>
+	[TestMethod]
+	public void CleanImNodes_ReportsWhatTheSimulationIsDoing()
+	{
+		OpenTab(CleanImNodesTab);
+
+		foreach (string readout in new[] { "Energy", "Settled", "Substeps", "Substep", "Bodies" })
+		{
+			Assert.IsTrue(IsVisible(readout), $"The tuning panel is missing its '{readout}' readout.");
+		}
 	}
 
 	/// <summary>

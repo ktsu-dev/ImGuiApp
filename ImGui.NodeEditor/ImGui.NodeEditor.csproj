@@ -20,5 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="..\NodeGraph\NodeGraph.csproj" />
     <ProjectReference Include="..\ForceDirectedLayout\ForceDirectedLayout.csproj" />
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
   </ItemGroup>
 </Project>

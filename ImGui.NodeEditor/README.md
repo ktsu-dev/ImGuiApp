@@ -8,6 +8,7 @@ ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself
 ## Features
 
 - **Separation of concerns**: business logic (`NodeEditorEngine`), rendering (`NodeEditorRenderer`), and input (`NodeEditorInputHandler`) are separate objects, so the graph can be built and tested without a renderer
+- **Tuning panel**: `PhysicsSettingsPanel` draws every layout setting, grouped and captioned, so a graph can be tuned while it is on screen
 - **Attribute-based nodes**: `AttributeBasedNodeFactory` reads `ktsu.NodeGraph` attributes off a type — or every decorated type in an assembly — and creates nodes with the right pins
 - **Physics is opt-in**: the simulation does nothing until `PhysicsSettings.Enabled` is set, so a host that positions nodes itself pays nothing for it
 - **Type-aware connections**: `TryCreateLink` returns a result with a message rather than throwing, and pin compatibility comes from the same rules the metadata declares
@@ -164,6 +165,29 @@ The graph and its physics. No ImGui calls.
 | `GetNodeDimensionUpdates(NodeEditorEngine)` | `Dictionary<int, Vector2>` | Sizes ImNodes measured |
 | `RenderDebugOverlays(...)` | `void` | Force and stability overlays |
 | `CurrentlyDraggedNodes` | `IReadOnlySet<int>` | Nodes the user is dragging this frame |
+
+### `PhysicsSettingsPanel`
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Draw(ref PhysicsSettings)` | `bool` | Draws every tunable the simulation has, grouped by force and captioned; true when the user changed one |
+| `DrawDiagnostics(NodeEditorEngine)` | `void` | Energy, whether it has settled, substep count and rate |
+
+The forces interact, so none can be judged alone: raising repulsion changes what the spring's rest
+length means, and levelling links only works in the room repulsion made. The panel therefore exposes
+the whole of `PhysicsSettings` rather than a chosen subset — a setting that is not on it is one
+nobody can reach without recompiling. Every control marks itself with `ktsu.ImGui.Probes`, so a UI
+test can address it by the label the user sees.
+
+```csharp
+PhysicsSettings settings = engine.PhysicsSettings;
+if (PhysicsSettingsPanel.Draw(ref settings))
+{
+    engine.UpdatePhysicsSettings(settings);
+}
+
+PhysicsSettingsPanel.DrawDiagnostics(engine);
+```
 
 ### `NodeEditorInputHandler`
 
