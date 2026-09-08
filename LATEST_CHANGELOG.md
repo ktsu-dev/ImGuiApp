@@ -1,6 +1,6 @@
-## v3.22.0 (minor)
+## v3.23.0 (minor)
 
-Changes since v3.21.0:
+Changes since v3.22.0:
 
-- [minor] Pull edges towards horizontal, not just out of their own way ([@Claude](https://github.com/Claude))
+- [minor] Measure links between their pins rather than between node centres ([@Claude](https://github.com/Claude))
 
