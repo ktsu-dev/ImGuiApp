@@ -1,6 +1,6 @@
-## v3.24.0 (minor)
+## v3.25.0 (minor)
 
-Changes since v3.23.0:
+Changes since v3.24.0:
 
-- [minor] Raise MaxVelocity so a graph settles in seconds, not minutes ([@Claude](https://github.com/Claude))
+- [minor] Untwist links that cross where they meet at a node ([@Claude](https://github.com/Claude))
 
