@@ -1,9 +1,9 @@
 # ktsu.ImGui.Popups
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Popups?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Popups)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-A comprehensive library for custom popup windows and modal dialogs using ImGui.NET, providing a rich set of UI components for interactive applications.
+A comprehensive library for custom popup windows and modal dialogs for Dear ImGui, built on the Hexa.NET.ImGui bindings, providing a rich set of UI components for interactive applications.
 
 ## Features
 
@@ -223,7 +223,7 @@ dotnet run --project examples/ImGuiPopupsDemo
 
 ## Dependencies
 
-- [Hexa.NET.ImGui](https://www.nuget.org/packages/Hexa.NET.ImGui/) - ImGui.NET bindings
+- [Hexa.NET.ImGui](https://www.nuget.org/packages/Hexa.NET.ImGui/) - .NET bindings for Dear ImGui
 - [ktsu.Extensions](https://www.nuget.org/packages/ktsu.Extensions/) - Utility extensions
 - [ktsu.CaseConverter](https://www.nuget.org/packages/ktsu.CaseConverter/) - String case conversion
 - [ktsu.ScopedAction](https://www.nuget.org/packages/ktsu.ScopedAction/) - RAII-style actions
@@ -231,19 +231,8 @@ dotnet run --project examples/ImGuiPopupsDemo
 - [ktsu.Semantics.Strings](https://www.nuget.org/packages/ktsu.Semantics.Strings/) - Type-safe string wrappers
 - [ktsu.TextFilter](https://www.nuget.org/packages/ktsu.TextFilter/) - Text filtering utilities
 - [Microsoft.Extensions.FileSystemGlobbing](https://www.nuget.org/packages/Microsoft.Extensions.FileSystemGlobbing/) - File pattern matching
-
-## Acknowledgments
-
-- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library these popups draw into
-- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+- [System.Text.Json](https://www.nuget.org/packages/System.Text.Json/) - JSON serialization attributes used by the filesystem browser
+- [Polyfill](https://www.nuget.org/packages/Polyfill/) - Build-time only; backports newer .NET APIs to the older target frameworks
 
 ## Changelog
 
@@ -252,3 +241,20 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 ---
 
 **ktsu.dev** - Building tools for developers
+## Acknowledgments
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library these popups draw into
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
+- [ktsu.TextFilter](https://github.com/ktsu-dev/TextFilter) - Glob, regex and fuzzy filtering behind the searchable list
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - Type-safe path and string types used by the filesystem browser
+- [ktsu.Extensions](https://github.com/ktsu-dev/Extensions) and [ktsu.CaseConverter](https://github.com/ktsu-dev/CaseConverter) - Collection and string helpers
+- [ktsu.ScopedAction](https://github.com/ktsu-dev/ScopedAction) - The RAII scope type behind the scoped helpers
+
+## Contributing
+
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
+
+## License
+
+ImGui.Popups is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
+

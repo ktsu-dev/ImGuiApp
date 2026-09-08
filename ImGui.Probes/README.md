@@ -1,5 +1,8 @@
 # ktsu.ImGui.Probes
 
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Probes?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Probes)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
+
 Lets a user interface library record where it drew named items, so an automated test can address a
 widget by name instead of by pixel position.
 
@@ -63,3 +66,11 @@ that costs something to build.
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library whose items are marked
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui, the package's only dependency
+
+## Contributing
+
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
+
+## License
+
+ImGui.Probes is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.

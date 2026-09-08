@@ -1,36 +1,36 @@
-# ktsu.ImGui.Styler 🎨
+# ktsu.ImGui.Styler
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Styler?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Styler)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-**A powerful, expressive styling library for ImGui.NET interfaces** that simplifies theme management, provides scoped styling utilities, and offers advanced color manipulation with accessibility features.
+**A powerful, expressive styling library for Dear ImGui interfaces** that simplifies theme management, provides scoped styling utilities, and offers advanced color manipulation with accessibility features.
 
-## ✨ Features
+## Features
 
-### 🎨 **Advanced Theme System**
+### Advanced Theme System
 - **50+ Built-in Themes**: Comprehensive collection including Catppuccin, Dracula, Gruvbox, Tokyo Night, Nord, and many more
 - **Interactive Theme Browser**: Visual theme selection with live preview and categorization
 - **Semantic Theme Support**: Leverages `ktsu.ThemeProvider` for consistent, semantic color theming
 - **Scoped Theme Application**: Apply themes to specific UI sections without affecting the global style
 
-### 🎯 **Precise Alignment Tools**
+### Precise Alignment Tools
 - **Automatic Content Centering**: Center any content within containers or available regions
 - **Flexible Container Alignment**: Align content within custom-sized containers
 - **Layout Integration**: Seamlessly works with ImGui's existing layout system
 
-### 🌈 **Advanced Color Management**
+### Advanced Color Management
 - **Hex Color Support**: Direct conversion from hex strings to ImGui colors
 - **Accessibility-First**: Automatic contrast calculation and optimal text color selection
 - **Color Manipulation**: Lighten, darken, and adjust colors programmatically
 - **Scoped Color Application**: Apply colors to specific UI elements without side effects
 
-### 🔧 **Scoped Styling System**
+### Scoped Styling System
 - **Style Variables**: Apply temporary style modifications with automatic cleanup
 - **Text Colors**: Scoped text color changes with proper restoration
 - **Theme Colors**: Apply theme-based colors to specific UI sections
 - **Memory Safe**: Automatic resource management and style restoration
 
-## 📦 Installation
+## Installation
 
 Add ImGuiStyler to your project via NuGet:
 
@@ -43,7 +43,7 @@ Or via Package Manager Console:
 Install-Package ktsu.ImGui.Styler
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ```csharp
 using ktsu.ImGui.Styler;
@@ -65,9 +65,9 @@ using (new Alignment.Center(ImGui.CalcTextSize("Centered!")))
 }
 ```
 
-## 📚 Comprehensive Usage Guide
+## Comprehensive Usage Guide
 
-### 🎨 Theme Management
+### Theme Management
 
 #### Applying Global Themes
 ```csharp
@@ -118,20 +118,29 @@ using (new ScopedTheme(dracula))
 // Automatically reverts to previous theme
 ```
 
-### 🌈 Color Management
+### Color Management
 
 #### Creating Colors
+
+Colors are constructed as the semantic `Color` (from `ktsu.Semantics.Color`) and converted at the ImGui seam by `ktsu.ImGui.Color`. Most styling APIs here accept the semantic `Color` directly, so the conversion is usually only needed when you want an `ImColor` in hand.
+
 ```csharp
+using ktsu.ImGui.Color;
+using ktsu.Semantics.Color;
+
 // From hex strings
-ImColor red = Color.FromHex("#ff0000");
-ImColor blueWithAlpha = Color.FromHex("#0066ffcc");
+Color red = Color.FromHex("#ff0000");
+Color blueWithAlpha = Color.FromHex("#0066ffcc");
 
-// From RGB values
-ImColor green = Color.FromRGB(0, 255, 0);
-ImColor customColor = Color.FromRGBA(255, 128, 64, 200);
+// From 8-bit sRGB components
+Color green = Color.FromBytes(0, 255, 0);
+Color custom = Color.FromBytes(255, 128, 64, 200);
 
-// From HSL (hue, saturation, lightness)
-ImColor purple = Color.FromHSL(0.83f, 1.0f, 0.5f);
+// From HSL (hue in degrees 0..360, saturation and lightness 0..1)
+Color purple = Color.FromHsl(new Hsl(280, 1.0, 0.5));
+
+// Convert when an ImColor is what you need
+ImColor imRed = red.ToImColor();
 ```
 
 #### Color Manipulation
@@ -139,17 +148,17 @@ ImColor purple = Color.FromHSL(0.83f, 1.0f, 0.5f);
 Color manipulation is provided as extension methods on `ImColor`:
 
 ```csharp
-ImColor baseColor = Color.FromHex("#3498db");
+ImColor baseColor = Color.FromHex("#3498db").ToImColor();
 
 // Adjust brightness
 ImColor lighter = baseColor.LightenBy(0.3f);
 ImColor darker = baseColor.DarkenBy(0.2f);
 
 // Accessibility-focused text color (best contrast over baseColor)
-ImColor optimalText = baseColor.CalculateOptimalContrastingColor();
+ImColor readableText = baseColor.MostReadableTextColor();
 
 // WCAG contrast ratio between two colors
-float ratio = optimalText.GetContrastRatioOver(baseColor);
+float ratio = readableText.GetContrastRatioOver(baseColor);
 ```
 
 #### Scoped Color Application
@@ -175,7 +184,7 @@ using (new ScopedColor(ImGuiCol.ButtonActive, Color.FromHex("#71368a")))
 }
 ```
 
-### 🎯 Alignment and Layout
+### Alignment and Layout
 
 #### Content Centering
 ```csharp
@@ -205,7 +214,7 @@ using (new Alignment.CenterWithin(contentSize, containerSize))
 }
 ```
 
-### 🔧 Advanced Styling
+### Advanced Styling
 
 #### Button Alignment
 
@@ -321,11 +330,11 @@ using (new ScopedThemeColor(Color.Secondary))
 }
 ```
 
-## 🎨 Available Themes
+## Available Themes
 
 ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 
-### 🌙 Dark Themes
+### Dark Themes
 - **Catppuccin**: Mocha, Macchiato, Frappe
 - **Tokyo Night**: Classic, Storm
 - **Gruvbox**: Dark, Dark Hard, Dark Soft
@@ -336,7 +345,7 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - **Kanagawa**: Wave, Dragon variants
 - **Everforest**: Dark, Dark Hard, Dark Soft
 
-### ☀️ Light Themes
+### Light Themes
 - **Catppuccin**: Latte
 - **Tokyo Night**: Day
 - **Gruvbox**: Light, Light Hard, Light Soft
@@ -346,12 +355,12 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - **Everforest**: Light, Light Hard, Light Soft
 - **VSCode**: Light theme
 
-### 🎨 Specialty Themes
+### Specialty Themes
 - **Monokai**: Classic editor theme
 - **Nightfly**: Smooth dark theme
 - **VSCode**: Dark theme recreation
 
-## 🛠️ API Reference
+## API Reference
 
 ### Theme Class
 - `Theme.Apply(string themeName)` - Apply a global theme (returns `false` if not found)
@@ -365,17 +374,21 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - `Theme.Families` - Get all theme families
 - `Theme.CurrentThemeName` - Get current theme name
 
-### Color Class
-- `Color.FromHex(string hex)` - Create color from hex string
-- `Color.FromRGB(byte r, byte g, byte b)` - Create color from RGB
-- `Color.FromRGBA(byte r, byte g, byte b, byte a)` - Create color from RGBA
-- `Color.FromHSL(float h, float s, float l)` - Create color from HSL
+### Colors
+
+Color construction and manipulation live in `ktsu.Semantics.Color` and the `ktsu.ImGui.Color` adapter; Styler consumes them rather than defining its own color type.
+
+- `Color.FromHex(string hex)` - Create a color from a hex string
+- `Color.FromBytes(byte r, byte g, byte b, byte a = 255)` - Create a color from 8-bit sRGB components
+- `Color.FromHsl(Hsl hsl)` - Create a color from hue (degrees), saturation and lightness
+- `color.ToImColor()` / `color.ToImGuiVector4()` / `color.ToImGuiU32()` - Convert at the ImGui seam
 
 ### Color Extension Methods (on `ImColor`)
 - `color.LightenBy(float amount)` - Lighten color
 - `color.DarkenBy(float amount)` - Darken color
 - `color.WithAlpha(float amount)` - Set alpha channel
-- `color.CalculateOptimalContrastingColor()` - Get accessible (max-contrast) text color
+- `color.MostReadableTextColor()` - Get accessible (max-contrast) text color
+- `color.AdjustForSufficientContrast(ImColor textColor, float? targetRatio = null)` - Nudge a color until it meets a contrast target
 - `color.GetContrastRatioOver(ImColor background)` - WCAG contrast ratio
 
 ### Alignment Classes
@@ -405,7 +418,7 @@ ImGuiStyler includes **50+ carefully crafted themes** across multiple families:
 - `Indent.ByDefault()` - Create default indent
 - `Indent.By(float width)` - Create indent with custom width
 
-## 🎯 Demo Application
+## Demo Application
 
 The included demo application showcases all features:
 
@@ -421,42 +434,26 @@ Features demonstrated:
 - Alignment showcases
 - Accessibility features
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our contributing guidelines:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Development Setup
-```bash
-git clone https://github.com/ktsu-dev/ImGuiApp.git
-cd ImGuiApp
-dotnet restore
-dotnet build
-```
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE.md](LICENSE.md) file for details.
-
-## 🙏 Acknowledgments
-
-- **[Dear ImGui](https://github.com/ocornut/imgui)** - The immediate mode GUI library these themes style
-- **[Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui)** - The .NET bindings for Dear ImGui that this package is built on
-- **[ImGui.NET](https://github.com/mellinoe/ImGui.NET)** - .NET bindings for Dear ImGui
-- **Theme Inspirations**: Catppuccin, Tokyo Night, Gruvbox, and other amazing color schemes
-- **Community Contributors** - Thank you for your themes, bug reports, and improvements!
-
-## 🔗 Related Projects
+## Related Projects
 
 - **[ktsu.ThemeProvider](https://github.com/ktsu-dev/ThemeProvider)** - Semantic theming foundation
 - **[ktsu.ImGui.Popups](https://nuget.org/packages/ktsu.ImGui.Popups)** - Modal and popup utilities (part of this suite)
 - **[ktsu.ImGui.Widgets](https://nuget.org/packages/ktsu.ImGui.Widgets)** - Custom widgets (part of this suite)
+## Acknowledgments
 
----
+- **[Dear ImGui](https://github.com/ocornut/imgui)** - The immediate mode GUI library these themes style
+- **[Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui)** - The .NET bindings for Dear ImGui that this package is built on
+- **[ktsu.ThemeProvider](https://github.com/ktsu-dev/ThemeProvider)** - The semantic theming foundation, with `ktsu.ThemeProvider.ImGui` mapping it onto ImGui's style
+- **[ktsu.Semantics](https://github.com/ktsu-dev/Semantics)** - The `Color` type and the color math behind the palette
+- **[ktsu.ScopedAction](https://github.com/ktsu-dev/ScopedAction)** - The RAII scope type the scoped styling helpers are built on
+- **Theme Inspirations**: Catppuccin, Tokyo Night, Gruvbox, and other amazing color schemes
+- **Community Contributors** - Thank you for your themes, bug reports, and improvements!
 
-**Made with ❤️ by the ktsu.dev team**
+## Contributing
+
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
+
+## License
+
+ImGui.Styler is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
+

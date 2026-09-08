@@ -68,6 +68,8 @@ Generic attribute-based system for declaring node graphs. Decorate classes, stru
 
 ### ImGuiNodeEditor - Visual Node Editor
 
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiNodeEditor?label=ktsu.ImGuiNodeEditor&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiNodeEditor)
+
 Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine` for business logic, `AttributeBasedNodeFactory` for node creation from decorated types, physics-based layout simulation, and `NodeEditorRenderer`/`NodeEditorInputHandler` for rendering and interaction.
 
 ### ImGui.Markdown - Markdown Rendering
@@ -81,6 +83,24 @@ CommonMark markdown renderer built on Markdig, with pipe tables, task lists, and
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.SyntaxHighlighting?label=ktsu.ImGui.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.SyntaxHighlighting)
 
 Syntax-highlighted source code rendered inside Dear ImGui, with built-in definitions for C#, C, C++, JavaScript, TypeScript, Python, JSON, YAML, XML, HTML, CSS, SQL, shell, Lua, and plain text. Languages are plain data, so applications can register their own; palettes follow the host's light or dark theme. Standalone, with no dependency on `ktsu.ImGui.App`, and it doubles as the code-block renderer for `ktsu.ImGui.Markdown`.
+
+### ForceDirectedLayout - Graph Layout Simulation
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?label=ktsu.ForceDirectedLayout&logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
+
+Renderer-agnostic force-directed layout: bodies repel, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGuiNodeEditor` uses it to lay out node graphs.
+
+### ImGui.Probes - Item Recording for Tests
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Probes?label=ktsu.ImGui.Probes&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Probes)
+
+Lets a UI library record where it drew named items so a test can address a widget by name instead of by pixel position. Tiny and dependency free beyond the ImGui binding, so any widget library can mark its items without depending on an application host or on test infrastructure.
+
+### ImGui.App.Testing - Headless Test Harness
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App.Testing?label=ktsu.ImGui.App.Testing&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App.Testing)
+
+Runs a `ktsu.ImGui.App` application headlessly: a CPU rasterizer with no window and no GPU, input injected straight into ImGui, and frames advanced under the test's control. Widgets are addressed by name through `ktsu.ImGui.Probes`, and frames are captured for assertions and failure artifacts.
 
 ## Installation
 
@@ -553,7 +573,7 @@ Theme management from ImGui.Styler.
 | `DarkenBy(float)` | Decrease luminance |
 | `WithAlpha(float)` | Set alpha channel |
 | `ToGrayscale()` | Convert to grayscale |
-| `CalculateOptimalContrastingColor()` | Get best contrast text color |
+| `MostReadableTextColor()` | Get best contrast text color |
 | `GetContrastRatioOver(ImColor)` | WCAG contrast ratio |
 
 ### `NodeEditorEngine`
@@ -635,10 +655,6 @@ dotnet run --project examples/ImGuiMarkdownDemo
 dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 ```
 
-## Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
 ## Acknowledgments
 
 The suite renders through the [Hexa.NET](https://github.com/HexaEngine/Hexa.NET.ImGui) bindings:
@@ -654,7 +670,19 @@ and on the libraries they wrap or sit beside:
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - Cross-platform windowing and OpenGL
 - [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Image loading behind the texture cache
 - [Markdig](https://github.com/xoofx/markdig) - The CommonMark parser behind `ktsu.ImGui.Markdown`
+- [Polyfill](https://github.com/SimonCropp/Polyfill) - Backports newer .NET APIs to the older target frameworks, at build time only
+
+and on the ktsu libraries the suite shares with the rest of the ecosystem:
+
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - The `Color`, path, string and quantity types
+- [ktsu.ThemeProvider](https://github.com/ktsu-dev/ThemeProvider) - The semantic theming foundation behind `ktsu.ImGui.Styler`
+- [ktsu.TextFilter](https://github.com/ktsu-dev/TextFilter) - Glob, regex and fuzzy filtering
+- [ktsu.Extensions](https://github.com/ktsu-dev/Extensions), [ktsu.CaseConverter](https://github.com/ktsu-dev/CaseConverter), [ktsu.ScopedAction](https://github.com/ktsu-dev/ScopedAction) and [ktsu.Invoker](https://github.com/ktsu-dev/Invoker) - Collection, string, RAII and invocation helpers
+
+## Contributing
+
+Contributions are welcome! For feature requests, bug reports, or questions, please open an issue on the GitHub repository. If you would like to contribute code, please open a pull request with your changes.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for more information.
