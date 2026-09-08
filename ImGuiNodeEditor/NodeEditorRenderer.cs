@@ -69,7 +69,7 @@ public class NodeEditorRenderer
 	/// </summary>
 	public void Render(NodeEditorEngine engine, Vector2 editorSize)
 	{
-		ArgumentNullException.ThrowIfNull(engine);
+		Ensure.NotNull(engine);
 
 		// Scaled about the middle of the editor, so zooming keeps whatever is in the middle of the
 		// view in the middle of it rather than sending the graph towards a corner. Cached because the
@@ -330,7 +330,7 @@ public class NodeEditorRenderer
 	/// </remarks>
 	public bool FitToView(NodeEditorEngine engine, Vector2 editorSize)
 	{
-		ArgumentNullException.ThrowIfNull(engine);
+		Ensure.NotNull(engine);
 
 		if (engine.Nodes.Count == 0)
 		{
