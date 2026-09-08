@@ -344,6 +344,44 @@ public sealed class AppDemoUITests
 		Assert.IsTrue(IsVisible("Strong Physics"), "The physics presets should survive being applied.");
 	}
 
+	/// <summary>
+	/// The link-flattening sliders live under a collapsed header inside a panel that is disabled until
+	/// physics is on, so reaching them takes both a toggle and an expand.
+	/// </summary>
+	[TestMethod]
+	public void CleanImNodes_LinkFlatteningSlidersRespond()
+	{
+		OpenTab(CleanImNodesTab);
+
+		harness.Click("Enable Physics");
+		harness.Step(2);
+		harness.Click("Link Springs");
+		harness.Step(2);
+
+		foreach (string slider in new[] { "Link Flattening", "Link Flattening Margin (px)" })
+		{
+			Assert.IsTrue(IsVisible(slider), $"Expanding Link Springs should reveal '{slider}'.");
+			DragSliderTrack(slider);
+			harness.Step(2);
+		}
+
+		Assert.IsTrue(IsVisible("Link Flattening"), "The flattening sliders should survive being dragged.");
+	}
+
+	/// <summary>
+	/// Drags a slider along its track so its value actually moves, which is what drives the caller's
+	/// change branch. A slider's item rectangle spans the track *and* the label drawn to its right, so
+	/// the drag stays in the left portion to be sure it lands on the track rather than the text.
+	/// </summary>
+	private void DragSliderTrack(string name)
+	{
+		Rectangle rect = harness.Probe.Rect(name)
+			?? throw new AssertFailedException($"No item matching '{name}' has been marked.");
+
+		float y = rect.MinY + (rect.Height / 2f);
+		harness.Mouse.Drag(rect.MinX + (rect.Width * 0.1f), y, rect.MinX + (rect.Width * 0.45f), y);
+	}
+
 	[TestMethod]
 	public void Utilities_OffersTheBuiltInImGuiWindows()
 	{

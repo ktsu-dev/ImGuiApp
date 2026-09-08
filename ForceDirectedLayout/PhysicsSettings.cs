@@ -21,6 +21,15 @@ public sealed record PhysicsSettings
 	/// <summary>Strength of the horizontal source-left/target-right ordering bias. 0 disables it.</summary>
 	public double DirectionalBias { get; init; } = 0.5;
 
+	/// <summary>
+	/// Strength of the horizontal splay that keeps an edge's rendered curve clear of its own endpoint
+	/// bodies. 0 disables it. See <see cref="LayoutCore.BezierClearanceRatio"/> for the geometry.
+	/// </summary>
+	public double LinkFlatteningStrength { get; init; } = 0.5;
+
+	/// <summary>Extra horizontal clearance demanded on top of the derived bezier bound, in position units.</summary>
+	public double LinkFlatteningMargin { get; init; }
+
 	/// <summary>Strength of the gravity force pulling each body toward the gravity target.</summary>
 	public double GravityStrength { get; init; } = 50.0;
 
@@ -61,6 +70,8 @@ public sealed record PhysicsSettings
 		RepulsionStrength = RepulsionStrength,
 		LinkSpringStrength = LinkSpringStrength,
 		DirectionalBias = DirectionalBias,
+		LinkFlatteningStrength = LinkFlatteningStrength,
+		LinkFlatteningMargin = LinkFlatteningMargin,
 		GravityStrength = GravityStrength,
 		OriginAnchorWeight = OriginAnchorWeight,
 		DampingFactor = DampingFactor,
@@ -81,6 +92,8 @@ public sealed record PhysicsSettings
 		RepulsionStrength = s.RepulsionStrength,
 		LinkSpringStrength = s.LinkSpringStrength,
 		DirectionalBias = s.DirectionalBias,
+		LinkFlatteningStrength = s.LinkFlatteningStrength,
+		LinkFlatteningMargin = s.LinkFlatteningMargin,
 		GravityStrength = s.GravityStrength,
 		OriginAnchorWeight = s.OriginAnchorWeight,
 		DampingFactor = s.DampingFactor,

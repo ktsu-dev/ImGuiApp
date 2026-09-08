@@ -19,6 +19,21 @@ public sealed class LayoutCore
 	/// <summary>Overlap depth below which <see cref="SeparateOverlaps"/> leaves a pair alone.</summary>
 	private const double OverlapEpsilon = 0.01;
 
+	/// <summary>
+	/// Horizontal clearance an edge needs per unit of vertical drop, as a fraction of that drop, for its
+	/// rendered curve to stay inside the channel between its two endpoint bodies.
+	/// </summary>
+	/// <remarks>
+	/// ImNodes renders a link as a cubic bezier whose inner control points are offset horizontally by
+	/// <c>0.25 * length</c> from each pin. Writing <c>gap</c> for the clear horizontal span between the
+	/// source's right edge and the target's left edge, the curve's x-coordinate is monotonic - it never
+	/// doubles back over either body - exactly when <c>gap >= 0.25 * length</c>. Substituting
+	/// <c>length = sqrt(gap^2 + dy^2)</c> and solving gives <c>gap >= |dy| / sqrt(15)</c>, so the ratio
+	/// below is <c>1 / sqrt(15)</c>, a cap of about 75.5 degrees off horizontal. Links are drawn beneath
+	/// the node backgrounds, so a curve that doubles back is a curve that disappears.
+	/// </remarks>
+	public const double BezierClearanceRatio = 0.2581988897471611;
+
 	private BodyState[] bodies = [];
 	private int bodyCount;
 
@@ -133,6 +148,7 @@ public sealed class LayoutCore
 
 			CalculateRepulsionForces();
 			CalculateLinkForces();
+			CalculateLinkFlatteningForces();
 			CalculateDirectionalForces();
 			CalculateGravityForces();
 
@@ -221,6 +237,54 @@ public sealed class LayoutCore
 
 			bodies[s].Force += force;
 			bodies[t].Force -= force;
+		}
+	}
+
+	/// <summary>
+	/// Splay an edge's endpoints apart horizontally until the clear span between their facing edges is
+	/// wide enough for the rendered curve, per <see cref="BezierClearanceRatio"/>. Steep edges are the
+	/// ones that need it; once an edge is flat enough the force switches off, so this shapes angles
+	/// rather than stretching the graph. It is a soft constraint balanced against the link spring, so
+	/// equilibrium settles just inside the bound rather than exactly on it.
+	/// </summary>
+	private void CalculateLinkFlatteningForces()
+	{
+		double strength = Settings.LinkFlatteningStrength;
+		if (strength <= 0)
+		{
+			return;
+		}
+
+		double margin = Settings.LinkFlatteningMargin;
+
+		for (int e = 0; e < edgeCount; e++)
+		{
+			int s = edges[e].SourceIndex;
+			int t = edges[e].TargetIndex;
+			if ((uint)s >= (uint)bodyCount || (uint)t >= (uint)bodyCount)
+			{
+				continue;
+			}
+
+			// Approximate the pins by the facing edges of the two bodies at their centre heights.
+			double sourceRight = bodies[s].Position.X + bodies[s].Dimensions.X;
+			double targetLeft = bodies[t].Position.X;
+			double gap = targetLeft - sourceRight;
+
+			double sourceCenterY = bodies[s].Position.Y + (bodies[s].Dimensions.Y * 0.5);
+			double targetCenterY = bodies[t].Position.Y + (bodies[t].Dimensions.Y * 0.5);
+			double verticalDrop = Math.Abs(targetCenterY - sourceCenterY);
+
+			double required = (verticalDrop * BezierClearanceRatio) + margin;
+			double violation = required - gap;
+			if (violation <= 0)
+			{
+				continue;
+			}
+
+			double forceX = strength * violation;
+			bodies[s].Force += new Vec2D(-forceX, 0);
+			bodies[t].Force += new Vec2D(forceX, 0);
 		}
 	}
 
