@@ -11,6 +11,7 @@ ImGui.Markdown renders CommonMark markdown directly inside Dear ImGui, using [Ma
 - **Tables**: Rendered with ImGui's native table API
 - **Links**: Clickable, with an optional callback or automatic OS-open for http, https, and mailto schemes
 - **Images**: Local images via a resolver callback; remote or unresolved images fall back to a placeholder box with the alt text
+- **Code blocks**: Rendered as monospace text on a shaded panel, or handed to a `CodeBlockRenderer` hook — `ktsu.ImGui.SyntaxHighlighting` plugs into it for syntax highlighting
 - **Two APIs**: A cached static `Render` for convenience, and a `MarkdownDocument` instance for hot render paths where the source is parsed once
 
 ## Installation
@@ -75,12 +76,25 @@ ImGuiMarkdown.Render(markdown, config);
 | ------ | ---- | ----------- |
 | `FontResolver` | `Func<MarkdownFontRole, float, ImFontPtr?>?` | Resolves a font for a typographic role (`Body`, `Bold`, `Italic`, `BoldItalic`, `Code`, `H1`-`H6`) at a target pixel size. Return `null` for a role to fall back to the current font at that size, with faux bold/italic styling applied for emphasis roles. |
 | `OnLinkClicked` | `Action<string>?` | Invoked when a link is clicked. When `null`, http, https, and mailto links open with the OS default handler; other schemes are ignored. |
+| `CodeBlockRenderer` | `Action<string?, string>?` | Draws fenced and indented code blocks, receiving the fence's info string (the language, or `null`) and the block's text, and taking over both drawing and reserving the block's layout space. When `null`, code blocks render as monospace text on a shaded panel. |
 | `ImageResolver` | `Func<string, MarkdownImageResult?>?` | Resolves an image source string to a `MarkdownImageResult` (an ImGui texture ID and a draw size). Return `null`, or omit the resolver, to draw a placeholder box with the alt text instead. |
 | `HeadingScales` | `IReadOnlyList<float>` | Size multipliers applied to the live body font size, H1 first. Defaults to `[2.0, 1.6, 1.35, 1.15, 1.0, 0.9]`. |
 | `WrapWidth` | `float?` | Explicit wrap width in pixels. When `null`, the available content region width is used. |
 | `ListIndentPixels` | `float` | Indentation applied per list nesting level, in pixels. Defaults to `20.0`. |
 | `ParagraphSpacingPixels` | `float` | Vertical spacing added after paragraphs and blocks, in pixels. Defaults to `6.0`. |
 | `LinkColor` | `ImGuiVector4?` | Explicit link color. When `null`, a theme-appropriate color is used. |
+
+### Highlighting code blocks
+
+`CodeBlockRenderer` is the extension point for syntax highlighting: the sibling package `ktsu.ImGui.SyntaxHighlighting` plugs straight into it, so fenced code picks up highlighting without either library depending on the other.
+
+```csharp
+MarkdownConfig config = new()
+{
+    CodeBlockRenderer = (language, code) =>
+        ImGuiSyntaxHighlighting.Render(code, language ?? "text"),
+};
+```
 
 ### Registering real bold and italic fonts
 
@@ -129,7 +143,7 @@ private static MarkdownImageResult? ResolveImage(string source)
 
 ## v1 Limitations
 
-- No syntax highlighting in code blocks; code is rendered in a plain monospace style
+- No built-in syntax highlighting; code blocks render in a plain monospace style unless a `CodeBlockRenderer` is supplied (for example `ktsu.ImGui.SyntaxHighlighting`)
 - No asynchronous remote image download; remote or unresolved image sources always show a placeholder box with the alt text
 - Raw HTML blocks and inline HTML are rendered as escaped, literal text, not interpreted
 - Faux italic renders upright when no italic font is supplied through `FontResolver`, since no glyph shear is applied

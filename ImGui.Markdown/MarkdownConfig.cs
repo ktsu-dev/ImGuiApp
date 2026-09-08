@@ -74,6 +74,15 @@ public sealed record MarkdownConfig
 	/// </summary>
 	public Func<string, MarkdownImageResult?>? ImageResolver { get; init; }
 
+	/// <summary>
+	/// Draws fenced and indented code blocks. It receives the fence's info string (the language, or
+	/// <see langword="null"/> for an indented block or a bare fence) and the block's text, and is
+	/// responsible for both drawing and reserving the block's layout space. Supply one to route code
+	/// blocks through a syntax highlighter such as <c>ktsu.ImGui.SyntaxHighlighting</c>; when
+	/// <see langword="null"/>, code blocks render as monospace text on a shaded panel.
+	/// </summary>
+	public Action<string?, string>? CodeBlockRenderer { get; init; }
+
 	/// <summary>Heading size multipliers applied to the live body font size, H1 first.</summary>
 	public IReadOnlyList<float> HeadingScales { get; init; } = DefaultHeadingScales;
 

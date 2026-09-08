@@ -173,6 +173,16 @@ internal static class BlockRenderer
 	private static void RenderCodeBlock(Markdig.Syntax.CodeBlock code, MarkdownConfig config)
 	{
 		string text = ExtractCodeText(code);
+
+		if (config.CodeBlockRenderer is not null)
+		{
+			// The hook owns the block completely — drawing and reserving space — so a highlighter can
+			// paint its own background, gutter and colors instead of the shaded monospace panel below.
+			config.CodeBlockRenderer((code as FencedCodeBlock)?.Info, text);
+			ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
+			return;
+		}
+
 		float size = ImGui.GetFontSize();
 		const float pad = 4.0f;
 		Vector2 start = ImGui.GetCursorScreenPos();
