@@ -357,17 +357,17 @@ public class GenericFacadeTests
 		Assert.IsTrue(drop < 400.0, $"The pair started 400 apart vertically and should have flattened; drop was {drop}.");
 	}
 
-	[TestMethod]
-	public void BackwardEdge_SwapsTheEndpointsIntoOrder()
+	/// <summary>Builds a body at rest, so a test's graph reads as a list of placements.</summary>
+	private static TestBody Body(int id, double x, double y, double width, double height, bool pinned = false) =>
+		new(id, new Vec2D(x, y), new Vec2D(width, height), Vec2D.Zero, Vec2D.Zero, pinned);
+
+	/// <summary>
+	/// Settles a graph whose only edge runs from body 1 to body 2, and reports where the two ended up.
+	/// </summary>
+	/// <returns>The horizontal centres of the edge's source and target.</returns>
+	private static (double SourceCenterX, double TargetCenterX) SettleBackwardEdge(List<TestBody> bodies)
 	{
-		// Mirrors the node editor: a small "param value" body sits to the right of the big "function"
-		// body it feeds, so the edge runs right-to-left and its curve hides behind both.
 		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
-		List<TestBody> bodies =
-		[
-			new TestBody(1, new Vec2D(400, 10), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, false),
-			new TestBody(2, new Vec2D(0, 0), new Vec2D(270, 230), Vec2D.Zero, Vec2D.Zero, false),
-		];
 		List<TestEdge> edges = [new TestEdge(1, 2)];
 
 		// The pair crosses within about 30 steps; the rest is settling back into a row.
@@ -376,8 +376,18 @@ public class GenericFacadeTests
 			layout.Step(bodies, edges, 0.016);
 		}
 
-		double sourceCenterX = bodies[0].Position.X + (bodies[0].Dimensions.X * 0.5);
-		double targetCenterX = bodies[1].Position.X + (bodies[1].Dimensions.X * 0.5);
+		return (bodies[0].Position.X + (bodies[0].Dimensions.X * 0.5),
+			bodies[1].Position.X + (bodies[1].Dimensions.X * 0.5));
+	}
+
+	[TestMethod]
+	public void BackwardEdge_SwapsTheEndpointsIntoOrder()
+	{
+		// Mirrors the node editor: a small "param value" body sits to the right of the big "function"
+		// body it feeds, so the edge runs right-to-left and its curve hides behind both.
+		List<TestBody> bodies = [Body(1, 400, 10, 160, 60), Body(2, 0, 0, 270, 230)];
+
+		(double sourceCenterX, double targetCenterX) = SettleBackwardEdge(bodies);
 
 		Assert.IsTrue(sourceCenterX < targetCenterX,
 			$"The source should end up left of its target; source centre {sourceCenterX}, target centre {targetCenterX}.");
@@ -393,22 +403,14 @@ public class GenericFacadeTests
 	{
 		// The reordering body has to cross the space a third, unconnected body occupies to reach its
 		// place in the order, which is the shape a real graph takes once it has more than two nodes.
-		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
 		List<TestBody> bodies =
 		[
-			new TestBody(1, new Vec2D(600, 0), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, false),
-			new TestBody(2, new Vec2D(0, 0), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, false),
-			new TestBody(3, new Vec2D(300, 0), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, true),
+			Body(1, 600, 0, 160, 60),
+			Body(2, 0, 0, 160, 60),
+			Body(3, 300, 0, 160, 60, pinned: true),
 		];
-		List<TestEdge> edges = [new TestEdge(1, 2)];
 
-		for (int i = 0; i < 1200; i++)
-		{
-			layout.Step(bodies, edges, 0.016);
-		}
-
-		double sourceCenterX = bodies[0].Position.X + (bodies[0].Dimensions.X * 0.5);
-		double targetCenterX = bodies[1].Position.X + (bodies[1].Dimensions.X * 0.5);
+		(double sourceCenterX, double targetCenterX) = SettleBackwardEdge(bodies);
 
 		Assert.IsTrue(sourceCenterX < targetCenterX,
 			$"A pinned body in the way should not stop the reorder; source centre {sourceCenterX}, target centre {targetCenterX}.");
