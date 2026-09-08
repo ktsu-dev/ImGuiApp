@@ -30,7 +30,7 @@ public static class ImageResampler
 	/// <returns>A new image at the requested size, or a copy of the source when the size is unchanged.</returns>
 	public static ImagePixels Resize(ImagePixels source, int width, int height)
 	{
-		ArgumentNullException.ThrowIfNull(source);
+		Ensure.NotNull(source);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 

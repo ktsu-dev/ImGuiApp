@@ -40,7 +40,7 @@ public sealed class ImagePixels
 	{
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
-		ArgumentNullException.ThrowIfNull(pixels);
+		Ensure.NotNull(pixels);
 
 		int expected = checked(width * height * 4);
 		if (pixels.Length != expected)

@@ -75,7 +75,7 @@ public static class ImageDecoder
 	/// <exception cref="InvalidImageDataException">The stream is of an unrecognised format, or malformed.</exception>
 	public static ImagePixels Load(Stream stream)
 	{
-		ArgumentNullException.ThrowIfNull(stream);
+		Ensure.NotNull(stream);
 
 		using MemoryStream buffer = new();
 		stream.CopyTo(buffer);
