@@ -55,7 +55,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType<AddNumbersNode>();
 
-		NodeDefinition definition = factory.GetNodeDefinition(typeof(AddNumbersNode))!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(AddNumbersNode)));
 
 		Assert.AreEqual(NodeExecutionMode.OnExecution, definition.ExecutionMode);
 		Assert.IsTrue(definition.HasSideEffects);
@@ -70,7 +70,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType<RetiredNode>();
 
-		NodeDefinition definition = factory.GetNodeDefinition(typeof(RetiredNode))!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(RetiredNode)));
 
 		Assert.IsTrue(definition.IsDeprecated);
 		Assert.AreEqual("Superseded by Add Numbers", definition.DeprecationReason);
@@ -88,7 +88,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType<AddNumbersNode>();
 
-		NodeDefinition definition = factory.GetNodeDefinition(typeof(AddNumbersNode))!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(AddNumbersNode)));
 
 		// B declares Order 0 and A declares Order 1, so B sorts first regardless of declaration order.
 		Assert.AreEqual("B", definition.InputPins[0].DisplayName);
@@ -122,7 +122,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType<ConstructedNode>();
 
-		NodeDefinition definition = factory.GetNodeDefinition(typeof(ConstructedNode))!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(ConstructedNode)));
 		PinDefinition seed = definition.InputPins.Single(p => p.DisplayName == "seed");
 		PinDefinition label = definition.InputPins.Single(p => p.DisplayName == "label");
 
@@ -138,7 +138,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType<SideEffectNode>();
 
-		NodeDefinition definition = factory.GetNodeDefinition(typeof(SideEffectNode))!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(SideEffectNode)));
 
 		Assert.Contains(PinType.Execution, definition.InputPins.Select(p => p.PinType).ToList());
 		Assert.Contains(PinType.Execution, definition.OutputPins.Select(p => p.PinType).ToList());
@@ -172,7 +172,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		Assert.IsNotNull(factory.GetNodeDefinition(typeof(AddNumbersNode)));
 		Assert.IsNotNull(factory.GetNodeDefinition(typeof(RetiredNode)));
 		Assert.IsNotNull(
-			factory.GetNodeDefinition(typeof(Counter).GetMethod(nameof(Counter.Increment))!),
+			factory.GetNodeDefinition(IncrementMethod),
 			"A decorated method on an ordinary class should be found by the scan.");
 		Assert.IsGreaterThan(2, factory.GetAllNodeDefinitions().Count());
 	}
@@ -236,7 +236,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType(typeof(MathNodes));
 
-		NodeDefinition definition = factory.GetNodeDefinition(ClampMethod)!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(ClampMethod));
 
 		Assert.AreSequenceEqual(["value", "min", "max"], definition.InputPins.Select(p => p.DisplayName).ToArray());
 		Assert.AreEqual(0.0, definition.InputPins[1].DefaultValue);
@@ -250,8 +250,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		AttributeBasedNodeFactory factory = Factory;
 		factory.RegisterNodeType<Counter>();
 
-		MethodInfo increment = typeof(Counter).GetMethod(nameof(Counter.Increment))!;
-		NodeDefinition definition = factory.GetNodeDefinition(increment)!;
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(IncrementMethod));
 
 		Assert.AreEqual("Instance", definition.InputPins[0].DisplayName);
 		Assert.AreEqual(typeof(Counter), definition.InputPins[0].DataType);
@@ -271,7 +270,7 @@ public sealed class AttributeBasedNodeFactoryTests
 		Assert.HasCount(3, node.InputPins);
 		Assert.HasCount(1, node.OutputPins);
 
-		MethodInfo unregistered = typeof(Counter).GetMethod(nameof(Counter.Increment))!;
+		MethodInfo unregistered = IncrementMethod;
 		Assert.ThrowsExactly<InvalidOperationException>(() => factory.CreateMethodNode(unregistered, Vector2.Zero));
 	}
 
@@ -285,7 +284,16 @@ public sealed class AttributeBasedNodeFactoryTests
 		Assert.IsEmpty(factory.GetAllNodeDefinitions());
 	}
 
-	private static MethodInfo ClampMethod => typeof(MathNodes).GetMethod(nameof(MathNodes.Clamp))!;
+	private static MethodInfo ClampMethod =>
+		typeof(MathNodes).GetMethod(nameof(MathNodes.Clamp)) ?? throw new AssertFailedException("Clamp went missing.");
+
+	/// <summary>Asserts a lookup found something, and hands back the non-null definition.</summary>
+	private static MethodInfo IncrementMethod =>
+		typeof(Counter).GetMethod(nameof(Counter.Increment)) ?? throw new AssertFailedException("Increment went missing.");
+
+	/// <summary>Asserts a lookup found something, and hands back the non-null definition.</summary>
+	private static NodeDefinition Registered(NodeDefinition? definition) =>
+		definition ?? throw new AssertFailedException("The definition was not registered.");
 
 	[Node("Add Numbers", ColorHint = "#4488ff", Tags = ["math", "arithmetic"])]
 	[NodeBehavior(

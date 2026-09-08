@@ -96,7 +96,8 @@ public sealed class NodeEditorEngineTests
 		LinkCreationResult result = engine.TryCreateLink(target.InputPins[0].Id, source.OutputPins[0].Id);
 
 		Assert.IsTrue(result.Success, result.Message);
-		Assert.AreEqual(source.OutputPins[0].Id, result.Link!.OutputPinId);
+		Link created = result.Link ?? throw new AssertFailedException("A successful result carried no link.");
+		Assert.AreEqual(source.OutputPins[0].Id, created.OutputPinId);
 	}
 
 	[TestMethod]
@@ -231,10 +232,13 @@ public sealed class NodeEditorEngineTests
 		engine.UpdateNodeDimensions(target.Id, new Vector2(100, 50));
 		engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
 
-		float? distance = engine.GetLinkDistance(engine.Links[0].Id);
+		if (engine.GetLinkDistance(engine.Links[0].Id) is not float distance)
+		{
+			Assert.Fail("The link reported no distance.");
+			return;
+		}
 
-		Assert.IsNotNull(distance);
-		Assert.AreEqual(300f, distance.Value, 0.001f, "Equal dimensions cancel out, leaving the position delta.");
+		Assert.AreEqual(300f, distance, 0.001f, "Equal dimensions cancel out, leaving the position delta.");
 		Assert.IsNull(engine.GetLinkDistance(9999));
 	}
 
@@ -245,10 +249,13 @@ public sealed class NodeEditorEngineTests
 		Node target = engine.CreateNode(new Vector2((float)engine.PhysicsSettings.RestLinkLength, 0), "Target", ["In"], []);
 		engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
 
-		float? stress = engine.GetLinkStress(engine.Links[0].Id);
+		if (engine.GetLinkStress(engine.Links[0].Id) is not float stress)
+		{
+			Assert.Fail("The link reported no stress.");
+			return;
+		}
 
-		Assert.IsNotNull(stress);
-		Assert.AreEqual(0f, stress.Value, 0.001f);
+		Assert.AreEqual(0f, stress, 0.001f);
 		Assert.IsNull(engine.GetLinkStress(9999));
 	}
 
@@ -259,7 +266,13 @@ public sealed class NodeEditorEngineTests
 		Node target = engine.CreateNode(new Vector2((float)engine.PhysicsSettings.RestLinkLength * 2f, 0), "Target", ["In"], []);
 		engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
 
-		Assert.AreEqual(1f, engine.GetLinkStress(engine.Links[0].Id)!.Value, 0.001f);
+		if (engine.GetLinkStress(engine.Links[0].Id) is not float stress)
+		{
+			Assert.Fail("The link reported no stress.");
+			return;
+		}
+
+		Assert.AreEqual(1f, stress, 0.001f);
 	}
 
 	[TestMethod]

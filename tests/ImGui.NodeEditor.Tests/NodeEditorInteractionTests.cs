@@ -85,9 +85,14 @@ public sealed class NodeEditorInteractionTests
 		engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
 		Start();
 
-		Assert.IsNotNull(lastEvents);
-		Assert.IsEmpty(lastEvents.LinkCreationRequests);
-		Assert.IsEmpty(lastEvents.LinkDeletionRequests);
+		if (lastEvents is not InputEvents events)
+		{
+			Assert.Fail("The input handler never ran.");
+			return;
+		}
+
+		Assert.IsEmpty(events.LinkCreationRequests);
+		Assert.IsEmpty(events.LinkDeletionRequests);
 	}
 
 	[TestMethod]

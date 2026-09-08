@@ -32,9 +32,13 @@ public sealed class PinDefinitionTests
 		IsInput = false,
 	};
 
-	private static PropertyInfo ValueProperty => typeof(Sample).GetProperty(nameof(Sample.Value))!;
-	private static PropertyInfo ReadOnlyProperty => typeof(Sample).GetProperty(nameof(Sample.Computed))!;
-	private static FieldInfo LabelField => typeof(Sample).GetField(nameof(Sample.Label))!;
+	/// <summary>Fails the test rather than dereferencing a reflection lookup that came back empty.</summary>
+	private static T Member<T>(T? member) where T : MemberInfo =>
+		member ?? throw new AssertFailedException("The sample member went missing.");
+
+	private static PropertyInfo ValueProperty => Member(typeof(Sample).GetProperty(nameof(Sample.Value)));
+	private static PropertyInfo ReadOnlyProperty => Member(typeof(Sample).GetProperty(nameof(Sample.Computed)));
+	private static FieldInfo LabelField => Member(typeof(Sample).GetField(nameof(Sample.Label)));
 
 	[TestMethod]
 	public void CanConnectTo_RefusesTwoPinsOfTheSameDirection()
@@ -129,7 +133,7 @@ public sealed class PinDefinitionTests
 	public void GetValue_ReturnsNullWhenTheMemberIsNotAPropertyOrField()
 	{
 		// Method and parameter pins carry their member for identity, not for reading a value.
-		PinDefinition pin = Input(typeof(int), typeof(Sample).GetMethod(nameof(Sample.Method))!);
+		PinDefinition pin = Input(typeof(int), Member(typeof(Sample).GetMethod(nameof(Sample.Method))));
 
 		Assert.IsNull(pin.GetValue(new Sample()));
 		pin.SetValue(new Sample(), 1);
