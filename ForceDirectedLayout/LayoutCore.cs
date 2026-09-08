@@ -35,6 +35,9 @@ public sealed class LayoutCore
 	public const double BezierClearanceRatio = 0.2581988897471611;
 
 	private BodyState[] bodies = [];
+
+	/// <summary>Per-body flag: this body is an endpoint of a backward edge, so it is trying to reorder.</summary>
+	private bool[] reordering = [];
 	private int bodyCount;
 
 	private EdgeRef[] edges = [];
@@ -84,6 +87,7 @@ public sealed class LayoutCore
 		if (bodies.Length < count)
 		{
 			Array.Resize(ref bodies, count);
+			Array.Resize(ref reordering, count);
 		}
 		bodyCount = count;
 	}
@@ -155,6 +159,7 @@ public sealed class LayoutCore
 			IntegrateMotion(substepDt);
 
 			ApplyDirectionalConstraints();
+			MarkReorderingBodies();
 			SeparateOverlaps();
 		}
 
@@ -372,6 +377,39 @@ public sealed class LayoutCore
 	}
 
 	/// <summary>
+	/// Flags every body that is an endpoint of a backward edge, so <see cref="SeparateOverlaps"/> can
+	/// let it slide around whatever stands between it and its place in the order.
+	/// </summary>
+	private void MarkReorderingBodies()
+	{
+		Array.Clear(reordering, 0, bodyCount);
+
+		if (Settings.DirectionalBias <= 0)
+		{
+			return;
+		}
+
+		for (int e = 0; e < edgeCount; e++)
+		{
+			int s = edges[e].SourceIndex;
+			int t = edges[e].TargetIndex;
+			if ((uint)s >= (uint)bodyCount || (uint)t >= (uint)bodyCount)
+			{
+				continue;
+			}
+
+			double sourceCenterX = bodies[s].Position.X + (bodies[s].Dimensions.X * 0.5);
+			double targetCenterX = bodies[t].Position.X + (bodies[t].Dimensions.X * 0.5);
+
+			if (sourceCenterX > targetCenterX)
+			{
+				reordering[s] = true;
+				reordering[t] = true;
+			}
+		}
+	}
+
+	/// <summary>
 	/// Push apart any pair of bodies whose rectangles are on top of one another.
 	/// </summary>
 	/// <remarks>
@@ -430,13 +468,23 @@ public sealed class LayoutCore
 					continue;
 				}
 
-				double correction = Math.Min(Math.Min(overlapX, overlapY), maxCorrection);
+				// Separating along X is what blocks a reorder: X is the axis the swap has to travel, so the
+				// ordering force and this pass fight to a standstill with the pair held exactly one
+				// clearance apart on the wrong side of each other. Going around vertically leaves X free.
+				bool slideAround = reordering[i] || reordering[j];
+				bool separateOnY = slideAround || overlapX >= overlapY;
+
+				double depth = separateOnY ? overlapY : overlapX;
+				double correction = Math.Min(depth, maxCorrection);
 
 				// A zero component has no side to be on, so the later body goes the positive way:
 				// arbitrary, but consistent, which is what stops a coincident pair from jittering.
-				Vec2D push = overlapX < overlapY
-					? new Vec2D(correction * (between.X < 0 ? -1.0 : 1.0), 0)
-					: new Vec2D(0, correction * (between.Y < 0 ? -1.0 : 1.0));
+				double along = separateOnY ? between.Y : between.X;
+				double sign = along < 0 ? -1.0 : 1.0;
+
+				Vec2D push = separateOnY
+					? new Vec2D(0, correction * sign)
+					: new Vec2D(correction * sign, 0);
 
 				if (sourceMovable && targetMovable)
 				{

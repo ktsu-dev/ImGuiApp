@@ -358,6 +358,64 @@ public class GenericFacadeTests
 	}
 
 	[TestMethod]
+	public void BackwardEdge_SwapsTheEndpointsIntoOrder()
+	{
+		// Mirrors the node editor: a small "param value" body sits to the right of the big "function"
+		// body it feeds, so the edge runs right-to-left and its curve hides behind both.
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(400, 10), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(0, 0), new Vec2D(270, 230), Vec2D.Zero, Vec2D.Zero, false),
+		];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		// The pair crosses within about 30 steps; the rest is settling back into a row.
+		for (int i = 0; i < 1200; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double sourceCenterX = bodies[0].Position.X + (bodies[0].Dimensions.X * 0.5);
+		double targetCenterX = bodies[1].Position.X + (bodies[1].Dimensions.X * 0.5);
+
+		Assert.IsTrue(sourceCenterX < targetCenterX,
+			$"The source should end up left of its target; source centre {sourceCenterX}, target centre {targetCenterX}.");
+
+		// They went around one another rather than through, so they end up clear, not stacked.
+		double gap = targetCenterX - sourceCenterX;
+		double clearance = (bodies[0].Dimensions.X + bodies[1].Dimensions.X) * 0.5;
+		Assert.IsTrue(gap >= clearance, $"The reordered pair should not overlap; gap {gap} against clearance {clearance}.");
+	}
+
+	[TestMethod]
+	public void BackwardEdge_SlidesPastAnUnrelatedBodyInItsPath()
+	{
+		// The reordering body has to cross the space a third, unconnected body occupies to reach its
+		// place in the order, which is the shape a real graph takes once it has more than two nodes.
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(600, 0), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(0, 0), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(3, new Vec2D(300, 0), new Vec2D(160, 60), Vec2D.Zero, Vec2D.Zero, true),
+		];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		for (int i = 0; i < 1200; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double sourceCenterX = bodies[0].Position.X + (bodies[0].Dimensions.X * 0.5);
+		double targetCenterX = bodies[1].Position.X + (bodies[1].Dimensions.X * 0.5);
+
+		Assert.IsTrue(sourceCenterX < targetCenterX,
+			$"A pinned body in the way should not stop the reorder; source centre {sourceCenterX}, target centre {targetCenterX}.");
+		Assert.AreEqual(new Vec2D(300, 0), bodies[2].Position, "The pinned body should not have moved.");
+	}
+
+	[TestMethod]
 	public void LinkFlattening_DanglingEdge_IsSkipped()
 	{
 		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(FlatteningOnly());

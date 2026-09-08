@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-ForceDirectedLayout settles a graph into a readable shape: bodies repel each other, edges pull like springs, gravity keeps the whole thing together, steep edges are splayed apart so a renderer's curves stay clear of the bodies at their ends, and overlaps are pushed apart. It is a pure simulation with no rendering, no UI dependency, and no runtime package dependencies — double precision throughout, AOT- and trim-clean, and exposed at three levels so a caller can pick how much ceremony they want. The same core is published as a native shared library for consumers outside .NET.
+ForceDirectedLayout settles a graph into a readable shape: bodies repel each other, edges pull like springs, gravity keeps the whole thing together, steep edges are splayed apart so a renderer's curves stay clear of the bodies at their ends, and overlaps are pushed apart. Edges that run the wrong way reorder themselves: their endpoints slide around whatever stands between them rather than through it, so nothing is drawn overlapping on the way. It is a pure simulation with no rendering, no UI dependency, and no runtime package dependencies — double precision throughout, AOT- and trim-clean, and exposed at three levels so a caller can pick how much ceremony they want. The same core is published as a native shared library for consumers outside .NET.
 
 ## Features
 
@@ -107,7 +107,7 @@ PhysicsSettings settings = new()
     RepulsionStrength = 1_200_000.0,   // pairwise inverse-square repulsion
     LinkSpringStrength = 0.5,          // Hooke's-law constant for edges
     RestLinkLength = 225.0,            // spring rest length
-    DirectionalBias = 0.5,             // biases sources left and targets right
+    DirectionalBias = 0.5,             // orders sources left of targets, reordering when needed
     LinkFlatteningStrength = 0.5,      // splays steep edges so their curves stay visible
     LinkFlatteningMargin = 0.0,        // extra clearance on top of the derived bound
     GravityStrength = 50.0,            // pull toward the gravity target
