@@ -56,6 +56,12 @@ public struct LayoutSettings
 	/// <summary>System energy threshold below which the simulation reports IsStable.</summary>
 	public double StabilityThreshold;
 
+	/// <summary>Clear space kept between body rectangles by the overlap pass. 0 disables the pass.</summary>
+	public double OverlapMargin;
+
+	/// <summary>Per-substep cap on how far an overlapping pair is pushed apart.</summary>
+	public double MaxOverlapCorrection;
+
 	/// <summary>Sensible defaults matching the previous Force&lt;float&gt;/Length&lt;float&gt; values.</summary>
 	public static LayoutSettings Defaults => new()
 	{
@@ -72,5 +78,7 @@ public struct LayoutSettings
 		MaxVelocity = 50.0,
 		TargetPhysicsHz = 120.0,
 		StabilityThreshold = 1.0,
+		OverlapMargin = 20.0,
+		MaxOverlapCorrection = 40.0,
 	};
 }

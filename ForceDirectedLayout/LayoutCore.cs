@@ -16,6 +16,9 @@ using System;
 /// </remarks>
 public sealed class LayoutCore
 {
+	/// <summary>Overlap depth below which <see cref="SeparateOverlaps"/> leaves a pair alone.</summary>
+	private const double OverlapEpsilon = 0.01;
+
 	private BodyState[] bodies = [];
 	private int bodyCount;
 
@@ -136,6 +139,7 @@ public sealed class LayoutCore
 			IntegrateMotion(substepDt);
 
 			ApplyDirectionalConstraints();
+			SeparateOverlaps();
 		}
 
 		double energy = 0.0;
@@ -298,6 +302,90 @@ public sealed class LayoutCore
 				else if (targetMovable)
 				{
 					bodies[t].Position += new Vec2D(correction * 2.0, 0);
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// Push apart any pair of bodies whose rectangles are on top of one another.
+	/// </summary>
+	/// <remarks>
+	/// Every force in this simulation treats a body as a point: repulsion is measured between centers,
+	/// the link spring pulls to a fixed rest length, and neither knows how wide a body is. Two bodies
+	/// can therefore sit at a distance the forces are entirely happy with and still have their
+	/// rectangles squarely on top of each other, which is what a consumer drawing them sees. That
+	/// cannot be fixed by tuning the forces, because the comfortable distance depends on the pair's
+	/// sizes and the forces do not have them.
+	/// <para>
+	/// So it is resolved positionally, after integration, the same way <see cref="ApplyDirectionalConstraints"/>
+	/// is: for each overlapping pair, along the axis they overlap least on — the shorter push, and the
+	/// one that leaves the arrangement the forces worked out most nearly as it was — and shared
+	/// equally between the two so the arrangement's centroid does not drift. The correction is capped
+	/// per substep, so a deep overlap slides apart over a few frames rather than snapping.
+	/// </para>
+	/// <para>
+	/// The whole overlap is resolved rather than a fraction of it. A fraction loses: between two
+	/// linked bodies the spring pulls back harder each substep than a fraction of the overlap pushes,
+	/// and the pair comes to rest still overlapping, just less.
+	/// </para>
+	/// </remarks>
+	private void SeparateOverlaps()
+	{
+		double margin = Settings.OverlapMargin;
+		if (margin <= 0)
+		{
+			return;
+		}
+
+		double maxCorrection = Settings.MaxOverlapCorrection;
+
+		for (int i = 0; i < bodyCount; i++)
+		{
+			for (int j = i + 1; j < bodyCount; j++)
+			{
+				bool sourceMovable = bodies[i].IsPinned == 0 && bodies[i].IsFrozen == 0;
+				bool targetMovable = bodies[j].IsPinned == 0 && bodies[j].IsFrozen == 0;
+				if (!sourceMovable && !targetMovable)
+				{
+					continue;
+				}
+
+				Vec2D clearance = ((bodies[i].Dimensions + bodies[j].Dimensions) * 0.5) + new Vec2D(margin, margin);
+				Vec2D aCenter = bodies[i].Position + (bodies[i].Dimensions * 0.5);
+				Vec2D bCenter = bodies[j].Position + (bodies[j].Dimensions * 0.5);
+				Vec2D between = bCenter - aCenter;
+
+				double overlapX = clearance.X - Math.Abs(between.X);
+				double overlapY = clearance.Y - Math.Abs(between.Y);
+
+				// An overlap this shallow is not worth a write, and stopping short of exactly zero keeps
+				// rounding from nudging a resolved pair for ever.
+				if (overlapX <= OverlapEpsilon || overlapY <= OverlapEpsilon)
+				{
+					continue;
+				}
+
+				double correction = Math.Min(Math.Min(overlapX, overlapY), maxCorrection);
+
+				// A zero component has no side to be on, so the later body goes the positive way:
+				// arbitrary, but consistent, which is what stops a coincident pair from jittering.
+				Vec2D push = overlapX < overlapY
+					? new Vec2D(correction * (between.X < 0 ? -1.0 : 1.0), 0)
+					: new Vec2D(0, correction * (between.Y < 0 ? -1.0 : 1.0));
+
+				if (sourceMovable && targetMovable)
+				{
+					bodies[i].Position -= push * 0.5;
+					bodies[j].Position += push * 0.5;
+				}
+				else if (sourceMovable)
+				{
+					bodies[i].Position -= push;
+				}
+				else
+				{
+					bodies[j].Position += push;
 				}
 			}
 		}
