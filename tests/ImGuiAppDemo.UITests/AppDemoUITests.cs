@@ -349,7 +349,7 @@ public sealed class AppDemoUITests
 	/// physics is on, so reaching them takes both a toggle and an expand.
 	/// </summary>
 	[TestMethod]
-	public void CleanImNodes_LinkFlatteningSlidersRespond()
+	public void CleanImNodes_LinkShapingSlidersRespond()
 	{
 		OpenTab(CleanImNodesTab);
 
@@ -358,14 +358,14 @@ public sealed class AppDemoUITests
 		harness.Click("Link Springs");
 		harness.Step(2);
 
-		foreach (string slider in new[] { "Link Flattening", "Link Flattening Margin (px)" })
+		foreach (string slider in new[] { "Link Flattening", "Link Flattening Margin (px)", "Link Untwisting" })
 		{
 			Assert.IsTrue(IsVisible(slider), $"Expanding Link Springs should reveal '{slider}'.");
 			DragSliderTrack(slider);
 			harness.Step(2);
 		}
 
-		Assert.IsTrue(IsVisible("Link Flattening"), "The flattening sliders should survive being dragged.");
+		Assert.IsTrue(IsVisible("Link Flattening"), "The link-shaping sliders should survive being dragged.");
 	}
 
 	/// <summary>

@@ -39,6 +39,12 @@ public struct LayoutSettings
 	/// <summary>Extra horizontal clearance demanded on top of the derived bezier bound, in position units.</summary>
 	public double LinkFlatteningMargin;
 
+	/// <summary>
+	/// Strength of the force that puts two links sharing a node into the same vertical order as the pins
+	/// they attach to, so they stop crossing each other. 0 disables it.
+	/// </summary>
+	public double LinkUntwistStrength;
+
 	/// <summary>Strength of the gravity force pulling each body toward the gravity target.</summary>
 	public double GravityStrength;
 
@@ -85,6 +91,7 @@ public struct LayoutSettings
 		DirectionalBias = 0.5,
 		LinkFlatteningStrength = 0.5,
 		LinkFlatteningMargin = 0.0,
+		LinkUntwistStrength = 0.1,
 		GravityStrength = 50.0,
 		OriginAnchorWeight = 1.0,
 		DampingFactor = 0.5,

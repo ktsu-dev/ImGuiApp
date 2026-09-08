@@ -31,6 +31,12 @@ public sealed record PhysicsSettings
 	/// <summary>Extra horizontal clearance demanded on top of the derived bezier bound, in position units.</summary>
 	public double LinkFlatteningMargin { get; init; }
 
+	/// <summary>
+	/// Strength of the force that puts two links sharing a node into the same vertical order as the pins
+	/// they attach to, so they stop crossing each other. 0 disables it.
+	/// </summary>
+	public double LinkUntwistStrength { get; init; } = 0.1;
+
 	/// <summary>Strength of the gravity force pulling each body toward the gravity target.</summary>
 	public double GravityStrength { get; init; } = 50.0;
 
@@ -77,6 +83,7 @@ public sealed record PhysicsSettings
 		DirectionalBias = DirectionalBias,
 		LinkFlatteningStrength = LinkFlatteningStrength,
 		LinkFlatteningMargin = LinkFlatteningMargin,
+		LinkUntwistStrength = LinkUntwistStrength,
 		GravityStrength = GravityStrength,
 		OriginAnchorWeight = OriginAnchorWeight,
 		DampingFactor = DampingFactor,
@@ -99,6 +106,7 @@ public sealed record PhysicsSettings
 		DirectionalBias = s.DirectionalBias,
 		LinkFlatteningStrength = s.LinkFlatteningStrength,
 		LinkFlatteningMargin = s.LinkFlatteningMargin,
+		LinkUntwistStrength = s.LinkUntwistStrength,
 		GravityStrength = s.GravityStrength,
 		OriginAnchorWeight = s.OriginAnchorWeight,
 		DampingFactor = s.DampingFactor,
