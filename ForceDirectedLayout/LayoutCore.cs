@@ -159,7 +159,6 @@ public sealed class LayoutCore
 			IntegrateMotion(substepDt);
 
 			ApplyDirectionalConstraints();
-			MarkReorderingBodies();
 			SeparateOverlaps();
 		}
 
@@ -295,6 +294,9 @@ public sealed class LayoutCore
 
 	private void CalculateDirectionalForces()
 	{
+		// Recomputed from scratch each substep, so a pair that has finished reordering stops being one.
+		Array.Clear(reordering, 0, bodyCount);
+
 		double bias = Settings.DirectionalBias;
 		if (bias <= 0)
 		{
@@ -315,6 +317,17 @@ public sealed class LayoutCore
 
 			double minGap = ((bodies[s].Dimensions.X + bodies[t].Dimensions.X) * 0.5) + 20.0;
 			double currentGap = targetCenterX - sourceCenterX;
+
+			// A backward edge has to get its endpoints past one another. SeparateOverlaps reads this to
+			// let them go around, rather than holding them apart on the very axis the swap travels.
+			// Recorded here because this is the pass that already knows which way each edge runs; it is
+			// read a substep later, by which time a body has moved at most MaxVelocity * dt.
+			if (currentGap < 0)
+			{
+				reordering[s] = true;
+				reordering[t] = true;
+			}
+
 			double violation = minGap - currentGap;
 
 			if (violation > 0)
@@ -372,39 +385,6 @@ public sealed class LayoutCore
 				{
 					bodies[t].Position += new Vec2D(correction * 2.0, 0);
 				}
-			}
-		}
-	}
-
-	/// <summary>
-	/// Flags every body that is an endpoint of a backward edge, so <see cref="SeparateOverlaps"/> can
-	/// let it slide around whatever stands between it and its place in the order.
-	/// </summary>
-	private void MarkReorderingBodies()
-	{
-		Array.Clear(reordering, 0, bodyCount);
-
-		if (Settings.DirectionalBias <= 0)
-		{
-			return;
-		}
-
-		for (int e = 0; e < edgeCount; e++)
-		{
-			int s = edges[e].SourceIndex;
-			int t = edges[e].TargetIndex;
-			if ((uint)s >= (uint)bodyCount || (uint)t >= (uint)bodyCount)
-			{
-				continue;
-			}
-
-			double sourceCenterX = bodies[s].Position.X + (bodies[s].Dimensions.X * 0.5);
-			double targetCenterX = bodies[t].Position.X + (bodies[t].Dimensions.X * 0.5);
-
-			if (sourceCenterX > targetCenterX)
-			{
-				reordering[s] = true;
-				reordering[t] = true;
 			}
 		}
 	}
