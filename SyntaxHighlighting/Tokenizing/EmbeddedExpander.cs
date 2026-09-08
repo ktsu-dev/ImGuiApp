@@ -130,18 +130,16 @@ internal static class EmbeddedExpander
 			return LanguageRegistry.TryGet(forcedLanguage, out embedded);
 		}
 
-		foreach (EmbeddedLanguageRule rule in language.EmbeddedLanguages.Where(candidate => candidate.AppliesTo(host, body)))
-		{
-			// A matching rule whose language is not registered does not stop the search: the next
-			// rule still gets its turn, the way it would if the first had not matched.
-			if (LanguageRegistry.TryGet(rule.Language, out embedded))
-			{
-				return true;
-			}
-		}
+		// The first rule that both claims the body and names a language the registry knows. A rule
+		// that claims the body but names an unregistered language does not stop the search: the next
+		// rule still gets its turn, the way it would if the first had not claimed the body at all.
+		LanguageDefinition? match = language.EmbeddedLanguages
+			.Where(rule => rule.AppliesTo(host, body))
+			.Select(rule => LanguageRegistry.TryGet(rule.Language, out LanguageDefinition definition) ? definition : null)
+			.FirstOrDefault(definition => definition is not null);
 
-		embedded = BuiltInLanguages.PlainText;
-		return false;
+		embedded = match ?? BuiltInLanguages.PlainText;
+		return match is not null;
 	}
 
 	private static EmbeddedHosts HostFor(TokenKind kind) => kind switch

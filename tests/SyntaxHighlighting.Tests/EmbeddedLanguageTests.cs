@@ -189,6 +189,29 @@ public sealed class EmbeddedLanguageTests
 	}
 
 	[TestMethod]
+	public void ARuleNamingAnUnregisteredLanguageFallsThroughToTheNext()
+	{
+		// The first rule claims every string but names nothing the registry knows. The search has to
+		// carry on to the JSON rule rather than treating the claim as the end of it.
+		LanguageDefinition host = BuiltInLanguages.CSharp with
+		{
+			Name = "csharp-with-a-dead-rule",
+			Aliases = [],
+			EmbeddedLanguages =
+			[
+				new EmbeddedLanguageRule { Language = "not-a-language", Hosts = EmbeddedHosts.StringLiteral },
+				BuiltInEmbeddedRules.Json,
+			],
+		};
+		LanguageRegistry.Register(host);
+
+		IReadOnlyList<HighlightedLine> lines = Highlight("var a = @\"{\"\"id\"\": 7}\";", "csharp-with-a-dead-rule");
+
+		TokenAssert.HasToken(lines, "\"\"id\"\"", TokenKind.Property);
+		TokenAssert.HasToken(lines, "7", TokenKind.Number);
+	}
+
+	[TestMethod]
 	public void AnUnterminatedStringStillReconstructs()
 	{
 		string code = "var a = \"{\"; var b = 1;";
