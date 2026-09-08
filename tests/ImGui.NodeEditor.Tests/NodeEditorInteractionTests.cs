@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.NodeEditor.Tests;
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -96,6 +97,41 @@ public sealed class NodeEditorInteractionTests
 	}
 
 	[TestMethod]
+	public void Renderer_MeasuresWhereEachPinSitsOnItsNode()
+	{
+		Node source = engine.CreateNode(new Vector2(150, 150), "Source", [], ["Out"]);
+		Node target = engine.CreateNode(new Vector2(600, 150), "Target", ["First", "Second", "Third"], []);
+		engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		Start();
+
+		Node measured = engine.Nodes.Single(n => n.Id == target.Id);
+
+		List<float> inputYs = [];
+		foreach (Pin pin in measured.InputPins)
+		{
+			Assert.IsTrue(engine.TryGetPinOffset(pin.Id, out Vector2 offset), $"{pin.Id} was never measured.");
+
+			// Inputs hang off the left edge, and every pin sits somewhere down the node's own height.
+			Assert.AreEqual(0f, offset.X, 0.01f, "an input pin should sit on the node's left edge");
+			Assert.IsGreaterThan(0f, offset.Y, "a pin sits below the node's top edge");
+			Assert.IsLessThan(measured.Dimensions.Y, offset.Y, "a pin sits above the node's bottom edge");
+			inputYs.Add(offset.Y);
+		}
+
+		// Drawn top to bottom, so measured top to bottom - which is the whole point of measuring rather
+		// than assuming every pin is at the node's middle.
+		for (int i = 1; i < inputYs.Count; i++)
+		{
+			Assert.IsGreaterThan(inputYs[i - 1], inputYs[i], "pins should be measured in the order they are drawn");
+		}
+
+		Assert.IsGreaterThan(20f, inputYs[^1] - inputYs[0], "three rows of pins should span more than a few pixels");
+
+		Node measuredSource = engine.Nodes.Single(n => n.Id == source.Id);
+		Assert.IsTrue(engine.TryGetPinOffset(measuredSource.OutputPins[0].Id, out Vector2 outputOffset));
+		Assert.AreEqual(measuredSource.Dimensions.X, outputOffset.X, 0.01f, "an output pin should sit on the node's right edge");
+	}
+
 	public void Renderer_MeasuresEveryNodeItDrew()
 	{
 		Node source = engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);

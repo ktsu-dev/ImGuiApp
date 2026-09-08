@@ -25,6 +25,9 @@ public class NodeEditorRenderer
 	private const float FitMargin = 0.9f;
 
 	private readonly Dictionary<int, Vector2> lastKnownNodePositions = [];
+
+	/// <summary>Pin rows collected while drawing one node, reused across nodes and frames.</summary>
+	private readonly List<(int PinId, float MiddleY, bool IsInput)> pinRows = [];
 	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
 	private readonly HashSet<int> currentlyDraggedNodes = [];
 
@@ -90,7 +93,7 @@ public class NodeEditorRenderer
 		// Render all nodes
 		foreach (Node node in engine.Nodes)
 		{
-			RenderNode(node);
+			RenderNode(engine, node);
 		}
 
 		// Render all links
@@ -222,8 +225,9 @@ public class NodeEditorRenderer
 	/// <summary>
 	/// Render a single node
 	/// </summary>
-	private void RenderNode(Node node)
+	private void RenderNode(NodeEditorEngine engine, Node node)
 	{
+		pinRows.Clear();
 		// Apply engine position to ImNodes BEFORE rendering the node
 		// This ensures physics-calculated positions are reflected immediately.
 		// Held in the space ImNodes works in, so a zoom change moves every node here and the
@@ -268,6 +272,7 @@ public class NodeEditorRenderer
 			ImNodes.BeginInputAttribute(pin.Id);
 			ImGui.Text(pin.EffectiveDisplayName);
 			ImNodes.EndInputAttribute();
+			RecordPinRow(pin.Id, isInput: true);
 		}
 
 		// Add some spacing between inputs and outputs
@@ -298,9 +303,47 @@ public class NodeEditorRenderer
 
 			ImGui.Text(pinText);
 			ImNodes.EndOutputAttribute();
+			RecordPinRow(pin.Id, isInput: false);
 		}
 
 		ImNodes.EndNode();
+
+		PublishPinOffsets(engine, node);
+	}
+
+	/// <summary>
+	/// Notes the vertical middle of the pin row just submitted, in screen space.
+	/// </summary>
+	/// <remarks>
+	/// ImNodes draws a pin's circle on the node's edge, level with the middle of its attribute's row,
+	/// so the row's rectangle is what says where the pin is. The node's own box is not final until
+	/// <c>EndNode</c>, which is why the rows are only turned into offsets afterwards.
+	/// </remarks>
+	private void RecordPinRow(int pinId, bool isInput) =>
+		pinRows.Add((pinId, (ImGui.GetItemRectMin().Y + ImGui.GetItemRectMax().Y) * 0.5f, isInput));
+
+	/// <summary>
+	/// Turns this node's recorded pin rows into offsets from its origin and hands them to the engine,
+	/// so the layout can measure a link between the points it is drawn between.
+	/// </summary>
+	private void PublishPinOffsets(NodeEditorEngine engine, Node node)
+	{
+		if (pinRows.Count == 0)
+		{
+			return;
+		}
+
+		Vector2 nodeScreenPos = ImNodes.GetNodeScreenSpacePos(node.Id);
+		Vector2 nodeDimensions = ImNodes.GetNodeDimensions(node.Id);
+
+		foreach ((int pinId, float middleY, bool isInput) in pinRows)
+		{
+			// Inputs sit on the left edge and outputs on the right. Everything here is in the zoomed
+			// space the view draws in, and the engine's lengths are not, so the offset is scaled back
+			// the same way node dimensions are.
+			float x = isInput ? 0f : nodeDimensions.X;
+			engine.UpdatePinOffset(pinId, new Vector2(x, middleY - nodeScreenPos.Y) / Zoom);
+		}
 	}
 
 	/// <summary>

@@ -145,11 +145,18 @@ public class ForceDirectedLayout<TBody, TEdge>
 				targetIndex = -1;
 			}
 
+			// Both offsets or neither: one alone would leave a force measuring from a pin at one end and a
+			// centre at the other, which is worse than measuring centre to centre at both.
+			bool hasPins = edgeAccessor.GetSourcePinOffset is not null && edgeAccessor.GetTargetPinOffset is not null;
+
 			buf[i] = new EdgeRef
 			{
 				SourceIndex = sourceIndex,
 				TargetIndex = targetIndex,
 				Anisotropy = Vec2D.Zero,
+				SourcePinOffset = hasPins ? edgeAccessor.GetSourcePinOffset!(edge) : Vec2D.Zero,
+				TargetPinOffset = hasPins ? edgeAccessor.GetTargetPinOffset!(edge) : Vec2D.Zero,
+				HasPinOffsets = (byte)(hasPins ? 1 : 0),
 			};
 		}
 	}

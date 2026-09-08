@@ -47,10 +47,58 @@ public class NodeEditorEngine
 
 		EdgeAccessor<Link> edgeAccessor = new(
 			GetSourceBodyId: l => pinIdToNodeId.TryGetValue(l.OutputPinId, out int id) ? id : -1,
-			GetTargetBodyId: l => pinIdToNodeId.TryGetValue(l.InputPinId, out int id) ? id : -1
+			GetTargetBodyId: l => pinIdToNodeId.TryGetValue(l.InputPinId, out int id) ? id : -1,
+			GetSourcePinOffset: l => ToVec2D(PinOffsetOrCentre(l.OutputPinId)),
+			GetTargetPinOffset: l => ToVec2D(PinOffsetOrCentre(l.InputPinId))
 		);
 
 		layout = new ForceDirectedLayout<Node, Link>(bodyAccessor, edgeAccessor);
+	}
+
+	/// <summary>Where each pin sits relative to its node's origin, as the renderer last measured it.</summary>
+	private readonly Dictionary<int, Vector2> pinIdToOffset = [];
+
+	/// <summary>
+	/// Records where a pin sits on its node, so the layout can measure a link between the points a
+	/// renderer joins rather than between node centres.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="offset">Its position relative to its node's origin, in engine space.</param>
+	public void UpdatePinOffset(int pinId, Vector2 offset) => pinIdToOffset[pinId] = offset;
+
+	/// <summary>
+	/// Where a renderer last measured a pin, relative to its node's origin.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="offset">Its measured offset, when one has been recorded.</param>
+	/// <returns>True when the pin has been drawn and measured at least once.</returns>
+	public bool TryGetPinOffset(int pinId, out Vector2 offset) => pinIdToOffset.TryGetValue(pinId, out offset);
+
+	/// <summary>
+	/// Where a pin sits on its node, falling back to that node's centre until a renderer has measured
+	/// it.
+	/// </summary>
+	/// <remarks>
+	/// The centre is what every force used before pin offsets existed, so a pin nobody has drawn yet
+	/// behaves as it always did rather than snapping to a node's top-left corner.
+	/// </remarks>
+	private Vector2 PinOffsetOrCentre(int pinId)
+	{
+		if (pinIdToOffset.TryGetValue(pinId, out Vector2 offset))
+		{
+			return offset;
+		}
+
+		if (pinIdToNodeId.TryGetValue(pinId, out int nodeId))
+		{
+			Node? owner = nodes.Find(n => n.Id == nodeId);
+			if (owner is not null)
+			{
+				return owner.Dimensions * 0.5f;
+			}
+		}
+
+		return Vector2.Zero;
 	}
 
 	/// <inheritdoc/>

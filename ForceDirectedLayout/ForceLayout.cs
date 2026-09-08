@@ -46,6 +46,18 @@ public struct EdgeInit
 	/// (e.g. execution vs data pin biasing in node-editor consumers).
 	/// </summary>
 	public Vec2D Anisotropy;
+
+	/// <summary>Where on the source body this edge attaches, relative to that body's origin.</summary>
+	public Vec2D SourcePinOffset;
+
+	/// <summary>Where on the target body this edge attaches, relative to that body's origin.</summary>
+	public Vec2D TargetPinOffset;
+
+	/// <summary>
+	/// Non-zero when the two pin offsets are meaningful. Leave it zero and the edge attaches at both
+	/// bodies' centres, which is how every force behaved before pin offsets existed.
+	/// </summary>
+	public byte HasPinOffsets;
 }
 
 /// <summary>
@@ -175,6 +187,9 @@ public sealed class ForceLayout
 				SourceIndex = sourceIndex,
 				TargetIndex = targetIndex,
 				Anisotropy = init.Anisotropy,
+				SourcePinOffset = init.SourcePinOffset,
+				TargetPinOffset = init.TargetPinOffset,
+				HasPinOffsets = init.HasPinOffsets,
 			};
 		}
 	}
