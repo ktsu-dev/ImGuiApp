@@ -1,15 +1,13 @@
-## v3.19.0 (minor)
+## v3.20.0 (minor)
 
-Changes since v3.18.0:
+Changes since v3.19.0:
 
-- Stop dereferencing nullables in the node editor tests ([@Claude](https://github.com/Claude))
-- Cover the node editor so the rename can pass the coverage gate ([@Claude](https://github.com/Claude))
-- Cover the block-comment form of a language hint ([@Claude](https://github.com/Claude))
-- Resolve the embedded rule and its language in one expression ([@Claude](https://github.com/Claude))
-- Address code-quality findings in the embedded-language expander ([@Claude](https://github.com/Claude))
-- [minor] Split tokenizing into ktsu.SyntaxHighlighting and highlight embedded languages ([@Claude](https://github.com/Claude))
-- Rename ImGuiNodeEditor to ImGui.NodeEditor, and inventory the widgets ([@Claude](https://github.com/Claude))
-- Merge remote-tracking branch 'origin/main' into claude/syntax-highlighting-library-3dbkoo ([@Claude](https://github.com/Claude))
-- Add the missing package READMEs and audit the rest ([@Claude](https://github.com/Claude))
-- Credit the Hexa.NET libraries in the package READMEs ([@Claude](https://github.com/Claude))
+- Merge main into the node editor zoom branch ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/imguiapp-issue-354-7ftjju ([@Claude](https://github.com/Claude))
+- fix: use Ensure.NotNull for the renderer's argument checks [patch] ([@Claude](https://github.com/Claude))
+- feat: zoom and fit-to-view in the node editor [minor] ([@Claude](https://github.com/Claude))
+- Guard with Ensure.NotNull, as KTSU0003 requires ([@Claude](https://github.com/Claude))
+- Address the code-quality findings on the IDCT basis and the temp path ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/imguiapp-issue-354-7ftjju ([@Claude](https://github.com/Claude))
+- [minor] Replace SixLabors.ImageSharp with a self-contained image decoder ([@Claude](https://github.com/Claude))
 
