@@ -1,5 +1,8 @@
 # ktsu.ImGui.SyntaxHighlighting
 
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.SyntaxHighlighting?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.SyntaxHighlighting)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
+
 ImGui.SyntaxHighlighting draws syntax-highlighted source code directly inside Dear ImGui. Like its sibling `ktsu.ImGui.Markdown`, it is a standalone package layered on `ktsu.ImGui.Color` only, with no dependency on `ktsu.ImGui.App`, so it can be dropped into any Hexa.NET.ImGui application.
 
 ## Features
@@ -148,6 +151,7 @@ dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library this draws into
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui that this package is built on
+- [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - The `Color` type each theme entry is held as, converted at the ImGui seam by `ktsu.ImGui.Color`
 
 ## Contributing
 
@@ -155,4 +159,4 @@ Contributions are welcome! For feature requests, bug reports, or questions, plea
 
 ## License
 
-ImGui.SyntaxHighlighting is licensed under the MIT License. See [LICENSE](LICENSE) for more information.
+ImGui.SyntaxHighlighting is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
