@@ -15,6 +15,15 @@ using Hexa.NET.ImNodes;
 /// </summary>
 public class NodeEditorRenderer
 {
+	/// <summary>The smallest <see cref="Zoom"/> the view allows.</summary>
+	public const float MinZoom = 0.25f;
+
+	/// <summary>The largest <see cref="Zoom"/> the view allows.</summary>
+	public const float MaxZoom = 2.0f;
+
+	/// <summary>How much of the editor a fitted graph is asked to fill, leaving a margin around it.</summary>
+	private const float FitMargin = 0.9f;
+
 	private readonly Dictionary<int, Vector2> lastKnownNodePositions = [];
 	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
 	private readonly HashSet<int> currentlyDraggedNodes = [];
@@ -24,16 +33,58 @@ public class NodeEditorRenderer
 	private Vector2 editorToScreenBase;
 	private bool hasEditorTransform;
 
+	// The point zoom scales about, cached from the last Render so the position and dimension
+	// read-backs can undo the same transform the render applied.
+	private Vector2 zoomAnchor;
+
 	/// <summary>
 	/// Set of node IDs currently being dragged by the user
 	/// </summary>
 	public IReadOnlySet<int> CurrentlyDraggedNodes => currentlyDraggedNodes;
 
 	/// <summary>
+	/// How large the graph is drawn, as a multiplier: 1 draws it at the engine's own scale.
+	/// </summary>
+	/// <remarks>
+	/// ImNodes has no zoom of its own, so this is applied here: node positions are scaled on their
+	/// way into ImNodes and unscaled on the way back out, and the font is scaled to match so a node's
+	/// box — which ImNodes sizes from its content — grows and shrinks with the distances between
+	/// nodes. Scaling positions alone would only pack the nodes tighter while they stayed the same
+	/// size, which is not what anyone means by zooming out.
+	/// <para>
+	/// The engine never sees the zoomed values. Its positions and dimensions stay at their own scale,
+	/// which is what the force-directed layout runs on: rest length, repulsion distance and overlap
+	/// margin are all lengths, and none of them would mean the same thing in a space that changed
+	/// whenever the user zoomed.
+	/// </para>
+	/// </remarks>
+	public float Zoom
+	{
+		get;
+		set => field = Math.Clamp(value, MinZoom, MaxZoom);
+	} = 1.0f;
+
+	/// <summary>
 	/// Render the entire node editor
 	/// </summary>
 	public void Render(NodeEditorEngine engine, Vector2 editorSize)
 	{
+		ArgumentNullException.ThrowIfNull(engine);
+
+		// Scaled about the middle of the editor, so zooming keeps whatever is in the middle of the
+		// view in the middle of it rather than sending the graph towards a corner. Cached because the
+		// read-backs have to undo exactly the transform this render applied, and they are not told
+		// how big the editor is.
+		zoomAnchor = editorSize * 0.5f;
+
+		bool scaled = !IsUnzoomed;
+		ScaledStyle restore = default;
+		if (scaled)
+		{
+			ImGui.PushFont(ImGui.GetFont(), ImGui.GetFontSize() * Zoom);
+			restore = ScaleImNodesStyle(Zoom);
+		}
+
 		ImNodes.BeginNodeEditor();
 
 		// Render all nodes
@@ -54,7 +105,119 @@ public class NodeEditorRenderer
 		CacheEditorTransform(engine);
 
 		ImNodes.EndNodeEditor();
+
+		if (scaled)
+		{
+			RestoreImNodesStyle(restore);
+			ImGui.PopFont();
+		}
 	}
+
+	/// <summary>
+	/// Scale the lengths in the node editor's style, returning the values to put back afterwards.
+	/// </summary>
+	/// <param name="zoom">The multiplier to apply.</param>
+	/// <returns>The style as it was, for <see cref="RestoreImNodesStyle"/>.</returns>
+	/// <remarks>
+	/// Scaling the font alone leaves a node's padding, its corner rounding and its pin circles the
+	/// size they were, so a node zoomed out is not a smaller node — it is the same chrome around
+	/// smaller text, and its box does not shrink in proportion. Everything in the style that is a
+	/// length is scaled with the text so that it does.
+	/// <para>
+	/// Grid spacing is scaled too, which is what makes the background move with the graph rather than
+	/// staying put underneath it.
+	/// </para>
+	/// </remarks>
+	private static ScaledStyle ScaleImNodesStyle(float zoom)
+	{
+		ImNodesStylePtr style = ImNodes.GetStyle();
+		ScaledStyle previous = new(
+			style.GridSpacing,
+			style.NodeCornerRounding,
+			style.NodePadding,
+			style.NodeBorderThickness,
+			style.LinkThickness,
+			style.LinkHoverDistance,
+			style.PinCircleRadius,
+			style.PinQuadSideLength,
+			style.PinTriangleSideLength,
+			style.PinLineThickness,
+			style.PinHoverRadius,
+			style.PinOffset);
+
+		style.GridSpacing = previous.GridSpacing * zoom;
+		style.NodeCornerRounding = previous.NodeCornerRounding * zoom;
+		style.NodePadding = previous.NodePadding * zoom;
+		style.NodeBorderThickness = previous.NodeBorderThickness * zoom;
+		style.LinkThickness = previous.LinkThickness * zoom;
+		style.LinkHoverDistance = previous.LinkHoverDistance * zoom;
+		style.PinCircleRadius = previous.PinCircleRadius * zoom;
+		style.PinQuadSideLength = previous.PinQuadSideLength * zoom;
+		style.PinTriangleSideLength = previous.PinTriangleSideLength * zoom;
+		style.PinLineThickness = previous.PinLineThickness * zoom;
+		style.PinHoverRadius = previous.PinHoverRadius * zoom;
+		style.PinOffset = previous.PinOffset * zoom;
+
+		return previous;
+	}
+
+	/// <summary>
+	/// Put the node editor's style back the way <see cref="ScaleImNodesStyle"/> found it.
+	/// </summary>
+	/// <param name="previous">The style to restore.</param>
+	/// <remarks>
+	/// Restored field by field rather than by writing the struct back whole, which would need the
+	/// project to allow unsafe code for the sake of one assignment.
+	/// </remarks>
+	private static void RestoreImNodesStyle(ScaledStyle previous)
+	{
+		ImNodesStylePtr style = ImNodes.GetStyle();
+
+		style.GridSpacing = previous.GridSpacing;
+		style.NodeCornerRounding = previous.NodeCornerRounding;
+		style.NodePadding = previous.NodePadding;
+		style.NodeBorderThickness = previous.NodeBorderThickness;
+		style.LinkThickness = previous.LinkThickness;
+		style.LinkHoverDistance = previous.LinkHoverDistance;
+		style.PinCircleRadius = previous.PinCircleRadius;
+		style.PinQuadSideLength = previous.PinQuadSideLength;
+		style.PinTriangleSideLength = previous.PinTriangleSideLength;
+		style.PinLineThickness = previous.PinLineThickness;
+		style.PinHoverRadius = previous.PinHoverRadius;
+		style.PinOffset = previous.PinOffset;
+	}
+
+	/// <summary>
+	/// The lengths in the node editor's style that a zoom scales, as they were before it did.
+	/// </summary>
+	private readonly record struct ScaledStyle(
+		float GridSpacing,
+		float NodeCornerRounding,
+		Vector2 NodePadding,
+		float NodeBorderThickness,
+		float LinkThickness,
+		float LinkHoverDistance,
+		float PinCircleRadius,
+		float PinQuadSideLength,
+		float PinTriangleSideLength,
+		float PinLineThickness,
+		float PinHoverRadius,
+		float PinOffset);
+
+	/// <summary>
+	/// Convert a position in the engine's space to the one it is drawn at.
+	/// </summary>
+	private Vector2 ToView(Vector2 position) => ((position - zoomAnchor) * Zoom) + zoomAnchor;
+
+	/// <summary>
+	/// Convert a position read back out of ImNodes to the engine's space.
+	/// </summary>
+	private Vector2 ToEngine(Vector2 position) => ((position - zoomAnchor) / Zoom) + zoomAnchor;
+
+	/// <summary>
+	/// Whether the view is at the engine's own scale, where the transform is the identity.
+	/// </summary>
+	private bool IsUnzoomed => Math.Abs(Zoom - 1.0f) < 0.0001f;
 
 	/// <summary>
 	/// Render a single node
@@ -62,21 +225,25 @@ public class NodeEditorRenderer
 	private void RenderNode(Node node)
 	{
 		// Apply engine position to ImNodes BEFORE rendering the node
-		// This ensures physics-calculated positions are reflected immediately
+		// This ensures physics-calculated positions are reflected immediately.
+		// Held in the space ImNodes works in, so a zoom change moves every node here and the
+		// read-back can tell a user's drag apart from what this wrote.
+		Vector2 viewPos = ToView(node.Position);
+
 		if (lastKnownNodePositions.TryGetValue(node.Id, out Vector2 lastPos))
 		{
 			// Check if engine position differs from what we last set in ImNodes
-			if (Vector2.Distance(lastPos, node.Position) > 0.1f)
+			if (Vector2.Distance(lastPos, viewPos) > 0.1f)
 			{
-				ImNodes.SetNodeEditorSpacePos(node.Id, node.Position);
-				lastKnownNodePositions[node.Id] = node.Position;
+				ImNodes.SetNodeEditorSpacePos(node.Id, viewPos);
+				lastKnownNodePositions[node.Id] = viewPos;
 			}
 		}
 		else
 		{
 			// First render - set initial position
-			ImNodes.SetNodeEditorSpacePos(node.Id, node.Position);
-			lastKnownNodePositions[node.Id] = node.Position;
+			ImNodes.SetNodeEditorSpacePos(node.Id, viewPos);
+			lastKnownNodePositions[node.Id] = viewPos;
 		}
 
 		ImNodes.BeginNode(node.Id);
@@ -137,6 +304,80 @@ public class NodeEditorRenderer
 	}
 
 	/// <summary>
+	/// Bring the whole graph into view: centred in the editor, and zoomed out far enough to fit.
+	/// </summary>
+	/// <param name="engine">The engine holding the nodes.</param>
+	/// <param name="editorSize">The area the graph is drawn in.</param>
+	/// <returns>True if there was anything to bring into view.</returns>
+	/// <remarks>
+	/// Centring moves the nodes rather than panning the editor. It has to: <see cref="Render"/> writes
+	/// every node's position into ImNodes on the frame it is drawn, so a pan is undone as soon as it
+	/// is read back — the positions are the only thing that decides where a node appears. The whole
+	/// arrangement is translated by one offset, so the shape a layout settled into is preserved rather
+	/// than being disturbed by the act of looking at it.
+	/// <para>
+	/// The zoom is then whatever makes the arrangement fit, with a margin so nothing sits against an
+	/// edge, and never above 1: a graph small enough to be magnified is shown at its own size, since
+	/// magnifying it is not what "fit" means to someone who asked to see all of it. A graph too big
+	/// even at <see cref="MinZoom"/> is shown as small as the view goes, which is the most of it there
+	/// is to be had.
+	/// </para>
+	/// <para>
+	/// A node's size is measured when it is drawn, so a graph fitted before its first frame is fitted
+	/// against sizes that are still zero. Callers that fit on opening should fit again once the
+	/// dimensions have arrived.
+	/// </para>
+	/// </remarks>
+	public bool FitToView(NodeEditorEngine engine, Vector2 editorSize)
+	{
+		ArgumentNullException.ThrowIfNull(engine);
+
+		if (engine.Nodes.Count == 0)
+		{
+			return false;
+		}
+
+		// Measured across each node's whole extent rather than its top-left corner, so a wide node on
+		// one edge does not pull the arrangement off centre by half its width.
+		Vector2 lowest = new(float.MaxValue, float.MaxValue);
+		Vector2 highest = new(float.MinValue, float.MinValue);
+
+		foreach (Node node in engine.Nodes)
+		{
+			lowest = Vector2.Min(lowest, node.Position);
+			highest = Vector2.Max(highest, node.Position + node.Dimensions);
+		}
+
+		Vector2 centre = editorSize * 0.5f;
+		Vector2 offset = centre - ((lowest + highest) * 0.5f);
+
+		foreach (Node node in engine.Nodes.ToArray())
+		{
+			engine.UpdateNodePosition(node.Id, node.Position + offset);
+		}
+
+		Zoom = FittingZoom(highest - lowest, editorSize);
+		return true;
+	}
+
+	/// <summary>
+	/// Work out the largest zoom an arrangement of the given extent still fits at.
+	/// </summary>
+	/// <param name="extent">How much room the arrangement takes at the engine's scale.</param>
+	/// <param name="editorSize">The room there is to show it in.</param>
+	/// <returns>The zoom to use, within the range the view allows.</returns>
+	private static float FittingZoom(Vector2 extent, Vector2 editorSize)
+	{
+		if (extent.X <= 0 || extent.Y <= 0 || editorSize.X <= 0 || editorSize.Y <= 0)
+		{
+			return 1.0f;
+		}
+
+		float fitting = Math.Min(editorSize.X / extent.X, editorSize.Y / extent.Y) * FitMargin;
+		return Math.Clamp(Math.Min(fitting, 1.0f), MinZoom, MaxZoom);
+	}
+
+	/// <summary>
 	/// Check for nodes that have moved and return their new positions
 	/// </summary>
 	public Dictionary<int, Vector2> GetNodePositionUpdates(NodeEditorEngine engine)
@@ -154,11 +395,12 @@ public class NodeEditorRenderer
 
 			Vector2 currentImNodesPos = ImNodes.GetNodeEditorSpacePos(node.Id);
 
-			// Only report a change if the ImNodes position differs from the ENGINE position
-			// This means the user dragged the node (ImNodes changed independently of us)
-			if (Vector2.Distance(node.Position, currentImNodesPos) > 0.1f)
+			// Only report a change if the ImNodes position differs from where this renderer drew the
+			// node. That means the user dragged it — ImNodes changed independently of us — and the
+			// position is reported back in the engine's space, not the one it was drawn in.
+			if (Vector2.Distance(ToView(node.Position), currentImNodesPos) > 0.1f)
 			{
-				updates[node.Id] = currentImNodesPos;
+				updates[node.Id] = ToEngine(currentImNodesPos);
 				lastKnownNodePositions[node.Id] = currentImNodesPos;
 				currentlyDraggedNodes.Add(node.Id);
 			}
@@ -170,6 +412,19 @@ public class NodeEditorRenderer
 	/// <summary>
 	/// Check for nodes that have been resized and return their new dimensions
 	/// </summary>
+	/// <remarks>
+	/// A size measured while the view is zoomed is not the node's size: the text, the padding and the
+	/// pin circles scale with the zoom, but ImGui's own spacing inside the node does not, and the
+	/// font size is rounded to whole pixels. Dividing such a measurement by the zoom gives a value
+	/// that depends on how far the user happened to be zoomed out, and handing that to a layout that
+	/// keeps node boxes apart would re-space the graph every time the view changed.
+	/// <para>
+	/// So a node that has already been measured keeps the size it was measured at, and only a node
+	/// that has never been measured takes a zoomed measurement — an approximate size being better
+	/// than none for a node created while zoomed out. It is corrected the next time the view is at
+	/// its own scale.
+	/// </para>
+	/// </remarks>
 	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions.", Justification = "Explicit loop is clearer; the loop contains a continue and dictionary mutation that would not simplify cleanly.")]
 	public Dictionary<int, Vector2> GetNodeDimensionUpdates(NodeEditorEngine engine)
 	{
@@ -190,9 +445,9 @@ public class NodeEditorRenderer
 			{
 				// Initialize with current dimensions for new nodes
 				lastKnownNodeDimensions[node.Id] = currentImNodesDims;
-				updates[node.Id] = currentImNodesDims;
+				updates[node.Id] = currentImNodesDims / Zoom;
 			}
-			else if (Vector2.Distance(lastDims, currentImNodesDims) > 0.1f)
+			else if (Vector2.Distance(lastDims, currentImNodesDims) > 0.1f && IsUnzoomed)
 			{
 				updates[node.Id] = currentImNodesDims;
 				lastKnownNodeDimensions[node.Id] = currentImNodesDims;
@@ -264,7 +519,7 @@ public class NodeEditorRenderer
 	/// Convert an editor-space position to screen-space using the cached transform
 	/// </summary>
 	private Vector2 EditorToScreen(Vector2 editorPos) =>
-		editorToScreenBase + editorPos;
+		editorToScreenBase + ToView(editorPos);
 
 	private void RenderOrigin(ImDrawListPtr drawList, NodeEditorEngine engine)
 	{
