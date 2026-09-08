@@ -26,6 +26,7 @@
 - **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
 - **Color Utilities**: HSL/HSLA color creation, accessibility-focused contrast calculations, color manipulation extensions, and semantic color palettes
 - **Markdown Rendering**: CommonMark rendering (headings, emphasis, lists, tables, links, images) built on Markdig via `ktsu.ImGui.Markdown`, standalone and independent of `ktsu.ImGui.App`
+- **Syntax Highlighting**: Themed code rendering for fifteen languages, with a data-driven tokenizer, an optional line-number gutter, and cached tokenization via `ktsu.ImGui.SyntaxHighlighting`, standalone and independent of `ktsu.ImGui.App`
 
 ## Libraries
 
@@ -75,6 +76,12 @@ Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine
 
 CommonMark markdown renderer built on Markdig, with pipe tables, task lists, and autolinks. Renders headings, emphasis, inline and block code, lists, blockquotes, tables, links, and images directly inside Dear ImGui. Standalone, with no dependency on `ktsu.ImGui.App`.
 
+### ImGui.SyntaxHighlighting - Code Highlighting
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.SyntaxHighlighting?label=ktsu.ImGui.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.SyntaxHighlighting)
+
+Syntax-highlighted source code rendered inside Dear ImGui, with built-in definitions for C#, C, C++, JavaScript, TypeScript, Python, JSON, YAML, XML, HTML, CSS, SQL, shell, Lua, and plain text. Languages are plain data, so applications can register their own; palettes follow the host's light or dark theme. Standalone, with no dependency on `ktsu.ImGui.App`, and it doubles as the code-block renderer for `ktsu.ImGui.Markdown`.
+
 ## Installation
 
 ### Package Manager Console
@@ -86,6 +93,7 @@ Install-Package ktsu.ImGui.Popups
 Install-Package ktsu.ImGui.Styler
 Install-Package ktsu.NodeGraph
 Install-Package ktsu.ImGui.Markdown
+Install-Package ktsu.ImGui.SyntaxHighlighting
 ```
 
 ### .NET CLI
@@ -97,6 +105,7 @@ dotnet add package ktsu.ImGui.Popups
 dotnet add package ktsu.ImGui.Styler
 dotnet add package ktsu.NodeGraph
 dotnet add package ktsu.ImGui.Markdown
+dotnet add package ktsu.ImGui.SyntaxHighlighting
 ```
 
 ### Package Reference
@@ -108,6 +117,7 @@ dotnet add package ktsu.ImGui.Markdown
 <PackageReference Include="ktsu.ImGui.Styler" Version="x.y.z" />
 <PackageReference Include="ktsu.NodeGraph" Version="x.y.z" />
 <PackageReference Include="ktsu.ImGui.Markdown" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.SyntaxHighlighting" Version="x.y.z" />
 ```
 
 ## Usage Examples
@@ -370,6 +380,22 @@ ImGui.End();
 
 ## API Reference
 
+### Syntax Highlighting
+
+```csharp
+using ktsu.ImGui.SyntaxHighlighting;
+using Hexa.NET.ImGui;
+
+ImGui.Begin("Code");
+ImGuiSyntaxHighlighting.Render("""
+    public static void Main()
+    {
+        Console.WriteLine("Hello, ImGui");
+    }
+    """, "csharp", new SyntaxHighlightConfig { ShowLineNumbers = true });
+ImGui.End();
+```
+
 ### `ImGuiApp` (Static)
 
 Application lifecycle and utilities.
@@ -575,6 +601,24 @@ CommonMark markdown rendering.
 | `MarkdownDocument` | Parses markdown once in its constructor; render the same instance every frame for hot paths |
 | `MarkdownConfig` | Rendering options: `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, `LinkColor` |
 
+### `ImGuiSyntaxHighlighting` (Static)
+
+Syntax-highlighted code rendering.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Render(string, string, SyntaxHighlightConfig?)` | `void` | Tokenizes (cached by source) and renders code at the current cursor position |
+| `Render(HighlightedCode, SyntaxHighlightConfig?)` | `void` | Renders pre-tokenized code at the current cursor position |
+| `Highlight(string, string, int)` | `IReadOnlyList<HighlightedLine>` | Tokenizes code without drawing anything |
+
+| Class | Description |
+| ----- | ----------- |
+| `HighlightedCode` | Tokenizes once in its constructor; render the same instance every frame for hot paths |
+| `SyntaxHighlightConfig` | Rendering options: `FontResolver`, `Theme`, `ShowLineNumbers`, `FirstLineNumber`, `TabWidth`, `ShowBackground`, `BackgroundRounding`, `PaddingPixels`, `LineSpacingPixels`, `GutterSpacingPixels`, `FontSizePixels`, `Width` |
+| `SyntaxTheme` | One color per `TokenKind`, with `Dark` and `Light` built in and unset entries taken from the ImGui theme |
+| `LanguageDefinition` | The comment, string, keyword and operator rules of one language |
+| `LanguageRegistry` | Resolves language names and aliases, and registers custom definitions |
+
 ## Demo Applications
 
 The repository includes demo applications showcasing all features:
@@ -588,6 +632,7 @@ dotnet run --project examples/ImGuiWidgetsDemo
 dotnet run --project examples/ImGuiPopupsDemo
 dotnet run --project examples/ImGuiStylerDemo
 dotnet run --project examples/ImGuiMarkdownDemo
+dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 ```
 
 ## Contributing

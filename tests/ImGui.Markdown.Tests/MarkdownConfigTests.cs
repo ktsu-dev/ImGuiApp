@@ -31,5 +31,28 @@ public sealed class MarkdownConfigTests
 		Assert.IsNull(config.FontResolver);
 		Assert.IsNull(config.OnLinkClicked);
 		Assert.IsNull(config.ImageResolver);
+		Assert.IsNull(config.CodeBlockRenderer);
+	}
+
+	[TestMethod]
+	public void CodeBlockRenderer_TakesTheLanguageAndTheCode()
+	{
+		// The hook's parameters are what an outside highlighter binds to, so their order and content
+		// are part of the contract rather than an implementation detail.
+		string? seenLanguage = null;
+		string? seenCode = null;
+		MarkdownConfig config = new()
+		{
+			CodeBlockRenderer = (language, code) =>
+			{
+				seenLanguage = language;
+				seenCode = code;
+			},
+		};
+
+		config.CodeBlockRenderer!("csharp", "int x = 1;");
+
+		Assert.AreEqual("csharp", seenLanguage);
+		Assert.AreEqual("int x = 1;", seenCode);
 	}
 }

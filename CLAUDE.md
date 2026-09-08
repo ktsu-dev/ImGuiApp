@@ -33,7 +33,8 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
 - **ImGuiNodeEditor** (`ktsu.ImGuiNodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`
-- **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). v1 has no code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
+- **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). Fenced and indented code blocks go to `MarkdownConfig.CodeBlockRenderer` (`Action<string?, string>?` — the fence's info string and the block text) when one is supplied, which takes over drawing *and* reserving the block's layout space; `ImGui.SyntaxHighlighting` plugs into it, and neither library references the other. v1 has no built-in code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
+- **ImGui.SyntaxHighlighting** (`ktsu.ImGui.SyntaxHighlighting`) - Syntax-highlighted code rendering, layered on `ImGui.Color` only, with no dependency on `ImGui.App` and no third-party parser. Static `ImGuiSyntaxHighlighting.Render(string code, string language, SyntaxHighlightConfig?)` tokenizes with a cache keyed by source, language and tab width; `HighlightedCode` tokenizes once for hot render paths; `Highlight(code, language, tabWidth)` returns the classified `HighlightedLine`/`HighlightedToken` runs without drawing. Languages are data (`LanguageDefinition`: line/block comment, string, keyword, type, constant, operator and identifier rules) held in `LanguageRegistry`, which resolves names and aliases case-insensitively and falls back to plain text for unknown names rather than throwing. Fifteen built-ins in `BuiltInLanguages`: text, csharp, c, cpp, javascript, typescript, python, json, yaml, xml, html, css, sql, shell, lua. Two tokenizers back them — the general `CodeTokenizer`, and `MarkupTokenizer` for definitions with `IsMarkup` (XML/HTML), which classify structurally rather than by keyword. `SyntaxTheme` holds one `ktsu.Semantics.Color.Color` per `TokenKind`, with `Dark`/`Light` built in; leaving `Theme` null picks between them per frame from the window background's luminance, and unset `Background`/`Plain`/`LineNumber` come from `FrameBg`/`Text`/`TextDisabled`. Highlighting is lexical, code is never wrapped, and there is no scrolling, selection or editing.
 
 ### Examples
 
@@ -42,6 +43,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `examples/ImGuiStylerDemo/` - Theme gallery
 - `examples/ImGuiPopupsDemo/` - Popup demonstrations
 - `examples/ImGuiMarkdownDemo/` - Markdown rendering demo
+- `examples/ImGuiSyntaxHighlightingDemo/` - Syntax highlighting demo, including markdown code blocks routed through the highlighter
 
 ### Tests
 
@@ -49,10 +51,14 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `tests/NodeGraph.Tests/` - Node graph attribute and type utility tests
 - `tests/<Demo>.UITests/` - One headless UI test project per example, driving the demo's real
   `BuildConfig()` through `ImGuiAppHarness`: `ImGuiAppDemo.UITests`, `ImGuiWidgetsDemo.UITests`,
-  `ImGuiStylerDemo.UITests`, `ImGuiPopupsDemo.UITests`, `ImGuiMarkdownDemo.UITests`. See
+  `ImGuiStylerDemo.UITests`, `ImGuiPopupsDemo.UITests`, `ImGuiMarkdownDemo.UITests`,
+  `ImGuiSyntaxHighlightingDemo.UITests`. See
   [Demo UI tests](#demo-ui-tests) below.
 - `tests/ImGui.Widgets.UITests/` - One headless UI test class per widget, each driving that widget
   alone with nothing else on screen. See [Widget UI tests](#widget-ui-tests) below.
+- `tests/ImGui.SyntaxHighlighting.Tests/` - Tokenizer, line-splitter, registry, theme and cache tests.
+  These are pure unit tests: everything but the draw calls in `CodeRenderer` is reachable without an
+  ImGui context, which is why `Highlight` is public.
 
 ### Key Files
 
@@ -71,6 +77,10 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Widgets/DeferredDrawing.cs` - `DrawDeferred()`/`DrawDeferredDocked()` per-frame pumps, and the `ToggleSwitch` animation-clock fallback used when neither has ever run
 - `ImGui.Widgets/DockedWindow.cs` - Abstract base for windows drawn by `DrawDeferredDocked()`; composes Hexa's `ImWindow` via a private adapter instead of inheriting it
 - `ImGui.Widgets/Dialogs/` - Hexa-backed dialog wrappers: `FileDialogs.cs` (`OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`), `RenameDialog.cs`, `MessageDialogs.cs` (`DialogMessageBox`/`ShowMessageBox`), `DialogOutcome.cs` (shared `DialogOutcome` enum and result mapping)
+- `ImGui.SyntaxHighlighting/Tokenizing/CodeTokenizer.cs` - Single-pass lexer driven by a `LanguageDefinition`; emits tokens over the whole source, so block comments and multi-line strings stay whole
+- `ImGui.SyntaxHighlighting/Tokenizing/LineSplitter.cs` - Cuts those tokens into lines, normalizes CRLF, and expands tabs against the column they start at
+- `ImGui.SyntaxHighlighting/Languages/BuiltInLanguages.cs` - The fifteen built-in language definitions
+- `ImGui.SyntaxHighlighting/Rendering/CodeRenderer.cs` - Draws the background, gutter and colored token runs, then reserves the footprint as one item
 - `ImGui.Color/ColorImGuiExtensions.cs` - `Color` ↔ ImColor/ImU32/Vector4 conversions (`ImColor.ToImGuiU32` applies global alpha; `Color.ToImGuiU32` is pure)
 - `ImGui.Color/SrgbImGuiExtensions.cs` - Direct `Srgb` → ImColor/ImGuiVector4/ImU32 conversions (no linear round-trip)
 - `ImGui.Color/ImColorExtensions.cs` - ImColor adjustment, analysis, and contrast operations
@@ -438,6 +448,13 @@ Things that bite here, beyond the demo-suite list above:
 3. Add demo to `examples/ImGuiWidgetsDemo/`
 4. Add an isolation suite to `tests/ImGui.Widgets.UITests/`
 
+### New Language (Syntax Highlighting)
+
+1. Add a `LanguageDefinition` to `ImGui.SyntaxHighlighting/Languages/BuiltInLanguages.cs` and list it in `All`
+2. Reuse the shared comment/string rule fields rather than re-declaring equivalent rules
+3. Add tokenizer tests to `tests/ImGui.SyntaxHighlighting.Tests/CodeTokenizerTests.cs`
+4. Add a snippet to `examples/ImGuiSyntaxHighlightingDemo/` if the language shows off something new
+
 ### New Theme
 
 1. Add theme definition to `ImGui.Styler/`
@@ -482,7 +499,7 @@ itself to `net10.0-ios` and failed with `NETSDK1147` before reaching a test, whi
 excluded from the test matrix (#327). If you add a step that has to build the iOS head, set
 `IncludeIosTargets` — an environment variable works, MSBuild reads it as a property.
 
-The test matrix in `dotnet.yml` fans out over Linux, Windows and macOS. The five UI suites run on
+The test matrix in `dotnet.yml` fans out over Linux, Windows and macOS. The six UI suites run on
 Linux only: they are the whole cost of the job, and the CPU rasterizer they drive measures the same
 on either host. The `Test` step tests for Linux rather than against Windows, so any platform added
 later gets that cheap treatment by default.
