@@ -7,22 +7,64 @@
 
 ## Features
 
-- **Knobs**: Ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
-- **Radial Progress Bar**: Circular progress indicators for visualizing loading and progress with countdown/count-up timers
-- **Resizable Layout Dividers**: Draggable layout dividers for resizable layouts (DividerContainer)
-- **TabPanel**: Tabbed interface with closable, reorderable tabs and dirty indicator support
-- **Combo**: Type-safe combo boxes for enums, strings, and strong strings
-- **Icons**: Customizable icons with various alignment options and event delegates
-- **Grid**: Flexible grid layout for displaying items
-- **Color Indicator**: An indicator that displays a color when enabled
-- **Image**: An image widget with alignment options
-- **Text**: A text widget with alignment options
-- **Tree**: A tree widget for displaying hierarchical data
-- **Scoped Id**: A utility class for creating scoped IDs
-- **Scoped Disable**: Temporarily disable UI elements within a scope
-- **SearchBox**: A powerful search box with support for various filter types (Glob, Regex, Fuzzy) and matching options
-- **Histogram**: Draws one or more binned distributions as overlaid bars, scaled to the tallest bin, keeping the binning scan off the render thread by accepting pre-computed bins
-- **HandleTrack**: Draggable handles over a rectangle you supply, kept sorted and a minimum distance apart, drawing handles only for overlay on content you own
+The widgets below are grouped by what they are for. Everything is a static method on `ImGuiWidgets` unless it is named as a type.
+
+### Input and Controls
+
+- **`Switch`**: iOS-style toggle with an animated thumb, whose track interpolates between the frame background and the accent color
+- **`SegmentedControl`**: A row of mutually exclusive options with a sliding, animated highlight behind the selected one
+- **`Stepper`**: A `[-] value [+]` integer stepper with hold-to-repeat after a short delay
+- **`RangeSlider`**: Dual-handle slider for a span within a range; the handles cannot cross and stay a minimum distance apart
+- **`XYPad`**: Edits two normalized parameters at once from one pad
+- **`Knob`** / **`KnobWithDrag`**: Dial-style knobs in several variants, ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
+- **`Rating`**: Interactive star rating that previews the value under the cursor before it is committed
+- **`Chip`** / **`ChipGroup`**: Pill-shaped filter or choice tags, filled when selected, and a wrapping single-select group of them
+- **`PinInput`**: An N-box PIN or one-time-passcode entry that auto-advances, and steps back on backspace
+- **`SearchBox`** / **`SearchBoxRanked`**: Filters a collection with `ktsu.TextFilter` (glob, regex, fuzzy) or ranks it with a fuzzy match
+- **`Combo`**: Type-safe combo boxes for enums, strings, and semantic strings
+
+### Display and Status
+
+- **`Avatar`**: Circular initials avatar on a color derived deterministically from the name, with an optional presence dot
+- **`Badge`** / **`BadgeDot`**: A count badge (with a `maxCount+` cap) or a plain dot, overlaid on the corner of the item just submitted
+- **`ColorIndicator`**: A colored square that shows a state
+- **`Icon`**: Icons with alignment options and click, double-click and context-menu delegates
+- **`Text`**: Text with alignment (`TextCentered`, `TextCenteredWithin`) and ellipsis clipping
+- **`Image`**: Images with alignment (`ImageCentered`, `ImageCenteredWithin`), returning whether they were clicked
+- **`PageIndicator`**: A row of carousel dots, optionally clickable to jump to a page
+- **`Tooltip`** / **`Breadcrumb`**: A hover tooltip and a path-style breadcrumb trail
+
+### Progress and Loading
+
+- **`RadialProgressBar`**: Circular determinate progress, with `RadialCountdown` and `RadialCountUp` timer variants
+- **`BufferingBar`** / **`Spinner`**: Determinate linear progress, and an indeterminate spinner
+- **`SkeletonLine`** / **`SkeletonRect`** / **`SkeletonCircle`**: Shimmering placeholders for content that has not loaded, animated from `ImGui.GetTime()` so they need no per-widget state
+
+### Data and Signals
+
+- **`Histogram`**: One or more binned distributions as overlaid bars, scaled to the tallest bin; it takes pre-computed bins, so the binning scan stays off the render thread
+- **`HandleTrack`**: Draggable handles over a rectangle you supply — a histogram plot, say — kept ordered and a minimum distance apart
+- **`FlameGraph`**: A flame graph over managed sample data
+- **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
+- **`Scope`**: An oscilloscope-style waveform over a block of audio samples
+
+### Layout and Containers
+
+- **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
+- **`Grid`**: `RowMajorGrid` and `ColumnMajorGrid` layouts with measured, delegate-drawn cells
+- **`TabPanel`**: Tabbed interface with closable, reorderable tabs and dirty indicators
+- **`Card`**: A scoped elevated panel that draws its shadow and rounded background behind whatever the `using` block renders
+- **`Tree`**: Connector lines drawn around whatever is nested inside it
+- **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
+- **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
+- **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
+
+### Motion and Gestures
+
+- **`Tween`** / **`Spring`** / **`Easing`**: Frame-rate independent time-based interpolation, a damped harmonic oscillator that chases a target, and the easing curves to shape them
+- **`InertialScroll`**: A one-dimensional scroll offset that coasts after release, for carousels, pickers and long lists
+- **`GestureDetector`** / **`GestureMachine`**: Claims a region and reports tap, double-tap, long-press, swipe and pan over it
+
 - **Hexa-backed widgets**: Thin adapters over [`Hexa.NET.ImGui.Widgets`](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) — spinners, buffering bars, splitters, toggle/transparent/inline buttons, an icon tree node, an enum combo, text/image alignment helpers, tooltips, breadcrumbs, a date/year picker, a flame graph, a file tree view, stateful file/rename/message dialogs, and a docked-window base class. See [Hexa-backed Widgets](#hexa-backed-widgets) below.
 - **Callback-driven editors**: `Sequencer` (an editable clip timeline), `CurveEditor` (a multi-curve graph, or a single `CurveData` curve), and `BezierEditor` (a cubic easing curve) — driven by a `SequenceSource`/`CurveSource` you subclass, or by a `CurveData`/`BezierControlPoints` value. See [Callback-driven Editors](#callback-driven-editors) below.
 

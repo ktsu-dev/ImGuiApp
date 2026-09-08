@@ -1,14 +1,15 @@
-# ktsu.ImGuiNodeEditor
+# ktsu.ImGui.NodeEditor
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiNodeEditor?logo=nuget)](https://nuget.org/packages/ktsu.ImGuiNodeEditor)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.NodeEditor?logo=nuget)](https://nuget.org/packages/ktsu.ImGui.NodeEditor)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-ImGuiNodeEditor is a visual node editor built on ImNodes, with the graph itself kept away from the drawing. `NodeEditorEngine` owns nodes, links and the physics that lays them out and knows nothing about ImGui; `NodeEditorRenderer` draws whatever the engine holds; `NodeEditorInputHandler` turns a frame's interactions into requests the engine can accept or refuse. Nodes can be declared as ordinary types decorated with [`ktsu.NodeGraph`](https://github.com/ktsu-dev/ImGuiApp) attributes and instantiated by reflection.
+ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself kept away from the drawing. `NodeEditorEngine` owns nodes, links and the physics that lays them out and knows nothing about ImGui; `NodeEditorRenderer` draws whatever the engine holds; `NodeEditorInputHandler` turns a frame's interactions into requests the engine can accept or refuse. Nodes can be declared as ordinary types decorated with [`ktsu.NodeGraph`](https://github.com/ktsu-dev/ImGuiApp) attributes and instantiated by reflection.
 
 ## Features
 
 - **Separation of concerns**: business logic (`NodeEditorEngine`), rendering (`NodeEditorRenderer`), and input (`NodeEditorInputHandler`) are separate objects, so the graph can be built and tested without a renderer
 - **Attribute-based nodes**: `AttributeBasedNodeFactory` reads `ktsu.NodeGraph` attributes off a type — or every decorated type in an assembly — and creates nodes with the right pins
+- **Physics is opt-in**: the simulation does nothing until `PhysicsSettings.Enabled` is set, so a host that positions nodes itself pays nothing for it
 - **Type-aware connections**: `TryCreateLink` returns a result with a message rather than throwing, and pin compatibility comes from the same rules the metadata declares
 - **Physics-based layout**: nodes repel, links pull, and the graph settles; powered by [`ktsu.ForceDirectedLayout`](https://github.com/ktsu-dev/ImGuiApp), with per-frame stability and energy readings for debug overlays
 - **Drag-aware**: nodes being dragged are excluded from the simulation, and the renderer reports position and size changes back to the engine
@@ -18,19 +19,19 @@ ImGuiNodeEditor is a visual node editor built on ImNodes, with the graph itself 
 ### Package Manager Console
 
 ```powershell
-Install-Package ktsu.ImGuiNodeEditor
+Install-Package ktsu.ImGui.NodeEditor
 ```
 
 ### .NET CLI
 
 ```bash
-dotnet add package ktsu.ImGuiNodeEditor
+dotnet add package ktsu.ImGui.NodeEditor
 ```
 
 ### Package Reference
 
 ```xml
-<PackageReference Include="ktsu.ImGuiNodeEditor" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.NodeEditor" Version="x.y.z" />
 ```
 
 ImNodes must be initialized before the editor draws. `ktsu.ImGui.App` detects and sets up the extension automatically; in a host that does not, initialize ImNodes yourself as its bindings document.
@@ -44,7 +45,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGuiNodeEditor;
+using ktsu.ImGui.NodeEditor;
 
 private readonly NodeEditorEngine engine = new();
 private readonly NodeEditorRenderer renderer = new();
@@ -112,6 +113,8 @@ Node node = factory.CreateNode<AddNode>(new Vector2(100, 100));
 ```
 
 `GetAllNodeDefinitions()` returns the registered definitions, which is what a "add node" menu is built from: each one carries the display name, category, tags, execution mode, deprecation state and pin list read off the attributes.
+
+Two things to know about registration. A class node also gets an `Instance` output pin (and input pins for its constructor's parameters), so it can be chained onward. And `RegisterNodeTypesFromAssembly` skips abstract types — which in IL includes every `static class` — so a `[Node]` method parked on a static holder class has to be registered by naming that holder: `factory.RegisterNodeType(typeof(MathNodes))`.
 
 ### Tuning the layout
 
@@ -195,4 +198,4 @@ Contributions are welcome! For feature requests, bug reports, or questions, plea
 
 ## License
 
-ImGuiNodeEditor is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.
+ImGui.NodeEditor is licensed under the MIT License. See [LICENSE.md](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md) for more information.

@@ -29,7 +29,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeGraph", "NodeGraph\Node
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeGraph.Tests", "tests\NodeGraph.Tests\NodeGraph.Tests.csproj", "{14A700C3-85E0-4782-81C8-FBDA250F1886}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGuiNodeEditor", "ImGuiNodeEditor\ImGuiNodeEditor.csproj", "{62349407-22D0-42A6-8F7B-B7E2303A5DB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.NodeEditor", "ImGui.NodeEditor\ImGui.NodeEditor.csproj", "{62349407-22D0-42A6-8F7B-B7E2303A5DB1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ForceDirectedLayout", "ForceDirectedLayout\ForceDirectedLayout.csproj", "{BD48C919-4782-446C-AD68-2E48749A96C8}"
 EndProject
@@ -71,7 +71,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGuiAppDemo.UITests", "tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.Widgets.UITests", "tests\ImGui.Widgets.UITests\ImGui.Widgets.UITests.csproj", "{B9B3917C-C244-4C87-8AE3-8E08A589C6DC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGuiNodeEditor.Tests", "tests\ImGuiNodeEditor.Tests\ImGuiNodeEditor.Tests.csproj", "{22B07D46-47BD-4141-93FB-809C55ACFB62}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.NodeEditor.Tests", "tests\ImGui.NodeEditor.Tests\ImGui.NodeEditor.Tests.csproj", "{22B07D46-47BD-4141-93FB-809C55ACFB62}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.SyntaxHighlighting", "ImGui.SyntaxHighlighting\ImGui.SyntaxHighlighting.csproj", "{B9B1CACA-F7DD-4444-A11B-0D70882C1FD9}"
 EndProject

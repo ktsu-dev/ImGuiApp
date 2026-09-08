@@ -6,7 +6,7 @@
     <IsTestProject>true</IsTestProject>
     <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
-    <RootNamespace>ktsu.ImGuiNodeEditor.Tests</RootNamespace>
+    <RootNamespace>ktsu.ImGui.NodeEditor.Tests</RootNamespace>
     <AssemblyName>$(RootNamespace)</AssemblyName>
     <EnableSourceLink>false</EnableSourceLink>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -15,6 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ImGui.App.Testing\ImGui.App.Testing.csproj" />
-    <ProjectReference Include="..\..\ImGuiNodeEditor\ImGuiNodeEditor.csproj" />
+    <ProjectReference Include="..\..\ImGui.NodeEditor\ImGui.NodeEditor.csproj" />
   </ItemGroup>
 </Project>
