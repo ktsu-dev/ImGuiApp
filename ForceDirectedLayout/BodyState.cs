@@ -50,4 +50,24 @@ public struct EdgeRef
 
 	/// <summary>Reserved per-edge anisotropy weight. Ignored by V1; populated for future use (e.g. execution vs data pin biasing).</summary>
 	public Vec2D Anisotropy;
+
+	/// <summary>
+	/// Where on the source body this edge attaches, relative to that body's origin. Read only when
+	/// <see cref="HasPinOffsets"/> is non-zero.
+	/// </summary>
+	public Vec2D SourcePinOffset;
+
+	/// <summary>
+	/// Where on the target body this edge attaches, relative to that body's origin. Read only when
+	/// <see cref="HasPinOffsets"/> is non-zero.
+	/// </summary>
+	public Vec2D TargetPinOffset;
+
+	/// <summary>
+	/// Non-zero when the two pin offsets are meaningful. Zero offsets are a legitimate attachment
+	/// point - a body's top-left corner - so absence needs its own flag rather than a sentinel value.
+	/// When zero the edge is treated as attaching at both bodies' centres, which is how every force
+	/// behaved before pin offsets existed.
+	/// </summary>
+	public byte HasPinOffsets;
 }

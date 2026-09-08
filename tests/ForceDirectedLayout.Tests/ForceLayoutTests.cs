@@ -380,6 +380,88 @@ public class GenericFacadeTests
 			bodies[1].Position.X + (bodies[1].Dimensions.X * 0.5));
 	}
 
+	/// <summary>An edge that knows which pin it attaches to at each end.</summary>
+	private sealed record PinnedEdge(int SourceId, int TargetId, Vec2D SourcePin, Vec2D TargetPin);
+
+	private static ForceDirectedLayout<TestBody, PinnedEdge> CreatePinnedLayout(PhysicsSettings settings) =>
+		new(
+			new BodyAccessor<TestBody>(
+				GetId: b => b.Id,
+				GetPosition: b => b.Position,
+				GetDimensions: b => b.Dimensions,
+				GetVelocity: b => b.Velocity,
+				GetForce: b => b.Force,
+				GetIsPinned: b => b.IsPinned,
+				WithPhysicsState: (b, p, v, f) => b with { Position = p, Velocity = v, Force = f }),
+			new EdgeAccessor<PinnedEdge>(
+				GetSourceBodyId: e => e.SourceId,
+				GetTargetBodyId: e => e.TargetId,
+				GetSourcePinOffset: e => e.SourcePin,
+				GetTargetPinOffset: e => e.TargetPin))
+		{
+			Settings = settings,
+		};
+
+	[TestMethod]
+	public void PinOffsets_LevelThePinsRatherThanTheBodyCentres()
+	{
+		// A tall body whose pin sits near its top, feeding a short one whose pin is at its middle. Level
+		// the centres and the link is still steep; level the pins and the tall body has to ride up.
+		ForceDirectedLayout<TestBody, PinnedEdge> layout = CreatePinnedLayout(new PhysicsSettings { Enabled = true });
+		List<TestBody> bodies = [Body(1, 0, 0, 160, 300), Body(2, 400, 0, 160, 60)];
+		List<PinnedEdge> edges = [new PinnedEdge(1, 2, new Vec2D(160, 30), new Vec2D(0, 30))];
+
+		for (int i = 0; i < 2000; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double sourcePinY = bodies[0].Position.Y + 30;
+		double targetPinY = bodies[1].Position.Y + 30;
+		double sourceCentreY = bodies[0].Position.Y + 150;
+		double targetCentreY = bodies[1].Position.Y + 30;
+		double centreGap = Math.Abs(targetCentreY - sourceCentreY);
+
+		// Soft against gravity, so the pins settle near level rather than exactly on it. What matters is
+		// which pair got levelled: the pins end up far closer together than the centres, where measuring
+		// from centres would have produced the reverse.
+		double pinGap = Math.Abs(targetPinY - sourcePinY);
+
+		Assert.IsTrue(pinGap < 60.0, $"The pins should settle close to level; they are {pinGap} apart.");
+		Assert.IsTrue(centreGap > pinGap * 1.5,
+			$"The centres should stay further apart than the pins; centres {centreGap}, pins {pinGap}.");
+	}
+
+	[TestMethod]
+	public void PinOffsets_MeasureTheSpringBetweenPins()
+	{
+		// No other force, so the spring alone settles the pair: pin-to-pin distance should reach the rest
+		// length, which the centre-to-centre distance then cannot also equal.
+		ForceDirectedLayout<TestBody, PinnedEdge> layout = CreatePinnedLayout(new PhysicsSettings
+		{
+			Enabled = true,
+			RepulsionStrength = 0,
+			GravityStrength = 0,
+			DirectionalBias = 0,
+			LinkFlatteningStrength = 0,
+			OverlapMargin = 0,
+			RestLinkLength = 200.0,
+			DampingFactor = 0.1,
+		});
+		List<TestBody> bodies = [Body(1, 0, 0, 200, 80), Body(2, 800, 0, 200, 80)];
+		List<PinnedEdge> edges = [new PinnedEdge(1, 2, new Vec2D(200, 40), new Vec2D(0, 40))];
+
+		for (int i = 0; i < 4000; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double sourcePinX = bodies[0].Position.X + 200;
+		double pinDistance = bodies[1].Position.X - sourcePinX;
+		Assert.IsTrue(Math.Abs(pinDistance - 200.0) < 15.0,
+			$"The spring should settle the pins at its rest length; they are {pinDistance} apart.");
+	}
+
 	[TestMethod]
 	public void LinkFlattening_PullsAForwardEdgeTowardsHorizontal()
 	{

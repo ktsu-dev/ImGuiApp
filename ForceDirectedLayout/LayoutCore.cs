@@ -210,6 +210,31 @@ public sealed class LayoutCore
 		}
 	}
 
+	/// <summary>
+	/// The two points an edge actually joins: its pin positions when the caller supplied them, and the
+	/// two body centres when it did not.
+	/// </summary>
+	/// <remarks>
+	/// A renderer draws a link between pins, not between centres, and on a node with several rows of
+	/// pins those differ by most of the node's height. Every force that reasons about a link's length
+	/// or its angle has to use the same two points the link is drawn between, or it is shaping
+	/// something the user cannot see.
+	/// </remarks>
+	private (Vec2D Source, Vec2D Target) EdgeEndpoints(int e)
+	{
+		int s = edges[e].SourceIndex;
+		int t = edges[e].TargetIndex;
+
+		if (edges[e].HasPinOffsets != 0)
+		{
+			return (bodies[s].Position + edges[e].SourcePinOffset,
+				bodies[t].Position + edges[e].TargetPinOffset);
+		}
+
+		return (bodies[s].Position + (bodies[s].Dimensions * 0.5),
+			bodies[t].Position + (bodies[t].Dimensions * 0.5));
+	}
+
 	private void CalculateLinkForces()
 	{
 		double restLength = Settings.RestLinkLength;
@@ -224,10 +249,9 @@ public sealed class LayoutCore
 				continue;
 			}
 
-			Vec2D sourceCenter = bodies[s].Position + (bodies[s].Dimensions * 0.5);
-			Vec2D targetCenter = bodies[t].Position + (bodies[t].Dimensions * 0.5);
+			(Vec2D sourcePin, Vec2D targetPin) = EdgeEndpoints(e);
 
-			Vec2D direction = targetCenter - sourceCenter;
+			Vec2D direction = targetPin - sourcePin;
 			double currentLength = direction.Length();
 			if (currentLength <= 0.1)
 			{
@@ -253,6 +277,30 @@ public sealed class LayoutCore
 	/// Both are soft, balanced against the link spring, so equilibrium settles near the target rather
 	/// than exactly on it, and neither can make every edge in a graph horizontal at once.
 	/// </summary>
+	/// <summary>
+	/// The two points this edge's curve is drawn between, for the passes that shape its angle.
+	/// </summary>
+	/// <remarks>
+	/// With pin offsets supplied these are the pins themselves. Without them the fallback is the pair a
+	/// node editor implies - the source's right edge and the target's left edge, each at its body's
+	/// mid-height - rather than the body centres <see cref="EdgeEndpoints"/> falls back to. Centres
+	/// would put both points inside their bodies and overstate the horizontal room a curve has.
+	/// </remarks>
+	private (Vec2D Source, Vec2D Target) FlattenedEndpoints(int e)
+	{
+		int s = edges[e].SourceIndex;
+		int t = edges[e].TargetIndex;
+
+		if (edges[e].HasPinOffsets != 0)
+		{
+			return (bodies[s].Position + edges[e].SourcePinOffset,
+				bodies[t].Position + edges[e].TargetPinOffset);
+		}
+
+		return (new Vec2D(bodies[s].Position.X + bodies[s].Dimensions.X, bodies[s].Position.Y + (bodies[s].Dimensions.Y * 0.5)),
+			new Vec2D(bodies[t].Position.X, bodies[t].Position.Y + (bodies[t].Dimensions.Y * 0.5)));
+	}
+
 	private void CalculateLinkFlatteningForces()
 	{
 		double strength = Settings.LinkFlatteningStrength;
@@ -272,17 +320,16 @@ public sealed class LayoutCore
 				continue;
 			}
 
-			// Approximate the pins by the facing edges of the two bodies at their centre heights.
-			double sourceRight = bodies[s].Position.X + bodies[s].Dimensions.X;
-			double targetLeft = bodies[t].Position.X;
-			double gap = targetLeft - sourceRight;
+			// The angle and the clearance are properties of the drawn curve, so both are measured between
+			// the points the curve actually joins.
+			(Vec2D sourcePin, Vec2D targetPin) = FlattenedEndpoints(e);
+			double gap = targetPin.X - sourcePin.X;
+			double verticalDrop = Math.Abs(targetPin.Y - sourcePin.Y);
 
+			// Which way round the two bodies sit is a property of the bodies, not of where a link happens
+			// to attach, so the ordering test stays on their centres.
 			double sourceCenterX = bodies[s].Position.X + (bodies[s].Dimensions.X * 0.5);
 			double targetCenterX = bodies[t].Position.X + (bodies[t].Dimensions.X * 0.5);
-
-			double sourceCenterY = bodies[s].Position.Y + (bodies[s].Dimensions.Y * 0.5);
-			double targetCenterY = bodies[t].Position.Y + (bodies[t].Dimensions.Y * 0.5);
-			double verticalDrop = Math.Abs(targetCenterY - sourceCenterY);
 
 			// Prefer horizontal: close the vertical offset between the two ends, always, in proportion to
 			// how far apart they sit. The clearance splay below only fires once a curve is at risk of
@@ -291,7 +338,7 @@ public sealed class LayoutCore
 			// the vertical slide that reorder needs.
 			if (targetCenterX > sourceCenterX)
 			{
-				double levelling = strength * (targetCenterY - sourceCenterY);
+				double levelling = strength * (targetPin.Y - sourcePin.Y);
 				bodies[s].Force += new Vec2D(0, levelling);
 				bodies[t].Force += new Vec2D(0, -levelling);
 			}
