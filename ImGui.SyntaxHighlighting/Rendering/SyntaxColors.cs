@@ -8,6 +8,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
 using ktsu.Semantics.Color;
+using ktsu.SyntaxHighlighting;
 
 /// <summary>
 /// Turns a theme into the packed colors the draw list needs, filling the theme's unset members from

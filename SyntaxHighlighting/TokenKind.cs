@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 /// <summary>
 /// The syntactic role of a token, which selects its color from the active <see cref="SyntaxTheme"/>.

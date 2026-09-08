@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting.Tests;
+namespace ktsu.SyntaxHighlighting.Tests;
 
 using ktsu.Semantics.Color;
 
@@ -32,7 +32,7 @@ public sealed class SyntaxThemeTests
 	}
 
 	[TestMethod]
-	public void PlainIsUnsetByDefaultSoTheImGuiThemeSuppliesIt()
+	public void PlainIsUnsetByDefaultSoTheHostThemeSuppliesIt()
 	{
 		Assert.IsNull(SyntaxTheme.Dark.ColorFor(TokenKind.Plain));
 		Assert.IsNull(SyntaxTheme.Dark.Background);

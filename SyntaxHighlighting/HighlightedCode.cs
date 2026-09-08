@@ -1,14 +1,13 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 using System.Collections.Generic;
 
 /// <summary>
-/// Code that has been tokenized once. Construct it from a source string and render it each frame;
-/// tokenizing happens only in the constructor. Use this for hot render paths, and the static
-/// <see cref="ImGuiSyntaxHighlighting.Render(string, string, SyntaxHighlightConfig)"/> for
-/// convenience elsewhere.
+/// Code that has been tokenized once. Construct it from a source string and draw it each frame;
+/// tokenizing happens only in the constructor. Use this for hot render paths, and
+/// <see cref="SyntaxHighlighter.HighlightCached(string, string, int)"/> for convenience elsewhere.
 /// </summary>
 public sealed class HighlightedCode
 {
@@ -28,15 +27,11 @@ public sealed class HighlightedCode
 	/// <param name="source">The source text.</param>
 	/// <param name="language">The language name or alias; unknown names fall back to plain text.</param>
 	/// <param name="tabWidth">The tab stop width used when expanding tabs to spaces.</param>
-	public HighlightedCode(string source, string language, int tabWidth = 4)
+	public HighlightedCode(string source, string language, int tabWidth = SyntaxHighlighter.DefaultTabWidth)
 	{
 		Source = source ?? string.Empty;
 		Language = LanguageRegistry.Resolve(language);
 		TabWidth = tabWidth;
 		Lines = HighlightCache.Tokenize(Source, Language, tabWidth);
 	}
-
-	/// <summary>Renders this code at the current cursor position.</summary>
-	/// <param name="config">Optional rendering config; defaults are used when omitted.</param>
-	public void Render(SyntaxHighlightConfig? config = null) => ImGuiSyntaxHighlighting.Render(this, config);
 }

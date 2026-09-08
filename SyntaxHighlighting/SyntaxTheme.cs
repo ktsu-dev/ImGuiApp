@@ -1,19 +1,19 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting;
+namespace ktsu.SyntaxHighlighting;
 
 using ktsu.Semantics.Color;
 
 /// <summary>
 /// Maps every <see cref="TokenKind"/> to a color. Colors are held as the semantic linear
 /// <see cref="Color"/> and converted only when drawing, so a theme can be manipulated with the
-/// operations in <c>ktsu.Semantics.Color</c> before it is used.
+/// operations in <c>ktsu.Semantics.Color</c> before it is used, whatever the host renderer.
 /// </summary>
 /// <remarks>
 /// <see cref="Background"/>, <see cref="Plain"/> and <see cref="LineNumber"/> are nullable: leaving
-/// them unset makes the renderer take them from the active ImGui theme
-/// (<c>FrameBg</c>, <c>Text</c> and <c>TextDisabled</c> respectively), so a code block keeps
-/// matching the surrounding UI when the application changes theme.
+/// them unset makes the renderer take them from the host UI's own theme (in
+/// <c>ktsu.ImGui.SyntaxHighlighting</c>, from <c>FrameBg</c>, <c>Text</c> and <c>TextDisabled</c>),
+/// so a code block keeps matching the surrounding UI when the application changes theme.
 /// </remarks>
 public sealed record SyntaxTheme
 {
@@ -75,14 +75,14 @@ public sealed record SyntaxTheme
 	public Color Property { get; init; } = Color.FromHex("#9cdcfe");
 
 	/// <summary>
-	/// A palette tuned for dark backgrounds. Background, plain text and gutter follow the active
-	/// ImGui theme.
+	/// A palette tuned for dark backgrounds. Background, plain text and gutter follow the host UI's
+	/// own theme.
 	/// </summary>
 	public static SyntaxTheme Dark { get; } = new() { Name = "Dark" };
 
 	/// <summary>
-	/// A palette tuned for light backgrounds. Background, plain text and gutter follow the active
-	/// ImGui theme.
+	/// A palette tuned for light backgrounds. Background, plain text and gutter follow the host UI's
+	/// own theme.
 	/// </summary>
 	public static SyntaxTheme Light { get; } = new()
 	{
@@ -117,7 +117,7 @@ public sealed record SyntaxTheme
 	/// <param name="kind">The token kind.</param>
 	/// <returns>
 	/// The configured color, or <see langword="null"/> for <see cref="TokenKind.Plain"/> when
-	/// <see cref="Plain"/> is unset and the caller should use the ImGui theme's text color.
+	/// <see cref="Plain"/> is unset and the caller should use the host UI's own text color.
 	/// </returns>
 	public Color? ColorFor(TokenKind kind) => kind switch
 	{

@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting.Tests;
+namespace ktsu.SyntaxHighlighting.Tests;
 
 using System;
 using System.Collections.Generic;
@@ -66,8 +66,8 @@ public sealed class LanguageRegistryTests
 		LanguageRegistry.Register(ini);
 
 		Assert.AreEqual("test-ini", LanguageRegistry.Resolve("test-conf").Name);
-		TokenAssert.HasToken(ImGuiSyntaxHighlighting.Highlight("; note\nflag = yes", "test-ini"), "; note", TokenKind.Comment);
-		TokenAssert.HasToken(ImGuiSyntaxHighlighting.Highlight("; note\nflag = yes", "test-ini"), "yes", TokenKind.Constant);
+		TokenAssert.HasToken(SyntaxHighlighter.Highlight("; note\nflag = yes", "test-ini"), "; note", TokenKind.Comment);
+		TokenAssert.HasToken(SyntaxHighlighter.Highlight("; note\nflag = yes", "test-ini"), "yes", TokenKind.Constant);
 	}
 
 	[TestMethod]

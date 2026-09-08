@@ -11,6 +11,7 @@ using ktsu.ImGui.App;
 using ktsu.ImGui.Markdown;
 using ktsu.ImGui.Probes;
 using ktsu.ImGui.SyntaxHighlighting;
+using ktsu.SyntaxHighlighting;
 
 internal static class ImGuiSyntaxHighlightingDemo
 {
@@ -84,6 +85,36 @@ internal static class ImGuiSyntaxHighlightingDemo
 				echo "building ${project}"
 				dotnet build "${project}" --configuration Release
 			done
+			"""),
+	];
+
+	/// <summary>
+	/// The snippets on the embedded-language tab. Each holds another language inside a comment or a
+	/// string, which the highlighter finds without being told where to look.
+	/// </summary>
+	internal static IReadOnlyList<Snippet> EmbeddedSnippets { get; } =
+	[
+		new Snippet("C# host", "csharp", """"
+			/// <summary>Posts an <see cref="Order"/> and returns the receipt.</summary>
+			/// <param name="order">The order to post.</param>
+			public Receipt Post(Order order)
+			{
+				// Doc comment tags are XML; the prose between them stays comment-colored.
+				string body = """{"id": 7, "items": ["pen", "ink"], "paid": true}""";
+				string query = "SELECT id, total FROM receipts WHERE order_id = @id";
+
+				// lang=sql
+				string tail = "ORDER BY total DESC";
+
+				return Send(body, query + tail);
+			}
+			""""),
+		new Snippet("JSON host", "json", """
+			{
+			  "name": "embedded",
+			  "payload": "{\"retries\": 3, \"verbose\": false}",
+			  "template": "<row id='1'><cell>ok</cell></row>"
+			}
 			"""),
 	];
 
@@ -180,6 +211,12 @@ internal static class ImGuiSyntaxHighlightingDemo
 				ImGui.EndTabItem();
 			}
 
+			if (DemoTab("Embedded"))
+			{
+				RenderEmbeddedTab();
+				ImGui.EndTabItem();
+			}
+
 			if (DemoTab("In markdown"))
 			{
 				ImGuiMarkdown.Render(MarkdownSample, BuildMarkdownConfig());
@@ -209,6 +246,27 @@ internal static class ImGuiSyntaxHighlightingDemo
 			{
 				SelectedPalette = index;
 			}
+		}
+	}
+
+	private static void RenderEmbeddedTab()
+	{
+		ImGui.TextWrapped(
+			"XML, JSON and SQL are recognized inside a host language's comments and strings. A "
+			+ "'// lang=<name>' comment names the language of the next string outright.");
+		ImGui.Spacing();
+
+		foreach (Snippet snippet in EmbeddedSnippets)
+		{
+			ImGui.TextUnformatted(snippet.Label);
+
+			Vector2 contentMin = ImGui.GetCursorScreenPos();
+			float contentWidth = ImGui.GetContentRegionAvail().X;
+			ImGuiSyntaxHighlighting.Render(snippet.Sample, snippet.Language, BuildHighlightConfig());
+			Vector2 contentMax = new(contentMin.X + contentWidth, ImGui.GetCursorScreenPos().Y);
+			ImGuiProbes.MarkRegion($"embedded/{snippet.Label}", contentMin, contentMax);
+
+			ImGui.Spacing();
 		}
 	}
 

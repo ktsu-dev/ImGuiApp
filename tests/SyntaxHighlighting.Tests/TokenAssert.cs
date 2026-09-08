@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.SyntaxHighlighting.Tests;
+namespace ktsu.SyntaxHighlighting.Tests;
 
 using System.Collections.Generic;
 using System.Linq;
