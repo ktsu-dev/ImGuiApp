@@ -6,6 +6,8 @@ using System;
 
 using Hexa.NET.ImGui;
 
+using ktsu.SyntaxHighlighting;
+
 /// <summary>
 /// Rendering options for the syntax highlighting widgets. Every member is optional; the defaults
 /// produce a themed code block that follows the application's ImGui theme.

@@ -4,10 +4,13 @@ namespace ktsu.ImGui.SyntaxHighlighting;
 
 using System.Collections.Generic;
 
+using ktsu.SyntaxHighlighting;
+
 /// <summary>
-/// Renders syntax-highlighted source code inside Dear ImGui. The static
-/// <see cref="Render(string, string, SyntaxHighlightConfig)"/> caches tokenization by source text;
-/// for hot paths, construct a <see cref="HighlightedCode"/> once and render it each frame.
+/// Renders syntax-highlighted source code inside Dear ImGui. Tokenizing itself lives in the
+/// renderer-agnostic <c>ktsu.SyntaxHighlighting</c>; this is the Dear ImGui drawing layer over it.
+/// The static <see cref="Render(string, string, SyntaxHighlightConfig)"/> caches tokenization by
+/// source text; for hot paths, construct a <see cref="HighlightedCode"/> once and render it each frame.
 /// </summary>
 public static class ImGuiSyntaxHighlighting
 {
@@ -25,8 +28,7 @@ public static class ImGuiSyntaxHighlighting
 		}
 
 		SyntaxHighlightConfig active = config ?? DefaultConfig;
-		LanguageDefinition definition = LanguageRegistry.Resolve(language);
-		CodeRenderer.Render(HighlightCache.GetOrTokenize(code, definition, active.TabWidth), active);
+		CodeRenderer.Render(SyntaxHighlighter.HighlightCached(code, language, active.TabWidth), active);
 	}
 
 	/// <summary>Renders pre-tokenized code at the current cursor position.</summary>
@@ -46,6 +48,6 @@ public static class ImGuiSyntaxHighlighting
 	/// <param name="language">The language name or alias; unknown names classify everything as plain.</param>
 	/// <param name="tabWidth">The tab stop width used when expanding tabs to spaces.</param>
 	/// <returns>The tokenized lines.</returns>
-	public static IReadOnlyList<HighlightedLine> Highlight(string code, string language, int tabWidth = 4) =>
-		HighlightCache.Tokenize(code, LanguageRegistry.Resolve(language), tabWidth);
+	public static IReadOnlyList<HighlightedLine> Highlight(string code, string language, int tabWidth = SyntaxHighlighter.DefaultTabWidth) =>
+		SyntaxHighlighter.Highlight(code, language, tabWidth);
 }

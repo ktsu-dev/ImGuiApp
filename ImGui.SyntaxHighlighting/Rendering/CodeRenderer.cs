@@ -9,6 +9,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.SyntaxHighlighting;
+
 /// <summary>
 /// Draws highlighted lines: a background panel, an optional line-number gutter, and one colored
 /// draw-list run per token. Everything is painted into the window draw list and the total footprint

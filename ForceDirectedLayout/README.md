@@ -8,7 +8,7 @@ ForceDirectedLayout settles a graph into a readable shape: bodies repel each oth
 ## Features
 
 - **Three surfaces over one core**: a generic facade for your own body and edge types, a non-generic id-based facade for bulk POD submission, and the flat `LayoutCore` underneath
-- **Renderer agnostic**: nothing here knows what a node looks like; `ktsu.ImGuiNodeEditor` is one consumer, an Unreal plugin driving the C ABI is another
+- **Renderer agnostic**: nothing here knows what a node looks like; `ktsu.ImGui.NodeEditor` is one consumer, an Unreal plugin driving the C ABI is another
 - **Step or solve**: advance the simulation by a frame delta with automatic substepping, or run it to convergence with `Solve(maxIterations, tolerance)`
 - **Stability reporting**: total system energy, an `IsStable` flag, and what the last step actually ran (substep count and substep delta)
 - **Pinning and freezing**: a pinned body still pushes on others but does not move; a frozen body is one the user is currently dragging

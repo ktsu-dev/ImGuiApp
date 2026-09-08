@@ -18,15 +18,16 @@
 
 - **Application Foundation**: Complete application scaffolding with windowing, OpenGL rendering, font management, texture caching, dependency-free PNG/JPEG/BMP/TGA decoding, and DPI awareness via `ktsu.ImGui.App`
 - **PID Frame Limiting**: High-precision PID-controlled frame rate limiting with auto-tuning and adaptive throttling for focused, unfocused, idle, and minimized states
-- **Custom Widgets**: Rich collection of UI components including TabPanel, Knob, SearchBox with fuzzy matching, RadialProgressBar with countdown/count-up timers, Grid layouts, DividerContainer with resizable sections, Combo, Tree, and Icons via `ktsu.ImGui.Widgets`
+- **Custom Widgets**: Around sixty UI components via `ktsu.ImGui.Widgets` — controls (Switch, SegmentedControl, Stepper, RangeSlider, XYPad, Knob, Rating, Chip, PinInput, SearchBox with fuzzy matching), layout (DividerContainer, Grid, TabPanel, Card, Tree, ImageCanvas, overlays), feedback (RadialProgressBar with countdown/count-up timers, spinners, skeleton placeholders, badges), signal views (Histogram, FlameGraph, DbMeter, oscilloscope), motion (tweens, springs, inertial scrolling, gesture detection), and callback-driven Sequencer, CurveEditor and BezierEditor
 - **Modal Dialogs**: Professional popup system with MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, and SearchableList via `ktsu.ImGui.Popups`
 - **Theming System**: 50+ built-in themes (Catppuccin, Tokyo Night, Gruvbox, Dracula, and more) with scoped styling, semantic text colors, button alignment, color palettes, and an interactive theme browser via `ktsu.ImGui.Styler`
-- **Node Graph Framework**: Attribute-based node declaration system with UI-agnostic `ktsu.NodeGraph` metadata library and ImNodes-based visual editor `ktsu.ImGuiNodeEditor` with physics-based layout
+- **Node Graph Framework**: Attribute-based node declaration system with UI-agnostic `ktsu.NodeGraph` metadata library and ImNodes-based visual editor `ktsu.ImGui.NodeEditor` with physics-based layout
 - **Font Management**: Unicode, emoji, and Nerd Font support with GPU memory management via `FontMemoryGuard` and dynamic font scaling
 - **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
 - **Color Utilities**: HSL/HSLA color creation, accessibility-focused contrast calculations, color manipulation extensions, and semantic color palettes
 - **Markdown Rendering**: CommonMark rendering (headings, emphasis, lists, tables, links, images) built on Markdig via `ktsu.ImGui.Markdown`, standalone and independent of `ktsu.ImGui.App`
-- **Syntax Highlighting**: Themed code rendering for fifteen languages, with a data-driven tokenizer, an optional line-number gutter, and cached tokenization via `ktsu.ImGui.SyntaxHighlighting`, standalone and independent of `ktsu.ImGui.App`
+- **Syntax Highlighting**: Themed code rendering for fifteen languages, with an optional line-number gutter and cached tokenization via `ktsu.ImGui.SyntaxHighlighting`, standalone and independent of `ktsu.ImGui.App`. The data-driven tokenizer itself lives in the renderer-agnostic `ktsu.SyntaxHighlighting`, which knows nothing about ImGui
+- **Embedded Languages**: XML in a doc comment, JSON in a fixture string and SQL in a query string are recognized inside the host language and highlighted in place, or named outright with a `// lang=json` hint comment
 
 ## Libraries
 
@@ -40,7 +41,7 @@ Complete application scaffolding for Dear ImGui applications with windowing, ren
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Widgets?label=ktsu.ImGui.Widgets&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Widgets)
 
-Rich collection of custom widgets: TabPanel, Knob, SearchBox, RadialProgressBar, Grid, DividerContainer, Combo, Tree, Icons, ColorIndicator, Text, Image, ScopedDisable, and ScopedId.
+Rich collection of custom widgets, grouped by what they are for: input and controls (Switch, SegmentedControl, Stepper, RangeSlider, XYPad, Knob, Rating, Chip, PinInput, SearchBox, Combo), display and status (Avatar, Badge, ColorIndicator, Icon, Text, Image, PageIndicator, Tooltip, Breadcrumb), progress and loading (RadialProgressBar, BufferingBar, Spinner, skeleton placeholders), data and signals (Histogram, HandleTrack, FlameGraph, DbMeter, Scope), layout and containers (DividerContainer, Grid, TabPanel, Card, Tree, ImageCanvas, OverlayHost, ScopedId, ScopedDisable), motion and gestures (Tween, Spring, Easing, InertialScroll, GestureDetector), callback-driven editors (Sequencer, CurveEditor, BezierEditor), and stateful dialogs.
 
 ### ImGui.Popups - Modal Dialogs
 
@@ -66,9 +67,9 @@ Advanced theming system with 50+ built-in themes, scoped styling, semantic text 
 
 Generic attribute-based system for declaring node graphs. Decorate classes, structs, and methods with node metadata (pins, execution modes, visibility, deprecation) without coupling to a specific editor implementation.
 
-### ImGuiNodeEditor - Visual Node Editor
+### ImGui.NodeEditor - Visual Node Editor
 
-[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGuiNodeEditor?label=ktsu.ImGuiNodeEditor&logo=nuget)](https://nuget.org/packages/ktsu.ImGuiNodeEditor)
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.NodeEditor?label=ktsu.ImGui.NodeEditor&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.NodeEditor)
 
 Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine` for business logic, `AttributeBasedNodeFactory` for node creation from decorated types, physics-based layout simulation, and `NodeEditorRenderer`/`NodeEditorInputHandler` for rendering and interaction.
 
@@ -78,17 +79,23 @@ Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine
 
 CommonMark markdown renderer built on Markdig, with pipe tables, task lists, and autolinks. Renders headings, emphasis, inline and block code, lists, blockquotes, tables, links, and images directly inside Dear ImGui. Standalone, with no dependency on `ktsu.ImGui.App`.
 
+### SyntaxHighlighting - Tokenizing (UI-Agnostic)
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.SyntaxHighlighting?label=ktsu.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.SyntaxHighlighting)
+
+Turns source text into classified token runs, with built-in definitions for C#, C, C++, JavaScript, TypeScript, Python, JSON, YAML, XML, HTML, CSS, SQL, shell, Lua, and plain text. Languages are plain data, so applications can register their own, and comments and strings are searched for an embedded language — XML doc comments, JSON payloads, SQL queries. Nothing here draws anything: no ImGui, no graphics API, just `SyntaxHighlighter.Highlight` and a `SyntaxTheme` of semantic colors.
+
 ### ImGui.SyntaxHighlighting - Code Highlighting
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.SyntaxHighlighting?label=ktsu.ImGui.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.SyntaxHighlighting)
 
-Syntax-highlighted source code rendered inside Dear ImGui, with built-in definitions for C#, C, C++, JavaScript, TypeScript, Python, JSON, YAML, XML, HTML, CSS, SQL, shell, Lua, and plain text. Languages are plain data, so applications can register their own; palettes follow the host's light or dark theme. Standalone, with no dependency on `ktsu.ImGui.App`, and it doubles as the code-block renderer for `ktsu.ImGui.Markdown`.
+Draws what `ktsu.SyntaxHighlighting` classifies, inside Dear ImGui: a background panel, an optional line-number gutter, and colored token runs whose palette follows the host's light or dark theme. Standalone, with no dependency on `ktsu.ImGui.App`, and it doubles as the code-block renderer for `ktsu.ImGui.Markdown`.
 
 ### ForceDirectedLayout - Graph Layout Simulation
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?label=ktsu.ForceDirectedLayout&logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
 
-Renderer-agnostic force-directed layout: bodies repel, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGuiNodeEditor` uses it to lay out node graphs.
+Renderer-agnostic force-directed layout: bodies repel, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGui.NodeEditor` uses it to lay out node graphs.
 
 ### ImGui.Probes - Item Recording for Tests
 
@@ -113,6 +120,7 @@ Install-Package ktsu.ImGui.Popups
 Install-Package ktsu.ImGui.Styler
 Install-Package ktsu.NodeGraph
 Install-Package ktsu.ImGui.Markdown
+Install-Package ktsu.SyntaxHighlighting
 Install-Package ktsu.ImGui.SyntaxHighlighting
 ```
 
@@ -125,6 +133,7 @@ dotnet add package ktsu.ImGui.Popups
 dotnet add package ktsu.ImGui.Styler
 dotnet add package ktsu.NodeGraph
 dotnet add package ktsu.ImGui.Markdown
+dotnet add package ktsu.SyntaxHighlighting
 dotnet add package ktsu.ImGui.SyntaxHighlighting
 ```
 
@@ -137,6 +146,7 @@ dotnet add package ktsu.ImGui.SyntaxHighlighting
 <PackageReference Include="ktsu.ImGui.Styler" Version="x.y.z" />
 <PackageReference Include="ktsu.NodeGraph" Version="x.y.z" />
 <PackageReference Include="ktsu.ImGui.Markdown" Version="x.y.z" />
+<PackageReference Include="ktsu.SyntaxHighlighting" Version="x.y.z" />
 <PackageReference Include="ktsu.ImGui.SyntaxHighlighting" Version="x.y.z" />
 ```
 
@@ -364,7 +374,7 @@ public class AddNode
 ### Visual Node Editor
 
 ```csharp
-using ktsu.ImGuiNodeEditor;
+using ktsu.ImGui.NodeEditor;
 
 // Create engine and factory
 NodeEditorEngine engine = new();
@@ -408,12 +418,30 @@ using Hexa.NET.ImGui;
 
 ImGui.Begin("Code");
 ImGuiSyntaxHighlighting.Render("""
+    /// <summary>Greets the world.</summary>
     public static void Main()
     {
         Console.WriteLine("Hello, ImGui");
+
+        // The JSON below is highlighted as JSON, inside the string.
+        Post(@"{""greeting"": ""hello"", ""count"": 1}");
     }
     """, "csharp", new SyntaxHighlightConfig { ShowLineNumbers = true });
 ImGui.End();
+```
+
+Tokenizing is available on its own, with no ImGui in sight, from `ktsu.SyntaxHighlighting`:
+
+```csharp
+using ktsu.SyntaxHighlighting;
+
+foreach (HighlightedLine line in SyntaxHighlighter.Highlight(source, "python"))
+{
+    foreach (HighlightedToken token in line.Tokens)
+    {
+        Console.WriteLine($"{token.Kind}: {token.Text}");
+    }
+}
 ```
 
 ### `ImGuiApp` (Static)
@@ -629,15 +657,30 @@ Syntax-highlighted code rendering.
 | ---- | ----------- | ----------- |
 | `Render(string, string, SyntaxHighlightConfig?)` | `void` | Tokenizes (cached by source) and renders code at the current cursor position |
 | `Render(HighlightedCode, SyntaxHighlightConfig?)` | `void` | Renders pre-tokenized code at the current cursor position |
-| `Highlight(string, string, int)` | `IReadOnlyList<HighlightedLine>` | Tokenizes code without drawing anything |
+| `Highlight(string, string, int)` | `IReadOnlyList<HighlightedLine>` | Tokenizes code without drawing anything; forwards to `SyntaxHighlighter` |
+
+| Class | Description |
+| ----- | ----------- |
+| `SyntaxHighlightConfig` | Rendering options: `FontResolver`, `Theme`, `ShowLineNumbers`, `FirstLineNumber`, `TabWidth`, `ShowBackground`, `BackgroundRounding`, `PaddingPixels`, `LineSpacingPixels`, `GutterSpacingPixels`, `FontSizePixels`, `Width` |
+
+### `SyntaxHighlighter` (Static, UI-agnostic)
+
+Tokenizing, from `ktsu.SyntaxHighlighting`. Nothing in this package draws.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Highlight(string, string, int)` | `IReadOnlyList<HighlightedLine>` | Tokenizes code, without consulting the cache |
+| `HighlightCached(string, string, int)` | `IReadOnlyList<HighlightedLine>` | Tokenizes through a bounded cache keyed by source, language and tab width |
 
 | Class | Description |
 | ----- | ----------- |
 | `HighlightedCode` | Tokenizes once in its constructor; render the same instance every frame for hot paths |
-| `SyntaxHighlightConfig` | Rendering options: `FontResolver`, `Theme`, `ShowLineNumbers`, `FirstLineNumber`, `TabWidth`, `ShowBackground`, `BackgroundRounding`, `PaddingPixels`, `LineSpacingPixels`, `GutterSpacingPixels`, `FontSizePixels`, `Width` |
-| `SyntaxTheme` | One color per `TokenKind`, with `Dark` and `Light` built in and unset entries taken from the ImGui theme |
-| `LanguageDefinition` | The comment, string, keyword and operator rules of one language |
+| `SyntaxTheme` | One color per `TokenKind`, with `Dark` and `Light` built in and unset entries taken from the host UI's theme |
+| `LanguageDefinition` | The comment, string, keyword, operator and embedded-language rules of one language |
 | `LanguageRegistry` | Resolves language names and aliases, and registers custom definitions |
+| `EmbeddedLanguageRule` | Says which language to look for inside a comment or string, and how to recognize it |
+| `BuiltInEmbeddedRules` | The rules the built-in languages use: `Json`, `Markup`, `Sql`, `XmlDocComments` |
+| `EmbeddedContent` | The recognizers behind those rules: `LooksLikeJson`, `LooksLikeMarkup`, `LooksLikeSql` |
 
 ## Demo Applications
 

@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/ktsu.NodeGraph?logo=nuget)](https://nuget.org/packages/ktsu.NodeGraph)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-NodeGraph describes node graphs with attributes, and nothing else. Decorate a class, struct, or method with node and pin metadata and any editor can read it back by reflection — this package draws nothing, references no UI library, and has no dependencies at all. `ktsu.ImGuiNodeEditor` is one consumer of it; a different renderer, a code generator, or a headless graph runner can be another.
+NodeGraph describes node graphs with attributes, and nothing else. Decorate a class, struct, or method with node and pin metadata and any editor can read it back by reflection — this package draws nothing, references no UI library, and has no dependencies at all. `ktsu.ImGui.NodeEditor` is one consumer of it; a different renderer, a code generator, or a headless graph runner can be another.
 
 ## Features
 
