@@ -590,8 +590,10 @@ Check the [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version ch
 ## Acknowledgments
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library
-- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui, and for the ImGuizmo, ImNodes and ImPlot extensions this auto-detects (`Hexa.NET.ImGuizmo`, `Hexa.NET.ImNodes`, `Hexa.NET.ImPlot`, from the same project)
+- [HexaGen](https://github.com/JunaMeinhold/HexaGen) - The generator and the `HexaGen.Runtime` those bindings are built on
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - .NET bindings for OpenGL and windowing
+- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Image loading behind the texture cache
 - All contributors and the .NET community for their support
 
 ## Support

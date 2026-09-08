@@ -445,8 +445,9 @@ This project is licensed under the **MIT License** - see the [LICENSE.md](LICENS
 
 ## 🙏 Acknowledgments
 
+- **[Dear ImGui](https://github.com/ocornut/imgui)** - The immediate mode GUI library these themes style
+- **[Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui)** - The .NET bindings for Dear ImGui that this package is built on
 - **[ImGui.NET](https://github.com/mellinoe/ImGui.NET)** - .NET bindings for Dear ImGui
-- **[Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui)** - Modern ImGui bindings
 - **Theme Inspirations**: Catppuccin, Tokyo Night, Gruvbox, and other amazing color schemes
 - **Community Contributors** - Thank you for your themes, bug reports, and improvements!
 

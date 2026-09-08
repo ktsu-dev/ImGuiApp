@@ -639,6 +639,22 @@ dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
 
+## Acknowledgments
+
+The suite renders through the [Hexa.NET](https://github.com/HexaEngine/Hexa.NET.ImGui) bindings:
+
+- [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui, and for the `Hexa.NET.ImGuizmo`, `Hexa.NET.ImNodes` and `Hexa.NET.ImPlot` extensions that `ktsu.ImGui.App` auto-detects
+- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection, with `Hexa.NET.ImGui.Widgets.Extras`, behind the Hexa-backed widgets, dialogs and editors in `ktsu.ImGui.Widgets`
+- [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
+- [HexaGen](https://github.com/JunaMeinhold/HexaGen) - The binding generator and the `HexaGen.Runtime` the wrappers are built on
+
+and on the libraries they wrap or sit beside:
+
+- [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library everything here draws into
+- [Silk.NET](https://github.com/dotnet/Silk.NET) - Cross-platform windowing and OpenGL
+- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Image loading behind the texture cache
+- [Markdig](https://github.com/xoofx/markdig) - The CommonMark parser behind `ktsu.ImGui.Markdown`
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
