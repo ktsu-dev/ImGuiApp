@@ -171,6 +171,8 @@ public class ForceLayoutTests
 			RepulsionStrength = 42.0,
 			LinkSpringStrength = 0.25,
 			DirectionalBias = 0.1,
+			LinkFlatteningStrength = 0.7,
+			LinkFlatteningMargin = 12.0,
 			GravityStrength = 7.0,
 			OriginAnchorWeight = 0.3,
 			DampingFactor = 0.4,
@@ -310,6 +312,111 @@ public class GenericFacadeTests
 
 		double finalDistance = Math.Abs(bodies[1].Position.X - bodies[0].Position.X);
 		Assert.IsTrue(finalDistance < initialDistance, $"Spring should pull nodes closer; was {initialDistance}, now {finalDistance}.");
+	}
+
+	/// <summary>
+	/// Settings that isolate the flattening force: no repulsion, no gravity, no ordering bias, and a
+	/// spring only strong enough to hold the pair together.
+	/// </summary>
+	private static PhysicsSettings FlatteningOnly() => new()
+	{
+		Enabled = true,
+		RepulsionStrength = 0,
+		GravityStrength = 0,
+		DirectionalBias = 0,
+		LinkSpringStrength = 0.1,
+		OverlapMargin = 0,
+		DampingFactor = 0.1,
+	};
+
+	[TestMethod]
+	public void LinkFlattening_VerticallyStackedPair_SplaysApartHorizontally()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(FlatteningOnly());
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(0, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(0, 400), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+		];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		// Heavy damping makes this settle slowly, so give it enough simulated time to converge.
+		for (int i = 0; i < 3000; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double gap = bodies[1].Position.X - (bodies[0].Position.X + bodies[0].Dimensions.X);
+		// Both bodies are the same height, so the centre offsets cancel out of the drop.
+		double drop = Math.Abs(bodies[1].Position.Y - bodies[0].Position.Y);
+		double required = drop * LayoutCore.BezierClearanceRatio;
+
+		// The force is a soft constraint balancing the link spring, so equilibrium sits just inside the
+		// bound rather than exactly on it - the residual violation is what holds the spring off.
+		Assert.IsTrue(gap >= required * 0.95, $"Clear span {gap} should reach the bezier bound {required} for a drop of {drop}.");
+		Assert.IsTrue(drop < 400.0, $"The pair started 400 apart vertically and should have flattened; drop was {drop}.");
+	}
+
+	[TestMethod]
+	public void LinkFlattening_AlreadyFlatPair_IsLeftAlone()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(FlatteningOnly() with { LinkSpringStrength = 0 });
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(0, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(400, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+		];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		for (int i = 0; i < 50; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		Assert.AreEqual(new Vec2D(0, 0), bodies[0].Position, "A horizontal edge already clears the bound, so nothing should push.");
+		Assert.AreEqual(new Vec2D(400, 0), bodies[1].Position, "A horizontal edge already clears the bound, so nothing should push.");
+	}
+
+	[TestMethod]
+	public void LinkFlattening_ZeroStrength_DisablesTheForce()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(
+			FlatteningOnly() with { LinkFlatteningStrength = 0, LinkSpringStrength = 0 });
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(0, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(0, 400), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+		];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		for (int i = 0; i < 50; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		Assert.AreEqual(0.0, bodies[0].Position.X, "With the force off, a stacked pair must not splay.");
+		Assert.AreEqual(0.0, bodies[1].Position.X, "With the force off, a stacked pair must not splay.");
+	}
+
+	[TestMethod]
+	public void LinkFlattening_Margin_AddsClearanceOnTopOfTheBound()
+	{
+		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(
+			FlatteningOnly() with { LinkFlatteningMargin = 150.0, LinkSpringStrength = 0 });
+		List<TestBody> bodies =
+		[
+			new TestBody(1, new Vec2D(0, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+			new TestBody(2, new Vec2D(400, 0), new Vec2D(100, 50), Vec2D.Zero, Vec2D.Zero, false),
+		];
+		List<TestEdge> edges = [new TestEdge(1, 2)];
+
+		for (int i = 0; i < 200; i++)
+		{
+			layout.Step(bodies, edges, 0.016);
+		}
+
+		double gap = bodies[1].Position.X - (bodies[0].Position.X + bodies[0].Dimensions.X);
+		Assert.IsTrue(gap >= 150.0, $"A margin of 150 should hold even a flat edge that far apart; gap was {gap}.");
 	}
 
 	[TestMethod]

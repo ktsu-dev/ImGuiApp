@@ -29,6 +29,15 @@ public struct LayoutSettings
 	/// <summary>Strength of the horizontal source-left/target-right ordering bias along edges. 0 disables it.</summary>
 	public double DirectionalBias;
 
+	/// <summary>
+	/// Strength of the horizontal splay that keeps an edge's rendered curve clear of its own endpoint
+	/// bodies. 0 disables it. See <see cref="LayoutCore.BezierClearanceRatio"/> for the geometry.
+	/// </summary>
+	public double LinkFlatteningStrength;
+
+	/// <summary>Extra horizontal clearance demanded on top of the derived bezier bound, in position units.</summary>
+	public double LinkFlatteningMargin;
+
 	/// <summary>Strength of the gravity force pulling each body toward the gravity target.</summary>
 	public double GravityStrength;
 
@@ -69,6 +78,8 @@ public struct LayoutSettings
 		RepulsionStrength = 1_200_000.0,
 		LinkSpringStrength = 0.5,
 		DirectionalBias = 0.5,
+		LinkFlatteningStrength = 0.5,
+		LinkFlatteningMargin = 0.0,
 		GravityStrength = 50.0,
 		OriginAnchorWeight = 1.0,
 		DampingFactor = 0.5,

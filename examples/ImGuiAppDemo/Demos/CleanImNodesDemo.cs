@@ -348,6 +348,20 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				currentSettings = currentSettings with { DirectionalBias = directionalBias };
 				settingsChanged = true;
 			}
+
+			float linkFlatteningStrength = (float)currentSettings.LinkFlatteningStrength;
+			if (DemoProbe.SliderFloat("Link Flattening", ref linkFlatteningStrength, 0.0f, 2.0f))
+			{
+				currentSettings = currentSettings with { LinkFlatteningStrength = linkFlatteningStrength };
+				settingsChanged = true;
+			}
+
+			float linkFlatteningMargin = (float)currentSettings.LinkFlatteningMargin;
+			if (DemoProbe.SliderFloat("Link Flattening Margin (px)", ref linkFlatteningMargin, 0.0f, 200.0f))
+			{
+				currentSettings = currentSettings with { LinkFlatteningMargin = linkFlatteningMargin };
+				settingsChanged = true;
+			}
 		}
 
 		// Gravity settings
@@ -380,6 +394,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				RepulsionStrength = 2_000_000.0,
 				LinkSpringStrength = 0.3,
 				DirectionalBias = 0.3,
+				LinkFlatteningStrength = 0.3,
 				GravityStrength = 20.0,
 				OriginAnchorWeight = 0.2,
 				DampingFactor = 0.95,
@@ -401,6 +416,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				RepulsionStrength = 10_000_000.0,
 				LinkSpringStrength = 1.0,
 				DirectionalBias = 0.8,
+				LinkFlatteningStrength = 1.0,
 				GravityStrength = 100.0,
 				OriginAnchorWeight = 0.4,
 				DampingFactor = 0.85,
