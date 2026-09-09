@@ -290,30 +290,33 @@ public class LayoutBenchTests
 	/// </summary>
 	/// <remarks>
 	/// This is the test a layout change is expected to break if it makes things worse, and the reason
-	/// the corpus has four shapes rather than one — a change that helps a wide fan-in can hurt a deep
+	/// the corpus has six shapes rather than one — a change that helps a wide fan-in can hurt a deep
 	/// chain, and only running both says so. The thresholds are current behaviour with headroom, not
 	/// targets: they are here to catch a regression, not to pin the numbers a particular tuning
 	/// happens to produce.
 	/// <para>
-	/// Two of them are loose for a reason worth knowing, because it is a real defect and not a quirk
-	/// of the measurement. <see cref="GraphCorpus.Chain"/> is a plain twelve-node chain, the shape that
-	/// most obviously wants to be a horizontal row, and it settles at about 53 degrees with only two
-	/// starts in six reading left to right. It is not a question of settling time — 4000, 12000 and
-	/// 30000 frames all land on the same 52.6 — it is gravity. Sweeping
-	/// <see cref="LayoutSettings.GravityStrength"/> over the same six starts:
+	/// They used to be far looser, and the reason they no longer need to be is worth recording. A plain
+	/// twelve-node chain — the shape that most obviously wants to be a horizontal row — used to settle
+	/// at about 53 degrees off horizontal with only two starts in six reading left to right, because
+	/// pulling every body towards one centre folds a long chain into a coil.
+	/// <see cref="GraphCorpus.MixedSizes"/> is a chain too and coiled the same way, at 50 degrees with
+	/// one start in twelve. Both now settle flat: 0.1 and 2.1 degrees, twelve starts in twelve.
 	/// </para>
-	/// <code>
-	/// gravity=0      angle  0.6   readable 5/6
-	/// gravity=10     angle  1.9   readable 5/6
-	/// gravity=50     angle 52.9   readable 2/6      (the default)
-	/// gravity=200    angle 58.4   readable 0/6
-	/// </code>
 	/// <para>
-	/// Pulling every body towards one centre folds a long chain into a coil, and the directional bias
-	/// that is supposed to order it left-to-right does not undo that — raising the bias makes it worse
-	/// (62.7 degrees at bias 2), because ordering the pairs says nothing about the shape of the whole.
-	/// <see cref="GraphCorpus.MixedSizes"/> is a chain too and coils the same way. Fixing it is a
-	/// change to gravity, not to this gate, so the thresholds record where it stands.
+	/// What fixed it is not what the defect looked like it needed. Weakening
+	/// <see cref="LayoutSettings.GravityStrength"/> did straighten the chain, but at the cost of the
+	/// thing gravity is for, and a tuning run over the whole corpus left it exactly where it was at 50.
+	/// The coil is undone by <see cref="LayoutSettings.LinkFlatteningStrength"/> instead, which at six
+	/// times its old value simply outcompetes it — a force that pulls each edge towards horizontal
+	/// beats one that pulls every body towards a point, and neither has to be turned off for that to be
+	/// true.
+	/// </para>
+	/// <para>
+	/// One threshold is still loose, and it is a real cost rather than a quirk:
+	/// <see cref="GraphCorpus.TwoClasses"/> is allowed a high count of links drawn across bodies. Links
+	/// hide more readily as a graph flattens, monotonically with the setting, and that graph's calls
+	/// between its two classes are the long edges that have to cross whatever is parked between them.
+	/// It is the price of everything above.
 	/// </para>
 	/// </remarks>
 	[TestMethod]
@@ -323,10 +326,12 @@ public class LayoutBenchTests
 
 		Expectation[] expectations =
 		[
-			new(GraphCorpus.Counter, MaxEdgeAngle: 40.0, MinReadableStarts: 5),
-			new(GraphCorpus.Chain, MaxEdgeAngle: 60.0, MinReadableStarts: 1),
-			new(GraphCorpus.FanIn, MaxEdgeAngle: 45.0, MinReadableStarts: 4),
-			new(GraphCorpus.MixedSizes, MaxEdgeAngle: 58.0, MinReadableStarts: 1),
+			new(GraphCorpus.Counter, MaxEdgeAngle: 25.0, MinReadableStarts: 5),
+			new(GraphCorpus.TwoClasses, MaxEdgeAngle: 32.0, MinReadableStarts: 5),
+			new(GraphCorpus.Chain, MaxEdgeAngle: 10.0, MinReadableStarts: 5),
+			new(GraphCorpus.FanIn, MaxEdgeAngle: 20.0, MinReadableStarts: 4),
+			new(GraphCorpus.MixedSizes, MaxEdgeAngle: 15.0, MinReadableStarts: 5),
+			new(GraphCorpus.Disconnected, MaxEdgeAngle: 10.0, MinReadableStarts: 4),
 		];
 
 		List<BenchResult> rows = [];

@@ -103,10 +103,24 @@ public class LayoutTunerTests
 	[TestMethod]
 	public void Score_PenalisesALayoutThatNeverRan()
 	{
-		// Disabling the simulation leaves every node where it was scattered, which is the worst
+		// Every force zeroed, so the nodes stay exactly where they were scattered - which is the worst
 		// arrangement available. A score that cannot tell that apart from a settled one is measuring
 		// nothing.
-		LayoutSettings inert = LayoutSettings.Defaults with { LinkSpringStrength = 0.0, GravityStrength = 0.0 };
+		//
+		// Silencing only the spring and gravity is not enough and made this test wrong once already:
+		// the remaining forces still organise a graph perfectly well, so "inert" has to mean all of
+		// them rather than the two that happen to look like the important ones.
+		LayoutSettings inert = LayoutSettings.Defaults with
+		{
+			RepulsionStrength = 0.0,
+			LinkSpringStrength = 0.0,
+			GravityStrength = 0.0,
+			DirectionalBias = 0.0,
+			LinkFlatteningStrength = 0.0,
+			LinkUntwistStrength = 0.0,
+			OriginAnchorWeight = 0.0,
+			OverlapMargin = 0.0,
+		};
 
 		LayoutScore settled = LayoutScore.OfCorpus(LayoutSettings.Defaults, Quick, TinyCorpus);
 		LayoutScore scattered = LayoutScore.OfCorpus(inert, Quick, TinyCorpus);

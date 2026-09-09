@@ -240,7 +240,13 @@ public sealed class LayoutCore
 	/// </remarks>
 	private void CalculateRepulsionForces()
 	{
-		double minDist = Settings.MinRepulsionDistance;
+		// Floored above zero, not just taken as given. The clamp below is what stops an inverse-square
+		// force exploding when two boxes touch, and a caller who sets MinRepulsionDistance to zero
+		// removes it: the clear distance between touching boxes is exactly zero, so the division
+		// yields infinity, the integrator carries that into a NaN position, and every metric taken
+		// afterwards reads NaN rather than "bad". A layout that silently becomes NaN is worse than one
+		// that is merely crowded, so zero means "as small as this can safely be" rather than nothing.
+		double minDist = Math.Max(Settings.MinRepulsionDistance, MinimumRepulsionClamp);
 		double strength = Settings.RepulsionStrength;
 
 		for (int i = 0; i < bodyCount; i++)
@@ -270,6 +276,16 @@ public sealed class LayoutCore
 			}
 		}
 	}
+
+	/// <summary>
+	/// Smallest separation the inverse-square repulsion is ever evaluated at, whatever
+	/// <see cref="LayoutSettings.MinRepulsionDistance"/> says.
+	/// </summary>
+	/// <remarks>
+	/// Small enough that it changes nothing for any usable setting, and positive so the division can
+	/// never be by zero.
+	/// </remarks>
+	private const double MinimumRepulsionClamp = 0.001;
 
 	/// <summary>
 	/// The distance between the two closest points on two bodies' bounding boxes: their gap along each

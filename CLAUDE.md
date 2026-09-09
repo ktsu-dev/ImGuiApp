@@ -468,10 +468,13 @@ used to, passing at repulsion 1,200,000 and 600,000, failing at 800,000, and pas
 
 `tests/ForceDirectedLayout.Tests/Bench/` is the harness that replaces that:
 
-- **`GraphCorpus`** — four graphs that break a layout differently. `Counter` is a real twenty-node
-  document with sizes running from a 60-wide literal to a 118x180 function; `Chain` is the shape that
-  most wants to be a horizontal row; `FanIn` is eight sources arriving at eight pins on one target,
-  which is where crossings come from; `MixedSizes` alternates 400-wide slabs with 50-wide literals.
+- **`GraphCorpus`** — six graphs that break a layout differently. `Counter` is a real twenty-node
+  document with sizes running from a 60-wide literal to a 118x180 function; `TwoClasses` is a
+  thirty-four-node document with two roots and calls crossing between them, which is where a link gets
+  drawn through a body parked in the middle; `Chain` is the shape that most wants to be a horizontal
+  row; `FanIn` is eight sources arriving at eight pins on one target, which is where crossings come
+  from; `MixedSizes` alternates 400-wide slabs with 50-wide literals; `Disconnected` is three
+  components with no link between them, the only shape that measures what gravity is for.
   Node sizes and pin rows are not decoration — repulsion measures clear space between boxes, every
   angle force measures between pins, and a graph of equal-sized points exercises none of it.
 - **`LayoutMetrics`** — settled area, mean edge angle, links drawn across a body they are no end of,
@@ -485,6 +488,18 @@ used to, passing at repulsion 1,200,000 and 600,000, failing at 800,000, and pas
 - **`LayoutSvg`** — writes a settled graph to SVG, links drawn first as the cubic the renderer
   actually draws and nodes over them, so a link hidden in the picture is a link hidden in the editor.
   Overlapping bodies are outlined in red. No window, no GPU, no ImGui context.
+- **`LayoutScore` / `LayoutTuner`** — one weighted number per configuration, and a coordinate descent
+  over it. The score is a judgement call written down, and its weights are the thing to argue with
+  first if you disagree with a tuned default.
+
+**The corpus score is a random variable, and it is noisier than the gains a tuning run chases.**
+Measured over independent families of starting arrangements (`BenchOptions.StartOffset`), the same
+settings score with a standard deviation of 0.317 at twelve starts, 0.096 at twenty-four and 0.032 at
+forty-eight. Two descents run at eight and twelve starts, keeping every improvement, reached values
+that disagreed on six settings out of fifteen and scored within 0.01 of each other — both were fitting
+the arrangements they were handed. Raise `Starts` until the deviation is small against the gain being
+claimed, keep `LayoutTuner.DefaultMinimumGain` a few times above it, and validate the result on a
+`StartOffset` family it was not chosen on.
 
 To iterate: add a scratch `[TestMethod]` that prints a sweep, run the suite, read the column that
 should have moved.
@@ -511,12 +526,57 @@ Two things that bite:
 
 `Corpus_SettlesIntoAReadableShape_UnderTheDefaults` is the quality gate a layout change is expected to
 break if it makes things worse. Its per-graph thresholds are current behaviour with headroom, not
-targets — and two of them are loose because of a real defect the corpus exposed: **centre gravity coils
-a long chain**. A plain twelve-node chain settles at about 53 degrees mean edge angle with only two
-starts in six reading left to right, and it is not a settling-time problem (4000, 12000 and 30000
-frames all land on 52.6). Sweeping `GravityStrength` over the same starts gives 0.6 degrees at 0, 1.9
-at 10, 52.9 at the default 50, and 58.4 at 200; raising `DirectionalBias` makes it worse rather than
-better, because ordering pairs left-to-right says nothing about the shape of the whole.
+targets.
+
+### Tuned defaults
+
+`LayoutSettings.Defaults` is measured, not inherited. A coordinate descent over the corpus
+(`LayoutTuner`, scored by `LayoutScore`) moved six of the fifteen settings and left the other nine
+where they were; the corpus score went from 3.25 to 1.19 and held at 1.22–1.28 on three families of
+starting arrangements the values were never chosen on.
+
+| setting | was | is |
+|---|---|---|
+| `RepulsionStrength` | 600,000 | 900,000 |
+| `MinRepulsionDistance` | 50 | 5 |
+| `LinkSpringStrength` | 0.5 | 0.1 |
+| `RestLinkLength` | 225 | 50 |
+| `DirectionalBias` | 0.5 | 4 |
+| `LinkFlatteningStrength` | 0.5 | 3 |
+
+That fixed the defect this corpus was built to expose. **Centre gravity used to coil a long chain**: a
+plain twelve-node chain settled at about 53 degrees mean edge angle with two starts in six reading
+left to right, and it was not a settling-time problem (4000, 12000 and 30000 frames all landed on
+52.6). It now settles at 0.1 degrees, twelve starts in twelve, and `MixedSizes` — a chain too — went
+from 50 degrees and 1/12 readable to 2.1 degrees and 12/12.
+
+**Gravity is not what fixed it.** Weakening `GravityStrength` did straighten the chain, but at the
+cost of the one thing gravity is for, and the descent left it at 50 untouched. `LinkFlatteningStrength`
+at six times its old value simply outcompetes the coil: a force pulling each edge towards horizontal
+beats one pulling every body towards a point, and neither has to be turned off for that to be true.
+
+Four things to know before changing any of it:
+
+- **Flattening hides links, monotonically.** Links drawn across a body they are no end of go from 0.10
+  to 0.40 (normalised) as the setting goes 0 → 12, and roughly double on `TwoClasses`, whose
+  cross-class calls are the long edges that have to cross whatever is parked between them. That is the
+  price of everything above. The score's minimum is a shallow basin — 2 and 3 land within half a
+  standard deviation of each other, 2 hiding fewer links and settling slightly less reliably — so that
+  particular choice is a judgement call and not a measurement.
+- **`MinRepulsionDistance` does nothing below `sqrt(RepulsionStrength / MaxForce)`**, which is about
+  13 under these defaults. `MaxForce` caps the total force at 5,000 while the law's own cap is 36,000,
+  so close-range repulsion is a constant 5,000 and the law only reappears past 13 units of clear space.
+  Sweeping the setting across 0, 2, 5 and 10 measures the same layout four times. What it really
+  controls is whether that floor is hard or soft: set it high enough that the law's cap falls below
+  `MaxForce` and repulsion goes soft at close range, which is what used to let bodies crowd.
+- **Zero is not a valid `MinRepulsionDistance`, and the library now floors it.** It is itself the clamp
+  keeping the inverse-square law finite where boxes touch, so zero used to yield infinity and then NaN
+  positions — a layout that stops being numbers rather than one that is merely bad.
+- **A mechanism test must pin the settings its mechanism depends on.** Three tests in
+  `ForceLayoutTests` broke on this tuning without anything being wrong: the flattening splay stopped
+  splaying because the pair now levels completely, and the untwist's overlap-pass exemption became
+  unobservable because flattening decides that geometry outright. Their fixtures now name every input
+  they rely on.
 
 ### Demo UI tests
 

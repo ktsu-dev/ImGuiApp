@@ -89,24 +89,47 @@ public struct LayoutSettings
 	public double MaxOverlapCorrection;
 
 	/// <summary>
-	/// Sensible defaults matching the previous Force&lt;float&gt;/Length&lt;float&gt; values, save for
-	/// <see cref="RepulsionStrength"/>, which was recalibrated when repulsion moved from measuring
-	/// between body centres to measuring the clear space between their bounding boxes.
+	/// Defaults tuned against the benchmark corpus, one setting at a time.
 	/// </summary>
+	/// <remarks>
+	/// These are measured rather than inherited. Six of them were moved by a coordinate descent over
+	/// the corpus in <c>tests/ForceDirectedLayout.Tests/Bench/</c>, scored by <c>LayoutScore</c>, and
+	/// the other nine were offered the same range and declined it. The corpus score went from 3.25 to
+	/// 1.19, and held at 1.22-1.28 on three families of starting arrangements the values were never
+	/// chosen on, against a measurement deviation of 0.03.
+	/// <para>
+	/// What moved, and what it bought: a chain used to settle at about 54 degrees off horizontal with
+	/// five starts in twelve reading left to right, because pulling every body towards one centre folds
+	/// a long chain into a coil. It now settles at 0.1 degrees, twelve in twelve. That was not fixed by
+	/// weakening <see cref="GravityStrength"/>, which the descent left exactly where it was, but by
+	/// <see cref="LinkFlatteningStrength"/> at six times its old value, which simply outcompetes the
+	/// coil. The link spring gets weaker and much shorter to go with it, so link geometry is settled by
+	/// the flattening force rather than negotiated with the spring, and repulsion rises to keep the
+	/// tighter graph from crowding.
+	/// </para>
+	/// <para>
+	/// The cost, which is real and worth knowing before raising the flattening further: links drawn
+	/// across a body they are no end of get more common as the graph flattens, roughly doubling on the
+	/// two-class corpus graph. It rises monotonically with the setting, so 3 is where it stops buying
+	/// enough to be worth it; 2 hides fewer links and settles slightly less reliably, and the two score
+	/// within half a standard deviation of each other, so that particular choice is a judgement call
+	/// and not a measurement.
+	/// </para>
+	/// </remarks>
 	public static LayoutSettings Defaults => new()
 	{
 		Enabled = 0,
-		RepulsionStrength = 600_000.0,
-		LinkSpringStrength = 0.5,
-		DirectionalBias = 0.5,
-		LinkFlatteningStrength = 0.5,
+		RepulsionStrength = 900_000.0,
+		LinkSpringStrength = 0.1,
+		DirectionalBias = 4.0,
+		LinkFlatteningStrength = 3.0,
 		LinkFlatteningMargin = 0.0,
 		LinkUntwistStrength = 0.1,
 		GravityStrength = 50.0,
 		OriginAnchorWeight = 1.0,
 		DampingFactor = 0.5,
-		MinRepulsionDistance = 50.0,
-		RestLinkLength = 225.0,
+		MinRepulsionDistance = 5.0,
+		RestLinkLength = 50.0,
 		MaxForce = 5000.0,
 		MaxVelocity = 250.0,
 		TargetPhysicsHz = 120.0,

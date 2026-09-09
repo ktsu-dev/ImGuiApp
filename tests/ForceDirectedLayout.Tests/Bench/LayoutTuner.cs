@@ -105,7 +105,7 @@ public static class LayoutTuner
 			s => s.LinkSpringStrength, (s, v) => s with { LinkSpringStrength = v }),
 		new("RestLinkLength", [50, 75, 100, 150, 225, 300, 400, 500],
 			s => s.RestLinkLength, (s, v) => s with { RestLinkLength = v }),
-		new("DirectionalBias", [0, 0.25, 0.5, 1.0, 2.0, 4.0],
+		new("DirectionalBias", [0, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0],
 			s => s.DirectionalBias, (s, v) => s with { DirectionalBias = v }),
 		new("LinkFlatteningStrength", [0, 0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
 			s => s.LinkFlatteningStrength, (s, v) => s with { LinkFlatteningStrength = v }),
