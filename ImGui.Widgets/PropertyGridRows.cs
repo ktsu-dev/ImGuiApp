@@ -211,31 +211,6 @@ public static partial class ImGuiWidgets
 			return EndRow(label, changed);
 		}
 
-		/// <summary>Draws a combo box row over the values of an enumeration.</summary>
-		/// <typeparam name="TEnum">The enumeration type.</typeparam>
-		/// <param name="label">The property name; text after <c>##</c> is hidden but used for the id.</param>
-		/// <param name="value">The value being edited.</param>
-		/// <returns><see langword="true"/> if the value changed this frame; otherwise <see langword="false"/>.</returns>
-		public bool Enum<TEnum>(string label, ref TEnum value) where TEnum : struct, System.Enum
-		{
-			if (!BeginRow(label))
-			{
-				return false;
-			}
-
-			string[] names = System.Enum.GetNames<TEnum>();
-			TEnum[] values = System.Enum.GetValues<TEnum>();
-			int index = Array.IndexOf(values, value);
-
-			bool changed = ImGui.Combo(Hidden(label), ref index, names, names.Length);
-			if (changed && index >= 0 && index < values.Length)
-			{
-				value = values[index];
-			}
-
-			return EndRow(label, changed);
-		}
-
 		/// <summary>Draws a two-component single-precision vector row.</summary>
 		/// <param name="label">The property name; text after <c>##</c> is hidden but used for the id.</param>
 		/// <param name="value">The value being edited.</param>
@@ -347,6 +322,31 @@ public static partial class ImGuiWidgets
 			if (changed)
 			{
 				value = ColorImGuiExtensions.FromImGuiVector4(srgb);
+			}
+
+			return EndRow(label, changed);
+		}
+
+		/// <summary>Draws a combo box row over the values of an enumeration.</summary>
+		/// <typeparam name="TEnum">The enumeration type.</typeparam>
+		/// <param name="label">The property name; text after <c>##</c> is hidden but used for the id.</param>
+		/// <param name="value">The value being edited.</param>
+		/// <returns><see langword="true"/> if the value changed this frame; otherwise <see langword="false"/>.</returns>
+		public bool Enum<TEnum>(string label, ref TEnum value) where TEnum : struct, System.Enum
+		{
+			if (!BeginRow(label))
+			{
+				return false;
+			}
+
+			string[] names = System.Enum.GetNames<TEnum>();
+			TEnum[] values = System.Enum.GetValues<TEnum>();
+			int index = Array.IndexOf(values, value);
+
+			bool changed = ImGui.Combo(Hidden(label), ref index, names, names.Length);
+			if (changed && index >= 0 && index < values.Length)
+			{
+				value = values[index];
 			}
 
 			return EndRow(label, changed);

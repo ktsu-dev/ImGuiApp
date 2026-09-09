@@ -165,7 +165,7 @@ public sealed class PropertyGridTests : WidgetTest
 		Click("Output/browse");
 		Click("Icon/browse");
 
-		CollectionAssert.AreEqual(
+		Assert.AreSequenceEqual(
 			(ImGuiWidgets.PropertyPathKind[])[ImGuiWidgets.PropertyPathKind.Directory, ImGuiWidgets.PropertyPathKind.Image],
 			kinds);
 	}
@@ -231,7 +231,7 @@ public sealed class PropertyGridTests : WidgetTest
 		changed = false;
 		Click("Tags/add");
 
-		Assert.AreEqual(3, tags.Count, "The add button appended nothing.");
+		Assert.HasCount(3, tags, "The add button appended nothing.");
 		Assert.AreEqual(string.Empty, tags[2], "The appended element was not the empty default.");
 		Assert.IsTrue(changed, "Appending an element was not reported as a change.");
 	}
@@ -244,7 +244,7 @@ public sealed class PropertyGridTests : WidgetTest
 		changed = false;
 		Click("Switches/[0]/remove");
 
-		Assert.AreEqual(1, switches.Count, "The remove button dropped nothing.");
+		Assert.HasCount(1, switches, "The remove button dropped nothing.");
 		Assert.IsTrue(changed, "Removing an element was not reported as a change.");
 	}
 
@@ -273,7 +273,7 @@ public sealed class PropertyGridTests : WidgetTest
 
 		Click("Frames/[0]/remove");
 
-		Assert.AreEqual(1, frames.Count, "Removing an image element did nothing.");
+		Assert.HasCount(1, frames, "Removing an image element did nothing.");
 	}
 
 	[TestMethod]

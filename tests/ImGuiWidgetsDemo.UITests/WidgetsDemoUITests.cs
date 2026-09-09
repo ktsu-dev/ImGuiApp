@@ -232,8 +232,8 @@ public sealed class WidgetsDemoUITests
 		harness.Click("Tags/add");
 		harness.Step(SettleFrames);
 
-		Assert.AreEqual(3, ImGuiWidgetsDemo.PropertyTags.Count, "The list row's add button appended nothing.");
-		Assert.IsTrue(ImGuiWidgetsDemo.PropertyEditCount > 0, "The grid reported no edit for the appended element.");
+		Assert.HasCount(3, ImGuiWidgetsDemo.PropertyTags, "The list row's add button appended nothing.");
+		Assert.IsGreaterThan(0, ImGuiWidgetsDemo.PropertyEditCount, "The grid reported no edit for the appended element.");
 	}
 
 	[TestMethod]
