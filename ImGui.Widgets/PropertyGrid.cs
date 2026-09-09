@@ -4,6 +4,7 @@ namespace ktsu.ImGui.Widgets;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 
@@ -210,7 +211,7 @@ public static partial class ImGuiWidgets
 		public PropertyGrid(string id, PropertyGridOptions? options)
 		{
 			Options = options ?? DefaultOptions;
-			tick++;
+			AdvanceTick();
 
 			ImGui.PushID(id);
 			ImGuiProbes.PushScope(id);
@@ -385,12 +386,23 @@ public static partial class ImGuiWidgets
 		/// <param name="path">The chosen path, or null when the host cancelled.</param>
 		internal static void CompleteBrowse(uint rowId, string? path)
 		{
+			long now = Interlocked.Read(ref tick);
+
 			lock (PendingLock)
 			{
-				SweepPendingPaths();
-				PendingPaths[rowId] = new PendingPath(path, tick);
+				SweepPendingPaths(now);
+				PendingPaths[rowId] = new PendingPath(path, now);
 			}
 		}
+
+		/// <summary>
+		/// Advances the tick that pending browse results are stamped with, one per grid drawn.
+		/// </summary>
+		/// <remarks>
+		/// A grid is constructed on the UI thread, but the tick is read from whatever thread answers a
+		/// browse, so it is advanced atomically and read back the same way.
+		/// </remarks>
+		private static void AdvanceTick() => Interlocked.Increment(ref tick);
 
 		/// <summary>Takes the browse result waiting for a row, if there is one.</summary>
 		/// <param name="rowId">The ImGui id of the row.</param>
@@ -416,7 +428,8 @@ public static partial class ImGuiWidgets
 		/// Drops results whose row has not drawn for long enough that it probably never will. Called
 		/// with <see cref="PendingLock"/> held.
 		/// </summary>
-		private static void SweepPendingPaths()
+		/// <param name="now">The current tick, read once by the caller.</param>
+		private static void SweepPendingPaths(long now)
 		{
 			if (PendingPaths.Count == 0)
 			{
@@ -427,12 +440,9 @@ public static partial class ImGuiWidgets
 			uint[] keys = new uint[PendingPaths.Count];
 			PendingPaths.Keys.CopyTo(keys, 0);
 
-			foreach (uint key in keys)
+			foreach (uint key in keys.Where(key => now - PendingPaths[key].Tick > PendingLifetime))
 			{
-				if (tick - PendingPaths[key].Tick > PendingLifetime)
-				{
-					PendingPaths.Remove(key);
-				}
+				PendingPaths.Remove(key);
 			}
 		}
 	}
