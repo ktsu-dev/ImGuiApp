@@ -124,6 +124,8 @@ PhysicsSettings settings = new()
 };
 ```
 
+These values were not guessed. `tests/ForceDirectedLayout.Tests/Bench/` settles a corpus of graphs over a range of starting arrangements and reports what a layout measures — settled area, mean edge angle, links drawn across a body they are no end of, tightest clear gap, overlaps, crossed link pairs — because the simulation is chaotic and a single run says nothing. `LayoutBench.Sweep` walks one setting across a range and prints the rows as a table, `LayoutBench.Compare` puts named variants side by side, and `LayoutSvg` writes a settled graph out as SVG so it can be looked at rather than only read. Changing what a force measures changes the units its strength is in, so that is how a new default gets found.
+
 ### From native code
 
 `ForceDirectedLayout.Native` publishes a shared library with a C entry point set — `Layout_Create`, `Layout_Destroy`, `Layout_SetSettings`, `Layout_SetNodes`, `Layout_SetEdges`, `Layout_Step`, `Layout_Solve`, `Layout_GetPositions`, `Layout_SetPinned`, `Layout_GetIndexOf`, `Layout_GetNodeCount` and `Layout_GetLastErrorMessage` — and ships `ktsu_force_directed_layout.h` beside the binary. The settings and node/edge structs are laid out sequentially and cross the ABI unchanged.
