@@ -32,7 +32,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
-- **ForceDirectedLayout** (`ktsu.ForceDirectedLayout`) - Renderer-agnostic graph layout simulation, with no UI dependency and no runtime package dependencies. Bodies repel across the clear space between their bounding boxes (not between their centres — see [Layout benchmarking](#layout-benchmarking)), edges pull like springs between the pins they actually attach at, gravity holds the graph together, edges are pulled towards horizontal, and an overlap pass separates any boxes left drawn over one another. Three surfaces over one `LayoutCore`: a generic facade over your own types, an id-based `ForceLayout` for bulk POD submission, and the flat core. Also published as a Native AOT shared library with a C ABI. `ImGui.NodeEditor` is one consumer.
+- **ForceDirectedLayout** (`ktsu.ForceDirectedLayout`) - Renderer-agnostic graph layout simulation, with no UI dependency and no runtime package dependencies. Bodies repel across the clear space between their bounding boxes (not between their centres — see [Layout benchmarking](#layout-benchmarking)), edges pull like springs between the pins they actually attach at, gravity holds the graph together, edges are pulled towards horizontal, an overlap pass separates any boxes left drawn over one another, and a recentring pass slides the whole arrangement so its drawn box sits on the world origin (see [Placement is not cohesion](#placement-is-not-cohesion)). Three surfaces over one `LayoutCore`: a generic facade over your own types, an id-based `ForceLayout` for bulk POD submission, and the flat core. Also published as a Native AOT shared library with a C ABI. `ImGui.NodeEditor` is one consumer.
 - **ImGui.NodeEditor** (`ktsu.ImGui.NodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`. `PhysicsSettingsPanel.Draw(ref PhysicsSettings)` draws every layout setting grouped by force and captioned, and `DrawDiagnostics(engine)` the live energy and settled state, so a consuming application gets the whole tuning surface rather than reimplementing a subset of it. ImNodes has no zoom of its own, so `NodeEditorRenderer.Zoom` supplies one and `FitToView` centres a graph and picks the zoom it fits at; the engine's positions and sizes stay at their own scale throughout, since that is the space the layout's lengths are measured in. Hovering is answered by the renderer: `HighlightLinksOnNodeHover` (on) colours the links meeting the hovered node, `HighlightDownstreamOnNodeHover` (off) also colours everything that node's value reaches, and `DrawHoveredLinkOnTop` (on) redraws the hovered link over the nodes ImNodes drew on top of it. See [Hover highlighting](#hover-highlighting) below. How many links a pin accepts is the pin's own business: `Pin.AllowsMultipleConnections` defaults to many for an output and one for an input, `[InputPin(AllowMultipleConnections = true)]` / `[OutputPin(AllowMultipleConnections = false)]` override it through the factory, and `NodeEditorEngine.SetPinAllowsMultipleConnections` sets it directly. `GetOutgoingLinks`, `GetIncomingLinks`, `GetDownstream` and `GetUpstream` walk the graph
 - **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). Fenced and indented code blocks go to `MarkdownConfig.CodeBlockRenderer` (`Action<string?, string>?` — the fence's info string and the block text) when one is supplied, which takes over drawing *and* reserving the block's layout space; `ImGui.SyntaxHighlighting` plugs into it, and neither library references the other. v1 has no built-in code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
 - **SyntaxHighlighting** (`ktsu.SyntaxHighlighting`) - Renderer-agnostic tokenizing: no ImGui, no graphics API, no third-party parser, so it can move to its own repository unchanged. `SyntaxHighlighter.Highlight(code, language, tabWidth)` returns the classified `HighlightedLine`/`HighlightedToken` runs; `SyntaxHighlighter.HighlightCached` goes through a bounded cache keyed by source, language and tab width; `HighlightedCode` tokenizes once for hot render paths. Languages are data (`LanguageDefinition`: line/block comment, string, keyword, type, constant, operator, identifier and embedded-language rules) held in `LanguageRegistry`, which resolves names and aliases case-insensitively and falls back to plain text for unknown names rather than throwing. Fifteen built-ins in `BuiltInLanguages`: text, csharp, c, cpp, javascript, typescript, python, json, yaml, xml, html, css, sql, shell, lua. Two tokenizers back them — the general `CodeTokenizer`, and `MarkupTokenizer` for definitions with `IsMarkup` (XML/HTML), which classify structurally rather than by keyword. `SyntaxTheme` holds one `ktsu.Semantics.Color.Color` per `TokenKind`, with `Dark`/`Light` built in and `Background`/`Plain`/`LineNumber` left unset for the host to fill. Comments and strings are searched for an embedded language; see [Embedded languages](#embedded-languages) below. Highlighting is lexical.
@@ -614,6 +614,43 @@ Four things to know before changing any of it:
   splaying because the pair now levels completely, and the untwist's overlap-pass exemption became
   unobservable because flattening decides that geometry outright. Their fixtures now name every input
   they rely on.
+
+### Placement is not cohesion
+
+Gravity holds a graph together; it does **not** decide where the graph sits. A separate pass does
+that, and the split is not incidental — the two obvious ways of merging them both fail, in ways worth
+knowing before touching either.
+
+Gravity pulls every body the same amount whichever side of the target it sits and however far out.
+Summed over a graph that is a step function of position: it counts bodies rather than measuring them,
+so anywhere the counts balance it is exactly zero and nothing holds the graph anywhere at all. A
+twelve-node chain settled 79 units to one side and stayed; pushed 600 the other way it came to rest 79
+units to the **other** side — the same distance out, on whichever side it arrived from, because both
+are edges of the same dead band. And where the counts do balance is the median of the body centres,
+which for a document with a dense cluster of literals on one side and a few large functions on the
+other is nowhere near the middle of what is drawn: 200 units apart on `GraphCorpus.Counter`.
+
+Making gravity proportional to distance fixes both of those and costs something worse. A body further
+out is then pulled harder, so wide nodes are squeezed closer together than narrow ones and settled
+spacing depends on node size again — which is precisely what measuring repulsion across clear space
+rather than between centres was for. Measured, a 400-wide pair settled 160 apart against a 60-wide
+pair's 224, and `SettledPairs_KeepTheSameClearSpace_WhateverTheirSize` fails.
+
+So `LayoutCore.RecentreOnOrigin` slides the whole arrangement instead, positionally, after
+integration. Every body moves by the same vector, so no distance between any two of them changes.
+Three details:
+
+- **It is positional, not a force.** As a force it was clamped per body by `MaxForce`, and a body
+  already at the ceiling lost its share while its neighbour kept theirs — which reshaped the graph,
+  the one thing the design exists to avoid.
+- **It stands down when any body is pinned or frozen**, since whoever pinned it is saying where the
+  graph goes.
+- **It is gated on `OriginAnchorWeight`**, so a test isolating one force should set that to zero or a
+  position it asserts will include the slide.
+
+Measured over the corpus: mean offset from the origin 62.7 → 5.4 units, worst 172 → 19.5, with the
+corpus score unchanged (1.194 → 1.166, inside noise). `RecentringTests` covers it, and a re-sweep of
+all fifteen settings afterwards moved none of them — `GravityStrength` included, which stays at 50.
 
 ### Demo UI tests
 

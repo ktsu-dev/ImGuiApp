@@ -187,6 +187,7 @@ public sealed class LayoutCore
 
 			ApplyDirectionalConstraints();
 			SeparateOverlaps();
+			RecentreOnOrigin();
 		}
 
 		double energy = 0.0;
@@ -804,6 +805,17 @@ public sealed class LayoutCore
 		}
 	}
 
+	/// <summary>
+	/// The fraction of its remaining offset from <see cref="WorldOrigin"/> the arrangement is slid back
+	/// each substep, before <see cref="LayoutSettings.OriginAnchorWeight"/> scales it.
+	/// </summary>
+	/// <remarks>
+	/// Not a setting, because it does not change where a graph comes to rest — only how quickly it gets
+	/// there. The resting place is the origin either way. Clamped to one so the graph can close the
+	/// offset but never travel past it, whatever weight is asked for.
+	/// </remarks>
+	private const double RecentringRate = 0.25;
+
 	private void CalculateGravityForces()
 	{
 		if (bodyCount == 0)
@@ -832,6 +844,75 @@ public sealed class LayoutCore
 			{
 				bodies[i].Force += toCenter * (magnitude / distance);
 			}
+		}
+	}
+
+	/// <summary>
+	/// Slide the whole arrangement, as one piece, towards having its drawn bounding box centred on
+	/// <see cref="WorldOrigin"/>.
+	/// </summary>
+	/// <remarks>
+	/// Gravity cannot do this job, and it is worth being precise about why, because the obvious repair
+	/// makes things worse.
+	/// <para>
+	/// Gravity pulls each body the same amount whichever side of the target it sits and however far out
+	/// it is. Summed over the graph that is a step function of position: it counts bodies rather than
+	/// measuring them, so anywhere the counts happen to balance it is exactly zero and nothing holds
+	/// the graph anywhere at all. A twelve-node chain settles 79 units to one side and stays; pushed
+	/// 600 the other way it comes to rest 79 units to the *other* side, the same distance out, because
+	/// both are edges of the same dead band. And where the counts do balance is the median of the body
+	/// centres, which for a document with a dense cluster of literals on one side and a few large
+	/// functions on the other is nowhere near the middle of what is drawn — 200 units apart on the
+	/// corpus's Counter graph.
+	/// </para>
+	/// <para>
+	/// Making gravity proportional to distance fixes both of those and costs something worse: a body
+	/// further from the target is then pulled harder, so a pair of wide nodes is squeezed closer
+	/// together than a pair of narrow ones, and settled spacing depends on node size again — which is
+	/// the whole thing measuring repulsion across clear space rather than between centres was for.
+	/// Measured, a 400-wide pair settled 160 apart against a 60-wide pair's 224.
+	/// </para>
+	/// <para>
+	/// So placement is separated from cohesion instead. This force is identical on every body, which
+	/// means it cannot change any distance between them: it can only slide the whole arrangement, and
+	/// it slides it until the box a reader sees is centred where it should be. Gravity is left to do
+	/// the one thing it is good at, which is holding the graph together.
+	/// </para>
+	/// </remarks>
+	private void RecentreOnOrigin()
+	{
+		double weight = Settings.OriginAnchorWeight;
+		if (bodyCount == 0 || weight <= 0)
+		{
+			return;
+		}
+
+		double minX = double.MaxValue;
+		double minY = double.MaxValue;
+		double maxX = double.MinValue;
+		double maxY = double.MinValue;
+
+		for (int i = 0; i < bodyCount; i++)
+		{
+			// A pinned or frozen body is placed by whoever pinned it, and sliding the graph would move
+			// it. One is enough to say where the graph goes, so the whole pass stands down.
+			if (bodies[i].IsPinned != 0 || bodies[i].IsFrozen != 0)
+			{
+				return;
+			}
+
+			minX = Math.Min(minX, bodies[i].Position.X);
+			minY = Math.Min(minY, bodies[i].Position.Y);
+			maxX = Math.Max(maxX, bodies[i].Position.X + bodies[i].Dimensions.X);
+			maxY = Math.Max(maxY, bodies[i].Position.Y + bodies[i].Dimensions.Y);
+		}
+
+		Vec2D drawnCentre = new((minX + maxX) * 0.5, (minY + maxY) * 0.5);
+		Vec2D shift = (WorldOrigin - drawnCentre) * Math.Min(weight * RecentringRate, 1.0);
+
+		for (int i = 0; i < bodyCount; i++)
+		{
+			bodies[i].Position += shift;
 		}
 	}
 
