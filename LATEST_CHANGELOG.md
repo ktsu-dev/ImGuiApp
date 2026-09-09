@@ -1,8 +1,6 @@
-## v3.26.1 (patch)
+## v3.27.0 (minor)
 
 Changes since v3.26.0:
 
-- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the microsoft group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 6 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Measure repulsion across the clear space between node boxes ([@Claude](https://github.com/Claude))
 
