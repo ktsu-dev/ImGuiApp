@@ -1,9 +1,10 @@
-## v3.30.0 (minor)
+## v3.31.0 (minor)
 
-Changes since v3.29.0:
+Changes since v3.30.0:
 
-- Use a comparison assert for the untwist separation bound ([@Claude](https://github.com/Claude))
-- Tune the layout defaults against the benchmark corpus ([@Claude](https://github.com/Claude))
-- Keep repulsion finite when MinRepulsionDistance is zero ([@Claude](https://github.com/Claude))
-- Add a scoring and tuning layer over the layout benchmark harness ([@Claude](https://github.com/Claude))
+- Assert the section's open state as a condition, not an equality ([@matt-edmondson](https://github.com/matt-edmondson))
+- Close a property grid section with a scope instead of a paired call ([@matt-edmondson](https://github.com/matt-edmondson))
+- Clear the property grid's static analysis findings ([@matt-edmondson](https://github.com/matt-edmondson))
+- Advance the property grid's tick atomically, and filter the sweep explicitly ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add a property grid to the widget library ([@matt-edmondson](https://github.com/matt-edmondson))
 
