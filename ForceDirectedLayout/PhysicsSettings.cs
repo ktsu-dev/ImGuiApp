@@ -16,20 +16,20 @@ public sealed record PhysicsSettings
 	/// Strength of pairwise inverse-square repulsion between bodies, measured across the clear space
 	/// between their bounding boxes rather than between their centres.
 	/// </summary>
-	public double RepulsionStrength { get; init; } = 600_000.0;
+	public double RepulsionStrength { get; init; } = 900_000.0;
 
 	/// <summary>Dimensionless Hooke's-law spring constant for edges.</summary>
-	public double LinkSpringStrength { get; init; } = 0.5;
+	public double LinkSpringStrength { get; init; } = 0.1;
 
 	/// <summary>Strength of the horizontal source-left/target-right ordering bias. 0 disables it.</summary>
-	public double DirectionalBias { get; init; } = 0.5;
+	public double DirectionalBias { get; init; } = 4.0;
 
 	/// <summary>
 	/// Strength of the preference for horizontal edges: it both levels an edge's two ends and, when the
 	/// rendered curve would otherwise hide, splays them apart horizontally. 0 disables both.
 	/// See <see cref="LayoutCore.BezierClearanceRatio"/> for the clearance geometry.
 	/// </summary>
-	public double LinkFlatteningStrength { get; init; } = 0.5;
+	public double LinkFlatteningStrength { get; init; } = 3.0;
 
 	/// <summary>Extra horizontal clearance demanded on top of the derived bezier bound, in position units.</summary>
 	public double LinkFlatteningMargin { get; init; }
@@ -53,10 +53,10 @@ public sealed record PhysicsSettings
 	/// Floor on the clear space used as the inverse-square repulsion denominator, so a pair that touches
 	/// pushes hard rather than infinitely hard.
 	/// </summary>
-	public double MinRepulsionDistance { get; init; } = 50.0;
+	public double MinRepulsionDistance { get; init; } = 5.0;
 
 	/// <summary>Spring rest length for edges.</summary>
-	public double RestLinkLength { get; init; } = 225.0;
+	public double RestLinkLength { get; init; } = 50.0;
 
 	/// <summary>Per-body force magnitude cap (applied before integration).</summary>
 	public double MaxForce { get; init; } = 5000.0;

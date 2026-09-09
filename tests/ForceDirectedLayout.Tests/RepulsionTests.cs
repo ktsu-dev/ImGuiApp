@@ -137,24 +137,48 @@ public class RepulsionTests
 
 	/// <summary>
 	/// Tests that a pair with no clear space between them is pushed at the floor rather than infinitely
-	/// hard, and that the floor is reached at contact rather than at coincidence.
+	/// hard, and that the law takes over again once there is room between them.
 	/// </summary>
+	/// <remarks>
+	/// There are two floors, and which one binds depends on the settings.
+	/// <see cref="LayoutSettings.MinRepulsionDistance"/> caps the inverse-square law at
+	/// <c>RepulsionStrength / MinRepulsionDistance²</c>, and <see cref="LayoutSettings.MaxForce"/> caps
+	/// the total force on a body regardless. Under the tuned defaults the second is by far the lower —
+	/// the law's cap is 36,000 against a MaxForce of 5,000 — so close-range repulsion is a constant
+	/// 5,000 and the law only reappears beyond about 13 units of clear space.
+	/// <para>
+	/// Worth knowing before tuning either: it means <see cref="LayoutSettings.MinRepulsionDistance"/>
+	/// has no effect at all below <c>sqrt(RepulsionStrength / MaxForce)</c>, which is why sweeping it
+	/// across 0, 2, 5, 10 measures the same layout four times. What it does control is whether the
+	/// floor is hard or soft: set it high enough that the law's cap falls under MaxForce and close-range
+	/// repulsion goes soft, which is what used to let bodies crowd.
+	/// </para>
+	/// </remarks>
 	[TestMethod]
 	public void Repulsion_WithNoClearSpace_PushesAtTheFloor()
 	{
 		Vec2D size = new(100, 100);
-		double floor = LayoutSettings.Defaults.RepulsionStrength /
-			(LayoutSettings.Defaults.MinRepulsionDistance * LayoutSettings.Defaults.MinRepulsionDistance);
+		double minDist = LayoutSettings.Defaults.MinRepulsionDistance;
+		double strength = LayoutSettings.Defaults.RepulsionStrength;
 
+		double floor = Math.Min(strength / (minDist * minDist), LayoutSettings.Defaults.MaxForce);
+
+		// Where the law resumes: the clear distance at which it first asks for less than the floor.
+		double lawResumesAt = Math.Sqrt(strength / floor);
+
+		// Two 100-wide boxes whose centres are 100 apart are touching, so a centre offset of 100 plus a
+		// clear distance is that much clear space between their facing edges.
 		double overlapping = RepulsionOn(size, size, new Vec2D(30, 0)).Length();
 		double touching = RepulsionOn(size, size, new Vec2D(100, 0)).Length();
-		double atTheFloor = RepulsionOn(size, size, new Vec2D(150, 0)).Length();
-		double beyond = RepulsionOn(size, size, new Vec2D(200, 0)).Length();
+		double justInside = RepulsionOn(size, size, new Vec2D(100 + (lawResumesAt * 0.5), 0)).Length();
+		double beyond = RepulsionOn(size, size, new Vec2D(100 + (lawResumesAt * 2.0), 0)).Length();
 
 		Assert.AreEqual(floor, overlapping, 0.001, "overlapping bodies should be pushed at the floor");
 		Assert.AreEqual(floor, touching, 0.001, "and so should touching ones");
-		Assert.AreEqual(floor, atTheFloor, 0.001, "and so should a pair exactly one floor of clear space apart");
+		Assert.AreEqual(floor, justInside, 0.001, "and so should a pair inside the distance the law resumes at");
 		Assert.IsTrue(beyond < floor, $"beyond it the law takes over again; {beyond:F1} against the floor's {floor:F1}");
+		Assert.AreEqual(strength / (lawResumesAt * 2.0 * lawResumesAt * 2.0), beyond, 0.001,
+			"and once it has, the force is the law's value at that clear distance");
 	}
 
 	/// <summary>

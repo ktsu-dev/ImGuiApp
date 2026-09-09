@@ -320,6 +320,13 @@ public class GenericFacadeTests
 	/// Settings that isolate the flattening force: no repulsion, no gravity, no ordering bias, and a
 	/// spring only strong enough to hold the pair together.
 	/// </summary>
+	/// <remarks>
+	/// The flattening strength is pinned here rather than inherited, because the splay this fixture
+	/// exists to test only happens while a drop remains to be cleared. Left on the default it stopped
+	/// testing anything the moment that default was tuned upwards: the pair levelled completely, the
+	/// drop went to zero, and a bound of zero is met by any arrangement at all. A mechanism test should
+	/// fail when the mechanism breaks, not when a default moves, so every input it depends on is named.
+	/// </remarks>
 	private static PhysicsSettings FlatteningOnly() => new()
 	{
 		Enabled = true,
@@ -327,6 +334,8 @@ public class GenericFacadeTests
 		GravityStrength = 0,
 		DirectionalBias = 0,
 		LinkSpringStrength = 0.1,
+		LinkFlatteningStrength = 0.5,
+		RestLinkLength = 225.0,
 		OverlapMargin = 0,
 		DampingFactor = 0.1,
 	};
@@ -556,25 +565,41 @@ public class GenericFacadeTests
 	}
 
 	/// <summary>
-	/// Tests that a graph with no pin offsets is left alone, since without them there is no pin order to
-	/// be wrong about.
+	/// Tests that a graph with no pin offsets is left alone by the untwist force, since without them
+	/// there is no pin order to be wrong about.
 	/// </summary>
+	/// <remarks>
+	/// Asserted as the difference the force makes rather than as a position, which is what it names and
+	/// the only form of it that is actually about untwisting. Asserting instead that the two sources
+	/// keep the vertical order they started in tested something incidental: with no pin offsets both
+	/// links attach at their bodies' mid-heights, so once flattening pulls the pair to a common height
+	/// the order they separate into is arbitrary, and a stronger flattening default flipped it. Nothing
+	/// was wrong with the untwist, and the test said there was.
+	/// </remarks>
 	[TestMethod]
 	public void Untwisting_DoesNothingWithoutPinOffsets()
 	{
-		List<TestBody> bodies = [Body(1, 0, 260, 100, 60), Body(2, 0, 0, 100, 60), Body(3, 400, 100, 120, 140)];
-		List<TestEdge> edges = [new(1, 3), new(2, 3)];
-
-		ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(new PhysicsSettings { Enabled = true });
-		for (int i = 0; i < 600; i++)
+		static (double First, double Second) Settle(double untwistStrength)
 		{
-			layout.Step(bodies, edges, 0.016);
+			List<TestBody> bodies = [Body(1, 0, 260, 100, 60), Body(2, 0, 0, 100, 60), Body(3, 400, 100, 120, 140)];
+			List<TestEdge> edges = [new(1, 3), new(2, 3)];
+
+			ForceDirectedLayout<TestBody, TestEdge> layout = CreateLayout(
+				new PhysicsSettings { Enabled = true, LinkUntwistStrength = untwistStrength });
+
+			for (int i = 0; i < 600; i++)
+			{
+				layout.Step(bodies, edges, 0.016);
+			}
+
+			return (bodies[0].Position.Y, bodies[1].Position.Y);
 		}
 
-		// Both links fall back to their bodies' mid-heights, giving the two the same pin height at the
-		// shared node, so neither ordering is the wrong one and the starting order survives.
-		Assert.IsTrue(bodies[0].Position.Y > bodies[1].Position.Y,
-			"with no pin offsets the two sources should keep the order they started in");
+		(double firstOff, double secondOff) = Settle(0.0);
+		(double firstOn, double secondOn) = Settle(LayoutSettings.Defaults.LinkUntwistStrength);
+
+		Assert.AreEqual(firstOff, firstOn, 1e-9, "with no pin offsets the untwist should not move the first source");
+		Assert.AreEqual(secondOff, secondOn, 1e-9, "nor the second");
 	}
 
 	/// <summary>
@@ -651,8 +676,22 @@ public class GenericFacadeTests
 				new(2, 3, new Vec2D(300, 25), new Vec2D(0, 100)),
 			];
 
+			// Isolated rather than run on the defaults, because the claim is about the overlap pass and
+			// nothing else. Flattening in particular decides this geometry outright once it is strong:
+			// two wide slabs stacked in a column are levelled onto the target so hard that the pair
+			// settles identically whether the untwist runs or not, and the exemption under test becomes
+			// unobservable rather than absent. Measured on the tuned defaults, the held and free cases
+			// agree to six figures; with flattening and the ordering bias off, they separate by 193
+			// vertically and 426 horizontally, which is the effect this test is named for.
 			ForceDirectedLayout<TestBody, PinnedEdge> layout = CreatePinnedLayout(
-				new PhysicsSettings { Enabled = true, LinkUntwistStrength = untwistStrength });
+				new PhysicsSettings
+				{
+					Enabled = true,
+					LinkUntwistStrength = untwistStrength,
+					RestLinkLength = 225.0,
+					LinkFlatteningStrength = 0,
+					DirectionalBias = 0,
+				});
 
 			for (int i = 0; i < 3000; i++)
 			{
@@ -666,9 +705,13 @@ public class GenericFacadeTests
 		(double heldVertical, double heldHorizontal) = Settle(0.0);
 		(double freeVertical, double freeHorizontal) = Settle(0.1);
 
-		double clearance = (50 * 0.5) + (50 * 0.5) + LayoutSettings.Defaults.OverlapMargin;
-		Assert.IsTrue(heldVertical >= clearance,
-			$"With nothing untwisting them the pair should be held at least a clearance apart vertically; it was {heldVertical:F0} against {clearance:F0}.");
+		// Half of each height: the pair is separated on Y rather than left stacked. The overlap margin is
+		// deliberately not added on top. It is a soft preference that the rest of the forces settle just
+		// inside, and how far inside depends on how tightly the spring and repulsion are tuned - so
+		// asserting the margin here measured the defaults rather than the overlap pass.
+		double separated = (50 * 0.5) + (50 * 0.5);
+		Assert.IsTrue(heldVertical >= separated,
+			$"With nothing untwisting them the pair should be held apart vertically; it was {heldVertical:F0} against {separated:F0}.");
 		Assert.IsTrue(freeVertical < heldVertical,
 			$"A twisted pair should be allowed to close on the axis it swaps along; it settled {freeVertical:F0} apart against {heldVertical:F0}.");
 		Assert.IsTrue(freeHorizontal > heldHorizontal,
