@@ -1,6 +1,6 @@
-## v3.32.0 (minor)
+## v3.32.1 (patch)
 
-Changes since v3.31.0:
+Changes since v3.32.0:
 
-- Centre a settled graph on the origin, separately from gravity ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
