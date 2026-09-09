@@ -19,11 +19,19 @@ using ktsu.ForceDirectedLayout;
 /// editor's user watches it unfold, and ten seconds is about as long as anyone waits.
 /// </param>
 /// <param name="FrameDelta">Simulated seconds per frame.</param>
+/// <param name="StartOffset">
+/// Shifts which arrangements are used, so two runs can measure the same claim against independent
+/// samples. Tuning needs this: a value chosen because it scored best on one set of arrangements has
+/// not been shown to be better until it also wins on a set it was not chosen on, and with the gains
+/// that matter here being smaller than the spread between families, that check is the difference
+/// between a tuned default and a fitted one.
+/// </param>
 public sealed record BenchOptions(
 	int Starts = 10,
 	int Frames = 6000,
 	int ReadableAfter = 600,
-	double FrameDelta = 1.0 / 60.0)
+	double FrameDelta = 1.0 / 60.0,
+	int StartOffset = 0)
 {
 	/// <summary>The defaults, which are what every comparison in the tests uses.</summary>
 	public static BenchOptions Default { get; } = new();
@@ -96,7 +104,7 @@ public static class LayoutBench
 
 		for (int start = 0; start < shape.Starts; start++)
 		{
-			LayoutCore core = graph.Start(settings, SeedFor(start), SpreadFor(start, shape.Starts));
+			LayoutCore core = graph.Start(settings, SeedFor(start + shape.StartOffset), SpreadFor(start, shape.Starts));
 
 			for (int frame = 0; frame < shape.ReadableAfter && frame < shape.Frames; frame++)
 			{
@@ -227,7 +235,7 @@ public static class LayoutBench
 	/// The seed for one start. Fixed multiples rather than a sequence, so adding a start to a run does
 	/// not renumber the ones already measured.
 	/// </summary>
-	/// <param name="start">Index of the start.</param>
+	/// <param name="start">Index of the start, already shifted by <see cref="BenchOptions.StartOffset"/>.</param>
 	private static int SeedFor(int start) => (start * 7919) + 1;
 
 	/// <summary>
