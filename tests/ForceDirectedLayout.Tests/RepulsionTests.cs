@@ -158,6 +158,43 @@ public class RepulsionTests
 	}
 
 	/// <summary>
+	/// Tests that a zero <see cref="LayoutSettings.MinRepulsionDistance"/> still yields a finite layout
+	/// rather than a NaN one.
+	/// </summary>
+	/// <remarks>
+	/// That setting is itself the clamp keeping the inverse-square law finite where bodies touch, so
+	/// setting it to zero removes the only thing preventing a division by zero: touching boxes have
+	/// exactly no clear space between them, the force comes back infinite, and the integrator carries
+	/// that into positions that are NaN forever after. It surfaced from a parameter sweep that happened
+	/// to offer zero, where every measurement of the result read NaN rather than "bad" — which is the
+	/// real cost, since a layout that silently stops being a number is worse than a crowded one.
+	/// </remarks>
+	[TestMethod]
+	public void Repulsion_WithNoMinimumDistance_StaysFinite()
+	{
+		LayoutSettings settings = RepulsionOnly() with { MinRepulsionDistance = 0.0 };
+
+		LayoutCore core = new() { Settings = settings };
+		core.ResizeBodies(2);
+
+		// Overlapping, which is where the clear distance between them is exactly zero.
+		core.Bodies[0] = new BodyState { Id = 1, Position = Vec2D.Zero, Dimensions = new Vec2D(100, 100) };
+		core.Bodies[1] = new BodyState { Id = 2, Position = new Vec2D(30, 0), Dimensions = new Vec2D(100, 100) };
+
+		for (int frame = 0; frame < 60; frame++)
+		{
+			core.Step(1.0 / 60.0);
+		}
+
+		for (int i = 0; i < core.BodyCount; i++)
+		{
+			Vec2D position = core.Bodies[i].Position;
+			Assert.IsTrue(double.IsFinite(position.X) && double.IsFinite(position.Y),
+				$"body {i} should still have a real position; it was ({position.X}, {position.Y})");
+		}
+	}
+
+	/// <summary>
 	/// Tests what all of the above is for: two bodies settle with the same room between them whether
 	/// they are small or wide, rather than the wide pair ending up crammed together.
 	/// </summary>
