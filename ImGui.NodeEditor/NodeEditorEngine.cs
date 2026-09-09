@@ -318,16 +318,15 @@ public class NodeEditorEngine
 	/// </remarks>
 	public bool SetPinAllowsMultipleConnections(int pinId, bool allowMultiple)
 	{
-		foreach (Node node in nodes)
-		{
-			if (TrySetPinCapacity(node.InputPins, pinId, allowMultiple) ||
-				TrySetPinCapacity(node.OutputPins, pinId, allowMultiple))
-			{
-				return true;
-			}
-		}
+		// A pin id is unique across the graph, so there is one node to find rather than a sequence
+		// to walk looking for it.
+		Node? owner = nodes.Find(n =>
+			n.InputPins.Any(p => p.Id == pinId) ||
+			n.OutputPins.Any(p => p.Id == pinId));
 
-		return false;
+		return owner is not null &&
+			(TrySetPinCapacity(owner.InputPins, pinId, allowMultiple) ||
+			TrySetPinCapacity(owner.OutputPins, pinId, allowMultiple));
 	}
 
 	private static bool TrySetPinCapacity(List<Pin> pins, int pinId, bool allowMultiple)
