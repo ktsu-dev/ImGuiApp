@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ktsu.ForceDirectedLayout;
+using ktsu.ForceDirectedLayout.Tests.Bench;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
@@ -403,91 +404,6 @@ public class GenericFacadeTests
 			Settings = settings,
 		};
 
-	/// <summary>A node in the benchmark graph, sized as the editor draws it.</summary>
-	private sealed record Box(int Id, double W, double H, int InputRows, int OutputRows);
-
-	/// <summary>An edge that knows which row it leaves and enters on.</summary>
-	private sealed record Wire(int From, int FromRow, int To, int ToRow);
-
-	/// <summary>
-	/// The Counter document as the editor lays it out: twenty nodes, twenty edges, five levels deep.
-	/// </summary>
-	private static (List<TestBody> Bodies, List<PinnedEdge> Edges) CounterGraph(double spread)
-	{
-		// id, width, height, input rows, output rows
-		Box[] boxes =
-		[
-			new(1, 60, 50, 0, 1), new(2, 115, 62, 1, 1),      // 0 -> var count
-			new(3, 60, 50, 0, 1), new(4, 115, 62, 1, 1),      // 1 -> var step
-			new(5, 110, 50, 0, 1),                            // param amount
-			new(6, 75, 50, 0, 1), new(7, 75, 50, 0, 1), new(8, 75, 50, 0, 1), new(9, 75, 50, 0, 1),
-			new(10, 90, 75, 2, 1),                            // binary + (Add)
-			new(11, 90, 70, 2, 1),                            // assign
-			new(12, 105, 60, 1, 1),                           // return (Add)
-			new(13, 118, 180, 7, 1),                          // function Add
-			new(14, 75, 50, 0, 1), new(15, 75, 50, 0, 1),
-			new(16, 90, 75, 2, 1),                            // binary + (Next)
-			new(17, 115, 62, 1, 1),                           // var result
-			new(18, 105, 60, 1, 1),                           // return (Next)
-			new(19, 118, 160, 6, 1),                          // function Next
-			new(20, 117, 160, 6, 1),                          // class Counter
-		];
-
-		Wire[] wires =
-		[
-			new(1, 0, 2, 0), new(2, 0, 20, 0),
-			new(3, 0, 4, 0), new(4, 0, 20, 1),
-			new(5, 0, 13, 0),
-			new(6, 0, 11, 0), new(7, 0, 10, 0), new(8, 0, 10, 1), new(10, 0, 11, 1),
-			new(11, 0, 13, 3), new(9, 0, 12, 0), new(12, 0, 13, 4), new(13, 0, 20, 2),
-			new(14, 0, 16, 0), new(15, 0, 16, 1), new(16, 0, 17, 0), new(17, 0, 19, 2),
-			new(18, 0, 19, 3), new(19, 0, 20, 3),
-			new(9, 0, 18, 0),
-		];
-
-		Dictionary<int, Box> byId = boxes.ToDictionary(b => b.Id);
-		List<TestBody> bodies = [];
-		int seed = 0;
-		foreach (Box b in boxes)
-		{
-			// Scattered start, so the layout has to do the work rather than inherit an answer.
-			seed = ((seed * 1103515245) + 12345) & 0x7fffffff;
-			double x = seed % 1000 * spread;
-			seed = ((seed * 1103515245) + 12345) & 0x7fffffff;
-			double y = seed % 1000 * spread;
-			bodies.Add(Body(b.Id, x, y, b.W, b.H));
-		}
-
-		// A row's pin sits a header down plus its own row height, which is what ImNodes produces.
-		static double RowY(Box b, int row) => Math.Min(28.0 + (row * 21.0) + 10.0, b.H - 8.0);
-
-		List<PinnedEdge> edges = [.. wires.Select(w => new PinnedEdge(
-			w.From, w.To,
-			new Vec2D(byId[w.From].W, RowY(byId[w.From], byId[w.From].InputRows + w.FromRow)),
-			new Vec2D(0, RowY(byId[w.To], w.ToRow))))];
-
-		return (bodies, edges);
-	}
-
-	/// <summary>Mean angle off horizontal across a graph's edges, and its bounding box.</summary>
-	private static (double Width, double Height, double MeanAngle) Shape(List<TestBody> bodies, List<PinnedEdge> edges)
-	{
-		double width = bodies.Max(b => b.Position.X + b.Dimensions.X) - bodies.Min(b => b.Position.X);
-		double height = bodies.Max(b => b.Position.Y + b.Dimensions.Y) - bodies.Min(b => b.Position.Y);
-
-		Dictionary<int, TestBody> byId = bodies.ToDictionary(b => b.Id);
-		double total = 0;
-		foreach (PinnedEdge e in edges)
-		{
-			Vec2D from = byId[e.SourceId].Position + e.SourcePin;
-			Vec2D to = byId[e.TargetId].Position + e.TargetPin;
-			double angle = Math.Abs(Math.Atan2(to.Y - from.Y, to.X - from.X) * 180.0 / Math.PI);
-			total += angle > 90 ? 180 - angle : angle;
-		}
-
-		return (width, height, total / edges.Count);
-	}
-
 	/// <summary>
 	/// Tests that a graph the size of a small class reaches a readable shape within the first few
 	/// seconds, rather than only after a minute and a half of settling.
@@ -502,61 +418,17 @@ public class GenericFacadeTests
 	[TestMethod]
 	public void ASmallGraph_IsReadableWithinTenSeconds()
 	{
-		(List<TestBody> bodies, List<PinnedEdge> edges) = CounterGraph(0.05);
-		ForceDirectedLayout<TestBody, PinnedEdge> layout = CreatePinnedLayout(new PhysicsSettings { Enabled = true });
+		// Over several starts rather than one: the simulation is chaotic, so which local minimum a
+		// single arrangement falls into says nothing about how fast the layout gets there in general.
+		BenchResult result = LayoutBench.Run(
+			GraphCorpus.Counter,
+			LayoutSettings.Defaults,
+			"counter",
+			new BenchOptions(Starts: 6, Frames: 600, ReadableAfter: 600));
 
-		for (int i = 0; i < 600; i++)
-		{
-			layout.Step(bodies, edges, 0.016);
-		}
-
-		(double width, double height, double meanAngle) = Shape(bodies, edges);
-
-		Assert.IsTrue(width > height,
-			$"A left-to-right graph should be wider than it is tall by now; it is {width:F0} x {height:F0}.");
-		Assert.IsTrue(meanAngle < 45.0,
-			$"Its edges should be nearer horizontal than vertical by now; mean angle is {meanAngle:F1} degrees.");
-	}
-
-	/// <summary>
-	/// Counts the (link, body) pairs where a link is drawn across a body it is not an end of.
-	/// </summary>
-	/// <remarks>
-	/// Links are rendered beneath node backgrounds, so a link crossing a body it has nothing to do with
-	/// disappears for that body's width. The link's path is approximated by the straight line between its
-	/// pins, which is what the rendered curve stays close to once the flattening force has done its work.
-	/// </remarks>
-	private static int LinksOverBodies(List<TestBody> bodies, List<PinnedEdge> edges)
-	{
-		Dictionary<int, TestBody> byId = bodies.ToDictionary(b => b.Id);
-		int over = 0;
-
-		foreach (PinnedEdge edge in edges)
-		{
-			Vec2D from = byId[edge.SourceId].Position + edge.SourcePin;
-			Vec2D to = byId[edge.TargetId].Position + edge.TargetPin;
-
-			foreach (TestBody body in bodies)
-			{
-				if (body.Id == edge.SourceId || body.Id == edge.TargetId)
-				{
-					continue;
-				}
-
-				for (int step = 1; step < 40; step++)
-				{
-					Vec2D at = Vec2D.Lerp(from, to, step / 40.0);
-					if (at.X >= body.Position.X && at.X <= body.Position.X + body.Dimensions.X &&
-						at.Y >= body.Position.Y && at.Y <= body.Position.Y + body.Dimensions.Y)
-					{
-						over++;
-						break;
-					}
-				}
-			}
-		}
-
-		return over;
+		Assert.IsTrue(result.ReadableStarts >= 5,
+			$"A left-to-right graph should be wider than it is tall with near-horizontal edges by now; " +
+			$"{result.ReadableStarts} of {result.Starts} starts were, at a mean angle of {result.MeanEdgeAngle:F1} degrees.");
 	}
 
 	/// <summary>
@@ -602,29 +474,6 @@ public class GenericFacadeTests
 		return twisted;
 	}
 
-	/// <summary>Deepest rectangle overlap between any two bodies.</summary>
-	private static double WorstOverlap(List<TestBody> bodies)
-	{
-		double worst = 0;
-		for (int i = 0; i < bodies.Count; i++)
-		{
-			for (int j = i + 1; j < bodies.Count; j++)
-			{
-				double acrossX = Math.Min(bodies[i].Position.X + bodies[i].Dimensions.X, bodies[j].Position.X + bodies[j].Dimensions.X)
-					- Math.Max(bodies[i].Position.X, bodies[j].Position.X);
-				double acrossY = Math.Min(bodies[i].Position.Y + bodies[i].Dimensions.Y, bodies[j].Position.Y + bodies[j].Dimensions.Y)
-					- Math.Max(bodies[i].Position.Y, bodies[j].Position.Y);
-
-				if (acrossX > 0 && acrossY > 0)
-				{
-					worst = Math.Max(worst, Math.Min(acrossX, acrossY));
-				}
-			}
-		}
-
-		return worst;
-	}
-
 	/// <summary>
 	/// Tests that repulsion is still what spreads a graph out, now that an overlap pass keeps bodies off
 	/// one another and an untwisting force reorders their far ends.
@@ -632,9 +481,7 @@ public class GenericFacadeTests
 	/// <remarks>
 	/// The overlap pass only guarantees bodies do not sit on top of each other; it creates no room beyond
 	/// that, and untwisting only says which way round two of them go. Without repulsion a settled graph
-	/// collapses to about a third of its area, and the links then have nowhere to run but across the
-	/// bodies: measured over the graph below, six times as many links are drawn over a body they are not
-	/// an end of.
+	/// collapses, and the links then have nowhere to run but across the bodies.
 	/// <para>
 	/// Neither shape nor edge angle can say this. Before there was an untwisting force the collapse was
 	/// into a tall column of near-vertical links, and both did; with one the collapse is into a flat
@@ -642,33 +489,35 @@ public class GenericFacadeTests
 	/// for it - everything is simply drawn on top of everything - so what is asserted here is the room
 	/// itself, and what the want of it does to the links.
 	/// </para>
+	/// <para>
+	/// Measured over several starts rather than one. On a single arrangement this claim is true on
+	/// average and unreliable in particular: the settled area of one start swings far enough with the
+	/// repulsion strength that the same assertion passed at 1,200,000 and 600,000, failed at 800,000,
+	/// and passed again at 400,000 - chaos, not a threshold.
+	/// </para>
 	/// </remarks>
 	[TestMethod]
 	public void Repulsion_IsWhatSpreadsAGraphOut()
 	{
-		(List<TestBody> withBodies, List<PinnedEdge> withEdges) = CounterGraph(0.05);
-		ForceDirectedLayout<TestBody, PinnedEdge> with = CreatePinnedLayout(new PhysicsSettings { Enabled = true });
+		BenchOptions shape = new(Starts: 8, Frames: 6000, ReadableAfter: 600);
 
-		(List<TestBody> withoutBodies, List<PinnedEdge> withoutEdges) = CounterGraph(0.05);
-		ForceDirectedLayout<TestBody, PinnedEdge> without = CreatePinnedLayout(new PhysicsSettings { Enabled = true, RepulsionStrength = 0 });
+		LayoutSettings without = LayoutSettings.Defaults;
+		without.RepulsionStrength = 0;
 
-		for (int i = 0; i < 6000; i++)
-		{
-			with.Step(withBodies, withEdges, 0.016);
-			without.Step(withoutBodies, withoutEdges, 0.016);
-		}
+		IReadOnlyList<BenchResult> rows = LayoutBench.Compare(
+			GraphCorpus.Counter,
+			shape,
+			("with", LayoutSettings.Defaults),
+			("without", without));
 
-		(double withWidth, double withHeight, double _) = Shape(withBodies, withEdges);
-		(double withoutWidth, double withoutHeight, double _) = Shape(withoutBodies, withoutEdges);
+		BenchResult with = rows[0];
+		BenchResult none = rows[1];
 
-		double withArea = withWidth * withHeight;
-		double withoutArea = withoutWidth * withoutHeight;
-
-		Assert.IsTrue(withArea > withoutArea * 2.0,
-			$"Repulsion should leave the graph far roomier; with {withArea:F0}, without {withoutArea:F0}.");
-		Assert.IsTrue(LinksOverBodies(withBodies, withEdges) * 3 < LinksOverBodies(withoutBodies, withoutEdges),
-			$"Without repulsion far more links should be drawn over bodies; with {LinksOverBodies(withBodies, withEdges)}, " +
-			$"without {LinksOverBodies(withoutBodies, withoutEdges)}.");
+		Assert.IsTrue(with.MeanArea > none.MeanArea * 2.0,
+			$"Repulsion should leave the graph far roomier; with {with.MeanArea:F0}, without {none.MeanArea:F0}.");
+		Assert.IsTrue(with.MeanLinksOverBodies * 3 < none.MeanLinksOverBodies,
+			$"Without repulsion far more links should be drawn over bodies; with {with.MeanLinksOverBodies:F1}, " +
+			$"without {none.MeanLinksOverBodies:F1}.");
 	}
 
 	/// <summary>
@@ -750,33 +599,21 @@ public class GenericFacadeTests
 		// Several starting arrangements, because which local minimum one start happens to land in says
 		// nothing: the claim is about the shape of a settled graph in general, so it is measured the way
 		// it was established.
-		int withTwists = 0;
-		int withoutTwists = 0;
-		double worstOverlap = 0;
+		BenchOptions shape = new(Starts: 6, Frames: 4000, ReadableAfter: 600);
 
-		foreach (double spread in new[] { 0.05, 0.2, 0.35, 0.5, 0.7, 1.0 })
-		{
-			(List<TestBody> withBodies, List<PinnedEdge> withEdges) = CounterGraph(spread);
-			ForceDirectedLayout<TestBody, PinnedEdge> with = CreatePinnedLayout(new PhysicsSettings { Enabled = true });
+		LayoutSettings without = LayoutSettings.Defaults;
+		without.LinkUntwistStrength = 0;
 
-			(List<TestBody> withoutBodies, List<PinnedEdge> withoutEdges) = CounterGraph(spread);
-			ForceDirectedLayout<TestBody, PinnedEdge> without = CreatePinnedLayout(
-				new PhysicsSettings { Enabled = true, LinkUntwistStrength = 0 });
+		IReadOnlyList<BenchResult> rows = LayoutBench.Compare(
+			GraphCorpus.Counter,
+			shape,
+			("with", LayoutSettings.Defaults),
+			("without", without));
 
-			for (int i = 0; i < 4000; i++)
-			{
-				with.Step(withBodies, withEdges, 0.016);
-				without.Step(withoutBodies, withoutEdges, 0.016);
-			}
-
-			withTwists += TwistedPairs(withBodies, withEdges);
-			withoutTwists += TwistedPairs(withoutBodies, withoutEdges);
-			worstOverlap = Math.Max(worstOverlap, WorstOverlap(withBodies));
-		}
-
-		Assert.IsTrue(withTwists < withoutTwists,
-			$"Untwisting should leave fewer crossed pairs across the six starts; with {withTwists}, without {withoutTwists}.");
-		Assert.AreEqual(0.0, worstOverlap, 0.5,
+		Assert.IsTrue(rows[0].MeanTwistedPairs < rows[1].MeanTwistedPairs,
+			$"Untwisting should leave fewer crossed pairs across the starts; with {rows[0].MeanTwistedPairs:F1}, " +
+			$"without {rows[1].MeanTwistedPairs:F1}.");
+		Assert.AreEqual(0.0, rows[0].WorstOverlap, 0.5,
 			"and no start should be left with bodies drawn over one another");
 	}
 

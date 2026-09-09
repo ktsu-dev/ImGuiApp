@@ -32,6 +32,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
+- **ForceDirectedLayout** (`ktsu.ForceDirectedLayout`) - Renderer-agnostic graph layout simulation, with no UI dependency and no runtime package dependencies. Bodies repel across the clear space between their bounding boxes (not between their centres — see [Layout benchmarking](#layout-benchmarking)), edges pull like springs between the pins they actually attach at, gravity holds the graph together, edges are pulled towards horizontal, and an overlap pass separates any boxes left drawn over one another. Three surfaces over one `LayoutCore`: a generic facade over your own types, an id-based `ForceLayout` for bulk POD submission, and the flat core. Also published as a Native AOT shared library with a C ABI. `ImGui.NodeEditor` is one consumer.
 - **ImGui.NodeEditor** (`ktsu.ImGui.NodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`. `PhysicsSettingsPanel.Draw(ref PhysicsSettings)` draws every layout setting grouped by force and captioned, and `DrawDiagnostics(engine)` the live energy and settled state, so a consuming application gets the whole tuning surface rather than reimplementing a subset of it. ImNodes has no zoom of its own, so `NodeEditorRenderer.Zoom` supplies one and `FitToView` centres a graph and picks the zoom it fits at; the engine's positions and sizes stay at their own scale throughout, since that is the space the layout's lengths are measured in
 - **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). Fenced and indented code blocks go to `MarkdownConfig.CodeBlockRenderer` (`Action<string?, string>?` — the fence's info string and the block text) when one is supplied, which takes over drawing *and* reserving the block's layout space; `ImGui.SyntaxHighlighting` plugs into it, and neither library references the other. v1 has no built-in code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
 - **SyntaxHighlighting** (`ktsu.SyntaxHighlighting`) - Renderer-agnostic tokenizing: no ImGui, no graphics API, no third-party parser, so it can move to its own repository unchanged. `SyntaxHighlighter.Highlight(code, language, tabWidth)` returns the classified `HighlightedLine`/`HighlightedToken` runs; `SyntaxHighlighter.HighlightCached` goes through a bounded cache keyed by source, language and tab width; `HighlightedCode` tokenizes once for hot render paths. Languages are data (`LanguageDefinition`: line/block comment, string, keyword, type, constant, operator, identifier and embedded-language rules) held in `LanguageRegistry`, which resolves names and aliases case-insensitively and falls back to plain text for unknown names rather than throwing. Fifteen built-ins in `BuiltInLanguages`: text, csharp, c, cpp, javascript, typescript, python, json, yaml, xml, html, css, sql, shell, lua. Two tokenizers back them — the general `CodeTokenizer`, and `MarkupTokenizer` for definitions with `IsMarkup` (XML/HTML), which classify structurally rather than by keyword. `SyntaxTheme` holds one `ktsu.Semantics.Color.Color` per `TokenKind`, with `Dark`/`Light` built in and `Background`/`Plain`/`LineNumber` left unset for the host to fill. Comments and strings are searched for an embedded language; see [Embedded languages](#embedded-languages) below. Highlighting is lexical.
@@ -52,6 +53,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
   PNG, JPEG, BMP and TGA decoders and the resampler. `TestImageBuilder` encodes PNG, BMP and TGA files
   in memory so the decoders can be driven over their whole feature matrix without binary fixtures; the
   JPEG cases, which need a real encoder, are small base64 constants in `JpegDecoderTests`.
+- `tests/ForceDirectedLayout.Tests/` - The layout simulation: per-force unit tests, the overlap pass,
+  repulsion, and `Bench/` — the benchmark harness every layout claim is measured with. See
+  [Layout benchmarking](#layout-benchmarking) below.
 - `tests/NodeGraph.Tests/` - Node graph attribute and type utility tests
 - `tests/<Demo>.UITests/` - One headless UI test project per example, driving the demo's real
   `BuildConfig()` through `ImGuiAppHarness`: `ImGuiAppDemo.UITests`, `ImGuiWidgetsDemo.UITests`,
@@ -427,6 +431,66 @@ dotnet test --filter "FullyQualifiedName~TestGL"    # Run specific test class
 Do **not** pass `--nologo` to `dotnet test`. On Microsoft Testing Platform projects it reports
 `Zero tests ran` and exit code 5 instead of running anything, which looks exactly like a broken test
 project (dotnet/sdk#55309). Running the produced test executable directly is the way to confirm.
+
+### Layout benchmarking
+
+Iterating on a force in `ktsu.ForceDirectedLayout` by running a graph once and looking at the result
+does not work: the simulation is chaotic, so which local minimum one starting arrangement falls into
+says nothing about the change that was made. A single-start assertion flips between passing and
+failing across parameter values that are all perfectly reasonable — `Repulsion_IsWhatSpreadsAGraphOut`
+used to, passing at repulsion 1,200,000 and 600,000, failing at 800,000, and passing again at 400,000.
+
+`tests/ForceDirectedLayout.Tests/Bench/` is the harness that replaces that:
+
+- **`GraphCorpus`** — four graphs that break a layout differently. `Counter` is a real twenty-node
+  document with sizes running from a 60-wide literal to a 118x180 function; `Chain` is the shape that
+  most wants to be a horizontal row; `FanIn` is eight sources arriving at eight pins on one target,
+  which is where crossings come from; `MixedSizes` alternates 400-wide slabs with 50-wide literals.
+  Node sizes and pin rows are not decoration — repulsion measures clear space between boxes, every
+  angle force measures between pins, and a graph of equal-sized points exercises none of it.
+- **`LayoutMetrics`** — settled area, mean edge angle, links drawn across a body they are no end of,
+  tightest and mean clear gap, worst overlap, twisted link pairs, and whether it settled. Read them as
+  a row: a collapse into a crushed ribbon flatters both the area and the angle while being the worst
+  outcome available.
+- **`LayoutBench.Run` / `.Sweep` / `.Compare` / `.Table`** — settles a configuration over several
+  starting arrangements (walked from nodes piled on top of each other to nodes flung a thousand units
+  apart) and renders the rows as a fixed-width table. Deterministic: the same settings measure the
+  same twice, so the difference between two rows is the setting and nothing else.
+- **`LayoutSvg`** — writes a settled graph to SVG, links drawn first as the cubic the renderer
+  actually draws and nodes over them, so a link hidden in the picture is a link hidden in the editor.
+  Overlapping bodies are outlined in red. No window, no GPU, no ImGui context.
+
+To iterate: add a scratch `[TestMethod]` that prints a sweep, run the suite, read the column that
+should have moved.
+
+```csharp
+Console.WriteLine(LayoutBench.Table(LayoutBench.Sweep(
+    GraphCorpus.Counter, LayoutSettings.Defaults, "repulsion",
+    [300_000, 600_000, 1_200_000],
+    (s, v) => s with { RepulsionStrength = v })));
+
+LayoutCore core = GraphCorpus.Counter.Start(LayoutSettings.Defaults, seed: 1, spread: 0.5);
+core.Solve(maxIterations: 6000, tolerance: 0);
+LayoutSvg.Write(core, "/tmp/counter.svg");
+```
+
+Two things that bite:
+
+- **Console output only shows for tests the runner renders a block for**, which by default is failing
+  ones. Pass `--show-stdout All --show-test-results all` to the test executable to see a sweep printed
+  by a passing test.
+- **The analyzers apply to scratch tests too.** `IDE0005` (unused using), `IDE2001` (embedded
+  statement on one line) and `IDE0055` (formatting) are errors here, so a quick `{ s.X = v; return s; }`
+  lambda will not build. Use a `with` expression, or put the body on its own lines.
+
+`Corpus_SettlesIntoAReadableShape_UnderTheDefaults` is the quality gate a layout change is expected to
+break if it makes things worse. Its per-graph thresholds are current behaviour with headroom, not
+targets — and two of them are loose because of a real defect the corpus exposed: **centre gravity coils
+a long chain**. A plain twelve-node chain settles at about 53 degrees mean edge angle with only two
+starts in six reading left to right, and it is not a settling-time problem (4000, 12000 and 30000
+frames all land on 52.6). Sweeping `GravityStrength` over the same starts gives 0.6 degrees at 0, 1.9
+at 10, 52.9 at the default 50, and 58.4 at 200; raising `DirectionalBias` makes it worse rather than
+better, because ordering pairs left-to-right says nothing about the shape of the whole.
 
 ### Demo UI tests
 
