@@ -1,9 +1,8 @@
-## v3.28.0 (minor)
+## v3.29.0 (minor)
 
-Changes since v3.27.0:
+Changes since v3.28.0:
 
-- Compare a reach as a sorted sequence ([@Claude](https://github.com/Claude))
-- Walk the graph backward as well as forward ([@Claude](https://github.com/Claude))
-- Find the pin's node rather than walking every node past it ([@Claude](https://github.com/Claude))
-- [minor] Answer a hovered node with the links and reach it has ([@Claude](https://github.com/Claude))
+- Use the comparison asserts rather than Assert.IsTrue on a comparison ([@Claude](https://github.com/Claude))
+- Compute the fan-in target's height in double ([@Claude](https://github.com/Claude))
+- Add a benchmark harness for iterating on layout behaviour ([@Claude](https://github.com/Claude))
 
