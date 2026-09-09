@@ -222,6 +222,10 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		ImGui.SeparatorText("Physics Simulation");
 		RenderPhysicsControls();
 
+		// Hover highlighting
+		ImGui.SeparatorText("Hover Highlighting");
+		RenderHighlightControls();
+
 		// Debug visualization toggle
 		ImGui.Separator();
 		DemoProbe.Checkbox("Show Debug Visualization", ref showDebugVisualization);
@@ -240,6 +244,31 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		if (showDebugVisualization)
 		{
 			RenderDebugInformation();
+		}
+	}
+
+	/// <summary>
+	/// Draws the renderer's hover options, which are what a node under the pointer says about the
+	/// rest of the graph.
+	/// </summary>
+	private void RenderHighlightControls()
+	{
+		bool highlightLinks = renderer.HighlightLinksOnNodeHover;
+		if (DemoProbe.Checkbox("Highlight a hovered node's links", ref highlightLinks))
+		{
+			renderer.HighlightLinksOnNodeHover = highlightLinks;
+		}
+
+		bool highlightDownstream = renderer.HighlightDownstreamOnNodeHover;
+		if (DemoProbe.Checkbox("Highlight everything downstream of it", ref highlightDownstream))
+		{
+			renderer.HighlightDownstreamOnNodeHover = highlightDownstream;
+		}
+
+		bool hoveredLinkOnTop = renderer.DrawHoveredLinkOnTop;
+		if (DemoProbe.Checkbox("Draw a hovered link over the nodes", ref hoveredLinkOnTop))
+		{
+			renderer.DrawHoveredLinkOnTop = hoveredLinkOnTop;
 		}
 	}
 

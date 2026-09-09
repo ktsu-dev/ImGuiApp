@@ -203,8 +203,19 @@ public class NodeEditorEngine
 		Pin outputPin = fromPin.Direction == PinDirection.Output ? fromPin : toPin;
 		Pin inputPin = fromPin.Direction == PinDirection.Input ? fromPin : toPin;
 
-		// Only one input connection per pin.
-		if (links.Any(l => l.InputPinId == inputPin.Id))
+		if (links.Any(l => l.OutputPinId == outputPin.Id && l.InputPinId == inputPin.Id))
+		{
+			return new LinkCreationResult(false, "Those pins are already linked");
+		}
+
+		// How many links a pin accepts is the pin's own business: an output fans out to every
+		// consumer that wants its value, an input takes one, and either can say otherwise.
+		if (!outputPin.AllowsMultipleConnections && links.Any(l => l.OutputPinId == outputPin.Id))
+		{
+			return new LinkCreationResult(false, "Output pin already connected");
+		}
+
+		if (!inputPin.AllowsMultipleConnections && links.Any(l => l.InputPinId == inputPin.Id))
 		{
 			return new LinkCreationResult(false, "Input pin already connected");
 		}
@@ -293,6 +304,113 @@ public class NodeEditorEngine
 		return links.Where(l =>
 			node.InputPins.Any(p => p.Id == l.InputPinId) ||
 			node.OutputPins.Any(p => p.Id == l.OutputPinId));
+	}
+
+	/// <summary>
+	/// Change how many links a pin accepts, overriding the default for its direction.
+	/// </summary>
+	/// <param name="pinId">The pin to change.</param>
+	/// <param name="allowMultiple">True to let the pin take any number of links, false for one.</param>
+	/// <returns>True if the pin was found.</returns>
+	/// <remarks>
+	/// Links already made are left alone: narrowing a pin that is connected twice does not
+	/// disconnect either link, it only refuses the next one.
+	/// </remarks>
+	public bool SetPinAllowsMultipleConnections(int pinId, bool allowMultiple)
+	{
+		foreach (Node node in nodes)
+		{
+			if (TrySetPinCapacity(node.InputPins, pinId, allowMultiple) ||
+				TrySetPinCapacity(node.OutputPins, pinId, allowMultiple))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static bool TrySetPinCapacity(List<Pin> pins, int pinId, bool allowMultiple)
+	{
+		int index = pins.FindIndex(p => p.Id == pinId);
+		if (index < 0)
+		{
+			return false;
+		}
+
+		pins[index] = pins[index] with { AllowMultipleConnections = allowMultiple };
+		return true;
+	}
+
+	/// <summary>Get the links leaving a node through its output pins.</summary>
+	/// <param name="nodeId">The node.</param>
+	/// <returns>Its outgoing links, or nothing if there is no such node.</returns>
+	public IEnumerable<Link> GetOutgoingLinks(int nodeId)
+	{
+		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
+		return node is null
+			? []
+			: links.Where(l => node.OutputPins.Any(p => p.Id == l.OutputPinId));
+	}
+
+	/// <summary>Get the links arriving at a node through its input pins.</summary>
+	/// <param name="nodeId">The node.</param>
+	/// <returns>Its incoming links, or nothing if there is no such node.</returns>
+	public IEnumerable<Link> GetIncomingLinks(int nodeId)
+	{
+		Node? node = nodes.FirstOrDefault(n => n.Id == nodeId);
+		return node is null
+			? []
+			: links.Where(l => node.InputPins.Any(p => p.Id == l.InputPinId));
+	}
+
+	/// <summary>
+	/// Everything a node's value reaches: the nodes found by following links forward from it, and
+	/// the links walked to get there.
+	/// </summary>
+	/// <param name="nodeId">The node to start from.</param>
+	/// <returns>The reach, which is empty when the node has no outgoing links or does not exist.</returns>
+	/// <remarks>
+	/// The starting node is not part of its own reach unless a cycle leads back to it, which is
+	/// reported rather than hidden: a node that feeds itself round a loop really is downstream of
+	/// itself, and the walk visits each node once so a cycle terminates.
+	/// </remarks>
+	public GraphReach GetDownstream(int nodeId)
+	{
+		// Off the map of pins to nodes, so following a link is a lookup rather than a search
+		// through every node's pins. It is a cache of what the nodes already say, so building it
+		// here costs a pass and changes nothing.
+		RebuildPinIdToNodeIdMap();
+
+		HashSet<int> reachedNodes = [];
+		HashSet<int> walkedLinks = [];
+		HashSet<int> visited = [nodeId];
+		Queue<int> pending = new();
+		pending.Enqueue(nodeId);
+
+		while (pending.Count > 0)
+		{
+			int current = pending.Dequeue();
+
+			foreach (Link link in GetOutgoingLinks(current))
+			{
+				walkedLinks.Add(link.Id);
+
+				if (!pinIdToNodeId.TryGetValue(link.InputPinId, out int targetId))
+				{
+					continue;
+				}
+
+				reachedNodes.Add(targetId);
+
+				if (visited.Add(targetId))
+				{
+					pending.Enqueue(targetId);
+				}
+			}
+		}
+
+		return new GraphReach(reachedNodes, walkedLinks);
 	}
 
 	/// <summary>Calculate the distance between two connected nodes.</summary>
@@ -435,3 +553,14 @@ public class NodeEditorEngine
 
 /// <summary>Result of attempting to create a link.</summary>
 public record LinkCreationResult(bool Success, string Message, Link? Link = null);
+
+/// <summary>
+/// The part of a graph found by walking away from one node, as node and link identifiers.
+/// </summary>
+/// <param name="NodeIds">The nodes reached.</param>
+/// <param name="LinkIds">The links walked to reach them.</param>
+public record GraphReach(IReadOnlySet<int> NodeIds, IReadOnlySet<int> LinkIds)
+{
+	/// <summary>A reach containing nothing.</summary>
+	public static GraphReach Empty { get; } = new(new HashSet<int>(), new HashSet<int>());
+}

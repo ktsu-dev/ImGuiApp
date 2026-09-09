@@ -391,6 +391,9 @@ Node nodeA = factory.CreateNode<AddNode>(new Vector2(100, 100));
 NodeEditorRenderer renderer = new();
 NodeEditorInputHandler inputHandler = new();
 renderer.Render(engine, editorSize);
+
+// Hovering a node colours the links that meet it; turn on the reach as well
+renderer.HighlightDownstreamOnNodeHover = true;
 ```
 
 ### Markdown Rendering
@@ -614,11 +617,36 @@ Core node graph business logic.
 | `RemoveNode(int)` | `bool` | Remove a node |
 | `TryCreateLink(int, int)` | `LinkCreationResult` | Create a link between pins |
 | `RemoveLink(int)` | `bool` | Remove a link |
+| `SetPinAllowsMultipleConnections(int, bool)` | `bool` | Change how many links a pin accepts |
+| `GetOutgoingLinks(int)` | `IEnumerable<Link>` | The links leaving a node |
+| `GetIncomingLinks(int)` | `IEnumerable<Link>` | The links arriving at a node |
+| `GetDownstream(int)` | `GraphReach` | The nodes and links reached by following links forward |
 | `UpdatePhysics(float)` | `void` | Run physics simulation step |
 | `Clear()` | `void` | Remove all nodes and links |
 | `Nodes` | `IReadOnlyList<Node>` | All nodes |
 | `Links` | `IReadOnlyList<Link>` | All links |
 | `IsStable` | `bool` | Whether physics is stable |
+
+An output pin fans out to as many inputs as want its value and an input pin takes one link, unless
+a pin says otherwise through `[InputPin(AllowMultipleConnections = true)]`,
+`[OutputPin(AllowMultipleConnections = false)]` or `SetPinAllowsMultipleConnections`.
+
+### `NodeEditorRenderer`
+
+Draws the graph with ImNodes, and answers what the pointer is over.
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Render(NodeEditorEngine, Vector2)` | `void` | Draw the graph |
+| `FitToView(NodeEditorEngine, Vector2)` | `bool` | Centre the graph and zoom to fit |
+| `Zoom` | `float` | How large the graph is drawn |
+| `HighlightLinksOnNodeHover` | `bool` | Colour the links meeting the hovered node (default on) |
+| `HighlightDownstreamOnNodeHover` | `bool` | Also colour everything the hovered node reaches (default off) |
+| `DrawHoveredLinkOnTop` | `bool` | Redraw the hovered link over the nodes it passes behind (default on) |
+| `HighlightColor` | `Vector4?` | The highlight colour, or null for ImNodes' hovered-link colour |
+| `HoveredNodeId` / `HoveredLinkId` | `int?` | What the pointer was over in the last frame |
+| `TryGetNodeScreenRect(int, out ScreenRect)` | `bool` | Where a node was last drawn |
+| `TryGetPinScreenPosition(int, out Vector2)` | `bool` | Where a pin was last drawn |
 
 ### Node Graph Attributes
 
