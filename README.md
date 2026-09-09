@@ -95,7 +95,7 @@ Draws what `ktsu.SyntaxHighlighting` classifies, inside Dear ImGui: a background
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?label=ktsu.ForceDirectedLayout&logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
 
-Renderer-agnostic force-directed layout: bodies repel, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGui.NodeEditor` uses it to lay out node graphs.
+Renderer-agnostic force-directed layout: bodies repel across the clear space between their bounding boxes, edges pull like springs, gravity holds the graph together, and overlapping boxes are pushed apart. Double precision, AOT- and trim-clean, with no runtime dependencies, and also published as a native shared library with a C ABI. `ktsu.ImGui.NodeEditor` uses it to lay out node graphs.
 
 ### ImGui.Probes - Item Recording for Tests
 

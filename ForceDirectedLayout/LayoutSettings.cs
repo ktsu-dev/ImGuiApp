@@ -20,7 +20,10 @@ public struct LayoutSettings
 	private byte pad2;
 	private int pad3;
 
-	/// <summary>Strength of pairwise inverse-square repulsion between bodies (newtons-equivalent).</summary>
+	/// <summary>
+	/// Strength of pairwise inverse-square repulsion between bodies, measured across the clear space
+	/// between their bounding boxes rather than between their centres (newtons-equivalent).
+	/// </summary>
 	public double RepulsionStrength;
 
 	/// <summary>Dimensionless Hooke's-law spring constant for edges.</summary>
@@ -54,7 +57,10 @@ public struct LayoutSettings
 	/// <summary>Per-second velocity retention. 0.5 means velocity halves every second.</summary>
 	public double DampingFactor;
 
-	/// <summary>Distance floor used to clamp the inverse-square repulsion denominator.</summary>
+	/// <summary>
+	/// Floor on the clear space used as the inverse-square repulsion denominator, so a pair that touches
+	/// pushes hard rather than infinitely hard.
+	/// </summary>
 	public double MinRepulsionDistance;
 
 	/// <summary>Spring rest length for edges.</summary>
@@ -82,11 +88,15 @@ public struct LayoutSettings
 	/// <summary>Per-substep cap on how far an overlapping pair is pushed apart.</summary>
 	public double MaxOverlapCorrection;
 
-	/// <summary>Sensible defaults matching the previous Force&lt;float&gt;/Length&lt;float&gt; values.</summary>
+	/// <summary>
+	/// Sensible defaults matching the previous Force&lt;float&gt;/Length&lt;float&gt; values, save for
+	/// <see cref="RepulsionStrength"/>, which was recalibrated when repulsion moved from measuring
+	/// between body centres to measuring the clear space between their bounding boxes.
+	/// </summary>
 	public static LayoutSettings Defaults => new()
 	{
 		Enabled = 0,
-		RepulsionStrength = 1_200_000.0,
+		RepulsionStrength = 600_000.0,
 		LinkSpringStrength = 0.5,
 		DirectionalBias = 0.5,
 		LinkFlatteningStrength = 0.5,

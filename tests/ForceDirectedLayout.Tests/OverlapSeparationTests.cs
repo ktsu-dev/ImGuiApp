@@ -10,10 +10,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 /// Tests the positional pass that keeps body rectangles off one another.
 /// </summary>
 /// <remarks>
-/// Every force in the simulation treats a body as a point, so none of them can see that two bodies
-/// are drawn over each other: the comfortable distance depends on the pair's sizes and the forces do
-/// not have them. These cover the pass that does, including the case no amount of force tuning could
-/// ever fix — two bodies at exactly the same point, which repulsion skips for want of a direction.
+/// Repulsion is measured across the clear space between two rectangles, so it does see how big a
+/// body is, but it is soft and it stops getting stronger below <c>MinRepulsionDistance</c> — a link
+/// spring pulling to a fixed rest length can hold a pair overlapping in spite of it. These cover the
+/// pass that resolves what is left, including the case no amount of force tuning could ever fix —
+/// two bodies at exactly the same point, which repulsion skips for want of a direction.
 /// </remarks>
 [TestClass]
 public class OverlapSeparationTests
