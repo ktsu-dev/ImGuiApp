@@ -48,7 +48,19 @@ public struct LayoutSettings
 	/// </summary>
 	public double LinkUntwistStrength;
 
-	/// <summary>Strength of the gravity force pulling each body toward the gravity target.</summary>
+	/// <summary>
+	/// Spring constant of the pull toward the gravity target, per unit of distance from it.
+	/// </summary>
+	/// <remarks>
+	/// A spring rather than a constant pull, and the difference is what decides where a graph sits.
+	/// A pull of the same size wherever a body happens to be sums, over the whole graph, to a step
+	/// function of position: it depends on how many bodies lie each side of the target and not on how
+	/// far, so anywhere the counts balance it is exactly zero and nothing holds the graph in place at
+	/// all. A twelve-node chain measured that way settled 79 units to one side of the target and stayed
+	/// there, and pushed 600 units the other way it came to rest 79 units to the *other* side — the
+	/// same distance out, on whichever side it happened to arrive from, because both are edges of the
+	/// same dead band. Proportional to distance there is one resting place and it is the target.
+	/// </remarks>
 	public double GravityStrength;
 
 	/// <summary>Blend factor from centroid (0) to world origin (1) for the gravity target.</summary>

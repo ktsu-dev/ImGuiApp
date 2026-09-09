@@ -338,6 +338,11 @@ public class GenericFacadeTests
 		RestLinkLength = 225.0,
 		OverlapMargin = 0,
 		DampingFactor = 0.1,
+
+		// No pull to the origin either, so a position in these tests means what the flattening force did
+		// to it. Left on, the recentring pass slides the pair bodily so its box straddles the origin,
+		// which moves both bodies equally and splays neither - true, and not what is being asked.
+		OriginAnchorWeight = 0,
 	};
 
 	[TestMethod]
