@@ -151,7 +151,7 @@ public class LayoutBenchTests
 
 		// A tight spread piles the graph up; a wide one flings it out.
 		LayoutCore tight = GraphCorpus.Counter.Start(settings, seed: 42, spread: 0.05);
-		Assert.IsTrue(LayoutMetrics.Measure(tight).Width < LayoutMetrics.Measure(first).Width,
+		Assert.IsLessThan(LayoutMetrics.Measure(first).Width, LayoutMetrics.Measure(tight).Width,
 			"a tighter spread should start the graph in a smaller area");
 	}
 
@@ -210,11 +210,11 @@ public class LayoutBenchTests
 
 		Console.WriteLine(LayoutBench.Table(rows));
 
-		Assert.IsTrue(rows[0].MeanTightestGap < rows[1].MeanTightestGap,
+		Assert.IsLessThan(rows[1].MeanTightestGap, rows[0].MeanTightestGap,
 			$"more repulsion should leave the closest pair more room; {rows[0].MeanTightestGap:F1} then {rows[1].MeanTightestGap:F1}");
-		Assert.IsTrue(rows[1].MeanTightestGap < rows[2].MeanTightestGap,
+		Assert.IsLessThan(rows[2].MeanTightestGap, rows[1].MeanTightestGap,
 			$"and more again; {rows[1].MeanTightestGap:F1} then {rows[2].MeanTightestGap:F1}");
-		Assert.IsTrue(rows[0].MeanArea < rows[2].MeanArea,
+		Assert.IsLessThan(rows[2].MeanArea, rows[0].MeanArea,
 			$"and the graph should end up larger overall; {rows[0].MeanArea:F0} against {rows[2].MeanArea:F0}");
 	}
 
@@ -238,7 +238,7 @@ public class LayoutBenchTests
 
 		Assert.IsTrue(table.Contains("with", StringComparison.Ordinal), "the table should name each variant");
 		Assert.IsTrue(table.Contains("tightGap", StringComparison.Ordinal), "and carry a header row");
-		Assert.IsTrue(rows[0].MeanTightestGap > rows[1].MeanTightestGap,
+		Assert.IsGreaterThan(rows[1].MeanTightestGap, rows[0].MeanTightestGap,
 			"and repulsion should be what leaves the closest pair its room");
 	}
 
@@ -347,12 +347,12 @@ public class LayoutBenchTests
 			// another, and never leaves a pair with no room between them.
 			Assert.AreEqual(0.0, row.WorstOverlap, 0.5,
 				$"{graph}: no start should be left with bodies drawn over one another");
-			Assert.IsTrue(row.MeanTightestGap > 10.0,
+			Assert.IsGreaterThan(10.0, row.MeanTightestGap,
 				$"{graph}: the closest pair should have real room between them; it had {row.MeanTightestGap:F1}");
 
-			Assert.IsTrue(row.MeanEdgeAngle < expectation.MaxEdgeAngle,
+			Assert.IsLessThan(expectation.MaxEdgeAngle, row.MeanEdgeAngle,
 				$"{graph}: mean edge angle should stay under {expectation.MaxEdgeAngle:F0} degrees; it was {row.MeanEdgeAngle:F1}");
-			Assert.IsTrue(row.ReadableStarts >= expectation.MinReadableStarts,
+			Assert.IsGreaterThanOrEqualTo(expectation.MinReadableStarts, row.ReadableStarts,
 				$"{graph}: at least {expectation.MinReadableStarts} of {row.Starts} starts should read left-to-right " +
 				$"within ten seconds; {row.ReadableStarts} did");
 		}

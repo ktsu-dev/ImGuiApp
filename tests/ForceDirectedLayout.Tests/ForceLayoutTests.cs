@@ -426,7 +426,7 @@ public class GenericFacadeTests
 			"counter",
 			new BenchOptions(Starts: 6, Frames: 600, ReadableAfter: 600));
 
-		Assert.IsTrue(result.ReadableStarts >= 5,
+		Assert.IsGreaterThanOrEqualTo(5, result.ReadableStarts,
 			$"A left-to-right graph should be wider than it is tall with near-horizontal edges by now; " +
 			$"{result.ReadableStarts} of {result.Starts} starts were, at a mean angle of {result.MeanEdgeAngle:F1} degrees.");
 	}
@@ -513,9 +513,9 @@ public class GenericFacadeTests
 		BenchResult with = rows[0];
 		BenchResult none = rows[1];
 
-		Assert.IsTrue(with.MeanArea > none.MeanArea * 2.0,
+		Assert.IsGreaterThan(none.MeanArea * 2.0, with.MeanArea,
 			$"Repulsion should leave the graph far roomier; with {with.MeanArea:F0}, without {none.MeanArea:F0}.");
-		Assert.IsTrue(with.MeanLinksOverBodies * 3 < none.MeanLinksOverBodies,
+		Assert.IsLessThan(none.MeanLinksOverBodies, with.MeanLinksOverBodies * 3,
 			$"Without repulsion far more links should be drawn over bodies; with {with.MeanLinksOverBodies:F1}, " +
 			$"without {none.MeanLinksOverBodies:F1}.");
 	}
@@ -610,7 +610,7 @@ public class GenericFacadeTests
 			("with", LayoutSettings.Defaults),
 			("without", without));
 
-		Assert.IsTrue(rows[0].MeanTwistedPairs < rows[1].MeanTwistedPairs,
+		Assert.IsLessThan(rows[1].MeanTwistedPairs, rows[0].MeanTwistedPairs,
 			$"Untwisting should leave fewer crossed pairs across the starts; with {rows[0].MeanTwistedPairs:F1}, " +
 			$"without {rows[1].MeanTwistedPairs:F1}.");
 		Assert.AreEqual(0.0, rows[0].WorstOverlap, 0.5,
