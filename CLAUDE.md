@@ -27,7 +27,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 ### Libraries
 
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness. Image decoding is self-contained (`ImGui.App/Images/`), so the package carries no imaging dependency; see [Image decoding](#image-decoding) below.
-- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `RangeSlider`, `XYPad`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `HandleTrack`, `DbMeter`, `Scope`); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ImageCanvas`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
+- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `RangeSlider`, `XYPad`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `HandleTrack`, `DbMeter`, `Scope`); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ImageCanvas`, `PropertyGrid`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
@@ -89,6 +89,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/Images/BmpDecoder.cs` - BMP: core and info headers, 1/4/8/16/24/32 bit, `BI_RGB` and `BI_BITFIELDS`
 - `ImGui.App/Images/TgaDecoder.cs` - TGA: colour-mapped, true-colour and greyscale, raw and run-length encoded
 - `ImGui.App/Images/ImageResampler.cs` - Separable Lanczos-3 scaling on premultiplied alpha, behind `SetWindowIcon`
+- `ImGui.Widgets/PropertyGrid.cs` - Two-column property grid: options, the path-browse request, and the table/row plumbing (`PropertyGridRows.cs` holds the typed rows, `PropertyGridLists.cs` the list rows). See [Property grid](#property-grid) below
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
 - `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshaling
@@ -273,6 +274,42 @@ The pump is required for dialogs, not for animation.
 
 The file dialogs' underlying `Close()` briefly blocks the UI thread while its async directory-scan
 task unwinds (`refreshTask?.Wait()`).
+
+### Property grid
+
+`ImGuiWidgets.PropertyGrid` is a two-column ImGui table opened in a `using` statement, one row per
+property, each editing a variable by reference. One overloaded `Value` row covers bool, int, long,
+float, double, string, `Vector2`/`Vector3` and their `DoubleVector2`/`DoubleVector3` counterparts,
+and the semantic `Color`; `Enum`, `FilePath`/`DirectoryPath`/`ImagePath` and `List` cover the rest.
+
+Five things are worth knowing before changing any of it:
+
+- **A collapsed section holds its own rows back.** `Section` returns a `SectionScope` disposable
+  rather than a bool, and rows are written inside its `using` with no test around them: while the
+  section is collapsed the scope raises the grid's `suppressDepth`, and every row returns false
+  without drawing, exactly as it does when the table never opened. It is a depth rather than a flag
+  so a section nested inside a collapsed one stays balanced on its own. `SectionScope.IsOpen` is
+  there only for skipping work that costs something to prepare before a row can be called.
+
+- **A path row never opens a dialog itself.** `ktsu.ImGui.Widgets` has no business knowing how the
+  host picks files, and Hexa's own dialogs would drag the deferred-drawing pump in as a hard
+  requirement. The browse button instead raises `PropertyGridOptions.OnBrowse` with a
+  `PropertyPathRequest`, and because a dialog outlives the frame that opened it, the request carries
+  no reference to the value: `Complete` records the answer under the row's ImGui id and the row
+  adopts it on its next draw. Entries whose row never draws again are swept on a later completion, so
+  the table cannot grow for the life of the process.
+- **Thumbnails come from the host too.** Texture upload lives in `ktsu.ImGui.App`, which this library
+  deliberately does not reference, so an image row asks `PropertyGridOptions.ThumbnailResolver` for a
+  texture id and draws an empty frame when there is none. The resolver is called with whatever is in
+  the row, including half-typed paths, so it must not throw — the demo checks `File.Exists` first.
+- **Every button's id carries its row's label.** Each row draws into one id stack, so a constant
+  `"...##browse"` or `"+##add"` would make every browse button in the grid — and the add buttons of
+  two different lists — the same item to ImGui, and clicks would land on the wrong one. This was a
+  real bug caught by `PropertyGridTests`; keep the label in the id.
+- **List elements are labelled `[i]` inside a `ScopedId` for the list.** That is what makes their
+  probe names `<list>/[0]` rather than a bare `[0]` shared by every list in the grid, and a bare one
+  is ambiguous to `ItemProbe`, so tests address elements as `Tags/[0]` and their remove buttons as
+  `Tags/[0]/remove`.
 
 ### Hexa-backed vs ktsu widgets
 
