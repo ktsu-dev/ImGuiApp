@@ -129,7 +129,8 @@ public sealed class HoverHighlightTests
 
 		Hover(source);
 
-		CollectionAssert.AreEquivalent(new[] { middle.Id, target.Id }, renderer.HighlightedNodes.ToArray());
+		// Sorted before comparing: what is highlighted is a set, and it promises no order.
+		Assert.AreSequenceEqual([middle.Id, target.Id], renderer.HighlightedNodes.Order());
 		Assert.HasCount(2, renderer.HighlightedLinks);
 	}
 
@@ -142,7 +143,7 @@ public sealed class HoverHighlightTests
 
 		Hover(middle);
 
-		CollectionAssert.AreEquivalent(new[] { target.Id }, renderer.HighlightedNodes.ToArray());
+		Assert.AreSequenceEqual([target.Id], renderer.HighlightedNodes.Order());
 	}
 
 	[TestMethod]

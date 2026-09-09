@@ -474,7 +474,10 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetDownstream(first.Id);
 
-		CollectionAssert.AreEquivalent(new[] { second.Id, third.Id }, reach.NodeIds.ToArray());
+		// A reach is a set, so it is sorted before being compared as a sequence: the walk makes no
+		// promise about the order it finds things in, and a test that assumed one would be asserting
+		// something the engine does not say.
+		Assert.AreSequenceEqual([second.Id, third.Id], reach.NodeIds.Order());
 		Assert.HasCount(2, reach.LinkIds);
 	}
 
@@ -489,7 +492,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetDownstream(middle.Id);
 
-		CollectionAssert.AreEquivalent(new[] { downstream.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([downstream.Id], reach.NodeIds.Order());
 		Assert.HasCount(1, reach.LinkIds);
 	}
 
@@ -504,7 +507,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetDownstream(source.Id);
 
-		CollectionAssert.AreEquivalent(new[] { left.Id, right.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([left.Id, right.Id], reach.NodeIds.Order());
 		Assert.HasCount(2, reach.LinkIds);
 	}
 
@@ -522,7 +525,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetDownstream(first.Id);
 
-		CollectionAssert.AreEquivalent(new[] { first.Id, second.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([first.Id, second.Id], reach.NodeIds.Order());
 		Assert.HasCount(2, reach.LinkIds);
 	}
 
@@ -548,7 +551,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetUpstream(third.Id);
 
-		CollectionAssert.AreEquivalent(new[] { first.Id, second.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([first.Id, second.Id], reach.NodeIds.Order());
 		Assert.HasCount(2, reach.LinkIds);
 	}
 
@@ -563,7 +566,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetUpstream(middle.Id);
 
-		CollectionAssert.AreEquivalent(new[] { upstream.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([upstream.Id], reach.NodeIds.Order());
 		Assert.HasCount(1, reach.LinkIds);
 	}
 
@@ -582,7 +585,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetUpstream(sum.Id);
 
-		CollectionAssert.AreEquivalent(new[] { left.Id, right.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([left.Id, right.Id], reach.NodeIds.Order());
 		Assert.HasCount(2, reach.LinkIds);
 	}
 
@@ -596,7 +599,7 @@ public sealed class NodeEditorEngineTests
 
 		GraphReach reach = engine.GetUpstream(first.Id);
 
-		CollectionAssert.AreEquivalent(new[] { first.Id, second.Id }, reach.NodeIds.ToArray());
+		Assert.AreSequenceEqual([first.Id, second.Id], reach.NodeIds.Order());
 		Assert.HasCount(2, reach.LinkIds);
 	}
 
