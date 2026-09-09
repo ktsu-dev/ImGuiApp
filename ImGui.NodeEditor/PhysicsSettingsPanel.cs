@@ -102,7 +102,7 @@ public static class PhysicsSettingsPanel
 		bool changed = false;
 		double repulsion = settings.RepulsionStrength;
 		if (Slider("Repulsion strength", ref repulsion, 0.0, 50_000_000.0, "%.0f",
-			"Pushes every pair of nodes apart, by the inverse square of their distance. This is what makes the room the other forces arrange things in; with none, a graph collapses onto itself."))
+			"Pushes every pair of nodes apart, by the inverse square of the clear space between their boxes — the gap you can see, not the distance between their centres, so a big node holds its neighbours off no harder than a small one does. This is what makes the room the other forces arrange things in; with none, a graph collapses onto itself."))
 		{
 			settings = settings with { RepulsionStrength = repulsion };
 			changed = true;
@@ -110,7 +110,7 @@ public static class PhysicsSettingsPanel
 
 		double minDistance = settings.MinRepulsionDistance;
 		if (Slider("Minimum distance", ref minDistance, 1.0, 200.0, "%.0f px",
-			"The distance repulsion stops getting stronger at. Without a floor, two nodes that nearly touch would be flung apart."))
+			"The clear space repulsion stops getting stronger below. Without a floor, two nodes that touch would be flung apart."))
 		{
 			settings = settings with { MinRepulsionDistance = minDistance };
 			changed = true;

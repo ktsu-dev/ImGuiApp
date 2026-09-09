@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ktsu-dev/ImGuiApp/blob/main/LICENSE.md)
 
-ForceDirectedLayout settles a graph into a readable shape: bodies repel each other, edges pull like springs between the points they actually attach at, gravity keeps the whole thing together, edges are pulled towards horizontal and steep ones splayed apart so a renderer's curves stay clear of the bodies at their ends, and overlaps are pushed apart. Two edges meeting at one node put their far ends into the same vertical order as the pins they arrive at, so they stop crossing each other. Edges that run the wrong way reorder themselves. Both untangles are given the axis they travel on: the overlap pass separates them on the other one, rather than holding a pair apart on the very axis its swap has to cross, so nothing is left drawn overlapping once an untangle is done. It is a pure simulation with no rendering, no UI dependency, and no runtime package dependencies — double precision throughout, AOT- and trim-clean, and exposed at three levels so a caller can pick how much ceremony they want. The same core is published as a native shared library for consumers outside .NET.
+ForceDirectedLayout settles a graph into a readable shape: bodies repel each other across the clear space between their bounding boxes, edges pull like springs between the points they actually attach at, gravity keeps the whole thing together, edges are pulled towards horizontal and steep ones splayed apart so a renderer's curves stay clear of the bodies at their ends, and overlaps are pushed apart. Two edges meeting at one node put their far ends into the same vertical order as the pins they arrive at, so they stop crossing each other. Edges that run the wrong way reorder themselves. Both untangles are given the axis they travel on: the overlap pass separates them on the other one, rather than holding a pair apart on the very axis its swap has to cross, so nothing is left drawn overlapping once an untangle is done. It is a pure simulation with no rendering, no UI dependency, and no runtime package dependencies — double precision throughout, AOT- and trim-clean, and exposed at three levels so a caller can pick how much ceremony they want. The same core is published as a native shared library for consumers outside .NET.
 
 ## Features
 
@@ -12,7 +12,7 @@ ForceDirectedLayout settles a graph into a readable shape: bodies repel each oth
 - **Step or solve**: advance the simulation by a frame delta with automatic substepping, or run it to convergence with `Solve(maxIterations, tolerance)`
 - **Stability reporting**: total system energy, an `IsStable` flag, and what the last step actually ran (substep count and substep delta)
 - **Pinning and freezing**: a pinned body still pushes on others but does not move; a frozen body is one the user is currently dragging
-- **Overlap resolution**: bodies have dimensions, so the layout separates boxes rather than points
+- **Boxes, not points**: bodies have dimensions, and the layout uses them — repulsion is measured between the two closest points on a pair's bounding boxes, so the same setting leaves the same room between a pair of literals as between a pair of classes, and an overlap pass separates any boxes that still end up drawn over one another
 - **AOT and trim clean**: `IsAotCompatible`, `IsTrimmable`, and analyzers enabled, with blittable POD settings and state structs
 - **A C ABI**: `ForceDirectedLayout.Native` publishes a Native AOT shared library (`ktsu_force_directed_layout`) with a `Layout_*` entry point set and a generated `ktsu_force_directed_layout.h`
 
@@ -104,7 +104,7 @@ Every force is a setting, and the defaults are tuned for node-editor-sized graph
 PhysicsSettings settings = new()
 {
     Enabled = true,
-    RepulsionStrength = 1_200_000.0,   // pairwise inverse-square repulsion
+    RepulsionStrength = 600_000.0,     // inverse-square in the clear space between bounding boxes
     LinkSpringStrength = 0.5,          // Hooke's-law constant for edges
     RestLinkLength = 225.0,            // spring rest length
     DirectionalBias = 0.5,             // orders sources left of targets, reordering when needed
@@ -114,6 +114,7 @@ PhysicsSettings settings = new()
     GravityStrength = 50.0,            // pull toward the gravity target
     OriginAnchorWeight = 1.0,          // 0 = centroid, 1 = world origin
     DampingFactor = 0.5,               // velocity retained per second
+    MinRepulsionDistance = 50.0,       // floor on that clear space, so touching bodies push hard, not infinitely hard
     MaxForce = 5000.0,
     MaxVelocity = 250.0,             // also bounds how fast a graph settles
     TargetPhysicsHz = 120.0,           // substep rate, independent of frame rate

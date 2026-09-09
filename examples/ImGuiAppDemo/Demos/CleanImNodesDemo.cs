@@ -303,7 +303,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		{
 			engine.UpdatePhysicsSettings(settings with
 			{
-				RepulsionStrength = 2_000_000.0,
+				RepulsionStrength = 1_000_000.0,
 				LinkSpringStrength = 0.3,
 				DirectionalBias = 0.3,
 				LinkFlatteningStrength = 0.3,
@@ -322,7 +322,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		{
 			engine.UpdatePhysicsSettings(settings with
 			{
-				RepulsionStrength = 10_000_000.0,
+				RepulsionStrength = 5_000_000.0,
 				LinkSpringStrength = 1.0,
 				DirectionalBias = 0.8,
 				LinkFlatteningStrength = 1.0,

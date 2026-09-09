@@ -206,6 +206,38 @@ public sealed class LayoutCore
 		}
 	}
 
+	/// <summary>
+	/// Push every pair of bodies apart, inverse-square in the clear space between their rectangles.
+	/// </summary>
+	/// <remarks>
+	/// The distance is the one between the two closest points on the pair's bounding boxes, not the one
+	/// between their centres. A centre measurement measures the wrong thing: it counts each body's own
+	/// extent as part of the distance between them, so a wide node reads as far from a neighbour pressed
+	/// against its side, while two small ones read as crowded with a screen of empty space between them.
+	/// The same setting then spaces a graph differently depending only on how big its nodes happen to be,
+	/// and the nodes of a node editor are every size from a literal to a class. What a reader sees is the
+	/// clear space, and the clear space is what this works on.
+	/// <para>
+	/// That distance is zero along any axis the two overlap on, so for a pair sharing a row it is their
+	/// horizontal gap alone and for a pair sharing a column their vertical gap alone. It is what holds a
+	/// tall node's neighbour off by as much room beside its corner as beside its middle.
+	/// </para>
+	/// <para>
+	/// The direction stays along the line between the centres, because it is the room a pair has that the
+	/// closest points establish and not the way they should go. Taking the direction from them as well
+	/// makes every force between a pair sharing a row exactly horizontal and every force between a pair
+	/// sharing a column exactly vertical, which leaves repulsion unable to move a body diagonally out of
+	/// another's way: measured over ten starting arrangements of the graph in
+	/// <c>ForceLayoutTests.CounterGraph</c>, that draws around half again as many links across bodies
+	/// they are not an end of, and leaves the edges several degrees steeper.
+	/// </para>
+	/// <para>
+	/// Since the distance no longer includes the bodies' own extents it is much the smaller number, so
+	/// the same spacing needs a smaller <see cref="LayoutSettings.RepulsionStrength"/> than a centre
+	/// measurement did. The default was halved to match, and a caller carrying a value tuned against the
+	/// old measurement should expect to do the same.
+	/// </para>
+	/// </remarks>
 	private void CalculateRepulsionForces()
 	{
 		double minDist = Settings.MinRepulsionDistance;
@@ -226,8 +258,10 @@ public sealed class LayoutCore
 					continue;
 				}
 
-				// Inverse-square, clamped at MinRepulsionDistance to prevent explosions when bodies overlap.
-				double effectiveDist = Math.Max(dist, minDist);
+				// Inverse-square, clamped at MinRepulsionDistance to prevent explosions when bodies
+				// touch - which is where the clear distance reaches zero, rather than where the bodies
+				// are coincident.
+				double effectiveDist = Math.Max(ClearDistance(i, j, direction), minDist);
 				double magnitude = strength / (effectiveDist * effectiveDist);
 				Vec2D force = direction * (magnitude / dist);
 
@@ -235,6 +269,22 @@ public sealed class LayoutCore
 				bodies[j].Force -= force;
 			}
 		}
+	}
+
+	/// <summary>
+	/// The distance between the two closest points on two bodies' bounding boxes: their gap along each
+	/// axis they are disjoint on, and zero once they touch or overlap on both.
+	/// </summary>
+	/// <param name="i">Index of the first body.</param>
+	/// <param name="j">Index of the second body.</param>
+	/// <param name="between">Offset between the two centres, which every caller has already computed.</param>
+	private double ClearDistance(int i, int j, Vec2D between)
+	{
+		Vec2D clearance = (bodies[i].Dimensions + bodies[j].Dimensions) * 0.5;
+		double gapX = Math.Max(Math.Abs(between.X) - clearance.X, 0.0);
+		double gapY = Math.Max(Math.Abs(between.Y) - clearance.Y, 0.0);
+
+		return Math.Sqrt((gapX * gapX) + (gapY * gapY));
 	}
 
 	/// <summary>
@@ -619,12 +669,12 @@ public sealed class LayoutCore
 	/// Push apart any pair of bodies whose rectangles are on top of one another.
 	/// </summary>
 	/// <remarks>
-	/// Every force in this simulation treats a body as a point: repulsion is measured between centers,
-	/// the link spring pulls to a fixed rest length, and neither knows how wide a body is. Two bodies
-	/// can therefore sit at a distance the forces are entirely happy with and still have their
-	/// rectangles squarely on top of each other, which is what a consumer drawing them sees. That
-	/// cannot be fixed by tuning the forces, because the comfortable distance depends on the pair's
-	/// sizes and the forces do not have them.
+	/// Repulsion does know how big a body is - it is measured across the clear space between the two
+	/// rectangles - but it is a soft force with a ceiling on it: it stops getting stronger below
+	/// <see cref="LayoutSettings.MinRepulsionDistance"/>, so a link spring pulling to a fixed rest
+	/// length can hold a pair overlapping in spite of it, and two bodies at the same point have no
+	/// direction to be pushed along at all. Either way the rectangles end up squarely on top of one
+	/// another, which is what a consumer drawing them sees, and no amount of force tuning reaches it.
 	/// <para>
 	/// So it is resolved positionally, after integration, the same way <see cref="ApplyDirectionalConstraints"/>
 	/// is: for each overlapping pair, along the axis they overlap least on — the shorter push, and the

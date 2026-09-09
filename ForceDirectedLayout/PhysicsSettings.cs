@@ -12,8 +12,11 @@ public sealed record PhysicsSettings
 	/// <summary>Whether simulation is active. When false, Step is a no-op.</summary>
 	public bool Enabled { get; init; }
 
-	/// <summary>Strength of pairwise inverse-square repulsion between bodies.</summary>
-	public double RepulsionStrength { get; init; } = 1_200_000.0;
+	/// <summary>
+	/// Strength of pairwise inverse-square repulsion between bodies, measured across the clear space
+	/// between their bounding boxes rather than between their centres.
+	/// </summary>
+	public double RepulsionStrength { get; init; } = 600_000.0;
 
 	/// <summary>Dimensionless Hooke's-law spring constant for edges.</summary>
 	public double LinkSpringStrength { get; init; } = 0.5;
@@ -46,7 +49,10 @@ public sealed record PhysicsSettings
 	/// <summary>Per-second velocity retention. 0.5 means velocity halves every second.</summary>
 	public double DampingFactor { get; init; } = 0.5;
 
-	/// <summary>Distance floor used to clamp the inverse-square repulsion denominator.</summary>
+	/// <summary>
+	/// Floor on the clear space used as the inverse-square repulsion denominator, so a pair that touches
+	/// pushes hard rather than infinitely hard.
+	/// </summary>
 	public double MinRepulsionDistance { get; init; } = 50.0;
 
 	/// <summary>Spring rest length for edges.</summary>

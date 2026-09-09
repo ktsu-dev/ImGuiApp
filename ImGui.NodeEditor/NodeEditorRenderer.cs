@@ -721,10 +721,15 @@ public class NodeEditorRenderer
 				drawList.AddCircleFilled(velocityEnd, 3.0f, velocityColor);
 			}
 
-			// Render repulsion zone
-			float repulsionRadius = (float)engine.PhysicsSettings.MinRepulsionDistance;
+			// Render the repulsion floor: this node's own box grown by the minimum distance, which is
+			// where another body's nearest point has repulsion at its hardest. Repulsion is measured
+			// across the clear space between two boxes, so the floor is a box around this one and not
+			// a circle around its centre.
+			float repulsionFloor = (float)engine.PhysicsSettings.MinRepulsionDistance;
+			Vector2 floorMinScreen = EditorToScreen(node.Position - new Vector2(repulsionFloor, repulsionFloor));
+			Vector2 floorMaxScreen = EditorToScreen(node.Position + node.Dimensions + new Vector2(repulsionFloor, repulsionFloor));
 			uint repulsionZoneColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.5f, 0.0f, 0.2f)); // Orange, transparent
-			drawList.AddCircle(nodeCenterScreen, repulsionRadius, repulsionZoneColor, 32, 1.0f);
+			drawList.AddRect(floorMinScreen, floorMaxScreen, repulsionZoneColor, 0.0f, ImDrawFlags.None, 1.0f);
 		}
 
 		// Render gravity center (fixed point, in editor/position space)
