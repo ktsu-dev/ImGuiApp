@@ -38,7 +38,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] WidgetDemoSections =
 	[
-		"Mobile - Form Controls", "Knobs", "Radial Progress Bar", "Color Indicators",
+		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
 		"Mobile - Decorators", "Mobile - Containers & Loaders",
 	];
@@ -219,6 +219,21 @@ public sealed class WidgetsDemoUITests
 		{
 			Assert.IsTrue(IsVisible(section), $"Section '{section}' was never rendered.");
 		}
+	}
+
+	[TestMethod]
+	public void PropertyGrid_EditsThePropertiesItLists()
+	{
+		OpenSection(WidgetDemosTab, "Property Grid");
+
+		Assert.IsTrue(IsVisible("Item Name"), "The property grid drew no row for the item name.");
+		Assert.IsTrue(IsVisible("Icon/thumbnail"), "The image row drew no preview.");
+
+		harness.Click("Tags/add");
+		harness.Step(SettleFrames);
+
+		Assert.AreEqual(3, ImGuiWidgetsDemo.PropertyTags.Count, "The list row's add button appended nothing.");
+		Assert.IsTrue(ImGuiWidgetsDemo.PropertyEditCount > 0, "The grid reported no edit for the appended element.");
 	}
 
 	[TestMethod]

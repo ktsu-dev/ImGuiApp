@@ -57,6 +57,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Tree`**: Connector lines drawn around whatever is nested inside it
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
+- **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
 
 ### Motion and Gestures
@@ -628,6 +629,92 @@ stackedContainer.Tick(deltaTime);
 ```
 
 The dividers can be dragged by the user to resize the content regions dynamically.
+
+### Property Grid
+
+`ImGuiWidgets.PropertyGrid` lays out one labelled editor per property in a two-column, resizable
+table. It is immediate mode like the rest of the library: it holds no model, and each row edits a
+variable passed by reference.
+
+```csharp
+using (ImGuiWidgets.PropertyGrid grid = new("Settings"))
+{
+    if (grid.Section("Basics"))
+    {
+        grid.Value("Visible", ref visible);            // bool
+        grid.Value("Quantity", ref quantity, 0, 100);  // int, clamped to a range
+        grid.Value("Serial", ref serial);              // long
+        grid.Value("Weight", ref weight);              // float
+        grid.Value("Tolerance", ref tolerance);        // double
+        grid.Value("Name", ref name);                  // string
+        grid.Enum("Mode", ref mode);                   // any enum
+        grid.EndSection();
+    }
+
+    if (grid.Section("Geometry"))
+    {
+        grid.Value("Offset", ref offset);   // System.Numerics.Vector2
+        grid.Value("Scale", ref scale);     // System.Numerics.Vector3
+        grid.Value("Origin", ref origin);   // ImGuiWidgets.DoubleVector2
+        grid.Value("Extent", ref extent);   // ImGuiWidgets.DoubleVector3
+        grid.EndSection();
+    }
+
+    grid.Value("Tint", ref tint);                        // ktsu.Semantics.Color.Color
+    grid.FilePath("Config", ref configPath);
+    grid.DirectoryPath("Output", ref outputFolder);
+    grid.ImagePath("Icon", ref iconPath);                // with a thumbnail beneath it
+    grid.List("Tags", tags);                             // a list of any of the above
+
+    if (grid.Changed)
+    {
+        Save();
+    }
+}
+```
+
+One overloaded `Value` row covers every scalar, vector and color type; `Enum`, the three path rows
+and `List` cover the rest. Every row returns whether it changed this frame, and `Changed`
+accumulates those answers so the whole grid can be tested once. `Section` follows ImGui's
+`TreeNode`/`TreePop` convention: call `EndSection` only when it returned `true`.
+
+A `List` row draws one editor per element, a `+` to append and an `x` on each element to remove it.
+Any row method can be an element editor, so `List` has an overload per supported element type, plus
+`FilePathList`, `DirectoryPathList` and `ImagePathList` for the ones whose element type is also a
+string. A list of some other type takes an editor and a factory:
+
+```csharp
+grid.List("Points", points, (string label, ref Vector2 value) => grid.Value(label, ref value), () => Vector2.Zero);
+```
+
+#### Paths and thumbnails
+
+This library does not open file dialogs or upload textures, so the path rows delegate both:
+
+```csharp
+ImGuiWidgets.PropertyGridOptions options = new()
+{
+    OnBrowse = request =>
+    {
+        // Hexa's dialogs are asynchronous, so the request is completed from the close callback.
+        ImGuiWidgets.OpenFileDialog dialog = new();
+        dialog.Show(outcome => request.Complete(outcome.Path?.ToString()));
+    },
+    ThumbnailResolver = path => ImGuiApp.GetOrLoadTexture(path.As<AbsoluteFilePath>()).TextureId,
+};
+```
+
+`OnBrowse` receives the row's label, what it is asking for (`File`, `Directory` or `Image`) and the
+path it currently holds. Browsing is asynchronous by nature — a dialog outlives the frame that
+opened it — so the request carries no reference to the value: whenever `Complete` is called, the row
+adopts the answer the next time it is drawn. Completing with `null` leaves the value alone, which is
+what a cancelled dialog should do. Without an `OnBrowse` the browse button is disabled and paths can
+still be typed; without a `ThumbnailResolver` an image row draws an empty preview frame, so its
+height does not change once a picture appears.
+
+The other options are `ReadOnly` (every row drawn disabled), `LabelColumnWeight` /
+`LabelColumnWidth`, `ListsStartExpanded`, `ThumbnailSize`, and the printf-style `FloatFormat` /
+`DoubleFormat`.
 
 ### Hexa-backed Widgets
 
