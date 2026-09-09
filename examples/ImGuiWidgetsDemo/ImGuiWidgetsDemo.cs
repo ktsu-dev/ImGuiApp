@@ -1416,7 +1416,7 @@ internal static class ImGuiWidgetsDemo
 
 			using (ImGuiWidgets.PropertyGrid grid = new("DemoProperties", options))
 			{
-				if (grid.Section("Basics"))
+				using (grid.Section("Basics"))
 				{
 					grid.Value("Visible", ref propertyVisible);
 					grid.Value("Quantity", ref propertyQuantity, 0, 100);
@@ -1425,38 +1425,33 @@ internal static class ImGuiWidgetsDemo
 					grid.Value("Tolerance", ref propertyTolerance);
 					grid.Value("Item Name", ref propertyItemName);
 					grid.Enum("Mode", ref propertyMode);
-					grid.EndSection();
 				}
 
-				if (grid.Section("Geometry"))
+				using (grid.Section("Geometry"))
 				{
 					grid.Value("Offset", ref propertyOffset);
 					grid.Value("Scale", ref propertyScale);
 					grid.Value("Origin", ref propertyOrigin);
 					grid.Value("Extent", ref propertyExtent);
-					grid.EndSection();
 				}
 
-				if (grid.Section("Appearance"))
+				using (grid.Section("Appearance"))
 				{
 					grid.Value("Tint", ref propertyTint);
-					grid.EndSection();
 				}
 
-				if (grid.Section("Paths"))
+				using (grid.Section("Paths"))
 				{
 					grid.FilePath("Config File", ref propertyConfigFile);
 					grid.DirectoryPath("Output Folder", ref propertyOutputFolder);
 					grid.ImagePath("Icon", ref propertyIconFile);
-					grid.EndSection();
 				}
 
-				if (grid.Section("Lists"))
+				using (grid.Section("Lists"))
 				{
 					grid.List("Tags", propertyTags);
 					grid.List("Counts", propertyCounts);
 					grid.List("Swatches", propertySwatches);
-					grid.EndSection();
 				}
 
 				if (grid.Changed)

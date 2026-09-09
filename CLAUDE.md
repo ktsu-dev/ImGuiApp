@@ -281,9 +281,15 @@ task unwinds (`refreshTask?.Wait()`).
 property, each editing a variable by reference. One overloaded `Value` row covers bool, int, long,
 float, double, string, `Vector2`/`Vector3` and their `DoubleVector2`/`DoubleVector3` counterparts,
 and the semantic `Color`; `Enum`, `FilePath`/`DirectoryPath`/`ImagePath` and `List` cover the rest.
-`Section` follows the `TreeNode`/`TreePop` convention — call `EndSection` only when it returned true.
 
-Four things are worth knowing before changing any of it:
+Five things are worth knowing before changing any of it:
+
+- **A collapsed section holds its own rows back.** `Section` returns a `SectionScope` disposable
+  rather than a bool, and rows are written inside its `using` with no test around them: while the
+  section is collapsed the scope raises the grid's `suppressDepth`, and every row returns false
+  without drawing, exactly as it does when the table never opened. It is a depth rather than a flag
+  so a section nested inside a collapsed one stays balanced on its own. `SectionScope.IsOpen` is
+  there only for skipping work that costs something to prepare before a row can be called.
 
 - **A path row never opens a dialog itself.** `ktsu.ImGui.Widgets` has no business knowing how the
   host picks files, and Hexa's own dialogs would drag the deferred-drawing pump in as a hard

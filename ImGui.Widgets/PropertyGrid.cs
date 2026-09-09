@@ -158,6 +158,12 @@ public static partial class ImGuiWidgets
 	/// {
 	///     grid.Value("Name", ref name);
 	///     grid.Value("Count", ref count);
+	///
+	///     using (grid.Section("Advanced"))
+	///     {
+	///         grid.Value("Tolerance", ref tolerance);
+	///     }
+	///
 	///     grid.Value("Tint", ref tint);
 	///     grid.ImagePath("Icon", ref iconPath);
 	///     grid.List("Tags", tags);
@@ -192,6 +198,10 @@ public static partial class ImGuiWidgets
 		// Width the current row leaves clear at its right-hand end, for a trailing button drawn by
 		// whatever is composing the row. Set by the list rows around each element's editor.
 		private float trailingReserve;
+
+		// How many collapsed sections are currently open around the caller. Counted rather than
+		// flagged so that a section nested inside a collapsed one stays balanced on its own.
+		private int suppressDepth;
 
 		private bool disposed;
 
@@ -264,23 +274,36 @@ public static partial class ImGuiWidgets
 		}
 
 		/// <summary>
-		/// Draws a collapsible section header spanning both columns. Rows drawn while it is open are
-		/// indented beneath it.
+		/// Opens a collapsible section spanning both columns. Rows drawn inside the returned scope are
+		/// indented beneath its header, and are skipped entirely while it is collapsed.
 		/// </summary>
 		/// <remarks>
-		/// Follows the <c>TreeNode</c>/<c>TreePop</c> convention: call <see cref="EndSection"/> only
-		/// when this returned <see langword="true"/>.
+		/// The scope closes the section, so there is nothing to remember to call and no state to test:
+		/// a collapsed section holds its rows back itself, the same way a grid whose table never opened
+		/// does.
+		/// <code>
+		/// using (grid.Section("Transform"))
+		/// {
+		///     grid.Value("Offset", ref offset);
+		/// }
+		/// </code>
+		/// Sections nest, and a collapsed one holds back everything inside it however deeply nested.
+		/// Read <see cref="SectionScope.IsOpen"/> only to skip work that costs something to prepare —
+		/// the rows themselves already cost nothing.
 		/// </remarks>
 		/// <param name="label">The section caption; text after <c>##</c> is hidden but used for the id.</param>
 		/// <param name="defaultOpen">Whether the section starts expanded.</param>
-		/// <returns><see langword="true"/> while the section is expanded.</returns>
-		public bool Section(string label, bool defaultOpen = true)
+		/// <returns>A scope that closes the section when disposed.</returns>
+		public SectionScope Section(string label, bool defaultOpen = true)
 		{
 			Ensure.NotNull(label);
 
-			if (!IsDrawing)
+			// A grid whose table never opened, or a section already collapsed further out, draws
+			// nothing here: the scope only has to keep the suppression count balanced.
+			if (!CanDraw)
 			{
-				return false;
+				suppressDepth++;
+				return new SectionScope(this, isOpen: false, drewHeader: false);
 			}
 
 			ImGui.TableNextRow();
@@ -294,17 +317,71 @@ public static partial class ImGuiWidgets
 
 			bool open = ImGui.TreeNodeEx(label, flags);
 			ImGuiProbes.MarkItem(VisibleLabel(label));
-			return open;
+
+			if (!open)
+			{
+				suppressDepth++;
+			}
+
+			return new SectionScope(this, open, open);
 		}
 
-		/// <summary>Closes the section opened by a <see cref="Section"/> call that returned true.</summary>
-		public void EndSection()
+		/// <summary>
+		/// A section opened by <see cref="Section"/>, which closes it when disposed.
+		/// </summary>
+		public sealed class SectionScope : IDisposable
 		{
-			if (IsDrawing)
+			private readonly PropertyGrid grid;
+
+			// True when a tree node was submitted and is therefore waiting to be popped. False both
+			// for a collapsed section and for one inside a collapsed section, neither of which drew a
+			// header; those are the scopes holding rows back instead.
+			private readonly bool drewHeader;
+
+			private bool disposed;
+
+			internal SectionScope(PropertyGrid grid, bool isOpen, bool drewHeader)
 			{
-				ImGui.TreePop();
+				this.grid = grid;
+				this.drewHeader = drewHeader;
+				IsOpen = isOpen;
+			}
+
+			/// <summary>
+			/// Gets a value indicating whether the section is expanded and its rows are being drawn.
+			/// </summary>
+			/// <remarks>
+			/// Rows inside a collapsed section already draw nothing, so this is only worth testing to
+			/// skip work that costs something to prepare before a row can be called.
+			/// </remarks>
+			public bool IsOpen { get; }
+
+			/// <summary>Closes the section.</summary>
+			public void Dispose()
+			{
+				if (disposed)
+				{
+					return;
+				}
+
+				disposed = true;
+
+				if (drewHeader)
+				{
+					ImGui.TreePop();
+				}
+				else
+				{
+					grid.suppressDepth--;
+				}
 			}
 		}
+
+		/// <summary>
+		/// Gets a value indicating whether a row called right now would draw: the table opened, and no
+		/// collapsed section is holding its contents back.
+		/// </summary>
+		private bool CanDraw => IsDrawing && suppressDepth == 0;
 
 		/// <summary>
 		/// Starts a row: writes the label into the first column and sizes the editor to fill the
@@ -312,10 +389,10 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <param name="label">The row's label.</param>
 		/// <param name="reserveRight">Extra width to leave clear at the right of the editor.</param>
-		/// <returns><see langword="false"/> when the grid never opened, in which case nothing was drawn.</returns>
+		/// <returns><see langword="false"/> when nothing was drawn, because the grid never opened or a collapsed section is holding its rows back.</returns>
 		private bool BeginRow(string label, float reserveRight = 0f)
 		{
-			if (!IsDrawing)
+			if (!CanDraw)
 			{
 				return false;
 			}

@@ -293,10 +293,9 @@ public sealed class PropertyGridTests : WidgetTest
 		Start(() =>
 		{
 			using ImGuiWidgets.PropertyGrid grid = new("Sections");
-			if (grid.Section("Transform"))
+			using (grid.Section("Transform"))
 			{
 				grid.Value("Inner", ref inner);
-				grid.EndSection();
 			}
 		});
 
@@ -305,6 +304,104 @@ public sealed class PropertyGridTests : WidgetTest
 		Click("Transform");
 
 		Assert.IsFalse(IsVisible("Inner"), "A collapsed section still drew its rows.");
+	}
+
+	[TestMethod]
+	public void PropertyGrid_CollapsedSectionSwallowsEveryKindOfRow()
+	{
+		// Rows inside a collapsed section are called exactly as they are when it is open -- the
+		// section holds them back rather than the caller testing for it -- so every row type has to
+		// survive being called with nowhere to draw.
+		List<string> items = ["alpha"];
+		bool flag = false;
+		string path = string.Empty;
+
+		Start(() =>
+		{
+			using ImGuiWidgets.PropertyGrid grid = new("Sections");
+			using (grid.Section("Everything"))
+			{
+				grid.Value("Flag", ref flag);
+				grid.FilePath("Path", ref path);
+				grid.List("Items", items);
+			}
+		});
+
+		Click("Everything");
+
+		Assert.IsFalse(IsVisible("Flag"), "A collapsed section still drew a value row.");
+		Assert.IsFalse(IsVisible("Path"), "A collapsed section still drew a path row.");
+		Assert.IsFalse(IsVisible("Items"), "A collapsed section still drew a list row.");
+		Assert.AreEqual("alpha", items[0], "A row that drew nothing still edited its value.");
+	}
+
+	[TestMethod]
+	public void PropertyGrid_CollapsedSectionHidesTheSectionsNestedInIt()
+	{
+		bool inner = false;
+
+		Start(() =>
+		{
+			using ImGuiWidgets.PropertyGrid grid = new("Sections");
+			using (grid.Section("Outer"))
+			{
+				using (grid.Section("Inner"))
+				{
+					grid.Value("Deep", ref inner);
+				}
+			}
+		});
+
+		Assert.IsTrue(IsVisible("Deep"), "Two open sections drew none of their rows.");
+
+		Click("Outer");
+
+		Assert.IsFalse(IsVisible("Inner"), "A collapsed section still drew the section nested in it.");
+		Assert.IsFalse(IsVisible("Deep"), "A collapsed section still drew a row nested two deep.");
+	}
+
+	[TestMethod]
+	public void PropertyGrid_SectionReportsWhetherItIsOpen()
+	{
+		bool? reported = null;
+		bool inner = false;
+
+		Start(() =>
+		{
+			using ImGuiWidgets.PropertyGrid grid = new("Sections");
+			using ImGuiWidgets.PropertyGrid.SectionScope section = grid.Section("Transform");
+			reported = section.IsOpen;
+			grid.Value("Inner", ref inner);
+		});
+
+		Assert.AreEqual(true, reported, "An expanded section did not report itself open.");
+
+		Click("Transform");
+
+		Assert.AreEqual(false, reported, "A collapsed section still reported itself open.");
+	}
+
+	[TestMethod]
+	public void PropertyGrid_RowsAfterASectionAreNotHeldBackByIt()
+	{
+		bool inside = false;
+		bool after = false;
+
+		Start(() =>
+		{
+			using ImGuiWidgets.PropertyGrid grid = new("Sections");
+			using (grid.Section("Transform"))
+			{
+				grid.Value("Inside", ref inside);
+			}
+
+			grid.Value("After", ref after);
+		});
+
+		Click("Transform");
+
+		Assert.IsFalse(IsVisible("Inside"), "A collapsed section still drew its own row.");
+		Assert.IsTrue(IsVisible("After"), "A collapsed section held back a row drawn after it closed.");
 	}
 
 	[TestMethod]

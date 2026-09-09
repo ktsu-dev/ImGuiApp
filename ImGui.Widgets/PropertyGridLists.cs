@@ -56,7 +56,7 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(drawItem);
 			Ensure.NotNull(createItem);
 
-			if (!IsDrawing)
+			if (!CanDraw)
 			{
 				return false;
 			}

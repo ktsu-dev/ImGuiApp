@@ -639,7 +639,7 @@ variable passed by reference.
 ```csharp
 using (ImGuiWidgets.PropertyGrid grid = new("Settings"))
 {
-    if (grid.Section("Basics"))
+    using (grid.Section("Basics"))
     {
         grid.Value("Visible", ref visible);            // bool
         grid.Value("Quantity", ref quantity, 0, 100);  // int, clamped to a range
@@ -648,16 +648,14 @@ using (ImGuiWidgets.PropertyGrid grid = new("Settings"))
         grid.Value("Tolerance", ref tolerance);        // double
         grid.Value("Name", ref name);                  // string
         grid.Enum("Mode", ref mode);                   // any enum
-        grid.EndSection();
     }
 
-    if (grid.Section("Geometry"))
+    using (grid.Section("Geometry"))
     {
         grid.Value("Offset", ref offset);   // System.Numerics.Vector2
         grid.Value("Scale", ref scale);     // System.Numerics.Vector3
         grid.Value("Origin", ref origin);   // ImGuiWidgets.DoubleVector2
         grid.Value("Extent", ref extent);   // ImGuiWidgets.DoubleVector3
-        grid.EndSection();
     }
 
     grid.Value("Tint", ref tint);                        // ktsu.Semantics.Color.Color
@@ -675,8 +673,14 @@ using (ImGuiWidgets.PropertyGrid grid = new("Settings"))
 
 One overloaded `Value` row covers every scalar, vector and color type; `Enum`, the three path rows
 and `List` cover the rest. Every row returns whether it changed this frame, and `Changed`
-accumulates those answers so the whole grid can be tested once. `Section` follows ImGui's
-`TreeNode`/`TreePop` convention: call `EndSection` only when it returned `true`.
+accumulates those answers so the whole grid can be tested once.
+
+`Section` returns a scope that closes the section when it is disposed, so there is nothing to
+remember to call and nothing to test: a collapsed section holds its rows back itself, and the rows
+inside it are written exactly as they are anywhere else. Sections nest, and a collapsed one holds
+back everything inside it however deeply nested. `SectionScope.IsOpen` says whether the section is
+expanded, which is worth reading only to skip work that costs something to prepare before a row can
+be called.
 
 A `List` row draws one editor per element, a `+` to append and an `x` on each element to remove it.
 Any row method can be an element editor, so `List` has an overload per supported element type, plus
