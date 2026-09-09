@@ -374,11 +374,12 @@ public sealed class PropertyGridTests : WidgetTest
 			grid.Value("Inner", ref inner);
 		});
 
-		Assert.AreEqual(true, reported, "An expanded section did not report itself open.");
+		// Nullable, so a null -- the section body never having run at all -- fails here too.
+		Assert.IsTrue(reported, "An expanded section did not report itself open.");
 
 		Click("Transform");
 
-		Assert.AreEqual(false, reported, "A collapsed section still reported itself open.");
+		Assert.IsFalse(reported, "A collapsed section still reported itself open.");
 	}
 
 	[TestMethod]
