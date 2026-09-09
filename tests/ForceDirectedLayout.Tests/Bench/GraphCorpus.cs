@@ -124,8 +124,9 @@ public static class GraphCorpus
 			edges.Add(new BenchEdge(i + 1, 0, sources + 1, i));
 		}
 
-		// Tall enough to give every arriving link its own pin row.
-		nodes.Add(new BenchNode(sources + 1, 130, 40 + (sources * 21), sources));
+		// Tall enough to give every arriving link its own pin row. The height is computed in double
+		// rather than widened from an int expression, so a large source count cannot overflow it.
+		nodes.Add(new BenchNode(sources + 1, 130, 40.0 + (sources * 21.0), sources));
 
 		return new BenchGraph("FanIn", nodes, edges);
 	}
