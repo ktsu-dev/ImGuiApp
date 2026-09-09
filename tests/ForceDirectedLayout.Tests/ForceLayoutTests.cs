@@ -710,7 +710,7 @@ public class GenericFacadeTests
 		// inside, and how far inside depends on how tightly the spring and repulsion are tuned - so
 		// asserting the margin here measured the defaults rather than the overlap pass.
 		double separated = (50 * 0.5) + (50 * 0.5);
-		Assert.IsTrue(heldVertical >= separated,
+		Assert.IsGreaterThanOrEqualTo(separated, heldVertical,
 			$"With nothing untwisting them the pair should be held apart vertically; it was {heldVertical:F0} against {separated:F0}.");
 		Assert.IsTrue(freeVertical < heldVertical,
 			$"A twisted pair should be allowed to close on the axis it swaps along; it settled {freeVertical:F0} apart against {heldVertical:F0}.");
