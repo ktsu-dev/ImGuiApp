@@ -4,8 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="ktsu.Extensions" Version="1.6.9" />
-    <PackageVersion Include="ktsu.ThemeProvider" Version="3.0.17" />
-    <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="3.0.17" />
+    <PackageVersion Include="ktsu.ThemeProvider" Version="3.0.18" />
+    <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="3.0.18" />
     <PackageVersion Include="ktsu.Semantics.Color" Version="3.3.0" />
     <PackageVersion Include="ktsu.Semantics.Paths" Version="3.3.0" />
     <PackageVersion Include="ktsu.Semantics.Strings" Version="3.3.0" />
