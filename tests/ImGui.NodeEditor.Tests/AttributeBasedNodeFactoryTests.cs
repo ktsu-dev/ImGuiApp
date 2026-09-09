@@ -274,6 +274,30 @@ public sealed class AttributeBasedNodeFactoryTests
 		Assert.ThrowsExactly<InvalidOperationException>(() => factory.CreateMethodNode(unregistered, Vector2.Zero));
 	}
 
+	/// <summary>
+	/// A pin's declared capacity is only worth declaring if it reaches the graph: the engine builds
+	/// pins from names, so without the factory carrying this across, an
+	/// <c>[OutputPin(AllowMultipleConnections = false)]</c> would be read and then dropped.
+	/// </summary>
+	[TestMethod]
+	public void CreateNode_CarriesEachPinsDeclaredConnectionCapacity()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<CapacityNode>();
+
+		Node node = factory.CreateNode<CapacityNode>(Vector2.Zero);
+
+		Assert.IsTrue(
+			node.InputPins.Single(p => p.EffectiveDisplayName == "Any").AllowsMultipleConnections,
+			"An input declared to take several connections should.");
+		Assert.IsFalse(
+			node.OutputPins.Single(p => p.EffectiveDisplayName == "One").AllowsMultipleConnections,
+			"An output declared to take one connection should.");
+		Assert.IsTrue(
+			node.OutputPins.Single(p => p.EffectiveDisplayName == "Instance").AllowsMultipleConnections,
+			"The instance output is there to be chained onward, by as many nodes as want it.");
+	}
+
 	[TestMethod]
 	public void GetNodeDefinition_ReturnsNullForAnythingUnregistered()
 	{
@@ -352,6 +376,16 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		[InputPin("Message")]
 		public string Message { get; set; } = string.Empty;
+	}
+
+	[Node("Capacity")]
+	public sealed class CapacityNode
+	{
+		[InputPin("Any", AllowMultipleConnections = true)]
+		public double Any { get; set; }
+
+		[OutputPin("One", AllowMultipleConnections = false)]
+		public double One { get; set; }
 	}
 
 	public sealed class NotANode

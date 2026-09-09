@@ -125,11 +125,14 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 			.OrderBy(p => p.Order)
 			.Select(p => p.DisplayName)];
 
-		return engine.CreateNode(
+		Node node = engine.CreateNode(
 			position,
 			definition.DisplayName,
 			inputPinNames,
 			outputPinNames);
+
+		ApplyConnectionCapacities(definition, node);
+		return node;
 	}
 
 	/// <summary>
@@ -154,11 +157,39 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 			.OrderBy(p => p.Order)
 			.Select(p => p.DisplayName)];
 
-		return engine.CreateNode(
+		Node node = engine.CreateNode(
 			position,
 			definition.DisplayName,
 			inputPinNames,
 			outputPinNames);
+
+		ApplyConnectionCapacities(definition, node);
+		return node;
+	}
+
+	/// <summary>
+	/// Carry each declared pin's connection capacity onto the pin the engine just created.
+	/// </summary>
+	/// <param name="definition">The definition the node was created from.</param>
+	/// <param name="node">The created node.</param>
+	/// <remarks>
+	/// The engine creates pins from names alone, so without this an
+	/// <c>[OutputPin(AllowMultipleConnections = false)]</c> would be declared and then ignored. The
+	/// pins are matched by the order they were created in, which is the order the names were passed
+	/// in.
+	/// </remarks>
+	private void ApplyConnectionCapacities(NodeDefinition definition, Node node)
+	{
+		ApplyConnectionCapacities([.. definition.InputPins.OrderBy(p => p.Order)], node.InputPins);
+		ApplyConnectionCapacities([.. definition.OutputPins.OrderBy(p => p.Order)], node.OutputPins);
+	}
+
+	private void ApplyConnectionCapacities(List<PinDefinition> definitions, List<Pin> pins)
+	{
+		for (int i = 0; i < definitions.Count && i < pins.Count; i++)
+		{
+			engine.SetPinAllowsMultipleConnections(pins[i].Id, definitions[i].AllowMultipleConnections);
+		}
 	}
 
 	/// <summary>
