@@ -538,6 +538,80 @@ public sealed class NodeEditorEngineTests
 	}
 
 	[TestMethod]
+	public void GetUpstream_FollowsLinksBackwardThroughTheWholeChain()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", [], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(300, 0), "Second", ["In"], ["Out"]);
+		Node third = engine.CreateNode(new Vector2(600, 0), "Third", ["In"], []);
+		engine.TryCreateLink(first.OutputPins[0].Id, second.InputPins[0].Id);
+		engine.TryCreateLink(second.OutputPins[0].Id, third.InputPins[0].Id);
+
+		GraphReach reach = engine.GetUpstream(third.Id);
+
+		CollectionAssert.AreEquivalent(new[] { first.Id, second.Id }, reach.NodeIds.ToArray());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_LeavesOutWhatTheNodeFeeds()
+	{
+		Node upstream = engine.CreateNode(new Vector2(0, 0), "Upstream", [], ["Out"]);
+		Node middle = engine.CreateNode(new Vector2(300, 0), "Middle", ["In"], ["Out"]);
+		Node downstream = engine.CreateNode(new Vector2(600, 0), "Downstream", ["In"], []);
+		engine.TryCreateLink(upstream.OutputPins[0].Id, middle.InputPins[0].Id);
+		engine.TryCreateLink(middle.OutputPins[0].Id, downstream.InputPins[0].Id);
+
+		GraphReach reach = engine.GetUpstream(middle.Id);
+
+		CollectionAssert.AreEquivalent(new[] { upstream.Id }, reach.NodeIds.ToArray());
+		Assert.HasCount(1, reach.LinkIds);
+	}
+
+	/// <summary>
+	/// Both sources of a node that adds two values are upstream of it, which is the shape a fan-in
+	/// makes and the mirror of the fanned output the downstream walk follows.
+	/// </summary>
+	[TestMethod]
+	public void GetUpstream_FollowsEveryBranchOfAFanIn()
+	{
+		Node left = engine.CreateNode(new Vector2(0, 0), "Left", [], ["Out"]);
+		Node right = engine.CreateNode(new Vector2(0, 200), "Right", [], ["Out"]);
+		Node sum = engine.CreateNode(new Vector2(300, 0), "Sum", ["A", "B"], []);
+		engine.TryCreateLink(left.OutputPins[0].Id, sum.InputPins[0].Id);
+		engine.TryCreateLink(right.OutputPins[0].Id, sum.InputPins[1].Id);
+
+		GraphReach reach = engine.GetUpstream(sum.Id);
+
+		CollectionAssert.AreEquivalent(new[] { left.Id, right.Id }, reach.NodeIds.ToArray());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_WalksACycleOnce()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", ["In"], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(300, 0), "Second", ["In"], ["Out"]);
+		engine.TryCreateLink(first.OutputPins[0].Id, second.InputPins[0].Id);
+		engine.TryCreateLink(second.OutputPins[0].Id, first.InputPins[0].Id);
+
+		GraphReach reach = engine.GetUpstream(first.Id);
+
+		CollectionAssert.AreEquivalent(new[] { first.Id, second.Id }, reach.NodeIds.ToArray());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_OfANodeNothingFeedsIsEmpty()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Alone", ["In"], ["Out"]);
+
+		GraphReach reach = engine.GetUpstream(node.Id);
+
+		Assert.IsEmpty(reach.NodeIds);
+		Assert.IsEmpty(reach.LinkIds);
+	}
+
+	[TestMethod]
 	public void GetOutgoingAndIncomingLinks_SplitTheLinksAtANodeByDirection()
 	{
 		Node source = engine.CreateNode(new Vector2(0, 0), "Source", [], ["Out"]);

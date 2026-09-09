@@ -621,6 +621,7 @@ Core node graph business logic.
 | `GetOutgoingLinks(int)` | `IEnumerable<Link>` | The links leaving a node |
 | `GetIncomingLinks(int)` | `IEnumerable<Link>` | The links arriving at a node |
 | `GetDownstream(int)` | `GraphReach` | The nodes and links reached by following links forward |
+| `GetUpstream(int)` | `GraphReach` | The nodes and links reached by following links backward |
 | `UpdatePhysics(float)` | `void` | Run physics simulation step |
 | `Clear()` | `void` | Remove all nodes and links |
 | `Nodes` | `IReadOnlyList<Node>` | All nodes |

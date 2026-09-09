@@ -374,7 +374,26 @@ public class NodeEditorEngine
 	/// reported rather than hidden: a node that feeds itself round a loop really is downstream of
 	/// itself, and the walk visits each node once so a cycle terminates.
 	/// </remarks>
-	public GraphReach GetDownstream(int nodeId)
+	public GraphReach GetDownstream(int nodeId) => Walk(nodeId, forward: true);
+
+	/// <summary>
+	/// Everything a node's value comes from: the nodes found by following links backward from it,
+	/// and the links walked to get there.
+	/// </summary>
+	/// <param name="nodeId">The node to start from.</param>
+	/// <returns>The reach, which is empty when the node has no incoming links or does not exist.</returns>
+	/// <remarks>
+	/// The mirror of <see cref="GetDownstream"/> in every respect, cycles included.
+	/// </remarks>
+	public GraphReach GetUpstream(int nodeId) => Walk(nodeId, forward: false);
+
+	/// <summary>
+	/// Walk the graph from one node, following links in one direction.
+	/// </summary>
+	/// <param name="nodeId">The node to start from.</param>
+	/// <param name="forward">True to follow links away from the node, false to follow them back.</param>
+	/// <returns>The nodes reached and the links walked to reach them.</returns>
+	private GraphReach Walk(int nodeId, bool forward)
 	{
 		// Off the map of pins to nodes, so following a link is a lookup rather than a search
 		// through every node's pins. It is a cache of what the nodes already say, so building it
@@ -391,20 +410,23 @@ public class NodeEditorEngine
 		{
 			int current = pending.Dequeue();
 
-			foreach (Link link in GetOutgoingLinks(current))
+			foreach (Link link in forward ? GetOutgoingLinks(current) : GetIncomingLinks(current))
 			{
 				walkedLinks.Add(link.Id);
 
-				if (!pinIdToNodeId.TryGetValue(link.InputPinId, out int targetId))
+				// A link is walked towards the far end of it, which is the input pin going forward
+				// and the output pin going back.
+				int farPin = forward ? link.InputPinId : link.OutputPinId;
+				if (!pinIdToNodeId.TryGetValue(farPin, out int reachedId))
 				{
 					continue;
 				}
 
-				reachedNodes.Add(targetId);
+				reachedNodes.Add(reachedId);
 
-				if (visited.Add(targetId))
+				if (visited.Add(reachedId))
 				{
-					pending.Enqueue(targetId);
+					pending.Enqueue(reachedId);
 				}
 			}
 		}
