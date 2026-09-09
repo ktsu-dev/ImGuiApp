@@ -140,6 +140,91 @@ public sealed class NodeEditorEngineTests
 		Assert.HasCount(1, engine.Links);
 	}
 
+	/// <summary>
+	/// One value can feed as many consumers as want it, which is the whole point of a graph rather
+	/// than a chain.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_LetsOneOutputFeedSeveralInputs()
+	{
+		Node source = engine.CreateNode(new Vector2(0, 0), "Source", [], ["Value"]);
+		Node first = engine.CreateNode(new Vector2(300, 0), "First", ["Input"], []);
+		Node second = engine.CreateNode(new Vector2(300, 200), "Second", ["Input"], []);
+		Node third = engine.CreateNode(new Vector2(300, 400), "Third", ["Input"], []);
+
+		LinkCreationResult[] results =
+		[
+			engine.TryCreateLink(source.OutputPins[0].Id, first.InputPins[0].Id),
+			engine.TryCreateLink(source.OutputPins[0].Id, second.InputPins[0].Id),
+			engine.TryCreateLink(source.OutputPins[0].Id, third.InputPins[0].Id),
+		];
+
+		Assert.IsTrue(results.All(r => r.Success), string.Join("; ", results.Select(r => r.Message)));
+		Assert.HasCount(3, engine.Links);
+	}
+
+	[TestMethod]
+	public void TryCreateLink_RefusesTheSamePairTwice()
+	{
+		Node source = engine.CreateNode(new Vector2(0, 0), "Source", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(300, 0), "Target", ["Input"], []);
+
+		engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		LinkCreationResult result = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+
+		Assert.IsFalse(result.Success);
+		Assert.HasCount(1, engine.Links);
+	}
+
+	/// <summary>
+	/// An output that has been narrowed to one connection keeps the one it has and refuses the next,
+	/// which is how a declared <c>[OutputPin(AllowMultipleConnections = false)]</c> reads once the
+	/// factory has carried it onto the pin.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_RefusesASecondLinkFromAnOutputNarrowedToOne()
+	{
+		Node source = engine.CreateNode(new Vector2(0, 0), "Source", [], ["Value"]);
+		Node first = engine.CreateNode(new Vector2(300, 0), "First", ["Input"], []);
+		Node second = engine.CreateNode(new Vector2(300, 200), "Second", ["Input"], []);
+
+		Assert.IsTrue(engine.SetPinAllowsMultipleConnections(source.OutputPins[0].Id, allowMultiple: false));
+		engine.TryCreateLink(source.OutputPins[0].Id, first.InputPins[0].Id);
+		LinkCreationResult result = engine.TryCreateLink(source.OutputPins[0].Id, second.InputPins[0].Id);
+
+		Assert.IsFalse(result.Success);
+		Assert.Contains("already connected", result.Message);
+		Assert.HasCount(1, engine.Links);
+	}
+
+	[TestMethod]
+	public void TryCreateLink_AcceptsASecondLinkIntoAnInputThatAllowsThem()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", [], ["Value"]);
+		Node second = engine.CreateNode(new Vector2(0, 200), "Second", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(300, 0), "Target", ["Any"], []);
+
+		engine.SetPinAllowsMultipleConnections(target.InputPins[0].Id, allowMultiple: true);
+		engine.TryCreateLink(first.OutputPins[0].Id, target.InputPins[0].Id);
+		LinkCreationResult result = engine.TryCreateLink(second.OutputPins[0].Id, target.InputPins[0].Id);
+
+		Assert.IsTrue(result.Success, result.Message);
+		Assert.HasCount(2, engine.Links);
+	}
+
+	[TestMethod]
+	public void SetPinAllowsMultipleConnections_ReportsAPinItDoesNotHave() =>
+		Assert.IsFalse(engine.SetPinAllowsMultipleConnections(9999, allowMultiple: true));
+
+	[TestMethod]
+	public void PinsDefaultToOneLinkIntoAnInputAndManyOutOfAnOutput()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Node", ["In"], ["Out"]);
+
+		Assert.IsFalse(node.InputPins[0].AllowsMultipleConnections);
+		Assert.IsTrue(node.OutputPins[0].AllowsMultipleConnections);
+	}
+
 	[TestMethod]
 	public void TryCreateLink_RefusesANodeConnectedToItself()
 	{
@@ -372,5 +457,175 @@ public sealed class NodeEditorEngineTests
 		// The centroid is what gravity pulls toward, so it should sit between the two nodes.
 		Assert.AreEqual(0f, engine.GravityCenter.X, 150f);
 		Assert.AreEqual(0f, engine.GravityCenter.Y, 150f);
+	}
+
+	/// <summary>
+	/// The reach of a node is what its value ends up affecting, which is the question behind
+	/// highlighting everything downstream of the node under the pointer.
+	/// </summary>
+	[TestMethod]
+	public void GetDownstream_FollowsLinksForwardThroughTheWholeChain()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", [], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(300, 0), "Second", ["In"], ["Out"]);
+		Node third = engine.CreateNode(new Vector2(600, 0), "Third", ["In"], []);
+		engine.TryCreateLink(first.OutputPins[0].Id, second.InputPins[0].Id);
+		engine.TryCreateLink(second.OutputPins[0].Id, third.InputPins[0].Id);
+
+		GraphReach reach = engine.GetDownstream(first.Id);
+
+		// A reach is a set, so it is sorted before being compared as a sequence: the walk makes no
+		// promise about the order it finds things in, and a test that assumed one would be asserting
+		// something the engine does not say.
+		Assert.AreSequenceEqual([second.Id, third.Id], reach.NodeIds.Order());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetDownstream_LeavesOutWhatFeedsTheNode()
+	{
+		Node upstream = engine.CreateNode(new Vector2(0, 0), "Upstream", [], ["Out"]);
+		Node middle = engine.CreateNode(new Vector2(300, 0), "Middle", ["In"], ["Out"]);
+		Node downstream = engine.CreateNode(new Vector2(600, 0), "Downstream", ["In"], []);
+		engine.TryCreateLink(upstream.OutputPins[0].Id, middle.InputPins[0].Id);
+		engine.TryCreateLink(middle.OutputPins[0].Id, downstream.InputPins[0].Id);
+
+		GraphReach reach = engine.GetDownstream(middle.Id);
+
+		Assert.AreSequenceEqual([downstream.Id], reach.NodeIds.Order());
+		Assert.HasCount(1, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetDownstream_FollowsEveryBranchOfAFannedOutput()
+	{
+		Node source = engine.CreateNode(new Vector2(0, 0), "Source", [], ["Out"]);
+		Node left = engine.CreateNode(new Vector2(300, 0), "Left", ["In"], []);
+		Node right = engine.CreateNode(new Vector2(300, 200), "Right", ["In"], []);
+		engine.TryCreateLink(source.OutputPins[0].Id, left.InputPins[0].Id);
+		engine.TryCreateLink(source.OutputPins[0].Id, right.InputPins[0].Id);
+
+		GraphReach reach = engine.GetDownstream(source.Id);
+
+		Assert.AreSequenceEqual([left.Id, right.Id], reach.NodeIds.Order());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	/// <summary>
+	/// A cycle terminates the walk rather than running it forever, and the node it leads back to is
+	/// reported: a node that feeds itself round a loop is downstream of itself.
+	/// </summary>
+	[TestMethod]
+	public void GetDownstream_WalksACycleOnce()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", ["In"], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(300, 0), "Second", ["In"], ["Out"]);
+		engine.TryCreateLink(first.OutputPins[0].Id, second.InputPins[0].Id);
+		engine.TryCreateLink(second.OutputPins[0].Id, first.InputPins[0].Id);
+
+		GraphReach reach = engine.GetDownstream(first.Id);
+
+		Assert.AreSequenceEqual([first.Id, second.Id], reach.NodeIds.Order());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetDownstream_OfANodeThatFeedsNothingIsEmpty()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Alone", ["In"], ["Out"]);
+
+		GraphReach reach = engine.GetDownstream(node.Id);
+
+		Assert.IsEmpty(reach.NodeIds);
+		Assert.IsEmpty(reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_FollowsLinksBackwardThroughTheWholeChain()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", [], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(300, 0), "Second", ["In"], ["Out"]);
+		Node third = engine.CreateNode(new Vector2(600, 0), "Third", ["In"], []);
+		engine.TryCreateLink(first.OutputPins[0].Id, second.InputPins[0].Id);
+		engine.TryCreateLink(second.OutputPins[0].Id, third.InputPins[0].Id);
+
+		GraphReach reach = engine.GetUpstream(third.Id);
+
+		Assert.AreSequenceEqual([first.Id, second.Id], reach.NodeIds.Order());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_LeavesOutWhatTheNodeFeeds()
+	{
+		Node upstream = engine.CreateNode(new Vector2(0, 0), "Upstream", [], ["Out"]);
+		Node middle = engine.CreateNode(new Vector2(300, 0), "Middle", ["In"], ["Out"]);
+		Node downstream = engine.CreateNode(new Vector2(600, 0), "Downstream", ["In"], []);
+		engine.TryCreateLink(upstream.OutputPins[0].Id, middle.InputPins[0].Id);
+		engine.TryCreateLink(middle.OutputPins[0].Id, downstream.InputPins[0].Id);
+
+		GraphReach reach = engine.GetUpstream(middle.Id);
+
+		Assert.AreSequenceEqual([upstream.Id], reach.NodeIds.Order());
+		Assert.HasCount(1, reach.LinkIds);
+	}
+
+	/// <summary>
+	/// Both sources of a node that adds two values are upstream of it, which is the shape a fan-in
+	/// makes and the mirror of the fanned output the downstream walk follows.
+	/// </summary>
+	[TestMethod]
+	public void GetUpstream_FollowsEveryBranchOfAFanIn()
+	{
+		Node left = engine.CreateNode(new Vector2(0, 0), "Left", [], ["Out"]);
+		Node right = engine.CreateNode(new Vector2(0, 200), "Right", [], ["Out"]);
+		Node sum = engine.CreateNode(new Vector2(300, 0), "Sum", ["A", "B"], []);
+		engine.TryCreateLink(left.OutputPins[0].Id, sum.InputPins[0].Id);
+		engine.TryCreateLink(right.OutputPins[0].Id, sum.InputPins[1].Id);
+
+		GraphReach reach = engine.GetUpstream(sum.Id);
+
+		Assert.AreSequenceEqual([left.Id, right.Id], reach.NodeIds.Order());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_WalksACycleOnce()
+	{
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", ["In"], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(300, 0), "Second", ["In"], ["Out"]);
+		engine.TryCreateLink(first.OutputPins[0].Id, second.InputPins[0].Id);
+		engine.TryCreateLink(second.OutputPins[0].Id, first.InputPins[0].Id);
+
+		GraphReach reach = engine.GetUpstream(first.Id);
+
+		Assert.AreSequenceEqual([first.Id, second.Id], reach.NodeIds.Order());
+		Assert.HasCount(2, reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetUpstream_OfANodeNothingFeedsIsEmpty()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Alone", ["In"], ["Out"]);
+
+		GraphReach reach = engine.GetUpstream(node.Id);
+
+		Assert.IsEmpty(reach.NodeIds);
+		Assert.IsEmpty(reach.LinkIds);
+	}
+
+	[TestMethod]
+	public void GetOutgoingAndIncomingLinks_SplitTheLinksAtANodeByDirection()
+	{
+		Node source = engine.CreateNode(new Vector2(0, 0), "Source", [], ["Out"]);
+		Node middle = engine.CreateNode(new Vector2(300, 0), "Middle", ["In"], ["Out"]);
+		Node target = engine.CreateNode(new Vector2(600, 0), "Target", ["In"], []);
+		engine.TryCreateLink(source.OutputPins[0].Id, middle.InputPins[0].Id);
+		engine.TryCreateLink(middle.OutputPins[0].Id, target.InputPins[0].Id);
+
+		Assert.HasCount(1, engine.GetIncomingLinks(middle.Id).ToList());
+		Assert.HasCount(1, engine.GetOutgoingLinks(middle.Id).ToList());
+		Assert.IsEmpty(engine.GetIncomingLinks(source.Id).ToList());
+		Assert.IsEmpty(engine.GetOutgoingLinks(target.Id).ToList());
 	}
 }

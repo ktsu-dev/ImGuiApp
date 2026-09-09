@@ -1,6 +1,9 @@
-## v3.27.0 (minor)
+## v3.28.0 (minor)
 
-Changes since v3.26.0:
+Changes since v3.27.0:
 
-- Measure repulsion across the clear space between node boxes ([@Claude](https://github.com/Claude))
+- Compare a reach as a sorted sequence ([@Claude](https://github.com/Claude))
+- Walk the graph backward as well as forward ([@Claude](https://github.com/Claude))
+- Find the pin's node rather than walking every node past it ([@Claude](https://github.com/Claude))
+- [minor] Answer a hovered node with the links and reach it has ([@Claude](https://github.com/Claude))
 
