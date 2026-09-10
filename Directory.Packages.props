@@ -35,7 +35,7 @@
     <PackageVersion Include="Silk.NET.Windowing.Common" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Windowing.Sdl" Version="2.23.0" />
     <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.12" />
-    <PackageVersion Include="Polyfill" Version="11.2.0" />
+    <PackageVersion Include="Polyfill" Version="11.3.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.12" />
   </ItemGroup>
 </Project>
