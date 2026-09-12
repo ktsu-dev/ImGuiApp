@@ -162,10 +162,15 @@ public static partial class ImGuiWidgets
 		{
 			float span = fromHigh - fromLow;
 
-			// A zero span has no position to report. The low end is the only answer that is not an
-			// infinity, and it keeps a degenerate box drawing rather than scattering NaN into the
-			// draw list.
-			return span == 0f ? toLow : toLow + ((value - fromLow) / span * (toHigh - toLow));
+			// A collapsed span has no position to report. The low end is the only answer that is not
+			// an infinity, and it keeps a degenerate box drawing rather than scattering NaN through
+			// the draw list.
+			//
+			// Compared against float.Epsilon rather than to zero: that is the smallest denormal, so
+			// this is "exactly zero" plus the handful of values a subtraction can leave that divide
+			// into something absurd rather than something useful. It is not a tolerance, and it is
+			// not meant as one.
+			return MathF.Abs(span) <= float.Epsilon ? toLow : toLow + ((value - fromLow) / span * (toHigh - toLow));
 		}
 
 		private static void DrawGrid(ImDrawListPtr drawList, Vector2 min, Vector2 max, ReadOnlySpan<Vector4> colors)
@@ -278,18 +283,17 @@ public static partial class ImGuiWidgets
 
 			bool changed = false;
 
-			if (ImGui.IsItemActivated())
+			// Activate has the side effect of setting the active point, and short-circuiting is what
+			// keeps it from running on a frame the item was not activated on.
+			if (ImGui.IsItemActivated() && !state.Activate(points, pointer, grabInValue))
 			{
-				if (!state.Activate(points, pointer, grabInValue))
+				// Empty track: add a point where the press landed and drag it from here, so the
+				// gesture that creates a point is the same one that positions it.
+				int added = CurveTrackState.Add(points, pointer, lowerBound, upperBound, minGap);
+				if (added >= 0)
 				{
-					// Empty track: add a point where the press landed and drag it from here, so the
-					// gesture that creates a point is the same one that positions it.
-					int added = CurveTrackState.Add(points, pointer, lowerBound, upperBound, minGap);
-					if (added >= 0)
-					{
-						state.Grab(added);
-						changed = true;
-					}
+					state.Grab(added);
+					changed = true;
 				}
 			}
 
