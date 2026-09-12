@@ -1,6 +1,7 @@
-## v3.32.3 (patch)
+## v3.33.0 (minor)
 
-Changes since v3.32.2:
+Changes since v3.32.0:
 
-- Bump the ktsu group with 8 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- refactor: take two review findings on CurveTrack [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: add CurveTrack, a tone curve widget [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
 
