@@ -1,4 +1,4 @@
-## v3.33.1 (patch)
+## v3.34.0 (minor)
 
 Changes since v3.33.0:
 
