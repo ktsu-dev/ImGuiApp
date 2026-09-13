@@ -104,17 +104,17 @@ Every force is a setting, and the defaults are tuned for node-editor-sized graph
 PhysicsSettings settings = new()
 {
     Enabled = true,
-    RepulsionStrength = 600_000.0,     // inverse-square in the clear space between bounding boxes
-    LinkSpringStrength = 0.5,          // Hooke's-law constant for edges
-    RestLinkLength = 225.0,            // spring rest length
-    DirectionalBias = 0.5,             // orders sources left of targets, reordering when needed
-    LinkFlatteningStrength = 0.5,      // pulls edges towards horizontal, and keeps curves visible
+    RepulsionStrength = 900_000.0,     // inverse-square in the clear space between bounding boxes
+    LinkSpringStrength = 0.1,          // Hooke's-law constant for edges
+    RestLinkLength = 50.0,             // spring rest length
+    DirectionalBias = 4.0,             // orders sources left of targets, reordering when needed
+    LinkFlatteningStrength = 3.0,      // pulls edges towards horizontal, and keeps curves visible
     LinkFlatteningMargin = 0.0,        // extra clearance on top of the derived bound
     LinkUntwistStrength = 0.1,         // swaps two links sharing a node into their pins' order
     GravityStrength = 50.0,            // pull toward the gravity target
     OriginAnchorWeight = 1.0,          // 0 = centroid, 1 = world origin
     DampingFactor = 0.5,               // velocity retained per second
-    MinRepulsionDistance = 50.0,       // floor on that clear space, so touching bodies push hard, not infinitely hard
+    MinRepulsionDistance = 5.0,        // floor on that clear space
     MaxForce = 5000.0,
     MaxVelocity = 250.0,             // also bounds how fast a graph settles
     TargetPhysicsHz = 120.0,           // substep rate, independent of frame rate
@@ -123,6 +123,8 @@ PhysicsSettings settings = new()
     MaxOverlapCorrection = 40.0,
 };
 ```
+
+`MinRepulsionDistance` is additionally floored internally above zero (`MinimumRepulsionClamp`) so inverse-square repulsion remains finite even if a caller sets it to zero.
 
 These values were not guessed. `tests/ForceDirectedLayout.Tests/Bench/` settles a corpus of graphs over a range of starting arrangements and reports what a layout measures — settled area, mean edge angle, links drawn across a body they are no end of, tightest clear gap, overlaps, crossed link pairs — because the simulation is chaotic and a single run says nothing. `LayoutBench.Sweep` walks one setting across a range and prints the rows as a table, `LayoutBench.Compare` puts named variants side by side, and `LayoutSvg` writes a settled graph out as SVG so it can be looked at rather than only read. Changing what a force measures changes the units its strength is in, so that is how a new default gets found.
 
