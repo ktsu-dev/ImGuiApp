@@ -339,8 +339,8 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
-			string[] names = System.Enum.GetNames<TEnum>();
-			TEnum[] values = System.Enum.GetValues<TEnum>();
+			string[] names = EnumCache<TEnum>.Names;
+			TEnum[] values = EnumCache<TEnum>.Values;
 			int index = Array.IndexOf(values, value);
 
 			bool changed = ImGui.Combo(Hidden(label), ref index, names, names.Length);
