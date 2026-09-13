@@ -58,6 +58,23 @@ public class RecentringTests
 		return core;
 	}
 
+	/// <summary>
+	/// Leaves only the recentring pass active so tests can isolate whether that pass ran.
+	/// </summary>
+	/// <param name="core">The core to prepare.</param>
+	private static void DisableForcesExceptRecentring(LayoutCore core)
+	{
+		LayoutSettings settings = core.Settings;
+		settings.RepulsionStrength = 0.0;
+		settings.LinkSpringStrength = 0.0;
+		settings.DirectionalBias = 0.0;
+		settings.LinkFlatteningStrength = 0.0;
+		settings.LinkUntwistStrength = 0.0;
+		settings.GravityStrength = 0.0;
+		settings.OverlapMargin = 0.0;
+		core.Settings = settings;
+	}
+
 	[TestMethod]
 	public void EveryCorpusGraph_SettlesCentredOnTheOrigin()
 	{
@@ -168,5 +185,67 @@ public class RecentringTests
 
 		Assert.AreEqual(delta.X, DrawnCentre(there).X - DrawnCentre(here).X, 20.0,
 			"and the second should have settled a whole delta away from the first");
+	}
+
+	[TestMethod]
+	public void Recentring_StandsDownWhenAnyBodyIsPinned()
+	{
+		LayoutCore core = Settle(GraphCorpus.Counter, 7919 * 3);
+		DisableForcesExceptRecentring(core);
+
+		Vec2D shove = new(1200, -700);
+		for (int i = 0; i < core.BodyCount; i++)
+		{
+			core.Bodies[i].Position += shove;
+			core.Bodies[i].Velocity = Vec2D.Zero;
+		}
+
+		core.Bodies[0].IsPinned = 1;
+		Vec2D pinnedBefore = core.Bodies[0].Position;
+		Vec2D centreBefore = DrawnCentre(core);
+
+		for (int frame = 0; frame < 120; frame++)
+		{
+			core.Step(1.0 / 60.0);
+		}
+
+		Vec2D pinnedAfter = core.Bodies[0].Position;
+		Vec2D centreAfter = DrawnCentre(core);
+
+		Assert.AreEqual(pinnedBefore.X, pinnedAfter.X, 0.0001, "the pinned body should not move");
+		Assert.AreEqual(pinnedBefore.Y, pinnedAfter.Y, 0.0001, "the pinned body should not move");
+		Assert.AreEqual(centreBefore.X, centreAfter.X, 0.0001, "with a pinned body the recentring pass should stand down entirely");
+		Assert.AreEqual(centreBefore.Y, centreAfter.Y, 0.0001, "with a pinned body the recentring pass should stand down entirely");
+	}
+
+	[TestMethod]
+	public void Recentring_StandsDownWhenAnyBodyIsFrozen()
+	{
+		LayoutCore core = Settle(GraphCorpus.Counter, 7919 * 3);
+		DisableForcesExceptRecentring(core);
+
+		Vec2D shove = new(1200, -700);
+		for (int i = 0; i < core.BodyCount; i++)
+		{
+			core.Bodies[i].Position += shove;
+			core.Bodies[i].Velocity = Vec2D.Zero;
+		}
+
+		core.Bodies[0].IsFrozen = 1;
+		Vec2D frozenBefore = core.Bodies[0].Position;
+		Vec2D centreBefore = DrawnCentre(core);
+
+		for (int frame = 0; frame < 120; frame++)
+		{
+			core.Step(1.0 / 60.0);
+		}
+
+		Vec2D frozenAfter = core.Bodies[0].Position;
+		Vec2D centreAfter = DrawnCentre(core);
+
+		Assert.AreEqual(frozenBefore.X, frozenAfter.X, 0.0001, "the frozen body should not move");
+		Assert.AreEqual(frozenBefore.Y, frozenAfter.Y, 0.0001, "the frozen body should not move");
+		Assert.AreEqual(centreBefore.X, centreAfter.X, 0.0001, "with a frozen body the recentring pass should stand down entirely");
+		Assert.AreEqual(centreBefore.Y, centreAfter.Y, 0.0001, "with a frozen body the recentring pass should stand down entirely");
 	}
 }
