@@ -1,7 +1,7 @@
-## v3.34.0 (minor)
+## v3.34.1 (patch)
 
-Changes since v3.33.0:
+Changes since v3.34.0:
 
-- ci: adopt the consolidated .NET workflow [patch] ([@Claude](https://github.com/Claude))
-- ci: tolerate a SonarQube Cloud outage instead of failing the build [patch] ([@Claude](https://github.com/Claude))
+- Sync ForceDirectedLayout and NodeEditor README tuning values ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
 
