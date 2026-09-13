@@ -106,4 +106,9 @@ public class TgaDecoderTests
 	public void Decode_TruncatedPixelData_Throws() =>
 		Assert.ThrowsExactly<InvalidImageDataException>(
 			() => ImageDecoder.Decode(TestImageBuilder.Tga(4, 4, imageType: 2, pixelBits: 24, [1, 2, 3], descriptor: TopLeftOrigin)));
+
+	[TestMethod]
+	public void Decode_ColourMapWithUnsupportedEntryDepth_Throws() =>
+		Assert.ThrowsExactly<InvalidImageDataException>(
+			() => ImageDecoder.Decode(TestImageBuilder.Tga(2, 2, imageType: 1, pixelBits: 8, [0, 0, 0, 0], colorMapLength: 2, colorMapEntryBits: 0, descriptor: TopLeftOrigin)));
 }

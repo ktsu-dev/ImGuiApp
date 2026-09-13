@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.App.Tests.Images;
 
 using System;
+using System.Buffers.Binary;
 using ktsu.ImGui.App.Images;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -118,6 +119,53 @@ public class JpegDecoderTests
 		InvalidImageDataException exception = Assert.ThrowsExactly<InvalidImageDataException>(() => ImageDecoder.Decode(file));
 
 		Assert.IsTrue(exception.Message.Contains("C9", StringComparison.Ordinal), exception.Message);
+	}
+
+	[TestMethod]
+	public void Decode_ProgressiveWithOutOfRangeSpectralSelectors_Throws()
+	{
+		byte[] file = ProgressiveWithScanSelector(64, 64, 0x10);
+
+		InvalidImageDataException exception = Assert.ThrowsExactly<InvalidImageDataException>(() => ImageDecoder.Decode(file));
+
+		Assert.IsTrue(exception.Message.Contains("spectral", StringComparison.Ordinal), exception.Message);
+	}
+
+	private static byte[] ProgressiveWithScanSelector(int spectralStart, int spectralEnd, int approximation)
+	{
+		byte[] data = Convert.FromBase64String(Progressive);
+		int position = 2;
+		while (position + 4 <= data.Length)
+		{
+			if (data[position] != 0xFF)
+			{
+				position++;
+				continue;
+			}
+
+			byte marker = data[position + 1];
+			position += 2;
+			if (marker == 0xDA)
+			{
+				int headerStart = position + 2;
+				int componentCount = data[headerStart];
+				int selectorOffset = headerStart + 1 + (componentCount * 2);
+				data[selectorOffset] = (byte)spectralStart;
+				data[selectorOffset + 1] = (byte)spectralEnd;
+				data[selectorOffset + 2] = (byte)approximation;
+				return data;
+			}
+
+			if (marker is 0xD9 or (>= 0xD0 and <= 0xD7))
+			{
+				continue;
+			}
+
+			ushort segmentLength = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(position, 2));
+			position += segmentLength;
+		}
+
+		throw new AssertFailedException("Progressive fixture does not contain an SOS segment.");
 	}
 
 	private static void AssertQuadrant(ImagePixels image, int x, int y, (byte R, byte G, byte B) expected)

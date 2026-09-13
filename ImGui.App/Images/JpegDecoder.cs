@@ -544,6 +544,14 @@ internal static class JpegDecoder
 			int approximation = header[3 + (scanComponentCount * 2)];
 			int successiveHigh = approximation >> 4;
 			int successiveLow = approximation & 0x0F;
+			if (progressive
+				&& (spectralStart > 63
+				|| spectralEnd > 63
+				|| spectralEnd < spectralStart
+				|| (spectralStart == 0 && spectralEnd != 0)))
+			{
+				throw new InvalidImageDataException($"JPEG scan has invalid spectral selection Ss={spectralStart}, Se={spectralEnd}.");
+			}
 
 			if (!progressive)
 			{

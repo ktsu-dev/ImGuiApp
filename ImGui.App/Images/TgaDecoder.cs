@@ -82,6 +82,8 @@ internal static class TgaDecoder
 			throw new InvalidImageDataException($"TGA uses unsupported pixel depth {pixelBits}.");
 		}
 
+		ValidateColorMapEntryBits(colorMapType, colorMapEntryBits);
+
 		int position = HeaderSize + idLength;
 		byte[]? colorMap = null;
 		if (colorMapType == 1)
@@ -252,4 +254,17 @@ internal static class TgaDecoder
 	}
 
 	private static byte Expand5(int value) => (byte)(value * 255 / 31);
+
+	private static void ValidateColorMapEntryBits(int colorMapType, int colorMapEntryBits)
+	{
+		if (colorMapType != 1)
+		{
+			return;
+		}
+
+		if (colorMapEntryBits is not (8 or 15 or 16 or 24 or 32))
+		{
+			throw new InvalidImageDataException($"TGA uses unsupported colour-map entry depth {colorMapEntryBits}.");
+		}
+	}
 }
