@@ -123,9 +123,9 @@ Two things to know about registration. A class node also gets an `Instance` outp
 engine.UpdatePhysicsSettings(new PhysicsSettings
 {
     Enabled = true,
-    RepulsionStrength = 1_200_000.0,
-    LinkSpringStrength = 0.5,
-    RestLinkLength = 225.0,
+    RepulsionStrength = 900_000.0,
+    LinkSpringStrength = 0.1,
+    RestLinkLength = 50.0,
 });
 
 // Readings worth putting behind a debug toggle
