@@ -241,7 +241,7 @@ internal static class CodeTokenizer
 		{
 			char current = source[scan];
 
-			if (!rule.AllowMultiline && current == '\n')
+			if (!rule.AllowMultiline && (current == '\n' || current == '\r'))
 			{
 				// An unterminated single-line literal ends at the newline rather than swallowing the
 				// rest of the file, so one stray quote cannot recolor the whole document.

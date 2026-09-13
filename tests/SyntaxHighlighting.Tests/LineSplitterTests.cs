@@ -46,6 +46,27 @@ public sealed class LineSplitterTests
 	}
 
 	[TestMethod]
+	public void UnterminatedSingleLineStringAndCharLiteralsDoNotLeakCarriageReturnOnCrLf()
+	{
+		IReadOnlyList<HighlightedLine> stringLines = SyntaxHighlighter.Highlight("string s = \"abc\r\nint b = 2;", "csharp");
+		IReadOnlyList<HighlightedLine> charLines = SyntaxHighlighter.Highlight("char c = 'x\r\nint b = 2;", "csharp");
+
+		Assert.AreEqual(2, stringLines.Count);
+		Assert.AreEqual(2, charLines.Count);
+		Assert.DoesNotContain("\r", stringLines[0].ToText());
+		Assert.DoesNotContain("\r", charLines[0].ToText());
+	}
+
+	[TestMethod]
+	public void UnterminatedSingleLinePythonStringDoesNotLeakCarriageReturnOnCrLf()
+	{
+		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("s = \"abc\r\nb = 2", "python");
+
+		Assert.AreEqual(2, lines.Count);
+		Assert.DoesNotContain("\r", lines[0].ToText());
+	}
+
+	[TestMethod]
 	public void ATrailingNewlineDoesNotAddAPhantomLine()
 	{
 		IReadOnlyList<HighlightedLine> lines = SyntaxHighlighter.Highlight("a\nb\n", "text");
