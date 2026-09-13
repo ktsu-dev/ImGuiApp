@@ -39,17 +39,7 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <typeparam name="T">The enum type to enumerate.</typeparam>
 		/// <returns>The display name of every declared member of <typeparamref name="T"/>.</returns>
-		internal static IReadOnlyList<string> Names<T>() where T : struct, Enum
-		{
-			T[] values = Enum.GetValues<T>();
-			List<string> names = new(values.Length);
-			foreach (T value in values)
-			{
-				names.Add(Hexa.NET.ImGui.Widgets.ComboEnumHelper<T>.GetName(value));
-			}
-
-			return names;
-		}
+		internal static IReadOnlyList<string> Names<T>() where T : struct, Enum => EnumComboNamesCache<T>.Names;
 
 		/// <summary>
 		/// Draws a combo box listing every member of an enum type.
@@ -63,6 +53,23 @@ public static partial class ImGuiWidgets
 		{
 			Ensure.NotNull(label);
 			return Hexa.NET.ImGui.Widgets.ComboEnumHelper<T>.Combo(label, ref value);
+		}
+	}
+
+	internal static class EnumComboNamesCache<T> where T : struct, Enum
+	{
+		internal static readonly string[] Names = BuildNames();
+
+		private static string[] BuildNames()
+		{
+			T[] values = EnumCache<T>.Values;
+			string[] names = new string[values.Length];
+			for (int index = 0; index < values.Length; index++)
+			{
+				names[index] = Hexa.NET.ImGui.Widgets.ComboEnumHelper<T>.GetName(values[index]);
+			}
+
+			return names;
 		}
 	}
 }

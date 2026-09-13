@@ -20,14 +20,14 @@ public static partial class ImGuiWidgets
 	/// <returns>If a combo value was selected.</returns>
 	public static bool Combo<TEnum>(string label, ref TEnum selectedValue) where TEnum : Enum
 	{
-		Array possibleValues = Enum.GetValues(typeof(TEnum));
+		TEnum[] possibleValues = EnumCache<TEnum>.Values;
 		int currentIndex = Array.IndexOf(possibleValues, selectedValue);
-		string[] possibleValuesNames = Enum.GetNames(typeof(TEnum));
+		string[] possibleValuesNames = EnumCache<TEnum>.Names;
 		bool changed = ImGui.Combo(label, ref currentIndex, possibleValuesNames, possibleValuesNames.Length);
 		ImGuiProbes.MarkItem(label);
 		if (changed)
 		{
-			selectedValue = (TEnum)possibleValues.GetValue(currentIndex)!;
+			selectedValue = possibleValues[currentIndex];
 			return true;
 		}
 

@@ -141,6 +141,27 @@ public sealed class HexaWidgetTests
 	}
 
 	[TestMethod]
+	public void EnumComboNames_RepeatedCalls_ReturnTheSameCachedInstance()
+	{
+		IReadOnlyList<string> first = ImGuiWidgets.EnumComboNames<PlainEnum>();
+		IReadOnlyList<string> second = ImGuiWidgets.EnumComboNames<PlainEnum>();
+
+		Assert.AreSame(first, second);
+	}
+
+	[TestMethod]
+	public void EnumCache_ReusesValuesAndNamesArraysPerEnumType()
+	{
+		PlainEnum[] valuesFirst = EnumCache<PlainEnum>.Values;
+		PlainEnum[] valuesSecond = EnumCache<PlainEnum>.Values;
+		string[] namesFirst = EnumCache<PlainEnum>.Names;
+		string[] namesSecond = EnumCache<PlainEnum>.Names;
+
+		Assert.AreSame(valuesFirst, valuesSecond);
+		Assert.AreSame(namesFirst, namesSecond);
+	}
+
+	[TestMethod]
 	public void EnumCombo_NullLabel_ThrowsBeforeTouchingImGui()
 	{
 		Assert.ThrowsExactly<ArgumentNullException>(() =>
