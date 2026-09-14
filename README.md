@@ -462,7 +462,7 @@ Application lifecycle and utilities.
 | `SetOverlayGeometry(OverlayCorner, int, int, int, int)` | `void` | Lock the overlay to a work-area corner at an offset and size |
 | `DisableOverlay()` | `void` | Restore the decorated, non-topmost, opaque window |
 | `SetGlobalScale(float)` | `void` | Set accessibility UI scale (0.5-3.0) |
-| `SetWindowIcon(string)` | `void` | Set window icon from image file |
+| `SetWindowIcon(string)` | `void` | Set window icon from image file (also updates the dock icon on macOS) |
 | `GetOrLoadTexture(AbsoluteFilePath)` | `ImGuiAppTextureInfo` | Load or retrieve cached GPU texture |
 | `DeleteTexture(uint)` | `void` | Remove texture from GPU |
 | `EmsToPx(float)` | `int` | Convert EMs to pixels |
@@ -489,7 +489,7 @@ Configuration for `ImGuiApp.Start()`.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `Title` | `string` | Window title (default: "ImGuiApp") |
-| `IconPath` | `string` | Path to window icon |
+| `IconPath` | `string` | Path to window icon (also used for the dock icon on macOS) |
 | `OnStart` | `Action` | Initialization callback |
 | `OnUpdate` | `Action<float>` | Per-frame update callback |
 | `OnRender` | `Action<float>` | Per-frame render callback |
