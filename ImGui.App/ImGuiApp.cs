@@ -1518,7 +1518,7 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Sets the window icon using the specified icon file path.
+	/// Sets the window icon using the specified icon file path. On macOS, this also sets the application dock icon.
 	/// </summary>
 	/// <param name="iconPath">The file path to the icon image.</param>
 	public static void SetWindowIcon(string iconPath)
@@ -1550,7 +1550,74 @@ public static partial class ImGuiApp
 			icons.Add(new(size, size, new Memory<byte>(resized.GetBuffer())));
 		}
 
+		_ = TrySetMacOSApplicationIcon(iconPath);
 		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
+	}
+
+	internal static bool TrySetMacOSApplicationIcon(string iconPath)
+	{
+		if (!OperatingSystem.IsMacOS())
+		{
+			return false;
+		}
+
+		nint nsApplicationClass = NativeMethods.objc_getClass("NSApplication");
+		nint nsImageClass = NativeMethods.objc_getClass("NSImage");
+		nint nsStringClass = NativeMethods.objc_getClass("NSString");
+		if (nsApplicationClass == nint.Zero || nsImageClass == nint.Zero || nsStringClass == nint.Zero)
+		{
+			return false;
+		}
+
+		nint allocSelector = NativeMethods.sel_registerName("alloc");
+		nint releaseSelector = NativeMethods.sel_registerName("release");
+		nint initWithUtf8StringSelector = NativeMethods.sel_registerName("initWithUTF8String:");
+		nint initWithContentsOfFileSelector = NativeMethods.sel_registerName("initWithContentsOfFile:");
+		nint sharedApplicationSelector = NativeMethods.sel_registerName("sharedApplication");
+		nint setApplicationIconImageSelector = NativeMethods.sel_registerName("setApplicationIconImage:");
+
+		nint utf8Path = Marshal.StringToCoTaskMemUTF8(iconPath);
+		nint nsString = nint.Zero;
+		nint nsImage = nint.Zero;
+		try
+		{
+			nint nsStringAlloc = NativeMethods.objc_msgSend(nsStringClass, allocSelector);
+			nsString = NativeMethods.objc_msgSend(nsStringAlloc, initWithUtf8StringSelector, utf8Path);
+			if (nsString == nint.Zero)
+			{
+				return false;
+			}
+
+			nint nsImageAlloc = NativeMethods.objc_msgSend(nsImageClass, allocSelector);
+			nsImage = NativeMethods.objc_msgSend(nsImageAlloc, initWithContentsOfFileSelector, nsString);
+			if (nsImage == nint.Zero)
+			{
+				return false;
+			}
+
+			nint sharedApplication = NativeMethods.objc_msgSend(nsApplicationClass, sharedApplicationSelector);
+			if (sharedApplication == nint.Zero)
+			{
+				return false;
+			}
+
+			_ = NativeMethods.objc_msgSend(sharedApplication, setApplicationIconImageSelector, nsImage);
+			return true;
+		}
+		finally
+		{
+			if (nsImage != nint.Zero)
+			{
+				_ = NativeMethods.objc_msgSend(nsImage, releaseSelector);
+			}
+
+			if (nsString != nint.Zero)
+			{
+				_ = NativeMethods.objc_msgSend(nsString, releaseSelector);
+			}
+
+			Marshal.FreeCoTaskMem(utf8Path);
+		}
 	}
 
 	internal static readonly ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;

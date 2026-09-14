@@ -416,7 +416,7 @@ The main entry point for creating and managing ImGui applications.
 | `DeleteTexture` | `uint textureId` | `void` | Deletes a texture and frees its resources |
 | `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
 | `CleanupAllTextures` | | `void` | Cleans up all loaded textures |
-| `SetWindowIcon` | `string iconPath` | `void` | Sets the window icon using the specified icon file path |
+| `SetWindowIcon` | `string iconPath` | `void` | Sets the window icon; on macOS this also updates the application dock icon |
 | `EmsToPx` | `float ems` | `int` | Converts a value in ems to pixels based on current font size |
 | `PtsToPx` | `int pts` | `int` | Converts a value in points to pixels based on current scale factor |
 | `UseImageBytes` | `ImagePixels image, Action<byte[]> action` | `void` | Executes an action with temporary access to image bytes using pooled memory |

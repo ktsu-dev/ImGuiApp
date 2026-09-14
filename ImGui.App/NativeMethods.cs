@@ -315,4 +315,36 @@ internal static partial class NativeMethods
 	/// <param name="mode">The display mode to release.</param>
 	[LibraryImport(CoreGraphicsLibraryName)]
 	internal static partial void CGDisplayModeRelease(nint mode);
+
+	// libobjc is present on macOS and provides the Objective-C runtime entry points used to send
+	// messages to AppKit classes at runtime.
+	private const string ObjectiveCLibraryName = "/usr/lib/libobjc.A.dylib";
+
+	/// <summary>
+	/// Returns the class object for the given Objective-C class name.
+	/// </summary>
+	/// <param name="name">The Objective-C class name.</param>
+	/// <returns>The class object, or zero if unavailable.</returns>
+	[LibraryImport(ObjectiveCLibraryName)]
+	internal static partial nint objc_getClass([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+
+	/// <summary>
+	/// Returns the selector for the given Objective-C selector name.
+	/// </summary>
+	/// <param name="name">The selector name.</param>
+	/// <returns>The selector handle.</returns>
+	[LibraryImport(ObjectiveCLibraryName)]
+	internal static partial nint sel_registerName([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+
+	/// <summary>
+	/// Sends an Objective-C message with no arguments and returns an object.
+	/// </summary>
+	[LibraryImport(ObjectiveCLibraryName, EntryPoint = "objc_msgSend")]
+	internal static partial nint objc_msgSend(nint receiver, nint selector);
+
+	/// <summary>
+	/// Sends an Objective-C message with one object argument and returns an object.
+	/// </summary>
+	[LibraryImport(ObjectiveCLibraryName, EntryPoint = "objc_msgSend")]
+	internal static partial nint objc_msgSend(nint receiver, nint selector, nint arg1);
 }

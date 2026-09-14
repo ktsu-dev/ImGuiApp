@@ -64,7 +64,7 @@ public class ImGuiAppConfig
 	public nint ParentWindowHandle { get; init; }
 
 	/// <summary>
-	/// Gets or sets the file path to the application window icon.
+	/// Gets or sets the file path to the application window icon. On macOS this is also used for the application dock icon.
 	/// </summary>
 	public string IconPath { get; init; } = string.Empty;
 

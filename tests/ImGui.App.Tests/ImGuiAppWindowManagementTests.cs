@@ -733,6 +733,18 @@ public sealed class ImGuiAppWindowManagementTests
 		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.SetWindowIcon(""));
 	}
 
+	[TestMethod]
+	public void TrySetMacOSApplicationIcon_OnNonMacOS_ReturnsFalse()
+	{
+		if (OperatingSystem.IsMacOS())
+		{
+			Assert.Inconclusive("This test verifies the non-macOS branch.");
+		}
+
+		bool set = ImGuiApp.TrySetMacOSApplicationIcon("/tmp/does-not-matter.png");
+		Assert.IsFalse(set);
+	}
+
 	#endregion
 
 	#region Texture Management Integration Tests
