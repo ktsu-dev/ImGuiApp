@@ -759,12 +759,6 @@ public sealed class ImGuiAppWindowManagementTests
 			ImGuiApp.Invoker = new ktsu.Invoker.Invoker();
 			ImGuiApp.SetWindowIcon(path);
 		}
-#pragma warning disable CA1031 // Do not catch general exception types
-		catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
-		{
-			Assert.Fail($"Expected no exception, but got: {ex.Message}");
-		}
 		finally
 		{
 			if (File.Exists(path))
