@@ -2,7 +2,9 @@
 
 namespace ktsu.ImGui.App.Tests;
 
+using System.IO;
 using System.Numerics;
+using ktsu.ImGui.App.Tests.Images;
 using ktsu.Semantics.Paths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -743,6 +745,33 @@ public sealed class ImGuiAppWindowManagementTests
 
 		bool set = ImGuiApp.TrySetMacOSApplicationIcon("/tmp/does-not-matter.png");
 		Assert.IsFalse(set);
+	}
+
+	[TestMethod]
+	public void SetWindowIcon_WithValidPng_DoesNotThrow()
+	{
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string path = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		try
+		{
+			File.WriteAllBytes(path, png);
+			ImGuiApp.window = null;
+			ImGuiApp.Invoker = new ktsu.Invoker.Invoker();
+			ImGuiApp.SetWindowIcon(path);
+		}
+#pragma warning disable CA1031 // Do not catch general exception types
+		catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+		{
+			Assert.Fail($"Expected no exception, but got: {ex.Message}");
+		}
+		finally
+		{
+			if (File.Exists(path))
+			{
+				File.Delete(path);
+			}
+		}
 	}
 
 	#endregion

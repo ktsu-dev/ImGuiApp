@@ -1554,6 +1554,7 @@ public static partial class ImGuiApp
 		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
 	}
 
+	[ExcludeFromCodeCoverage(Justification = "Native AppKit Objective-C interop is host/platform dependent; unit tests cover the public SetWindowIcon behavior and non-macOS branch.")]
 	internal static bool TrySetMacOSApplicationIcon(string iconPath)
 	{
 		if (!OperatingSystem.IsMacOS())
