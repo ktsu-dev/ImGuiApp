@@ -514,6 +514,12 @@ ImGuiWidgets.Tree.Branch("Vegetables", carrot, static item =>
     ImGuiWidgets.Tree.Leaf(item, static text => ImGui.Button(text)));
 ```
 
+Both `Branch` overloads have a flags form, so state and flags can be combined:
+
+```csharp
+ImGuiWidgets.Tree.Branch("Vegetables", ImGuiTreeNodeFlags.DefaultOpen, carrot, static item => { /* ... */ });
+```
+
 The original scope form still works, and is the way to draw rows without a callback at all. It also
 draws a spine at the outermost level, which a bare `Branch` does not:
 

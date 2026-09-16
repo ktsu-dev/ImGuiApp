@@ -1335,9 +1335,9 @@ internal static class ImGuiWidgetsDemo
 			ImGui.TextUnformatted("Collapsible branches and terminal leaves. A collapsed branch never runs its body:");
 			ImGui.Separator();
 
-			ImGuiWidgets.Tree.Branch("Fruit", () =>
+			ImGuiWidgets.Tree.Branch("Fruit", ImGuiTreeNodeFlags.DefaultOpen, () =>
 			{
-				ImGuiWidgets.Tree.Branch("Citrus", () =>
+				ImGuiWidgets.Tree.Branch("Citrus", ImGuiTreeNodeFlags.DefaultOpen, () =>
 				{
 					ImGuiWidgets.Tree.Leaf(() => DemoProbe.Button("Lemon"));
 					ImGuiWidgets.Tree.Leaf(() => DemoProbe.Button("Lime"));
@@ -1348,7 +1348,7 @@ internal static class ImGuiWidgetsDemo
 
 			// The state overloads hand the callback what it needs, so the lambdas capture nothing and no
 			// closure is allocated per node per frame. Worth reaching for once a tree gets large.
-			ImGuiWidgets.Tree.Branch("Vegetables", "Carrot", static label =>
+			ImGuiWidgets.Tree.Branch("Vegetables", ImGuiTreeNodeFlags.DefaultOpen, "Carrot", static label =>
 				ImGuiWidgets.Tree.Leaf(label, static text => DemoProbe.Button(text)));
 
 			ImGui.Separator();

@@ -131,13 +131,27 @@ public static partial class ImGuiWidgets
 		/// <param name="state">Passed to <paramref name="content"/> untouched.</param>
 		/// <param name="content">Drawn while the branch is expanded, and not called at all while it is
 		/// collapsed.</param>
-		public static void Branch<TState>(string label, TState state, Action<TState> content)
+		public static void Branch<TState>(string label, TState state, Action<TState> content) =>
+			Branch(label, ImGuiTreeNodeFlags.SpanAvailWidth, state, content);
+
+		/// <summary>
+		/// Draws a collapsible branch with explicit tree node flags, passing <paramref name="state"/> to
+		/// <paramref name="content"/> so the callback can be static and capture nothing.
+		/// </summary>
+		/// <typeparam name="TState">Type of the state handed to <paramref name="content"/>.</typeparam>
+		/// <param name="label">Label for display and identity.</param>
+		/// <param name="flags">Flags for the underlying tree node. These replace the default of
+		/// <see cref="ImGuiTreeNodeFlags.SpanAvailWidth"/> rather than adding to it.</param>
+		/// <param name="state">Passed to <paramref name="content"/> untouched.</param>
+		/// <param name="content">Drawn while the branch is expanded, and not called at all while it is
+		/// collapsed.</param>
+		public static void Branch<TState>(string label, ImGuiTreeNodeFlags flags, TState state, Action<TState> content)
 		{
 			Ensure.NotNull(content);
 
 			using (Current?.Child)
 			{
-				if (ImGui.TreeNodeEx(label, ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.NoTreePushOnOpen))
+				if (ImGui.TreeNodeEx(label, flags | ImGuiTreeNodeFlags.NoTreePushOnOpen))
 				{
 					using (Tree subtree = new())
 					{
