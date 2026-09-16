@@ -209,8 +209,7 @@ public static partial class ImGuiApp
 			{
 				running = false;
 				windowReady.Set();
-				window?.Dispose();
-				window = null;
+				TeardownWindow();
 			}
 		}
 
