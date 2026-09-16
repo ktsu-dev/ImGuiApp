@@ -54,7 +54,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Grid`**: `RowMajorGrid` and `ColumnMajorGrid` layouts with measured, delegate-drawn cells
 - **`TabPanel`**: Tabbed interface with closable, reorderable tabs and dirty indicators
 - **`Card`**: A scoped elevated panel that draws its shadow and rounded background behind whatever the `using` block renders
-- **`Tree`**: Connector lines drawn around whatever is nested inside it
+- **`Tree`**: Collapsible `Branch` and terminal `Leaf` nodes, with connector lines drawn between them
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
@@ -478,7 +478,50 @@ ImGuiWidgets.TextCenteredWithin("Hello, ImGuiWidgets!", new Vector2(100, 100));
 
 ### Tree
 
-The tree widget allows you to display hierarchical data:
+Hierarchical data, drawn with connector lines. A `Branch` collapses and carries children, a `Leaf` is a
+terminal row:
+
+```csharp
+ImGuiWidgets.Tree.Branch("Fruit", () =>
+{
+    ImGuiWidgets.Tree.Branch("Citrus", () =>
+    {
+        ImGuiWidgets.Tree.Leaf(() => ImGui.Button("Lemon"));
+        ImGuiWidgets.Tree.Leaf(() => ImGui.Button("Lime"));
+    });
+
+    ImGuiWidgets.Tree.Leaf(() => ImGui.Button("Apple"));
+});
+```
+
+A collapsed branch never invokes its body, so there is no open-state check to write and none to forget.
+Branches find their parent from the innermost enclosing branch, so nothing is threaded through the
+callbacks. A branch with no enclosing branch is a root row and draws no connector, since it has nothing
+above it to join to.
+
+Pass `ImGuiTreeNodeFlags` to control the node itself. These replace the default of `SpanAvailWidth`
+rather than adding to it:
+
+```csharp
+ImGuiWidgets.Tree.Branch("Collapsed by default", ImGuiTreeNodeFlags.None, () => { /* ... */ });
+```
+
+In a tree large enough for one closure per node per frame to matter, the state overloads let the
+callback be `static` and capture nothing:
+
+```csharp
+ImGuiWidgets.Tree.Branch("Vegetables", carrot, static item =>
+    ImGuiWidgets.Tree.Leaf(item, static text => ImGui.Button(text)));
+```
+
+Both `Branch` overloads have a flags form, so state and flags can be combined:
+
+```csharp
+ImGuiWidgets.Tree.Branch("Vegetables", ImGuiTreeNodeFlags.DefaultOpen, carrot, static item => { /* ... */ });
+```
+
+The original scope form still works, and is the way to draw rows without a callback at all. It also
+draws a spine at the outermost level, which a bare `Branch` does not:
 
 ```csharp
 using (var tree = new ImGuiWidgets.Tree())
@@ -749,7 +792,7 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 
 **Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same font for their toolbar, breadcrumb and file-tree glyphs. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker`, `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` require no icon font.
 
-**Overlapping widgets**: Seven Hexa-backed widgets look like duplicates of an existing ktsu widget. Five are not: `HorizontalSplitter`/`VerticalSplitter` is a single drag handle where `DividerContainer` is a retained layout container; `IconTreeNode` is a collapsible node where `Tree` only draws connector lines around whatever is nested inside it; `BufferingBar`/`Spinner` are determinate-linear and indeterminate where `RadialProgressBar`/`SkeletonLine` are determinate-radial and a shimmering placeholder; and the `TextCentered*`/`ImageCentered*` families each cover axes and overloads the other does not. Two do overlap: prefer **`Switch`** over `ToggleSwitch` (it marks itself for probes, animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, and draws its own label), and prefer **`Combo`** over `EnumCombo` unless you need Hexa's display-name overrides. Nothing is obsoleted — that is a breaking change — but new code should reach for the preferred one, and the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` shows the pairs side by side. The through-line: the ktsu originals call `ImGuiProbes.MarkItem`, so a UI test can address them by name; the Hexa adapters have to be marked by the test itself.
+**Overlapping widgets**: Seven Hexa-backed widgets look like duplicates of an existing ktsu widget. Five are not: `HorizontalSplitter`/`VerticalSplitter` is a single drag handle where `DividerContainer` is a retained layout container; `IconTreeNode` is a single node with an icon glyph where `Tree.Branch` is a whole collapsible subtree with connector lines; `BufferingBar`/`Spinner` are determinate-linear and indeterminate where `RadialProgressBar`/`SkeletonLine` are determinate-radial and a shimmering placeholder; and the `TextCentered*`/`ImageCentered*` families each cover axes and overloads the other does not. Two do overlap: prefer **`Switch`** over `ToggleSwitch` (it marks itself for probes, animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, and draws its own label), and prefer **`Combo`** over `EnumCombo` unless you need Hexa's display-name overrides. Nothing is obsoleted — that is a breaking change — but new code should reach for the preferred one, and the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` shows the pairs side by side. The through-line: the ktsu originals call `ImGuiProbes.MarkItem`, so a UI test can address them by name; the Hexa adapters have to be marked by the test itself.
 
 **Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it creates a dockspace over the main viewport and draws every registered docked window, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). It *requires* `ImGuiConfigFlags.DockingEnable`, which `ImGuiAppConfig.EnableDocking = true` sets, and throws `InvalidOperationException` when the flag is off: ImGui only accepts that flag before the first frame, so the pump cannot turn it on itself, and Hexa's dockspace would silently do nothing without it. Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
 

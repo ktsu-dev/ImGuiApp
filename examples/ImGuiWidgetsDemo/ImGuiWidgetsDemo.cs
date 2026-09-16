@@ -1332,7 +1332,27 @@ internal static class ImGuiWidgetsDemo
 	{
 		if (DemoProbe.Header("Tree View"))
 		{
-			ImGui.TextUnformatted("Hierarchical tree structure with automatic cleanup:");
+			ImGui.TextUnformatted("Collapsible branches and terminal leaves. A collapsed branch never runs its body:");
+			ImGui.Separator();
+
+			ImGuiWidgets.Tree.Branch("Fruit", ImGuiTreeNodeFlags.DefaultOpen, () =>
+			{
+				ImGuiWidgets.Tree.Branch("Citrus", ImGuiTreeNodeFlags.DefaultOpen, () =>
+				{
+					ImGuiWidgets.Tree.Leaf(() => DemoProbe.Button("Lemon"));
+					ImGuiWidgets.Tree.Leaf(() => DemoProbe.Button("Lime"));
+				});
+
+				ImGuiWidgets.Tree.Leaf(() => DemoProbe.Button("Apple"));
+			});
+
+			// The state overloads hand the callback what it needs, so the lambdas capture nothing and no
+			// closure is allocated per node per frame. Worth reaching for once a tree gets large.
+			ImGuiWidgets.Tree.Branch("Vegetables", ImGuiTreeNodeFlags.DefaultOpen, "Carrot", static label =>
+				ImGuiWidgets.Tree.Leaf(label, static text => DemoProbe.Button(text)));
+
+			ImGui.Separator();
+			ImGui.TextUnformatted("The scope form, for drawing rows without a callback:");
 			ImGui.Separator();
 
 			using ImGuiWidgets.Tree tree = new();

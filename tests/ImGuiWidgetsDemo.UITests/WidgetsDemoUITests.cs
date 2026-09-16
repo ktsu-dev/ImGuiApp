@@ -365,6 +365,13 @@ public sealed class WidgetsDemoUITests
 		{
 			Assert.IsTrue(IsVisible(node), $"The tree is missing '{node}'.");
 		}
+
+		// The branch and leaf section above the scope form. These are drawn inside branch callbacks, so
+		// their appearing at all is what proves an expanded branch runs its body.
+		foreach (string node in new[] { "Lemon", "Lime", "Apple", "Carrot" })
+		{
+			Assert.IsTrue(IsVisible(node), $"The branch and leaf tree is missing '{node}'.");
+		}
 	}
 
 	[TestMethod]
