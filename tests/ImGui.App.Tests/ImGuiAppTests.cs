@@ -4,7 +4,9 @@
 
 namespace ktsu.ImGui.App.Tests;
 
+using System.Diagnostics;
 using System.Numerics;
+using ktsu.ImGui.App.Tests.Images;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -536,6 +538,84 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		ImGuiApp.DeleteTexture(123);
 
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "Delete should route through the registered backend");
+	}
+
+	[TestMethod]
+	public void GetOrLoadTexture_WithConcurrentFirstAccessToOnePath_UploadsExactlyOneTexture()
+	{
+		// Loading assets off the UI thread is a supported pattern - the invoker exists precisely to
+		// marshal those calls onto the render thread - so two threads can reach GetOrLoadTexture for
+		// the same uncached path at once. While the cache miss was checked outside the Invoke, both
+		// threads uploaded a separate GPU texture and both assigned Textures[path]. Only the last
+		// assignment was reachable, so the other handle could not be reached by DeleteTexture,
+		// CleanupAllTextures or ReloadAllTextures and leaked for the life of the GL context.
+		ResetState();
+
+		// This thread owns the invoker, so it stands in for the render thread: the callers' Invoke
+		// bodies run only while it pumps DoInvokes below.
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 4242 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			const int callerCount = 4;
+			using CountdownEvent arrived = new(callerCount);
+			using ManualResetEventSlim release = new(false);
+
+			Task<ImGuiAppTextureInfo>[] callers = new Task<ImGuiAppTextureInfo>[callerCount];
+			for (int i = 0; i < callerCount; i++)
+			{
+				callers[i] = Task.Run(() =>
+				{
+					arrived.Signal();
+					release.Wait();
+					return ImGuiApp.GetOrLoadTexture(path);
+				});
+			}
+
+			Assert.IsTrue(arrived.Wait(TimeSpan.FromSeconds(30)), "Every caller should reach the start gate");
+			release.Set();
+
+			// Nothing can publish a texture until this thread pumps, so holding the pump back keeps
+			// all four callers on the uncached side of the cache check. Give them a moment to get
+			// there and queue their upload. Pumping too early would only let one caller win by
+			// itself, which weakens this assertion rather than failing it spuriously.
+			Thread.Sleep(250);
+
+			Stopwatch pump = Stopwatch.StartNew();
+			while (Array.Exists(callers, caller => !caller.IsCompleted) && pump.Elapsed < TimeSpan.FromSeconds(30))
+			{
+				ImGuiApp.Invoker.DoInvokes();
+				Thread.Sleep(1);
+			}
+
+			foreach (Task<ImGuiAppTextureInfo> caller in callers)
+			{
+				Assert.IsTrue(caller.IsCompletedSuccessfully, $"Every concurrent caller should complete: {caller.Status} {caller.Exception?.Message}");
+			}
+
+			Assert.AreEqual(1, backend.CreateTextureCallCount, "Concurrent first access to one path should upload exactly one GPU texture");
+
+			ImGuiAppTextureInfo published = callers[0].Result;
+			foreach (Task<ImGuiAppTextureInfo> caller in callers)
+			{
+				Assert.AreSame(published, caller.Result, "Every caller should receive the single published texture");
+			}
+
+			Assert.IsTrue(ImGuiApp.TryGetTexture(path, out ImGuiAppTextureInfo? cached), "The texture should be published to the cache");
+			Assert.AreSame(published, cached, "The cached texture should be the one handed to the callers");
+		}
+		finally
+		{
+			File.Delete(file);
+		}
 	}
 
 	[TestMethod]

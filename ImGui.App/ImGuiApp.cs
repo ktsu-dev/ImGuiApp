@@ -1635,26 +1635,55 @@ public static partial class ImGuiApp
 			return existingTexture;
 		}
 
+		// Decoding stays off the invoker thread: it is the expensive half, it touches no GPU state,
+		// and moving it inside the Invoke below would drag every background load onto the render
+		// thread. Two threads racing the same path may each decode once, which costs CPU but leaks
+		// nothing.
 		ImagePixels image = ImageDecoder.Load(path);
 
-		ImGuiAppTextureInfo textureInfo = new()
-		{
-			Path = path,
-			Width = image.Width,
-			Height = image.Height
-		};
+		ImGuiAppTextureInfo? loadedTexture = null;
 
 		UseImageBytes(image, bytes =>
 		{
-			textureInfo.TextureId = UploadTextureRGBA(bytes, image.Width, image.Height);
-			unsafe
+			// Upload and publish happen together inside one Invoke, so the invoker thread is the
+			// single place a texture for a given path can be created. Invoke bodies never overlap:
+			// on the invoker thread they run inline, and from every other thread they are queued and
+			// drained one at a time, so the miss re-check below cannot be raced.
+			//
+			// Checking the cache outside this body - as this method used to - let two threads racing
+			// the same uncached path both miss, both upload a separate GPU texture, and both assign
+			// Textures[path]. Only the last assignment was reachable; the other handle was invisible
+			// to DeleteTexture, CleanupAllTextures and ReloadAllTextures, and leaked for the life of
+			// the GL context.
+			loadedTexture = Invoker.Invoke(() =>
 			{
-				textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
-			}
+				if (Textures.TryGetValue(path, out ImGuiAppTextureInfo? publishedTexture))
+				{
+					return publishedTexture;
+				}
+
+				nint textureId = UploadTextureRGBA(bytes, image.Width, image.Height);
+				ImTextureRef textureRef;
+				unsafe
+				{
+					textureRef = new ImTextureRef(default, textureId);
+				}
+
+				ImGuiAppTextureInfo textureInfo = new()
+				{
+					Path = path,
+					Width = image.Width,
+					Height = image.Height,
+					TextureId = textureId,
+					TextureRef = textureRef
+				};
+
+				Textures[path] = textureInfo;
+				return textureInfo;
+			});
 		});
 
-		Textures[path] = textureInfo;
-		return textureInfo;
+		return loadedTexture!;
 	}
 
 	/// <summary>
