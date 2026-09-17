@@ -993,6 +993,38 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
+	/// Disposes the window and everything that hangs off it, then clears the static fields that
+	/// referred to them.
+	/// </summary>
+	/// <remarks>
+	/// Clearing <see cref="window"/> is what makes a later <see cref="Start(ImGuiAppConfig)"/>
+	/// legal: the guard there reads the field, not a live window. Both the blocking run loop and
+	/// the embedded session end here, so neither path can be the one that forgets a field.
+	/// The individual cleanups are idempotent, which matters because the window's Closing handler
+	/// has usually already run them by the time the run loop unwinds.
+	/// </remarks>
+	internal static void TeardownWindow()
+	{
+		CleanupController();
+		CleanupInputContext();
+		CleanupOpenGL();
+
+		window?.Dispose();
+		window = null;
+	}
+
+	/// <summary>
+	/// Runs the window's blocking loop and tears the window down once it returns.
+	/// </summary>
+	internal static void RunWindowLoop()
+	{
+		DebugLogger.Log("ImGuiApp.Start: Starting window run loop");
+		window!.Run();
+		DebugLogger.Log("ImGuiApp.Start: Window run loop completed");
+		TeardownWindow();
+	}
+
+	/// <summary>
 	/// Starts the ImGui application with the specified configuration.
 	/// </summary>
 	/// <param name="config">The configuration settings for the ImGui application.</param>
@@ -1032,10 +1064,7 @@ public static partial class ImGuiApp
 
 		if (!config.TestMode)
 		{
-			DebugLogger.Log("ImGuiApp.Start: Starting window run loop");
-			window.Run();
-			DebugLogger.Log("ImGuiApp.Start: Window run loop completed");
-			window.Dispose();
+			RunWindowLoop();
 		}
 	}
 
