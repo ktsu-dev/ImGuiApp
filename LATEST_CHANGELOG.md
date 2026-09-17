@@ -1,6 +1,6 @@
-## v3.38.2 (patch)
+## v3.38.3 (patch)
 
-Changes since v3.38.1:
+Changes since v3.38.2:
 
-- [patch] Keep integrated-GPU font heuristics off discrete Intel Arc ([@Claude](https://github.com/Claude))
+- [patch] Run window teardown when the run loop throws ([@matt-edmondson](https://github.com/matt-edmondson))
 
