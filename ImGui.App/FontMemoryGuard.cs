@@ -570,6 +570,31 @@ public static class FontMemoryGuard
 #endif
 
 	/// <summary>
+	/// Renderer-string fragments that name discrete hardware with its own VRAM.
+	/// Intel Arc is in this list deliberately: it is a discrete part that reports the same vendor
+	/// string as Intel's integrated graphics, so the renderer is the only thing separating them.
+	/// </summary>
+	private static readonly string[] DiscreteGpuPatterns = ["arc", "rx 6", "rx 7", "rtx", "geforce"];
+
+	/// <summary>
+	/// Determines if a GPU is discrete based on renderer string analysis.
+	/// This is the one classification every integrated-GPU heuristic defers to, so a renderer string
+	/// cannot be read as discrete in one place and integrated in another.
+	/// </summary>
+	/// <param name="renderer">GPU renderer string from OpenGL.</param>
+	/// <returns>True if the renderer names known discrete hardware.</returns>
+	public static bool IsDiscreteGpu(string renderer)
+	{
+		if (string.IsNullOrEmpty(renderer))
+		{
+			return false;
+		}
+
+		string rendererLower = renderer.ToLowerInvariant();
+		return DiscreteGpuPatterns.Any(rendererLower.Contains);
+	}
+
+	/// <summary>
 	/// Determines if a GPU is integrated based on renderer string analysis.
 	/// </summary>
 	/// <param name="renderer">GPU renderer string from OpenGL.</param>
@@ -581,14 +606,13 @@ public static class FontMemoryGuard
 			return false;
 		}
 
-		string rendererLower = renderer.ToLowerInvariant();
-
-		// First check for known discrete GPU patterns - if found, this is NOT integrated
-		string[] discretePatterns = ["arc", "rx 6", "rx 7", "rtx", "geforce"];
-		if (discretePatterns.Any(rendererLower.Contains))
+		// Known discrete hardware is never integrated, whatever else the renderer string says.
+		if (IsDiscreteGpu(renderer))
 		{
 			return false;
 		}
+
+		string rendererLower = renderer.ToLowerInvariant();
 
 		// Intel integrated GPU patterns - exclude Arc discrete GPUs
 		string[] intelIntegratedPatterns = [
@@ -613,14 +637,24 @@ public static class FontMemoryGuard
 	/// <summary>
 	/// Applies memory configuration heuristics for integrated GPUs when direct memory detection fails.
 	/// This is especially important for Intel integrated GPUs which often don't expose memory extensions.
+	/// Discrete hardware is excluded up front and keeps the discrete defaults.
 	/// </summary>
 	/// <param name="isIntelGpu">Whether this is an Intel GPU.</param>
 	/// <param name="isAmdGpu">Whether this is an AMD GPU.</param>
 	/// <param name="isIntegratedGpu">Whether this appears to be integrated graphics.</param>
 	/// <param name="renderer">GPU renderer string for additional analysis.</param>
 	/// <returns>True if heuristics were applied and configuration updated.</returns>
-	private static bool ApplyIntegratedGpuHeuristics(bool isIntelGpu, bool isAmdGpu, bool isIntegratedGpu, string renderer)
+	internal static bool ApplyIntegratedGpuHeuristics(bool isIntelGpu, bool isAmdGpu, bool isIntegratedGpu, string renderer)
 	{
+		// TryQueryGpuMemory attempts no Intel extension, so every Intel GPU reaches this fallback.
+		// Without this guard the isIntelGpu branch below fires for a discrete Arc and configures a
+		// card with its own 8-16GB of VRAM as if it shared system RAM with the CPU. Leaving the
+		// discrete defaults untouched is the intended outcome, not a side effect of no branch matching.
+		if (IsDiscreteGpu(renderer))
+		{
+			return false;
+		}
+
 		if (!isIntegratedGpu && !isIntelGpu)
 		{
 			return false; // Only apply heuristics for suspected integrated GPUs
@@ -671,6 +705,13 @@ public static class FontMemoryGuard
 			return 32 * 1024 * 1024; // Conservative 32MB for unknown Intel GPU
 		}
 
+		// Arc is discrete, and IsIntegratedGpu classifies it that way. Handing back an integrated
+		// budget here would make the two classifications disagree for any caller consulting only this one.
+		if (IsDiscreteGpu(renderer))
+		{
+			return DefaultMaxAtlasMemoryBytes * 2; // 128MB - the discrete ceiling CalculateRecommendedMemoryFromDetection uses
+		}
+
 		string rendererLower = renderer.ToLowerInvariant();
 
 		// Iris graphics (higher end integrated) - check first before Xe to get correct priority
@@ -679,8 +720,8 @@ public static class FontMemoryGuard
 			return 80 * 1024 * 1024; // 80MB - Iris has better performance
 		}
 
-		// Modern Intel GPUs (12th gen+, Xe Graphics)
-		if (rendererLower.Contains("xe") || rendererLower.Contains("arc"))
+		// Modern Intel integrated GPUs (12th gen+, Xe Graphics). Arc is handled above as discrete.
+		if (rendererLower.Contains("xe"))
 		{
 			return 96 * 1024 * 1024; // 96MB - Modern Intel has better memory bandwidth
 		}
