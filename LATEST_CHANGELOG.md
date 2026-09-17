@@ -1,6 +1,6 @@
-## v3.38.3 (patch)
+## v3.38.4 (patch)
 
-Changes since v3.38.2:
+Changes since v3.38.3:
 
-- [patch] Run window teardown when the run loop throws ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 8 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
