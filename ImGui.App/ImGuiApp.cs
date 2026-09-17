@@ -854,12 +854,30 @@ public static partial class ImGuiApp
 				return;
 			}
 
-			CleanupPinnedFontData();
-			FontHelper.CleanupCustomFonts();
-			CleanupController();
-			CleanupInputContext();
-			CleanupOpenGL();
+			CleanupWindowResources();
 		};
+	}
+
+	/// <summary>
+	/// Releases everything the window acquired, without touching the window itself.
+	/// </summary>
+	/// <remarks>
+	/// A run loop can end three ways: a normal close, which raises the window's <c>Closing</c> event;
+	/// an exception out of an <see cref="ImGuiAppConfig.OnRender"/> or
+	/// <see cref="ImGuiAppConfig.OnUpdate"/> callback, which raises nothing; and an embedded session
+	/// being disposed. Only the first raises <c>Closing</c>, so the other two have to reach this
+	/// sequence through <see cref="TeardownWindow"/> instead. Keeping it in one place is what stops
+	/// a path from being the one that forgets the pinned font memory.
+	/// Every call here is idempotent, because on a normal close both the <c>Closing</c> handler and
+	/// the teardown that follows the loop will run it.
+	/// </remarks>
+	internal static void CleanupWindowResources()
+	{
+		CleanupPinnedFontData();
+		FontHelper.CleanupCustomFonts();
+		CleanupController();
+		CleanupInputContext();
+		CleanupOpenGL();
 	}
 
 	/// <summary>
@@ -1005,9 +1023,7 @@ public static partial class ImGuiApp
 	/// </remarks>
 	internal static void TeardownWindow()
 	{
-		CleanupController();
-		CleanupInputContext();
-		CleanupOpenGL();
+		CleanupWindowResources();
 
 		window?.Dispose();
 		window = null;
@@ -1016,12 +1032,26 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Runs the window's blocking loop and tears the window down once it returns.
 	/// </summary>
+	/// <remarks>
+	/// The teardown is in a <see langword="finally"/> because an exception thrown by a consumer's
+	/// render or update callback propagates straight out of <c>window.Run()</c>.
+	/// A host that catches it around <see cref="Start(ImGuiAppConfig)"/> and carries on would
+	/// otherwise leak the GL context, the controller, the input context and the pinned font memory
+	/// once per faulted session, and be unable to start a second window because
+	/// <see cref="window"/> still held the orphaned one.
+	/// </remarks>
 	internal static void RunWindowLoop()
 	{
 		DebugLogger.Log("ImGuiApp.Start: Starting window run loop");
-		window!.Run();
-		DebugLogger.Log("ImGuiApp.Start: Window run loop completed");
-		TeardownWindow();
+		try
+		{
+			window!.Run();
+			DebugLogger.Log("ImGuiApp.Start: Window run loop completed");
+		}
+		finally
+		{
+			TeardownWindow();
+		}
 	}
 
 	/// <summary>
