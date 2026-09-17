@@ -2,7 +2,7 @@
 
 Changes since v3.38.0:
 
-- Bump the ktsu group with 20 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- [patch] Clear the window on teardown so Start can run again ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v3.38.0 (minor)
 
