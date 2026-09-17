@@ -392,6 +392,97 @@ public class FontMemoryGuardTests
 		Assert.AreEqual(64 * 1024 * 1024, FontMemoryGuard.GetAmdApuMemoryLimit("AMD Radeon(TM) Unknown APU"));
 	}
 
+	[TestMethod]
+	public void FontMemoryGuard_IsDiscreteGpu_AgreesWithIsIntegratedGpu()
+	{
+		string[] discreteRenderers =
+		[
+			"Intel Arc A770",
+			"Intel(R) Arc(TM) A750 Graphics",
+			"NVIDIA GeForce RTX 3060",
+			"AMD Radeon RX 7900 XTX"
+		];
+
+		foreach (string renderer in discreteRenderers)
+		{
+			Assert.IsTrue(FontMemoryGuard.IsDiscreteGpu(renderer), $"'{renderer}' should be detected as discrete");
+			Assert.IsFalse(FontMemoryGuard.IsIntegratedGpu(renderer), $"'{renderer}' should not be detected as integrated");
+		}
+
+		string[] integratedRenderers =
+		[
+			"Intel(R) UHD Graphics 620",
+			"Intel(R) Iris(R) Xe Graphics",
+			"AMD Radeon(TM) Vega 8 Graphics"
+		];
+
+		foreach (string renderer in integratedRenderers)
+		{
+			Assert.IsFalse(FontMemoryGuard.IsDiscreteGpu(renderer), $"'{renderer}' should not be detected as discrete");
+			Assert.IsTrue(FontMemoryGuard.IsIntegratedGpu(renderer), $"'{renderer}' should be detected as integrated");
+		}
+
+		Assert.IsFalse(FontMemoryGuard.IsDiscreteGpu(""), "An empty renderer string should not be detected as discrete");
+	}
+
+	[TestMethod]
+	public void FontMemoryGuard_GetIntelGpuMemoryLimit_TreatsArcAsDiscrete()
+	{
+		// Arc is discrete hardware with its own VRAM, so it must not be handed an integrated budget.
+		Assert.AreEqual(FontMemoryGuard.DefaultMaxAtlasMemoryBytes * 2, FontMemoryGuard.GetIntelGpuMemoryLimit("Intel Arc A770"));
+		Assert.AreEqual(FontMemoryGuard.DefaultMaxAtlasMemoryBytes * 2, FontMemoryGuard.GetIntelGpuMemoryLimit("Intel(R) Arc(TM) A750 Graphics"));
+	}
+
+	[TestMethod]
+	public void FontMemoryGuard_ApplyIntegratedGpuHeuristics_LeavesDiscreteIntelArcAlone()
+	{
+		// TryQueryGpuMemory attempts no Intel extension, so an Arc always reaches this fallback with
+		// isIntelGpu true and isIntegratedGpu false. It must decline rather than apply an integrated budget.
+		bool applied = FontMemoryGuard.ApplyIntegratedGpuHeuristics(
+			isIntelGpu: true,
+			isAmdGpu: false,
+			isIntegratedGpu: false,
+			renderer: "Intel(R) Arc(TM) A770 Graphics");
+
+		Assert.IsFalse(applied, "Integrated heuristics should not apply to a discrete Intel Arc GPU");
+		Assert.AreEqual(FontMemoryGuard.DefaultMaxAtlasMemoryBytes, FontMemoryGuard.CurrentConfig.MaxAtlasMemoryBytes,
+			"A discrete Arc should keep the default atlas memory budget");
+		Assert.AreEqual(0.1f, FontMemoryGuard.CurrentConfig.MaxGpuMemoryPercentage, 0.0001f,
+			"A discrete Arc should keep the discrete GPU memory percentage");
+	}
+
+	[TestMethod]
+	public void FontMemoryGuard_ApplyIntegratedGpuHeuristics_StillAppliesToIntelIntegrated()
+	{
+		bool applied = FontMemoryGuard.ApplyIntegratedGpuHeuristics(
+			isIntelGpu: true,
+			isAmdGpu: false,
+			isIntegratedGpu: true,
+			renderer: "Intel(R) Iris(R) Xe Graphics");
+
+		Assert.IsTrue(applied, "Integrated heuristics should still apply to Intel integrated graphics");
+		Assert.AreEqual(80 * 1024 * 1024, FontMemoryGuard.CurrentConfig.MaxAtlasMemoryBytes,
+			"Intel Iris Xe should get the Iris integrated budget");
+		Assert.AreEqual(0.05f, FontMemoryGuard.CurrentConfig.MaxGpuMemoryPercentage, 0.0001f,
+			"Integrated GPUs should use the reduced GPU memory percentage");
+	}
+
+	[TestMethod]
+	public void FontMemoryGuard_ApplyIntegratedGpuHeuristics_StillAppliesToUnclassifiedIntel()
+	{
+		// An Intel renderer string matching no known pattern is far more likely to be integrated than
+		// a discrete part, so the conservative Intel budget still applies.
+		bool applied = FontMemoryGuard.ApplyIntegratedGpuHeuristics(
+			isIntelGpu: true,
+			isAmdGpu: false,
+			isIntegratedGpu: false,
+			renderer: "Intel(R) Unknown Graphics");
+
+		Assert.IsTrue(applied, "Integrated heuristics should still apply to an unclassified Intel GPU");
+		Assert.AreEqual(32 * 1024 * 1024, FontMemoryGuard.CurrentConfig.MaxAtlasMemoryBytes,
+			"An unclassified Intel GPU should get the conservative Intel budget");
+	}
+
 	#endregion
 
 	#region Configuration Tests
