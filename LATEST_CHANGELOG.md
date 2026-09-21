@@ -1,7 +1,8 @@
-## v3.38.7 (patch)
+## v3.38.8 (patch)
 
-Changes since v3.38.6:
+Changes since v3.38.7:
 
-- [patch] Clear the three SonarCloud findings on this branch ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Release the GDI+ graphics context when reading the DPI fails ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump Markdig from 1.3.2 to 1.4.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Polyfill from 11.3.0 to 11.4.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 19 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
