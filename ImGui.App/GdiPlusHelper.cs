@@ -43,7 +43,7 @@ public static partial class GdiPlusHelper
 		public int CreateFromHwnd(IntPtr hwnd, out IntPtr graphics) => NativeMethods.GdipCreateFromHWND(hwnd, out graphics);
 
 		/// <inheritdoc/>
-		public int GetDpiX(IntPtr graphics, out float dpi) => NativeMethods.GdipGetDpiX(graphics, out dpi);
+		public int ReadDpiX(IntPtr graphics, out float dpi) => NativeMethods.GdipGetDpiX(graphics, out dpi);
 
 		/// <inheritdoc/>
 		public int DeleteGraphics(IntPtr graphics) => NativeMethods.GdipDeleteGraphics(graphics);

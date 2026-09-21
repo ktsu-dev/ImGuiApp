@@ -17,7 +17,7 @@ internal interface IGdiPlusGraphics
 	/// <param name="graphics">The graphics context to read.</param>
 	/// <param name="dpi">The DPI along the X axis.</param>
 	/// <returns>The GDI+ status code.</returns>
-	public int GetDpiX(IntPtr graphics, out float dpi);
+	public int ReadDpiX(IntPtr graphics, out float dpi);
 
 	/// <summary>Releases a graphics context.</summary>
 	/// <param name="graphics">The graphics context to release.</param>
@@ -70,7 +70,7 @@ internal static class GdiPlusDpi
 
 		try
 		{
-			CheckStatus(graphics.GetDpiX(graphicsHandle, out result));
+			CheckStatus(graphics.ReadDpiX(graphicsHandle, out result));
 		}
 		finally
 		{

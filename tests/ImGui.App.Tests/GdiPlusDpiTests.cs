@@ -28,7 +28,7 @@ public class GdiPlusDpiTests
 
 		// Assert
 		Assert.AreEqual(144f, dpi, "The DPI read from the graphics context should be returned");
-		CollectionAssert.AreEqual(new[] { GraphicsHandle }, gdiPlus.Deleted, "The graphics context should be released exactly once");
+		Assert.AreSequenceEqual([GraphicsHandle], gdiPlus.Deleted, "The graphics context should be released exactly once");
 	}
 
 	[TestMethod]
@@ -44,7 +44,7 @@ public class GdiPlusDpiTests
 
 		// Assert
 		Assert.Contains("2", exception.Message, "The failure reported should be the one from reading the DPI");
-		CollectionAssert.AreEqual(new[] { GraphicsHandle }, gdiPlus.Deleted, "The graphics context should be released even though reading the DPI threw");
+		Assert.AreSequenceEqual([GraphicsHandle], gdiPlus.Deleted, "The graphics context should be released even though reading the DPI threw");
 	}
 
 	[TestMethod]
@@ -87,7 +87,7 @@ public class GdiPlusDpiTests
 		/// <summary>Gets or sets the status <see cref="CreateFromHwnd"/> returns.</summary>
 		public int CreateStatus { get; set; }
 
-		/// <summary>Gets or sets the status <see cref="GetDpiX"/> returns.</summary>
+		/// <summary>Gets or sets the status <see cref="ReadDpiX"/> returns.</summary>
 		public int DpiStatus { get; set; }
 
 		/// <summary>Gets or sets the status <see cref="DeleteGraphics"/> returns.</summary>
@@ -110,7 +110,7 @@ public class GdiPlusDpiTests
 		}
 
 		/// <inheritdoc/>
-		public int GetDpiX(IntPtr graphics, out float dpi)
+		public int ReadDpiX(IntPtr graphics, out float dpi)
 		{
 			DpiWasRead = true;
 			dpi = DpiStatus == 0 ? Dpi : 0f;
