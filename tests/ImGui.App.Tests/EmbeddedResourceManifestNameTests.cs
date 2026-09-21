@@ -111,7 +111,7 @@ public class EmbeddedResourceManifestNameTests
 	{
 		DirectoryInfo? directory = new FileInfo(SourceFilePath()).Directory;
 
-		while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "ImGui.sln")))
+		while (directory is not null && !File.Exists(Path.Join(directory.FullName, "ImGui.sln")))
 		{
 			directory = directory.Parent;
 		}
@@ -173,7 +173,14 @@ public class EmbeddedResourceManifestNameTests
 				continue;
 			}
 
-			string candidate = Path.GetFullPath(Path.Combine(projectDirectory, spec.Replace('\\', Path.DirectorySeparatorChar)));
+			// MSBuild reads an item spec relative to the project unless it is already rooted, so say
+			// which of the two this is rather than leaning on Path.Combine silently dropping the
+			// project directory for a rooted spec.
+			string normalizedSpec = spec.Replace('\\', Path.DirectorySeparatorChar);
+			string candidate = Path.IsPathRooted(normalizedSpec)
+				? Path.GetFullPath(normalizedSpec)
+				: Path.GetFullPath(Path.Join(projectDirectory, normalizedSpec));
+
 			if (string.Equals(candidate, target, StringComparison.Ordinal))
 			{
 				return element;
