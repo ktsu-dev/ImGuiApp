@@ -20,13 +20,7 @@ public static partial class GdiPlusHelper
 	/// </summary>
 	/// <param name="gdiStatus">The status code returned by a GDI+ operation.</param>
 	/// <exception cref="InvalidOperationException">Thrown when the GDI+ operation fails.</exception>
-	internal static void CheckStatus(int gdiStatus)
-	{
-		if (gdiStatus != 0)
-		{
-			throw new InvalidOperationException($"GDI Status Error: {gdiStatus}");
-		}
-	}
+	internal static void CheckStatus(int gdiStatus) => GdiPlusDpi.CheckStatus(gdiStatus);
 
 	/// <summary>
 	/// Gets the DPI (dots per inch) along the X axis for a given window handle.
@@ -34,12 +28,24 @@ public static partial class GdiPlusHelper
 	/// <param name="hwnd">The handle to the window.</param>
 	/// <returns>The DPI along the X axis.</returns>
 	/// <exception cref="InvalidOperationException">Thrown when a GDI+ operation fails.</exception>
-	public static float GetDpiX(IntPtr hwnd)
-	{
-		CheckStatus(NativeMethods.GdipCreateFromHWND(hwnd, out nint graphicsHandle));
-		CheckStatus(NativeMethods.GdipGetDpiX(graphicsHandle, out float result));
-		CheckStatus(NativeMethods.GdipDeleteGraphics(graphicsHandle));
+	public static float GetDpiX(IntPtr hwnd) => GdiPlusDpi.GetDpiX(NativeGdiPlusGraphics.Instance, hwnd);
 
-		return result;
+	/// <summary>
+	/// The GDI+ operations <see cref="GdiPlusHelper.GetDpiX(IntPtr)"/> runs, as the platform actually
+	/// provides them.
+	/// </summary>
+	private sealed class NativeGdiPlusGraphics : IGdiPlusGraphics
+	{
+		/// <summary>Gets the single instance; the type holds no state of its own.</summary>
+		internal static NativeGdiPlusGraphics Instance { get; } = new();
+
+		/// <inheritdoc/>
+		public int CreateFromHwnd(IntPtr hwnd, out IntPtr graphics) => NativeMethods.GdipCreateFromHWND(hwnd, out graphics);
+
+		/// <inheritdoc/>
+		public int GetDpiX(IntPtr graphics, out float dpi) => NativeMethods.GdipGetDpiX(graphics, out dpi);
+
+		/// <inheritdoc/>
+		public int DeleteGraphics(IntPtr graphics) => NativeMethods.GdipDeleteGraphics(graphics);
 	}
 }

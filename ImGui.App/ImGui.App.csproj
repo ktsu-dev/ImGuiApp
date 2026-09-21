@@ -62,6 +62,9 @@
          so the shared ImGuiAppConfig surface (and Start(ImGuiAppConfig)) is available on iOS. -->
     <Compile Remove="ForceDpiAware.cs" />
     <Compile Remove="GdiPlusHelper.cs" />
+    <!-- The DPI sequence GdiPlusHelper.cs runs. It makes no native calls itself, but its only
+         caller is the file above, so it goes with it rather than compiling unreachable. -->
+    <Compile Remove="GdiPlusDpi.cs" />
     <Compile Remove="NativeMethods.cs" />
     <Compile Remove="OverlayWindow.cs" />
     <!-- Reflection-heavy; plan §2.7 explicitly skips extension auto-discovery on iOS
