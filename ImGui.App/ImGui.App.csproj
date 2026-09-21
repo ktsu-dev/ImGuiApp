@@ -95,6 +95,15 @@
     <EmbeddedResource Update="Resources\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <!-- Pinned because the manifest name is otherwise derived from RootNamespace, which ktsu.Sdk
+           computes from AuthorsNamespace and ProjectNamespace. Resources.Designer.cs carries the same
+           name as a string baked in when it was generated, so a change on the MSBuild side quietly
+           desynchronises the two, and every lookup then throws MissingManifestResourceException at
+           run time rather than failing the build. That drift already happened once, in
+           examples/ImGuiAppDemo; here it would take NerdFont and NotoEmoji down in every consuming
+           application. This value is what the generator writes today, so regenerating the designer
+           keeps matching it. -->
+      <LogicalName>ktsu.ImGui.App.Resources.Resources.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 
