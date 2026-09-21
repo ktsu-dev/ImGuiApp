@@ -109,15 +109,31 @@ public class EmbeddedResourceManifestNameTests
 
 	private static string RepositoryRoot()
 	{
-		DirectoryInfo? directory = new FileInfo(SourceFilePath()).Directory;
+		// The test binaries sit under tests/<project>/bin/<configuration>/<tfm>, so walking up from
+		// them finds the checkout. CallerFilePath is only a fallback: CI builds with deterministic
+		// source paths, which rewrites it to /_/… and leaves nothing on disk to walk.
+		string? root = FindAncestorHoldingSolution(AppContext.BaseDirectory)
+			?? FindAncestorHoldingSolution(Path.GetDirectoryName(SourceFilePath()));
+
+		Assert.IsNotNull(root, "Could not locate the repository root (the directory holding ImGui.sln) from the test binaries or the test source path.");
+		return root;
+	}
+
+	private static string? FindAncestorHoldingSolution(string? startDirectory)
+	{
+		if (string.IsNullOrEmpty(startDirectory))
+		{
+			return null;
+		}
+
+		DirectoryInfo? directory = new(startDirectory);
 
 		while (directory is not null && !File.Exists(Path.Join(directory.FullName, "ImGui.sln")))
 		{
 			directory = directory.Parent;
 		}
 
-		Assert.IsNotNull(directory, "Could not locate the repository root (the directory holding ImGui.sln) from the test source path.");
-		return directory.FullName;
+		return directory?.FullName;
 	}
 
 	private static List<string> EnumerateResxFiles()
