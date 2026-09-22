@@ -45,7 +45,8 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "TabPanel", "SearchBox", "Grid Layout", "Divider Container",
+		"Images & Icons", "ImageCanvas", "TabPanel", "SearchBox", "Grid Layout", "Virtual Table",
+		"Divider Container",
 	];
 
 	private static readonly string[] NetNewSections =

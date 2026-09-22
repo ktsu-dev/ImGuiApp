@@ -473,6 +473,7 @@ internal static class ImGuiWidgetsDemo
 		ShowTabPanelDemo();
 		ShowSearchBoxDemo();
 		ShowGridDemo(ktsuTexture);
+		VirtualTableDemo.Show();
 		ShowDividerDemo();
 
 		MessageOK.ShowIfOpen();
