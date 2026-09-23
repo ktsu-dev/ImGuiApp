@@ -116,22 +116,12 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 			throw new InvalidOperationException($"Node type {nodeType.Name} is not registered");
 		}
 
-		// Extract pin names from definition
-		List<string> inputPinNames = [.. definition.InputPins
-			.OrderBy(p => p.Order)
-			.Select(p => p.DisplayName)];
-
-		List<string> outputPinNames = [.. definition.OutputPins
-			.OrderBy(p => p.Order)
-			.Select(p => p.DisplayName)];
-
-		Node node = engine.CreateNode(
+		Node node = engine.CreateNodeFromSpecs(
 			position,
 			definition.DisplayName,
-			inputPinNames,
-			outputPinNames);
+			ToSpecs(definition.InputPins),
+			ToSpecs(definition.OutputPins));
 
-		ApplyConnectionCapacities(definition, node);
 		return node;
 	}
 
@@ -148,49 +138,35 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 			throw new InvalidOperationException($"Method {method.DeclaringType?.Name}.{method.Name} is not registered");
 		}
 
-		// Extract pin names from definition
-		List<string> inputPinNames = [.. definition.InputPins
-			.OrderBy(p => p.Order)
-			.Select(p => p.DisplayName)];
-
-		List<string> outputPinNames = [.. definition.OutputPins
-			.OrderBy(p => p.Order)
-			.Select(p => p.DisplayName)];
-
-		Node node = engine.CreateNode(
+		Node node = engine.CreateNodeFromSpecs(
 			position,
 			definition.DisplayName,
-			inputPinNames,
-			outputPinNames);
+			ToSpecs(definition.InputPins),
+			ToSpecs(definition.OutputPins));
 
-		ApplyConnectionCapacities(definition, node);
 		return node;
 	}
 
 	/// <summary>
-	/// Carry each declared pin's connection capacity onto the pin the engine just created.
+	/// Turn declared pins into what the engine creates pins from.
 	/// </summary>
-	/// <param name="definition">The definition the node was created from.</param>
-	/// <param name="node">The created node.</param>
+	/// <param name="pins">The declared pins, in any order.</param>
+	/// <returns>One spec per pin, ordered as the declaration asked.</returns>
 	/// <remarks>
-	/// The engine creates pins from names alone, so without this an
-	/// <c>[OutputPin(AllowMultipleConnections = false)]</c> would be declared and then ignored. The
-	/// pins are matched by the order they were created in, which is the order the names were passed
-	/// in.
+	/// This replaced a pass that created pins from names and then set each one's connection capacity
+	/// by index, matching declared pins to created pins by the order they happened to be created in.
+	/// Carrying everything in one value means there is no second list to fall out of step with.
 	/// </remarks>
-	private void ApplyConnectionCapacities(NodeDefinition definition, Node node)
-	{
-		ApplyConnectionCapacities([.. definition.InputPins.OrderBy(p => p.Order)], node.InputPins);
-		ApplyConnectionCapacities([.. definition.OutputPins.OrderBy(p => p.Order)], node.OutputPins);
-	}
-
-	private void ApplyConnectionCapacities(List<PinDefinition> definitions, List<Pin> pins)
-	{
-		for (int i = 0; i < definitions.Count && i < pins.Count; i++)
-		{
-			engine.SetPinAllowsMultipleConnections(pins[i].Id, definitions[i].AllowMultipleConnections);
-		}
-	}
+	private static List<PinSpec> ToSpecs(List<PinDefinition> pins) =>
+	[
+		.. pins
+			.OrderBy(p => p.Order)
+			.Select(p => new PinSpec(
+				p.DisplayName,
+				p.DataType,
+				p.DefaultValue,
+				p.AllowMultipleConnections)),
+	];
 
 	/// <summary>
 	/// Gets the definition for a registered node type.
