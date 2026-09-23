@@ -240,6 +240,12 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			ImGui.TextColored(lastActionColor, lastActionMessage);
 		}
 
+		if (renderer.SelectedNodeIds.Count > 0)
+		{
+			ImGui.SeparatorText("Parameters");
+			NodeInspectorPanel.Draw(engine, renderer.SelectedNodeIds.First());
+		}
+
 		// Debug information
 		if (showDebugVisualization)
 		{
@@ -452,5 +458,18 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		engine.TryCreateLink(multiplyNode.OutputPins[0].Id, setVector.InputPins[1].Id); // X² as new X
 		engine.TryCreateLink(splitVector1.OutputPins[1].Id, setVector.InputPins[2].Id); // Keep Y unchanged
 		engine.TryCreateLink(setVector.OutputPins[0].Id, splitVector2.InputPins[0].Id); // Final vector analysis
+
+		// A node whose parameters are edited rather than connected, which is what issue #437 asked
+		// about. Typed pins with defaults are all an inline editor needs.
+		Node blobFilter = engine.CreateNodeFromSpecs(
+			new Vector2(50, 550),
+			"Blob Filter",
+			[
+				new PinSpec("Threshold", typeof(double), 128.0),
+				new PinSpec("AreaMin", typeof(double), 50.0),
+				new PinSpec("Sigma", typeof(double), 2.0),
+				new PinSpec("Invert", typeof(bool), false),
+			],
+			[new PinSpec("Count", typeof(int))]);
 	}
 }

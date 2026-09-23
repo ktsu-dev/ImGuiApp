@@ -11,7 +11,7 @@ ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself
 - **Tuning panel**: `PhysicsSettingsPanel` draws every layout setting, grouped and captioned, so a graph can be tuned while it is on screen
 - **Attribute-based nodes**: `AttributeBasedNodeFactory` reads `ktsu.NodeGraph` attributes off a type — or every decorated type in an assembly — and creates nodes with the right pins
 - **Physics is opt-in**: the simulation does nothing until `PhysicsSettings.Enabled` is set, so a host that positions nodes itself pays nothing for it
-- **Type-aware connections**: `TryCreateLink` returns a result with a message rather than throwing, and pin compatibility comes from the same rules the metadata declares
+- **Connections are checked**: `TryCreateLink` returns a result with a message rather than throwing, and refuses a link that joins two pins of the same direction, duplicates one that exists, exceeds what a pin will accept, or joins a node to itself. It does not yet compare the pins' declared types
 - **Physics-based layout**: nodes repel, links pull, and the graph settles; powered by [`ktsu.ForceDirectedLayout`](https://github.com/ktsu-dev/ImGuiApp), with per-frame stability and energy readings for debug overlays
 - **Drag-aware**: nodes being dragged are excluded from the simulation, and the renderer reports position and size changes back to the engine
 
@@ -118,6 +118,43 @@ Node node = factory.CreateNode<AddNode>(new Vector2(100, 100));
 `GetAllNodeDefinitions()` returns the registered definitions, which is what a "add node" menu is built from: each one carries the display name, category, tags, execution mode, deprecation state and pin list read off the attributes.
 
 Two things to know about registration. A class node also gets an `Instance` output pin (and input pins for its constructor's parameters), so it can be chained onward. And `RegisterNodeTypesFromAssembly` skips abstract types — which in IL includes every `static class` — so a `[Node]` method parked on a static holder class has to be registered by naming that holder: `factory.RegisterNodeType(typeof(MathNodes))`.
+
+### Editing a node's parameters
+
+A pin carries the type it was declared with, and the engine holds a value for it. An unconnected
+input pin whose type has an editor is drawn with one beside its label, and `NodeInspectorPanel`
+draws the same parameters as a property grid for whichever node is selected.
+
+```csharp
+Node filter = engine.CreateNodeFromSpecs(
+    new Vector2(100, 100),
+    "Blob Filter",
+    [
+        new PinSpec("Threshold", typeof(double), 128.0),
+        new PinSpec("Polarity", typeof(EdgePolarity), EdgePolarity.Rising),
+    ],
+    [new PinSpec("Count", typeof(int))]);
+
+// Whatever the user typed, or the declared default until they do
+double threshold = (double)engine.GetPinValue(filter.InputPins[0].Id)!;
+
+// A panel for the selected node
+if (renderer.SelectedNodeIds.Count > 0)
+{
+    NodeInspectorPanel.Draw(engine, renderer.SelectedNodeIds.First());
+}
+```
+
+A node built by `AttributeBasedNodeFactory` gets this for free: the type and default come off the
+`[InputPin]` declaration, including a default written as a C# initializer.
+
+Editable types are bool, int, float, double, string, `Vector2`, `Vector3` and enums, plus
+`Nullable<T>` of those. Anything else, `long` included, draws no inline editor and a disabled row in
+the inspector. A connected input pin gets no editor either, because its value arrives along the
+link.
+
+Values are held per pin, not per node instance. The library does not construct the type a node was
+declared from and does not run it, so a graph's meaning is still the host's to give it.
 
 ### Tuning the layout
 
