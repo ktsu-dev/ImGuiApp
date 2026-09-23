@@ -4,6 +4,7 @@ namespace ktsu.ImGui.NodeEditor;
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
 
@@ -113,16 +114,15 @@ public class NodeEditorInputHandler
 			}
 		}
 
-		foreach (int linkId in selected)
-		{
-			// A link detached by a drag can also be selected, and ProcessLinkDeletion has already
-			// reported it this frame. Asking the application to remove the same id twice would have
-			// the second call fail for a link that no longer exists.
-			if (!events.LinkDeletionRequests.Contains(linkId))
-			{
-				events.LinkDeletionRequests.Add(linkId);
-			}
-		}
+		// A link detached by a drag can also be selected, and ProcessLinkDeletion has already
+		// reported it this frame. Asking the application to remove the same id twice would have the
+		// second call fail for a link that no longer exists.
+		//
+		// The filter is materialised before anything is added rather than iterated lazily, so it
+		// reads the request list as it stood on entry rather than one it is in the middle of
+		// growing. Distinct covers a selection that names an id more than once.
+		List<int> newRequests = [.. selected.Where(linkId => !events.LinkDeletionRequests.Contains(linkId)).Distinct()];
+		events.LinkDeletionRequests.AddRange(newRequests);
 
 		// The selection named links that are on their way out, so it must not outlive them. Left in
 		// place it would name the same ids on the next Delete, and ImNodes would be holding a
