@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
+using Hexa.NET.ImNodes;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
@@ -66,6 +67,31 @@ public sealed class InlinePinEditorTests
 			"Blob Filter",
 			[new PinSpec("Threshold", typeof(double), 128.0)],
 			[new PinSpec("Count", typeof(int))]);
+
+	/// <summary>
+	/// A screen-space point inside the first input pin's inline editor.
+	/// </summary>
+	/// <remarks>
+	/// Read live from the style rather than assumed from the node's right edge: once the output row
+	/// accounts for the editor's width too (the fix for the label-drift bug this file also covers),
+	/// the node can be wider than the input row alone, so the editor no longer necessarily reaches
+	/// the node's right edge. The input row starts flush at the node's own left content edge
+	/// regardless, so the editor's midpoint is found by walking out from there: past the node's left
+	/// padding, the label, the item spacing <c>SameLine()</c> leaves, and half the editor's own width.
+	/// </remarks>
+	private Vector2 EditorMidpoint(Node node)
+	{
+		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.InputPins[0].Id, out Vector2 pin));
+
+		float labelWidth = ImGui.CalcTextSize(node.InputPins[0].EffectiveDisplayName).X;
+		float nodePadding = ImNodes.GetStyle().NodePadding.X;
+		float itemSpacing = ImGui.GetStyle().ItemSpacing.X;
+		float editorWidth = renderer.InlineEditorWidth * renderer.Zoom;
+
+		float x = rect.Min.X + nodePadding + labelWidth + itemSpacing + (editorWidth * 0.5f);
+		return new Vector2(x, pin.Y);
+	}
 
 	/// <summary>
 	/// An editor is wider than a label, so a node carrying one is wider than the same node without.
@@ -144,15 +170,8 @@ public sealed class InlinePinEditorTests
 		Start();
 		harness.Step(5);
 
-		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.InputPins[0].Id, out Vector2 pin));
-		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
-
-		// The editor sits to the right of the label on the pin's own row, so aim at the right-hand
-		// side of the node at the pin's height. Measured: with InlineEditorWidth 90 at Zoom 1, the
-		// editor's box occupies roughly the rightmost 90 pixels of the node before its own padding,
-		// so 20 pixels in from the node's right edge lands inside it.
-		float x = rect.Max.X - 20f;
-		harness.Mouse.Click(x, pin.Y);
+		Vector2 target = EditorMidpoint(node);
+		harness.Mouse.Click(target.X, target.Y);
 		harness.Step();
 
 		harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
@@ -175,11 +194,8 @@ public sealed class InlinePinEditorTests
 		harness.Step(5);
 
 		Vector2 before = engine.Nodes[0].Position;
-		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
-		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.InputPins[0].Id, out Vector2 pin));
-
-		float x = rect.Max.X - 20f;
-		harness.Mouse.Drag(x, pin.Y, x + 60f, pin.Y);
+		Vector2 target = EditorMidpoint(node);
+		harness.Mouse.Drag(target.X, target.Y, target.X + 20f, target.Y);
 		harness.Step(3);
 
 		Assert.AreEqual(before, engine.Nodes[0].Position, "The node moved, so the editor's drag reached ImNodes as a node drag.");
@@ -189,17 +205,73 @@ public sealed class InlinePinEditorTests
 	/// An editor makes its row taller, so the link's attach point moves down with it. What must not
 	/// happen is the offset being measured from the editor alone and landing off the row.
 	/// </summary>
+	/// <remarks>
+	/// A one-input node makes this nearly unfalsifiable: any Y strictly between the node's top and
+	/// bottom edges would pass, editor row or not. Two typed inputs give two rows whose pin Ys must
+	/// come out distinct, in order, and about one editor row apart.
+	/// </remarks>
 	[TestMethod]
 	public void ThePinOffset_StaysOnTheRowTheEditorIsDrawnOn()
 	{
-		Node node = TypedNode();
+		Node node = engine.CreateNodeFromSpecs(
+			new Vector2(250, 200),
+			"Blob Filter",
+			[
+				new PinSpec("Threshold", typeof(double), 128.0),
+				new PinSpec("Sigma", typeof(double), 2.0),
+			],
+			[]);
 		Start();
 		harness.Step(5);
 
-		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.InputPins[0].Id, out Vector2 pin));
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.InputPins[0].Id, out Vector2 firstPin));
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.InputPins[1].Id, out Vector2 secondPin));
 		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
 
-		Assert.IsTrue(pin.Y > rect.Min.Y, "The pin sits below the node's top edge.");
-		Assert.IsTrue(pin.Y < rect.Max.Y, "And above its bottom edge.");
+		Assert.IsTrue(firstPin.Y > rect.Min.Y, "The first pin sits below the node's top edge.");
+		Assert.IsTrue(secondPin.Y < rect.Max.Y, "The second pin sits above the node's bottom edge.");
+		Assert.IsLessThan(secondPin.Y, firstPin.Y, "The two rows should be in the order they were declared.");
+
+		float rowSpacing = secondPin.Y - firstPin.Y;
+		Assert.IsTrue(rowSpacing is > 10f and < 60f, $"The two rows should be about one editor row apart, not on top of each other or spread across the whole node. Was {rowSpacing}.");
+	}
+
+	/// <summary>
+	/// Reproduces the layout bug the fix in the renderer's node-width estimate addresses: an inline
+	/// editor widens an input row past what that estimate used to account for, which under-sizes the
+	/// padding pushing an output label to the right and leaves it stranded mid-node instead of beside
+	/// its own pin circle.
+	/// </summary>
+	[TestMethod]
+	public void AnOutputLabel_EndsNearTheNodesRightEdge_WhenInputsHaveEditors()
+	{
+		Node node = engine.CreateNodeFromSpecs(
+			new Vector2(250, 200),
+			"Blob Filter",
+			[
+				new PinSpec("Threshold", typeof(double), 128.0),
+				new PinSpec("AreaMin", typeof(double), 50.0),
+				new PinSpec("Sigma", typeof(double), 2.0),
+				new PinSpec("Invert", typeof(bool), false),
+			],
+			[new PinSpec("Count", typeof(int))]);
+
+		// DrawNodeBody runs immediately after the output pins loop and before ImNodes.EndNode(), so
+		// ImGui's own "last item" state still names the output label's Text() call — the same trick
+		// RecordPinRow relies on for the row it measures.
+		Vector2 labelRectMax = default;
+		renderer.DrawNodeBody = _ => labelRectMax = ImGui.GetItemRectMax();
+
+		Start();
+		harness.Step(5);
+
+		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(node.OutputPins[0].Id, out Vector2 pin));
+
+		float gapToNodeEdge = rect.Max.X - labelRectMax.X;
+		float gapToPin = pin.X - labelRectMax.X;
+
+		Assert.IsTrue(gapToNodeEdge is >= 0f and < 20f, $"The output label should end close to the node's right edge (within node padding), not the ~80px short the unfixed estimate produced. Gap was {gapToNodeEdge}.");
+		Assert.IsTrue(gapToPin is >= 0f and < 30f, $"The output label should end close to its own pin circle. Gap was {gapToPin}.");
 	}
 }

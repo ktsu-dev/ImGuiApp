@@ -442,7 +442,7 @@ public class NodeEditorRenderer
 			Vector2 textSize = ImGui.CalcTextSize(pinText);
 
 			// Calculate the node's content width based on the longest text
-			float nodeContentWidth = CalculateNodeContentWidth(node);
+			float nodeContentWidth = CalculateNodeContentWidth(engine, node);
 			float paddingWidth = nodeContentWidth - textSize.X;
 
 			// Add padding to push text to the right
@@ -1266,7 +1266,14 @@ public class NodeEditorRenderer
 	/// <summary>
 	/// Calculate the content width of a node based on its longest text element
 	/// </summary>
-	private static float CalculateNodeContentWidth(Node node)
+	/// <remarks>
+	/// An input row that draws an inline editor is wider than its label alone: it is
+	/// <c>label + ItemSpacing + InlineEditorWidth * Zoom</c>, exactly the row <see cref="DrawInlineEditor"/>
+	/// draws under the same three conditions. Without accounting for that here, the output-pin padding
+	/// below is computed against a node that is narrower than the one ImNodes actually drew, and an
+	/// output pin's label drifts away from its own pin circle.
+	/// </remarks>
+	private float CalculateNodeContentWidth(NodeEditorEngine engine, Node node)
 	{
 		float maxWidth = 0;
 
@@ -1274,11 +1281,20 @@ public class NodeEditorRenderer
 		Vector2 titleSize = ImGui.CalcTextSize(node.Name);
 		maxWidth = Math.Max(maxWidth, titleSize.X);
 
-		// Check all input pin names
+		// Check all input pin names, plus whatever inline editor is drawn alongside them
 		foreach (Pin pin in node.InputPins)
 		{
 			Vector2 pinSize = ImGui.CalcTextSize(pin.EffectiveDisplayName);
-			maxWidth = Math.Max(maxWidth, pinSize.X);
+			float rowWidth = pinSize.X;
+
+			if (DrawInlinePinEditors
+				&& !engine.IsPinConnected(pin.Id)
+				&& PinValueKinds.Classify(pin.DataType) != PinValueKind.Unsupported)
+			{
+				rowWidth += ImGui.GetStyle().ItemSpacing.X + (InlineEditorWidth * Zoom);
+			}
+
+			maxWidth = Math.Max(maxWidth, rowWidth);
 		}
 
 		// Check all output pin names
