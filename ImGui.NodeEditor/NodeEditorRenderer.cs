@@ -544,7 +544,8 @@ public class NodeEditorRenderer
 				DrawEnumEditor(engine, pin, id, current);
 				break;
 
-			case PinValueKind.Unsupported:
+			// No Unsupported case: the early return above has already taken that path, and default
+			// covers every kind regardless.
 			default:
 				break;
 		}

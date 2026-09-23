@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.NodeEditor;
 
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 /// <summary>
@@ -58,7 +59,8 @@ public static class PinValueKinds
 	/// <remarks>
 	/// <c>long</c> is deliberately unsupported. Dear ImGui has no <c>InputLong</c>, so it needs an
 	/// unsafe <c>DragScalar</c> with <c>ImGuiDataType.S64</c>, which is not worth one unverified
-	/// interop call in v1. Adding it is a case here and a case in each surface's switch.
+	/// interop call in v1. Adding it is an entry in <see cref="KindsByType"/> and a case in each
+	/// surface's switch.
 	/// </remarks>
 	public static PinValueKind Classify(Type? dataType)
 	{
@@ -69,21 +71,32 @@ public static class PinValueKinds
 
 		Type underlying = Nullable.GetUnderlyingType(dataType) ?? dataType;
 
+		// An enum is matched by shape rather than by identity, so it cannot be a table entry and has
+		// to be asked about before the lookup.
 		if (underlying.IsEnum)
 		{
 			return PinValueKind.Enum;
 		}
 
-		return underlying switch
-		{
-			Type t when t == typeof(bool) => PinValueKind.Boolean,
-			Type t when t == typeof(int) => PinValueKind.Int32,
-			Type t when t == typeof(float) => PinValueKind.Single,
-			Type t when t == typeof(double) => PinValueKind.Double,
-			Type t when t == typeof(string) => PinValueKind.String,
-			Type t when t == typeof(Vector2) => PinValueKind.Vector2,
-			Type t when t == typeof(Vector3) => PinValueKind.Vector3,
-			_ => PinValueKind.Unsupported,
-		};
+		return KindsByType.TryGetValue(underlying, out PinValueKind kind) ? kind : PinValueKind.Unsupported;
 	}
+
+	/// <summary>
+	/// The types that have an editor, and which one.
+	/// </summary>
+	/// <remarks>
+	/// A lookup rather than a switch over <c>Type t when t == typeof(...)</c>: each of those guards
+	/// re-tested that the already-non-null <c>Type</c> was a <c>Type</c>, which is a condition that
+	/// cannot be false.
+	/// </remarks>
+	private static readonly Dictionary<Type, PinValueKind> KindsByType = new()
+	{
+		[typeof(bool)] = PinValueKind.Boolean,
+		[typeof(int)] = PinValueKind.Int32,
+		[typeof(float)] = PinValueKind.Single,
+		[typeof(double)] = PinValueKind.Double,
+		[typeof(string)] = PinValueKind.String,
+		[typeof(Vector2)] = PinValueKind.Vector2,
+		[typeof(Vector3)] = PinValueKind.Vector3,
+	};
 }
