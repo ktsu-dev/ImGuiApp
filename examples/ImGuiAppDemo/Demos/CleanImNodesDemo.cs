@@ -461,7 +461,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 
 		// A node whose parameters are edited rather than connected, which is what issue #437 asked
 		// about. Typed pins with defaults are all an inline editor needs.
-		Node blobFilter = engine.CreateNodeFromSpecs(
+		engine.CreateNodeFromSpecs(
 			new Vector2(50, 550),
 			"Blob Filter",
 			[

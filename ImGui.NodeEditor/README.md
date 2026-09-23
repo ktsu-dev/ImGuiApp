@@ -131,7 +131,7 @@ Node filter = engine.CreateNodeFromSpecs(
     "Blob Filter",
     [
         new PinSpec("Threshold", typeof(double), 128.0),
-        new PinSpec("Polarity", typeof(EdgePolarity), EdgePolarity.Rising),
+        new PinSpec("Polarity", typeof(EdgePolarity), EdgePolarity.Rising), // your own enum
     ],
     [new PinSpec("Count", typeof(int))]);
 

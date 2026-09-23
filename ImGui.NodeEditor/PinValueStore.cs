@@ -108,9 +108,9 @@ public sealed class PinValueStore
 	/// <c>typeof(double?).IsInstanceOfType(1.0)</c> is false. Null is accepted for a reference type
 	/// and for a <c>Nullable{T}</c>, and refused for any other value type.
 	/// <para>
-	/// The match is exact rather than widening: an int offered to a double pin is refused. The
-	/// editors write the pin's own type, so a mismatch is a caller's bug and is better reported than
-	/// silently converted.
+	/// The match is assignable, not convertible: an int offered to a double pin is refused, even
+	/// though a conversion exists. The editors write the pin's own type, so a mismatch is a
+	/// caller's bug and is better reported than silently converted.
 	/// </para>
 	/// </remarks>
 	public static bool Accepts(Type? dataType, object? value)

@@ -138,6 +138,11 @@ public class NodeEditorRenderer
 	/// after every pin so host content cannot move a recorded pin row, which is the right contract
 	/// for arbitrary content and the wrong place for a parameter, which belongs on its pin's line.
 	/// The two compose: editors on the rows, host content underneath.
+	/// <para>
+	/// The string editor caps input at 256 characters (<c>ImGui.InputText</c>'s own buffer limit).
+	/// <see cref="PinValueStore.TrySet(Pin, object?)"/> and the inspector's string row accept any
+	/// length; only typing through this inline editor is capped.
+	/// </para>
 	/// </remarks>
 	public bool DrawInlinePinEditors { get; set; } = true;
 
@@ -153,6 +158,11 @@ public class NodeEditorRenderer
 	/// <remarks>
 	/// Read after the editor ends, like the hover state and for the same reason: ImNodes only answers
 	/// once it has laid the frame out.
+	/// <para>
+	/// "As of the last frame drawn" is literal: this is updated only while <see cref="Render"/> keeps
+	/// running. If the editor stops being drawn, the set does not clear itself, it simply holds
+	/// whatever was selected the last time it did run.
+	/// </para>
 	/// </remarks>
 	public IReadOnlySet<int> SelectedNodeIds => selectedNodes;
 
