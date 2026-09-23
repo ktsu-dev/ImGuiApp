@@ -654,4 +654,78 @@ public sealed class NodeEditorEngineTests
 		Assert.IsNull(node.InputPins[0].DataType, "A name carries no type, and inventing one would be a lie.");
 		Assert.IsNull(node.OutputPins[0].DataType);
 	}
+
+	[TestMethod]
+	public void CreateNode_SeedsEachPinWithItsDeclaredDefault()
+	{
+		Node node = engine.CreateNodeFromSpecs(
+			new Vector2(0, 0),
+			"Seeded",
+			[new PinSpec("Threshold", typeof(double), 128.0), new PinSpec("Label", typeof(string))],
+			[]);
+
+		Assert.AreEqual(128.0, engine.GetPinValue(node.InputPins[0].Id));
+		Assert.IsNull(engine.GetPinValue(node.InputPins[1].Id), "A spec with no default seeds nothing.");
+	}
+
+	[TestMethod]
+	public void SetPinValue_RefusesAValueThePinsTypeWillNotTake()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Typed", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+
+		Assert.IsFalse(engine.SetPinValue(pinId, "not a number"));
+		Assert.AreEqual(128.0, engine.GetPinValue(pinId));
+	}
+
+	[TestMethod]
+	public void SetPinValue_ForAPinThatDoesNotExist_ReportsSo() => Assert.IsFalse(engine.SetPinValue(999, 1.0));
+
+	[TestMethod]
+	public void ResetPinValue_ReturnsThePinToItsDeclaredDefault()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Seeded", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+		engine.SetPinValue(pinId, 200.0);
+
+		Assert.IsTrue(engine.ResetPinValue(pinId));
+		Assert.AreEqual(128.0, engine.GetPinValue(pinId));
+	}
+
+	[TestMethod]
+	public void IsPinConnected_FollowsTheLinks()
+	{
+		(Node source, Node target) = TwoConnectedNodes();
+
+		Assert.IsTrue(engine.IsPinConnected(source.OutputPins[0].Id));
+		Assert.IsTrue(engine.IsPinConnected(target.InputPins[0].Id));
+
+		engine.RemoveLink(engine.Links[0].Id);
+
+		Assert.IsFalse(engine.IsPinConnected(source.OutputPins[0].Id), "The link is gone, so the pin is free again.");
+	}
+
+	[TestMethod]
+	public void RemoveNode_ForgetsWhatItsPinsHeld()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Doomed", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+
+		engine.UpdatePinOffset(pinId, new Vector2(4, 8));
+		engine.RemoveNode(node.Id);
+
+		Assert.IsNull(engine.GetPinValue(pinId), "A removed node's values would otherwise outlive it for the life of the process.");
+		Assert.IsFalse(engine.TryGetPinOffset(pinId, out _), "And so would its measured pin offsets.");
+	}
+
+	[TestMethod]
+	public void Clear_ForgetsEveryValue()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Seeded", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+
+		engine.Clear();
+
+		Assert.IsNull(engine.GetPinValue(pinId));
+	}
 }

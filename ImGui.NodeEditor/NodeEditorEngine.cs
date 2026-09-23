@@ -58,6 +58,9 @@ public class NodeEditorEngine
 	/// <summary>Where each pin sits relative to its node's origin, as the renderer last measured it.</summary>
 	private readonly Dictionary<int, Vector2> pinIdToOffset = [];
 
+	/// <summary>What each pin holds, and what it resets to. See <see cref="PinValueStore"/>.</summary>
+	private readonly PinValueStore pinValues = new();
+
 	/// <summary>
 	/// Records where a pin sits on its node, so the layout can measure a link between the points a
 	/// renderer joins rather than between node centres.
@@ -73,6 +76,45 @@ public class NodeEditorEngine
 	/// <param name="offset">Its measured offset, when one has been recorded.</param>
 	/// <returns>True when the pin has been drawn and measured at least once.</returns>
 	public bool TryGetPinOffset(int pinId, out Vector2 offset) => pinIdToOffset.TryGetValue(pinId, out offset);
+
+	/// <summary>
+	/// What a pin currently holds.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>Its value, or null if it has none.</returns>
+	/// <remarks>
+	/// A connected input pin still reports the literal last written to it. Whether that literal or
+	/// the link's value is the one that matters is a question about evaluating the graph, which this
+	/// library does not do.
+	/// </remarks>
+	public object? GetPinValue(int pinId) => pinValues.Get(pinId);
+
+	/// <summary>
+	/// Write a value to a pin.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="value">The value.</param>
+	/// <returns>True if it was written, false if there is no such pin or its type refused the value.</returns>
+	public bool SetPinValue(int pinId, object? value)
+	{
+		Pin? pin = FindPin(pinId);
+		return pin is not null && pinValues.TrySet(pin, value);
+	}
+
+	/// <summary>
+	/// Put a pin back to the value it was created with.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>True if it had a default to go back to.</returns>
+	public bool ResetPinValue(int pinId) => pinValues.Reset(pinId);
+
+	/// <summary>
+	/// Whether any link meets this pin.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>True if at least one link ends at it.</returns>
+	public bool IsPinConnected(int pinId) =>
+		links.Any(l => l.OutputPinId == pinId || l.InputPinId == pinId);
 
 	/// <summary>
 	/// Where a pin sits on its node, falling back to that node's centre until a renderer has measured
@@ -206,6 +248,17 @@ public class NodeEditorEngine
 
 		Node node = new(nextNodeId++, position, name, inputPins, outputPins);
 		nodes.Add(node);
+
+		for (int i = 0; i < inputPins.Count; i++)
+		{
+			pinValues.Seed(inputPins[i].Id, inputs[i].DefaultValue);
+		}
+
+		for (int i = 0; i < outputPins.Count; i++)
+		{
+			pinValues.Seed(outputPins[i].Id, outputs[i].DefaultValue);
+		}
+
 		return node;
 	}
 
@@ -289,6 +342,14 @@ public class NodeEditorEngine
 		foreach (Link? link in connectedLinks)
 		{
 			links.Remove(link);
+		}
+
+		// A removed node's pins are gone, so what they held and where they were measured goes with
+		// them. Without this both tables grow for the life of the process.
+		foreach (Pin pin in node.InputPins.Concat(node.OutputPins))
+		{
+			pinValues.Forget(pin.Id);
+			pinIdToOffset.Remove(pin.Id);
 		}
 
 		nodes.Remove(node);
@@ -515,6 +576,8 @@ public class NodeEditorEngine
 		nextNodeId = 1;
 		nextLinkId = 1;
 		nextPinId = 1;
+		pinValues.Clear();
+		pinIdToOffset.Clear();
 		layout.WorldOrigin = Vec2D.Zero;
 	}
 
