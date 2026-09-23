@@ -190,42 +190,6 @@ public class AttributeBasedNodeFactory
 	}
 
 	/// <summary>
-	/// Gets what a node created by this factory was created from.
-	/// </summary>
-	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
-	/// <returns>The binding, or null if this factory did not create that node or it has since been removed.</returns>
-	public NodeBinding? GetBinding(int nodeId) => bindings.TryGetValue(nodeId, out NodeBinding? binding) ? binding : null;
-
-	/// <summary>
-	/// Gets the definition a node was created from.
-	/// </summary>
-	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
-	/// <returns>The definition, or null if this factory did not create that node or it has since been removed.</returns>
-	/// <remarks>
-	/// This is the lookup that answers "which type is this selected node", which the pin names on
-	/// the <see cref="Node"/> alone cannot.
-	/// </remarks>
-	public NodeDefinition? GetNodeDefinition(int nodeId) => GetBinding(nodeId)?.Definition;
-
-	/// <summary>
-	/// Gets the object a node's parameter values live on.
-	/// </summary>
-	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
-	/// <param name="instance">The instance, or null if the node has none.</param>
-	/// <returns>True if this factory created that node and it has a backing instance.</returns>
-	/// <remarks>
-	/// Read and write its members through the owning <see cref="PinDefinition"/>'s
-	/// <see cref="PinDefinition.GetValue(object)"/> and
-	/// <see cref="PinDefinition.SetValue(object, object?)"/>, which is what an inspector panel
-	/// editing a declared parameter such as a threshold needs.
-	/// </remarks>
-	public bool TryGetNodeInstance(int nodeId, [NotNullWhen(true)] out object? instance)
-	{
-		instance = GetBinding(nodeId)?.Instance;
-		return instance is not null;
-	}
-
-	/// <summary>
 	/// Constructs the object a type node's parameter values live on, and writes each input pin's
 	/// declared default onto it.
 	/// </summary>
@@ -321,6 +285,42 @@ public class AttributeBasedNodeFactory
 	/// <param name="method">The method.</param>
 	/// <returns>The node definition, or null if not registered.</returns>
 	public NodeDefinition? GetNodeDefinition(MethodInfo method) => nodeDefinitions.TryGetValue(method, out NodeDefinition? definition) ? definition : null;
+
+	/// <summary>
+	/// Gets the definition a node was created from.
+	/// </summary>
+	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
+	/// <returns>The definition, or null if this factory did not create that node or it has since been removed.</returns>
+	/// <remarks>
+	/// This is the lookup that answers "which type is this selected node", which the pin names on
+	/// the <see cref="Node"/> alone cannot.
+	/// </remarks>
+	public NodeDefinition? GetNodeDefinition(int nodeId) => GetBinding(nodeId)?.Definition;
+
+	/// <summary>
+	/// Gets what a node created by this factory was created from.
+	/// </summary>
+	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
+	/// <returns>The binding, or null if this factory did not create that node or it has since been removed.</returns>
+	public NodeBinding? GetBinding(int nodeId) => bindings.TryGetValue(nodeId, out NodeBinding? binding) ? binding : null;
+
+	/// <summary>
+	/// Gets the object a node's parameter values live on.
+	/// </summary>
+	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
+	/// <param name="instance">The instance, or null if the node has none.</param>
+	/// <returns>True if this factory created that node and it has a backing instance.</returns>
+	/// <remarks>
+	/// Read and write its members through the owning <see cref="PinDefinition"/>'s
+	/// <see cref="PinDefinition.GetValue(object)"/> and
+	/// <see cref="PinDefinition.SetValue(object, object?)"/>, which is what an inspector panel
+	/// editing a declared parameter such as a threshold needs.
+	/// </remarks>
+	public bool TryGetNodeInstance(int nodeId, [NotNullWhen(true)] out object? instance)
+	{
+		instance = GetBinding(nodeId)?.Instance;
+		return instance is not null;
+	}
 
 	/// <summary>
 	/// Gets all registered node definitions.
