@@ -101,7 +101,9 @@ Two details that will bite if left unspecified:
 
 ## The two surfaces
 
-Both use one `PinValueKind` classifier, so the set of editable types is defined once even though the inline path draws with raw ImGui and the inspector draws with `PropertyGrid` rows. It covers bool, int, long, float, double, string, `Vector2`, `Vector3`, enums, and `Nullable<T>` of those. An unrecognized type draws nothing and leaves the pin as it is today.
+Both use one `PinValueKind` classifier, so the set of editable types is defined once even though the inline path draws with raw ImGui and the inspector draws with `PropertyGrid` rows. It covers bool, int, float, double, string, `Vector2`, `Vector3`, enums, and `Nullable<T>` of those. An unrecognized type draws nothing inline and a disabled row in the inspector, which is what a pin looks like today.
+
+`long` is deliberately not in that list. Dear ImGui has no `InputLong`, so a 64-bit integer needs an unsafe `DragScalar` with `ImGuiDataType.S64`, and one unverified interop call is not worth carrying into v1 for a type no motivating case uses. A `long` pin classifies as unsupported and both surfaces treat it as they treat any other unsupported type. Adding it later is a change to one classifier and one switch.
 
 **Inline**, on the renderer:
 
