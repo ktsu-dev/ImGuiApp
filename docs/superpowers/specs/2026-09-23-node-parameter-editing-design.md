@@ -47,11 +47,11 @@ public readonly record struct PinSpec(
     object? DefaultValue = null,
     bool? AllowMultipleConnections = null);
 
-public Node CreateNode(Vector2 position, string name,
+public Node CreateNodeFromSpecs(Vector2 position, string name,
     IReadOnlyList<PinSpec> inputs, IReadOnlyList<PinSpec> outputs);
 ```
 
-Both existing overloads delegate to it, so nothing breaks.
+Named `CreateNodeFromSpecs` rather than a third `CreateNode` overload: a `CreateNode` taking `IReadOnlyList<PinSpec>` is ambiguous against the existing `List<string>` overload for a `[]` collection expression argument, and that ambiguity broke the build. Both existing string-based overloads delegate to it internally; neither is removed, since dropping a public overload from a published package breaks whoever already calls it.
 
 **Inline editors are the renderer's own feature, not a use of `DrawNodeBody`.** The hook that landed for #441 is `Action<Node>?`, called once per node after every pin and before `EndNode`. That placement is deliberate and guarded by `DrawNodeBody_LeavesThePinPositionsWhereTheyWere`: `PublishPinOffsets` measures from rows `RecordPinRow` collects as each pin is submitted, so host content drawn later cannot move where a link attaches. It produces a body under the pins, which is not the layout a node editor is expected to have:
 
@@ -88,7 +88,17 @@ public sealed class PinValueStore
 }
 ```
 
-Exposed through the engine as `GetPinValue`, `SetPinValue`, `ResetPinValue` and `IsPinConnected`.
+Exposed through the engine as `GetPinValue`, `SetPinValue`, `ResetPinValue` and `IsPinConnected`. The
+shipped `PinValueStore` carries three members beyond this sketch: `Seed`, which `CreateNodeFromSpecs`
+calls to record each pin's declared default (not type-checked itself, since a mistyped attribute
+should still produce a creatable node), `Clear`, which the engine's own `Clear` delegates to, and a
+`public static bool Accepts(Type? dataType, object? value)` doing the type check `TrySet` uses
+internally. `Accepts` is public rather than private because `CreateNodeFromSpecs` needs the same
+check on the way in, to decide whether a declared default can be seeded as written or has to be
+converted to the pin's type first: a later fix (post-review) found that a mistyped
+`[InputPin("AreaMin", DefaultValue = 50)]` on a `double` property was seeding a boxed `int`
+unchecked, so `CreateNodeFromSpecs` now runs each spec's default through `Accepts`, attempts an
+`IConvertible` conversion when it fails, and seeds null rather than throwing when neither works.
 
 **Seeding and reset.** `CreateNode` seeds the store from each `PinSpec.DefaultValue`, and the store records that seed alongside the current value so `Reset` has something to go back to. A pin whose spec carried no default is seeded with null and resets to null. The engine looks the pin up by id and hands it to the store, which is why `TrySet` takes a `Pin` while the engine's `SetPinValue` takes a pin id.
 
