@@ -224,4 +224,23 @@ public sealed class NodeRenderingTests
 
 		Assert.AreEqual(0, ErrorsLastFrame(), "ImGui reported the graph's drawing as misuse.");
 	}
+
+	/// <summary>
+	/// ImNodes knows what is selected and nothing exposed it, so an inspector had no way to know what
+	/// it was inspecting.
+	/// </summary>
+	[TestMethod]
+	public void SelectedNodeIds_ReportsWhatTheUserClicked()
+	{
+		Node node = engine.CreateNode(new Vector2(250, 200), "Target", ["In"], []);
+		Start();
+
+		Assert.IsEmpty(renderer.SelectedNodeIds, "Nothing is selected before anything is clicked.");
+
+		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
+		harness.Mouse.Click(rect.Centre.X, rect.Min.Y + 6f);
+		harness.Step(3);
+
+		Assert.Contains(node.Id, renderer.SelectedNodeIds);
+	}
 }

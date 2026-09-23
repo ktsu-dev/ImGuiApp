@@ -34,6 +34,9 @@ public class NodeEditorRenderer
 	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
 	private readonly HashSet<int> currentlyDraggedNodes = [];
 
+	/// <summary>The nodes ImNodes had selected as of the last frame drawn.</summary>
+	private readonly HashSet<int> selectedNodes = [];
+
 	/// <summary>Where each node was drawn this frame, in screen space.</summary>
 	private readonly Dictionary<int, ScreenRect> nodeScreenRects = [];
 
@@ -145,6 +148,13 @@ public class NodeEditorRenderer
 
 	/// <summary>The node the pointer was over as of the last frame drawn, if any.</summary>
 	public int? HoveredNodeId { get; private set; }
+
+	/// <summary>The nodes ImNodes had selected as of the last frame drawn.</summary>
+	/// <remarks>
+	/// Read after the editor ends, like the hover state and for the same reason: ImNodes only answers
+	/// once it has laid the frame out.
+	/// </remarks>
+	public IReadOnlySet<int> SelectedNodeIds => selectedNodes;
 
 	/// <summary>The link the pointer was over as of the last frame drawn, if any.</summary>
 	public int? HoveredLinkId { get; private set; }
@@ -705,6 +715,7 @@ public class NodeEditorRenderer
 	/// ImNodes only answers these once the editor has ended, which is why they describe the frame
 	/// that just finished rather than the one about to be built.
 	/// </remarks>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; the pointer is scoped to the call and not retained.")]
 	private void ReadHoverState()
 	{
 		int nodeId = 0;
@@ -712,6 +723,25 @@ public class NodeEditorRenderer
 
 		int linkId = 0;
 		HoveredLinkId = ImNodes.IsLinkHovered(ref linkId) ? linkId : null;
+
+		selectedNodes.Clear();
+		int selectedCount = ImNodes.NumSelectedNodes();
+		if (selectedCount > 0)
+		{
+			int[] buffer = new int[selectedCount];
+			unsafe
+			{
+				fixed (int* first = buffer)
+				{
+					ImNodes.GetSelectedNodes(first);
+				}
+			}
+
+			foreach (int id in buffer)
+			{
+				selectedNodes.Add(id);
+			}
+		}
 	}
 
 	/// <summary>
