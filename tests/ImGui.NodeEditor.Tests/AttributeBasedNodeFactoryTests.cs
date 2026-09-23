@@ -384,6 +384,116 @@ public sealed class AttributeBasedNodeFactoryTests
 	}
 
 	[TestMethod]
+	public void CreateNode_ConstructsAnInstanceCarryingTheDeclaredDefaults()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		Node node = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+
+		Assert.IsTrue(factory.TryGetNodeInstance(node.Id, out object? instance), "A node's parameter values need somewhere to live.");
+		InitializedDefaultsNode backing = (InitializedDefaultsNode)instance;
+
+		Assert.AreEqual(128.0, backing.Threshold, "The member's own initializer.");
+		Assert.AreEqual(7, backing.Count, "A field's initializer, not just a property's.");
+		Assert.AreEqual(50.0, backing.AreaMin, "The attribute's default wins over the initializer's 1.0, so the instance and the pin agree.");
+	}
+
+	[TestMethod]
+	public void CreateNode_GivesEachNodeItsOwnInstance()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Node first = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+		Node second = factory.CreateNode<InitializedDefaultsNode>(new Vector2(100, 0));
+
+		Assert.IsTrue(factory.TryGetNodeInstance(first.Id, out object? firstInstance));
+		Assert.IsTrue(factory.TryGetNodeInstance(second.Id, out object? secondInstance));
+
+		// The round trip a host's inspector panel makes: edit a parameter through the pin that declared it.
+		PinDefinition threshold = Input(definition, "Threshold");
+		threshold.SetValue(firstInstance, 200.0);
+
+		Assert.AreEqual(200.0, threshold.GetValue(firstInstance));
+		Assert.AreEqual(128.0, threshold.GetValue(secondInstance), "Two nodes of one type are two nodes, not one shared instance.");
+	}
+
+	[TestMethod]
+	public void GetNodeDefinition_MapsANodeIdBackToTheTypeItCameFrom()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<AddNumbersNode>();
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		Node added = factory.CreateNode<AddNumbersNode>(Vector2.Zero);
+		Node initialized = factory.CreateNode<InitializedDefaultsNode>(new Vector2(100, 0));
+
+		Assert.AreEqual(typeof(AddNumbersNode), factory.GetNodeDefinition(added.Id)?.NodeType);
+		Assert.AreEqual(typeof(InitializedDefaultsNode), factory.GetNodeDefinition(initialized.Id)?.NodeType);
+		Assert.IsNull(factory.GetNodeDefinition(added.Id + initialized.Id + 1), "A node this factory never created has no binding.");
+	}
+
+	[TestMethod]
+	public void CreateNode_BindsTheDefinitionEvenWhenTheTypeCannotBeConstructed()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<ParameterisedNode>();
+
+		Node node = factory.CreateNode<ParameterisedNode>(Vector2.Zero);
+
+		Assert.IsFalse(factory.TryGetNodeInstance(node.Id, out object? instance), "There is no parameterless constructor to build one with.");
+		Assert.IsNull(instance);
+		Assert.AreEqual(typeof(ParameterisedNode), factory.GetNodeDefinition(node.Id)?.NodeType, "The definition is still known; only the instance is missing.");
+	}
+
+	[TestMethod]
+	public void CreateMethodNode_BindsTheDefinitionWithoutManufacturingAReceiver()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<Counter>();
+
+		Node node = factory.CreateMethodNode(IncrementMethod, Vector2.Zero);
+
+		Assert.AreEqual(IncrementMethod, factory.GetNodeDefinition(node.Id)?.Method);
+		Assert.IsFalse(
+			factory.TryGetNodeInstance(node.Id, out _),
+			"A non-static method node takes its receiver over the Instance input pin, so the factory must not invent a second one.");
+	}
+
+	[TestMethod]
+	public void RemoveNode_DropsTheBinding()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+		Node node = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+
+		Assert.IsTrue(engine.RemoveNode(node.Id));
+
+		Assert.IsNull(factory.GetBinding(node.Id), "The id no longer stands for a node, so it must not still resolve.");
+		Assert.IsFalse(factory.TryGetNodeInstance(node.Id, out _));
+	}
+
+	[TestMethod]
+	public void Clear_DropsEveryBindingSoAReissuedNodeIdIsNotInherited()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+		factory.RegisterNodeType<AddNumbersNode>();
+		Node before = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+
+		engine.Clear();
+
+		Assert.IsNull(factory.GetBinding(before.Id));
+
+		// Clear restarts the id counter, so this unrelated node is handed the same id.
+		Node after = factory.CreateNode<AddNumbersNode>(Vector2.Zero);
+		Assert.AreEqual(before.Id, after.Id, "The premise of this test is that the id is reissued.");
+		Assert.AreEqual(typeof(AddNumbersNode), factory.GetNodeDefinition(after.Id)?.NodeType, "The new node must not inherit the cleared node's binding.");
+	}
+
+	[TestMethod]
 	public void GetNodeDefinition_ReturnsNullForAnythingUnregistered()
 	{
 		AttributeBasedNodeFactory factory = Factory;

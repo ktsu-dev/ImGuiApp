@@ -9,7 +9,7 @@ ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself
 
 - **Separation of concerns**: business logic (`NodeEditorEngine`), rendering (`NodeEditorRenderer`), and input (`NodeEditorInputHandler`) are separate objects, so the graph can be built and tested without a renderer
 - **Tuning panel**: `PhysicsSettingsPanel` draws every layout setting, grouped and captioned, so a graph can be tuned while it is on screen
-- **Attribute-based nodes**: `AttributeBasedNodeFactory` reads `ktsu.NodeGraph` attributes off a type — or every decorated type in an assembly — and creates nodes with the right pins
+- **Attribute-based nodes**: `AttributeBasedNodeFactory` reads `ktsu.NodeGraph` attributes off a type — or every decorated type in an assembly — and creates nodes with the right pins, each bound to an instance its declared parameters live on
 - **Physics is opt-in**: the simulation does nothing until `PhysicsSettings.Enabled` is set, so a host that positions nodes itself pays nothing for it
 - **Type-aware connections**: `TryCreateLink` returns a result with a message rather than throwing, and pin compatibility comes from the same rules the metadata declares
 - **Physics-based layout**: nodes repel, links pull, and the graph settles; powered by [`ktsu.ForceDirectedLayout`](https://github.com/ktsu-dev/ImGuiApp), with per-frame stability and energy readings for debug overlays
@@ -113,11 +113,36 @@ factory.RegisterNodeTypesFromAssembly(typeof(AddNode).Assembly);
 Node node = factory.CreateNode<AddNode>(new Vector2(100, 100));
 ```
 
-`[NodeExecute]` marks `Execute` for whoever runs the graph to call. This editor is not that: registering a type gives you a node that **draws**, and nothing here constructs the type or invokes the method. Running a graph is the host's job — see [Running a graph](https://github.com/ktsu-dev/ImGuiApp/blob/main/NodeGraph/README.md#running-a-graph) in `ktsu.NodeGraph`.
+`[NodeExecute]` marks `Execute` for whoever runs the graph to call. This editor is not that: registering a type gives you a node that **draws**, and nothing here invokes the method. Running a graph is the host's job — see [Running a graph](https://github.com/ktsu-dev/ImGuiApp/blob/main/NodeGraph/README.md#running-a-graph) in `ktsu.NodeGraph`.
 
 `GetAllNodeDefinitions()` returns the registered definitions, which is what a "add node" menu is built from: each one carries the display name, category, tags, execution mode, deprecation state and pin list read off the attributes.
 
 Two things to know about registration. A class node also gets an `Instance` output pin (and input pins for its constructor's parameters), so it can be chained onward. And `RegisterNodeTypesFromAssembly` skips abstract types — which in IL includes every `static class` — so a `[Node]` method parked on a static holder class has to be registered by naming that holder: `factory.RegisterNodeType(typeof(MathNodes))`.
+
+### Editing node parameters
+
+A tunable declared as an input pin — a threshold, a minimum area, a sigma — has to be stored per node rather than per type, because two nodes of one type are two nodes. `CreateNode` therefore constructs the type once per node and binds it to the id the engine issued:
+
+```csharp
+Node node = factory.CreateNode<ThresholdNode>(new Vector2(100, 100));
+
+if (factory.TryGetNodeInstance(node.Id, out object? instance))
+{
+    NodeDefinition definition = factory.GetNodeDefinition(node.Id)!;
+    PinDefinition threshold = definition.InputPins.Single(p => p.DisplayName == "Threshold");
+
+    double current = (double)threshold.GetValue(instance)!;   // 128.0, the declared default
+    threshold.SetValue(instance, 200.0);                      // what an inspector panel writes
+}
+```
+
+The instance starts at each input pin's declared default — the attribute's `DefaultValue` where there is one, otherwise the member's own C# initializer. `GetNodeDefinition(int)` is what answers "which type is this node the user selected", which `Node` alone cannot: it carries names and geometry and deliberately nothing else.
+
+Two cases have no instance, and `TryGetNodeInstance` answers `false` for both: a **method node**, whose receiver arrives over its `Instance` input pin rather than being manufactured here, and a type with **no parameterless constructor**. The definition still resolves in both cases.
+
+Bindings are dropped when the engine drops the node, through `NodeEditorEngine.NodeRemoved` and `Cleared`. `Clear()` also restarts the id counter, so dropping on it is what stops an unrelated node inheriting a cleared node's values when it is later issued the same id.
+
+Constructing the type is not executing it. Nothing here calls `[NodeExecute]`; the instance exists so a parameter has somewhere to live.
 
 ### Tuning the layout
 
@@ -157,6 +182,8 @@ The graph and its physics. No ImGui calls.
 | `SetDraggedNodes(IReadOnlySet<int>)` | `void` | Excludes dragged nodes from the simulation |
 | `UpdatePhysicsSettings(PhysicsSettings)` | `void` | Replaces the physics settings |
 | `UpdatePhysics(float)` | `void` | Advances the layout by a frame delta |
+| `NodeRemoved` | `event EventHandler<NodeRemovedEventArgs>` | Raised after a node is removed, so anything keyed by node id can drop its entry |
+| `Cleared` | `event EventHandler<EventArgs>` | Raised after `Clear()`, which also restarts the id counters |
 
 ### `NodeEditorRenderer`
 
@@ -227,10 +254,15 @@ PhysicsSettingsPanel.DrawDiagnostics(engine);
 | `CreateMethodNode(MethodInfo, Vector2)` | `Node` | Creates a node from a decorated method |
 | `GetNodeDefinition(Type)` / `GetNodeDefinition(MethodInfo)` | `NodeDefinition?` | The metadata read off a registration |
 | `GetAllNodeDefinitions()` | `IEnumerable<NodeDefinition>` | Every registration, for building menus |
+| `GetNodeDefinition(int)` | `NodeDefinition?` | What a created node was created from, by node id |
+| `TryGetNodeInstance(int, out object?)` | `bool` | The object a node's parameter values live on |
+| `GetBinding(int)` | `NodeBinding?` | Both of the above together |
 
 ### Domain models
 
 `Node(Id, Position, Name, InputPins, OutputPins, Dimensions, Velocity, Force, IsPinned)`, `Link(Id, OutputPinId, InputPinId)` and `Pin(Id, Direction, Name, DisplayName)` are records; `PinDirection` is `Input` or `Output`.
+
+`NodeBinding(NodeId, Definition, Instance)` ties a node back to what it was created from; `NodeRemovedEventArgs` carries the `NodeId` of a removed node.
 
 ## Acknowledgments
 

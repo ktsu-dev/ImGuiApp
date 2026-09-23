@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -69,6 +70,21 @@ public record Pin(
 	/// </remarks>
 	public bool AllowsMultipleConnections => AllowMultipleConnections ?? (Direction == PinDirection.Output);
 };
+
+/// <summary>
+/// Says which node was removed from the graph.
+/// </summary>
+/// <param name="nodeId">The removed node's identifier.</param>
+/// <remarks>
+/// The node itself is deliberately not carried. By the time the event is raised the node is gone
+/// from the graph, and handing back a record of it invites a handler to treat it as still live.
+/// The id is what a handler keyed by node id actually needs.
+/// </remarks>
+public sealed class NodeRemovedEventArgs(int nodeId) : EventArgs
+{
+	/// <summary>Gets the removed node's identifier.</summary>
+	public int NodeId { get; } = nodeId;
+}
 
 /// <summary>
 /// Direction of pin (input or output)
