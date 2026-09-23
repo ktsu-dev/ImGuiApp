@@ -346,21 +346,41 @@ public sealed class AttributeBasedNodeFactoryTests
 	}
 
 	/// <summary>
-	/// Reading initializers means constructing the type, and registration must survive types that
-	/// cannot be constructed at all. Both fall back to the attribute alone, as before.
+	/// Reading initializers means constructing the type, and there are two ways that does not
+	/// happen: the type takes constructor arguments, so it is never attempted, or its constructor
+	/// throws when it is. Registration has to survive both, reporting no default rather than failing.
 	/// </summary>
 	[TestMethod]
 	public void RegisterNodeType_SurvivesATypeItCannotConstruct()
 	{
 		AttributeBasedNodeFactory factory = Factory;
 
-		factory.RegisterNodeType<ConstructedNode>();
+		factory.RegisterNodeType<ParameterisedNode>();
 		factory.RegisterNodeType<UnconstructableNode>();
 
 		Assert.IsNull(
+			Input(Registered(factory.GetNodeDefinition(typeof(ParameterisedNode))), "Factor").DefaultValue,
+			"A type that takes constructor arguments has no prototype to read an initializer off.");
+		Assert.IsNull(
 			Input(Registered(factory.GetNodeDefinition(typeof(UnconstructableNode))), "In").DefaultValue,
 			"A constructor that throws leaves the pin as it was.");
-		Assert.IsNotNull(factory.GetNodeDefinition(typeof(ConstructedNode)), "A type with no parameterless constructor still registers.");
+	}
+
+	/// <summary>
+	/// A property that refuses to be read before it is written is a real shape, and reading the
+	/// prototype must not turn it into a registration failure.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_SurvivesAPinWhoseGetterThrows()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+
+		factory.RegisterNodeType<TouchyGetterNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(TouchyGetterNode)));
+
+		Assert.IsNull(Input(definition, "Fragile").DefaultValue, "A getter that throws has no default to report.");
+		Assert.AreEqual(4, Input(definition, "Sturdy").DefaultValue, "Its neighbour is still read.");
 	}
 
 	[TestMethod]
@@ -490,6 +510,29 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		[InputPin("In")]
 		public int In { get; set; } = 3;
+	}
+
+	/// <summary>Takes a constructor argument, so there is nothing to construct a prototype from.</summary>
+	[Node("Parameterised")]
+	public sealed class ParameterisedNode(double scale)
+	{
+		[InputPin("Factor")]
+		public double Factor { get; set; } = scale;
+	}
+
+	/// <summary>A property that refuses to be read until it has been written.</summary>
+	[Node("Touchy")]
+	public sealed class TouchyGetterNode
+	{
+		[InputPin("Fragile")]
+		public string? Fragile
+		{
+			get => field ?? throw new InvalidOperationException("Set me before reading me.");
+			set;
+		}
+
+		[InputPin("Sturdy")]
+		public int Sturdy { get; set; } = 4;
 	}
 
 	public static class MathNodes

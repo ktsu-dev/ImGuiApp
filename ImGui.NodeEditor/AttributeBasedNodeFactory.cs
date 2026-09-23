@@ -408,6 +408,13 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 	/// </summary>
 	/// <param name="nodeType">The type to construct.</param>
 	/// <returns>The instance, or null.</returns>
+	/// <remarks>
+	/// The guard is what makes the one catch enough: an abstract or open-generic type, and a
+	/// reference type without a public parameterless constructor, are all turned away before
+	/// <see cref="Activator.CreateInstance(Type)"/> is reached, which is where its
+	/// <c>MissingMethodException</c> and <c>MemberAccessException</c> would have come from. What is
+	/// left is a constructor that runs and throws.
+	/// </remarks>
 	private static object? CreatePrototype(Type nodeType)
 	{
 		bool constructible = !nodeType.IsAbstract
@@ -426,14 +433,6 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 		catch (TargetInvocationException)
 		{
 			// The constructor threw. Registration is metadata only, so this is not fatal here.
-			return null;
-		}
-		catch (MemberAccessException)
-		{
-			return null;
-		}
-		catch (NotSupportedException)
-		{
 			return null;
 		}
 	}
