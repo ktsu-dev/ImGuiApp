@@ -7,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
+using Hexa.NET.ImNodes;
 
 using ktsu.ForceDirectedLayout;
 using ktsu.ImGui.App;
@@ -32,6 +33,11 @@ public sealed class NodeEditorInteractionTests
 	private ImGuiAppHarness harness = null!;
 	private InputEvents? lastEvents;
 	private bool drawDebugOverlays;
+	private int? linkToSelect;
+
+	// A key press spans more than one frame and lastEvents only ever holds the newest, so the frame
+	// that carried the request would be overwritten before a test could read it.
+	private readonly List<int> observedLinkDeletions = [];
 
 	[TestCleanup]
 	public void TearDown() => harness?.Dispose();
@@ -67,9 +73,20 @@ public sealed class NodeEditorInteractionTests
 			engine.UpdateNodeDimensions(update.Key, update.Value);
 		}
 
+		// Stands in for the user clicking the link. Selecting by id keeps these tests off the link's
+		// drawn curve, whose screen position depends on node measurement and the layout. It has to
+		// happen outside BeginNodeEditor/EndNodeEditor, which is why it sits here and not in a test
+		// body: ImNodes asserts on the scope, and Render has just closed the editor.
+		if (linkToSelect is int selectId)
+		{
+			ImNodes.SelectLink(selectId);
+			linkToSelect = null;
+		}
+
 		// ImNodes reports interactions for the editor that just closed, so the handler runs after
 		// the render rather than before it.
 		lastEvents = input.ProcessInput();
+		observedLinkDeletions.AddRange(lastEvents.LinkDeletionRequests);
 
 		engine.SetDraggedNodes(renderer.CurrentlyDraggedNodes);
 		engine.UpdatePhysics(1f / 60f);
@@ -94,6 +111,79 @@ public sealed class NodeEditorInteractionTests
 
 		Assert.IsEmpty(events.LinkCreationRequests);
 		Assert.IsEmpty(events.LinkDeletionRequests);
+	}
+
+	/// <summary>
+	/// Draws a two-node graph joined by one link, runs frames until it is on screen, and selects
+	/// the link the way a click would.
+	/// </summary>
+	/// <returns>The id of the selected link.</returns>
+	private int StartWithOneSelectedLink()
+	{
+		Node source = engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(600, 200), "Target", ["Source.Value"], []);
+		LinkCreationResult created = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		Assert.IsTrue(created.Success, $"The fixture needs a link: {created.Message}");
+
+		Start();
+
+		linkToSelect = created.Link!.Id;
+		harness.Step(2);
+		observedLinkDeletions.Clear();
+
+		return created.Link.Id;
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithALinkSelectedAndDeletePressed_RequestsItsDeletion()
+	{
+		// The gesture the issue reports as doing nothing: click a link, press Delete. ImNodes offers
+		// the selection but never acts on it, and IsLinkDestroyed only fires for a link dragged off
+		// its pin - a gesture that is itself disabled unless the editor opts into link detaching. So
+		// before the fix, LinkDeletionRequests could not be made non-empty by any user gesture.
+		int linkId = StartWithOneSelectedLink();
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		CollectionAssert.Contains(observedLinkDeletions, linkId, "Deleting a selected link should reach the application as a deletion request");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithALinkSelectedAndBackspacePressed_RequestsItsDeletion()
+	{
+		// Backspace is the key labelled Delete on a Mac keyboard, so it has to work too.
+		int linkId = StartWithOneSelectedLink();
+
+		harness.Keyboard.Press(ImGuiKey.Backspace);
+
+		CollectionAssert.Contains(observedLinkDeletions, linkId, "Backspace should delete a selected link, for Mac keyboards");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithALinkSelectedAndNoKeyPressed_RequestsNothing()
+	{
+		// Selecting a link is not asking for it to be removed. Without this, a click would delete.
+		StartWithOneSelectedLink();
+
+		harness.Step(3);
+
+		Assert.IsEmpty(observedLinkDeletions, "Selecting a link is not a request to delete it");
+	}
+
+	[TestMethod]
+	public void ProcessInput_AfterDeletingTheSelection_DoesNotRequestTheSameLinkAgain()
+	{
+		// The selection names links the application is about to remove, so it must not survive the
+		// press. Left in place it would name the same ids on the next Delete, asking the application
+		// to remove a link that is already gone.
+		int linkId = StartWithOneSelectedLink();
+		harness.Keyboard.Press(ImGuiKey.Delete);
+		Assert.IsTrue(engine.RemoveLink(linkId), "The fixture should have a link to remove");
+		observedLinkDeletions.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		Assert.IsEmpty(observedLinkDeletions, "A second Delete should not re-request a link that was already handed over");
 	}
 
 	[TestMethod]
