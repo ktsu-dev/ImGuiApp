@@ -165,6 +165,28 @@ The graph and its physics. No ImGui calls.
 | `GetNodeDimensionUpdates(NodeEditorEngine)` | `Dictionary<int, Vector2>` | Sizes ImNodes measured |
 | `RenderDebugOverlays(...)` | `void` | Force and stability overlays |
 | `CurrentlyDraggedNodes` | `IReadOnlySet<int>` | Nodes the user is dragging this frame |
+| `DrawNodeBody` | `Action<Node>?` | Called inside each node, after its pins, to draw host content in the node body |
+
+#### Host content in a node body
+
+`DrawNodeBody` runs between ImNodes' `BeginNode` and `EndNode`, so anything it submits is drawn in
+the node and sized into it:
+
+```csharp
+renderer.DrawNodeBody = node =>
+{
+    float value = values[node.Id];
+    if (ImGui.SliderFloat("amount", ref value, 0f, 1f))
+    {
+        values[node.Id] = value;
+    }
+};
+```
+
+The ID stack is already the node's, so a label only has to be unique within the one node. It is
+called after the pins rather than among them, which is what keeps the published pin offsets
+measuring the rows a link is actually drawn to. An exception thrown out of it escapes before
+`EndNode` and leaves the frame unusable, so a host that can fail should catch its own failures.
 
 ### `PhysicsSettingsPanel`
 
