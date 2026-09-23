@@ -702,6 +702,103 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.AreEqual(2, backend.CreateTextureCallCount, "A declined update must recreate the texture");
 	}
 
+	// Writes a decodable PNG to a temp file and returns its path. The caller deletes it.
+	private static string WriteTempPng(int width, int height)
+	{
+		byte[] pixels = new byte[width * height * 4];
+		Array.Fill(pixels, (byte)0xFF);
+		byte[] png = TestImageBuilder.Png(width, height, colorType: 6, bitDepth: 8, pixels);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+		return file;
+	}
+
+	[TestMethod]
+	public void UpdateTexture_OnAPathTrackedTexture_KeepsItPublishedInTheCache()
+	{
+		// UpdateTexture's recreate fallback went through DeleteTexture, which drops every cache entry
+		// pointing at the deleted handle - including the entry GetOrLoadTexture published for this
+		// path - and then never restored it. The texture stayed live on the GPU but became invisible
+		// to TryGetTexture, so callers were told a loaded texture was missing.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 4242 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		string file = WriteTempPng(2, 2);
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiAppTextureInfo info = ImGuiApp.GetOrLoadTexture(path);
+
+			// A size change forces the delete/recreate fallback regardless of what the backend can do
+			// in place, which is the path the issue reports.
+			ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+			Assert.IsTrue(ImGuiApp.TryGetTexture(path, out ImGuiAppTextureInfo? cached), "A path-tracked texture must stay published after a resize");
+			Assert.AreSame(info, cached, "The cache should still hold the instance the caller is using");
+			Assert.AreEqual(1, cached!.Width, "The published entry must carry the new size");
+			Assert.AreEqual(1, cached.Height, "The published entry must carry the new size");
+			Assert.AreEqual(backend.NextHandle, cached.TextureId, "The published entry must carry the recreated handle");
+		}
+		finally
+		{
+			File.Delete(file);
+		}
+	}
+
+	[TestMethod]
+	public void UpdateTexture_OnAPathTrackedTexture_DoesNotUploadADuplicateOnTheNextLoad()
+	{
+		// The downstream cost of the desync, which the cache-presence assertion above does not by
+		// itself pin: with the path evicted, the next GetOrLoadTexture missed, re-decoded the file and
+		// uploaded a second GPU texture, leaving the first one reachable only through the caller's own
+		// ImGuiAppTextureInfo. CleanupAllTextures walks Textures.Keys, so whichever handle was not
+		// published could never be freed - the leak the issue reports.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 4242 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		string file = WriteTempPng(2, 2);
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiAppTextureInfo info = ImGuiApp.GetOrLoadTexture(path);
+			ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+			int uploadsAfterUpdate = backend.CreateTextureCallCount;
+			ImGuiAppTextureInfo reloaded = ImGuiApp.GetOrLoadTexture(path);
+
+			Assert.AreSame(info, reloaded, "Re-loading the path should hand back the texture already in use");
+			Assert.AreEqual(uploadsAfterUpdate, backend.CreateTextureCallCount, "Re-loading a still-cached path must not upload a duplicate GPU texture");
+			CollectionAssert.Contains(ImGuiApp.Textures.Keys.ToList(), path, "CleanupAllTextures walks Textures.Keys, so the path must still be among them for the handle to be freeable");
+		}
+		finally
+		{
+			File.Delete(file);
+		}
+	}
+
+	[TestMethod]
+	public void UpdateTexture_OnAnUntrackedTexture_StaysOutOfTheCache()
+	{
+		// The republish must restore only entries this instance was already published under. A texture
+		// from CreateTexture has no path and was never in the cache, so a resize must not add one.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[2 * 2 * 4], 2, 2);
+
+		ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+		Assert.AreEqual(0, ImGuiApp.Textures.Count, "A memory texture must stay out of the path-keyed cache across a resize");
+	}
+
 	[TestMethod]
 	public void PerformanceSettings_DefaultValues_AreCorrect()
 	{
