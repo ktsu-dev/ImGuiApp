@@ -137,6 +137,39 @@ public static partial class SoftwareRasterizer
 		}
 	}
 
+	/// <summary>
+	/// One triangle after projection: screen positions, reciprocal depths, signed area, and the
+	/// clip-space vertices its attributes come from.
+	/// </summary>
+	/// <remarks>
+	/// Bundled rather than passed as eleven arguments, which is what lets the rasterization split
+	/// into a setup step and a per-pixel step without either growing a parameter list nobody can
+	/// read. Built with an object initializer rather than a positional record for the same reason.
+	/// </remarks>
+	private readonly struct ProjectedTriangle
+	{
+		public Vector3 S0 { get; init; }
+
+		public Vector3 S1 { get; init; }
+
+		public Vector3 S2 { get; init; }
+
+		public float InverseW0 { get; init; }
+
+		public float InverseW1 { get; init; }
+
+		public float InverseW2 { get; init; }
+
+		/// <summary>Gets the signed area. Negative is front-facing, because y points down here.</summary>
+		public float Area { get; init; }
+
+		public ClipVertex A { get; init; }
+
+		public ClipVertex B { get; init; }
+
+		public ClipVertex C { get; init; }
+	}
+
 	private static void FillProjected(
 		Bitmap32 target,
 		DepthBuffer? depth,
@@ -146,6 +179,43 @@ public static partial class SoftwareRasterizer
 		TextureSource? texture,
 		in DrawState3D state)
 	{
+		if (!TrySetUp(target, a, b, c, state.Cull, out ProjectedTriangle triangle, out Rectangle bounds))
+		{
+			return;
+		}
+
+		for (int y = bounds.MinY; y < bounds.MaxY; y++)
+		{
+			for (int x = bounds.MinX; x < bounds.MaxX; x++)
+			{
+				ShadePixel(target, depth, triangle, texture, state, x, y);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Projects a triangle, applies culling, and works out which pixels it could touch.
+	/// </summary>
+	/// <param name="target">The colour attachment, for its dimensions.</param>
+	/// <param name="a">First vertex, in clip space.</param>
+	/// <param name="b">Second vertex, in clip space.</param>
+	/// <param name="c">Third vertex, in clip space.</param>
+	/// <param name="cull">Which facings to discard.</param>
+	/// <param name="triangle">The projected triangle, when there is one to draw.</param>
+	/// <param name="bounds">The pixels it could touch, clipped to the target.</param>
+	/// <returns><see langword="false"/> when there is nothing to rasterize.</returns>
+	private static bool TrySetUp(
+		Bitmap32 target,
+		in ClipVertex a,
+		in ClipVertex b,
+		in ClipVertex c,
+		CullMode cull,
+		out ProjectedTriangle triangle,
+		out Rectangle bounds)
+	{
+		triangle = default;
+		bounds = default;
+
 		(Vector3 s0, float invW0) = Project(a.ClipPosition, target);
 		(Vector3 s1, float invW1) = Project(b.ClipPosition, target);
 		(Vector3 s2, float invW2) = Project(c.ClipPosition, target);
@@ -154,78 +224,107 @@ public static partial class SoftwareRasterizer
 
 		if (MathF.Abs(signedArea) < 1e-7f)
 		{
-			return;
+			return false;
 		}
 
 		// The y axis points down in target space, so a counter-clockwise winding in the usual
 		// y-up sense comes out with a negative signed area here. Front-facing is therefore
 		// negative, and getting this backwards would cull exactly the geometry meant to be drawn —
-		// which is why CullTests pins a single triangle's visibility under both modes.
+		// which is why CullingDiscardsExactlyOneFacing pins one triangle under both modes.
 		bool frontFacing = signedArea < 0f;
 
-		if ((state.Cull == CullMode.Back && !frontFacing) || (state.Cull == CullMode.Front && frontFacing))
+		if ((cull == CullMode.Back && !frontFacing) || (cull == CullMode.Front && frontFacing))
+		{
+			return false;
+		}
+
+		bounds = new Rectangle(
+			Math.Max(0, (int)MathF.Floor(Min3(s0.X, s1.X, s2.X))),
+			Math.Max(0, (int)MathF.Floor(Min3(s0.Y, s1.Y, s2.Y))),
+			Math.Min(target.Width, (int)MathF.Ceiling(Max3(s0.X, s1.X, s2.X))),
+			Math.Min(target.Height, (int)MathF.Ceiling(Max3(s0.Y, s1.Y, s2.Y))));
+
+		if (bounds.Width == 0 || bounds.Height == 0)
+		{
+			return false;
+		}
+
+		triangle = new ProjectedTriangle
+		{
+			S0 = s0,
+			S1 = s1,
+			S2 = s2,
+			InverseW0 = invW0,
+			InverseW1 = invW1,
+			InverseW2 = invW2,
+			Area = signedArea,
+			A = a,
+			B = b,
+			C = c,
+		};
+
+		return true;
+	}
+
+	/// <summary>
+	/// Covers, depth-tests and shades one pixel.
+	/// </summary>
+	/// <param name="target">The colour attachment.</param>
+	/// <param name="depth">The depth attachment, or null.</param>
+	/// <param name="triangle">The projected triangle.</param>
+	/// <param name="texture">Texture to modulate by, or null.</param>
+	/// <param name="state">The draw state.</param>
+	/// <param name="x">Column.</param>
+	/// <param name="y">Row.</param>
+	private static void ShadePixel(
+		Bitmap32 target,
+		DepthBuffer? depth,
+		in ProjectedTriangle triangle,
+		TextureSource? texture,
+		in DrawState3D state,
+		int x,
+		int y)
+	{
+		Vector2 p = new(x + 0.5f, y + 0.5f);
+
+		float w0 = EdgeXY(triangle.S1, triangle.S2, p) / triangle.Area;
+		float w1 = EdgeXY(triangle.S2, triangle.S0, p) / triangle.Area;
+		float w2 = EdgeXY(triangle.S0, triangle.S1, p) / triangle.Area;
+
+		if (w0 < 0f || w1 < 0f || w2 < 0f)
 		{
 			return;
 		}
 
-		int minX = Math.Max(0, (int)MathF.Floor(Min3(s0.X, s1.X, s2.X)));
-		int minY = Math.Max(0, (int)MathF.Floor(Min3(s0.Y, s1.Y, s2.Y)));
-		int maxX = Math.Min(target.Width, (int)MathF.Ceiling(Max3(s0.X, s1.X, s2.X)));
-		int maxY = Math.Min(target.Height, (int)MathF.Ceiling(Max3(s0.Y, s1.Y, s2.Y)));
+		// Depth is already a projective quantity, so it interpolates linearly in screen space and
+		// must not be perspective-corrected. The attributes below must.
+		float z = (triangle.S0.Z * w0) + (triangle.S1.Z * w1) + (triangle.S2.Z * w2);
 
-		if (minX >= maxX || minY >= maxY)
+		if (!DepthTestAndWrite(depth, x, y, z, state.Depth))
 		{
 			return;
 		}
 
-		float area = signedArea;
+		float invW = (triangle.InverseW0 * w0) + (triangle.InverseW1 * w1) + (triangle.InverseW2 * w2);
 
-		for (int y = minY; y < maxY; y++)
+		if (invW <= 0f)
 		{
-			for (int x = minX; x < maxX; x++)
-			{
-				Vector2 p = new(x + 0.5f, y + 0.5f);
-
-				float w0 = EdgeXY(s1, s2, p) / area;
-				float w1 = EdgeXY(s2, s0, p) / area;
-				float w2 = EdgeXY(s0, s1, p) / area;
-
-				if (w0 < 0f || w1 < 0f || w2 < 0f)
-				{
-					continue;
-				}
-
-				// Depth is already a projective quantity, so it interpolates linearly in screen
-				// space and must not be perspective-corrected. The attributes below must.
-				float z = (s0.Z * w0) + (s1.Z * w1) + (s2.Z * w2);
-
-				if (!DepthTestAndWrite(depth, x, y, z, state.Depth))
-				{
-					continue;
-				}
-
-				float invW = (invW0 * w0) + (invW1 * w1) + (invW2 * w2);
-
-				if (invW <= 0f)
-				{
-					continue;
-				}
-
-				float c0 = invW0 * w0 / invW;
-				float c1 = invW1 * w1 / invW;
-				float c2 = invW2 * w2 / invW;
-
-				Rgba32 source = Interpolate(a.Color, b.Color, c.Color, c0, c1, c2);
-
-				if (texture is not null)
-				{
-					Vector2 uv = (a.Uv * c0) + (b.Uv * c1) + (c.Uv * c2);
-					source = Modulate(source, texture.Sample(uv.X, uv.Y));
-				}
-
-				Write(target, x, y, source, state.Blend);
-			}
+			return;
 		}
+
+		float c0 = triangle.InverseW0 * w0 / invW;
+		float c1 = triangle.InverseW1 * w1 / invW;
+		float c2 = triangle.InverseW2 * w2 / invW;
+
+		Rgba32 source = Interpolate(triangle.A.Color, triangle.B.Color, triangle.C.Color, c0, c1, c2);
+
+		if (texture is not null)
+		{
+			Vector2 uv = (triangle.A.Uv * c0) + (triangle.B.Uv * c1) + (triangle.C.Uv * c2);
+			source = Modulate(source, texture.Sample(uv.X, uv.Y));
+		}
+
+		Write(target, x, y, source, state.Blend);
 	}
 
 	/// <summary>
