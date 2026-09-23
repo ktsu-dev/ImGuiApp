@@ -2,8 +2,8 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
-using System.Linq;
 using System.Numerics;
+using System.Reflection;
 
 using ktsu.ImGui.Widgets;
 
@@ -97,12 +97,12 @@ public static class NodeInspectorPanel
 					break;
 
 				case PinValueKind.Enum:
+					DrawEnum(grid, engine, pin, label, current, editable);
+					break;
+
 				case PinValueKind.Unsupported:
 				default:
-					// Shown, not omitted: a pin with no editor is still part of the node. The enum
-					// case has no editor either. The grid's Enum row is generic over the enum type,
-					// which is only known here as a Type, so it is shown as text rather than reflected
-					// into that overload.
+					// Shown, not omitted: a pin with no editor is still part of the node.
 					DrawUnsupported(grid, label, current);
 					break;
 			}
@@ -176,5 +176,44 @@ public static class NodeInspectorPanel
 	{
 		string value = current?.ToString() ?? string.Empty;
 		grid.Value(label, ref value);
+	}
+
+	/// <summary>The open generic <c>PropertyGrid.Enum&lt;TEnum&gt;</c> method, resolved once.</summary>
+	private static readonly MethodInfo EnumRowMethod = typeof(ImGuiWidgets.PropertyGrid).GetMethod(nameof(ImGuiWidgets.PropertyGrid.Enum))
+		?? throw new MissingMethodException(nameof(ImGuiWidgets.PropertyGrid), nameof(ImGuiWidgets.PropertyGrid.Enum));
+
+	/// <summary>
+	/// <see cref="EnumRowMethod"/> closed over one enum type, cached so a row drawn every frame does
+	/// not call <see cref="MethodInfo.MakeGenericMethod"/> every frame.
+	/// </summary>
+	private static readonly Dictionary<Type, MethodInfo> EnumRowMethodsByType = [];
+
+	/// <summary>
+	/// Draws an enum pin through the grid's own <c>Enum&lt;TEnum&gt;</c> row, reached via reflection
+	/// because the pin's enum type is only known here as a runtime <see cref="Type"/>.
+	/// </summary>
+	/// <remarks>
+	/// Going through <see cref="ImGuiWidgets.PropertyGrid.Enum{TEnum}"/> rather than drawing a combo
+	/// by hand keeps this row inside the grid's own <c>BeginRow</c>/<c>EndRow</c> plumbing, so it
+	/// gets the same column layout, probe mark and disabled handling every other row gets for free.
+	/// </remarks>
+	private static void DrawEnum(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
+	{
+		Type enumType = Nullable.GetUnderlyingType(pin.DataType!) ?? pin.DataType!;
+
+		if (!EnumRowMethodsByType.TryGetValue(enumType, out MethodInfo? method))
+		{
+			method = EnumRowMethod.MakeGenericMethod(enumType);
+			EnumRowMethodsByType[enumType] = method;
+		}
+
+		object value = current ?? Activator.CreateInstance(enumType)!;
+		object?[] arguments = [label, value];
+
+		bool changed = (bool)method.Invoke(grid, arguments)!;
+		if (changed && editable)
+		{
+			engine.SetPinValue(pin.Id, arguments[1]);
+		}
 	}
 }
