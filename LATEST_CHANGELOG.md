@@ -1,15 +1,12 @@
-## v3.39.0 (minor)
+## v3.40.0 (minor)
 
-Changes since v3.38.0:
+Changes since v3.39.0:
 
-- Add a virtualized table widget [minor] ([@Claude](https://github.com/Claude))
-- [patch] Correct the stale Hexa Widgets.Extras note in CLAUDE.md ([@Claude](https://github.com/Claude))
-- [patch] Clear the three SonarCloud findings on this branch ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Release the GDI+ graphics context when reading the DPI fails ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Find the repository root from the test binaries, not CallerFilePath ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Make rooted item specs explicit instead of relying on Path.Combine ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Pin ImGui.App's Resources.resx manifest name, and guard every .resx ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Run window teardown when the run loop throws ([@matt-edmondson](https://github.com/matt-edmondson))
-- [patch] Keep integrated-GPU font heuristics off discrete Intel Arc ([@Claude](https://github.com/Claude))
-- [patch] Clear the window on teardown so Start can run again ([@matt-edmondson](https://github.com/matt-edmondson))
+- Split the 3D triangle fill into setup and per-pixel shading ([@Claude](https://github.com/Claude))
+- Add IRenderer3D and its software implementation [minor] ([@Claude](https://github.com/Claude))
+- [patch] Assert the node body hook's reach in order, per MSTEST0068 ([@Claude](https://github.com/Claude))
+- [patch] Cover the prototype-reading paths, and drop two catches that cannot fire ([@Claude](https://github.com/Claude))
+- [patch] Say plainly that NodeGraph declares execution rather than running it ([@Claude](https://github.com/Claude))
+- [minor] Give NodeEditorRenderer a hook for host content in a node body ([@Claude](https://github.com/Claude))
+- [patch] Read an input pin's default from its C# initializer ([@Claude](https://github.com/Claude))
 

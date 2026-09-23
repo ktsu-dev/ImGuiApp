@@ -28,6 +28,27 @@ public class NodeEditorEngine
 	private readonly ForceDirectedLayout<Node, Link> layout;
 
 	/// <summary>
+	/// Raised after a node has been removed from the graph.
+	/// </summary>
+	/// <remarks>
+	/// Anything the caller keys by node id — an instance, a cached definition, a selection — has to
+	/// be told when that id stops standing for a node, because the graph is the only thing that
+	/// knows.
+	/// </remarks>
+	public event EventHandler<NodeRemovedEventArgs>? NodeRemoved;
+
+	/// <summary>
+	/// Raised after the graph has been cleared.
+	/// </summary>
+	/// <remarks>
+	/// This is not merely <see cref="NodeRemoved"/> repeated. <see cref="Clear"/> also restarts the
+	/// id counters, so the next node created takes id 1 again. Anything keyed by node id must drop
+	/// every entry here rather than ageing them out, or a stale entry is silently inherited by an
+	/// unrelated node that happens to be issued the same id.
+	/// </remarks>
+	public event EventHandler<EventArgs>? Cleared;
+
+	/// <summary>
 	/// Create a new node editor engine with default physics settings.
 	/// </summary>
 	public NodeEditorEngine()
@@ -402,6 +423,7 @@ public class NodeEditorEngine
 		}
 
 		nodes.Remove(node);
+		NodeRemoved?.Invoke(this, new NodeRemovedEventArgs(nodeId));
 		return true;
 	}
 
@@ -628,6 +650,7 @@ public class NodeEditorEngine
 		pinValues.Clear();
 		pinIdToOffset.Clear();
 		layout.WorldOrigin = Vec2D.Zero;
+		Cleared?.Invoke(this, EventArgs.Empty);
 	}
 
 	/// <summary>Toggle whether a node is pinned (frozen during physics simulation).</summary>
