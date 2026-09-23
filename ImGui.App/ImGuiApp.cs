@@ -807,6 +807,33 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
+	/// Asks the installed renderer backend whether it can also draw 3D geometry.
+	/// </summary>
+	/// <param name="renderer3D">The 3D renderer, when one is available.</param>
+	/// <returns>
+	/// <see langword="true"/> when the installed backend implements <see cref="IRenderer3D"/>.
+	/// <see langword="false"/> when it does not, or when no backend is installed at all.
+	/// </returns>
+	/// <remarks>
+	/// <para>
+	/// <see cref="IRenderer3D"/> is an opt-in extension rather than part of
+	/// <see cref="IRendererBackend"/>, so a backend advertises it by implementing it and this is
+	/// how a caller finds out. A caller checks once and keeps the result for the life of the
+	/// session; it cannot change while a backend is installed.
+	/// </para>
+	/// <para>
+	/// A <see langword="false"/> is an ordinary answer and not a fault — it is what a backend
+	/// without a 3D path is supposed to say, and the caller falls back to uploading pixels it
+	/// rasterized itself through <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.
+	/// </para>
+	/// </remarks>
+	public static bool TryGetRenderer3D([NotNullWhen(true)] out IRenderer3D? renderer3D)
+	{
+		renderer3D = renderer as IRenderer3D;
+		return renderer3D is not null;
+	}
+
+	/// <summary>
 	/// Releases the state established by <see cref="BeginExternalFrameSession()"/>.
 	/// </summary>
 	/// <remarks>
