@@ -4,7 +4,6 @@ namespace ktsu.ImGui.NodeEditor;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using ktsu.ForceDirectedLayout;
@@ -84,6 +83,51 @@ public class NodeEditorEngine
 	/// <summary>What each pin holds, and what it resets to. See <see cref="PinValueStore"/>.</summary>
 	private readonly PinValueStore pinValues = new();
 
+	/// <summary>Pins whose value lives somewhere else. See <see cref="PinValueAccessor"/>.</summary>
+	private readonly Dictionary<int, PinValueAccessor> pinValueAccessors = [];
+
+	/// <summary>
+	/// Say that a pin's value lives somewhere other than this engine's own store.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="accessor">How to read and write the value where it actually lives.</param>
+	/// <remarks>
+	/// From here on <see cref="GetPinValue(int)"/> and <see cref="SetPinValue(int, object?)"/> go
+	/// through the accessor for this pin, so the pin has one home rather than two.
+	/// <para>
+	/// Binding re-seeds the pin's default from the accessor, because for a bound pin the value it
+	/// was created with is the one its home was holding when it was bound — not the one the store
+	/// was seeded with from a declaration the home may have read differently. That is what keeps
+	/// <see cref="ResetPinValue(int)"/> honest: a reset of a bound pin puts back a value the home
+	/// itself produced.
+	/// </para>
+	/// <para>
+	/// The engine holds delegates and nothing else: it learns nothing about reflection, about
+	/// <c>PinDefinition</c>, or about the object on the other side.
+	/// <see cref="AttributeBasedNodeFactory"/> is the caller that has all three and registers the
+	/// pair; a host with its own way of modelling a node can register its own.
+	/// </para>
+	/// </remarks>
+	public void BindPinValue(int pinId, PinValueAccessor accessor)
+	{
+		Ensure.NotNull(accessor);
+		pinValueAccessors[pinId] = accessor;
+		pinValues.Seed(pinId, accessor.Get());
+	}
+
+	/// <summary>
+	/// Stop routing a pin's value elsewhere, returning it to this engine's own store.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>True if the pin had a bound accessor to drop.</returns>
+	/// <remarks>
+	/// The store still holds whatever it last held for the pin, which for a bound pin is its seeded
+	/// default rather than the value the accessor was reporting. Unbinding is what
+	/// <see cref="RemoveNode(int)"/> and <see cref="Clear"/> do as a pin stops existing, so nothing
+	/// reads the store afterwards.
+	/// </remarks>
+	public bool UnbindPinValue(int pinId) => pinValueAccessors.Remove(pinId);
+
 	/// <summary>
 	/// Records where a pin sits on its node, so the layout can measure a link between the points a
 	/// renderer joins rather than between node centres.
@@ -109,8 +153,16 @@ public class NodeEditorEngine
 	/// A connected input pin still reports the literal last written to it. Whether that literal or
 	/// the link's value is the one that matters is a question about evaluating the graph, which this
 	/// library does not do.
+	/// <para>
+	/// A pin bound through <see cref="BindPinValue(int, PinValueAccessor)"/> is read from wherever
+	/// its accessor keeps it; every other pin is read from this engine's own store. Either way this
+	/// is the one call that answers what a pin holds.
+	/// </para>
 	/// </remarks>
-	public object? GetPinValue(int pinId) => pinValues.Get(pinId);
+	public object? GetPinValue(int pinId) =>
+		pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+			? accessor.Get()
+			: pinValues.Get(pinId);
 
 	/// <summary>
 	/// Write a value to a pin.
@@ -118,18 +170,48 @@ public class NodeEditorEngine
 	/// <param name="pinId">The pin.</param>
 	/// <param name="value">The value.</param>
 	/// <returns>True if it was written, false if there is no such pin or its type refused the value.</returns>
+	/// <remarks>
+	/// The pin's declared type is checked first, whichever home the value has, so a refused value
+	/// reaches neither the accessor nor the store. A bound accessor can still report a write it did
+	/// not make, which is what its own false return means.
+	/// </remarks>
 	public bool SetPinValue(int pinId, object? value)
 	{
 		Pin? pin = FindPin(pinId);
-		return pin is not null && pinValues.TrySet(pin, value);
+		if (pin is null || !PinValueStore.Accepts(pin.DataType, value))
+		{
+			return false;
+		}
+
+		// TrySet checks the type again, which is the store's own guard and stays its business. The
+		// check above is what extends the same refusal to a bound pin, whose home has no such guard.
+		return pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+			? accessor.Set(value)
+			: pinValues.TrySet(pin, value);
 	}
 
 	/// <summary>
 	/// Put a pin back to the value it was created with.
 	/// </summary>
 	/// <param name="pinId">The pin.</param>
-	/// <returns>True if it had a default to go back to.</returns>
-	public bool ResetPinValue(int pinId) => pinValues.Reset(pinId);
+	/// <returns>True if it had a default to go back to and that default was written.</returns>
+	/// <remarks>
+	/// The seeded default lives in the store whether or not the pin is bound, because it is what the
+	/// pin was created with rather than what it holds now — see
+	/// <see cref="BindPinValue(int, PinValueAccessor)"/> for where a bound pin's seed comes from. A
+	/// bound pin has that default written back through its accessor as well, so the reset is visible
+	/// to whoever the value actually lives on rather than only to a store nothing is reading.
+	/// </remarks>
+	public bool ResetPinValue(int pinId)
+	{
+		if (!pinValues.Reset(pinId))
+		{
+			return false;
+		}
+
+		return !pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+			|| accessor.Set(pinValues.Get(pinId));
+	}
 
 	/// <summary>
 	/// Whether any link meets this pin.
@@ -274,62 +356,15 @@ public class NodeEditorEngine
 
 		for (int i = 0; i < inputPins.Count; i++)
 		{
-			pinValues.Seed(inputPins[i].Id, CoerceDefaultValue(inputs[i].DataType, inputs[i].DefaultValue));
+			pinValues.Seed(inputPins[i].Id, PinValueStore.Coerce(inputs[i].DataType, inputs[i].DefaultValue));
 		}
 
 		for (int i = 0; i < outputPins.Count; i++)
 		{
-			pinValues.Seed(outputPins[i].Id, CoerceDefaultValue(outputs[i].DataType, outputs[i].DefaultValue));
+			pinValues.Seed(outputPins[i].Id, PinValueStore.Coerce(outputs[i].DataType, outputs[i].DefaultValue));
 		}
 
 		return node;
-	}
-
-	/// <summary>
-	/// Bring a declared default in line with the pin's declared type before it is seeded.
-	/// </summary>
-	/// <param name="dataType">The pin's declared type, or null when it has none.</param>
-	/// <param name="defaultValue">The default as written on the attribute, which is untyped
-	/// <see cref="object"/> and so is trusted by nothing until it gets here.</param>
-	/// <returns>
-	/// <paramref name="defaultValue"/> unchanged when it already matches, a converted value when
-	/// <see cref="IConvertible"/> can bridge the mismatch (an <c>int</c> literal on a <c>double</c>
-	/// pin, for instance), or null when neither holds.
-	/// </returns>
-	/// <remarks>
-	/// <see cref="ktsu.NodeGraph.InputPinAttribute.DefaultValue"/> is declared as <c>object?</c> straight off the
-	/// attribute, so <c>[InputPin("X", DefaultValue = 50)]</c> on a <see langword="double"/> property
-	/// seeds a boxed <see langword="int"/> unless this catches it: the inline editor, the inspector
-	/// row and <see cref="PinValueStore.Get(int)"/> all read as the pin's declared type, and a
-	/// mismatched seed makes them silently disagree with each other. A bad attribute must still
-	/// produce a creatable node, so this never throws; it seeds null when it cannot convert.
-	/// </remarks>
-	private static object? CoerceDefaultValue(Type? dataType, object? defaultValue)
-	{
-		if (PinValueStore.Accepts(dataType, defaultValue))
-		{
-			return defaultValue;
-		}
-
-		if (dataType is not null && defaultValue is IConvertible)
-		{
-			Type underlying = Nullable.GetUnderlyingType(dataType) ?? dataType;
-			try
-			{
-				return Convert.ChangeType(defaultValue, underlying, CultureInfo.InvariantCulture);
-			}
-			catch (InvalidCastException)
-			{
-			}
-			catch (FormatException)
-			{
-			}
-			catch (OverflowException)
-			{
-			}
-		}
-
-		return null;
 	}
 
 	/// <summary>
@@ -419,6 +454,7 @@ public class NodeEditorEngine
 		foreach (Pin pin in node.InputPins.Concat(node.OutputPins))
 		{
 			pinValues.Forget(pin.Id);
+			pinValueAccessors.Remove(pin.Id);
 			pinIdToOffset.Remove(pin.Id);
 		}
 
@@ -648,6 +684,7 @@ public class NodeEditorEngine
 		nextLinkId = 1;
 		nextPinId = 1;
 		pinValues.Clear();
+		pinValueAccessors.Clear();
 		pinIdToOffset.Clear();
 		layout.WorldOrigin = Vec2D.Zero;
 		Cleared?.Invoke(this, EventArgs.Empty);

@@ -136,13 +136,24 @@ public class AttributeBasedNodeFactory
 			throw new InvalidOperationException($"Node type {nodeType.Name} is not registered");
 		}
 
+		// One ordered list drives both the specs the engine creates pins from and the accessors bound
+		// to those pins, so the declared pins and the created pins cannot fall out of step.
+		List<PinDefinition> orderedInputs = Ordered(definition.InputPins);
+
 		Node node = engine.CreateNodeFromSpecs(
 			position,
 			definition.DisplayName,
-			ToSpecs(definition.InputPins),
-			ToSpecs(definition.OutputPins));
+			ToSpecs(orderedInputs),
+			ToSpecs(Ordered(definition.OutputPins)));
 
-		bindings[node.Id] = new NodeBinding(node.Id, definition, CreateBackingInstance(definition));
+		object? instance = CreateBackingInstance(definition);
+		bindings[node.Id] = new NodeBinding(node.Id, definition, instance);
+
+		if (instance is not null)
+		{
+			BindPinValues(node, orderedInputs, instance);
+		}
+
 		return node;
 	}
 
@@ -162,9 +173,11 @@ public class AttributeBasedNodeFactory
 		Node node = engine.CreateNodeFromSpecs(
 			position,
 			definition.DisplayName,
-			ToSpecs(definition.InputPins),
-			ToSpecs(definition.OutputPins));
+			ToSpecs(Ordered(definition.InputPins)),
+			ToSpecs(Ordered(definition.OutputPins)));
 
+		// No instance, so no accessors: a method node's parameter values stay in the engine's own
+		// store, which is where a node built without a backing object keeps them.
 		bindings[node.Id] = new NodeBinding(node.Id, definition, Instance: null);
 		return node;
 	}
@@ -198,7 +211,7 @@ public class AttributeBasedNodeFactory
 	}
 
 	/// <summary>
-	/// Writes a pin's declared default onto an instance, where the pin has one and it fits.
+	/// Writes a pin's declared default onto an instance, where the pin has one that will fit.
 	/// </summary>
 	/// <param name="pin">The pin whose default to apply.</param>
 	/// <param name="instance">The instance to write to.</param>
@@ -209,44 +222,166 @@ public class AttributeBasedNodeFactory
 	/// came from the attribute and disagrees with the member's own initializer — which is the case
 	/// where leaving it out would let <see cref="PinDefinition.DefaultValue"/> and the instance
 	/// report different values for the same pin.
+	/// <para>
+	/// A mistyped declared default — <c>[InputPin("X", DefaultValue = 50)]</c> on a
+	/// <see langword="double"/> — is converted rather than ignored, because
+	/// <see cref="PinValueStore.Coerce(Type?, object?)"/> is the same conversion the engine seeds its
+	/// own store through. Ignoring it here would make the instance and the pin disagree on the frame
+	/// the node was created. A default that will not convert at all coerces to null and the member's
+	/// own initializer stands, which is the only value there is.
+	/// </para>
 	/// </remarks>
 	private static void ApplyDeclaredDefault(PinDefinition pin, object instance)
 	{
-		Type? memberType = pin.Member switch
-		{
-			PropertyInfo prop when prop.CanWrite => prop.PropertyType,
-			FieldInfo field when !field.IsInitOnly => field.FieldType,
-			_ => null
-		};
-
-		if (memberType is null || pin.DefaultValue is null || !memberType.IsInstanceOfType(pin.DefaultValue))
+		Type? memberType = WritableMemberType(pin);
+		if (memberType is null)
 		{
 			return;
 		}
 
-		pin.SetValue(instance, pin.DefaultValue);
+		object? declared = PinValueStore.Coerce(memberType, pin.DefaultValue);
+		if (declared is null)
+		{
+			return;
+		}
+
+		pin.SetValue(instance, declared);
+	}
+
+	/// <summary>
+	/// The type a pin's value would be written as, for a pin whose value can be written at all.
+	/// </summary>
+	/// <param name="pin">The pin.</param>
+	/// <returns>The member's type, or null when the pin has no writable member behind it.</returns>
+	/// <remarks>
+	/// A pin standing for a constructor or method parameter is not writable in this sense: its
+	/// default belongs to an argument list and has nowhere to live on the instance. Neither is a
+	/// get-only property or an <c>init</c>/<c>readonly</c> field.
+	/// </remarks>
+	private static Type? WritableMemberType(PinDefinition pin) => pin.Member switch
+	{
+		PropertyInfo prop when prop.CanWrite => prop.PropertyType,
+		FieldInfo field when !field.IsInitOnly => field.FieldType,
+		_ => null
+	};
+
+	/// <summary>
+	/// Point each of a node's writable input pins at the instance its value lives on.
+	/// </summary>
+	/// <param name="node">The node the engine created.</param>
+	/// <param name="orderedInputs">The declared input pins, in the order the node's pins were created from.</param>
+	/// <param name="instance">The object the node's members live on.</param>
+	/// <remarks>
+	/// This is what makes the instance the single home for a bound parameter: from here on
+	/// <see cref="NodeEditorEngine.GetPinValue(int)"/> reads the member and
+	/// <see cref="NodeEditorEngine.SetPinValue(int, object?)"/> writes it, so an inline editor, an
+	/// inspector row and <see cref="PinDefinition.GetValue(object)"/> can no longer disagree.
+	/// <para>
+	/// Pins are paired with declarations by zipping the same ordered list the specs were built from,
+	/// rather than re-deriving an order that could differ from the one the engine was handed.
+	/// </para>
+	/// </remarks>
+	private void BindPinValues(Node node, IReadOnlyList<PinDefinition> orderedInputs, object instance)
+	{
+		foreach ((Pin createdPin, PinDefinition pinDef) in node.InputPins.Zip(orderedInputs))
+		{
+			if (WritableMemberType(pinDef) is null)
+			{
+				continue;
+			}
+
+			engine.BindPinValue(createdPin.Id, new PinValueAccessor(
+				() => ReadMember(pinDef, instance),
+				value => WriteMember(pinDef, instance, value)));
+		}
+	}
+
+	/// <summary>
+	/// Reads a pin's member off the instance its value lives on.
+	/// </summary>
+	/// <param name="pin">The pin.</param>
+	/// <param name="instance">The instance.</param>
+	/// <returns>What the member holds, or null if it refused to be read.</returns>
+	/// <remarks>
+	/// A getter is allowed to throw until it has been written, which
+	/// <see cref="ReadDeclaredDefault(PinDefinition, Lazy{object})"/> already allows for when it
+	/// reads a prototype. A bound pin is read on every frame that draws it, so the same allowance
+	/// has to hold here or such a node could not be drawn at all.
+	/// </remarks>
+	private static object? ReadMember(PinDefinition pin, object instance)
+	{
+		try
+		{
+			return pin.GetValue(instance);
+		}
+		catch (TargetInvocationException)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Writes a pin's member on the instance its value lives on.
+	/// </summary>
+	/// <param name="pin">The pin.</param>
+	/// <param name="instance">The instance.</param>
+	/// <param name="value">The value.</param>
+	/// <returns>True if the member took it.</returns>
+	/// <remarks>
+	/// False is not an error path to be swallowed: it is what
+	/// <see cref="NodeEditorEngine.SetPinValue(int, object?)"/> returns to its caller, so a setter
+	/// that refused the value is reported as a write that did not happen rather than as one that
+	/// silently did. A validating setter is the ordinary reason for that.
+	/// <para>
+	/// Only the setter's own refusal is caught. A value of the wrong type never reaches here:
+	/// <c>PinAttribute.InitializeTypeInfo</c> takes a data pin's <c>DataType</c> straight off the
+	/// member, and <see cref="NodeEditorEngine.SetPinValue(int, object?)"/> checks against that
+	/// before writing anything.
+	/// </para>
+	/// </remarks>
+	private static bool WriteMember(PinDefinition pin, object instance, object? value)
+	{
+		try
+		{
+			pin.SetValue(instance, value);
+			return true;
+		}
+		catch (TargetInvocationException)
+		{
+			return false;
+		}
 	}
 
 	/// <summary>
 	/// Turn declared pins into what the engine creates pins from.
 	/// </summary>
-	/// <param name="pins">The declared pins, in any order.</param>
-	/// <returns>One spec per pin, ordered as the declaration asked.</returns>
+	/// <param name="pins">The declared pins, already in the order they should be created in.</param>
+	/// <returns>One spec per pin, in the order given.</returns>
 	/// <remarks>
 	/// This replaced a pass that created pins from names and then set each one's connection capacity
 	/// by index, matching declared pins to created pins by the order they happened to be created in.
 	/// Carrying everything in one value means there is no second list to fall out of step with.
+	/// <para>
+	/// The ordering is done once by <see cref="Ordered(List{PinDefinition})"/> and the result is what
+	/// both this and <see cref="BindPinValues(Node, IReadOnlyList{PinDefinition}, object)"/> read, so
+	/// the specs and the accessors are built from one list rather than two that agree today.
+	/// </para>
 	/// </remarks>
-	private static List<PinSpec> ToSpecs(List<PinDefinition> pins) =>
+	private static List<PinSpec> ToSpecs(IReadOnlyList<PinDefinition> pins) =>
 	[
-		.. pins
-			.OrderBy(p => p.Order)
-			.Select(p => new PinSpec(
-				p.DisplayName,
-				p.DataType,
-				p.DefaultValue,
-				p.AllowMultipleConnections)),
+		.. pins.Select(p => new PinSpec(
+			p.DisplayName,
+			p.DataType,
+			p.DefaultValue,
+			p.AllowMultipleConnections)),
 	];
+
+	/// <summary>
+	/// The declared pins in the order the engine should create them in.
+	/// </summary>
+	/// <param name="pins">The declared pins, in any order.</param>
+	/// <returns>The same pins, ordered as the declaration asked.</returns>
+	private static List<PinDefinition> Ordered(List<PinDefinition> pins) => [.. pins.OrderBy(p => p.Order)];
 
 	/// <summary>
 	/// Gets the definition for a registered node type.

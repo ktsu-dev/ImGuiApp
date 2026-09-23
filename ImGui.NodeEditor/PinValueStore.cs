@@ -4,6 +4,7 @@ namespace ktsu.ImGui.NodeEditor;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 /// <summary>
 /// What each pin currently holds, and what it should go back to.
@@ -125,5 +126,56 @@ public sealed class PinValueStore
 		return value is null
 			? !underlying.IsValueType || underlying != dataType
 			: underlying.IsInstanceOfType(value);
+	}
+
+	/// <summary>
+	/// Bring a declared default in line with a pin's declared type.
+	/// </summary>
+	/// <param name="dataType">The type the value has to end up as, or null when there is none.</param>
+	/// <param name="value">The value as written on the declaration, which is untyped
+	/// <see cref="object"/> and so is trusted by nothing until it gets here.</param>
+	/// <returns>
+	/// <paramref name="value"/> unchanged when <see cref="Accepts(Type?, object?)"/> already takes
+	/// it, a converted value when <see cref="IConvertible"/> can bridge the mismatch (an <c>int</c>
+	/// literal on a <c>double</c> pin, for instance), or null when neither holds.
+	/// </returns>
+	/// <remarks>
+	/// <see cref="ktsu.NodeGraph.InputPinAttribute.DefaultValue"/> is declared as <c>object?</c>
+	/// straight off the attribute, so <c>[InputPin("X", DefaultValue = 50)]</c> on a
+	/// <see langword="double"/> property means a boxed <see langword="int"/> unless this catches it.
+	/// <para>
+	/// Every route a declared default can take to a pin goes through here — the seed
+	/// <see cref="NodeEditorEngine.CreateNodeFromSpecs"/> writes to this store, and the value
+	/// <see cref="AttributeBasedNodeFactory"/> writes onto a node's backing instance — so the two
+	/// cannot read a mistyped default differently. A bad declaration must still produce a creatable
+	/// node, so this never throws; it yields null when it cannot convert, and the callers treat null
+	/// as "nothing usable was declared".
+	/// </para>
+	/// </remarks>
+	public static object? Coerce(Type? dataType, object? value)
+	{
+		if (Accepts(dataType, value))
+		{
+			return value;
+		}
+
+		if (value is not IConvertible)
+		{
+			return null;
+		}
+
+		// Accepts takes anything when the type is null, so reaching here means there is one.
+		Type target = Nullable.GetUnderlyingType(dataType!) ?? dataType!;
+
+		try
+		{
+			return Convert.ChangeType(value, target, CultureInfo.InvariantCulture);
+		}
+		catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+		{
+			// A declared default that will not convert to its pin's type is seeded as null rather
+			// than thrown: a bad attribute must still produce a creatable node.
+			return null;
+		}
 	}
 }
