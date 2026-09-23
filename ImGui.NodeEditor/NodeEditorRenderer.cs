@@ -96,6 +96,36 @@ public class NodeEditorRenderer
 	/// </summary>
 	public Vector4? HighlightColor { get; set; }
 
+	/// <summary>
+	/// Called inside each node, after its pins and before the node ends, so a host can draw its own
+	/// content in the node body. Null draws nothing extra, which is the shape of a node this renderer
+	/// has always drawn.
+	/// </summary>
+	/// <remarks>
+	/// Without this, a host wanting a widget on a node face had to either fork the renderer, giving up
+	/// zoom, hover highlighting, the measured position and dimension feedback and the pin offset
+	/// publishing, or drive ImNodes itself and keep the engine for topology alone. Both cost the same
+	/// things.
+	/// <para>
+	/// What the callback may submit is what ImNodes accepts between <c>BeginNode</c> and
+	/// <c>EndNode</c>: ordinary ImGui widgets, which are drawn in the node and sized into it. The ID
+	/// stack is already the node's, since ImNodes pushes the node's ID as it begins it, so a label
+	/// need only be unique within the one node. The cursor is wherever the pins left it, and the
+	/// callback should leave the ID stack as it found it.
+	/// </para>
+	/// <para>
+	/// It runs after the pins rather than among them, so the rows the pin offsets are measured from
+	/// are already recorded and content added here cannot move them. Content wider than the pin labels
+	/// widens the node, and the right-aligned output labels were padded before it was submitted, so a
+	/// body wider than the pins leaves them short of the new edge for that frame.
+	/// </para>
+	/// <para>
+	/// An exception thrown out of the callback escapes mid-node, leaving ImNodes without its
+	/// <c>EndNode</c> and the frame unusable. A host that can fail should catch its own failures.
+	/// </para>
+	/// </remarks>
+	public Action<Node>? DrawNodeBody { get; set; }
+
 	/// <summary>The node the pointer was over as of the last frame drawn, if any.</summary>
 	public int? HoveredNodeId { get; private set; }
 
@@ -392,6 +422,9 @@ public class NodeEditorRenderer
 			ImNodes.EndOutputAttribute();
 			RecordPinRow(pin.Id, isInput: false);
 		}
+
+		// Host content goes last, where it cannot disturb the pin rows already recorded above.
+		DrawNodeBody?.Invoke(node);
 
 		ImNodes.EndNode();
 
