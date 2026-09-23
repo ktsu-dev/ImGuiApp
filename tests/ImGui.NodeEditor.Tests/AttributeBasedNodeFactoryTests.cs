@@ -298,6 +298,91 @@ public sealed class AttributeBasedNodeFactoryTests
 			"The instance output is there to be chained onward, by as many nodes as want it.");
 	}
 
+	/// <summary>
+	/// Every default in the shipped node library is written as a C# initializer rather than as
+	/// <c>[InputPin(DefaultValue = ...)]</c>, so a menu or inspector built from the definitions saw
+	/// null for all of them. The factory reads the initializer off a prototype instance instead.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_ReadsAnInputDefaultFromItsPropertyInitializer()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(128.0, Input(definition, "Threshold").DefaultValue);
+		Assert.AreEqual("unnamed", Input(definition, "Label").DefaultValue);
+		Assert.AreEqual(7, Input(definition, "Count").DefaultValue, "A field initializer is a default too.");
+	}
+
+	[TestMethod]
+	public void RegisterNodeType_PrefersTheAttributeDefaultOverTheInitializer()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(
+			50.0,
+			Input(definition, "AreaMin").DefaultValue,
+			"An explicit DefaultValue is the author saying what it is, initializer or not.");
+	}
+
+	/// <summary>
+	/// A property with neither form reports what the node will actually hold when it is constructed,
+	/// which for a value type is its zero rather than null.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_ReportsTheZeroForAnUninitializedValueTypePin()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(0.0, Input(definition, "Untouched").DefaultValue);
+	}
+
+	/// <summary>
+	/// Reading initializers means constructing the type, and there are two ways that does not
+	/// happen: the type takes constructor arguments, so it is never attempted, or its constructor
+	/// throws when it is. Registration has to survive both, reporting no default rather than failing.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_SurvivesATypeItCannotConstruct()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+
+		factory.RegisterNodeType<ParameterisedNode>();
+		factory.RegisterNodeType<UnconstructableNode>();
+
+		Assert.IsNull(
+			Input(Registered(factory.GetNodeDefinition(typeof(ParameterisedNode))), "Factor").DefaultValue,
+			"A type that takes constructor arguments has no prototype to read an initializer off.");
+		Assert.IsNull(
+			Input(Registered(factory.GetNodeDefinition(typeof(UnconstructableNode))), "In").DefaultValue,
+			"A constructor that throws leaves the pin as it was.");
+	}
+
+	/// <summary>
+	/// A property that refuses to be read before it is written is a real shape, and reading the
+	/// prototype must not turn it into a registration failure.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_SurvivesAPinWhoseGetterThrows()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+
+		factory.RegisterNodeType<TouchyGetterNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(TouchyGetterNode)));
+
+		Assert.IsNull(Input(definition, "Fragile").DefaultValue, "A getter that throws has no default to report.");
+		Assert.AreEqual(4, Input(definition, "Sturdy").DefaultValue, "Its neighbour is still read.");
+	}
+
 	[TestMethod]
 	public void GetNodeDefinition_ReturnsNullForAnythingUnregistered()
 	{
@@ -318,6 +403,11 @@ public sealed class AttributeBasedNodeFactoryTests
 	/// <summary>Asserts a lookup found something, and hands back the non-null definition.</summary>
 	private static NodeDefinition Registered(NodeDefinition? definition) =>
 		definition ?? throw new AssertFailedException("The definition was not registered.");
+
+	/// <summary>Finds the one input pin with the given display name.</summary>
+	private static PinDefinition Input(NodeDefinition definition, string displayName) =>
+		definition.InputPins.SingleOrDefault(p => p.DisplayName == displayName)
+			?? throw new AssertFailedException($"No input pin named '{displayName}'.");
 
 	[Node("Add Numbers", ColorHint = "#4488ff", Tags = ["math", "arithmetic"])]
 	[NodeBehavior(
@@ -391,6 +481,58 @@ public sealed class AttributeBasedNodeFactoryTests
 	public sealed class NotANode
 	{
 		public int Value { get; set; }
+	}
+
+	/// <summary>Mirrors how the shipped library writes its defaults: initializers, not attributes.</summary>
+	[Node("Initialized Defaults")]
+	public sealed class InitializedDefaultsNode
+	{
+		[InputPin("Threshold")]
+		public double Threshold { get; set; } = 128.0;
+
+		[InputPin("Label")]
+		public string Label { get; set; } = "unnamed";
+
+		[InputPin("Count")]
+		public int Count = 7;
+
+		[InputPin("AreaMin", DefaultValue = 50.0)]
+		public double AreaMin { get; set; } = 1.0;
+
+		[InputPin("Untouched")]
+		public double Untouched { get; set; }
+	}
+
+	[Node("Unconstructable")]
+	public sealed class UnconstructableNode
+	{
+		public UnconstructableNode() => throw new InvalidOperationException("Not from here.");
+
+		[InputPin("In")]
+		public int In { get; set; } = 3;
+	}
+
+	/// <summary>Takes a constructor argument, so there is nothing to construct a prototype from.</summary>
+	[Node("Parameterised")]
+	public sealed class ParameterisedNode(double scale)
+	{
+		[InputPin("Factor")]
+		public double Factor { get; set; } = scale;
+	}
+
+	/// <summary>A property that refuses to be read until it has been written.</summary>
+	[Node("Touchy")]
+	public sealed class TouchyGetterNode
+	{
+		[InputPin("Fragile")]
+		public string? Fragile
+		{
+			get => field ?? throw new InvalidOperationException("Set me before reading me.");
+			set;
+		}
+
+		[InputPin("Sturdy")]
+		public int Sturdy { get; set; } = 4;
 	}
 
 	public static class MathNodes
