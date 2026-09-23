@@ -126,6 +126,23 @@ public class NodeEditorRenderer
 	/// </remarks>
 	public Action<Node>? DrawNodeBody { get; set; }
 
+	/// <summary>
+	/// Whether an unconnected input pin whose type can be edited is drawn with an editor beside its
+	/// label. On by default.
+	/// </summary>
+	/// <remarks>
+	/// This is the renderer's own drawing, not a use of <see cref="DrawNodeBody"/>. That hook runs
+	/// after every pin so host content cannot move a recorded pin row, which is the right contract
+	/// for arbitrary content and the wrong place for a parameter, which belongs on its pin's line.
+	/// The two compose: editors on the rows, host content underneath.
+	/// </remarks>
+	public bool DrawInlinePinEditors { get; set; } = true;
+
+	/// <summary>
+	/// How wide an inline editor is drawn, before zoom. Defaults to 90.
+	/// </summary>
+	public float InlineEditorWidth { get; set; } = 90f;
+
 	/// <summary>The node the pointer was over as of the last frame drawn, if any.</summary>
 	public int? HoveredNodeId { get; private set; }
 
@@ -387,7 +404,14 @@ public class NodeEditorRenderer
 		foreach (Pin pin in node.InputPins)
 		{
 			ImNodes.BeginInputAttribute(pin.Id);
+
+			// The label and any editor are one row, and the row is what a link attaches to the middle
+			// of. Grouped so that RecordPinRow measures both rather than whichever was submitted last.
+			ImGui.BeginGroup();
 			ImGui.Text(pin.EffectiveDisplayName);
+			DrawInlineEditor(engine, pin);
+			ImGui.EndGroup();
+
 			ImNodes.EndInputAttribute();
 			RecordPinRow(pin.Id, isInput: true);
 		}
@@ -435,6 +459,169 @@ public class NodeEditorRenderer
 		}
 
 		PublishPinOffsets(engine, node);
+	}
+
+	/// <summary>
+	/// Draw an editor for a pin's value, when the pin has one to edit.
+	/// </summary>
+	/// <param name="engine">The engine holding the value.</param>
+	/// <param name="pin">The pin.</param>
+	/// <remarks>
+	/// Nothing is drawn for a pin that is connected, whose type has no editor, or when
+	/// <see cref="DrawInlinePinEditors"/> is off. Submitted inside the pin's attribute, so ImNodes
+	/// marks the attribute active while the widget is and does not read the drag as a node drag.
+	/// </remarks>
+	private void DrawInlineEditor(NodeEditorEngine engine, Pin pin)
+	{
+		if (!DrawInlinePinEditors || engine.IsPinConnected(pin.Id))
+		{
+			return;
+		}
+
+		PinValueKind kind = PinValueKinds.Classify(pin.DataType);
+		if (kind == PinValueKind.Unsupported)
+		{
+			return;
+		}
+
+		ImGui.SameLine();
+		ImGui.SetNextItemWidth(InlineEditorWidth * Zoom);
+
+		string id = $"##pin{pin.Id}";
+		object? current = engine.GetPinValue(pin.Id);
+
+		switch (kind)
+		{
+			case PinValueKind.Boolean:
+				DrawBooleanEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Int32:
+				DrawInt32Editor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Single:
+				DrawSingleEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Double:
+				DrawDoubleEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.String:
+				DrawStringEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Vector2:
+				DrawVector2Editor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Vector3:
+				DrawVector3Editor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Enum:
+				DrawEnumEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Unsupported:
+			default:
+				break;
+		}
+	}
+
+	/// <summary>Draw a <see cref="bool"/> pin as a checkbox.</summary>
+	private static void DrawBooleanEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		bool value = current as bool? ?? false;
+		if (ImGui.Checkbox(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw an <see cref="int"/> pin as a drag box.</summary>
+	private static void DrawInt32Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		int value = current as int? ?? 0;
+		if (ImGui.DragInt(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="float"/> pin as a drag box.</summary>
+	private static void DrawSingleEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		float value = current as float? ?? 0f;
+		if (ImGui.DragFloat(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="double"/> pin as an input box.</summary>
+	private static void DrawDoubleEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		double value = current as double? ?? 0.0;
+		if (ImGui.InputDouble(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="string"/> pin as a text box.</summary>
+	private static void DrawStringEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		string value = current as string ?? string.Empty;
+		if (ImGui.InputText(id, ref value, 256))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="Vector2"/> pin as a two-component input box.</summary>
+	private static void DrawVector2Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		Vector2 value = current as Vector2? ?? Vector2.Zero;
+		if (ImGui.InputFloat2(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="Vector3"/> pin as a three-component input box.</summary>
+	private static void DrawVector3Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		Vector3 value = current as Vector3? ?? Vector3.Zero;
+		if (ImGui.InputFloat3(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>
+	/// Draw an enum pin as a list of its names.
+	/// </summary>
+	/// <param name="engine">The engine holding the value.</param>
+	/// <param name="pin">The pin.</param>
+	/// <param name="id">The widget's id.</param>
+	/// <param name="current">What the pin holds now.</param>
+	private static void DrawEnumEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		Type enumType = Nullable.GetUnderlyingType(pin.DataType!) ?? pin.DataType!;
+		string[] names = Enum.GetNames(enumType);
+
+		int index = current is null ? 0 : Array.IndexOf(names, current.ToString());
+		if (index < 0)
+		{
+			index = 0;
+		}
+
+		if (ImGui.Combo(id, ref index, names, names.Length))
+		{
+			engine.SetPinValue(pin.Id, Enum.Parse(enumType, names[index]));
+		}
 	}
 
 	/// <summary>
