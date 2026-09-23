@@ -827,6 +827,8 @@ Things that bite here, beyond the demo-suite list above:
 3. Add `[NodeExecute]` to the execution method
 4. Register with `AttributeBasedNodeFactory.RegisterNodeType<T>()`
 
+Registration makes the node *drawable*, not runnable. Neither `ktsu.NodeGraph` nor `ktsu.ImGui.NodeEditor` invokes `[NodeExecute]` or `[NodeValidate]` — there is no evaluator, scheduler or dispatcher in either, and `[NodeBehavior]`'s execution mode, async, determinism and cacheability flags are read so an editor can display them. Running a graph is the host's job; see "Running a graph" in `NodeGraph/README.md`.
+
 ### Modifying ImGui.App
 
 Changes affect all consumers. Test with all example applications.

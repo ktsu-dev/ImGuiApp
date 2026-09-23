@@ -113,6 +113,8 @@ factory.RegisterNodeTypesFromAssembly(typeof(AddNode).Assembly);
 Node node = factory.CreateNode<AddNode>(new Vector2(100, 100));
 ```
 
+`[NodeExecute]` marks `Execute` for whoever runs the graph to call. This editor is not that: registering a type gives you a node that **draws**, and nothing here constructs the type or invokes the method. Running a graph is the host's job — see [Running a graph](https://github.com/ktsu-dev/ImGuiApp/blob/main/NodeGraph/README.md#running-a-graph) in `ktsu.NodeGraph`.
+
 `GetAllNodeDefinitions()` returns the registered definitions, which is what a "add node" menu is built from: each one carries the display name, category, tags, execution mode, deprecation state and pin list read off the attributes.
 
 Two things to know about registration. A class node also gets an `Instance` output pin (and input pins for its constructor's parameters), so it can be chained onward. And `RegisterNodeTypesFromAssembly` skips abstract types — which in IL includes every `static class` — so a `[Node]` method parked on a static holder class has to be registered by naming that holder: `factory.RegisterNodeType(typeof(MathNodes))`.

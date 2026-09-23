@@ -5,10 +5,12 @@
 
 NodeGraph describes node graphs with attributes, and nothing else. Decorate a class, struct, or method with node and pin metadata and any editor can read it back by reflection — this package draws nothing, references no UI library, and has no dependencies at all. `ktsu.ImGui.NodeEditor` is one consumer of it; a different renderer, a code generator, or a headless graph runner can be another.
 
+"And nothing else" includes running a graph. There is no evaluator here, and nothing in this package ever calls a `[NodeExecute]` method — see [Running a graph](#running-a-graph).
+
 ## Features
 
 - **UI-agnostic metadata**: `[Node]`, `[InputPin]`, `[OutputPin]`, `[ExecutionInput]`, `[ExecutionOutput]` describe a node without naming an editor
-- **Execution semantics**: `[NodeBehavior]` declares an execution mode (reactive, execution-pin driven, on start, continuous, or manual), async support, side effects, determinism and cacheability; `[NodeExecute]` and `[NodeValidate]` mark the methods that run and check a node
+- **Execution semantics, declared rather than performed**: `[NodeBehavior]` declares an execution mode (reactive, execution-pin driven, on start, continuous, or manual), async support, side effects, determinism and cacheability; `[NodeExecute]` and `[NodeValidate]` mark the methods a host should call to run and to check a node
 - **Lifecycle metadata**: `[NodeDeprecated]` and `[NodeVisibility]` let an editor hide, warn about, or redirect a node without the graph code changing
 - **Type compatibility rules**: `PinTypeUtilities` answers whether two pin types can connect, whether the connection needs a conversion, and whether that conversion loses information
 - **Wildcards and custom rules**: `[WildcardPin]` accepts any type, and `[PinConnectionRule]` declares a pairing the built-in rules do not cover
@@ -38,7 +40,7 @@ dotnet add package ktsu.NodeGraph
 
 ### Basic Example
 
-A node is an ordinary type with attributes. Inputs and outputs are properties; the work happens in the method marked `[NodeExecute]`.
+A node is an ordinary type with attributes. Inputs and outputs are properties, and `[NodeExecute]` marks the method that does the node's work — for whoever runs the graph to call, since this package does not.
 
 ```csharp
 using ktsu.NodeGraph;
@@ -96,6 +98,24 @@ public static double Clamp(
     [InputPin("Max")] double max) => Math.Clamp(value, min, max);
 ```
 
+### Running a graph
+
+This package does not. It carries what a node declares about itself and stops there: nothing in
+`ktsu.NodeGraph` or `ktsu.ImGui.NodeEditor` invokes a `[NodeExecute]` method, calls a
+`[NodeValidate]` one, or schedules anything. There is no evaluator, no scheduler and no dispatcher,
+and `ExecutionMode`, `SupportsAsyncExecution`, `IsDeterministic` and `IsCacheable` are read off the
+attributes so an editor can show them, not so anything here acts on them.
+
+Registering a type with `ktsu.ImGui.NodeEditor` gives you a graph that **draws**. Running it is the
+host's job, and it is the host that decides what "running" means for its domain — pull or push,
+synchronous or async, caching or not. The attributes are there so that decision can be declared on
+the node rather than encoded in the runner.
+
+A minimal evaluator is not much: construct the node, write each input pin's value onto its member,
+invoke the `[NodeExecute]` method, read the output pins back off the instance. `PinDefinition` in
+`ktsu.ImGui.NodeEditor` already has `GetValue`/`SetValue` for the reading and writing, and
+`NodeExecuteAttribute.Order` and `IsAsync` are there for a runner that wants them.
+
 ### Deciding whether two pins may connect
 
 ```csharp
@@ -114,9 +134,9 @@ bool lossy = PinTypeUtilities.IsLossyConversion(typeof(double), typeof(int));   
 | `[InputPin]` | Property, field, parameter | Declares an input. `DisplayName`, `Order`, `IsRequired`, `ColorHint`, `AllowMultipleConnections`, `DefaultValue` |
 | `[OutputPin]` | Property, field, method, return value | Declares an output. Same members, with `AllowMultipleConnections` defaulting to `true` |
 | `[ExecutionInput]` / `[ExecutionOutput]` | Property, field | Declares control-flow pins rather than data pins |
-| `[NodeBehavior]` | Class | `ExecutionMode`, async support, side effects, determinism, cacheability |
-| `[NodeExecute]` | Method | The method that performs the node's work |
-| `[NodeValidate]` | Method | A method that validates the node's inputs before execution |
+| `[NodeBehavior]` | Class | `ExecutionMode`, async support, side effects, determinism, cacheability. Declared for a host to act on; nothing here does |
+| `[NodeExecute]` | Method | The method that performs the node's work, for a host to call. Nothing in this package invokes it |
+| `[NodeValidate]` | Method | A method that validates the node's inputs before execution, for a host to call |
 | `[NodeDeprecated]` | Class, struct | Marks a node as deprecated, with a reason, replacement, and versions |
 | `[NodeVisibility]` | Class, struct | Controls menu visibility, instantiability, and experimental status |
 | `[WildcardPin]` | Property, field | The pin accepts any type |
