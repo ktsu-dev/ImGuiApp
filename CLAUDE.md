@@ -82,6 +82,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/ForceDpiAware.cs` - Multi-platform DPI detection
 - `ImGui.App/WindowingEnvironment.cs` - Wayland / tiling window manager detection driving `ImGuiAppConfig.WindowGeometry`
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
+- `ImGui.App/IRenderer3D.cs` - The optional 3D extension a backend may implement; see [Backend-agnostic 3D](#backend-agnostic-3d)
+- `ImGui.App.Testing/SoftwareRasterizer.ThreeD.cs` - The 3D fill: near clipping, depth, perspective-correct interpolation
+- `ImGui.App.Testing/DepthBuffer.cs` - The depth attachment, 0 near to 1 far, matching `Matrix4x4.CreatePerspectiveFieldOfView`
 - `ImGui.App/Images/ImageDecoder.cs` - Front door for image loading; sniffs the format from the file's own bytes
 - `ImGui.App/Images/ImagePixels.cs` - The decoded RGBA8 buffer every decoder produces and the texture cache uploads
 - `ImGui.App/Images/PngDecoder.cs` - PNG, including every colour type and bit depth, `tRNS`, Adam7 and all five filters
@@ -225,6 +228,59 @@ within about three units per channel — the range such decoders differ by among
 Lanczos-3 filter whose support widens by the reduction factor when downscaling, so shrinking averages
 rather than point-samples. It resamples premultiplied alpha and unpremultiplies afterwards, so the
 colour of fully transparent pixels does not bleed into their visible neighbours.
+
+### Backend-agnostic 3D
+
+`IRenderer3D` is an **optional extension** a renderer backend may also implement, discovered with
+`ImGuiApp.TryGetRenderer3D(out IRenderer3D?)`. A caller that gets `false` falls back to rasterizing
+on the CPU and uploading pixels through `CreateTexture`, which is what it had to do before.
+
+**It is not a rendering engine.** `IRendererBackend.RenderDrawData` already takes vertex and index
+buffers with a texture id and a clip rect and draws them, so every backend here is already a
+textured-triangle rasterizer; the 2D-ness lives in exactly three places — the projection is
+orthographic, there is no depth buffer, and the position is a `Vector2`. Making those three things
+parameters is the whole of it. Shaders, materials, lighting, instancing, MSAA, mipmaps and
+alternative target formats are deliberately absent: that list is where a rendering abstraction goes
+to die, because each item forces a backend-specific escape hatch. `Vertex3D` has **no normal** —
+the caller bakes shading into its colour, because a caller who wants real lighting wants shaders,
+and shaders cannot be made backend-agnostic without inventing a shading language.
+
+`SoftwareRenderer` implements it, and that is a first-class deliverable rather than polish: six
+headless UI suites, the one-class-per-widget isolation rule and `WidgetTest`'s
+`Snapshot`/`PixelsChangedSince`/`BoundsOfDifference` all rest on that renderer, so a 3D path that
+only worked on OpenGL would be the first thing in the suite that could not be rendered headlessly.
+`SoftwareRasterizer.ThreeD.cs` adds the 3D fill beside the 2D one, and `DepthBuffer` the attachment.
+
+Four things to know before changing any of it:
+
+- **Near-plane clipping is not optional and is the part most likely to be left out.** A vertex
+  behind the eye has a non-positive `w`, and dividing by it sends the vertex to the *wrong side* of
+  the screen — so a triangle straddling the eye draws as a wildly wrong shape covering the target
+  rather than as the wedge it is. The polygon is clipped against `w >= 1e-5` before any divide.
+  `ATriangleStraddlingTheEyeIsClippedRatherThanSmearedAcrossTheTarget` fails by the target being
+  *more* covered, not less.
+- **Depth interpolates linearly in screen space; attributes do not.** NDC z is already projective,
+  so perspective-correcting it would be wrong. Colour and UV are not, so they go through `1/w`.
+  `InterpolationIsPerspectiveCorrect` pins this against a **derived** number rather than an
+  observed one: with the near edge at view depth 4.5 and the far edge at 11,
+  `(1/7.75 − 1/11) / (1/4.5 − 1/11) = 0.290`, against affine interpolation's 0.500. The two are
+  0.21 apart, which is what lets the test be tight. Perspective compresses the *far* end, so the
+  halfway attribute lands near the horizon — the checkerboard argument. That test was first written
+  asserting the shift ran the other way.
+- **Front-facing is a negative signed area**, because the y axis points down in target space. Get
+  it backwards and culling discards exactly the geometry meant to be drawn, which looks like
+  nothing rendering at all; `CullingDiscardsExactlyOneFacing` checks both modes against one
+  triangle rather than inferring one from the other.
+- **A render target's texture id is not a deletable texture.** `GetTargetTexture` returns something
+  usable as an ImGui texture id, and on OpenGL that is a name from the same namespace
+  `CreateTexture` draws from — so passing it to `DeleteTexture` would free a live target's colour
+  attachment out from under it. `SoftwareRenderer.DeleteTexture` throws on one, and
+  `IsRenderTargetTexture` answers the question, so the CPU backend reproduces the contract a GPU
+  backend has to keep and a test can pin it. A resize keeps the id, so a caller need not rebind.
+
+**Not yet implemented: the OpenGL and Metal backends** (#413 sub-issues 1 and 3), and
+`ImGuiWidgets.Viewport3D` (sub-issue 4). `TryGetRenderer3D` therefore answers `false` in a real
+desktop application today and `true` under a headless harness.
 
 ### Deferred Drawing (dialogs and docked windows)
 

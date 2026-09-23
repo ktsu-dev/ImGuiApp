@@ -22,7 +22,7 @@ using Hexa.NET.ImGui;
 /// </remarks>
 /// <param name="width">Render target width in pixels.</param>
 /// <param name="height">Render target height in pixels.</param>
-public sealed class SoftwareRenderer(int width, int height) : IRendererBackend
+public sealed partial class SoftwareRenderer(int width, int height) : IRendererBackend
 {
 	private readonly Dictionary<nint, TextureSource> textures = [];
 	private nint nextId = 1;
@@ -61,7 +61,21 @@ public sealed class SoftwareRenderer(int width, int height) : IRendererBackend
 
 	/// <summary>Releases a texture.</summary>
 	/// <param name="id">A handle returned by <see cref="CreateTexture"/>.</param>
-	public void DeleteTexture(nint id) => textures.Remove(id);
+	/// <exception cref="ArgumentException">
+	/// <paramref name="id"/> is a render target's colour attachment. Those are released through
+	/// <see cref="DeleteRenderTarget"/> and nothing else — see <see cref="IsRenderTargetTexture"/>
+	/// for why silently accepting it would be worse than throwing.
+	/// </exception>
+	public void DeleteTexture(nint id)
+	{
+		if (IsRenderTargetTexture(id))
+		{
+			throw new ArgumentException(
+				$"Texture {id} is a render target's colour attachment. Release it with DeleteRenderTarget.", nameof(id));
+		}
+
+		textures.Remove(id);
+	}
 
 	/// <summary>Looks up a texture by handle.</summary>
 	/// <param name="id">A handle returned by <see cref="CreateTexture"/>.</param>
