@@ -4,6 +4,7 @@ namespace ktsu.ImGui.NodeEditor;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -13,14 +14,33 @@ using ktsu.NodeGraph;
 /// Factory for creating nodes from classes decorated with node attributes.
 /// This provides type-safe node creation from domain models.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the AttributeBasedNodeFactory class.
-/// </remarks>
-/// <param name="engine">The node editor engine to create nodes in.</param>
-public class AttributeBasedNodeFactory(NodeEditorEngine engine)
+public class AttributeBasedNodeFactory
 {
-	private readonly NodeEditorEngine engine = engine ?? throw new ArgumentNullException(nameof(engine));
+	private readonly NodeEditorEngine engine;
 	private readonly Dictionary<object, NodeDefinition> nodeDefinitions = []; // Changed to object to support both Type and MethodInfo keys
+
+	/// <summary>Everything this factory has created, keyed by the node id the engine issued.</summary>
+	private readonly Dictionary<int, NodeBinding> bindings = [];
+
+	/// <summary>
+	/// Initializes a new instance of the AttributeBasedNodeFactory class.
+	/// </summary>
+	/// <param name="engine">The node editor engine to create nodes in.</param>
+	/// <remarks>
+	/// The factory subscribes to the engine for the lifetime of both. A node id only means anything
+	/// while the engine still holds that node, so the bindings have to be told when one is removed
+	/// or the graph is cleared; nothing else can know.
+	/// </remarks>
+	public AttributeBasedNodeFactory(NodeEditorEngine engine)
+	{
+		this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+		this.engine.NodeRemoved += OnNodeRemoved;
+		this.engine.Cleared += OnCleared;
+	}
+
+	private void OnNodeRemoved(object? sender, NodeRemovedEventArgs e) => bindings.Remove(e.NodeId);
+
+	private void OnCleared(object? sender, EventArgs e) => bindings.Clear();
 
 	/// <summary>
 	/// Registers a type as a node definition by scanning its attributes.
@@ -132,6 +152,7 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 			outputPinNames);
 
 		ApplyConnectionCapacities(definition, node);
+		bindings[node.Id] = new NodeBinding(node.Id, definition, CreateBackingInstance(definition));
 		return node;
 	}
 
@@ -164,7 +185,66 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 			outputPinNames);
 
 		ApplyConnectionCapacities(definition, node);
+		bindings[node.Id] = new NodeBinding(node.Id, definition, Instance: null);
 		return node;
+	}
+
+	/// <summary>
+	/// Constructs the object a type node's parameter values live on, and writes each input pin's
+	/// declared default onto it.
+	/// </summary>
+	/// <param name="definition">The definition the node was created from.</param>
+	/// <returns>The instance, or null if the type cannot be constructed without arguments.</returns>
+	/// <remarks>
+	/// A method node gets no instance. The library already models the receiver of a non-static
+	/// method as an <c>Instance</c> input pin, so one arrives over a link from whichever node
+	/// produced it; manufacturing a second one here would contradict that and give the node two
+	/// receivers that disagree.
+	/// </remarks>
+	private static object? CreateBackingInstance(NodeDefinition definition)
+	{
+		object? instance = CreatePrototype(definition.NodeType);
+		if (instance is null)
+		{
+			return null;
+		}
+
+		foreach (PinDefinition pin in definition.InputPins)
+		{
+			ApplyDeclaredDefault(pin, instance);
+		}
+
+		return instance;
+	}
+
+	/// <summary>
+	/// Writes a pin's declared default onto an instance, where the pin has one and it fits.
+	/// </summary>
+	/// <param name="pin">The pin whose default to apply.</param>
+	/// <param name="instance">The instance to write to.</param>
+	/// <remarks>
+	/// Only a pin backed by a property or field is written; a parameter pin's default belongs to a
+	/// constructor or method argument and has nowhere to live on the instance. A default read off a
+	/// prototype is written back unchanged, so the write only does visible work for a default that
+	/// came from the attribute and disagrees with the member's own initializer — which is the case
+	/// where leaving it out would let <see cref="PinDefinition.DefaultValue"/> and the instance
+	/// report different values for the same pin.
+	/// </remarks>
+	private static void ApplyDeclaredDefault(PinDefinition pin, object instance)
+	{
+		Type? memberType = pin.Member switch
+		{
+			PropertyInfo prop when prop.CanWrite => prop.PropertyType,
+			FieldInfo field when !field.IsInitOnly => field.FieldType,
+			_ => null
+		};
+
+		if (memberType is null || pin.DefaultValue is null || !memberType.IsInstanceOfType(pin.DefaultValue))
+		{
+			return;
+		}
+
+		pin.SetValue(instance, pin.DefaultValue);
 	}
 
 	/// <summary>
@@ -205,6 +285,42 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 	/// <param name="method">The method.</param>
 	/// <returns>The node definition, or null if not registered.</returns>
 	public NodeDefinition? GetNodeDefinition(MethodInfo method) => nodeDefinitions.TryGetValue(method, out NodeDefinition? definition) ? definition : null;
+
+	/// <summary>
+	/// Gets the definition a node was created from.
+	/// </summary>
+	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
+	/// <returns>The definition, or null if this factory did not create that node or it has since been removed.</returns>
+	/// <remarks>
+	/// This is the lookup that answers "which type is this selected node", which the pin names on
+	/// the <see cref="Node"/> alone cannot.
+	/// </remarks>
+	public NodeDefinition? GetNodeDefinition(int nodeId) => GetBinding(nodeId)?.Definition;
+
+	/// <summary>
+	/// Gets what a node created by this factory was created from.
+	/// </summary>
+	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
+	/// <returns>The binding, or null if this factory did not create that node or it has since been removed.</returns>
+	public NodeBinding? GetBinding(int nodeId) => bindings.TryGetValue(nodeId, out NodeBinding? binding) ? binding : null;
+
+	/// <summary>
+	/// Gets the object a node's parameter values live on.
+	/// </summary>
+	/// <param name="nodeId">The node's identifier, as the engine issued it.</param>
+	/// <param name="instance">The instance, or null if the node has none.</param>
+	/// <returns>True if this factory created that node and it has a backing instance.</returns>
+	/// <remarks>
+	/// Read and write its members through the owning <see cref="PinDefinition"/>'s
+	/// <see cref="PinDefinition.GetValue(object)"/> and
+	/// <see cref="PinDefinition.SetValue(object, object?)"/>, which is what an inspector panel
+	/// editing a declared parameter such as a threshold needs.
+	/// </remarks>
+	public bool TryGetNodeInstance(int nodeId, [NotNullWhen(true)] out object? instance)
+	{
+		instance = GetBinding(nodeId)?.Instance;
+		return instance is not null;
+	}
 
 	/// <summary>
 	/// Gets all registered node definitions.
