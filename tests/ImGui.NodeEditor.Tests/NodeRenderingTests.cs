@@ -147,7 +147,8 @@ public sealed class NodeRenderingTests
 		drawnFor.Clear();
 		harness.Step(1);
 
-		CollectionAssert.AreEquivalent(
+		// In the engine's own node order, which is the order the renderer walks them in.
+		Assert.AreSequenceEqual(
 			EveryNodeName,
 			drawnFor,
 			"The hook should reach every node drawn, once each, a pinless node included.");
