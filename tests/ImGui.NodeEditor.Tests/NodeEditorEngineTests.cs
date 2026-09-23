@@ -628,4 +628,30 @@ public sealed class NodeEditorEngineTests
 		Assert.IsEmpty(engine.GetIncomingLinks(source.Id).ToList());
 		Assert.IsEmpty(engine.GetOutgoingLinks(target.Id).ToList());
 	}
+
+	[TestMethod]
+	public void CreateNodeFromSpecs_CarriesTypeAndCapacityOntoThePins()
+	{
+		Node node = engine.CreateNodeFromSpecs(
+			new Vector2(0, 0),
+			"Typed",
+			[new PinSpec("Threshold", typeof(double)), new PinSpec("Tags", typeof(string), AllowMultipleConnections: true)],
+			[new PinSpec("Count", typeof(int), AllowMultipleConnections: false)]);
+
+		Assert.AreEqual(typeof(double), node.InputPins[0].DataType);
+		Assert.AreEqual("Threshold", node.InputPins[0].EffectiveDisplayName);
+		Assert.AreEqual("In 1", node.InputPins[0].Name);
+		Assert.IsFalse(node.InputPins[0].AllowsMultipleConnections, "An input takes one link unless it says otherwise.");
+		Assert.IsTrue(node.InputPins[1].AllowsMultipleConnections, "The spec asked for many.");
+		Assert.IsFalse(node.OutputPins[0].AllowsMultipleConnections, "The spec asked for one.");
+	}
+
+	[TestMethod]
+	public void CreateNode_WithPinNames_LeavesThePinsUntyped()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Untyped", ["In"], ["Out"]);
+
+		Assert.IsNull(node.InputPins[0].DataType, "A name carries no type, and inventing one would be a lie.");
+		Assert.IsNull(node.OutputPins[0].DataType);
+	}
 }

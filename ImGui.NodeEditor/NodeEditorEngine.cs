@@ -143,38 +143,65 @@ public class NodeEditorEngine
 	/// </summary>
 	public Node CreateNode(Vector2 position, string name, int inputPinCount, int outputPinCount)
 	{
-		List<string> inputPinNames = [];
-		List<string> outputPinNames = [];
+		PinSpec[] inputSpecs = new PinSpec[inputPinCount];
+		PinSpec[] outputSpecs = new PinSpec[outputPinCount];
 
 		for (int i = 0; i < inputPinCount; i++)
 		{
-			inputPinNames.Add($"In {i + 1}");
+			inputSpecs[i] = new PinSpec($"In {i + 1}");
 		}
 
 		for (int i = 0; i < outputPinCount; i++)
 		{
-			outputPinNames.Add($"Out {i + 1}");
+			outputSpecs[i] = new PinSpec($"Out {i + 1}");
 		}
 
-		return CreateNode(position, name, inputPinNames, outputPinNames);
+		return CreateNodeFromSpecs(position, name, inputSpecs, outputSpecs);
 	}
 
 	/// <summary>
-	/// Create a new node with specified pin names.
+	/// Create a new node with specified pin names. The pins are untyped.
 	/// </summary>
-	public Node CreateNode(Vector2 position, string name, List<string> inputPinNames, List<string> outputPinNames)
+	public Node CreateNode(Vector2 position, string name, List<string> inputPinNames, List<string> outputPinNames) =>
+		CreateNodeFromSpecs(
+			position,
+			name,
+			[.. inputPinNames.Select(n => new PinSpec(n))],
+			[.. outputPinNames.Select(n => new PinSpec(n))]);
+
+	/// <summary>
+	/// Create a new node from a description of each of its pins.
+	/// </summary>
+	/// <param name="position">Where to place the node.</param>
+	/// <param name="name">The node's name.</param>
+	/// <param name="inputs">Its input pins, in the order they should be drawn.</param>
+	/// <param name="outputs">Its output pins, in the order they should be drawn.</param>
+	/// <returns>The created node.</returns>
+	public Node CreateNodeFromSpecs(Vector2 position, string name, IReadOnlyList<PinSpec> inputs, IReadOnlyList<PinSpec> outputs)
 	{
 		List<Pin> inputPins = [];
 		List<Pin> outputPins = [];
 
-		foreach (string pinName in inputPinNames)
+		foreach (PinSpec spec in inputs)
 		{
-			inputPins.Add(new Pin(nextPinId++, PinDirection.Input, $"In {inputPins.Count + 1}", pinName));
+			inputPins.Add(new Pin(
+				nextPinId++,
+				PinDirection.Input,
+				$"In {inputPins.Count + 1}",
+				spec.Name,
+				spec.AllowMultipleConnections,
+				spec.DataType));
 		}
 
-		foreach (string pinName in outputPinNames)
+		foreach (PinSpec spec in outputs)
 		{
-			outputPins.Add(new Pin(nextPinId++, PinDirection.Output, $"Out {outputPins.Count + 1}", pinName));
+			outputPins.Add(new Pin(
+				nextPinId++,
+				PinDirection.Output,
+				$"Out {outputPins.Count + 1}",
+				spec.Name,
+				spec.AllowMultipleConnections,
+				spec.DataType));
 		}
 
 		Node node = new(nextNodeId++, position, name, inputPins, outputPins);
