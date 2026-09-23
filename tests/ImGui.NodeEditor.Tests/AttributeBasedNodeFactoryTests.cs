@@ -298,6 +298,71 @@ public sealed class AttributeBasedNodeFactoryTests
 			"The instance output is there to be chained onward, by as many nodes as want it.");
 	}
 
+	/// <summary>
+	/// Every default in the shipped node library is written as a C# initializer rather than as
+	/// <c>[InputPin(DefaultValue = ...)]</c>, so a menu or inspector built from the definitions saw
+	/// null for all of them. The factory reads the initializer off a prototype instance instead.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_ReadsAnInputDefaultFromItsPropertyInitializer()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(128.0, Input(definition, "Threshold").DefaultValue);
+		Assert.AreEqual("unnamed", Input(definition, "Label").DefaultValue);
+		Assert.AreEqual(7, Input(definition, "Count").DefaultValue, "A field initializer is a default too.");
+	}
+
+	[TestMethod]
+	public void RegisterNodeType_PrefersTheAttributeDefaultOverTheInitializer()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(
+			50.0,
+			Input(definition, "AreaMin").DefaultValue,
+			"An explicit DefaultValue is the author saying what it is, initializer or not.");
+	}
+
+	/// <summary>
+	/// A property with neither form reports what the node will actually hold when it is constructed,
+	/// which for a value type is its zero rather than null.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_ReportsTheZeroForAnUninitializedValueTypePin()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(0.0, Input(definition, "Untouched").DefaultValue);
+	}
+
+	/// <summary>
+	/// Reading initializers means constructing the type, and registration must survive types that
+	/// cannot be constructed at all. Both fall back to the attribute alone, as before.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_SurvivesATypeItCannotConstruct()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+
+		factory.RegisterNodeType<ConstructedNode>();
+		factory.RegisterNodeType<UnconstructableNode>();
+
+		Assert.IsNull(
+			Input(Registered(factory.GetNodeDefinition(typeof(UnconstructableNode))), "In").DefaultValue,
+			"A constructor that throws leaves the pin as it was.");
+		Assert.IsNotNull(factory.GetNodeDefinition(typeof(ConstructedNode)), "A type with no parameterless constructor still registers.");
+	}
+
 	[TestMethod]
 	public void GetNodeDefinition_ReturnsNullForAnythingUnregistered()
 	{
@@ -318,6 +383,11 @@ public sealed class AttributeBasedNodeFactoryTests
 	/// <summary>Asserts a lookup found something, and hands back the non-null definition.</summary>
 	private static NodeDefinition Registered(NodeDefinition? definition) =>
 		definition ?? throw new AssertFailedException("The definition was not registered.");
+
+	/// <summary>Finds the one input pin with the given display name.</summary>
+	private static PinDefinition Input(NodeDefinition definition, string displayName) =>
+		definition.InputPins.SingleOrDefault(p => p.DisplayName == displayName)
+			?? throw new AssertFailedException($"No input pin named '{displayName}'.");
 
 	[Node("Add Numbers", ColorHint = "#4488ff", Tags = ["math", "arithmetic"])]
 	[NodeBehavior(
@@ -391,6 +461,35 @@ public sealed class AttributeBasedNodeFactoryTests
 	public sealed class NotANode
 	{
 		public int Value { get; set; }
+	}
+
+	/// <summary>Mirrors how the shipped library writes its defaults: initializers, not attributes.</summary>
+	[Node("Initialized Defaults")]
+	public sealed class InitializedDefaultsNode
+	{
+		[InputPin("Threshold")]
+		public double Threshold { get; set; } = 128.0;
+
+		[InputPin("Label")]
+		public string Label { get; set; } = "unnamed";
+
+		[InputPin("Count")]
+		public int Count = 7;
+
+		[InputPin("AreaMin", DefaultValue = 50.0)]
+		public double AreaMin { get; set; } = 1.0;
+
+		[InputPin("Untouched")]
+		public double Untouched { get; set; }
+	}
+
+	[Node("Unconstructable")]
+	public sealed class UnconstructableNode
+	{
+		public UnconstructableNode() => throw new InvalidOperationException("Not from here.");
+
+		[InputPin("In")]
+		public int In { get; set; } = 3;
 	}
 
 	public static class MathNodes

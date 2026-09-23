@@ -321,6 +321,10 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 		IEnumerable<MemberInfo> members = nodeType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
 			.Where(m => m is PropertyInfo or FieldInfo);
 
+		// A prototype answers what an initializer wrote, for the pins whose attribute said nothing.
+		// Built at most once per type, and only if such a pin turns up.
+		Lazy<object?> prototype = new(() => CreatePrototype(nodeType));
+
 		foreach (MemberInfo? member in members)
 		{
 			// Check for any pin attribute (input, output, execution input, execution output)
@@ -348,10 +352,11 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 				bool isInput = pinAttr is InputPinAttribute or ExecutionInputAttribute;
 				pinDef.IsInput = isInput;
 
-				// Set default value for input pins
+				// Set default value for input pins - prefer the attribute, then the member's own
+				// initializer read off a prototype instance, matching what parameter pins already do.
 				if (isInput && pinAttr is InputPinAttribute inputPin)
 				{
-					pinDef.DefaultValue = inputPin.DefaultValue;
+					pinDef.DefaultValue = inputPin.DefaultValue ?? ReadDeclaredDefault(pinDef, prototype);
 				}
 
 				// Add to appropriate collection
@@ -369,6 +374,68 @@ public class AttributeBasedNodeFactory(NodeEditorEngine engine)
 		// Sort pins by order
 		definition.InputPins.Sort((a, b) => a.Order.CompareTo(b.Order));
 		definition.OutputPins.Sort((a, b) => a.Order.CompareTo(b.Order));
+	}
+
+	/// <summary>
+	/// Reads what a pin's member holds on a freshly constructed instance of its declaring type,
+	/// which is the value its C# initializer wrote.
+	/// </summary>
+	/// <param name="pin">The pin whose member to read.</param>
+	/// <param name="prototype">The prototype instance, or null if the type could not be constructed.</param>
+	/// <returns>The declared default, or null if there is no prototype or the member cannot be read.</returns>
+	private static object? ReadDeclaredDefault(PinDefinition pin, Lazy<object?> prototype)
+	{
+		object? instance = prototype.Value;
+		if (instance is null)
+		{
+			return null;
+		}
+
+		try
+		{
+			return pin.GetValue(instance);
+		}
+		catch (TargetInvocationException)
+		{
+			// A getter that throws on a default-constructed instance has no default to report.
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Constructs an instance of a node type purely to read its initializers, returning null when
+	/// the type cannot be constructed without arguments or its constructor refuses to run.
+	/// </summary>
+	/// <param name="nodeType">The type to construct.</param>
+	/// <returns>The instance, or null.</returns>
+	private static object? CreatePrototype(Type nodeType)
+	{
+		bool constructible = !nodeType.IsAbstract
+			&& !nodeType.ContainsGenericParameters
+			&& (nodeType.IsValueType || nodeType.GetConstructor(Type.EmptyTypes) is not null);
+
+		if (!constructible)
+		{
+			return null;
+		}
+
+		try
+		{
+			return Activator.CreateInstance(nodeType);
+		}
+		catch (TargetInvocationException)
+		{
+			// The constructor threw. Registration is metadata only, so this is not fatal here.
+			return null;
+		}
+		catch (MemberAccessException)
+		{
+			return null;
+		}
+		catch (NotSupportedException)
+		{
+			return null;
+		}
 	}
 
 	private static void ScanMethodPins(MethodInfo method, NodeDefinition definition)
