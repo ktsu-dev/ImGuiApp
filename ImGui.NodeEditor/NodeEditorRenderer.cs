@@ -617,20 +617,38 @@ public class NodeEditorRenderer
 	/// <param name="pin">The pin.</param>
 	/// <param name="id">The widget's id.</param>
 	/// <param name="current">What the pin holds now.</param>
+	/// <remarks>
+	/// Matched by value, not by <c>ToString()</c> against the defined names: a value not defined in
+	/// the type (a cast integer, a flags combination) has no matching name, and picking index 0 for
+	/// it would display a name the pin does not actually hold, without writing it back. Such a value
+	/// shows a blank preview instead until the user picks a defined one.
+	/// </remarks>
 	private static void DrawEnumEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
 	{
 		Type enumType = Nullable.GetUnderlyingType(pin.DataType!) ?? pin.DataType!;
 		string[] names = Enum.GetNames(enumType);
+		Array values = Enum.GetValues(enumType);
 
-		int index = current is null ? 0 : Array.IndexOf(names, current.ToString());
-		if (index < 0)
-		{
-			index = 0;
-		}
+		int index = current is null ? -1 : Array.IndexOf(values, current);
+		string preview = index >= 0 ? names[index] : string.Empty;
 
-		if (ImGui.Combo(id, ref index, names, names.Length))
+		if (ImGui.BeginCombo(id, preview))
 		{
-			engine.SetPinValue(pin.Id, Enum.Parse(enumType, names[index]));
+			for (int i = 0; i < names.Length; i++)
+			{
+				bool selected = i == index;
+				if (ImGui.Selectable(names[i], selected))
+				{
+					engine.SetPinValue(pin.Id, values.GetValue(i));
+				}
+
+				if (selected)
+				{
+					ImGui.SetItemDefaultFocus();
+				}
+			}
+
+			ImGui.EndCombo();
 		}
 	}
 

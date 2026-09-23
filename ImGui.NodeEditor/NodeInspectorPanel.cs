@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
+using System.Globalization;
 using System.Numerics;
 using System.Reflection;
 
@@ -186,6 +187,11 @@ public static class NodeInspectorPanel
 	/// <see cref="EnumRowMethod"/> closed over one enum type, cached so a row drawn every frame does
 	/// not call <see cref="MethodInfo.MakeGenericMethod"/> every frame.
 	/// </summary>
+	/// <remarks>
+	/// Not thread-safe, and does not need to be: like the rest of this library it relies on ImGui's
+	/// own single-threaded model, where drawing happens on one thread and never concurrently with
+	/// itself.
+	/// </remarks>
 	private static readonly Dictionary<Type, MethodInfo> EnumRowMethodsByType = [];
 
 	/// <summary>
@@ -196,6 +202,10 @@ public static class NodeInspectorPanel
 	/// Going through <see cref="ImGuiWidgets.PropertyGrid.Enum{TEnum}"/> rather than drawing a combo
 	/// by hand keeps this row inside the grid's own <c>BeginRow</c>/<c>EndRow</c> plumbing, so it
 	/// gets the same column layout, probe mark and disabled handling every other row gets for free.
+	/// A null pin (a <c>Polarity?</c> that was never set, say) is seeded through
+	/// <see cref="UndefinedSentinel"/> rather than <c>Activator.CreateInstance</c>: the latter
+	/// produces the enum's zero value, which — whenever a member happens to be defined at zero,
+	/// the common case — renders as though the user had already picked that name.
 	/// </remarks>
 	private static void DrawEnum(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
@@ -207,7 +217,7 @@ public static class NodeInspectorPanel
 			EnumRowMethodsByType[enumType] = method;
 		}
 
-		object value = current ?? Activator.CreateInstance(enumType)!;
+		object value = current ?? UndefinedSentinel(enumType);
 		object?[] arguments = [label, value];
 
 		bool changed = (bool)method.Invoke(grid, arguments)!;
@@ -215,5 +225,44 @@ public static class NodeInspectorPanel
 		{
 			engine.SetPinValue(pin.Id, arguments[1]);
 		}
+	}
+
+	/// <summary>
+	/// A value of <paramref name="enumType"/> that matches none of its defined members.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="ImGuiWidgets.PropertyGrid.Enum{TEnum}"/> looks up the row's current value with
+	/// <c>Array.IndexOf</c> and hands the result straight to <c>ImGui.Combo</c>, which itself renders
+	/// a blank preview for an index outside the item list. Handing it a value no member owns gets
+	/// that blank preview for free, rather than misrepresenting an unset pin as a chosen one.
+	/// </remarks>
+	private static object UndefinedSentinel(Type enumType)
+	{
+		Array definedValues = Enum.GetValues(enumType);
+		HashSet<long> defined = new(definedValues.Length);
+
+		foreach (object definedValue in definedValues)
+		{
+			try
+			{
+				defined.Add(Convert.ToInt64(definedValue, CultureInfo.InvariantCulture));
+			}
+			catch (OverflowException)
+			{
+				// An underlying value outside long's range can never collide with the small
+				// non-negative candidates tried below.
+			}
+		}
+
+		// Among any n+1 candidates there is one no set of n defined values can occupy.
+		for (long candidate = 0; candidate <= defined.Count; candidate++)
+		{
+			if (!defined.Contains(candidate))
+			{
+				return Enum.ToObject(enumType, candidate);
+			}
+		}
+
+		return Enum.ToObject(enumType, 0);
 	}
 }
