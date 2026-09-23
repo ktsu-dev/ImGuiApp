@@ -82,12 +82,17 @@ public record Pin(
 /// </summary>
 /// <param name="Name">The pin's display name.</param>
 /// <param name="DataType">The .NET type it carries, or null for an untyped pin.</param>
+/// <param name="DefaultValue">
+/// What the pin holds before anything sets it, or null for nothing. This is the value
+/// <see cref="PinValueStore.Reset"/> goes back to.
+/// </param>
 /// <param name="AllowMultipleConnections">
 /// How many links it accepts, or null to take the default for its direction.
 /// </param>
 public readonly record struct PinSpec(
 	string Name,
 	Type? DataType = null,
+	object? DefaultValue = null,
 	bool? AllowMultipleConnections = null
 );
 
