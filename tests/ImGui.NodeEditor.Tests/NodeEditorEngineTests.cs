@@ -668,6 +668,34 @@ public sealed class NodeEditorEngineTests
 		Assert.IsNull(engine.GetPinValue(node.InputPins[1].Id), "A spec with no default seeds nothing.");
 	}
 
+	/// <summary>
+	/// <c>[InputPin("X", DefaultValue = 50)]</c> on a <see langword="double"/> property is a natural
+	/// thing to write, and boxes an <see langword="int"/>. Seeding that unchecked would make
+	/// <see cref="NodeEditorEngine.GetPinValue"/> return a boxed <c>50</c> while both editing
+	/// surfaces read it as <c>50.0</c> and disagree with it forever.
+	/// </summary>
+	[TestMethod]
+	public void CreateNodeFromSpecs_CoercesAMistypedDeclaredDefaultToThePinsType()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Mistyped", [new PinSpec("X", typeof(double), 50)], []);
+
+		object? value = engine.GetPinValue(node.InputPins[0].Id);
+
+		// AreEqual alone would not catch this: 50.0 == (object)50 by value comparison even though
+		// their runtime types differ, so the runtime type has to be asserted separately.
+		Assert.AreEqual(50.0, value);
+		Assert.AreEqual(typeof(double), value?.GetType(), "The seed should have been converted to the pin's declared type, not left as the boxed int it was written as.");
+	}
+
+	/// <summary>A default that cannot be converted at all is dropped rather than making the node uncreatable.</summary>
+	[TestMethod]
+	public void CreateNodeFromSpecs_SeedsNull_WhenTheDeclaredDefaultCannotBeConverted()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Unconvertible", [new PinSpec("Position", typeof(Vector2), 50)], []);
+
+		Assert.IsNull(engine.GetPinValue(node.InputPins[0].Id), "An int cannot become a Vector2, so the bad default should have been dropped rather than thrown.");
+	}
+
 	[TestMethod]
 	public void SetPinValue_RefusesAValueThePinsTypeWillNotTake()
 	{

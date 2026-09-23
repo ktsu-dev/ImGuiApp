@@ -2,7 +2,9 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using ktsu.ForceDirectedLayout;
@@ -251,15 +253,62 @@ public class NodeEditorEngine
 
 		for (int i = 0; i < inputPins.Count; i++)
 		{
-			pinValues.Seed(inputPins[i].Id, inputs[i].DefaultValue);
+			pinValues.Seed(inputPins[i].Id, CoerceDefaultValue(inputs[i].DataType, inputs[i].DefaultValue));
 		}
 
 		for (int i = 0; i < outputPins.Count; i++)
 		{
-			pinValues.Seed(outputPins[i].Id, outputs[i].DefaultValue);
+			pinValues.Seed(outputPins[i].Id, CoerceDefaultValue(outputs[i].DataType, outputs[i].DefaultValue));
 		}
 
 		return node;
+	}
+
+	/// <summary>
+	/// Bring a declared default in line with the pin's declared type before it is seeded.
+	/// </summary>
+	/// <param name="dataType">The pin's declared type, or null when it has none.</param>
+	/// <param name="defaultValue">The default as written on the attribute, which is untyped
+	/// <see cref="object"/> and so is trusted by nothing until it gets here.</param>
+	/// <returns>
+	/// <paramref name="defaultValue"/> unchanged when it already matches, a converted value when
+	/// <see cref="IConvertible"/> can bridge the mismatch (an <c>int</c> literal on a <c>double</c>
+	/// pin, for instance), or null when neither holds.
+	/// </returns>
+	/// <remarks>
+	/// <see cref="ktsu.NodeGraph.InputPinAttribute.DefaultValue"/> is declared as <c>object?</c> straight off the
+	/// attribute, so <c>[InputPin("X", DefaultValue = 50)]</c> on a <see langword="double"/> property
+	/// seeds a boxed <see langword="int"/> unless this catches it: the inline editor, the inspector
+	/// row and <see cref="PinValueStore.Get(int)"/> all read as the pin's declared type, and a
+	/// mismatched seed makes them silently disagree with each other. A bad attribute must still
+	/// produce a creatable node, so this never throws; it seeds null when it cannot convert.
+	/// </remarks>
+	private static object? CoerceDefaultValue(Type? dataType, object? defaultValue)
+	{
+		if (PinValueStore.Accepts(dataType, defaultValue))
+		{
+			return defaultValue;
+		}
+
+		if (dataType is not null && defaultValue is IConvertible)
+		{
+			Type underlying = Nullable.GetUnderlyingType(dataType) ?? dataType;
+			try
+			{
+				return Convert.ChangeType(defaultValue, underlying, CultureInfo.InvariantCulture);
+			}
+			catch (InvalidCastException)
+			{
+			}
+			catch (FormatException)
+			{
+			}
+			catch (OverflowException)
+			{
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>
