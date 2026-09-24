@@ -1242,7 +1242,7 @@ In `DiffViewImpl.DrawLines`, branch on `options.Mode` and add the side-by-side t
 				SetUpSideColumns(options, "old");
 				SetUpSideColumns(options, "new");
 
-				ImGuiListClipperPtr clipper = new(ImGuiP.ImGuiListClipper());
+				ImGuiListClipper clipper = default;
 				clipper.Begin(rows.Count);
 
 				while (clipper.Step())
