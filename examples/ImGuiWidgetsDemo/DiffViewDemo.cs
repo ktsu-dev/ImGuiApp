@@ -39,9 +39,14 @@ internal static class DiffViewDemo
 
 		ImGui.Separator();
 
-		// A second view in the same frame, to prove the two do not share collapsed state.
-		ImGui.TextUnformatted("A second view, independently collapsible");
-		_ = ImGuiWidgets.DiffView("##diffTwo", Hunks, SecondSelection, options);
+		// Fixed to side by side rather than following the toggle. This is what puts the paired
+		// layout under the headless suite on every run, since the toggle above defaults to unified
+		// and the suite never touches it. Wiring this view to the toggle for symmetry would silently
+		// remove that coverage.
+		ImGuiWidgets.DiffViewOptions secondOptions = new() { Mode = ImGuiWidgets.DiffViewMode.SideBySide };
+
+		ImGui.TextUnformatted("A second view, always side by side and independently collapsible");
+		_ = ImGuiWidgets.DiffView("##diffTwo", Hunks, SecondSelection, secondOptions);
 	}
 
 	private static IReadOnlyList<ImGuiWidgets.DiffHunk> BuildHunks()
