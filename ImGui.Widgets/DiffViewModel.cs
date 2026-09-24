@@ -2,9 +2,7 @@
 
 namespace ktsu.ImGui.Widgets;
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -46,6 +44,13 @@ public static partial class ImGuiWidgets
 	}
 
 	/// <summary>A run of lines forming one change, with the context around it.</summary>
+	/// <remarks>
+	/// The widget treats a hunk instance as immutable. It lays a hunk out once and keeps that layout,
+	/// its side-by-side rows and its change counts, until it is handed a different instance at the
+	/// same position, so a caller whose diff has changed builds new hunks rather than editing the
+	/// lines of one it already handed over. <see cref="IReadOnlyList{T}"/> does not stop a caller
+	/// mutating the list behind it, and a change made that way is not seen.
+	/// </remarks>
 	public sealed record DiffHunk
 	{
 		/// <summary>Gets the hunk's lines, in the order they are shown.</summary>
@@ -53,23 +58,5 @@ public static partial class ImGuiWidgets
 
 		/// <summary>Gets what the source names this hunk, which for git is the enclosing function.</summary>
 		public string Heading { get; init; } = string.Empty;
-	}
-
-	/// <summary>The selected hunk indices that still name a hunk, ascending.</summary>
-	/// <remarks>
-	/// A selection outlives the diff it was made against. A caller that stages something and re-reads
-	/// gets a different set of hunks, and an index that pointed at the third of five means nothing
-	/// about the third of two. This is what a caller reads its selection back through, so a stale
-	/// index is dropped rather than turned into a hunk that is not there.
-	/// </remarks>
-	/// <param name="selection">The selected hunk indices.</param>
-	/// <param name="hunkCount">How many hunks there are.</param>
-	/// <returns>The indices within range, ascending.</returns>
-	/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
-	public static IReadOnlyList<int> SelectedHunks(ISet<int> selection, int hunkCount)
-	{
-		Ensure.NotNull(selection);
-
-		return [.. selection.Where(index => index >= 0 && index < hunkCount).Order()];
 	}
 }

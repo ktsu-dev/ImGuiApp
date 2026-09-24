@@ -188,7 +188,7 @@ public class DiffViewStateTests
 		HashSet<int> selection = [0, 1];
 
 		Assert.IsFalse(
-			ImGuiWidgets.DiffViewState.SelectAll(selection, 2),
+			ImGuiWidgets.SelectAll(selection, 2),
 			"Reporting a change when nothing changed would make a caller rebuild a patch every frame.");
 	}
 
@@ -197,7 +197,7 @@ public class DiffViewStateTests
 	{
 		HashSet<int> selection = [1];
 
-		Assert.IsTrue(ImGuiWidgets.DiffViewState.SelectAll(selection, 3));
+		Assert.IsTrue(ImGuiWidgets.SelectAll(selection, 3));
 		Assert.AreSequenceEqual(FirstThreeIndices, selection.Order());
 	}
 
@@ -206,17 +206,26 @@ public class DiffViewStateTests
 	{
 		HashSet<int> selection = [];
 
-		Assert.IsFalse(ImGuiWidgets.DiffViewState.SelectNone(selection));
+		Assert.IsFalse(ImGuiWidgets.SelectNone(selection));
 	}
 
 	[TestMethod]
-	public void SelectedIndices_HoldsAnIndexPastTheEnd_IgnoresIt()
+	public void SelectNone_HoldsASelection_ClearsItAndReportsTheChange()
+	{
+		HashSet<int> selection = [0, 3];
+
+		Assert.IsTrue(ImGuiWidgets.SelectNone(selection));
+		Assert.IsEmpty(selection);
+	}
+
+	[TestMethod]
+	public void SelectedHunkIndices_HoldsAnIndexPastTheEnd_IgnoresIt()
 	{
 		HashSet<int> selection = [0, 7];
 
 		Assert.AreSequenceEqual(
 			FirstIndexOnly,
-			ImGuiWidgets.SelectedHunks(selection, hunkCount: 2),
+			ImGuiWidgets.SelectedHunkIndices(selection, hunkCount: 2),
 			"A selection outlives the patch it was made against, so an index past the end is dropped rather than drawn.");
 	}
 
@@ -230,5 +239,86 @@ public class DiffViewStateTests
 
 		state.ToggleCollapsed(1);
 		Assert.IsFalse(state.IsCollapsed(1));
+	}
+
+	[TestMethod]
+	public void Pair_MixedHunk_EmitsEveryLineOnceOnTheSideItBelongsTo()
+	{
+		// The property the seam between the two views rests on: the side-by-side layout is a
+		// rearrangement of the hunk, never a filter of it, so nothing a unified view would show can
+		// go missing or be doubled when the same hunk is drawn paired.
+		ImGuiWidgets.DiffHunk hunk = Hunk(
+			Context("c1"),
+			Removed("r1"),
+			Removed("r2"),
+			Added("a1"),
+			Context("c2"),
+			Added("a2"),
+			Added("a3"),
+			Removed("r3"),
+			Context("c3"));
+
+		IReadOnlyList<ImGuiWidgets.DiffRowPair> rows = ImGuiWidgets.DiffViewState.Pair(hunk);
+
+		Assert.AreSequenceEqual(
+			hunk.Lines.Where(line => line.Kind != ImGuiWidgets.DiffLineKind.Added).Select(line => line.Text),
+			rows.Where(row => row.Left is not null).Select(row => row.Left!.Text),
+			"The old side carries every context and removed line, in order and once each.");
+
+		Assert.AreSequenceEqual(
+			hunk.Lines.Where(line => line.Kind != ImGuiWidgets.DiffLineKind.Removed).Select(line => line.Text),
+			rows.Where(row => row.Right is not null).Select(row => row.Right!.Text),
+			"The new side carries every context and added line, in order and once each.");
+	}
+
+	[TestMethod]
+	public void RowsFor_TheSameHunkTwice_LaysItOutOnce()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk hunk = Hunk(Removed("x"), Added("X"));
+
+		Assert.AreSame(
+			state.RowsFor(0, hunk),
+			state.RowsFor(0, hunk),
+			"Laying the same hunk out again every frame is the cost the clipper exists to avoid.");
+	}
+
+	[TestMethod]
+	public void RowsFor_ADifferentHunkAtTheSamePosition_LaysItOutAgain()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		IReadOnlyList<ImGuiWidgets.DiffRowPair> first = state.RowsFor(0, Hunk(Added("X")));
+		IReadOnlyList<ImGuiWidgets.DiffRowPair> second = state.RowsFor(0, Hunk(Added("X"), Added("Y")));
+
+		Assert.AreEqual(1, first.Count);
+		Assert.AreEqual(2, second.Count, "A new hunk instance is a new diff, so its layout is built again.");
+	}
+
+	[TestMethod]
+	public void ChangeCounts_MixedHunk_CountsEachKindOnItsOwn()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+
+		(int removed, int added) = state.ChangeCounts(0, Hunk(Context("c"), Removed("x"), Added("X"), Added("Y")));
+
+		Assert.AreEqual(1, removed);
+		Assert.AreEqual(2, added, "Context lines count as neither, which is what keeps the summary bar honest.");
+	}
+
+	[TestMethod]
+	public void MarkerFor_EachKind_IsTheGlyphAPatchUses()
+	{
+		Assert.AreEqual("+", ImGuiWidgets.DiffViewImpl.MarkerFor(ImGuiWidgets.DiffLineKind.Added));
+		Assert.AreEqual("-", ImGuiWidgets.DiffViewImpl.MarkerFor(ImGuiWidgets.DiffLineKind.Removed));
+		Assert.AreEqual(
+			" ",
+			ImGuiWidgets.DiffViewImpl.MarkerFor(ImGuiWidgets.DiffLineKind.Context),
+			"A context line keeps the marker column's width without claiming the line changed.");
+	}
+
+	[TestMethod]
+	public void HunkName_IsTheBracketedIndexTheLibraryProbesWith()
+	{
+		Assert.AreEqual("##diff/[2]", ImGuiWidgets.DiffViewImpl.HunkName("##diff", 2));
 	}
 }

@@ -18,6 +18,21 @@ internal static class DiffViewDemo
 
 	private static readonly IReadOnlyList<ImGuiWidgets.DiffHunk> Hunks = BuildHunks();
 
+	/// <summary>Gets the hunks ticked in the first diff view.</summary>
+	internal static IReadOnlyCollection<int> FirstSelected => FirstSelection;
+
+	/// <summary>
+	/// Returns this section's state to its starting values. The demo keeps its state in statics,
+	/// which outlive a harness, so a test that ticked a hunk would otherwise decide what the next
+	/// test starts from.
+	/// </summary>
+	internal static void ResetState()
+	{
+		FirstSelection.Clear();
+		SecondSelection.Clear();
+		mode = ImGuiWidgets.DiffViewMode.Unified;
+	}
+
 	public static void Show()
 	{
 		if (!DemoProbe.Header("Diff view"))
@@ -47,6 +62,20 @@ internal static class DiffViewDemo
 
 		ImGui.TextUnformatted("A second view, always side by side and independently collapsible");
 		_ = ImGuiWidgets.DiffView("##diffTwo", Hunks, SecondSelection, secondOptions);
+
+		ImGui.Separator();
+
+		// Both options off, and drawn through the overload with no selection. This is the only place
+		// the two-column table, the fixed heading and the view with nothing to tick are drawn at all,
+		// so it is what puts those shapes under the headless suite.
+		ImGuiWidgets.DiffViewOptions plainOptions = new()
+		{
+			CanShowLineNumbers = false,
+			CanCollapseHunks = false,
+		};
+
+		ImGui.TextUnformatted("A third view: no line numbers, no collapsing, nothing to select");
+		ImGuiWidgets.DiffView("##diffThree", Hunks, plainOptions);
 	}
 
 	private static IReadOnlyList<ImGuiWidgets.DiffHunk> BuildHunks()

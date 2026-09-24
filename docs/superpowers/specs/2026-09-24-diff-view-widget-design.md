@@ -141,9 +141,11 @@ instead of branching, and so the two modes cannot drift apart as they are mainta
 
 Transient interaction state lives in a `Dictionary<uint, DiffViewState>` inside
 `DiffViewImpl`, keyed by the widget's ImGui id, which is how `CurveTrack` and `HandleTrack` already
-do it. It holds which hunks are collapsed, and nothing else. The side-by-side view is one table rather than
-two panes, so there are no scroll positions to keep in step. None of this is worth a caller
-persisting, and a caller who wants a hunk to start collapsed can collapse it by not expanding it.
+do it. It holds which hunks are collapsed, and the layout each hunk was last laid out to, and nothing
+else. The side-by-side view is one table rather than two panes, so there are no scroll positions to
+keep in step. None of this is worth a caller persisting: a hunk starts expanded, because a diff view
+whose first frame shows no diff is the wrong default, and a collapse the caller cares about across
+sessions is the caller's to hold.
 
 `DiffViewState` itself is free of ImGui, like every other state type here, which is what lets its
 rules be tested without a graphics context.
@@ -166,7 +168,9 @@ The tints are built rather than hardcoded. A fixed green over a light theme is e
 garish, and this library ships `ktsu.ImGui.Color` and `ktsu.ImGui.Styler` precisely so a widget does
 not guess. Added and removed take a fixed hue with their saturation and value derived from the
 current style's `ImGuiCol.FrameBg`, so they read as a tint of the surface they sit on, and context
-takes `ImGuiCol.FrameBg` itself at a low alpha. Filler is the same as context at half that alpha.
+takes `ImGuiCol.FrameBg` itself at a low alpha. Filler takes the same `FrameBg` at a much higher
+alpha than context, so a gap reads as a recess rather than as another shade of the surface: at a tint
+this faint, a small difference in alpha is no difference at all to look at.
 
 ### Side by side
 

@@ -21,8 +21,8 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <remarks>
 	/// Deliberately free of ImGui, like <see cref="CurveTrackState"/>, which is what lets every rule
-	/// here be tested without a graphics context. Only the collapse set is per widget. Everything
-	/// else is static, because it depends on nothing but its arguments.
+	/// here be tested without a graphics context. The collapse set and the per hunk layouts are per
+	/// widget. Everything else is static, because it depends on nothing but its arguments.
 	/// </remarks>
 	internal sealed class DiffViewState
 	{
@@ -30,6 +30,89 @@ public static partial class ImGuiWidgets
 		internal const int SummaryWidth = 10;
 
 		private readonly HashSet<int> collapsed = [];
+		private readonly Dictionary<int, HunkLayout> layouts = [];
+
+		/// <summary>
+		/// What one hunk lays out to: its two change counts, and its paired rows once something has
+		/// asked for them.
+		/// </summary>
+		/// <remarks>
+		/// The rows are built on first use rather than in the constructor, so a diff drawn unified
+		/// never pays for a layout only the side-by-side view reads.
+		/// </remarks>
+		private sealed class HunkLayout
+		{
+			internal HunkLayout(DiffHunk hunk)
+			{
+				Hunk = hunk;
+
+				foreach (DiffLine line in hunk.Lines)
+				{
+					if (line.Kind == DiffLineKind.Removed)
+					{
+						RemovedCount++;
+					}
+					else if (line.Kind == DiffLineKind.Added)
+					{
+						AddedCount++;
+					}
+				}
+			}
+
+			internal DiffHunk Hunk { get; }
+
+			internal int RemovedCount { get; }
+
+			internal int AddedCount { get; }
+
+			internal IReadOnlyList<DiffRowPair> Rows => field ??= Pair(Hunk);
+		}
+
+		/// <summary>
+		/// The layout for the hunk at this position, built once and kept until the position holds a
+		/// different hunk instance.
+		/// </summary>
+		/// <remarks>
+		/// Held against the position rather than against the hunk, so the cache is bounded by how many
+		/// hunks the widget draws. Keying it by the hunk itself would grow without bound under a
+		/// caller that rebuilds its diff, which is the same caller the cache exists for.
+		/// </remarks>
+		private HunkLayout LayoutFor(int index, DiffHunk hunk)
+		{
+			if (!layouts.TryGetValue(index, out HunkLayout? layout) || !ReferenceEquals(layout.Hunk, hunk))
+			{
+				layout = new HunkLayout(hunk);
+				layouts[index] = layout;
+			}
+
+			return layout;
+		}
+
+		/// <summary>The hunk's side-by-side rows, laid out once per hunk instance.</summary>
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
+		/// <returns>The rows, in order.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> is <see langword="null"/>.</exception>
+		internal IReadOnlyList<DiffRowPair> RowsFor(int index, DiffHunk hunk)
+		{
+			Ensure.NotNull(hunk);
+
+			return LayoutFor(index, hunk).Rows;
+		}
+
+		/// <summary>How many lines the hunk removes and adds, counted once per hunk instance.</summary>
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
+		/// <returns>The two counts.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> is <see langword="null"/>.</exception>
+		internal (int Removed, int Added) ChangeCounts(int index, DiffHunk hunk)
+		{
+			Ensure.NotNull(hunk);
+
+			HunkLayout layout = LayoutFor(index, hunk);
+
+			return (layout.RemovedCount, layout.AddedCount);
+		}
 
 		/// <summary>Whether a hunk is collapsed.</summary>
 		/// <param name="index">The hunk's index.</param>
@@ -165,43 +248,6 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(selection);
 
 			return selection.Add(index) || selection.Remove(index);
-		}
-
-		/// <summary>Selects every hunk.</summary>
-		/// <param name="selection">The selected hunk indices.</param>
-		/// <param name="hunkCount">How many hunks there are.</param>
-		/// <returns><see langword="true"/> when the selection changed.</returns>
-		/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
-		internal static bool SelectAll(ISet<int> selection, int hunkCount)
-		{
-			Ensure.NotNull(selection);
-
-			bool changed = false;
-
-			for (int index = 0; index < hunkCount; index++)
-			{
-				changed |= selection.Add(index);
-			}
-
-			return changed;
-		}
-
-		/// <summary>Clears the selection.</summary>
-		/// <param name="selection">The selected hunk indices.</param>
-		/// <returns><see langword="true"/> when the selection changed.</returns>
-		/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
-		internal static bool SelectNone(ISet<int> selection)
-		{
-			Ensure.NotNull(selection);
-
-			if (selection.Count == 0)
-			{
-				return false;
-			}
-
-			selection.Clear();
-
-			return true;
 		}
 	}
 }
