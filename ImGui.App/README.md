@@ -194,6 +194,72 @@ private static void OnRender(float deltaTime)
 }
 ```
 
+### Dynamic Textures from Pixel Buffers
+
+Images you generate yourself (a camera feed, a filter preview, a plot rendered off-screen) do not need
+a file. `CreateTexture` uploads a pixel buffer and `UpdateTexture` replaces its contents, reusing the
+GPU storage in place when the size is unchanged:
+
+```csharp
+private static ImGuiAppTextureInfo? preview;
+
+// Called with tightly packed RGBA8 pixels: width * height * 4 bytes, rows top to bottom.
+private static void ShowFrame(ReadOnlySpan<byte> rgba, int width, int height)
+{
+    if (preview is null)
+    {
+        preview = ImGuiApp.CreateTexture(rgba, width, height);
+    }
+    else
+    {
+        // In place when the size matches; otherwise the texture is recreated and `preview`
+        // is updated to carry the new handle and size.
+        ImGuiApp.UpdateTexture(preview, rgba, width, height);
+    }
+}
+
+private static void OnRender(float deltaTime)
+{
+    if (preview is not null)
+    {
+        ImGui.Image(preview.TextureRef, new Vector2(preview.Width, preview.Height));
+    }
+}
+```
+
+Things to know:
+
+- **Both take a `ReadOnlySpan<byte>`**, so a `byte[]`, a `Memory<byte>`, a pooled buffer, a slice of a
+  larger buffer or `ImagePixels.ReadOnlyPixels` all pass without conversion.
+- **The pixels must be tightly packed RGBA8**, with no padding at the end of a row. Anything else
+  throws `ArgumentException`. Convert and repack before the call if your source is BGR, BGRA or
+  has a row stride (see below).
+- **Both are safe to call from any thread.** The upload always happens on the window thread: from
+  another thread the call copies the pixels, waits for the next frame to upload them, and returns
+  afterwards. Called from inside `OnRender`, the pixels go straight to the GPU with no copy.
+- **The texture is yours.** It is not added to the path-keyed cache, so call `DeleteTexture` when you
+  are done with it, and upload its contents again if the renderer restarts.
+
+Getting RGBA8 out of common imaging libraries:
+
+```csharp
+// ImageSharp: Image<Rgba32> is already in the right layout.
+byte[] rgba = new byte[image.Width * image.Height * 4];
+image.CopyPixelDataTo(rgba);
+ImGuiApp.UpdateTexture(preview, rgba, image.Width, image.Height);
+
+// OpenCvSharp: Mats are BGR or BGRA. CvtColor into a fresh Mat both swizzles and drops any
+// row padding the source had, since the Mat it allocates is continuous.
+using Mat converted = new();
+Cv2.CvtColor(mat, converted, ColorConversionCodes.BGR2RGBA);
+converted.GetArray(out Vec4b[] pixels);
+ImGuiApp.UpdateTexture(preview, MemoryMarshal.AsBytes(pixels.AsSpan()), converted.Width, converted.Height);
+
+// SkiaSharp: ask for Rgba8888 explicitly; the platform default is often Bgra8888.
+using SKBitmap bitmap = source.Copy(SKColorType.Rgba8888);
+ImGuiApp.UpdateTexture(preview, bitmap.GetPixelSpan(), bitmap.Width, bitmap.Height);
+```
+
 ### Image Loading
 
 Textures and window icons are decoded by `ktsu.ImGui.App` itself rather than by a third-party imaging
@@ -413,7 +479,9 @@ The main entry point for creating and managing ImGui applications.
 | `Stop` | | `void` | Stops the running application |
 | `GetOrLoadTexture` | `AbsoluteFilePath path` | `ImGuiAppTextureInfo` | Loads a texture from file or returns cached texture info if already loaded |
 | `TryGetTexture` | `AbsoluteFilePath path, out ImGuiAppTextureInfo textureInfo` | `bool` | Attempts to get a cached texture by path |
-| `DeleteTexture` | `uint textureId` | `void` | Deletes a texture and frees its resources |
+| `CreateTexture` | `ReadOnlySpan<byte> rgba, int width, int height` | `ImGuiAppTextureInfo` | Uploads a tightly packed RGBA8 buffer as a new texture owned by the caller; callable from any thread |
+| `UpdateTexture` | `ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> rgba, int width, int height` | `void` | Replaces a texture's pixels, in place when the size is unchanged; callable from any thread |
+| `DeleteTexture` | `nint textureId` | `void` | Deletes a texture and frees its resources |
 | `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
 | `CleanupAllTextures` | | `void` | Cleans up all loaded textures |
 | `SetWindowIcon` | `string iconPath` | `void` | Sets the window icon; on macOS this also updates the application dock icon |

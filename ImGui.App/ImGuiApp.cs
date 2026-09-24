@@ -104,7 +104,25 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
 	/// </summary>
-	public static Invoker Invoker { get; internal set; } = null!;
+	public static Invoker Invoker
+	{
+		get;
+		internal set
+		{
+			field = value;
+			// An Invoker is owned by the thread that constructs it, and every assignment here sits
+			// next to that construction. The Invoker keeps its own owner id private, so it is
+			// recorded here for the paths that can skip marshalling when already on that thread.
+			invokerThreadId = Environment.CurrentManagedThreadId;
+		}
+	} = null!;
+
+	private static int invokerThreadId;
+
+	/// <summary>
+	/// Gets a value indicating whether the calling thread is the one <see cref="Invoker"/> runs its work on.
+	/// </summary>
+	internal static bool IsOnInvokerThread => Invoker is not null && Environment.CurrentManagedThreadId == invokerThreadId;
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -1911,6 +1929,12 @@ public static partial class ImGuiApp
 	/// from <see cref="GetOrLoadTexture(AbsoluteFilePath)"/> stays published in the path-keyed cache
 	/// across that fallback, so <see cref="TryGetTexture(AbsoluteFilePath, out ImGuiAppTextureInfo?)"/>
 	/// keeps finding it and <c>CleanupAllTextures</c> keeps owning it.
+	/// <para>
+	/// Safe to call from any thread, so a frame produced on a worker thread can be uploaded from
+	/// there. The upload itself always runs on the window thread: from any other thread the call
+	/// copies the pixels, waits for the next frame to perform the update, and returns once it has.
+	/// Called from the window thread, the pixels go straight to the backend with no copy.
+	/// </para>
 	/// </remarks>
 	/// <exception cref="ArgumentNullException"><paramref name="textureInfo"/> is null.</exception>
 	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
@@ -1920,15 +1944,38 @@ public static partial class ImGuiApp
 		Ensure.NotNull(textureInfo);
 		ValidatePixelSpan(rgba, width, height);
 
+		// The in-place update touches the rendering context, so it has to run on the thread that owns
+		// it, like every other upload here. Image-processing callers typically produce frames on a
+		// worker thread; calling the backend directly from there issued GL calls with no current
+		// context, which fail silently or corrupt state. On the owning thread the span goes straight
+		// to the backend with no copy, which keeps the per-frame render-thread path allocation-free.
+		byte[]? pixels = null;
 		bool sameSize = textureInfo.Width == width && textureInfo.Height == height;
-		if (sameSize && renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, rgba, width, height))
+		if (sameSize)
 		{
-			return;
+			bool updatedInPlace;
+			if (IsOnInvokerThread)
+			{
+				updatedInPlace = renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, rgba, width, height);
+			}
+			else
+			{
+				// A span cannot be captured by the Invoke body, so the pixels cross threads as a copy,
+				// which the recreate path below reuses if the backend declines.
+				byte[] copy = rgba.ToArray();
+				pixels = copy;
+				updatedInPlace = Invoker.Invoke(() => renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, copy, width, height));
+			}
+
+			if (updatedInPlace)
+			{
+				return;
+			}
 		}
 
 		// A span cannot be captured by the Invoke body below, and the upload needs the pixels on the
 		// invoker thread, so the copy the recreate path always made happens here instead.
-		byte[] pixels = rgba.ToArray();
+		byte[] upload = pixels ?? rgba.ToArray();
 
 		// Capture, delete, recreate and republish happen together inside one Invoke, for the same
 		// reason GetOrLoadTexture publishes inside its own: between the delete and the republish the
@@ -1950,7 +1997,7 @@ public static partial class ImGuiApp
 			List<AbsoluteFilePath> publishedKeys = [.. Textures.Where(entry => ReferenceEquals(entry.Value, textureInfo)).Select(entry => entry.Key)];
 
 			DeleteTexture(textureInfo.TextureId);
-			textureInfo.TextureId = UploadTextureRGBA(pixels, width, height);
+			textureInfo.TextureId = UploadTextureRGBA(upload, width, height);
 			unsafe
 			{
 				textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
