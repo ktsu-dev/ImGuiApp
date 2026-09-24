@@ -203,6 +203,11 @@ PublishScripts/
 **/[Pp]ackages/*
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
+# and except a Unity project's Packages/, which is source: Unity's package manifest and its
+# resolved lock file are both meant to be committed, and a NuGet restore folder never contains
+# a file by either name.
+!**/[Pp]ackages/manifest.json
+!**/[Pp]ackages/packages-lock.json
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/[Pp]ackages/repositories.config
 # NuGet v3's project.json files produces more ignorable files
@@ -652,6 +657,21 @@ Temporary Items
 # ImGui.ini files
 imgui.ini
 
+# Game engine projects
+#
+# Godot: the import cache, and the mono/temp bin+obj a C# build writes.
+.godot/
+
+# Unity: .meta files are source, not the Visual Studio C++ build artifact that the `*.meta` rule
+# further up targets. Unity generates one per asset and it carries the GUID that scenes, prefabs
+# and serialized references point at, so ignoring them gives every clone fresh GUIDs and silently
+# breaks those references - including for a plug-in whose .dll is itself a build output. This
+# negation has to come after that rule to win, and is scoped to the asset tree so the Visual
+# Studio artifact stays ignored everywhere else.
+!**/[Aa]ssets/**/*.meta
+
 # Worktrees and agent scratch, which must never be committed into the tree they branch from.
+# The SDK regenerates this file on every build and drops anything it does not own, so if these
+# two lines are missing, that is why, and they need putting back before staging.
 .worktrees/
 .superpowers/
