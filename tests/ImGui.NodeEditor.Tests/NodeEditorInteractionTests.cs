@@ -35,11 +35,17 @@ public sealed class NodeEditorInteractionTests
 	private bool drawDebugOverlays;
 	private int? linkToSelect;
 	private readonly List<int> nodesToSelect = [];
+	private bool drawTextField;
+	private bool focusTextFieldNextFrame;
+	private string textFieldValue = "";
 
 	// A key press spans more than one frame and lastEvents only ever holds the newest, so the frame
 	// that carried the request would be overwritten before a test could read it.
 	private readonly List<int> observedLinkDeletions = [];
 	private readonly List<int> observedNodeDeletions = [];
+
+	// Read on the same frame the handler reads it, since it is only meaningful inside one.
+	private bool lastWantTextInput;
 
 	[TestCleanup]
 	public void TearDown() => harness?.Dispose();
@@ -97,6 +103,23 @@ public sealed class NodeEditorInteractionTests
 
 			nodesToSelect.Clear();
 		}
+
+		// Stands in for the user having clicked into a text box. WantTextInput is what tells the
+		// handler that a Delete belongs to the text field rather than to the graph, and ImGui only
+		// raises it while a text widget is active - so the fixture has to draw a real one and give
+		// it the keyboard, rather than setting a flag.
+		if (drawTextField)
+		{
+			if (focusTextFieldNextFrame)
+			{
+				ImGui.SetKeyboardFocusHere();
+				focusTextFieldNextFrame = false;
+			}
+
+			ImGui.InputText("##typing", ref textFieldValue, 64);
+		}
+
+		lastWantTextInput = ImGui.GetIO().WantTextInput;
 
 		// ImNodes reports interactions for the editor that just closed, so the handler runs after
 		// the render rather than before it.
@@ -297,6 +320,29 @@ public sealed class NodeEditorInteractionTests
 		harness.Keyboard.Press(ImGuiKey.Delete);
 
 		Assert.IsEmpty(observedNodeDeletions, "A second Delete should not re-request a node that was already handed over");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WhileTypingInATextField_LeavesTheSelectionAlone()
+	{
+		// A Delete aimed at a text field is not aimed at the graph. Without the WantTextInput guard,
+		// deleting a character in any input box on screen would silently take the user's selected
+		// nodes and links with it - the one failure of this gesture that destroys work rather than
+		// merely doing nothing.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+		linkToSelect = engine.Links[0].Id;
+		drawTextField = true;
+		focusTextFieldNextFrame = true;
+		harness.Step(3);
+		Assert.IsTrue(lastWantTextInput, "The fixture needs the text field to hold the keyboard");
+		observedNodeDeletions.Clear();
+		observedLinkDeletions.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		Assert.IsEmpty(observedNodeDeletions, "Typing must not delete the selected node");
+		Assert.IsEmpty(observedLinkDeletions, "Typing must not delete the selected link either");
+		Assert.IsNotEmpty(engine.Nodes.Where(n => n.Id == sourceId), "The node is still there to be deleted later");
 	}
 
 	[TestMethod]
