@@ -95,6 +95,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/Images/JpegDecoder.cs` - Baseline, extended sequential and progressive Huffman JPEG
 - `ImGui.App/Images/BmpDecoder.cs` - BMP: core and info headers, 1/4/8/16/24/32 bit, `BI_RGB` and `BI_BITFIELDS`
 - `ImGui.App/Images/TgaDecoder.cs` - TGA: colour-mapped, true-colour and greyscale, raw and run-length encoded
+- `ImGui.App/Images/PixelConverter.cs` - Converts caller buffers in any `PixelLayout` (RGBA/BGRA/RGB/BGR/grey, optional row stride) to the RGBA8 behind the layout overloads of `ImGuiApp.CreateTexture`/`UpdateTexture`
 - `ImGui.App/Images/ImageResampler.cs` - Separable Lanczos-3 scaling on premultiplied alpha, behind `SetWindowIcon`
 - `ImGui.Widgets/PropertyGrid.cs` - Two-column property grid: options, the path-browse request, and the table/row plumbing (`PropertyGridRows.cs` holds the typed rows, `PropertyGridLists.cs` the list rows). See [Property grid](#property-grid) below
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout

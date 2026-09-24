@@ -6,6 +6,7 @@ namespace ktsu.ImGui.App.Tests;
 
 using System.Diagnostics;
 using System.Numerics;
+using ktsu.ImGui.App.Images;
 using ktsu.ImGui.App.Tests.Images;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
@@ -473,9 +474,12 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		public bool UpdateTextureResult { get; init; } = true;
 		public int LastUpdateThreadId { get; private set; }
 
+		public byte[] LastCreatedPixels { get; private set; } = [];
+
 		public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 		{
 			CreateTextureCallCount++;
+			LastCreatedPixels = rgba.ToArray();
 			return NextHandle;
 		}
 
@@ -726,6 +730,96 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A declined update must delete the old texture");
 		Assert.AreEqual(2, backend.CreateTextureCallCount, "A declined update must recreate the texture");
+	}
+
+	private static FakeRendererBackend StartFakeRenderer(bool updateTextureResult = true)
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42, UpdateTextureResult = updateTextureResult };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		return backend;
+	}
+
+	[TestMethod]
+	public void CreateTexture_WithBgr8AndPaddedRows_UploadsConvertedRgba()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+
+		// Two rows of one BGR pixel, each padded to four bytes as an OpenCV Mat or a DIB would be.
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture([3, 2, 1, 0xEE, 6, 5, 4, 0xEE], 1, 2, PixelLayout.Bgr8, rowStride: 4);
+
+		Assert.AreEqual(1, info.Width);
+		Assert.AreEqual(2, info.Height);
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 255, 4, 5, 6, 255 }, backend.LastCreatedPixels, "The backend should receive tightly packed RGBA8");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithBgra8_UpdatesInPlaceWithConvertedPixels()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		ImGuiApp.UpdateTexture(info, [30, 20, 10, 40], 1, 1, PixelLayout.Bgra8);
+
+		Assert.AreEqual(info.TextureId, backend.LastUpdatedTextureId, "In-place update should target the existing handle");
+		Assert.AreSequenceEqual(new byte[] { 10, 20, 30, 40 }, backend.LastUpdatedPixels, "The backend should receive the pixels as RGBA8");
+		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithTightRgba8Layout_PassesThePixelsThroughUnchanged()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		// A buffer longer than the image is accepted: only the first width * height * 4 bytes are pixels.
+		ImGuiApp.UpdateTexture(info, [1, 2, 3, 4, 0xEE, 0xEE], 1, 1, PixelLayout.Rgba8);
+
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 4 }, backend.LastUpdatedPixels);
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutAndDifferentSize_RecreatesFromConvertedPixels()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		ImGuiApp.UpdateTexture(info, [9, 8], 2, 1, PixelLayout.Gray8);
+
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A size change must delete the old texture");
+		Assert.AreEqual(2, backend.CreateTextureCallCount, "A size change must recreate the texture");
+		Assert.AreSequenceEqual(new byte[] { 9, 9, 9, 255, 8, 8, 8, 255 }, backend.LastCreatedPixels, "The recreated texture should hold the converted pixels");
+		Assert.AreEqual(2, info.Width, "The info must carry the new width");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutFromAWorkerThread_UpdatesOnTheInvokerThread()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		Task worker = RunOnWorkerWhilePumping(() => ImGuiApp.UpdateTexture(info, [3, 2, 1], 1, 1, PixelLayout.Bgr8));
+
+		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
+		Assert.AreEqual(Environment.CurrentManagedThreadId, backend.LastUpdateThreadId, "The backend must be called on the invoker's thread, not the worker's");
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 255 }, backend.LastUpdatedPixels, "The pixel payload should reach the backend converted");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutAndNullInfo_Throws()
+	{
+		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.UpdateTexture(null!, new byte[3], 1, 1, PixelLayout.Rgb8));
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutAndTooFewBytes_Throws()
+	{
+		StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[2 * 2 * 4], 2, 2);
+
+		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.UpdateTexture(info, new byte[11], 2, 2, PixelLayout.Rgb8));
 	}
 
 	[TestMethod]
