@@ -183,38 +183,38 @@ public class DiffViewStateTests
 	}
 
 	[TestMethod]
-	public void SelectAll_AlreadyComplete_ReportsNoChange()
+	public void SelectAllHunks_AlreadyComplete_ReportsNoChange()
 	{
 		HashSet<int> selection = [0, 1];
 
 		Assert.IsFalse(
-			ImGuiWidgets.SelectAll(selection, 2),
+			ImGuiWidgets.SelectAllHunks(selection, 2),
 			"Reporting a change when nothing changed would make a caller rebuild a patch every frame.");
 	}
 
 	[TestMethod]
-	public void SelectAll_PartiallySelected_AddsTheRest()
+	public void SelectAllHunks_PartiallySelected_AddsTheRest()
 	{
 		HashSet<int> selection = [1];
 
-		Assert.IsTrue(ImGuiWidgets.SelectAll(selection, 3));
+		Assert.IsTrue(ImGuiWidgets.SelectAllHunks(selection, 3));
 		Assert.AreSequenceEqual(FirstThreeIndices, selection.Order());
 	}
 
 	[TestMethod]
-	public void SelectNone_EmptySelection_ReportsNoChange()
+	public void ClearHunkSelection_EmptySelection_ReportsNoChange()
 	{
 		HashSet<int> selection = [];
 
-		Assert.IsFalse(ImGuiWidgets.SelectNone(selection));
+		Assert.IsFalse(ImGuiWidgets.ClearHunkSelection(selection));
 	}
 
 	[TestMethod]
-	public void SelectNone_HoldsASelection_ClearsItAndReportsTheChange()
+	public void ClearHunkSelection_HoldsASelection_EmptiesItAndReportsTheChange()
 	{
 		HashSet<int> selection = [0, 3];
 
-		Assert.IsTrue(ImGuiWidgets.SelectNone(selection));
+		Assert.IsTrue(ImGuiWidgets.ClearHunkSelection(selection));
 		Assert.IsEmpty(selection);
 	}
 

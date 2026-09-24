@@ -115,7 +115,7 @@ public static partial class ImGuiWidgets
 		return [.. selection.Where(index => index >= 0 && index < hunkCount).Order()];
 	}
 
-	/// <summary>Selects every hunk of a diff view's selection.</summary>
+	/// <summary>Ticks every hunk of a diff view's selection.</summary>
 	/// <remarks>
 	/// The widget owns a checkbox per hunk and nothing wider, so the "stage everything" a caller puts
 	/// beside it works on the same set through this rather than reimplementing what those checkboxes
@@ -125,7 +125,7 @@ public static partial class ImGuiWidgets
 	/// <param name="hunkCount">How many hunks there are.</param>
 	/// <returns><see langword="true"/> when the selection changed.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
-	public static bool SelectAll(ISet<int> selection, int hunkCount)
+	public static bool SelectAllHunks(ISet<int> selection, int hunkCount)
 	{
 		Ensure.NotNull(selection);
 
@@ -139,11 +139,15 @@ public static partial class ImGuiWidgets
 		return changed;
 	}
 
-	/// <summary>Clears a diff view's selection.</summary>
+	/// <summary>Clears a diff view's selection, so no hunk is ticked.</summary>
+	/// <remarks>
+	/// The counterpart to <see cref="SelectAllHunks"/>, and named for what it does to the set rather
+	/// than with a <c>Select</c> prefix, which would read as though it selected something.
+	/// </remarks>
 	/// <param name="selection">The selected hunk indices, mutated in place.</param>
 	/// <returns><see langword="true"/> when the selection changed.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
-	public static bool SelectNone(ISet<int> selection)
+	public static bool ClearHunkSelection(ISet<int> selection)
 	{
 		Ensure.NotNull(selection);
 
@@ -458,6 +462,9 @@ public static partial class ImGuiWidgets
 		{
 			float rows = Math.Min(rowCount, MaxVisibleRows) * ImGui.GetTextLineHeightWithSpacing();
 
+			// The scrollbar's height is part of the box, not padding on it. A scrolling table draws
+			// its horizontal scrollbar inside its own child and takes the content region's height to
+			// do it, so a box of exactly one row's height is a box holding nothing but a scrollbar.
 			return new Vector2(0.0f, rows + ImGui.GetStyle().ScrollbarSize);
 		}
 
