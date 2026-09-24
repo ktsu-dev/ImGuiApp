@@ -177,7 +177,7 @@ public class Viewport3DStateTests
 		float closer = camera.Distance;
 		camera.Dolly(-1.3f);
 
-		Assert.IsTrue(closer < 7f, $"A positive dolly should move closer, but distance became {closer}.");
+		Assert.IsLessThan(7f, closer, $"A positive dolly should move closer, but distance became {closer}.");
 		Assert.AreEqual(7f, camera.Distance, 1e-4f);
 	}
 
