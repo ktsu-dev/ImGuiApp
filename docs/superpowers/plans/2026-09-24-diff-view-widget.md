@@ -58,6 +58,7 @@ Five inputs the spec implies that no task's happy path exercises, most likely to
 | `tests/ImGui.Widgets.Tests/DiffViewStateTests.cs` | **Create.** The three rules |
 | `examples/ImGuiWidgetsDemo/DiffViewDemo.cs` | **Create.** A page showing both modes |
 | `examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.cs` | **Modify.** Call the new page |
+| `tests/ImGuiWidgetsDemo.UITests/WidgetsDemoUITests.cs` | **Modify.** Register the new demo section so it is exercised headlessly |
 | `ImGui.Widgets/README.md` | **Modify.** An entry under Display and Status |
 
 ---
@@ -1136,18 +1137,28 @@ internal static class DiffViewDemo
 }
 ```
 
-- [ ] **Step 4: Call the demo page**
+- [ ] **Step 4: Call the demo page and register it**
 
-In `examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.cs`, call `DiffViewDemo.Show();` beside the other section calls, following whatever order and grouping the file already uses.
+In `examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.cs`, call `DiffViewDemo.Show();` from `ShowWidgetDemos`, which is the body of the "Widget Demos" tab, beside the other section calls and following the order the file already uses.
 
-- [ ] **Step 5: Run it and look at it**
+Then add `"Diff view"` to the `WidgetDemoSections` array in `tests/ImGuiWidgetsDemo.UITests/WidgetsDemoUITests.cs`. That array is hardcoded, so a section missing from it is never expanded by `EverySection_CanBeExpandedWithoutError`, which is the test that actually runs the widget's submission path.
+
+- [ ] **Step 5: Run the headless UI tests**
+
+Run: `dotnet build tests/ImGuiWidgetsDemo.UITests/ImGuiWidgetsDemo.UITests.csproj && ./tests/ImGuiWidgetsDemo.UITests/bin/Debug/net10.0/ktsu.examples.ImGuiWidgetsDemo.UITests`
+Expected: 29 passing before your change and 29 after, with the new section now among those `EverySection_CanBeExpandedWithoutError` expands. It takes about two minutes.
+
+This harness starts the demo headless, renders frames into a pixel buffer, and `AssertSectionDrewContent` proves a section drew something beyond its own header, so a widget that throws on submission or draws nothing fails here. It is a real gate, not a smoke test.
+
+- [ ] **Step 6: Look at it**
 
 Run: `dotnet run --project examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.csproj`
-Expected, and this is a step to actually perform rather than assume: the hunks draw, the tints read against the theme, the checkboxes tick, collapsing one hunk in the first view leaves the second alone, the long line scrolls horizontally without pushing the checkbox off screen, and the 400-line hunk does not slow the frame.
 
-If any of that is wrong, fix it before committing. This step is the only test the drawing gets.
+The harness proves the widget draws. It cannot say whether it looks right, and these are the things only a person can judge: the tints read against the theme rather than washing the text out, the checkboxes tick, collapsing a hunk in the first view leaves the second alone, the long line scrolls horizontally without pushing the checkbox off screen, and the 400-line hunk does not stutter.
 
-- [ ] **Step 6: Add the README entry**
+If you cannot open a window from where you are running, say so in your report and leave this to the human rather than claiming it passed.
+
+- [ ] **Step 7: Add the README entry**
 
 In `ImGui.Widgets/README.md`, under **Display and Status**, matching the surrounding entries' voice:
 
@@ -1155,11 +1166,11 @@ In `ImGui.Widgets/README.md`, under **Display and Status**, matching the surroun
 - **`DiffView`**: Draws a diff someone else computed, unified or side by side, with a checkbox per hunk and a proportional summary bar
 ```
 
-- [ ] **Step 7: Run the suite and commit**
+- [ ] **Step 8: Run the suite and commit**
 
 ```bash
 ./tests/ImGui.Widgets.Tests/bin/Debug/net10.0/ktsu.ImGui.Widgets.Tests
-git add ImGui.Widgets/DiffView.cs ImGui.Widgets/README.md examples/ImGuiWidgetsDemo/DiffViewDemo.cs examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.cs
+git add ImGui.Widgets/DiffView.cs ImGui.Widgets/README.md examples/ImGuiWidgetsDemo/DiffViewDemo.cs examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.cs tests/ImGuiWidgetsDemo.UITests/WidgetsDemoUITests.cs
 git commit -m "[minor] Draw a unified diff with selectable hunks
 
 Each hunk carries a checkbox, a proportional bar of what it removes against
@@ -1315,10 +1326,12 @@ Rename the unified path's method to `DrawUnifiedLines` and leave its body as Tas
 Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
 Expected: success, 0 warnings.
 
-- [ ] **Step 4: Run it and look at it**
+- [ ] **Step 4: Run the headless UI tests, then look at it**
 
-Run: `dotnet run --project examples/ImGuiWidgetsDemo/ImGuiWidgetsDemo.csproj`
-Expected, performed rather than assumed: ticking "Side by side" reflows both views, the two sides stay level through the addition-only hunk, which is entirely filler on the left, the filler reads as a gap rather than as content, and the 400-line hunk still scrolls smoothly.
+Run: `./tests/ImGuiWidgetsDemo.UITests/bin/Debug/net10.0/ktsu.examples.ImGuiWidgetsDemo.UITests`
+Expected: still 29 passing. The demo's mode toggle defaults to unified, so this proves the side-by-side code compiles and the section still draws, not that the paired layout is right.
+
+Then run the demo and judge what the harness cannot: ticking "Side by side" reflows both views, the two sides stay level through the addition-only hunk which is entirely filler on the left, the filler reads as a gap rather than as content, and the 400-line hunk still scrolls smoothly. If you cannot open a window, say so rather than claiming it passed.
 
 - [ ] **Step 5: Run the suite and commit**
 
@@ -1344,6 +1357,8 @@ possible from a patch rather than needing the whole file."
 
 **Review Focus coverage.** An empty hunk list returns early in Task 2 Step 1 and an empty hunk is Task 1's `Pair_EmptyHunk_IsNoRows`. A stale index is `SelectedIndices_HoldsAnIndexPastTheEnd_IgnoresIt`, against the public `SelectedHunks`, which is what a caller reads a selection back through. An addition-only hunk is covered twice, as a pairing test in Task 1 and as a fixture hunk in the demo. Two views in one frame and an over-wide line are both in the demo, which is the only place they can be judged.
 
-**One thing the plan deliberately does not promise.** The exact `ImGuiListClipper` construction is written from the shape this binding usually takes, and Task 2 Step 2 says to follow `VirtualTable.cs` if it differs rather than to guess. Clipping is also the one part of this widget no test can reach, which is why both drawing tasks end with a step that says to run the demo and look.
+**One thing the plan deliberately does not promise.** The exact `ImGuiListClipper` construction is written from the shape this binding usually takes, and Task 2 Step 2 says to follow `VirtualTable.cs` if it differs rather than to guess.
+
+**The drawing is testable here, which is unusual.** `tests/ImGuiWidgetsDemo.UITests` starts the demo headless, renders into a pixel buffer, and asserts a section drew content beyond its own header, so a widget that throws or draws nothing fails a test rather than needing to be noticed. Both drawing tasks run it. What it cannot judge is whether the result looks right, so both tasks also end with a step that says to open the demo, and to say so plainly rather than claim it passed if that is not possible.
 
 **Where a mistake will surface.** Task 3 is where a pairing error becomes visible, and Task 1 is where it is cheap to fix. That is why the rule is built and tested a task before anything draws it.
