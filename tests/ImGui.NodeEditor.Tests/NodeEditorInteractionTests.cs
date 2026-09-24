@@ -34,10 +34,12 @@ public sealed class NodeEditorInteractionTests
 	private InputEvents? lastEvents;
 	private bool drawDebugOverlays;
 	private int? linkToSelect;
+	private readonly List<int> nodesToSelect = [];
 
 	// A key press spans more than one frame and lastEvents only ever holds the newest, so the frame
 	// that carried the request would be overwritten before a test could read it.
 	private readonly List<int> observedLinkDeletions = [];
+	private readonly List<int> observedNodeDuplications = [];
 
 	[TestCleanup]
 	public void TearDown() => harness?.Dispose();
@@ -83,10 +85,24 @@ public sealed class NodeEditorInteractionTests
 			linkToSelect = null;
 		}
 
+		// The node equivalent, and outside the editor scope for the same reason. Clicking a node
+		// would mean driving the mouse onto a body whose screen position the physics is still
+		// moving, so the tests name the node instead.
+		if (nodesToSelect.Count > 0)
+		{
+			foreach (int nodeId in nodesToSelect)
+			{
+				ImNodes.SelectNode(nodeId);
+			}
+
+			nodesToSelect.Clear();
+		}
+
 		// ImNodes reports interactions for the editor that just closed, so the handler runs after
 		// the render rather than before it.
 		lastEvents = input.ProcessInput();
 		observedLinkDeletions.AddRange(lastEvents.LinkDeletionRequests);
+		observedNodeDuplications.AddRange(lastEvents.NodeDuplicationRequests);
 
 		engine.SetDraggedNodes(renderer.CurrentlyDraggedNodes);
 		engine.UpdatePhysics(1f / 60f);
@@ -111,6 +127,7 @@ public sealed class NodeEditorInteractionTests
 
 		Assert.IsEmpty(events.LinkCreationRequests);
 		Assert.IsEmpty(events.LinkDeletionRequests);
+		Assert.IsEmpty(events.NodeDuplicationRequests);
 	}
 
 	/// <summary>
@@ -184,6 +201,125 @@ public sealed class NodeEditorInteractionTests
 		harness.Keyboard.Press(ImGuiKey.Delete);
 
 		Assert.IsEmpty(observedLinkDeletions, "A second Delete should not re-request a link that was already handed over");
+	}
+
+	/// <summary>
+	/// Draws a two-node graph joined by one link, runs frames until it is on screen, and selects
+	/// the named nodes the way a click would.
+	/// </summary>
+	/// <returns>The two node ids, source first.</returns>
+	private (int SourceId, int TargetId) StartWithSelectedNodes(bool selectSource, bool selectTarget)
+	{
+		Node source = engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(600, 200), "Target", ["Source.Value"], []);
+		LinkCreationResult created = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		Assert.IsTrue(created.Success, $"The fixture needs a link: {created.Message}");
+
+		Start();
+
+		if (selectSource)
+		{
+			nodesToSelect.Add(source.Id);
+		}
+
+		if (selectTarget)
+		{
+			nodesToSelect.Add(target.Id);
+		}
+
+		harness.Step(2);
+		observedNodeDuplications.Clear();
+		observedLinkDeletions.Clear();
+
+		return (source.Id, target.Id);
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndCtrlDPressed_RequestsItsDuplication()
+	{
+		// The gesture #455 asks for: click a node, press Ctrl+D. ImNodes has no notion of
+		// duplicating anything, so before the fix no user gesture could ask for it at all.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		CollectionAssert.Contains(observedNodeDuplications, sourceId, "Ctrl+D on a selected node should reach the application as a duplication request");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithSeveralNodesSelected_RequestsAllOfTheirDuplication()
+	{
+		// The issue asks for "one or more nodes", and duplicating the whole selection in one request
+		// is also what lets the engine carry the link between them across.
+		(int sourceId, int targetId) = StartWithSelectedNodes(selectSource: true, selectTarget: true);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		CollectionAssert.Contains(observedNodeDuplications, sourceId, "Both selected nodes should be requested");
+		CollectionAssert.Contains(observedNodeDuplications, targetId, "Both selected nodes should be requested");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndPlainDPressed_RequestsNothing()
+	{
+		// D on its own is a letter. Without the modifier test, typing would fill the graph.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.D);
+
+		Assert.IsEmpty(observedNodeDuplications, "D without Ctrl is not the duplicate gesture");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndCtrlShiftDPressed_RequestsNothing()
+	{
+		// Read as a chord, so the modifiers have to match exactly and Ctrl+Shift+D stays free for
+		// whatever else wants it.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true, shift: true);
+
+		Assert.IsEmpty(observedNodeDuplications, "Ctrl+Shift+D is a different chord");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithNothingSelectedAndCtrlDPressed_RequestsNothing()
+	{
+		engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Start();
+		observedNodeDuplications.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		Assert.IsEmpty(observedNodeDuplications, "Ctrl+D with an empty selection has nothing to copy");
+	}
+
+	[TestMethod]
+	public void ProcessInput_AfterDuplicating_KeepsTheSelectionSoASecondPressCopiesAgain()
+	{
+		// Unlike a delete, the gesture leaves the selected nodes where they are, so pressing again
+		// is a reasonable thing to ask for and must not be swallowed.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+		observedNodeDuplications.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		CollectionAssert.Contains(observedNodeDuplications, sourceId, "A second Ctrl+D should copy the still-selected node again");
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_ForADuplicationRequest_CopiesTheSelectionAndTheLinkBetweenIt()
+	{
+		// What the application does with the request, since the handler only reports it.
+		StartWithSelectedNodes(selectSource: true, selectTarget: true);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+		IReadOnlyList<Node> copies = engine.DuplicateNodes(observedNodeDuplications, NodeEditorEngine.DefaultDuplicationOffset);
+
+		Assert.HasCount(2, copies);
+		Assert.HasCount(4, engine.Nodes);
+		Assert.HasCount(2, engine.Links, "The pair's link should have been copied with it");
 	}
 
 	[TestMethod]

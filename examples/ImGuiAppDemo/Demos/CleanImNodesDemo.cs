@@ -123,6 +123,20 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
 			}
 		}
+
+		// Process node duplication requests. The whole selection goes over in one call rather than
+		// one node at a time, so a link between two selected nodes is copied along with them.
+		if (events.NodeDuplicationRequests.Count > 0)
+		{
+			IReadOnlyList<Node> copies = engine.DuplicateNodes(events.NodeDuplicationRequests, NodeEditorEngine.DefaultDuplicationOffset);
+			if (copies.Count > 0)
+			{
+				lastActionMessage = copies.Count == 1
+					? $"Node {copies[0].Id} duplicated"
+					: $"{copies.Count} nodes duplicated";
+				lastActionColor = new Vector4(0.4f, 0.8f, 1.0f, 1.0f); // Blue
+			}
+		}
 	}
 
 	private void UpdateNodeTransforms()
