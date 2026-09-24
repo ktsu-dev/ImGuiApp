@@ -18,6 +18,8 @@ using Silk.NET.Windowing;
 [TestClass]
 public sealed class ImGuiAppTests : IDisposable
 {
+	public TestContext TestContext { get; set; } = null!;
+
 	private Mock<IWindow>? _mockWindow;
 	private Mock<IMonitor>? _mockMonitor;
 	private TestGL? _testGL;
@@ -670,6 +672,21 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
 	}
 
+	// Runs work on a thread-pool thread while this thread plays the window thread, pumping the
+	// invoker until the work finishes, so anything the work marshals through the invoker runs here.
+	private Task RunOnWorkerWhilePumping(Action work)
+	{
+		Task worker = Task.Run(work, TestContext.CancellationToken);
+		Stopwatch pump = Stopwatch.StartNew();
+		while (!worker.IsCompleted && pump.Elapsed < TimeSpan.FromSeconds(30))
+		{
+			ImGuiApp.Invoker.DoInvokes();
+			SpinWait.SpinUntil(() => worker.IsCompleted, TimeSpan.FromMilliseconds(1));
+		}
+
+		return worker;
+	}
+
 	[TestMethod]
 	public void UpdateTexture_FromAWorkerThread_UpdatesOnTheInvokerThread()
 	{
@@ -685,19 +702,12 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
 		byte[] pixels = [5, 6, 7, 8];
 
-		Task worker = Task.Run(() => ImGuiApp.UpdateTexture(info, pixels, 1, 1));
-
-		Stopwatch pump = Stopwatch.StartNew();
-		while (!worker.IsCompleted && pump.Elapsed < TimeSpan.FromSeconds(30))
-		{
-			ImGuiApp.Invoker.DoInvokes();
-			Thread.Sleep(1);
-		}
+		Task worker = RunOnWorkerWhilePumping(() => ImGuiApp.UpdateTexture(info, pixels, 1, 1));
 
 		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
 		Assert.AreEqual(Environment.CurrentManagedThreadId, backend.LastUpdateThreadId, "The backend must be called on the invoker's thread, not the worker's");
 		Assert.AreEqual(info.TextureId, backend.LastUpdatedTextureId, "In-place update should target the existing handle");
-		CollectionAssert.AreEqual(pixels, backend.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
+		Assert.AreSequenceEqual(pixels, backend.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
 		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
 	}
 
@@ -711,14 +721,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		ImGuiApp.controller = null;
 		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
 
-		Task worker = Task.Run(() => ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1));
-
-		Stopwatch pump = Stopwatch.StartNew();
-		while (!worker.IsCompleted && pump.Elapsed < TimeSpan.FromSeconds(30))
-		{
-			ImGuiApp.Invoker.DoInvokes();
-			Thread.Sleep(1);
-		}
+		Task worker = RunOnWorkerWhilePumping(() => ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1));
 
 		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A declined update must delete the old texture");
