@@ -124,6 +124,18 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			}
 		}
 
+		// Process node deletion requests. Drained after the links so a link selected alongside the
+		// node it hangs off is removed by its own request rather than silently by RemoveNode;
+		// either order leaves the same graph.
+		foreach (int nodeId in events.NodeDeletionRequests)
+		{
+			if (engine.RemoveNode(nodeId))
+			{
+				lastActionMessage = $"Node {nodeId} deleted";
+				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
+			}
+		}
+
 		// Process node duplication requests. The whole selection goes over in one call rather than
 		// one node at a time, so a link between two selected nodes is copied along with them.
 		if (events.NodeDuplicationRequests.Count > 0)
@@ -252,6 +264,12 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		if (!string.IsNullOrEmpty(lastActionMessage))
 		{
 			ImGui.TextColored(lastActionColor, lastActionMessage);
+		}
+
+		if (renderer.SelectedNodeIds.Count > 0)
+		{
+			ImGui.SeparatorText("Parameters");
+			NodeInspectorPanel.Draw(engine, renderer.SelectedNodeIds.First());
 		}
 
 		// Debug information
@@ -466,5 +484,18 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		engine.TryCreateLink(multiplyNode.OutputPins[0].Id, setVector.InputPins[1].Id); // X² as new X
 		engine.TryCreateLink(splitVector1.OutputPins[1].Id, setVector.InputPins[2].Id); // Keep Y unchanged
 		engine.TryCreateLink(setVector.OutputPins[0].Id, splitVector2.InputPins[0].Id); // Final vector analysis
+
+		// A node whose parameters are edited rather than connected, which is what issue #437 asked
+		// about. Typed pins with defaults are all an inline editor needs.
+		engine.CreateNodeFromSpecs(
+			new Vector2(50, 550),
+			"Blob Filter",
+			[
+				new PinSpec("Threshold", typeof(double), 128.0),
+				new PinSpec("AreaMin", typeof(double), 50.0),
+				new PinSpec("Sigma", typeof(double), 2.0),
+				new PinSpec("Invert", typeof(bool), false),
+			],
+			[new PinSpec("Count", typeof(int))]);
 	}
 }
