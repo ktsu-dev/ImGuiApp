@@ -35,11 +35,17 @@ public sealed class NodeEditorInteractionTests
 	private bool drawDebugOverlays;
 	private int? linkToSelect;
 	private readonly List<int> nodesToSelect = [];
+	private bool drawTextField;
+	private bool focusTextFieldNextFrame;
+	private string textFieldValue = "";
 
 	// A key press spans more than one frame and lastEvents only ever holds the newest, so the frame
 	// that carried the request would be overwritten before a test could read it.
 	private readonly List<int> observedLinkDeletions = [];
 	private readonly List<int> observedNodeDuplications = [];
+
+	// Read on the same frame the handler reads it, since it is only meaningful inside one.
+	private bool lastWantTextInput;
 
 	[TestCleanup]
 	public void TearDown() => harness?.Dispose();
@@ -97,6 +103,23 @@ public sealed class NodeEditorInteractionTests
 
 			nodesToSelect.Clear();
 		}
+
+		// Stands in for the user having clicked into a text box. WantTextInput is what tells the
+		// handler that a keystroke belongs to the text field rather than to the graph, and ImGui
+		// only raises it while a text widget is active - so the fixture has to draw a real one and
+		// give it the keyboard, rather than setting a flag.
+		if (drawTextField)
+		{
+			if (focusTextFieldNextFrame)
+			{
+				ImGui.SetKeyboardFocusHere();
+				focusTextFieldNextFrame = false;
+			}
+
+			ImGui.InputText("##typing", ref textFieldValue, 64);
+		}
+
+		lastWantTextInput = ImGui.GetIO().WantTextInput;
 
 		// ImNodes reports interactions for the editor that just closed, so the handler runs after
 		// the render rather than before it.
@@ -306,6 +329,25 @@ public sealed class NodeEditorInteractionTests
 		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
 
 		CollectionAssert.Contains(observedNodeDuplications, sourceId, "A second Ctrl+D should copy the still-selected node again");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WhileTypingInATextField_DoesNotDuplicate()
+	{
+		// Ctrl+D is a chord a text box may well want for itself, and "d" is a letter someone is
+		// going to type. Without the WantTextInput guard, typing near an open text field would fill
+		// the graph with copies the user never asked for.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+		drawTextField = true;
+		focusTextFieldNextFrame = true;
+		harness.Step(3);
+		Assert.IsTrue(lastWantTextInput, "The fixture needs the text field to hold the keyboard");
+		observedNodeDuplications.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		Assert.IsEmpty(observedNodeDuplications, "Typing must not duplicate the selected node");
+		Assert.HasCount(2, engine.Nodes, "The graph is unchanged");
 	}
 
 	[TestMethod]
