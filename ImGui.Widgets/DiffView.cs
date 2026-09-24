@@ -378,9 +378,12 @@ public static partial class ImGuiWidgets
 		/// <summary>Draws one side of a paired row, or an empty tinted gap where it has no line.</summary>
 		private static void DrawSide(DiffLine? line, bool isOldSide, DiffViewOptions options)
 		{
+			uint tint = line is null ? FillerTint() : TintFor(line.Kind);
+
 			if (options.CanShowLineNumbers)
 			{
 				_ = ImGui.TableNextColumn();
+				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, tint);
 				DrawNumber(isOldSide ? line?.OldNumber : line?.NewNumber);
 			}
 
@@ -388,19 +391,19 @@ public static partial class ImGuiWidgets
 
 			if (line is null)
 			{
-				// Two more empty cells keep the row's shape, tinted fainter than a real change so the
-				// gap reads as an absence rather than as content.
-				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, FillerTint());
+				// Every cell in the row's shape is tinted, the number cell included, so a filler row
+				// reads as a gap across its whole width rather than only where the marker and text sit.
+				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, tint);
 				_ = ImGui.TableNextColumn();
-				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, FillerTint());
+				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, tint);
 				return;
 			}
 
-			ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, TintFor(line.Kind));
+			ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, tint);
 			ImGui.TextUnformatted(MarkerFor(line.Kind));
 
 			_ = ImGui.TableNextColumn();
-			ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, TintFor(line.Kind));
+			ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, tint);
 			ImGui.TextUnformatted(line.Text);
 		}
 
