@@ -230,9 +230,10 @@ public static partial class ImGuiWidgets
 			{
 				if (removed > 0)
 				{
-					ImGui.PushStyleColor(ImGuiCol.Text, Palette.Semantic.Error.Value);
-					ImGui.TextUnformatted(new string('-', removed));
-					ImGui.PopStyleColor();
+					using (new ScopedColor(ImGuiCol.Text, Palette.Semantic.Error))
+					{
+						ImGui.TextUnformatted(new string('-', removed));
+					}
 				}
 
 				if (added > 0)
@@ -242,9 +243,10 @@ public static partial class ImGuiWidgets
 						ImGui.SameLine();
 					}
 
-					ImGui.PushStyleColor(ImGuiCol.Text, Palette.Semantic.Success.Value);
-					ImGui.TextUnformatted(new string('+', added));
-					ImGui.PopStyleColor();
+					using (new ScopedColor(ImGuiCol.Text, Palette.Semantic.Success))
+					{
+						ImGui.TextUnformatted(new string('+', added));
+					}
 				}
 			}
 			finally
