@@ -458,6 +458,7 @@ internal static class ImGuiWidgetsDemo
 		ShowMobileContainersDemo();
 		ShowHistogramAndHandleTrackDemo();
 		ShowCurveTrackDemo();
+		DiffViewDemo.Show();
 	}
 
 	private static void ShowAdvancedDemos()
