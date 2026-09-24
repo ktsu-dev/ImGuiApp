@@ -10,8 +10,9 @@ ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself
 - **Separation of concerns**: business logic (`NodeEditorEngine`), rendering (`NodeEditorRenderer`), and input (`NodeEditorInputHandler`) are separate objects, so the graph can be built and tested without a renderer
 - **Tuning panel**: `PhysicsSettingsPanel` draws every layout setting, grouped and captioned, so a graph can be tuned while it is on screen
 - **Attribute-based nodes**: `AttributeBasedNodeFactory` reads `ktsu.NodeGraph` attributes off a type — or every decorated type in an assembly — and creates nodes with the right pins, each bound to an instance its declared parameters live on
+- **Parameter editing**: an unconnected input pin whose type has an editor gets one on the node face and a row in `NodeInspectorPanel`, both reading and writing through `GetPinValue`/`SetPinValue`. A value lives on the node's instance where there is one and in the engine's own store otherwise
 - **Physics is opt-in**: the simulation does nothing until `PhysicsSettings.Enabled` is set, so a host that positions nodes itself pays nothing for it
-- **Type-aware connections**: `TryCreateLink` returns a result with a message rather than throwing, and pin compatibility comes from the same rules the metadata declares
+- **Connections are checked**: `TryCreateLink` returns a result with a message rather than throwing, and refuses a link that joins two pins of the same direction, duplicates one that exists, exceeds what a pin will accept, or joins a node to itself. It does not yet compare the pins' declared types
 - **Physics-based layout**: nodes repel, links pull, and the graph settles; powered by [`ktsu.ForceDirectedLayout`](https://github.com/ktsu-dev/ImGuiApp), with per-frame stability and energy readings for debug overlays
 - **Drag-aware**: nodes being dragged are excluded from the simulation, and the renderer reports position and size changes back to the engine
 
@@ -121,28 +122,90 @@ Two things to know about registration. A class node also gets an `Instance` outp
 
 ### Editing node parameters
 
-A tunable declared as an input pin — a threshold, a minimum area, a sigma — has to be stored per node rather than per type, because two nodes of one type are two nodes. `CreateNode` therefore constructs the type once per node and binds it to the id the engine issued:
+A pin carries the type it was declared with, and the engine answers what it holds. An unconnected input pin whose type has an editor is drawn with one beside its label, and `NodeInspectorPanel` draws the same parameters as a property grid for whichever node is selected.
+
+```csharp
+Node filter = engine.CreateNodeFromSpecs(
+    new Vector2(100, 100),
+    "Blob Filter",
+    [
+        new PinSpec("Threshold", typeof(double), 128.0),
+        new PinSpec("Polarity", typeof(EdgePolarity), EdgePolarity.Rising), // your own enum
+    ],
+    [new PinSpec("Count", typeof(int))]);
+
+// Whatever the user typed, or the declared default until they do
+double threshold = (double)engine.GetPinValue(filter.InputPins[0].Id)!;
+engine.SetPinValue(filter.InputPins[0].Id, 200.0);
+engine.ResetPinValue(filter.InputPins[0].Id);   // back to the declared default
+
+// A panel for the selected node
+if (renderer.SelectedNodeIds.Count > 0)
+{
+    NodeInspectorPanel.Draw(engine, renderer.SelectedNodeIds.First());
+}
+```
+
+Editable types are bool, int, float, double, string, `Vector2`, `Vector3` and enums, plus `Nullable<T>` of those. Anything else, `long` included, draws no inline editor and a disabled row in the inspector. A connected input pin gets no editor either, because its value arrives along the link.
+
+#### Where a value lives
+
+`GetPinValue` and `SetPinValue` are the only way to reach a parameter, but the value itself has one of two homes.
+
+A tunable declared as an input pin — a threshold, a minimum area, a sigma — has to be stored per node rather than per type, because two nodes of one type are two nodes. `AttributeBasedNodeFactory.CreateNode` therefore constructs the declared type once per node, binds it to the id the engine issued, and points each input pin backed by a writable property or field at that object. For those pins **the instance is the value**: there is no copy, and no push or refresh between the two.
 
 ```csharp
 Node node = factory.CreateNode<ThresholdNode>(new Vector2(100, 100));
+int pin = node.InputPins.Single(p => p.EffectiveDisplayName == "Threshold").Id;
+
+engine.SetPinValue(pin, 200.0);   // what an inline editor or an inspector row does
 
 if (factory.TryGetNodeInstance(node.Id, out object? instance))
 {
     NodeDefinition definition = factory.GetNodeDefinition(node.Id)!;
     PinDefinition threshold = definition.InputPins.Single(p => p.DisplayName == "Threshold");
 
-    double current = (double)threshold.GetValue(instance)!;   // 128.0, the declared default
-    threshold.SetValue(instance, 200.0);                      // what an inspector panel writes
+    double current = (double)threshold.GetValue(instance)!;   // 200.0 — the same value, not a copy
+
+    threshold.SetValue(instance, 300.0);
+    double reported = (double)engine.GetPinValue(pin)!;       // 300.0 — and back the other way
 }
 ```
 
-The instance starts at each input pin's declared default — the attribute's `DefaultValue` where there is one, otherwise the member's own C# initializer. `GetNodeDefinition(int)` is what answers "which type is this node the user selected", which `Node` alone cannot: it carries names and geometry and deliberately nothing else.
+Every other pin keeps its value in the engine's own store, and nothing about editing it differs:
 
-Two cases have no instance, and `TryGetNodeInstance` answers `false` for both: a **method node**, whose receiver arrives over its `Instance` input pin rather than being manufactured here, and a type with **no parameterless constructor**. The definition still resolves in both cases.
+| Pin | Home |
+| --- | ---- |
+| An input pin on a factory node, backed by a writable property or field | The node's instance |
+| A pin on a node built with `CreateNode(position, name, …)` or `CreateNodeFromSpecs` | The store |
+| A **method node's** pins — its receiver arrives over its `Instance` input pin rather than being manufactured | The store |
+| A node whose type has **no parameterless constructor**, so there is no instance | The store |
+| A pin standing for a **constructor or method parameter**, whose default belongs to an argument list | The store |
+| Any **output pin** | The store |
+
+The instance starts at each input pin's declared default — the attribute's `DefaultValue` where there is one, otherwise the member's own C# initializer — and so does the store. A declared default of the wrong type is converted on both paths by the same coercion, so `[InputPin("X", DefaultValue = 50)]` on a `double` means `50.0` wherever it is read. One that cannot convert at all leaves the member's own initializer standing.
+
+`ResetPinValue` puts a pin back to what it was created with, through whichever home it has, so the instance and the reported value never disagree. `SetPinValue` checks the pin's declared type first either way, and a refused value reaches neither home.
+
+`TryGetNodeInstance` answers `false` for a method node and for a type with no parameterless constructor; `GetNodeDefinition(int)` still resolves in both cases, and is what answers "which type is this node the user selected", which `Node` alone cannot: it carries names and geometry and deliberately nothing else.
 
 Bindings are dropped when the engine drops the node, through `NodeEditorEngine.NodeRemoved` and `Cleared`. `Clear()` also restarts the id counter, so dropping on it is what stops an unrelated node inheriting a cleared node's values when it is later issued the same id.
 
 Constructing the type is not executing it. Nothing here calls `[NodeExecute]`; the instance exists so a parameter has somewhere to live.
+
+#### Binding a pin to your own model
+
+A host that models its nodes some other way can say where a pin's value lives, with no reflection and no factory. `PinValueAccessor` is the whole of the engine's side of it — two delegates, and nothing about how the value is kept:
+
+```csharp
+engine.BindPinValue(pinId, new PinValueAccessor(
+    () => settings.Threshold,
+    value => { settings.Threshold = (double)value!; return true; }));
+```
+
+The accessor's `Set` returns whether the write happened, which is what `SetPinValue` reports back to its caller — a validating setter that refused the value says so rather than appearing to have stored it. Binding re-seeds the pin's default from the accessor, so a later `ResetPinValue` puts back a value the home itself produced. `UnbindPinValue` returns the pin to the store, which `RemoveNode` and `Clear` do as a pin stops existing.
+
+This is deliberately the only thing the engine knows about a value that lives elsewhere: it holds delegates, and learns nothing about reflection, `PinDefinition` or `ktsu.NodeGraph`.
 
 ### Tuning the layout
 
@@ -179,6 +242,12 @@ The graph and its physics. No ImGui calls.
 | `TryCreateLink(int, int)` | `LinkCreationResult` | Attempts a connection; the result carries success, a message, and the link |
 | `RemoveLink(int)` / `RemoveNode(int)` | `bool` | Removes a link or node |
 | `UpdateNodePosition(int, Vector2)` / `UpdateNodeDimensions(int, Vector2)` | `void` | Feeds measured layout back in |
+| `GetPinValue(int)` | `object?` | What a pin holds, from whichever home it has |
+| `SetPinValue(int, object?)` | `bool` | Writes it, after checking the pin's declared type |
+| `ResetPinValue(int)` | `bool` | Puts it back to the value it was created with |
+| `BindPinValue(int, PinValueAccessor)` | `void` | Says the value lives somewhere other than the engine's store |
+| `UnbindPinValue(int)` | `bool` | Returns the pin to the store |
+| `IsPinConnected(int)` | `bool` | Whether any link meets the pin |
 | `SetDraggedNodes(IReadOnlySet<int>)` | `void` | Excludes dragged nodes from the simulation |
 | `UpdatePhysicsSettings(PhysicsSettings)` | `void` | Replaces the physics settings |
 | `UpdatePhysics(float)` | `void` | Advances the layout by a frame delta |
@@ -255,14 +324,14 @@ PhysicsSettingsPanel.DrawDiagnostics(engine);
 | `GetNodeDefinition(Type)` / `GetNodeDefinition(MethodInfo)` | `NodeDefinition?` | The metadata read off a registration |
 | `GetAllNodeDefinitions()` | `IEnumerable<NodeDefinition>` | Every registration, for building menus |
 | `GetNodeDefinition(int)` | `NodeDefinition?` | What a created node was created from, by node id |
-| `TryGetNodeInstance(int, out object?)` | `bool` | The object a node's parameter values live on |
+| `TryGetNodeInstance(int, out object?)` | `bool` | The object a node's parameter values live on, when it has one |
 | `GetBinding(int)` | `NodeBinding?` | Both of the above together |
 
 ### Domain models
 
 `Node(Id, Position, Name, InputPins, OutputPins, Dimensions, Velocity, Force, IsPinned)`, `Link(Id, OutputPinId, InputPinId)` and `Pin(Id, Direction, Name, DisplayName)` are records; `PinDirection` is `Input` or `Output`.
 
-`NodeBinding(NodeId, Definition, Instance)` ties a node back to what it was created from; `NodeRemovedEventArgs` carries the `NodeId` of a removed node.
+`NodeBinding(NodeId, Definition, Instance)` ties a node back to what it was created from; `NodeRemovedEventArgs` carries the `NodeId` of a removed node. `PinValueAccessor(Get, Set)` says where a pin's value lives when it does not live in the engine's store, and `PinSpec(Name, DataType, DefaultValue, AllowMultipleConnections)` is what a pin is created from.
 
 ## Acknowledgments
 

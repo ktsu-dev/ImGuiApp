@@ -6,6 +6,8 @@
 
 namespace ktsu.examples.ImGuiAppDemo.UITests;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.App;
@@ -399,6 +401,23 @@ public sealed class AppDemoUITests
 		{
 			Assert.IsTrue(IsVisible(readout), $"The tuning panel is missing its '{readout}' readout.");
 		}
+	}
+
+	/// <summary>
+	/// The Blob Filter node's inputs are typed and unconnected, so the renderer draws an editor on
+	/// each of their rows. Widgets submitted inside an ImNodes attribute are exactly where a cursor
+	/// or ID stack mistake shows up, and ImGui reports that as misuse rather than by crashing.
+	/// </summary>
+	[TestMethod]
+	public void CleanImNodes_TabDrawsInlineParameterEditorsWithoutError()
+	{
+		OpenTab(CleanImNodesTab);
+		harness.Step(10);
+
+		Assert.AreEqual(
+			0,
+			ImGui.GetCurrentContext().ErrorCountCurrentFrame,
+			"ImGui reported the node editor's drawing as misuse.");
 	}
 
 	/// <summary>

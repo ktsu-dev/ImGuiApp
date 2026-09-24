@@ -298,6 +298,47 @@ public sealed class AttributeBasedNodeFactoryTests
 			"The instance output is there to be chained onward, by as many nodes as want it.");
 	}
 
+	[TestMethod]
+	public void CreateNode_CarriesEachPinsTypeOntoTheGraph()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.AreEqual(typeof(double), node.InputPins[0].DataType);
+		Assert.AreEqual(typeof(double), node.InputPins[1].DataType);
+	}
+
+	/// <summary>
+	/// The definition has known each pin's default since #439 taught it to read a C# initializer.
+	/// Until now it dropped them on the way to the graph, so a node was created holding nothing.
+	/// </summary>
+	[TestMethod]
+	public void CreateNode_SeedsEachPinFromItsDeclaredDefault()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.AreEqual(128.0, engine.GetPinValue(node.InputPins[0].Id), "Read from the property initializer.");
+		Assert.AreEqual(50.0, engine.GetPinValue(node.InputPins[1].Id), "Read from the attribute.");
+	}
+
+	[TestMethod]
+	public void CreateNode_StillAppliesDeclaredConnectionCapacities()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.IsFalse(
+			node.OutputPins.Single(p => p.EffectiveDisplayName == "Count").AllowsMultipleConnections,
+			"An output fans out by default, and this one declared otherwise.");
+	}
+
 	/// <summary>
 	/// Every default in the shipped node library is written as a C# initializer rather than as
 	/// <c>[InputPin(DefaultValue = ...)]</c>, so a menu or inspector built from the definitions saw
@@ -586,6 +627,19 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		[OutputPin("One", AllowMultipleConnections = false)]
 		public double One { get; set; }
+	}
+
+	[Node("Blob Filter")]
+	public sealed class BlobFilterNode
+	{
+		[InputPin("Threshold", Order = 0)]
+		public double Threshold { get; set; } = 128.0;
+
+		[InputPin("AreaMin", Order = 1, DefaultValue = 50.0)]
+		public double AreaMin { get; set; }
+
+		[OutputPin("Count", AllowMultipleConnections = false)]
+		public int Count => 0;
 	}
 
 	public sealed class NotANode

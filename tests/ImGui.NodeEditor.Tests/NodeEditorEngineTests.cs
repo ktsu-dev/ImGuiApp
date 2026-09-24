@@ -628,4 +628,132 @@ public sealed class NodeEditorEngineTests
 		Assert.IsEmpty(engine.GetIncomingLinks(source.Id).ToList());
 		Assert.IsEmpty(engine.GetOutgoingLinks(target.Id).ToList());
 	}
+
+	[TestMethod]
+	public void CreateNodeFromSpecs_CarriesTypeAndCapacityOntoThePins()
+	{
+		Node node = engine.CreateNodeFromSpecs(
+			new Vector2(0, 0),
+			"Typed",
+			[new PinSpec("Threshold", typeof(double)), new PinSpec("Tags", typeof(string), AllowMultipleConnections: true)],
+			[new PinSpec("Count", typeof(int), AllowMultipleConnections: false)]);
+
+		Assert.AreEqual(typeof(double), node.InputPins[0].DataType);
+		Assert.AreEqual("Threshold", node.InputPins[0].EffectiveDisplayName);
+		Assert.AreEqual("In 1", node.InputPins[0].Name);
+		Assert.IsFalse(node.InputPins[0].AllowsMultipleConnections, "An input takes one link unless it says otherwise.");
+		Assert.IsTrue(node.InputPins[1].AllowsMultipleConnections, "The spec asked for many.");
+		Assert.IsFalse(node.OutputPins[0].AllowsMultipleConnections, "The spec asked for one.");
+	}
+
+	[TestMethod]
+	public void CreateNode_WithPinNames_LeavesThePinsUntyped()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Untyped", ["In"], ["Out"]);
+
+		Assert.IsNull(node.InputPins[0].DataType, "A name carries no type, and inventing one would be a lie.");
+		Assert.IsNull(node.OutputPins[0].DataType);
+	}
+
+	[TestMethod]
+	public void CreateNode_SeedsEachPinWithItsDeclaredDefault()
+	{
+		Node node = engine.CreateNodeFromSpecs(
+			new Vector2(0, 0),
+			"Seeded",
+			[new PinSpec("Threshold", typeof(double), 128.0), new PinSpec("Label", typeof(string))],
+			[]);
+
+		Assert.AreEqual(128.0, engine.GetPinValue(node.InputPins[0].Id));
+		Assert.IsNull(engine.GetPinValue(node.InputPins[1].Id), "A spec with no default seeds nothing.");
+	}
+
+	/// <summary>
+	/// <c>[InputPin("X", DefaultValue = 50)]</c> on a <see langword="double"/> property is a natural
+	/// thing to write, and boxes an <see langword="int"/>. Seeding that unchecked would make
+	/// <see cref="NodeEditorEngine.GetPinValue"/> return a boxed <c>50</c> while both editing
+	/// surfaces read it as <c>50.0</c> and disagree with it forever.
+	/// </summary>
+	[TestMethod]
+	public void CreateNodeFromSpecs_CoercesAMistypedDeclaredDefaultToThePinsType()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Mistyped", [new PinSpec("X", typeof(double), 50)], []);
+
+		object? value = engine.GetPinValue(node.InputPins[0].Id);
+
+		// AreEqual alone would not catch this: 50.0 == (object)50 by value comparison even though
+		// their runtime types differ, so the runtime type has to be asserted separately.
+		Assert.AreEqual(50.0, value);
+		Assert.AreEqual(typeof(double), value?.GetType(), "The seed should have been converted to the pin's declared type, not left as the boxed int it was written as.");
+	}
+
+	/// <summary>A default that cannot be converted at all is dropped rather than making the node uncreatable.</summary>
+	[TestMethod]
+	public void CreateNodeFromSpecs_SeedsNull_WhenTheDeclaredDefaultCannotBeConverted()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Unconvertible", [new PinSpec("Position", typeof(Vector2), 50)], []);
+
+		Assert.IsNull(engine.GetPinValue(node.InputPins[0].Id), "An int cannot become a Vector2, so the bad default should have been dropped rather than thrown.");
+	}
+
+	[TestMethod]
+	public void SetPinValue_RefusesAValueThePinsTypeWillNotTake()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Typed", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+
+		Assert.IsFalse(engine.SetPinValue(pinId, "not a number"));
+		Assert.AreEqual(128.0, engine.GetPinValue(pinId));
+	}
+
+	[TestMethod]
+	public void SetPinValue_ForAPinThatDoesNotExist_ReportsSo() => Assert.IsFalse(engine.SetPinValue(999, 1.0));
+
+	[TestMethod]
+	public void ResetPinValue_ReturnsThePinToItsDeclaredDefault()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Seeded", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+		engine.SetPinValue(pinId, 200.0);
+
+		Assert.IsTrue(engine.ResetPinValue(pinId));
+		Assert.AreEqual(128.0, engine.GetPinValue(pinId));
+	}
+
+	[TestMethod]
+	public void IsPinConnected_FollowsTheLinks()
+	{
+		(Node source, Node target) = TwoConnectedNodes();
+
+		Assert.IsTrue(engine.IsPinConnected(source.OutputPins[0].Id));
+		Assert.IsTrue(engine.IsPinConnected(target.InputPins[0].Id));
+
+		engine.RemoveLink(engine.Links[0].Id);
+
+		Assert.IsFalse(engine.IsPinConnected(source.OutputPins[0].Id), "The link is gone, so the pin is free again.");
+	}
+
+	[TestMethod]
+	public void RemoveNode_ForgetsWhatItsPinsHeld()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Doomed", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+
+		engine.UpdatePinOffset(pinId, new Vector2(4, 8));
+		engine.RemoveNode(node.Id);
+
+		Assert.IsNull(engine.GetPinValue(pinId), "A removed node's values would otherwise outlive it for the life of the process.");
+		Assert.IsFalse(engine.TryGetPinOffset(pinId, out _), "And so would its measured pin offsets.");
+	}
+
+	[TestMethod]
+	public void Clear_ForgetsEveryValue()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Seeded", [new PinSpec("Threshold", typeof(double), 128.0)], []);
+		int pinId = node.InputPins[0].Id;
+
+		engine.Clear();
+
+		Assert.IsNull(engine.GetPinValue(pinId));
+	}
 }
