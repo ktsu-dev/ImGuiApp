@@ -44,7 +44,11 @@ public static partial class ImGuiApp
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static OpenGLProvider? glProvider;
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
-	internal static IntPtr currentGLContextHandle; // Track the current GL context handle
+	// The GL the textures currently in `Textures` were uploaded against. Compared by reference in
+	// CheckAndHandleContextChange: a different GL means a different GL context, so every texture id
+	// held in `Textures` names an object that context never created. Null until the first check
+	// observes a GL, which is why that first observation records without reloading.
+	internal static GL? currentGLContext;
 
 	internal static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -328,8 +332,6 @@ public static partial class ImGuiApp
 					DebugLogger.Log("onConfigureIO: Starting configuration");
 					unsafe
 					{
-						currentGLContextHandle = (nint)ImGui.GetCurrentContext().Handle;
-
 						ImGuiIOPtr io = ImGui.GetIO();
 
 						// Configure imgui.ini file saving based on user preference
@@ -2607,32 +2609,42 @@ public static partial class ImGuiApp
 		ScaleFactor = 1;
 		GlobalScale = 1.0f;
 		Textures.Clear();
+		currentGLContext = null;
 		overlayChrome.ResetState();
 		Config = new();
 	}
 
 	/// <summary>
-	/// Checks if the OpenGL context has changed and handles texture reloading if needed
+	/// Checks whether the OpenGL context has been replaced since the tracked textures were uploaded,
+	/// and reloads them if it has.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop to detect context handle changes; pointer is not retained.")]
+	/// <remarks>
+	/// This compares the <see cref="GL"/> the textures were uploaded against, not the ImGui context.
+	/// <see cref="ImGui.GetCurrentContext"/> returns the ImGui context pointer, which is created once
+	/// in <c>ImGuiController.Init</c> and never replaced, so comparing it could never report a change
+	/// and the reload below was unreachable.
+	/// <para>
+	/// This detects a GL the application itself replaced. A driver-side reset that invalidates the
+	/// context underneath an unchanged <see cref="GL"/> instance is not observable this way and would
+	/// need a <c>GL_KHR_robustness</c> reset query.
+	/// </para>
+	/// </remarks>
 	internal static void CheckAndHandleContextChange()
 	{
-		if (gl == null)
+		if (gl == null || ReferenceEquals(gl, currentGLContext))
 		{
 			return;
 		}
 
-		// Get the current context handle
-		nint newContextHandle;
-		unsafe
-		{
-			newContextHandle = (nint)ImGui.GetCurrentContext().Handle;
-		}
+		// The first observation has nothing to reload against: the tracked textures were uploaded
+		// against this GL, so record it and leave them alone. Reloading here would re-upload every
+		// texture and orphan the handles it replaced, since the reload does not delete them.
+		bool contextWasReplaced = currentGLContext is not null;
+		currentGLContext = gl;
 
-		// If context has changed, reload all textures
-		if (newContextHandle != currentGLContextHandle && newContextHandle != nint.Zero)
+		if (contextWasReplaced)
 		{
-			currentGLContextHandle = newContextHandle;
+			DebugLogger.Log("CheckAndHandleContextChange: GL context replaced, reloading textures");
 			ReloadAllTextures();
 		}
 	}
