@@ -951,7 +951,7 @@ public static partial class ImGuiWidgets
 				ImGui.TableSetupColumn("marker", ImGuiTableColumnFlags.WidthFixed);
 				ImGui.TableSetupColumn("text", ImGuiTableColumnFlags.WidthStretch);
 
-				ImGuiListClipperPtr clipper = new(ImGuiP.ImGuiListClipper());
+				ImGuiListClipper clipper = default;
 				clipper.Begin(hunk.Lines.Count);
 
 				while (clipper.Step())
@@ -1027,7 +1027,7 @@ public static partial class ImGuiWidgets
 - [ ] **Step 2: Build and check the API compiles against the demo**
 
 Run: `dotnet build ImGui.Widgets/ImGui.Widgets.csproj`
-Expected: success, 0 warnings. If `ImGuiListClipperPtr` construction does not match this binding's shape, find the pattern `VirtualTable.cs` uses and follow it rather than inventing one.
+Expected: success, 0 warnings. The clipper is declared by value as `ImGuiListClipper clipper = default;`, which is what `VirtualTable.cs` does. This binding has no `ImGuiListClipperPtr`.
 
 - [ ] **Step 3: Add the demo page**
 
