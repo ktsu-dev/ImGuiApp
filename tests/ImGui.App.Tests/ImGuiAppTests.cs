@@ -469,6 +469,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		public nint LastUpdatedTextureId { get; private set; }
 		public byte[] LastUpdatedPixels { get; private set; } = [];
 		public bool UpdateTextureResult { get; init; } = true;
+		public int LastUpdateThreadId { get; private set; }
 
 		public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 		{
@@ -479,6 +480,7 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
 		{
 			LastUpdatedTextureId = id;
+			LastUpdateThreadId = Environment.CurrentManagedThreadId;
 			LastUpdatedPixels = rgba.ToArray();
 			return UpdateTextureResult;
 		}
@@ -666,6 +668,61 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		CollectionAssert.AreEqual(pixels, backend.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
 		Assert.AreEqual(0, backend.DeleteTextureCallCount, "A successful in-place update must not delete the texture");
 		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_FromAWorkerThread_UpdatesOnTheInvokerThread()
+	{
+		// The in-place path used to call the backend on whatever thread called UpdateTexture. On
+		// OpenGL that is a GL call with no current context, which is exactly what an application
+		// producing frames on a worker thread does. The update has to reach the backend on the
+		// thread that owns the invoker, and the caller has to wait for it.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+		byte[] pixels = [5, 6, 7, 8];
+
+		Task worker = Task.Run(() => ImGuiApp.UpdateTexture(info, pixels, 1, 1));
+
+		Stopwatch pump = Stopwatch.StartNew();
+		while (!worker.IsCompleted && pump.Elapsed < TimeSpan.FromSeconds(30))
+		{
+			ImGuiApp.Invoker.DoInvokes();
+			Thread.Sleep(1);
+		}
+
+		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
+		Assert.AreEqual(Environment.CurrentManagedThreadId, backend.LastUpdateThreadId, "The backend must be called on the invoker's thread, not the worker's");
+		Assert.AreEqual(info.TextureId, backend.LastUpdatedTextureId, "In-place update should target the existing handle");
+		CollectionAssert.AreEqual(pixels, backend.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
+		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_FromAWorkerThread_WhenBackendDeclines_FallsBackToRecreate()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42, UpdateTextureResult = false };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		Task worker = Task.Run(() => ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1));
+
+		Stopwatch pump = Stopwatch.StartNew();
+		while (!worker.IsCompleted && pump.Elapsed < TimeSpan.FromSeconds(30))
+		{
+			ImGuiApp.Invoker.DoInvokes();
+			Thread.Sleep(1);
+		}
+
+		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A declined update must delete the old texture");
+		Assert.AreEqual(2, backend.CreateTextureCallCount, "A declined update must recreate the texture");
 	}
 
 	[TestMethod]
