@@ -255,12 +255,23 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		/// <summary>Draws a hunk's lines as a unified table.</summary>
+		/// <summary>Draws a hunk's lines in the layout the options ask for.</summary>
 		/// <remarks>
 		/// Clipped rather than drawn whole, because a hunk of a few thousand lines is ordinary on a
 		/// generated file and the cost of a frame should follow what is on screen.
 		/// </remarks>
 		private static void DrawLines(DiffHunk hunk, DiffViewOptions options)
+		{
+			if (options.Mode == DiffViewMode.SideBySide)
+			{
+				DrawPairedLines(hunk, options);
+				return;
+			}
+
+			DrawUnifiedLines(hunk, options);
+		}
+
+		private static void DrawUnifiedLines(DiffHunk hunk, DiffViewOptions options)
 		{
 			int columns = options.CanShowLineNumbers ? 4 : 2;
 
@@ -297,6 +308,109 @@ public static partial class ImGuiWidgets
 			{
 				ImGui.EndTable();
 			}
+		}
+
+		/// <summary>Draws a hunk as an old side against a new side, aligned by filler.</summary>
+		/// <remarks>
+		/// One table with both sides in it rather than two scrolling panes, so they stay level by
+		/// construction. Two panes would need their scroll positions kept in step, which is a state
+		/// machine that exists only to undo a layout choice.
+		/// </remarks>
+		private static void DrawPairedLines(DiffHunk hunk, DiffViewOptions options)
+		{
+			IReadOnlyList<DiffRowPair> rows = DiffViewState.Pair(hunk);
+
+			if (rows.Count == 0)
+			{
+				return;
+			}
+
+			int perSide = options.CanShowLineNumbers ? 3 : 2;
+
+			if (!ImGui.BeginTable("paired", perSide * 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.ScrollX | ImGuiTableFlags.BordersInnerV))
+			{
+				return;
+			}
+
+			try
+			{
+				SetUpSideColumns(options, "old");
+				SetUpSideColumns(options, "new");
+
+				ImGuiListClipper clipper = default;
+				clipper.Begin(rows.Count);
+
+				while (clipper.Step())
+				{
+					for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+					{
+						DrawPairedRow(rows[row], options);
+					}
+				}
+
+				clipper.End();
+			}
+			finally
+			{
+				ImGui.EndTable();
+			}
+		}
+
+		private static void SetUpSideColumns(DiffViewOptions options, string side)
+		{
+			if (options.CanShowLineNumbers)
+			{
+				ImGui.TableSetupColumn($"{side}#", ImGuiTableColumnFlags.WidthFixed);
+			}
+
+			ImGui.TableSetupColumn($"{side}marker", ImGuiTableColumnFlags.WidthFixed);
+			ImGui.TableSetupColumn($"{side}text", ImGuiTableColumnFlags.WidthStretch);
+		}
+
+		private static void DrawPairedRow(DiffRowPair pair, DiffViewOptions options)
+		{
+			ImGui.TableNextRow();
+
+			DrawSide(pair.Left, isOldSide: true, options);
+			DrawSide(pair.Right, isOldSide: false, options);
+		}
+
+		/// <summary>Draws one side of a paired row, or an empty tinted gap where it has no line.</summary>
+		private static void DrawSide(DiffLine? line, bool isOldSide, DiffViewOptions options)
+		{
+			if (options.CanShowLineNumbers)
+			{
+				_ = ImGui.TableNextColumn();
+				DrawNumber(isOldSide ? line?.OldNumber : line?.NewNumber);
+			}
+
+			_ = ImGui.TableNextColumn();
+
+			if (line is null)
+			{
+				// Two more empty cells keep the row's shape, tinted fainter than a real change so the
+				// gap reads as an absence rather than as content.
+				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, FillerTint());
+				_ = ImGui.TableNextColumn();
+				ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, FillerTint());
+				return;
+			}
+
+			ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, TintFor(line.Kind));
+			ImGui.TextUnformatted(MarkerFor(line.Kind));
+
+			_ = ImGui.TableNextColumn();
+			ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, TintFor(line.Kind));
+			ImGui.TextUnformatted(line.Text);
+		}
+
+		/// <summary>The background for a row that exists on one side only.</summary>
+		internal static uint FillerTint()
+		{
+			Vector4 color = ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBg];
+			color.W = ContextRowAlpha * 0.5f;
+
+			return ImGui.ColorConvertFloat4ToU32(color);
 		}
 
 		private static void DrawLine(DiffLine line, DiffViewOptions options)
