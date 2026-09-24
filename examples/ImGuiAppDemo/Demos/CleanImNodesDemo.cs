@@ -123,6 +123,18 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
 			}
 		}
+
+		// Process node deletion requests. Drained after the links so a link selected alongside the
+		// node it hangs off is removed by its own request rather than silently by RemoveNode;
+		// either order leaves the same graph.
+		foreach (int nodeId in events.NodeDeletionRequests)
+		{
+			if (engine.RemoveNode(nodeId))
+			{
+				lastActionMessage = $"Node {nodeId} deleted";
+				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
+			}
+		}
 	}
 
 	private void UpdateNodeTransforms()
