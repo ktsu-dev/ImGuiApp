@@ -34,10 +34,12 @@ public sealed class NodeEditorInteractionTests
 	private InputEvents? lastEvents;
 	private bool drawDebugOverlays;
 	private int? linkToSelect;
+	private readonly List<int> nodesToSelect = [];
 
 	// A key press spans more than one frame and lastEvents only ever holds the newest, so the frame
 	// that carried the request would be overwritten before a test could read it.
 	private readonly List<int> observedLinkDeletions = [];
+	private readonly List<int> observedNodeDeletions = [];
 
 	[TestCleanup]
 	public void TearDown() => harness?.Dispose();
@@ -83,10 +85,24 @@ public sealed class NodeEditorInteractionTests
 			linkToSelect = null;
 		}
 
+		// The node equivalent, and outside the editor scope for the same reason. Clicking a node
+		// would mean driving the mouse onto a body whose screen position the physics is still
+		// moving, so the tests name the node instead.
+		if (nodesToSelect.Count > 0)
+		{
+			foreach (int nodeId in nodesToSelect)
+			{
+				ImNodes.SelectNode(nodeId);
+			}
+
+			nodesToSelect.Clear();
+		}
+
 		// ImNodes reports interactions for the editor that just closed, so the handler runs after
 		// the render rather than before it.
 		lastEvents = input.ProcessInput();
 		observedLinkDeletions.AddRange(lastEvents.LinkDeletionRequests);
+		observedNodeDeletions.AddRange(lastEvents.NodeDeletionRequests);
 
 		engine.SetDraggedNodes(renderer.CurrentlyDraggedNodes);
 		engine.UpdatePhysics(1f / 60f);
@@ -111,6 +127,7 @@ public sealed class NodeEditorInteractionTests
 
 		Assert.IsEmpty(events.LinkCreationRequests);
 		Assert.IsEmpty(events.LinkDeletionRequests);
+		Assert.IsEmpty(events.NodeDeletionRequests);
 	}
 
 	/// <summary>
@@ -184,6 +201,146 @@ public sealed class NodeEditorInteractionTests
 		harness.Keyboard.Press(ImGuiKey.Delete);
 
 		Assert.IsEmpty(observedLinkDeletions, "A second Delete should not re-request a link that was already handed over");
+	}
+
+	/// <summary>
+	/// Draws a two-node graph joined by one link, runs frames until it is on screen, and selects
+	/// the named nodes the way a click would.
+	/// </summary>
+	/// <returns>The two node ids, source first.</returns>
+	private (int SourceId, int TargetId) StartWithSelectedNodes(bool selectSource, bool selectTarget)
+	{
+		Node source = engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(600, 200), "Target", ["Source.Value"], []);
+		LinkCreationResult created = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		Assert.IsTrue(created.Success, $"The fixture needs a link: {created.Message}");
+
+		Start();
+
+		if (selectSource)
+		{
+			nodesToSelect.Add(source.Id);
+		}
+
+		if (selectTarget)
+		{
+			nodesToSelect.Add(target.Id);
+		}
+
+		harness.Step(2);
+		observedNodeDeletions.Clear();
+		observedLinkDeletions.Clear();
+
+		return (source.Id, target.Id);
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndDeletePressed_RequestsItsDeletion()
+	{
+		// The gesture #454 reports as doing nothing: click a node, press Delete. ImNodes offers the
+		// selection but never acts on it, and unlike a link there is no IsNodeDestroyed to fall back
+		// on, so before the fix no user gesture could ask for a node to be removed at all.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		CollectionAssert.Contains(observedNodeDeletions, sourceId, "Deleting a selected node should reach the application as a deletion request");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndBackspacePressed_RequestsItsDeletion()
+	{
+		// Backspace is the key labelled Delete on a Mac keyboard, so it has to work here exactly as
+		// it does for links.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.Backspace);
+
+		CollectionAssert.Contains(observedNodeDeletions, sourceId, "Backspace should delete a selected node, for Mac keyboards");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithSeveralNodesSelected_RequestsAllOfThem()
+	{
+		// The issue asks for "node(s)", so one press has to clear the whole selection rather than
+		// whichever node ImNodes happens to report first.
+		(int sourceId, int targetId) = StartWithSelectedNodes(selectSource: true, selectTarget: true);
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		CollectionAssert.Contains(observedNodeDeletions, sourceId, "Both selected nodes should be requested");
+		CollectionAssert.Contains(observedNodeDeletions, targetId, "Both selected nodes should be requested");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndNoKeyPressed_RequestsNothing()
+	{
+		// Selecting a node is not asking for it to be removed. Without this, a click would delete.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Step(3);
+
+		Assert.IsEmpty(observedNodeDeletions, "Selecting a node is not a request to delete it");
+	}
+
+	[TestMethod]
+	public void ProcessInput_AfterDeletingTheSelection_DoesNotRequestTheSameNodeAgain()
+	{
+		// The selection names nodes the application is about to remove, so it must not survive the
+		// press. Left in place it would name the same ids on the next Delete, asking the application
+		// to remove a node that is already gone.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+		harness.Keyboard.Press(ImGuiKey.Delete);
+		Assert.IsTrue(engine.RemoveNode(sourceId), "The fixture should have a node to remove");
+		observedNodeDeletions.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		Assert.IsEmpty(observedNodeDeletions, "A second Delete should not re-request a node that was already handed over");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithBothANodeAndALinkSelected_RequestsBoth()
+	{
+		// One press, one gesture: "remove what I have selected". Reading the key separately per
+		// selection kind would let the two drift apart, which is how a Delete ends up taking the
+		// links and leaving the node behind.
+		Node source = engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(600, 200), "Target", ["Source.Value"], []);
+		LinkCreationResult created = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		Assert.IsTrue(created.Success, $"The fixture needs a link: {created.Message}");
+
+		Start();
+
+		linkToSelect = created.Link!.Id;
+		nodesToSelect.Add(source.Id);
+		harness.Step(2);
+		observedLinkDeletions.Clear();
+		observedNodeDeletions.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		CollectionAssert.Contains(observedLinkDeletions, created.Link.Id, "A selected link should still be requested when a node is selected too");
+		CollectionAssert.Contains(observedNodeDeletions, source.Id, "A selected node should be requested when a link is selected too");
+	}
+
+	[TestMethod]
+	public void RemoveNode_ForADeletionRequest_TakesTheNodeAndItsLinksWithIt()
+	{
+		// What the application does with the request, since the handler only reports it. Deleting a
+		// node cannot leave a link dangling off a pin that no longer exists.
+		(int sourceId, int targetId) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.Delete);
+
+		foreach (int nodeId in observedNodeDeletions)
+		{
+			engine.RemoveNode(nodeId);
+		}
+
+		Assert.IsEmpty(engine.Nodes.Where(n => n.Id == sourceId), "The requested node should be gone");
+		Assert.IsNotEmpty(engine.Nodes.Where(n => n.Id == targetId), "Only the selected node should be gone");
+		Assert.IsEmpty(engine.Links, "The link hanging off the deleted node should be gone with it");
 	}
 
 	[TestMethod]
