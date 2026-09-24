@@ -1,8 +1,8 @@
-## v3.45.0 (minor)
+## v3.46.0 (minor)
 
-Changes since v3.44.0:
+Changes since v3.45.0:
 
-- [minor] Create and update textures from BGRA, RGB, BGR and greyscale pixels with row padding ([@Claude](https://github.com/Claude))
-- Pump worker-thread texture tests without Thread.Sleep ([@Claude](https://github.com/Claude))
-- [patch] Marshal UpdateTexture's in-place path to the window thread and document dynamic textures ([@Claude](https://github.com/Claude))
+- Assert the dolly bound with IsLessThan rather than IsTrue ([@Claude](https://github.com/Claude))
+- Cover the render-to-target round trip, the one path Viewport3D is made of ([@Claude](https://github.com/Claude))
+- Add Viewport3DState, the ImGui-free orbit camera behind Viewport3D ([@Claude](https://github.com/Claude))
 
