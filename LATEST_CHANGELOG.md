@@ -1,9 +1,7 @@
-## v3.44.0 (minor)
+## v3.44.1 (patch)
 
-Changes since v3.43.0:
+Changes since v3.44.0:
 
-- Split ProcessInputEvents, one method per request kind ([@matt-edmondson](https://github.com/matt-edmondson))
-- Merge main, and carry pin values onto a duplicated node ([@matt-edmondson](https://github.com/matt-edmondson))
-- Test the WantTextInput guard on the duplicate chord ([@matt-edmondson](https://github.com/matt-edmondson))
-- [minor] Duplicate selected nodes with Ctrl+D ([@matt-edmondson](https://github.com/matt-edmondson))
+- Pump worker-thread texture tests without Thread.Sleep ([@Claude](https://github.com/Claude))
+- [patch] Marshal UpdateTexture's in-place path to the window thread and document dynamic textures ([@Claude](https://github.com/Claude))
 
