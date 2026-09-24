@@ -651,3 +651,7 @@ Temporary Items
 
 # ImGui.ini files
 imgui.ini
+
+# Worktrees and agent scratch, which must never be committed into the tree they branch from.
+.worktrees/
+.superpowers/
