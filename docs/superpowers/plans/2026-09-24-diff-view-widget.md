@@ -23,7 +23,7 @@ Every task's requirements implicitly include this section.
 - US spelling in identifiers, comments and user-facing strings.
 - **No semicolons or dashes joining clauses in prose**, including XML doc comments.
 - Booleans are named `Is`, `Can` or `Has` followed by the thing they describe, never `Allow` or `Use`.
-- Null guards in both the library and the tests are `ArgumentNullException.ThrowIfNull(x)`. This repository does not use Polyfill's `Ensure`.
+- Null guards are `Ensure.NotNull(x)` from Polyfill. `KTSU0003` in `ktsu.Sdk.Analyzers` is an **error**-level rule that rejects `ArgumentNullException.ThrowIfNull`, and the library uses `Ensure.NotNull` throughout.
 - Compare sequences with `Assert.AreSequenceEqual` where the assertion is about a sequence.
 - Warnings are errors. The build fails on an unused `using` and on formatting.
 - Public API additions require the `CompatibilitySuppressions.xml` dance only when something is **removed or changed**. Adding new members needs nothing.
@@ -402,7 +402,7 @@ public static partial class ImGuiWidgets
 	/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
 	public static IReadOnlyList<int> SelectedHunks(ISet<int> selection, int hunkCount)
 	{
-		ArgumentNullException.ThrowIfNull(selection);
+		Ensure.NotNull(selection);
 
 		return [.. selection.Where(index => index >= 0 && index < hunkCount).Order()];
 	}
@@ -480,7 +480,7 @@ public static partial class ImGuiWidgets
 		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> is <see langword="null"/>.</exception>
 		internal static IReadOnlyList<DiffRowPair> Pair(DiffHunk hunk)
 		{
-			ArgumentNullException.ThrowIfNull(hunk);
+			Ensure.NotNull(hunk);
 
 			List<DiffRowPair> rows = [];
 			List<DiffLine> removed = [];
@@ -578,7 +578,7 @@ public static partial class ImGuiWidgets
 		/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
 		internal static bool Toggle(ISet<int> selection, int index)
 		{
-			ArgumentNullException.ThrowIfNull(selection);
+			Ensure.NotNull(selection);
 
 			return selection.Add(index) || selection.Remove(index);
 		}
@@ -590,7 +590,7 @@ public static partial class ImGuiWidgets
 		/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
 		internal static bool SelectAll(ISet<int> selection, int hunkCount)
 		{
-			ArgumentNullException.ThrowIfNull(selection);
+			Ensure.NotNull(selection);
 
 			bool changed = false;
 
@@ -608,7 +608,7 @@ public static partial class ImGuiWidgets
 		/// <exception cref="ArgumentNullException"><paramref name="selection"/> is <see langword="null"/>.</exception>
 		internal static bool SelectNone(ISet<int> selection)
 		{
-			ArgumentNullException.ThrowIfNull(selection);
+			Ensure.NotNull(selection);
 
 			if (selection.Count == 0)
 			{
@@ -741,8 +741,8 @@ public static partial class ImGuiWidgets
 		ISet<int> selection,
 		DiffViewOptions? options = null)
 	{
-		ArgumentNullException.ThrowIfNull(hunks);
-		ArgumentNullException.ThrowIfNull(selection);
+		Ensure.NotNull(hunks);
+		Ensure.NotNull(selection);
 
 		return DiffViewImpl.Draw(label, hunks, selection, options ?? new DiffViewOptions());
 	}
@@ -757,7 +757,7 @@ public static partial class ImGuiWidgets
 		IReadOnlyList<DiffHunk> hunks,
 		DiffViewOptions? options = null)
 	{
-		ArgumentNullException.ThrowIfNull(hunks);
+		Ensure.NotNull(hunks);
 
 		_ = DiffViewImpl.Draw(label, hunks, selection: null, options ?? new DiffViewOptions());
 	}
