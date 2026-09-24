@@ -630,6 +630,148 @@ public sealed class NodeEditorEngineTests
 	}
 
 	[TestMethod]
+	public void DuplicateNode_CopiesTheNodeToItsOwnIdAndPinsAtAnOffset()
+	{
+		Node original = engine.CreateNode(new Vector2(100, 50), "Original", ["A", "B"], ["Out"]);
+
+		Node? copy = engine.DuplicateNode(original.Id, new Vector2(40, 40));
+
+		Assert.IsNotNull(copy);
+		Assert.AreNotEqual(original.Id, copy.Id, "A copy is a new node, not the same one twice");
+		Assert.AreEqual("Original", copy.Name);
+		Assert.AreEqual(new Vector2(140, 90), copy.Position, "The copy sits at the original's position plus the offset");
+		Assert.HasCount(2, copy.InputPins);
+		Assert.HasCount(1, copy.OutputPins);
+		Assert.AreEqual("A", copy.InputPins[0].EffectiveDisplayName);
+		Assert.AreEqual("B", copy.InputPins[1].EffectiveDisplayName);
+		Assert.AreEqual("Out", copy.OutputPins[0].EffectiveDisplayName);
+
+		// A shared pin id would have the two nodes fighting over the same links, and every lookup
+		// keyed by pin id answering for whichever node it found first.
+		List<int> originalPinIds = [.. original.InputPins.Concat(original.OutputPins).Select(p => p.Id)];
+		List<int> copyPinIds = [.. copy.InputPins.Concat(copy.OutputPins).Select(p => p.Id)];
+		Assert.IsEmpty(originalPinIds.Intersect(copyPinIds), "The copy's pins must be its own");
+
+		Assert.HasCount(2, engine.Nodes);
+	}
+
+	[TestMethod]
+	public void DuplicateNode_LeavesTheOriginalWhereItWas()
+	{
+		Node original = engine.CreateNode(new Vector2(100, 50), "Original", ["In"], []);
+
+		engine.DuplicateNode(original.Id, new Vector2(40, 40));
+
+		Node unchanged = engine.Nodes.Single(n => n.Id == original.Id);
+		Assert.AreEqual(new Vector2(100, 50), unchanged.Position, "Duplicating moves the copy, not the original");
+	}
+
+	[TestMethod]
+	public void DuplicateNode_CarriesAPinsConnectionLimitOver()
+	{
+		// The limit is part of what the pin is, and it is the one pin property a caller can change
+		// after the node was made - so it is the one most easily left behind by a copy.
+		Node original = engine.CreateNode(new Vector2(0, 0), "Original", ["In"], ["Out"]);
+		Assert.IsTrue(engine.SetPinAllowsMultipleConnections(original.InputPins[0].Id, allowMultiple: true));
+		Assert.IsTrue(engine.SetPinAllowsMultipleConnections(original.OutputPins[0].Id, allowMultiple: false));
+
+		Node? copy = engine.DuplicateNode(original.Id, Vector2.Zero);
+
+		Assert.IsNotNull(copy);
+		Assert.IsTrue(copy.InputPins[0].AllowsMultipleConnections, "A widened input should stay widened on the copy");
+		Assert.IsFalse(copy.OutputPins[0].AllowsMultipleConnections, "A narrowed output should stay narrowed on the copy");
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_CopiesALinkWhoseBothEndsAreBeingCopied()
+	{
+		(Node source, Node target) = TwoConnectedNodes();
+
+		IReadOnlyList<Node> copies = engine.DuplicateNodes([source.Id, target.Id], new Vector2(40, 40));
+
+		Assert.HasCount(2, copies);
+		Assert.HasCount(2, engine.Links, "The pair's own link should have been copied with it");
+
+		Link copied = engine.Links.Single(l => l.OutputPinId != source.OutputPins[0].Id);
+		Assert.AreEqual(copies[0].OutputPins[0].Id, copied.OutputPinId, "The copied link should join the copies");
+		Assert.AreEqual(copies[1].InputPins[0].Id, copied.InputPinId, "The copied link should join the copies");
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_DoesNotCopyALinkWithOneEndOutsideTheSelection()
+	{
+		// Quietly fanning the original's input into the copy would change what the graph computes
+		// without the user asking for it.
+		(Node source, Node target) = TwoConnectedNodes();
+
+		IReadOnlyList<Node> copies = engine.DuplicateNodes([target.Id], new Vector2(40, 40));
+
+		Assert.HasCount(1, copies);
+		Assert.HasCount(1, engine.Links, "The copy should arrive unconnected");
+		Assert.IsEmpty(engine.GetIncomingLinks(copies[0].Id).ToList());
+		Assert.HasCount(1, engine.GetOutgoingLinks(source.Id).ToList(), "The original link is untouched");
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_SkipsIdsThatNameNoNodeAndRepeatsOfOne()
+	{
+		Node original = engine.CreateNode(new Vector2(0, 0), "Original", ["In"], []);
+
+		IReadOnlyList<Node> copies = engine.DuplicateNodes([original.Id, original.Id, 9999], new Vector2(40, 40));
+
+		Assert.HasCount(1, copies, "A selection naming the same node twice makes one copy, not two in the same place");
+		Assert.HasCount(2, engine.Nodes);
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_WithNothingToCopyChangesNothing()
+	{
+		engine.CreateNode(new Vector2(0, 0), "Original", ["In"], []);
+
+		Assert.IsEmpty(engine.DuplicateNodes([], new Vector2(40, 40)));
+		Assert.IsEmpty(engine.DuplicateNodes([9999], new Vector2(40, 40)));
+		Assert.HasCount(1, engine.Nodes);
+	}
+
+	[TestMethod]
+	public void DuplicateNode_OfAnUnknownIdReturnsNull()
+	{
+		Assert.IsNull(engine.DuplicateNode(9999, new Vector2(40, 40)));
+		Assert.IsEmpty(engine.Nodes);
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_CopiesAgainFromTheOriginalRatherThanFromTheLastCopy()
+	{
+		// Pressing the key twice on the same selection is a reasonable thing to ask for, and the
+		// second press must read the graph as it stood rather than picking up the first copy.
+		Node original = engine.CreateNode(new Vector2(0, 0), "Original", ["In"], []);
+
+		engine.DuplicateNodes([original.Id], new Vector2(40, 40));
+		IReadOnlyList<Node> second = engine.DuplicateNodes([original.Id], new Vector2(80, 80));
+
+		Assert.HasCount(1, second);
+		Assert.AreEqual(new Vector2(80, 80), second[0].Position, "The second copy is offset from the original, not from the first copy");
+		Assert.HasCount(3, engine.Nodes);
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_DoesNotCopyMeasuredOrPhysicsState()
+	{
+		// The renderer measures the copy on the frame it first draws it. A copy that arrives already
+		// claiming its original's size would be laid out against a shape nothing has drawn.
+		Node original = engine.CreateNode(new Vector2(0, 0), "Original", ["In"], []);
+		engine.UpdateNodeDimensions(original.Id, new Vector2(120, 60));
+
+		Node? copy = engine.DuplicateNode(original.Id, new Vector2(40, 40));
+
+		Assert.IsNotNull(copy);
+		Assert.AreEqual(Vector2.Zero, copy.Dimensions, "The copy is measured when it is drawn, not inherited");
+		Assert.AreEqual(Vector2.Zero, copy.Velocity);
+		Assert.AreEqual(Vector2.Zero, copy.Force);
+	}
+
+	[TestMethod]
 	public void CreateNodeFromSpecs_CarriesTypeAndCapacityOntoThePins()
 	{
 		Node node = engine.CreateNodeFromSpecs(
@@ -744,6 +886,53 @@ public sealed class NodeEditorEngineTests
 
 		Assert.IsNull(engine.GetPinValue(pinId), "A removed node's values would otherwise outlive it for the life of the process.");
 		Assert.IsFalse(engine.TryGetPinOffset(pinId, out _), "And so would its measured pin offsets.");
+	}
+
+	[TestMethod]
+	public void DuplicateNode_CarriesTheValueEachPinHolds()
+	{
+		// Duplicating a node the user has tuned and getting one that reads 0 is the copy quietly
+		// computing something else. The value is as much a part of the pin as its declared type.
+		Node original = engine.CreateNodeFromSpecs(
+			new Vector2(0, 0),
+			"Tuned",
+			[new PinSpec("Threshold", typeof(double), 128.0)],
+			[]);
+		Assert.IsTrue(engine.SetPinValue(original.InputPins[0].Id, 50.0));
+
+		Node? copy = engine.DuplicateNode(original.Id, new Vector2(40, 40));
+
+		Assert.IsNotNull(copy);
+		Assert.AreEqual(50.0, engine.GetPinValue(copy.InputPins[0].Id), "The copy should arrive tuned the way the original was");
+	}
+
+	[TestMethod]
+	public void DuplicateNode_CarriesTheDeclaredTypeOntoTheCopiedPin()
+	{
+		// Without the type the copy's pin would take anything, and SetPinValue's refusal - the thing
+		// that keeps a string out of a double pin - would not survive being duplicated.
+		Node original = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Typed", [new PinSpec("Threshold", typeof(double))], []);
+
+		Node? copy = engine.DuplicateNode(original.Id, Vector2.Zero);
+
+		Assert.IsNotNull(copy);
+		Assert.AreEqual(typeof(double), copy.InputPins[0].DataType);
+		Assert.IsFalse(engine.SetPinValue(copy.InputPins[0].Id, "not a double"), "The copy's pin should refuse what the original's would");
+	}
+
+	[TestMethod]
+	public void DuplicateNode_GivesTheCopyItsOwnValueRatherThanSharingTheOriginals()
+	{
+		// Copied by value, not aliased. Writing to one must not move the other, or duplicating a node
+		// would be indistinguishable from drawing the same node twice.
+		Node original = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Tuned", [new PinSpec("Threshold", typeof(double), 1.0)], []);
+		Node? copy = engine.DuplicateNode(original.Id, new Vector2(40, 40));
+		Assert.IsNotNull(copy);
+
+		Assert.IsTrue(engine.SetPinValue(copy.InputPins[0].Id, 99.0));
+
+		Assert.AreEqual(1.0, engine.GetPinValue(original.InputPins[0].Id), "Writing to the copy must not reach the original");
+		Assert.AreEqual(99.0, engine.GetPinValue(copy.InputPins[0].Id));
 	}
 
 	[TestMethod]

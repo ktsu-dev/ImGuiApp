@@ -43,6 +43,7 @@ public sealed class NodeEditorInteractionTests
 	// that carried the request would be overwritten before a test could read it.
 	private readonly List<int> observedLinkDeletions = [];
 	private readonly List<int> observedNodeDeletions = [];
+	private readonly List<int> observedNodeDuplications = [];
 
 	// Read on the same frame the handler reads it, since it is only meaningful inside one.
 	private bool lastWantTextInput;
@@ -126,6 +127,7 @@ public sealed class NodeEditorInteractionTests
 		lastEvents = input.ProcessInput();
 		observedLinkDeletions.AddRange(lastEvents.LinkDeletionRequests);
 		observedNodeDeletions.AddRange(lastEvents.NodeDeletionRequests);
+		observedNodeDuplications.AddRange(lastEvents.NodeDuplicationRequests);
 
 		engine.SetDraggedNodes(renderer.CurrentlyDraggedNodes);
 		engine.UpdatePhysics(1f / 60f);
@@ -151,6 +153,7 @@ public sealed class NodeEditorInteractionTests
 		Assert.IsEmpty(events.LinkCreationRequests);
 		Assert.IsEmpty(events.LinkDeletionRequests);
 		Assert.IsEmpty(events.NodeDeletionRequests);
+		Assert.IsEmpty(events.NodeDuplicationRequests);
 	}
 
 	/// <summary>
@@ -252,6 +255,7 @@ public sealed class NodeEditorInteractionTests
 
 		harness.Step(2);
 		observedNodeDeletions.Clear();
+		observedNodeDuplications.Clear();
 		observedLinkDeletions.Clear();
 
 		return (source.Id, target.Id);
@@ -387,6 +391,113 @@ public sealed class NodeEditorInteractionTests
 		Assert.IsEmpty(engine.Nodes.Where(n => n.Id == sourceId), "The requested node should be gone");
 		Assert.IsNotEmpty(engine.Nodes.Where(n => n.Id == targetId), "Only the selected node should be gone");
 		Assert.IsEmpty(engine.Links, "The link hanging off the deleted node should be gone with it");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndCtrlDPressed_RequestsItsDuplication()
+	{
+		// The gesture #455 asks for: click a node, press Ctrl+D. ImNodes has no notion of
+		// duplicating anything, so before the fix no user gesture could ask for it at all.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		CollectionAssert.Contains(observedNodeDuplications, sourceId, "Ctrl+D on a selected node should reach the application as a duplication request");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithSeveralNodesSelected_RequestsAllOfTheirDuplication()
+	{
+		// The issue asks for "one or more nodes", and duplicating the whole selection in one request
+		// is also what lets the engine carry the link between them across.
+		(int sourceId, int targetId) = StartWithSelectedNodes(selectSource: true, selectTarget: true);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		CollectionAssert.Contains(observedNodeDuplications, sourceId, "Both selected nodes should be requested");
+		CollectionAssert.Contains(observedNodeDuplications, targetId, "Both selected nodes should be requested");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndPlainDPressed_RequestsNothing()
+	{
+		// D on its own is a letter. Without the modifier test, typing would fill the graph.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.D);
+
+		Assert.IsEmpty(observedNodeDuplications, "D without Ctrl is not the duplicate gesture");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithANodeSelectedAndCtrlShiftDPressed_RequestsNothing()
+	{
+		// Read as a chord, so the modifiers have to match exactly and Ctrl+Shift+D stays free for
+		// whatever else wants it.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true, shift: true);
+
+		Assert.IsEmpty(observedNodeDuplications, "Ctrl+Shift+D is a different chord");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WithNothingSelectedAndCtrlDPressed_RequestsNothing()
+	{
+		engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Start();
+		observedNodeDuplications.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		Assert.IsEmpty(observedNodeDuplications, "Ctrl+D with an empty selection has nothing to copy");
+	}
+
+	[TestMethod]
+	public void ProcessInput_AfterDuplicating_KeepsTheSelectionSoASecondPressCopiesAgain()
+	{
+		// Unlike a delete, the gesture leaves the selected nodes where they are, so pressing again
+		// is a reasonable thing to ask for and must not be swallowed.
+		(int sourceId, _) = StartWithSelectedNodes(selectSource: true, selectTarget: false);
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+		observedNodeDuplications.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		CollectionAssert.Contains(observedNodeDuplications, sourceId, "A second Ctrl+D should copy the still-selected node again");
+	}
+
+	[TestMethod]
+	public void ProcessInput_WhileTypingInATextField_DoesNotDuplicate()
+	{
+		// Ctrl+D is a chord a text box may well want for itself, and "d" is a letter someone is
+		// going to type. Without the WantTextInput guard, typing near an open text field would fill
+		// the graph with copies the user never asked for.
+		StartWithSelectedNodes(selectSource: true, selectTarget: false);
+		drawTextField = true;
+		focusTextFieldNextFrame = true;
+		harness.Step(3);
+		Assert.IsTrue(lastWantTextInput, "The fixture needs the text field to hold the keyboard");
+		observedNodeDuplications.Clear();
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+
+		Assert.IsEmpty(observedNodeDuplications, "Typing must not duplicate the selected node");
+		Assert.HasCount(2, engine.Nodes, "The graph is unchanged");
+	}
+
+	[TestMethod]
+	public void DuplicateNodes_ForADuplicationRequest_CopiesTheSelectionAndTheLinkBetweenIt()
+	{
+		// What the application does with the request, since the handler only reports it.
+		StartWithSelectedNodes(selectSource: true, selectTarget: true);
+
+		harness.Keyboard.Press(ImGuiKey.D, ctrl: true);
+		IReadOnlyList<Node> copies = engine.DuplicateNodes(observedNodeDuplications, NodeEditorEngine.DefaultDuplicationOffset);
+
+		Assert.HasCount(2, copies);
+		Assert.HasCount(4, engine.Nodes);
+		Assert.HasCount(2, engine.Links, "The pair's link should have been copied with it");
 	}
 
 	[TestMethod]

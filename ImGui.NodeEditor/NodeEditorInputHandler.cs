@@ -37,6 +37,9 @@ public class NodeEditorInputHandler
 			ProcessSelectedNodeDeletion(events);
 		}
 
+		// Check for nodes the user selected and asked to duplicate
+		ProcessSelectedNodeDuplication(events);
+
 		return events;
 	}
 
@@ -57,6 +60,57 @@ public class NodeEditorInputHandler
 		// repeat: false, so holding the key down deletes the selection once rather than firing
 		// again every repeat interval.
 		return ImGui.IsKeyPressed(ImGuiKey.Delete, repeat: false) || ImGui.IsKeyPressed(ImGuiKey.Backspace, repeat: false);
+	}
+
+	/// <summary>
+	/// Turns "select a node, then press Ctrl+D" into duplication requests.
+	/// </summary>
+	/// <remarks>
+	/// ImNodes tracks which nodes are selected but offers no notion of duplicating one, so the whole
+	/// gesture is the application's to make. The handler only reports what was asked for;
+	/// <see cref="NodeEditorEngine.DuplicateNodes"/> is what answers it, and the offset the copies
+	/// land at is the application's choice rather than this method's.
+	/// </remarks>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; the buffer is pinned for the call and not retained.")]
+	private static void ProcessSelectedNodeDuplication(InputEvents events)
+	{
+		// A Ctrl+D aimed at a text field is not aimed at the graph.
+		if (ImGui.GetIO().WantTextInput)
+		{
+			return;
+		}
+
+		// As a chord rather than a key plus a modifier test: a chord matches the modifiers exactly,
+		// so Ctrl+Shift+D stays available to whatever else wants it, and ImGuiKey.ModCtrl is the
+		// Command key on a Mac when the host sets ConfigMacOSXBehaviors. No repeat, so holding the
+		// keys down duplicates once rather than filling the graph.
+		if (!ImGui.IsKeyChordPressed((int)(ImGuiKey.ModCtrl | ImGuiKey.D)))
+		{
+			return;
+		}
+
+		int selectedCount = ImNodes.NumSelectedNodes();
+		if (selectedCount <= 0)
+		{
+			return;
+		}
+
+		int[] selected = new int[selectedCount];
+		unsafe
+		{
+			fixed (int* buffer = selected)
+			{
+				ImNodes.GetSelectedNodes(buffer);
+			}
+		}
+
+		// Distinct covers a selection that names an id more than once; duplicating it twice would
+		// put two copies in the same place.
+		events.NodeDuplicationRequests.AddRange(selected.Distinct());
+
+		// The selection is deliberately left alone. Unlike a delete it names nodes that are still
+		// there afterwards, and a second Ctrl+D on the same selection is a reasonable thing to ask
+		// for.
 	}
 
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; pointers are scoped to the call and not retained.")]
@@ -196,6 +250,11 @@ public class InputEvents
 	/// there that is already gone.
 	/// </summary>
 	public List<int> NodeDeletionRequests { get; } = [];
+	/// <summary>
+	/// Nodes the user selected and asked to duplicate. The originals stay where they are; it is the
+	/// application that decides where the copies land.
+	/// </summary>
+	public List<int> NodeDuplicationRequests { get; } = [];
 }
 
 /// <summary>
