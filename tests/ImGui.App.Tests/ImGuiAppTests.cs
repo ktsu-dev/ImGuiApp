@@ -548,6 +548,106 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "Delete should route through the registered backend");
 	}
 
+	/// <summary>
+	/// Builds a GL bound to nothing. Constructing one is enough for reference comparison, and the
+	/// reload path uploads through <see cref="IRendererBackend"/> rather than through this object, so
+	/// no GL entry point is ever called.
+	/// </summary>
+	private static Silk.NET.OpenGL.GL UnboundGL() => new(Mock.Of<INativeContext>());
+
+	[TestMethod]
+	public void CheckAndHandleContextChange_WhenTheGLIsReplaced_ReloadsTrackedTextures()
+	{
+		// The detector used to compare ImGui.GetCurrentContext().Handle, which is created once in
+		// ImGuiController.Init and never replaced, so a replaced GL context went unnoticed and every
+		// tracked texture id kept naming an object the new context had never created.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 2001 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiAppTextureInfo texture = new()
+			{
+				Path = path,
+				TextureId = 1001,
+				Width = 1,
+				Height = 1
+			};
+			ImGuiApp.Textures[path] = texture;
+
+			using Silk.NET.OpenGL.GL first = UnboundGL();
+			ImGuiApp.gl = first;
+			ImGuiApp.CheckAndHandleContextChange();
+
+			Assert.AreEqual(0, backend.CreateTextureCallCount, "The first observation of a GL has nothing to reload against");
+			Assert.AreEqual(1001, texture.TextureId, "The first observation should leave the tracked texture alone");
+
+			using Silk.NET.OpenGL.GL second = UnboundGL();
+			ImGuiApp.gl = second;
+			ImGuiApp.CheckAndHandleContextChange();
+
+			Assert.AreEqual(1, backend.CreateTextureCallCount, "Replacing the GL should reload the tracked textures");
+			Assert.AreEqual(2001, texture.TextureId, "The tracked texture should carry the id the new context handed back");
+		}
+		finally
+		{
+			ImGuiApp.gl = null;
+			File.Delete(file);
+		}
+	}
+
+	[TestMethod]
+	public void CheckAndHandleContextChange_WithTheSameGL_DoesNotReload()
+	{
+		// The guard against the opposite failure: RemapCanvas calls this on every window move and
+		// resize, so reloading whenever it is called would re-upload every texture and orphan the
+		// handles it replaced, since the reload does not delete them.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 2002 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiApp.Textures[path] = new ImGuiAppTextureInfo
+			{
+				Path = path,
+				TextureId = 1001,
+				Width = 1,
+				Height = 1
+			};
+
+			using Silk.NET.OpenGL.GL only = UnboundGL();
+			ImGuiApp.gl = only;
+
+			ImGuiApp.CheckAndHandleContextChange();
+			ImGuiApp.CheckAndHandleContextChange();
+			ImGuiApp.CheckAndHandleContextChange();
+
+			Assert.AreEqual(0, backend.CreateTextureCallCount, "An unchanged GL should never trigger a reload");
+			Assert.AreEqual(1001, ImGuiApp.Textures[path].TextureId, "An unchanged GL should leave the tracked texture alone");
+		}
+		finally
+		{
+			ImGuiApp.gl = null;
+			File.Delete(file);
+		}
+	}
+
 	[TestMethod]
 	public void GetOrLoadTexture_WithConcurrentFirstAccessToOnePath_UploadsExactlyOneTexture()
 	{
