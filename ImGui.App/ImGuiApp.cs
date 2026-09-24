@@ -1907,7 +1907,10 @@ public static partial class ImGuiApp
 	/// <param name="height">Texture height in pixels.</param>
 	/// <remarks>
 	/// Falls back to deleting and recreating the texture when the active renderer backend cannot update
-	/// in place, mutating <paramref name="textureInfo"/> to carry the new handle.
+	/// in place, mutating <paramref name="textureInfo"/> to carry the new handle. A texture that came
+	/// from <see cref="GetOrLoadTexture(AbsoluteFilePath)"/> stays published in the path-keyed cache
+	/// across that fallback, so <see cref="TryGetTexture(AbsoluteFilePath, out ImGuiAppTextureInfo?)"/>
+	/// keeps finding it and <c>CleanupAllTextures</c> keeps owning it.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException"><paramref name="textureInfo"/> is null.</exception>
 	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
@@ -1923,15 +1926,44 @@ public static partial class ImGuiApp
 			return;
 		}
 
-		DeleteTexture(textureInfo.TextureId);
-		textureInfo.TextureId = UploadTextureRGBA(rgba.ToArray(), width, height);
-		unsafe
-		{
-			textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
-		}
+		// A span cannot be captured by the Invoke body below, and the upload needs the pixels on the
+		// invoker thread, so the copy the recreate path always made happens here instead.
+		byte[] pixels = rgba.ToArray();
 
-		textureInfo.Width = width;
-		textureInfo.Height = height;
+		// Capture, delete, recreate and republish happen together inside one Invoke, for the same
+		// reason GetOrLoadTexture publishes inside its own: between the delete and the republish the
+		// path is absent from the cache, so a concurrent GetOrLoadTexture for it would miss, decode
+		// the file again and upload a second GPU texture. Invoke bodies never overlap, so nothing can
+		// observe the gap. Nested Invokes below run inline on the invoker thread.
+		Invoker.Invoke(() =>
+		{
+			// DeleteTexture removes every cache entry whose handle matches the one being deleted,
+			// which for a path-tracked texture is the entry GetOrLoadTexture published. The recreate
+			// below gives textureInfo a live handle again but restores no entry, so without this
+			// republish the texture stays on the GPU while TryGetTexture reports it missing, the next
+			// GetOrLoadTexture uploads a duplicate, and CleanupAllTextures - which walks
+			// Textures.Keys - can no longer reach either handle to free it.
+			//
+			// Reference equality is the test rather than a handle comparison: only the entry this
+			// instance is actually published under should come back, never one that a different
+			// ImGuiAppTextureInfo happens to share a handle with.
+			List<AbsoluteFilePath> publishedKeys = [.. Textures.Where(entry => ReferenceEquals(entry.Value, textureInfo)).Select(entry => entry.Key)];
+
+			DeleteTexture(textureInfo.TextureId);
+			textureInfo.TextureId = UploadTextureRGBA(pixels, width, height);
+			unsafe
+			{
+				textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
+			}
+
+			textureInfo.Width = width;
+			textureInfo.Height = height;
+
+			foreach (AbsoluteFilePath key in publishedKeys)
+			{
+				Textures[key] = textureInfo;
+			}
+		});
 	}
 
 	private static void ValidatePixelSpan(ReadOnlySpan<byte> rgba, int width, int height)
