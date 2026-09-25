@@ -427,7 +427,8 @@ public sealed class NodeEditorHistory : IDisposable
 		// In their old order, so each lands back at the index it was captured at.
 		foreach (NodeState node in (forward ? change.AddedNodes : change.RemovedNodes).OrderBy(n => n.Snapshot.Index))
 		{
-			if (Engine.RestoreNode(node.Snapshot) && node.Binding is NodeBinding binding)
+			bool restored = Engine.RestoreNode(node.Snapshot);
+			if (restored && node.Binding is NodeBinding binding)
 			{
 				factory?.RestoreBinding(binding);
 			}
@@ -565,13 +566,9 @@ internal sealed class GraphChange
 			}
 
 			Dictionary<int, object?> nowValues = now.Snapshot.Pins.ToDictionary(p => p.PinId, p => p.Value);
-			foreach (PinSnapshot pin in was.Snapshot.Pins)
-			{
-				if (nowValues.TryGetValue(pin.PinId, out object? value) && !Equals(pin.Value, value))
-				{
-					changedValues.Add((pin.PinId, pin.Value, value));
-				}
-			}
+			changedValues.AddRange(was.Snapshot.Pins
+				.Where(pin => nowValues.TryGetValue(pin.PinId, out object? value) && !Equals(pin.Value, value))
+				.Select(pin => (pin.PinId, pin.Value, nowValues[pin.PinId])));
 		}
 
 		HashSet<int> linksBefore = [.. before.Links.Select(l => l.Link.Id)];

@@ -131,9 +131,8 @@ internal static class KeyChordMatcher
 		bool meta = false;
 		List<ImGuiKey> keys = [];
 
-		foreach (Note note in chord.Notes)
+		foreach (string name in chord.Notes.Select(note => note.ToString()))
 		{
-			string name = note.ToString();
 			switch (name)
 			{
 				case "CTRL" or "CONTROL":

@@ -123,10 +123,10 @@ public partial class NodeEditorRenderer
 		// drawn later is drawn on top.
 		foreach (CommentBox box in engine.CommentBoxes.Reverse().ToList())
 		{
-			if (HandleCommentBox(engine, box, titleHeight))
-			{
-				closing = box.Id;
-			}
+			// Every box's items are submitted, whether or not an earlier one was closed, so the
+			// handling stays a statement rather than a filter.
+			bool closed = HandleCommentBox(engine, box, titleHeight);
+			closing = closed ? box.Id : closing;
 		}
 
 		ImGui.SetCursorScreenPos(cursor);

@@ -40,12 +40,15 @@ internal sealed class PinEditGestures
 	{
 		if (ImGui.IsItemActivated() || !current.TryGetValue(pinId, out long gesture))
 		{
-			gesture = Interlocked.Increment(ref lastIssued);
+			gesture = IssueGesture();
 			current[pinId] = gesture;
 		}
 
 		return gesture;
 	}
+
+	/// <summary>A token no instance has issued before.</summary>
+	private static long IssueGesture() => Interlocked.Increment(ref lastIssued);
 
 	/// <summary>Forget a pin that is gone.</summary>
 	/// <param name="pinId">The pin.</param>
