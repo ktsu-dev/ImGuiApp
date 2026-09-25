@@ -28,7 +28,7 @@ internal sealed class GraphicsDemo : IDemoTab
 	private readonly ImGuiAppTextureInfo?[] layoutTextures = new ImGuiAppTextureInfo?[ShownLayouts.Length];
 	private ImGuiAppTextureInfo? animatedTexture;
 	private byte[] animatedPixels = [];
-	private nint textureContext;
+	private ImGuiContextPtr textureContext;
 	private bool animatePixels = true;
 
 	public string TabName => "Graphics & Drawing";
@@ -177,10 +177,10 @@ internal sealed class GraphicsDemo : IDemoTab
 		}
 	}
 
-	private unsafe void EnsurePixelTextures()
+	private void EnsurePixelTextures()
 	{
-		nint context = (nint)ImGui.GetCurrentContext().Handle;
-		if (context == textureContext && animatedTexture is not null)
+		ImGuiContextPtr context = ImGui.GetCurrentContext();
+		if (context.Equals(textureContext) && animatedTexture is not null)
 		{
 			return;
 		}

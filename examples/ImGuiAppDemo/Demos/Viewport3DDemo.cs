@@ -181,13 +181,7 @@ internal sealed class Viewport3DDemo : IDemoTab
 			Topology = PrimitiveTopology.TriangleList,
 		});
 
-		ImTextureRef textureRef;
-		unsafe
-		{
-			textureRef = new ImTextureRef(texId: renderer3D.GetTargetTexture(target));
-		}
-
-		ImGui.Image(textureRef, ViewportSize);
+		ImGuiWidgets.Image(renderer3D.GetTargetTexture(target), ViewportSize);
 	}
 
 	private void DrawCpuWireframe(Vector2 origin, Matrix4x4 modelViewProjection)
