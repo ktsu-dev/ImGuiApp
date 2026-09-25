@@ -38,6 +38,8 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 
 	// UI state
 	private bool showDebugVisualization;
+	private bool showNodeBodies;
+	private Vector2 lastEditorSize;
 	private string lastActionMessage = "";
 	private Vector4 lastActionColor = new(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -103,6 +105,7 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 	{
 		Vector2 editorAreaPos = ImGui.GetCursorScreenPos();
 		Vector2 editorAreaSize = ImGui.GetContentRegionAvail();
+		lastEditorSize = editorAreaSize;
 
 		// Handle input events first
 		ProcessInputEvents();
@@ -344,6 +347,9 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 		ImGui.SeparatorText("Layout Tools");
 		RenderLayoutTools();
 
+		ImGui.SeparatorText("View & Node Content");
+		RenderViewControls();
+
 		// Physics settings
 		ImGui.SeparatorText("Physics Simulation");
 		RenderPhysicsControls();
@@ -444,6 +450,59 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 		}
 
 		ImGui.TextDisabled("Drag a comment's title to move it with its nodes; double-click to rename.");
+	}
+
+	/// <summary>
+	/// Draws the renderer's zoom, the fit-to-view action, and what is drawn inside each node: the
+	/// inline editors on unconnected parameter rows, and host content through the body hook.
+	/// </summary>
+	private void RenderViewControls()
+	{
+		float zoom = renderer.Zoom;
+		ImGui.SetNextItemWidth(120f);
+		if (DemoProbe.SliderFloat("Zoom", ref zoom, NodeEditorRenderer.MinZoom, NodeEditorRenderer.MaxZoom, "%.2fx"))
+		{
+			renderer.Zoom = zoom;
+		}
+
+		ImGui.SameLine();
+		if (DemoProbe.Button("Fit To View") && renderer.FitToView(engine, lastEditorSize))
+		{
+			lastActionMessage = $"Fitted the graph at {renderer.Zoom:0.00}x";
+			lastActionColor = new Vector4(0.0f, 0.8f, 1.0f, 1.0f); // Cyan
+		}
+
+		bool inlineEditors = renderer.DrawInlinePinEditors;
+		if (DemoProbe.Checkbox("Inline parameter editors", ref inlineEditors))
+		{
+			renderer.DrawInlinePinEditors = inlineEditors;
+		}
+
+		ImGui.SameLine();
+		float inlineWidth = renderer.InlineEditorWidth;
+		ImGui.SetNextItemWidth(120f);
+		if (DemoProbe.SliderFloat("Editor width", ref inlineWidth, 40f, 200f, "%.0f"))
+		{
+			renderer.InlineEditorWidth = inlineWidth;
+		}
+
+		// The body hook runs inside each node after its pins, so host content sits under the rows
+		// rather than among them. Here it summarises how the node sits in the graph.
+		if (DemoProbe.Checkbox("Show connection summary in each node", ref showNodeBodies))
+		{
+			renderer.DrawNodeBody = showNodeBodies ? DrawNodeSummary : null;
+		}
+	}
+
+	/// <summary>
+	/// The host content drawn in each node's body while the summary is on.
+	/// </summary>
+	private void DrawNodeSummary(Node node)
+	{
+		int incoming = engine.GetIncomingLinks(node.Id).Count();
+		int outgoing = engine.GetOutgoingLinks(node.Id).Count();
+		int reach = engine.GetDownstream(node.Id).NodeIds.Count;
+		ImGui.TextDisabled($"in {incoming} / out {outgoing} / reaches {reach}");
 	}
 
 	/// <summary>
