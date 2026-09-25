@@ -31,6 +31,8 @@ public sealed class WidgetsDemoUITests
 	private const string NetNewTab = "Net New";
 	private const string DialogsTab = "Dialogs";
 
+	private static readonly int[] FirstHunkOnly = [0];
+
 	private static readonly string[] AllTabs =
 	[
 		WidgetDemosTab, AdvancedDemosTab, ComparisonTab, NetNewTab, DialogsTab,
@@ -40,7 +42,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Diff view",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
@@ -409,6 +411,26 @@ public sealed class WidgetsDemoUITests
 		{
 			Assert.IsTrue(IsVisible(combo), $"The combo section is missing '{combo}'.");
 		}
+	}
+
+	[TestMethod]
+	public void DiffView_DrawsAHunkPerViewAndTicksTheOneThatWasClicked()
+	{
+		OpenSection(WidgetDemosTab, "Diff view");
+
+		Assert.IsTrue(IsVisible("##diffOne/[0]/heading"), "The selectable view drew no heading for its first hunk.");
+		Assert.IsTrue(IsVisible("##diffTwo/[0]/heading"), "The side-by-side view drew no heading for its first hunk.");
+		Assert.IsTrue(IsVisible("##diffThree/[0]/heading"), "The view with neither option drew no heading for its first hunk.");
+
+		Assert.IsEmpty(DiffViewDemo.FirstSelected, "Precondition: the demo starts with nothing staged.");
+
+		harness.Click("##diffOne/[0]/select");
+		harness.Step(2);
+
+		Assert.AreSequenceEqual(
+			FirstHunkOnly,
+			DiffViewDemo.FirstSelected,
+			"Ticking a hunk's checkbox is the whole point of the widget, so it has to reach the caller's set.");
 	}
 
 	[TestMethod]

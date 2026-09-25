@@ -33,6 +33,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Image`**: Images with alignment (`ImageCentered`, `ImageCenteredWithin`), returning whether they were clicked
 - **`PageIndicator`**: A row of carousel dots, optionally clickable to jump to a page
 - **`Tooltip`** / **`Breadcrumb`**: A hover tooltip and a path-style breadcrumb trail
+- **`DiffView`**: Draws a diff someone else computed, unified or side by side, with a checkbox per hunk and a proportional summary bar
 
 ### Progress and Loading
 
