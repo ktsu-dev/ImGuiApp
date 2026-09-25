@@ -1,8 +1,8 @@
-## v3.49.0 (minor)
+## v3.49.1 (patch)
 
-Changes since v3.48.0:
+Changes since v3.49.0:
 
-- Address code-quality findings in the node editor history and comment boxes ([@Claude](https://github.com/Claude))
-- Restore the .gitignore entries the SDK build dropped ([@Claude](https://github.com/Claude))
-- [minor] NodeEditor: undo/redo, keymap commands, grid snapping and comment boxes ([@Claude](https://github.com/Claude))
+- [patch] Keep the new demo code free of unsafe blocks ([@Claude](https://github.com/Claude))
+- [patch] Drop the float equality guard on the viewport's wheel dolly ([@Claude](https://github.com/Claude))
+- [patch] Cover recent features in the ImGuiApp demo ([@Claude](https://github.com/Claude))
 
