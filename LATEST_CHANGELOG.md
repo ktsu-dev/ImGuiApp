@@ -1,7 +1,6 @@
-## v3.46.1 (patch)
+## v3.47.0 (minor)
 
 Changes since v3.46.0:
 
-- Bump Moq from 4.20.72 to 4.21.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Compare the GL context, not the ImGui context, when detecting a context change ([@Claude](https://github.com/Claude))
 
