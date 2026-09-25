@@ -1,8 +1,6 @@
-## v3.49.1 (patch)
+## v3.49.2 (patch)
 
-Changes since v3.49.0:
+Changes since v3.49.1:
 
-- [patch] Keep the new demo code free of unsafe blocks ([@Claude](https://github.com/Claude))
-- [patch] Drop the float equality guard on the viewport's wheel dolly ([@Claude](https://github.com/Claude))
-- [patch] Cover recent features in the ImGuiApp demo ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
