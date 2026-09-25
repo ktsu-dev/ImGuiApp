@@ -11,11 +11,12 @@ using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.App;
+using ktsu.ImGui.Examples.App.Demos;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
-/// Drives ImGuiAppDemo through the headless harness. The demo is a tab bar over fourteen sections,
+/// Drives ImGuiAppDemo through the headless harness. The demo is a tab bar over fifteen sections,
 /// including the ImGuizmo, ImNodes and ImPlot extensions, so the broadest guarantee here is that
 /// every tab renders and its controls respond.
 /// </summary>
@@ -31,6 +32,7 @@ public sealed class AppDemoUITests
 	private const string InputTab = "Input & Interaction";
 	private const string AnimationTab = "Animation & Effects";
 	private const string ImGuizmoTab = "ImGuizmo 3D Gizmos";
+	private const string Viewport3DTab = "3D Viewport";
 	private const string ImNodesTab = "ImNodes Editor";
 	private const string ImPlotTab = "ImPlot Charts";
 	private const string CleanImNodesTab = "Clean ImNodes";
@@ -53,7 +55,7 @@ public sealed class AppDemoUITests
 	/// <summary>
 	/// Reports whether an item was drawn in the frame just rendered. Probe.Rect remembers the last
 	/// position an item ever occupied, so it answers "was this ever drawn" rather than "is this on
-	/// screen now" -- and with fourteen tabs, most items are off screen most of the time.
+	/// screen now" -- and with fifteen tabs, most items are off screen most of the time.
 	/// </summary>
 	private bool IsVisible(string name) => harness.Probe.WasSeenInFrame(name, harness.FrameCount - 1);
 
@@ -88,7 +90,7 @@ public sealed class AppDemoUITests
 	[TestMethod]
 	public void Demo_RegistersEveryTab()
 	{
-		Assert.HasCount(14, ImGuiAppDemo.TabNames);
+		Assert.HasCount(15, ImGuiAppDemo.TabNames);
 
 		foreach (string tab in ImGuiAppDemo.TabNames)
 		{
@@ -100,7 +102,7 @@ public sealed class AppDemoUITests
 	public void EveryTab_RendersWithoutError()
 	{
 		// The broadest guard in the suite. Each tab's Render runs only while it is selected, so
-		// this is what actually executes all fourteen code paths -- including the three extension
+		// this is what actually executes all fifteen code paths -- including the three extension
 		// tabs, which fault inside native code if ImGuizmo, ImNodes or ImPlot were never handed the
 		// ImGui context.
 		foreach (string tab in ImGuiAppDemo.TabNames)
@@ -170,6 +172,97 @@ public sealed class AppDemoUITests
 		harness.Click("Clear Canvas");
 		harness.Step(2);
 		Assert.IsTrue(IsVisible("Clear Canvas"), "The canvas should survive being cleared.");
+	}
+
+	/// <summary>
+	/// The raw-pixel section uploads one picture from each PixelLayout and streams a padded BGR
+	/// buffer through UpdateTexture every frame. A stride or layout mistake throws from the upload
+	/// rather than drawing wrong, so drawing the tab for a while is the guard.
+	/// </summary>
+	[TestMethod]
+	public void Graphics_UploadsTexturesFromEachPixelLayout()
+	{
+		OpenTab(GraphicsTab);
+		harness.Step(5);
+
+		Assert.IsTrue(IsVisible("Animate streamed pixels"), "The raw-pixel section should be showing.");
+		Assert.AreEqual(0, ImGui.GetCurrentContext().ErrorCountCurrentFrame, "ImGui reported the raw-pixel section as misuse.");
+
+		harness.Click("Animate streamed pixels");
+		harness.Step(2);
+		harness.Click("Animate streamed pixels");
+		harness.Step(2);
+		Assert.IsTrue(IsVisible("Animate streamed pixels"), "The tab should survive pausing and resuming the stream.");
+	}
+
+	/// <summary>
+	/// The harness's software renderer implements IRenderer3D, so the tab draws its cube into an
+	/// offscreen target and shows that as an image. The cube's faces are saturated colours on a
+	/// near-grey clear, so saturated pixels inside the viewport are the cube having arrived.
+	/// </summary>
+	[TestMethod]
+	public void Viewport3D_DrawsTheCubeThroughIRenderer3D()
+	{
+		OpenTab(Viewport3DTab);
+
+		Assert.IsTrue(ImGuiAppDemo.GetTab<Viewport3DDemo>().LastFrameUsedRenderer3D, "The harness offers IRenderer3D, so the tab should use it.");
+		Assert.IsGreaterThan(2000, CountSaturatedPixelsIn("Viewport"), "The cube should be drawn inside the viewport.");
+	}
+
+	[TestMethod]
+	public void Viewport3D_FallsBackToACpuWireframe()
+	{
+		ClickIn(Viewport3DTab, "Force CPU wireframe");
+
+		Assert.IsFalse(ImGuiAppDemo.GetTab<Viewport3DDemo>().LastFrameUsedRenderer3D, "The fallback should not use IRenderer3D.");
+		Assert.AreEqual(0, ImGui.GetCurrentContext().ErrorCountCurrentFrame, "ImGui reported the wireframe as misuse.");
+		Assert.IsLessThan(200, CountSaturatedPixelsIn("Viewport"), "The wireframe is drawn in grey, not as the shaded faces.");
+	}
+
+	[TestMethod]
+	public void Viewport3D_DraggingOrbitsAndTheWheelDollies()
+	{
+		OpenTab(Viewport3DTab);
+		ktsu.ImGui.Widgets.ImGuiWidgets.Viewport3DState camera = ImGuiAppDemo.GetTab<Viewport3DDemo>().Camera;
+		float yaw = camera.Yaw;
+		float distance = camera.Distance;
+
+		Rectangle rect = harness.Probe.Rect("Viewport")
+			?? throw new AssertFailedException("The viewport was never marked.");
+		float y = rect.MinY + (rect.Height / 2f);
+		harness.Mouse.Drag(rect.MinX + (rect.Width * 0.3f), y, rect.MinX + (rect.Width * 0.7f), y);
+		harness.Step(2);
+
+		Assert.AreNotEqual(yaw, camera.Yaw, "A horizontal drag should turn the camera about its target.");
+
+		harness.Mouse.Wheel(rect.MinX + (rect.Width / 2f), y, 3);
+		harness.Step(2);
+
+		Assert.IsLessThan(distance, camera.Distance, "Wheeling forward should move the camera in.");
+	}
+
+	private int CountSaturatedPixelsIn(string item)
+	{
+		Rectangle rect = harness.Probe.Rect(item)
+			?? throw new AssertFailedException($"No item matching '{item}' has been marked.");
+		CapturedFrame frame = harness.Capture();
+
+		int count = 0;
+		for (int y = rect.MinY; y < rect.MaxY; y++)
+		{
+			for (int x = rect.MinX; x < rect.MaxX; x++)
+			{
+				Rgba32 p = frame.GetPixel(x, y);
+				int max = Math.Max(p.R, Math.Max(p.G, p.B));
+				int min = Math.Min(p.R, Math.Min(p.G, p.B));
+				if (max - min > 60)
+				{
+					count++;
+				}
+			}
+		}
+
+		return count;
 	}
 
 	[TestMethod]
@@ -418,6 +511,41 @@ public sealed class AppDemoUITests
 			0,
 			ImGui.GetCurrentContext().ErrorCountCurrentFrame,
 			"ImGui reported the node editor's drawing as misuse.");
+	}
+
+	[TestMethod]
+	public void CleanImNodes_FitToViewFitsTheGraph()
+	{
+		OpenTab(CleanImNodesTab);
+		Assert.IsTrue(IsVisible("Zoom"), "The view controls should offer a zoom slider.");
+
+		harness.Click("Fit To View");
+		harness.Step(3);
+
+		Assert.AreEqual(0, ImGui.GetCurrentContext().ErrorCountCurrentFrame, "ImGui reported fitting the view as misuse.");
+		Assert.IsTrue(IsVisible("Fit To View"), "The tab should survive fitting the view.");
+	}
+
+	/// <summary>
+	/// The body hook submits widgets inside every node, between ImNodes' BeginNode and EndNode,
+	/// which is where an ID stack or cursor mistake would show. Switched back off afterwards,
+	/// because the demo tabs outlive the harness.
+	/// </summary>
+	[TestMethod]
+	public void CleanImNodes_NodeBodyHookAndInlineEditorTogglesDrawWithoutError()
+	{
+		OpenTab(CleanImNodesTab);
+
+		foreach (string toggle in new[] { "Show connection summary in each node", "Inline parameter editors" })
+		{
+			harness.Click(toggle);
+			harness.Step(3);
+			Assert.AreEqual(0, ImGui.GetCurrentContext().ErrorCountCurrentFrame, $"ImGui reported '{toggle}' as misuse.");
+
+			harness.Click(toggle);
+			harness.Step(3);
+			Assert.AreEqual(0, ImGui.GetCurrentContext().ErrorCountCurrentFrame, $"ImGui reported undoing '{toggle}' as misuse.");
+		}
 	}
 
 	/// <summary>
