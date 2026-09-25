@@ -13,7 +13,7 @@ using Hexa.NET.ImNodes;
 /// <summary>
 /// Pure rendering class - only handles ImNodes display, no business logic
 /// </summary>
-public class NodeEditorRenderer
+public partial class NodeEditorRenderer
 {
 	/// <summary>The smallest <see cref="Zoom"/> the view allows.</summary>
 	public const float MinZoom = 0.25f;
@@ -58,10 +58,88 @@ public class NodeEditorRenderer
 	// read-backs can undo the same transform the render applied.
 	private Vector2 zoomAnchor;
 
+	/// <summary>Where ImNodes' editor space starts on screen, as of the last Render.</summary>
+	private Vector2 canvasOrigin;
+
+	/// <summary>The grid spacing in force during the last Render, before zoom scaled it.</summary>
+	private float gridSpacing = 24f;
+
+	/// <summary>The nodes drawn in the last Render, so state kept for nodes that are gone can be dropped.</summary>
+	private readonly HashSet<int> renderedNodeIds = [];
+
+	/// <summary>Where each node the user is dragging was when the drag started, in engine space.</summary>
+	private readonly Dictionary<int, Vector2> dragStarts = [];
+
+	/// <summary>The drag finished on the last call to <see cref="GetNodePositionUpdates"/>, if one did.</summary>
+	private readonly List<NodeMove> completedNodeMoves = [];
+
+	/// <summary>Tells one edit of an inline editor's pin from the next.</summary>
+	private readonly PinEditGestures inlineEditGestures = new();
+
 	/// <summary>
 	/// Set of node IDs currently being dragged by the user
 	/// </summary>
+	/// <remarks>
+	/// This includes nodes being carried by a comment box the user is dragging, so a host that hands
+	/// this to <see cref="NodeEditorEngine.SetDraggedNodes"/> keeps the layout off them too.
+	/// </remarks>
 	public IReadOnlySet<int> CurrentlyDraggedNodes => currentlyDraggedNodes;
+
+	/// <summary>
+	/// Where the history of the user's gestures is recorded, or null to record nothing.
+	/// </summary>
+	/// <remarks>
+	/// With a history, the renderer records what only it sees finish: a node drag when the mouse is
+	/// released, and a comment box moved, resized, renamed or closed. Pin values edited in the inline
+	/// editors reach the history through <see cref="NodeEditorEngine.PinValueChanged"/> whether this
+	/// is set or not, since the history listens to the engine for those.
+	/// </remarks>
+	public NodeEditorHistory? History { get; set; }
+
+	/// <summary>
+	/// Whether a dragged node snaps to the grid ImNodes draws behind the graph. Off by default.
+	/// </summary>
+	/// <remarks>
+	/// This turns on ImNodes' own grid snapping for the duration of <see cref="Render"/>, so the
+	/// lattice a node lands on is the grid on screen and snapping happens as the node is dragged,
+	/// with every selected node moved by the same amount as the one under the pointer so a selection
+	/// keeps its shape. A comment box snaps its corner to the same grid when released.
+	/// <para>
+	/// Only a drag is snapped. A node the layout moves goes wherever the layout puts it, so for a
+	/// graph that is meant to stay on the grid turn the physics off or pin its nodes, and use
+	/// <see cref="SnapNodesToGrid"/> to bring nodes placed some other way onto it.
+	/// </para>
+	/// <para>
+	/// The grid ImNodes draws is scaled with <see cref="Zoom"/> about the middle of the editor, and
+	/// its lines stay where ImNodes' panning puts them, so nodes snapped at one zoom sit on a common
+	/// lattice with each other; nodes snapped at a different zoom may sit on a lattice offset from
+	/// it.
+	/// </para>
+	/// </remarks>
+	public bool SnapToGrid { get; set; }
+
+	/// <summary>
+	/// The grid's spacing at the engine's own scale, or null to keep whatever ImNodes' style says
+	/// (24 unless the host has changed it).
+	/// </summary>
+	/// <remarks>This sets the drawn grid as well as the snapping lattice, so the two stay one grid.</remarks>
+	public float? GridSpacing
+	{
+		get;
+		set => field = value is float spacing ? Math.Max(spacing, 1f) : null;
+	}
+
+	/// <summary>
+	/// The moves made by a node drag that finished during the last call to
+	/// <see cref="GetNodePositionUpdates"/>, or nothing if no drag finished then.
+	/// </summary>
+	/// <remarks>
+	/// A drag finishes when the left mouse button is released, so a drag that pauses for a few frames
+	/// is still one drag. Each move runs from where the node was when the drag started to where the
+	/// update just returned for it puts it — a position that has already been snapped when
+	/// <see cref="SnapToGrid"/> is on. <see cref="History"/>, when set, has already recorded them.
+	/// </remarks>
+	public IReadOnlyList<NodeMove> CompletedNodeMoves => completedNodeMoves;
 
 	/// <summary>
 	/// Whether hovering a node draws the links that meet it in the highlight colour.
@@ -217,6 +295,23 @@ public class NodeEditorRenderer
 		nodeScreenRects.Clear();
 		pinScreenPositions.Clear();
 
+		// The grid settings go on before the zoom scales the style, so the spacing asked for is the
+		// spacing at the engine's scale, and come off after it is restored.
+		ImNodesStylePtr style = ImNodes.GetStyle();
+		ImNodesStyleFlags previousFlags = style.Flags;
+		float previousGridSpacing = style.GridSpacing;
+		if (GridSpacing is float spacing)
+		{
+			style.GridSpacing = spacing;
+		}
+
+		if (SnapToGrid)
+		{
+			style.Flags = previousFlags | ImNodesStyleFlags.GridSnapping;
+		}
+
+		gridSpacing = style.GridSpacing;
+
 		bool scaled = !IsUnzoomed;
 		ScaledStyle restore = default;
 		if (scaled)
@@ -229,11 +324,23 @@ public class NodeEditorRenderer
 
 		ImNodes.BeginNodeEditor();
 
+		// ImNodes places editor space on screen from the cursor as the editor's child window begins,
+		// so this is where a comment box's editor-space rectangle lands on screen.
+		canvasOrigin = ImGui.GetCursorScreenPos();
+
+		// Before any node, so the boxes are drawn in the editor's background channel: over the grid,
+		// under every node, and under the links, which ImNodes draws into the same channel later.
+		RenderCommentBoxes(engine);
+
 		// Render all nodes
+		renderedNodeIds.Clear();
 		foreach (Node node in engine.Nodes)
 		{
 			RenderNode(engine, node, highlightColor);
+			renderedNodeIds.Add(node.Id);
 		}
+
+		ForgetNodesNotRendered();
 
 		// Render all links
 		foreach (Link link in engine.Links)
@@ -258,6 +365,83 @@ public class NodeEditorRenderer
 			RestoreImNodesStyle(restore);
 			ImGui.PopFont();
 		}
+
+		style.Flags = previousFlags;
+		style.GridSpacing = previousGridSpacing;
+	}
+
+	/// <summary>
+	/// Drop what is remembered about nodes that were not drawn this frame.
+	/// </summary>
+	/// <remarks>
+	/// ImNodes forgets a node it was not given for a frame, so a node that comes back — an undone
+	/// deletion restores a node under its old id — is a new node to ImNodes and has to have its
+	/// position written again. Remembering where it was last drawn would make the renderer think
+	/// ImNodes already had it, skip the write, and read ImNodes' default position back as a drag.
+	/// </remarks>
+	private void ForgetNodesNotRendered()
+	{
+		foreach (int stale in lastKnownNodePositions.Keys.Where(id => !renderedNodeIds.Contains(id)).ToList())
+		{
+			lastKnownNodePositions.Remove(stale);
+			lastKnownNodeDimensions.Remove(stale);
+			dragStarts.Remove(stale);
+		}
+	}
+
+	/// <summary>
+	/// Where a position lands when snapped to the grid ImNodes draws.
+	/// </summary>
+	/// <param name="position">A position in engine space.</param>
+	/// <returns>The nearest grid point, in engine space.</returns>
+	/// <remarks>
+	/// ImNodes snaps in its grid space — editor space less the panning — to multiples of the zoomed
+	/// spacing, and so does this, so a comment box and a node snapped at the same zoom share a
+	/// lattice. Uses the spacing and zoom of the last <see cref="Render"/>.
+	/// </remarks>
+	public Vector2 SnapPositionToGrid(Vector2 position)
+	{
+		float spacing = gridSpacing * Zoom;
+		if (spacing <= 0f)
+		{
+			return position;
+		}
+
+		Vector2 panning = ImNodes.EditorContextGetPanning();
+		Vector2 grid = ToView(position) - panning;
+		Vector2 snapped = new(MathF.Round(grid.X / spacing) * spacing, MathF.Round(grid.Y / spacing) * spacing);
+		return ToEngine(snapped + panning);
+	}
+
+	/// <summary>
+	/// Move nodes onto the grid, each to its nearest grid point.
+	/// </summary>
+	/// <param name="engine">The engine holding the nodes.</param>
+	/// <param name="nodeIds">The nodes to move. Ids naming no node are skipped.</param>
+	/// <returns>How many nodes moved.</returns>
+	/// <remarks>
+	/// For nodes that did not arrive by a drag, which <see cref="SnapToGrid"/> does not touch:
+	/// created in code, placed by the layout, or loaded from a file. Recorded as one step when
+	/// <see cref="History"/> is set.
+	/// </remarks>
+	public int SnapNodesToGrid(NodeEditorEngine engine, IEnumerable<int> nodeIds)
+	{
+		Ensure.NotNull(engine);
+		Ensure.NotNull(nodeIds);
+
+		HashSet<int> wanted = [.. nodeIds];
+		List<NodeMove> moves = [.. engine.Nodes
+			.Where(n => wanted.Contains(n.Id))
+			.Select(n => new NodeMove(n.Id, n.Position, SnapPositionToGrid(n.Position)))
+			.Where(m => m.From != m.To)];
+
+		foreach (NodeMove move in moves)
+		{
+			engine.UpdateNodePosition(move.NodeId, move.To);
+		}
+
+		History?.RecordNodeMoves(moves, "Snap to grid");
+		return moves.Count;
 	}
 
 	/// <summary>
@@ -510,131 +694,94 @@ public class NodeEditorRenderer
 		string id = $"##pin{pin.Id}";
 		object? current = engine.GetPinValue(pin.Id);
 
-		switch (kind)
+		(bool changed, object? value) = kind switch
 		{
-			case PinValueKind.Boolean:
-				DrawBooleanEditor(engine, pin, id, current);
-				break;
+			PinValueKind.Boolean => EditBoolean(id, current),
+			PinValueKind.Int32 => EditInt32(id, current),
+			PinValueKind.Single => EditSingle(id, current),
+			PinValueKind.Double => EditDouble(id, current),
+			PinValueKind.String => EditString(id, current),
+			PinValueKind.Vector2 => EditVector2(id, current),
+			PinValueKind.Vector3 => EditVector3(id, current),
+			PinValueKind.Enum => EditEnum(pin, id, current),
 
-			case PinValueKind.Int32:
-				DrawInt32Editor(engine, pin, id, current);
-				break;
+			// No Unsupported case: the early return above has already taken that path.
+			_ => (false, current),
+		};
 
-			case PinValueKind.Single:
-				DrawSingleEditor(engine, pin, id, current);
-				break;
-
-			case PinValueKind.Double:
-				DrawDoubleEditor(engine, pin, id, current);
-				break;
-
-			case PinValueKind.String:
-				DrawStringEditor(engine, pin, id, current);
-				break;
-
-			case PinValueKind.Vector2:
-				DrawVector2Editor(engine, pin, id, current);
-				break;
-
-			case PinValueKind.Vector3:
-				DrawVector3Editor(engine, pin, id, current);
-				break;
-
-			case PinValueKind.Enum:
-				DrawEnumEditor(engine, pin, id, current);
-				break;
-
-			// No Unsupported case: the early return above has already taken that path, and default
-			// covers every kind regardless.
-			default:
-				break;
+		// Tracked every frame the widget is drawn rather than only when it changes, so the
+		// activation that starts a gesture is seen. A pick from an enum's list is a gesture of its
+		// own, and the item the list leaves behind is the combo rather than the pick, so it has none.
+		long gesture = inlineEditGestures.Track(pin.Id);
+		if (changed)
+		{
+			engine.SetPinValue(pin.Id, value, kind == PinValueKind.Enum ? null : gesture);
 		}
 	}
 
-	/// <summary>Draw a <see cref="bool"/> pin as a checkbox.</summary>
-	private static void DrawBooleanEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit a <see cref="bool"/> pin as a checkbox.</summary>
+	private static (bool Changed, object? Value) EditBoolean(string id, object? current)
 	{
 		bool value = current as bool? ?? false;
-		if (ImGui.Checkbox(id, ref value))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.Checkbox(id, ref value), value);
 	}
 
-	/// <summary>Draw an <see cref="int"/> pin as a drag box.</summary>
-	private static void DrawInt32Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit an <see cref="int"/> pin as a drag box.</summary>
+	private static (bool Changed, object? Value) EditInt32(string id, object? current)
 	{
 		int value = current as int? ?? 0;
-		if (ImGui.DragInt(id, ref value))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.DragInt(id, ref value), value);
 	}
 
-	/// <summary>Draw a <see cref="float"/> pin as a drag box.</summary>
-	private static void DrawSingleEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit a <see cref="float"/> pin as a drag box.</summary>
+	private static (bool Changed, object? Value) EditSingle(string id, object? current)
 	{
 		float value = current as float? ?? 0f;
-		if (ImGui.DragFloat(id, ref value))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.DragFloat(id, ref value), value);
 	}
 
-	/// <summary>Draw a <see cref="double"/> pin as an input box.</summary>
-	private static void DrawDoubleEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit a <see cref="double"/> pin as an input box.</summary>
+	private static (bool Changed, object? Value) EditDouble(string id, object? current)
 	{
 		double value = current as double? ?? 0.0;
-		if (ImGui.InputDouble(id, ref value))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.InputDouble(id, ref value), value);
 	}
 
-	/// <summary>Draw a <see cref="string"/> pin as a text box.</summary>
-	private static void DrawStringEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit a <see cref="string"/> pin as a text box.</summary>
+	private static (bool Changed, object? Value) EditString(string id, object? current)
 	{
 		string value = current as string ?? string.Empty;
-		if (ImGui.InputText(id, ref value, 256))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.InputText(id, ref value, 256), value);
 	}
 
-	/// <summary>Draw a <see cref="Vector2"/> pin as a two-component input box.</summary>
-	private static void DrawVector2Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit a <see cref="Vector2"/> pin as a two-component input box.</summary>
+	private static (bool Changed, object? Value) EditVector2(string id, object? current)
 	{
 		Vector2 value = current as Vector2? ?? Vector2.Zero;
-		if (ImGui.InputFloat2(id, ref value))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.InputFloat2(id, ref value), value);
 	}
 
-	/// <summary>Draw a <see cref="Vector3"/> pin as a three-component input box.</summary>
-	private static void DrawVector3Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	/// <summary>Edit a <see cref="Vector3"/> pin as a three-component input box.</summary>
+	private static (bool Changed, object? Value) EditVector3(string id, object? current)
 	{
 		Vector3 value = current as Vector3? ?? Vector3.Zero;
-		if (ImGui.InputFloat3(id, ref value))
-		{
-			engine.SetPinValue(pin.Id, value);
-		}
+		return (ImGui.InputFloat3(id, ref value), value);
 	}
 
 	/// <summary>
-	/// Draw an enum pin as a list of its names.
+	/// Edit an enum pin as a list of its names.
 	/// </summary>
-	/// <param name="engine">The engine holding the value.</param>
 	/// <param name="pin">The pin.</param>
 	/// <param name="id">The widget's id.</param>
 	/// <param name="current">What the pin holds now.</param>
+	/// <returns>Whether a name was picked, and the value it stands for.</returns>
 	/// <remarks>
 	/// Matched by value, not by <c>ToString()</c> against the defined names: a value not defined in
 	/// the type (a cast integer, a flags combination) has no matching name, and picking index 0 for
 	/// it would display a name the pin does not actually hold, without writing it back. Such a value
 	/// shows a blank preview instead until the user picks a defined one.
 	/// </remarks>
-	private static void DrawEnumEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	private static (bool Changed, object? Value) EditEnum(Pin pin, string id, object? current)
 	{
 		Type enumType = Nullable.GetUnderlyingType(pin.DataType!) ?? pin.DataType!;
 		string[] names = Enum.GetNames(enumType);
@@ -643,6 +790,7 @@ public class NodeEditorRenderer
 		int index = current is null ? -1 : Array.IndexOf(values, current);
 		string preview = index >= 0 ? names[index] : string.Empty;
 
+		(bool Changed, object? Value) result = (false, current);
 		if (ImGui.BeginCombo(id, preview))
 		{
 			for (int i = 0; i < names.Length; i++)
@@ -650,7 +798,7 @@ public class NodeEditorRenderer
 				bool selected = i == index;
 				if (ImGui.Selectable(names[i], selected))
 				{
-					engine.SetPinValue(pin.Id, values.GetValue(i));
+					result = (true, values.GetValue(i));
 				}
 
 				if (selected)
@@ -661,6 +809,8 @@ public class NodeEditorRenderer
 
 			ImGui.EndCombo();
 		}
+
+		return result;
 	}
 
 	/// <summary>
@@ -971,10 +1121,19 @@ public class NodeEditorRenderer
 	/// <summary>
 	/// Check for nodes that have moved and return their new positions
 	/// </summary>
+	/// <remarks>
+	/// Also notices when a drag ends, which is what <see cref="CompletedNodeMoves"/> reports and
+	/// <see cref="History"/> records. A node counts as dragged when it moves while it is selected
+	/// and the left button is down, which is how ImNodes drags nodes; a node that moves otherwise has
+	/// been panned, and panning is not an edit.
+	/// </remarks>
 	public Dictionary<int, Vector2> GetNodePositionUpdates(NodeEditorEngine engine)
 	{
+		Ensure.NotNull(engine);
 		Dictionary<int, Vector2> updates = [];
 		currentlyDraggedNodes.Clear();
+		completedNodeMoves.Clear();
+		bool leftDown = ImGui.IsMouseDown(ImGuiMouseButton.Left);
 
 		foreach (Node node in engine.Nodes)
 		{
@@ -994,10 +1153,49 @@ public class NodeEditorRenderer
 				updates[node.Id] = ToEngine(currentImNodesPos);
 				lastKnownNodePositions[node.Id] = currentImNodesPos;
 				currentlyDraggedNodes.Add(node.Id);
+
+				if (leftDown && selectedNodes.Contains(node.Id))
+				{
+					dragStarts.TryAdd(node.Id, node.Position);
+				}
 			}
 		}
 
+		if (!leftDown && dragStarts.Count > 0)
+		{
+			FinishDrag(engine, updates);
+		}
+
+		foreach (int carried in CommentBoxCarriedNodes)
+		{
+			currentlyDraggedNodes.Add(carried);
+		}
+
 		return updates;
+	}
+
+	/// <summary>
+	/// Turn the drag that just ended into moves, and record them.
+	/// </summary>
+	private void FinishDrag(NodeEditorEngine engine, Dictionary<int, Vector2> updates)
+	{
+		foreach ((int nodeId, Vector2 from) in dragStarts)
+		{
+			Node? node = engine.Nodes.FirstOrDefault(n => n.Id == nodeId);
+			if (node is null)
+			{
+				continue;
+			}
+
+			Vector2 to = updates.TryGetValue(nodeId, out Vector2 updated) ? updated : node.Position;
+			if (from != to)
+			{
+				completedNodeMoves.Add(new NodeMove(nodeId, from, to));
+			}
+		}
+
+		dragStarts.Clear();
+		History?.RecordNodeMoves(completedNodeMoves);
 	}
 
 	/// <summary>

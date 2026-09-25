@@ -14,7 +14,7 @@ using ktsu.ForceDirectedLayout;
 /// which operates in double precision. Node positions remain float-precision <see cref="Vector2"/>
 /// to match the surrounding ImGui/ImNodes ecosystem; conversion happens at the accessor boundary.
 /// </summary>
-public class NodeEditorEngine
+public partial class NodeEditorEngine
 {
 	private readonly List<Node> nodes = [];
 	private readonly List<Link> links = [];
@@ -46,6 +46,17 @@ public class NodeEditorEngine
 	/// unrelated node that happens to be issued the same id.
 	/// </remarks>
 	public event EventHandler<EventArgs>? Cleared;
+
+	/// <summary>
+	/// Raised after a pin's value has been written through <see cref="SetPinValue(int, object?)"/>
+	/// or <see cref="ResetPinValue(int)"/>.
+	/// </summary>
+	/// <remarks>
+	/// Values copied onto a duplicate and values put back by an undo are not reported here: the
+	/// first is part of creating a node, the second is part of undoing a change that was already
+	/// reported once.
+	/// </remarks>
+	public event EventHandler<PinValueChangedEventArgs>? PinValueChanged;
 
 	/// <summary>
 	/// Create a new node editor engine with default physics settings.
@@ -175,7 +186,36 @@ public class NodeEditorEngine
 	/// reaches neither the accessor nor the store. A bound accessor can still report a write it did
 	/// not make, which is what its own false return means.
 	/// </remarks>
-	public bool SetPinValue(int pinId, object? value)
+	public bool SetPinValue(int pinId, object? value) => SetPinValue(pinId, value, editGesture: null);
+
+	/// <summary>
+	/// Write a value to a pin, saying which edit gesture the write belongs to.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="value">The value.</param>
+	/// <param name="editGesture">
+	/// Identifies one continuous edit — one drag of a slider, one session of typing into a box — or
+	/// null for a write that stands alone. Writes sharing a gesture are one change as far as
+	/// <see cref="PinValueChanged"/> listeners such as <see cref="NodeEditorHistory"/> are concerned,
+	/// so dragging a value across a hundred frames undoes in one step rather than a hundred.
+	/// </param>
+	/// <returns>True if it was written, false if there is no such pin or its type refused the value.</returns>
+	public bool SetPinValue(int pinId, object? value, long? editGesture)
+	{
+		object? previous = GetPinValue(pinId);
+		if (!WritePinValue(pinId, value))
+		{
+			return false;
+		}
+
+		PinValueChanged?.Invoke(this, new PinValueChangedEventArgs(pinId, previous, GetPinValue(pinId), editGesture));
+		return true;
+	}
+
+	/// <summary>
+	/// Write a value to a pin without reporting it, for the callers that are not an edit.
+	/// </summary>
+	private bool WritePinValue(int pinId, object? value)
 	{
 		Pin? pin = FindPin(pinId);
 		if (pin is null || !PinValueStore.Accepts(pin.DataType, value))
@@ -204,13 +244,21 @@ public class NodeEditorEngine
 	/// </remarks>
 	public bool ResetPinValue(int pinId)
 	{
+		object? previous = GetPinValue(pinId);
 		if (!pinValues.Reset(pinId))
 		{
 			return false;
 		}
 
-		return !pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+		bool written = !pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
 			|| accessor.Set(pinValues.Get(pinId));
+
+		if (written)
+		{
+			PinValueChanged?.Invoke(this, new PinValueChangedEventArgs(pinId, previous, GetPinValue(pinId), EditGesture: null));
+		}
+
+		return written;
 	}
 
 	/// <summary>
@@ -409,7 +457,7 @@ public class NodeEditorEngine
 	/// draws it, and a copy inherits its original's velocity no more than it inherits its id.
 	/// </para>
 	/// <para>
-	/// A copied pin's value is written through <see cref="SetPinValue(int, object?)"/> and so lands
+	/// A copied pin's value is written the way <see cref="SetPinValue(int, object?)"/> writes one, and so lands
 	/// in this engine's own store, even where the original's lives on an instance a factory bound
 	/// through <see cref="BindPinValue(int, PinValueAccessor)"/>: a copy has no instance of its own.
 	/// It has no seeded default either, so <see cref="ResetPinValue(int)"/> on a copied pin reports
@@ -450,8 +498,8 @@ public class NodeEditorEngine
 
 		// A copy of a tuned node is expected to arrive tuned: duplicating a node whose Threshold the
 		// user set to 50 and getting one that reads 0 is the copy quietly computing something else.
-		// The value goes through the same front door a caller would use, so the copy's declared type
-		// vets it exactly as the original's did. Where the original kept its value on an instance the
+		// The value goes through the same type check a caller's write would, so the copy's declared
+		// type vets it exactly as the original's did, but it is not reported as an edit. Where the original kept its value on an instance the
 		// factory bound, the copy has no instance and no accessor, so the same value lands in this
 		// engine's own store under the new pin id - the same value, a different home.
 		//
@@ -460,7 +508,7 @@ public class NodeEditorEngine
 		{
 			if (GetPinValue(originalPinId) is object value)
 			{
-				SetPinValue(copiedPinId, value);
+				WritePinValue(copiedPinId, value);
 			}
 		}
 
@@ -796,7 +844,7 @@ public class NodeEditorEngine
 	/// <summary>Set the world origin to the centroid of all current node positions.</summary>
 	public void InitializeWorldOriginToCentroid() => layout.InitializeWorldOriginToCentroid(nodes);
 
-	/// <summary>Clear all nodes and links.</summary>
+	/// <summary>Clear all nodes, links and comment boxes.</summary>
 	public void Clear()
 	{
 		nodes.Clear();
@@ -807,6 +855,8 @@ public class NodeEditorEngine
 		pinValues.Clear();
 		pinValueAccessors.Clear();
 		pinIdToOffset.Clear();
+		commentBoxes.Clear();
+		nextCommentBoxId = 1;
 		layout.WorldOrigin = Vec2D.Zero;
 		Cleared?.Invoke(this, EventArgs.Empty);
 	}

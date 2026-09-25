@@ -43,6 +43,30 @@ public class AttributeBasedNodeFactory
 	private void OnCleared(object? sender, EventArgs e) => bindings.Clear();
 
 	/// <summary>
+	/// Reattach a binding to a node that was removed and has been put back.
+	/// </summary>
+	/// <param name="binding">The binding the node had, as <see cref="GetBinding"/> reported it before the removal.</param>
+	/// <returns>True if the engine holds a node with the binding's id and the binding was attached.</returns>
+	/// <remarks>
+	/// Removing a node drops its binding, because an id that names no node must not keep an instance
+	/// alive. <see cref="NodeEditorHistory"/> undoes a removal by restoring the node under the same
+	/// id, and this is how the instance comes back with it — the same instance, so its pin accessors,
+	/// which the engine restores alongside the node, still read and write the object this binding
+	/// names.
+	/// </remarks>
+	public bool RestoreBinding(NodeBinding binding)
+	{
+		Ensure.NotNull(binding);
+		if (!engine.Nodes.Any(n => n.Id == binding.NodeId))
+		{
+			return false;
+		}
+
+		bindings[binding.NodeId] = binding;
+		return true;
+	}
+
+	/// <summary>
 	/// Registers a type as a node definition by scanning its attributes.
 	/// </summary>
 	/// <typeparam name="T">The type to register as a node.</typeparam>
