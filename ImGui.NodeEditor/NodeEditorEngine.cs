@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -24,6 +25,27 @@ public class NodeEditorEngine
 	private int nextPinId = 1;
 
 	private readonly ForceDirectedLayout<Node, Link> layout;
+
+	/// <summary>
+	/// Raised after a node has been removed from the graph.
+	/// </summary>
+	/// <remarks>
+	/// Anything the caller keys by node id — an instance, a cached definition, a selection — has to
+	/// be told when that id stops standing for a node, because the graph is the only thing that
+	/// knows.
+	/// </remarks>
+	public event EventHandler<NodeRemovedEventArgs>? NodeRemoved;
+
+	/// <summary>
+	/// Raised after the graph has been cleared.
+	/// </summary>
+	/// <remarks>
+	/// This is not merely <see cref="NodeRemoved"/> repeated. <see cref="Clear"/> also restarts the
+	/// id counters, so the next node created takes id 1 again. Anything keyed by node id must drop
+	/// every entry here rather than ageing them out, or a stale entry is silently inherited by an
+	/// unrelated node that happens to be issued the same id.
+	/// </remarks>
+	public event EventHandler<EventArgs>? Cleared;
 
 	/// <summary>
 	/// Create a new node editor engine with default physics settings.
@@ -58,6 +80,54 @@ public class NodeEditorEngine
 	/// <summary>Where each pin sits relative to its node's origin, as the renderer last measured it.</summary>
 	private readonly Dictionary<int, Vector2> pinIdToOffset = [];
 
+	/// <summary>What each pin holds, and what it resets to. See <see cref="PinValueStore"/>.</summary>
+	private readonly PinValueStore pinValues = new();
+
+	/// <summary>Pins whose value lives somewhere else. See <see cref="PinValueAccessor"/>.</summary>
+	private readonly Dictionary<int, PinValueAccessor> pinValueAccessors = [];
+
+	/// <summary>
+	/// Say that a pin's value lives somewhere other than this engine's own store.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="accessor">How to read and write the value where it actually lives.</param>
+	/// <remarks>
+	/// From here on <see cref="GetPinValue(int)"/> and <see cref="SetPinValue(int, object?)"/> go
+	/// through the accessor for this pin, so the pin has one home rather than two.
+	/// <para>
+	/// Binding re-seeds the pin's default from the accessor, because for a bound pin the value it
+	/// was created with is the one its home was holding when it was bound — not the one the store
+	/// was seeded with from a declaration the home may have read differently. That is what keeps
+	/// <see cref="ResetPinValue(int)"/> honest: a reset of a bound pin puts back a value the home
+	/// itself produced.
+	/// </para>
+	/// <para>
+	/// The engine holds delegates and nothing else: it learns nothing about reflection, about
+	/// <c>PinDefinition</c>, or about the object on the other side.
+	/// <see cref="AttributeBasedNodeFactory"/> is the caller that has all three and registers the
+	/// pair; a host with its own way of modelling a node can register its own.
+	/// </para>
+	/// </remarks>
+	public void BindPinValue(int pinId, PinValueAccessor accessor)
+	{
+		Ensure.NotNull(accessor);
+		pinValueAccessors[pinId] = accessor;
+		pinValues.Seed(pinId, accessor.Get());
+	}
+
+	/// <summary>
+	/// Stop routing a pin's value elsewhere, returning it to this engine's own store.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>True if the pin had a bound accessor to drop.</returns>
+	/// <remarks>
+	/// The store still holds whatever it last held for the pin, which for a bound pin is its seeded
+	/// default rather than the value the accessor was reporting. Unbinding is what
+	/// <see cref="RemoveNode(int)"/> and <see cref="Clear"/> do as a pin stops existing, so nothing
+	/// reads the store afterwards.
+	/// </remarks>
+	public bool UnbindPinValue(int pinId) => pinValueAccessors.Remove(pinId);
+
 	/// <summary>
 	/// Records where a pin sits on its node, so the layout can measure a link between the points a
 	/// renderer joins rather than between node centres.
@@ -73,6 +143,83 @@ public class NodeEditorEngine
 	/// <param name="offset">Its measured offset, when one has been recorded.</param>
 	/// <returns>True when the pin has been drawn and measured at least once.</returns>
 	public bool TryGetPinOffset(int pinId, out Vector2 offset) => pinIdToOffset.TryGetValue(pinId, out offset);
+
+	/// <summary>
+	/// What a pin currently holds.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>Its value, or null if it has none.</returns>
+	/// <remarks>
+	/// A connected input pin still reports the literal last written to it. Whether that literal or
+	/// the link's value is the one that matters is a question about evaluating the graph, which this
+	/// library does not do.
+	/// <para>
+	/// A pin bound through <see cref="BindPinValue(int, PinValueAccessor)"/> is read from wherever
+	/// its accessor keeps it; every other pin is read from this engine's own store. Either way this
+	/// is the one call that answers what a pin holds.
+	/// </para>
+	/// </remarks>
+	public object? GetPinValue(int pinId) =>
+		pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+			? accessor.Get()
+			: pinValues.Get(pinId);
+
+	/// <summary>
+	/// Write a value to a pin.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="value">The value.</param>
+	/// <returns>True if it was written, false if there is no such pin or its type refused the value.</returns>
+	/// <remarks>
+	/// The pin's declared type is checked first, whichever home the value has, so a refused value
+	/// reaches neither the accessor nor the store. A bound accessor can still report a write it did
+	/// not make, which is what its own false return means.
+	/// </remarks>
+	public bool SetPinValue(int pinId, object? value)
+	{
+		Pin? pin = FindPin(pinId);
+		if (pin is null || !PinValueStore.Accepts(pin.DataType, value))
+		{
+			return false;
+		}
+
+		// TrySet checks the type again, which is the store's own guard and stays its business. The
+		// check above is what extends the same refusal to a bound pin, whose home has no such guard.
+		return pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+			? accessor.Set(value)
+			: pinValues.TrySet(pin, value);
+	}
+
+	/// <summary>
+	/// Put a pin back to the value it was created with.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>True if it had a default to go back to and that default was written.</returns>
+	/// <remarks>
+	/// The seeded default lives in the store whether or not the pin is bound, because it is what the
+	/// pin was created with rather than what it holds now — see
+	/// <see cref="BindPinValue(int, PinValueAccessor)"/> for where a bound pin's seed comes from. A
+	/// bound pin has that default written back through its accessor as well, so the reset is visible
+	/// to whoever the value actually lives on rather than only to a store nothing is reading.
+	/// </remarks>
+	public bool ResetPinValue(int pinId)
+	{
+		if (!pinValues.Reset(pinId))
+		{
+			return false;
+		}
+
+		return !pinValueAccessors.TryGetValue(pinId, out PinValueAccessor? accessor)
+			|| accessor.Set(pinValues.Get(pinId));
+	}
+
+	/// <summary>
+	/// Whether any link meets this pin.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <returns>True if at least one link ends at it.</returns>
+	public bool IsPinConnected(int pinId) =>
+		links.Any(l => l.OutputPinId == pinId || l.InputPinId == pinId);
 
 	/// <summary>
 	/// Where a pin sits on its node, falling back to that node's centre until a renderer has measured
@@ -143,43 +290,202 @@ public class NodeEditorEngine
 	/// </summary>
 	public Node CreateNode(Vector2 position, string name, int inputPinCount, int outputPinCount)
 	{
-		List<string> inputPinNames = [];
-		List<string> outputPinNames = [];
+		PinSpec[] inputSpecs = new PinSpec[inputPinCount];
+		PinSpec[] outputSpecs = new PinSpec[outputPinCount];
 
 		for (int i = 0; i < inputPinCount; i++)
 		{
-			inputPinNames.Add($"In {i + 1}");
+			inputSpecs[i] = new PinSpec($"In {i + 1}");
 		}
 
 		for (int i = 0; i < outputPinCount; i++)
 		{
-			outputPinNames.Add($"Out {i + 1}");
+			outputSpecs[i] = new PinSpec($"Out {i + 1}");
 		}
 
-		return CreateNode(position, name, inputPinNames, outputPinNames);
+		return CreateNodeFromSpecs(position, name, inputSpecs, outputSpecs);
 	}
 
 	/// <summary>
-	/// Create a new node with specified pin names.
+	/// Create a new node with specified pin names. The pins are untyped.
 	/// </summary>
-	public Node CreateNode(Vector2 position, string name, List<string> inputPinNames, List<string> outputPinNames)
+	public Node CreateNode(Vector2 position, string name, List<string> inputPinNames, List<string> outputPinNames) =>
+		CreateNodeFromSpecs(
+			position,
+			name,
+			[.. inputPinNames.Select(n => new PinSpec(n))],
+			[.. outputPinNames.Select(n => new PinSpec(n))]);
+
+	/// <summary>
+	/// Create a new node from a description of each of its pins.
+	/// </summary>
+	/// <param name="position">Where to place the node.</param>
+	/// <param name="name">The node's name.</param>
+	/// <param name="inputs">Its input pins, in the order they should be drawn.</param>
+	/// <param name="outputs">Its output pins, in the order they should be drawn.</param>
+	/// <returns>The created node.</returns>
+	public Node CreateNodeFromSpecs(Vector2 position, string name, IReadOnlyList<PinSpec> inputs, IReadOnlyList<PinSpec> outputs)
 	{
 		List<Pin> inputPins = [];
 		List<Pin> outputPins = [];
 
-		foreach (string pinName in inputPinNames)
+		foreach (PinSpec spec in inputs)
 		{
-			inputPins.Add(new Pin(nextPinId++, PinDirection.Input, $"In {inputPins.Count + 1}", pinName));
+			inputPins.Add(new Pin(
+				nextPinId++,
+				PinDirection.Input,
+				$"In {inputPins.Count + 1}",
+				spec.Name,
+				spec.AllowMultipleConnections,
+				spec.DataType));
 		}
 
-		foreach (string pinName in outputPinNames)
+		foreach (PinSpec spec in outputs)
 		{
-			outputPins.Add(new Pin(nextPinId++, PinDirection.Output, $"Out {outputPins.Count + 1}", pinName));
+			outputPins.Add(new Pin(
+				nextPinId++,
+				PinDirection.Output,
+				$"Out {outputPins.Count + 1}",
+				spec.Name,
+				spec.AllowMultipleConnections,
+				spec.DataType));
 		}
 
 		Node node = new(nextNodeId++, position, name, inputPins, outputPins);
 		nodes.Add(node);
+
+		for (int i = 0; i < inputPins.Count; i++)
+		{
+			pinValues.Seed(inputPins[i].Id, PinValueStore.Coerce(inputs[i].DataType, inputs[i].DefaultValue));
+		}
+
+		for (int i = 0; i < outputPins.Count; i++)
+		{
+			pinValues.Seed(outputPins[i].Id, PinValueStore.Coerce(outputs[i].DataType, outputs[i].DefaultValue));
+		}
+
 		return node;
+	}
+
+	/// <summary>
+	/// How far a duplicate is placed from the node it was copied from, when the caller does not say.
+	/// </summary>
+	/// <remarks>
+	/// Far enough that the copy is visibly its own node rather than a redraw of the original, close
+	/// enough that it is still where the user was looking. The physics, if it is running, moves it
+	/// from here anyway.
+	/// </remarks>
+	public static Vector2 DefaultDuplicationOffset => new(40f, 40f);
+
+	/// <summary>
+	/// Copy a node, giving the copy its own id, its own pins, and a position offset from the
+	/// original's.
+	/// </summary>
+	/// <param name="nodeId">The node to copy.</param>
+	/// <param name="offset">Where to put the copy, relative to the original.</param>
+	/// <returns>The new node, or null if no node has that id.</returns>
+	public Node? DuplicateNode(int nodeId, Vector2 offset)
+	{
+		IReadOnlyList<Node> copies = DuplicateNodes([nodeId], offset);
+		return copies.Count > 0 ? copies[0] : null;
+	}
+
+	/// <summary>
+	/// Copy a set of nodes, along with the links that run between them.
+	/// </summary>
+	/// <param name="nodeIds">The nodes to copy. Ids naming no node are skipped, as are repeats.</param>
+	/// <param name="offset">Where to put each copy, relative to the node it came from.</param>
+	/// <returns>The new nodes, in the order their originals were named.</returns>
+	/// <remarks>
+	/// A link is copied when <em>both</em> of its ends are being copied, so duplicating a connected
+	/// pair gives a connected pair rather than two loose nodes. A link with one end outside the set
+	/// is not copied: the copy is a new node, and quietly fanning the original's input into it would
+	/// change what the graph computes without the user asking for it.
+	/// <para>
+	/// Everything that makes a pin what it is comes across — its name, its display name, its declared
+	/// type, how many links it accepts including an override applied through
+	/// <see cref="SetPinAllowsMultipleConnections"/>, and the value it currently holds. Measured
+	/// dimensions and physics state do not: the renderer measures the copy on the frame it first
+	/// draws it, and a copy inherits its original's velocity no more than it inherits its id.
+	/// </para>
+	/// <para>
+	/// A copied pin's value is written through <see cref="SetPinValue(int, object?)"/> and so lands
+	/// in this engine's own store, even where the original's lives on an instance a factory bound
+	/// through <see cref="BindPinValue(int, PinValueAccessor)"/>: a copy has no instance of its own.
+	/// It has no seeded default either, so <see cref="ResetPinValue(int)"/> on a copied pin reports
+	/// that there is nothing to go back to.
+	/// </para>
+	/// </remarks>
+	public IReadOnlyList<Node> DuplicateNodes(IEnumerable<int> nodeIds, Vector2 offset)
+	{
+		Ensure.NotNull(nodeIds);
+
+		// The originals are resolved before anything is added, so the walk reads the graph as it
+		// stood on entry rather than one it is in the middle of growing. Distinct covers a selection
+		// that names the same node twice.
+		List<Node> originals = [.. nodeIds.Distinct()
+			.Select(id => nodes.Find(n => n.Id == id))
+			.Where(node => node is not null)
+			.Select(node => node!)];
+
+		if (originals.Count == 0)
+		{
+			return [];
+		}
+
+		// Maps each copied pin back from the pin it was copied from, so the link pass below can look
+		// up where an original link's two ends landed.
+		Dictionary<int, int> originalPinToCopiedPin = [];
+		List<Node> copies = [];
+
+		foreach (Node original in originals)
+		{
+			List<Pin> inputPins = [.. original.InputPins.Select(pin => CopyPin(pin, originalPinToCopiedPin))];
+			List<Pin> outputPins = [.. original.OutputPins.Select(pin => CopyPin(pin, originalPinToCopiedPin))];
+
+			Node copy = new(nextNodeId++, original.Position + offset, original.Name, inputPins, outputPins, IsPinned: original.IsPinned);
+			nodes.Add(copy);
+			copies.Add(copy);
+		}
+
+		// A copy of a tuned node is expected to arrive tuned: duplicating a node whose Threshold the
+		// user set to 50 and getting one that reads 0 is the copy quietly computing something else.
+		// The value goes through the same front door a caller would use, so the copy's declared type
+		// vets it exactly as the original's did. Where the original kept its value on an instance the
+		// factory bound, the copy has no instance and no accessor, so the same value lands in this
+		// engine's own store under the new pin id - the same value, a different home.
+		//
+		// The copies are all in `nodes` by now, which is what lets SetPinValue find their pins.
+		foreach ((int originalPinId, int copiedPinId) in originalPinToCopiedPin)
+		{
+			if (GetPinValue(originalPinId) is object value)
+			{
+				SetPinValue(copiedPinId, value);
+			}
+		}
+
+		// Read from the link list as it stood before any copy was made, so a copied link is never
+		// itself copied.
+		List<Link> internalLinks = [.. links.Where(link =>
+			originalPinToCopiedPin.ContainsKey(link.OutputPinId) &&
+			originalPinToCopiedPin.ContainsKey(link.InputPinId))];
+
+		foreach (Link link in internalLinks)
+		{
+			// Through TryCreateLink rather than around it, so a copied link is subject to the same
+			// rules as one the user drew. Both ends are pins that did not exist a moment ago, so it
+			// cannot fail; going through the front door is what keeps that true if the rules change.
+			TryCreateLink(originalPinToCopiedPin[link.OutputPinId], originalPinToCopiedPin[link.InputPinId]);
+		}
+
+		return copies;
+	}
+
+	private Pin CopyPin(Pin original, Dictionary<int, int> originalPinToCopiedPin)
+	{
+		Pin copy = original with { Id = nextPinId++ };
+		originalPinToCopiedPin[original.Id] = copy.Id;
+		return copy;
 	}
 
 	/// <summary>
@@ -264,7 +570,17 @@ public class NodeEditorEngine
 			links.Remove(link);
 		}
 
+		// A removed node's pins are gone, so what they held and where they were measured goes with
+		// them. Without this both tables grow for the life of the process.
+		foreach (Pin pin in node.InputPins.Concat(node.OutputPins))
+		{
+			pinValues.Forget(pin.Id);
+			pinValueAccessors.Remove(pin.Id);
+			pinIdToOffset.Remove(pin.Id);
+		}
+
 		nodes.Remove(node);
+		NodeRemoved?.Invoke(this, new NodeRemovedEventArgs(nodeId));
 		return true;
 	}
 
@@ -488,7 +804,11 @@ public class NodeEditorEngine
 		nextNodeId = 1;
 		nextLinkId = 1;
 		nextPinId = 1;
+		pinValues.Clear();
+		pinValueAccessors.Clear();
+		pinIdToOffset.Clear();
 		layout.WorldOrigin = Vec2D.Zero;
+		Cleared?.Invoke(this, EventArgs.Empty);
 	}
 
 	/// <summary>Toggle whether a node is pinned (frozen during physics simulation).</summary>

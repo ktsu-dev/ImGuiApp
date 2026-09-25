@@ -44,7 +44,11 @@ public static partial class ImGuiApp
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static OpenGLProvider? glProvider;
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
-	internal static IntPtr currentGLContextHandle; // Track the current GL context handle
+	// The GL the textures currently in `Textures` were uploaded against. Compared by reference in
+	// CheckAndHandleContextChange: a different GL means a different GL context, so every texture id
+	// held in `Textures` names an object that context never created. Null until the first check
+	// observes a GL, which is why that first observation records without reloading.
+	internal static GL? currentGLContext;
 
 	internal static ImGuiAppWindowState LastNormalWindowState { get; set; } = new();
 
@@ -104,7 +108,25 @@ public static partial class ImGuiApp
 	/// <summary>
 	/// Gets an instance of the <see cref="Invoker"/> class to delegate tasks to the window thread.
 	/// </summary>
-	public static Invoker Invoker { get; internal set; } = null!;
+	public static Invoker Invoker
+	{
+		get;
+		internal set
+		{
+			field = value;
+			// An Invoker is owned by the thread that constructs it, and every assignment here sits
+			// next to that construction. The Invoker keeps its own owner id private, so it is
+			// recorded here for the paths that can skip marshalling when already on that thread.
+			invokerThreadId = Environment.CurrentManagedThreadId;
+		}
+	} = null!;
+
+	private static int invokerThreadId;
+
+	/// <summary>
+	/// Gets a value indicating whether the calling thread is the one <see cref="Invoker"/> runs its work on.
+	/// </summary>
+	internal static bool IsOnInvokerThread => Invoker is not null && Environment.CurrentManagedThreadId == invokerThreadId;
 
 	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is focused.
@@ -310,8 +332,6 @@ public static partial class ImGuiApp
 					DebugLogger.Log("onConfigureIO: Starting configuration");
 					unsafe
 					{
-						currentGLContextHandle = (nint)ImGui.GetCurrentContext().Handle;
-
 						ImGuiIOPtr io = ImGui.GetIO();
 
 						// Configure imgui.ini file saving based on user preference
@@ -790,8 +810,8 @@ public static partial class ImGuiApp
 	/// </summary>
 	/// <remarks>
 	/// The parameterless overload leaves no backend installed, which is correct for a host that
-	/// never uploads a texture but fatal for one that does: <see cref="CreateTexture"/>,
-	/// <see cref="UpdateTexture"/> and <see cref="DeleteTexture(nint)"/> all route through the
+	/// never uploads a texture but fatal for one that does: <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>,
+	/// <see cref="UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan{byte}, int, int)"/> and <see cref="DeleteTexture(nint)"/> all route through the
 	/// backend and throw without one. An application that shows an image it generated — rather than
 	/// one loaded from a file — reaches exactly that path, so a host that intends to render such an
 	/// application supplies its renderer here.
@@ -804,6 +824,33 @@ public static partial class ImGuiApp
 		Ensure.NotNull(backend);
 		BeginExternalFrameSession();
 		renderer = backend;
+	}
+
+	/// <summary>
+	/// Asks the installed renderer backend whether it can also draw 3D geometry.
+	/// </summary>
+	/// <param name="renderer3D">The 3D renderer, when one is available.</param>
+	/// <returns>
+	/// <see langword="true"/> when the installed backend implements <see cref="IRenderer3D"/>.
+	/// <see langword="false"/> when it does not, or when no backend is installed at all.
+	/// </returns>
+	/// <remarks>
+	/// <para>
+	/// <see cref="IRenderer3D"/> is an opt-in extension rather than part of
+	/// <see cref="IRendererBackend"/>, so a backend advertises it by implementing it and this is
+	/// how a caller finds out. A caller checks once and keeps the result for the life of the
+	/// session; it cannot change while a backend is installed.
+	/// </para>
+	/// <para>
+	/// A <see langword="false"/> is an ordinary answer and not a fault — it is what a backend
+	/// without a 3D path is supposed to say, and the caller falls back to uploading pixels it
+	/// rasterized itself through <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.
+	/// </para>
+	/// </remarks>
+	public static bool TryGetRenderer3D([NotNullWhen(true)] out IRenderer3D? renderer3D)
+	{
+		renderer3D = renderer as IRenderer3D;
+		return renderer3D is not null;
 	}
 
 	/// <summary>
@@ -1848,14 +1895,171 @@ public static partial class ImGuiApp
 	/// internal texture cache: it has no file path to reload from, so it is not restored by
 	/// <c>ReloadAllTextures</c> after a renderer restart. The caller owns its lifetime, must call
 	/// <see cref="DeleteTexture(ImGuiAppTextureInfo)"/>, and must re-upload its contents if the renderer restarts.
+	/// For pixels in another layout or with padded rows, use
+	/// <see cref="CreateTexture(ReadOnlySpan{byte}, int, int, PixelLayout, int)"/>.
 	/// </remarks>
 	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop; pointer is scoped to the call and not retained.")]
 	public static ImGuiAppTextureInfo CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 	{
 		ValidatePixelSpan(rgba, width, height);
+		return CreateTextureFromBuffer(rgba.ToArray(), width, height);
+	}
 
-		nint textureId = UploadTextureRGBA(rgba.ToArray(), width, height);
+	/// <summary>
+	/// Creates a GPU texture from pixels held in memory in any <see cref="PixelLayout"/>, with or
+	/// without padding at the end of each row.
+	/// </summary>
+	/// <param name="pixels">
+	/// The source pixels: <paramref name="height"/> rows, each starting <paramref name="rowStride"/>
+	/// bytes after the previous one. The buffer only has to reach the end of the last row's pixels.
+	/// </param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <param name="layout">How each pixel is laid out in <paramref name="pixels"/>.</param>
+	/// <param name="rowStride">
+	/// Bytes from the start of one row to the start of the next, such as OpenCV's <c>Mat.Step()</c> or
+	/// SkiaSharp's <c>RowBytes</c>. 0, the default, means rows are tightly packed.
+	/// </param>
+	/// <returns>Texture info owned by the caller, with the same lifetime rules as <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.</returns>
+	/// <remarks>
+	/// The pixels are converted to RGBA8 on the CPU into a pooled buffer before upload; tightly packed
+	/// <see cref="PixelLayout.Rgba8"/> skips the conversion.
+	/// </remarks>
+	/// <exception cref="ArgumentOutOfRangeException">
+	/// A dimension is not positive, <paramref name="layout"/> is unknown, or <paramref name="rowStride"/>
+	/// is negative or shorter than a row of pixels.
+	/// </exception>
+	/// <exception cref="ArgumentException"><paramref name="pixels"/> is too short for the geometry.</exception>
+	public static ImGuiAppTextureInfo CreateTexture(ReadOnlySpan<byte> pixels, int width, int height, PixelLayout layout, int rowStride = 0)
+	{
+		int stride = PixelConverter.Validate(pixels, width, height, layout, rowStride);
+		int rgbaByteCount = checked(width * height * 4);
+		byte[] rgba = _bytePool.Rent(rgbaByteCount);
+		try
+		{
+			PixelConverter.ToRgba8(pixels, width, height, layout, stride, rgba);
+			return CreateTextureFromBuffer(rgba, width, height);
+		}
+		finally
+		{
+			_bytePool.Return(rgba);
+		}
+	}
+
+	/// <summary>
+	/// Replaces the contents of a texture created by <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.
+	/// </summary>
+	/// <param name="textureInfo">The texture to update, as returned by one of the <c>CreateTexture</c> overloads.</param>
+	/// <param name="rgba">Tightly packed RGBA8 pixels, <paramref name="width"/> * <paramref name="height"/> * 4 bytes.</param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <remarks>
+	/// Falls back to deleting and recreating the texture when the size changes or the active renderer
+	/// backend cannot update in place, mutating <paramref name="textureInfo"/> to carry the new handle. A
+	/// texture that came from <see cref="GetOrLoadTexture(AbsoluteFilePath)"/> stays published in the
+	/// path-keyed cache across that fallback, so
+	/// <see cref="TryGetTexture(AbsoluteFilePath, out ImGuiAppTextureInfo?)"/> keeps finding it and
+	/// <c>CleanupAllTextures</c> keeps owning it.
+	/// <para>
+	/// Safe to call from any thread, so a frame produced on a worker thread can be uploaded from
+	/// there. The upload itself always runs on the window thread: from any other thread the call
+	/// copies the pixels, waits for the next frame to perform the update, and returns once it has.
+	/// Called from the window thread, the pixels go straight to the backend with no copy.
+	/// </para>
+	/// For pixels in another layout or with padded rows, use
+	/// <see cref="UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan{byte}, int, int, PixelLayout, int)"/>.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException"><paramref name="textureInfo"/> is null.</exception>
+	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
+	public static void UpdateTexture(ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> rgba, int width, int height)
+	{
+		Ensure.NotNull(textureInfo);
+		ValidatePixelSpan(rgba, width, height);
+
+		// The in-place update touches the rendering context, so it has to run on the thread that owns
+		// it, like every other upload here. Image-processing callers typically produce frames on a
+		// worker thread; calling the backend directly from there issued GL calls with no current
+		// context, which fail silently or corrupt state. On the owning thread the span goes straight
+		// to the backend with no copy, which keeps the per-frame render-thread path allocation-free.
+		if (IsOnInvokerThread)
+		{
+			bool sameSize = textureInfo.Width == width && textureInfo.Height == height;
+			if (sameSize && renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, rgba, width, height))
+			{
+				return;
+			}
+
+			// Already tried in place, so only the recreate is left. It needs an array, since a span
+			// cannot be captured by the Invoke body that performs it.
+			UpdateTextureFromBuffer(textureInfo, rgba.ToArray(), width, height, tryInPlace: false);
+			return;
+		}
+
+		// A span cannot be captured by the Invoke body, so the pixels cross threads as a copy.
+		UpdateTextureFromBuffer(textureInfo, rgba.ToArray(), width, height, tryInPlace: true);
+	}
+
+	/// <summary>
+	/// Replaces the contents of a texture from pixels in any <see cref="PixelLayout"/>, with or without
+	/// padding at the end of each row.
+	/// </summary>
+	/// <param name="textureInfo">The texture to update, as returned by one of the <c>CreateTexture</c> overloads.</param>
+	/// <param name="pixels">
+	/// The source pixels: <paramref name="height"/> rows, each starting <paramref name="rowStride"/>
+	/// bytes after the previous one. The buffer only has to reach the end of the last row's pixels.
+	/// </param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <param name="layout">How each pixel is laid out in <paramref name="pixels"/>.</param>
+	/// <param name="rowStride">
+	/// Bytes from the start of one row to the start of the next, such as OpenCV's <c>Mat.Step()</c> or
+	/// SkiaSharp's <c>RowBytes</c>. 0, the default, means rows are tightly packed.
+	/// </param>
+	/// <remarks>
+	/// Behaves like <see cref="UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan{byte}, int, int)"/>, including
+	/// being safe to call from any thread, after converting the pixels to RGBA8 on the calling thread. The
+	/// conversion goes into a pooled buffer that is handed to the window thread as is, so a converted
+	/// update costs one pass over the pixels and no further copy on any thread.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException"><paramref name="textureInfo"/> is null.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">
+	/// A dimension is not positive, <paramref name="layout"/> is unknown, or <paramref name="rowStride"/>
+	/// is negative or shorter than a row of pixels.
+	/// </exception>
+	/// <exception cref="ArgumentException"><paramref name="pixels"/> is too short for the geometry.</exception>
+	public static void UpdateTexture(ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> pixels, int width, int height, PixelLayout layout, int rowStride = 0)
+	{
+		Ensure.NotNull(textureInfo);
+		int stride = PixelConverter.Validate(pixels, width, height, layout, rowStride);
+		int rgbaByteCount = checked(width * height * 4);
+
+		// Tightly packed RGBA8 needs no conversion, and the plain overload already avoids every copy on
+		// the window thread.
+		if (layout == PixelLayout.Rgba8 && stride == width * 4)
+		{
+			UpdateTexture(textureInfo, pixels[..rgbaByteCount], width, height);
+			return;
+		}
+
+		byte[] rgba = _bytePool.Rent(rgbaByteCount);
+		try
+		{
+			PixelConverter.ToRgba8(pixels, width, height, layout, stride, rgba);
+
+			// Invoke waits for its body to finish, so the rented buffer outlives every use of it and can
+			// cross to the window thread without a copy.
+			UpdateTextureFromBuffer(textureInfo, rgba, width, height, tryInPlace: true);
+		}
+		finally
+		{
+			_bytePool.Return(rgba);
+		}
+	}
+
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop; pointer is scoped to the call and not retained.")]
+	private static ImGuiAppTextureInfo CreateTextureFromBuffer(byte[] rgba, int width, int height)
+	{
+		nint textureId = UploadTextureRGBA(rgba, width, height);
 		ImTextureRef textureRef;
 		unsafe
 		{
@@ -1872,39 +2076,55 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Replaces the contents of a texture created by <see cref="CreateTexture"/>.
+	/// Updates a texture on the window thread from an array holding at least
+	/// <paramref name="width"/> * <paramref name="height"/> * 4 bytes of RGBA8, which may be a pooled
+	/// buffer larger than that. Waits for the update to finish.
 	/// </summary>
-	/// <param name="textureInfo">The texture to update, as returned by <see cref="CreateTexture"/>.</param>
-	/// <param name="rgba">Tightly packed RGBA8 pixels, <paramref name="width"/> * <paramref name="height"/> * 4 bytes.</param>
-	/// <param name="width">Texture width in pixels.</param>
-	/// <param name="height">Texture height in pixels.</param>
-	/// <remarks>
-	/// Falls back to deleting and recreating the texture when the active renderer backend cannot update
-	/// in place, mutating <paramref name="textureInfo"/> to carry the new handle.
-	/// </remarks>
-	/// <exception cref="ArgumentNullException"><paramref name="textureInfo"/> is null.</exception>
-	/// <exception cref="ArgumentException">The span length does not equal width * height * 4.</exception>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui texture interop; pointer is scoped to the call and not retained.")]
-	public static void UpdateTexture(ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> rgba, int width, int height)
+	private static void UpdateTextureFromBuffer(ImGuiAppTextureInfo textureInfo, byte[] rgba, int width, int height, bool tryInPlace)
 	{
-		Ensure.NotNull(textureInfo);
-		ValidatePixelSpan(rgba, width, height);
+		int rgbaByteCount = width * height * 4;
 
-		bool sameSize = textureInfo.Width == width && textureInfo.Height == height;
-		if (sameSize && renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, rgba, width, height))
+		// The in-place attempt, capture, delete, recreate and republish all happen inside one Invoke,
+		// for the same reason GetOrLoadTexture publishes inside its own: between the delete and the
+		// republish the path is absent from the cache, so a concurrent GetOrLoadTexture for it would
+		// miss, decode the file again and upload a second GPU texture. Invoke bodies never overlap, so
+		// nothing can observe the gap. Nested Invokes below run inline on the invoker thread.
+		Invoker.Invoke(() =>
 		{
-			return;
-		}
+			bool sameSize = textureInfo.Width == width && textureInfo.Height == height;
+			if (tryInPlace && sameSize && renderer is not null && renderer.UpdateTexture(textureInfo.TextureId, rgba.AsSpan(0, rgbaByteCount), width, height))
+			{
+				return;
+			}
 
-		DeleteTexture(textureInfo.TextureId);
-		textureInfo.TextureId = UploadTextureRGBA(rgba.ToArray(), width, height);
-		unsafe
-		{
-			textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
-		}
+			// DeleteTexture removes every cache entry whose handle matches the one being deleted,
+			// which for a path-tracked texture is the entry GetOrLoadTexture published. The recreate
+			// below gives textureInfo a live handle again but restores no entry, so without this
+			// republish the texture stays on the GPU while TryGetTexture reports it missing, the next
+			// GetOrLoadTexture uploads a duplicate, and CleanupAllTextures - which walks
+			// Textures.Keys - can no longer reach either handle to free it.
+			//
+			// Reference equality is the test rather than a handle comparison: only the entry this
+			// instance is actually published under should come back, never one that a different
+			// ImGuiAppTextureInfo happens to share a handle with.
+			List<AbsoluteFilePath> publishedKeys = [.. Textures.Where(entry => ReferenceEquals(entry.Value, textureInfo)).Select(entry => entry.Key)];
 
-		textureInfo.Width = width;
-		textureInfo.Height = height;
+			DeleteTexture(textureInfo.TextureId);
+			textureInfo.TextureId = UploadTextureRGBA(rgba, width, height);
+			unsafe
+			{
+				textureInfo.TextureRef = new ImTextureRef(default, textureInfo.TextureId);
+			}
+
+			textureInfo.Width = width;
+			textureInfo.Height = height;
+
+			foreach (AbsoluteFilePath key in publishedKeys)
+			{
+				Textures[key] = textureInfo;
+			}
+		});
 	}
 
 	private static void ValidatePixelSpan(ReadOnlySpan<byte> rgba, int width, int height)
@@ -2389,32 +2609,42 @@ public static partial class ImGuiApp
 		ScaleFactor = 1;
 		GlobalScale = 1.0f;
 		Textures.Clear();
+		currentGLContext = null;
 		overlayChrome.ResetState();
 		Config = new();
 	}
 
 	/// <summary>
-	/// Checks if the OpenGL context has changed and handles texture reloading if needed
+	/// Checks whether the OpenGL context has been replaced since the tracked textures were uploaded,
+	/// and reloads them if it has.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop to detect context handle changes; pointer is not retained.")]
+	/// <remarks>
+	/// This compares the <see cref="GL"/> the textures were uploaded against, not the ImGui context.
+	/// <see cref="ImGui.GetCurrentContext"/> returns the ImGui context pointer, which is created once
+	/// in <c>ImGuiController.Init</c> and never replaced, so comparing it could never report a change
+	/// and the reload below was unreachable.
+	/// <para>
+	/// This detects a GL the application itself replaced. A driver-side reset that invalidates the
+	/// context underneath an unchanged <see cref="GL"/> instance is not observable this way and would
+	/// need a <c>GL_KHR_robustness</c> reset query.
+	/// </para>
+	/// </remarks>
 	internal static void CheckAndHandleContextChange()
 	{
-		if (gl == null)
+		if (gl == null || ReferenceEquals(gl, currentGLContext))
 		{
 			return;
 		}
 
-		// Get the current context handle
-		nint newContextHandle;
-		unsafe
-		{
-			newContextHandle = (nint)ImGui.GetCurrentContext().Handle;
-		}
+		// The first observation has nothing to reload against: the tracked textures were uploaded
+		// against this GL, so record it and leave them alone. Reloading here would re-upload every
+		// texture and orphan the handles it replaced, since the reload does not delete them.
+		bool contextWasReplaced = currentGLContext is not null;
+		currentGLContext = gl;
 
-		// If context has changed, reload all textures
-		if (newContextHandle != currentGLContextHandle && newContextHandle != nint.Zero)
+		if (contextWasReplaced)
 		{
-			currentGLContextHandle = newContextHandle;
+			DebugLogger.Log("CheckAndHandleContextChange: GL context replaced, reloading textures");
 			ReloadAllTextures();
 		}
 	}

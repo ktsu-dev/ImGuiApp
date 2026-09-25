@@ -194,6 +194,89 @@ private static void OnRender(float deltaTime)
 }
 ```
 
+### Dynamic Textures from Pixel Buffers
+
+Images you generate yourself (a camera feed, a filter preview, a plot rendered off-screen) do not need
+a file. `CreateTexture` uploads a pixel buffer and `UpdateTexture` replaces its contents, reusing the
+GPU storage in place when the size is unchanged:
+
+```csharp
+private static ImGuiAppTextureInfo? preview;
+
+// Called with tightly packed RGBA8 pixels: width * height * 4 bytes, rows top to bottom.
+private static void ShowFrame(ReadOnlySpan<byte> rgba, int width, int height)
+{
+    if (preview is null)
+    {
+        preview = ImGuiApp.CreateTexture(rgba, width, height);
+    }
+    else
+    {
+        // In place when the size matches; otherwise the texture is recreated and `preview`
+        // is updated to carry the new handle and size.
+        ImGuiApp.UpdateTexture(preview, rgba, width, height);
+    }
+}
+
+private static void OnRender(float deltaTime)
+{
+    if (preview is not null)
+    {
+        ImGui.Image(preview.TextureRef, new Vector2(preview.Width, preview.Height));
+    }
+}
+```
+
+Things to know:
+
+- **Both take a `ReadOnlySpan<byte>`**, so a `byte[]`, a `Memory<byte>`, a pooled buffer, a slice of a
+  larger buffer or `ImagePixels.ReadOnlyPixels` all pass without conversion.
+- **The two-size overloads take tightly packed RGBA8**, with no padding at the end of a row, and
+  throw `ArgumentException` for anything else.
+- **Other layouts and padded rows have their own overloads.** Pass a `PixelLayout` (`Rgba8`,
+  `Bgra8`, `Rgb8`, `Bgr8` or `Gray8`) and, if rows are padded, the row stride in bytes:
+  `CreateTexture(pixels, width, height, layout, rowStride)` and
+  `UpdateTexture(texture, pixels, width, height, layout, rowStride)`. A `rowStride` of 0 means tightly
+  packed. The pixels are converted to RGBA8 on the calling thread into a pooled buffer, which goes to
+  the GPU with no further copy. The buffer only has to reach the end of the last row's pixels, so a
+  region of a larger image can be passed as it sits in memory.
+- **Both are safe to call from any thread.** The upload always happens on the window thread: from
+  another thread the call copies the pixels, waits for the next frame to upload them, and returns
+  afterwards. Called from inside `OnRender`, the pixels go straight to the GPU with no copy.
+- **The texture is yours.** It is not added to the path-keyed cache, so call `DeleteTexture` when you
+  are done with it, and upload its contents again if the renderer restarts.
+- **Alpha is taken as straight, not premultiplied.** A premultiplied source still displays, but its
+  translucent edges come out darker than intended.
+
+Uploading from common imaging libraries:
+
+```csharp
+// ImageSharp: Image<Rgba32> is already tightly packed RGBA8.
+byte[] rgba = new byte[image.Width * image.Height * 4];
+image.CopyPixelDataTo(rgba);
+ImGuiApp.UpdateTexture(preview, rgba, image.Width, image.Height);
+
+// OpenCvSharp: an 8-bit Mat is BGR (CV_8UC3), BGRA (CV_8UC4) or grey (CV_8UC1), and its rows can be
+// padded, or belong to a larger image when the Mat is a region of interest. Pass it as it is.
+PixelLayout layout = mat.Channels() switch
+{
+    1 => PixelLayout.Gray8,
+    3 => PixelLayout.Bgr8,
+    _ => PixelLayout.Bgra8,
+};
+int stride = checked((int)mat.Step());
+int length = checked(((mat.Rows - 1) * stride) + (mat.Cols * (int)mat.ElemSize()));
+unsafe
+{
+    ReadOnlySpan<byte> pixels = new((void*)mat.Data, length);
+    ImGuiApp.UpdateTexture(preview, pixels, mat.Cols, mat.Rows, layout, stride);
+}
+
+// SkiaSharp: the default colour type is platform-dependent, and RowBytes can include padding.
+PixelLayout skiaLayout = bitmap.ColorType == SKColorType.Bgra8888 ? PixelLayout.Bgra8 : PixelLayout.Rgba8;
+ImGuiApp.UpdateTexture(preview, bitmap.GetPixelSpan(), bitmap.Width, bitmap.Height, skiaLayout, bitmap.RowBytes);
+```
+
 ### Image Loading
 
 Textures and window icons are decoded by `ktsu.ImGui.App` itself rather than by a third-party imaging
@@ -413,7 +496,11 @@ The main entry point for creating and managing ImGui applications.
 | `Stop` | | `void` | Stops the running application |
 | `GetOrLoadTexture` | `AbsoluteFilePath path` | `ImGuiAppTextureInfo` | Loads a texture from file or returns cached texture info if already loaded |
 | `TryGetTexture` | `AbsoluteFilePath path, out ImGuiAppTextureInfo textureInfo` | `bool` | Attempts to get a cached texture by path |
-| `DeleteTexture` | `uint textureId` | `void` | Deletes a texture and frees its resources |
+| `CreateTexture` | `ReadOnlySpan<byte> rgba, int width, int height` | `ImGuiAppTextureInfo` | Uploads a tightly packed RGBA8 buffer as a new texture owned by the caller; callable from any thread |
+| `UpdateTexture` | `ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> rgba, int width, int height` | `void` | Replaces a texture's pixels, in place when the size is unchanged; callable from any thread |
+| `CreateTexture` | `ReadOnlySpan<byte> pixels, int width, int height, PixelLayout layout, int rowStride = 0` | `ImGuiAppTextureInfo` | As above, from BGRA, RGB, BGR or greyscale pixels, with optional row padding |
+| `UpdateTexture` | `ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> pixels, int width, int height, PixelLayout layout, int rowStride = 0` | `void` | As above, from BGRA, RGB, BGR or greyscale pixels, with optional row padding |
+| `DeleteTexture` | `nint textureId` | `void` | Deletes a texture and frees its resources |
 | `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
 | `CleanupAllTextures` | | `void` | Cleans up all loaded textures |
 | `SetWindowIcon` | `string iconPath` | `void` | Sets the window icon; on macOS this also updates the application dock icon |

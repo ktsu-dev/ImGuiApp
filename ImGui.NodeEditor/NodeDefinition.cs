@@ -288,3 +288,20 @@ public class PinDefinition
 		}
 	}
 }
+
+/// <summary>
+/// Ties a node in the graph back to what it was created from, and to the object its parameter
+/// values live on.
+/// </summary>
+/// <param name="NodeId">The node's identifier, as the engine issued it.</param>
+/// <param name="Definition">The definition the node was created from.</param>
+/// <param name="Instance">
+/// The object the node's declared members live on, or null when the node has none — a method node,
+/// or a type that cannot be constructed without arguments.
+/// </param>
+/// <remarks>
+/// The graph's <see cref="Node"/> carries names and geometry and deliberately nothing else, so
+/// without this there is no route from a node the user has selected back to the type that declared
+/// it, and no object for a value such as a threshold to be stored on.
+/// </remarks>
+public sealed record NodeBinding(int NodeId, NodeDefinition Definition, object? Instance);

@@ -34,6 +34,9 @@ public class NodeEditorRenderer
 	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
 	private readonly HashSet<int> currentlyDraggedNodes = [];
 
+	/// <summary>The nodes ImNodes had selected as of the last frame drawn.</summary>
+	private readonly HashSet<int> selectedNodes = [];
+
 	/// <summary>Where each node was drawn this frame, in screen space.</summary>
 	private readonly Dictionary<int, ScreenRect> nodeScreenRects = [];
 
@@ -96,8 +99,72 @@ public class NodeEditorRenderer
 	/// </summary>
 	public Vector4? HighlightColor { get; set; }
 
+	/// <summary>
+	/// Called inside each node, after its pins and before the node ends, so a host can draw its own
+	/// content in the node body. Null draws nothing extra, which is the shape of a node this renderer
+	/// has always drawn.
+	/// </summary>
+	/// <remarks>
+	/// Without this, a host wanting a widget on a node face had to either fork the renderer, giving up
+	/// zoom, hover highlighting, the measured position and dimension feedback and the pin offset
+	/// publishing, or drive ImNodes itself and keep the engine for topology alone. Both cost the same
+	/// things.
+	/// <para>
+	/// What the callback may submit is what ImNodes accepts between <c>BeginNode</c> and
+	/// <c>EndNode</c>: ordinary ImGui widgets, which are drawn in the node and sized into it. The ID
+	/// stack is already the node's, since ImNodes pushes the node's ID as it begins it, so a label
+	/// need only be unique within the one node. The cursor is wherever the pins left it, and the
+	/// callback should leave the ID stack as it found it.
+	/// </para>
+	/// <para>
+	/// It runs after the pins rather than among them, so the rows the pin offsets are measured from
+	/// are already recorded and content added here cannot move them. Content wider than the pin labels
+	/// widens the node, and the right-aligned output labels were padded before it was submitted, so a
+	/// body wider than the pins leaves them short of the new edge for that frame.
+	/// </para>
+	/// <para>
+	/// An exception thrown out of the callback escapes mid-node, leaving ImNodes without its
+	/// <c>EndNode</c> and the frame unusable. A host that can fail should catch its own failures.
+	/// </para>
+	/// </remarks>
+	public Action<Node>? DrawNodeBody { get; set; }
+
+	/// <summary>
+	/// Whether an unconnected input pin whose type can be edited is drawn with an editor beside its
+	/// label. On by default.
+	/// </summary>
+	/// <remarks>
+	/// This is the renderer's own drawing, not a use of <see cref="DrawNodeBody"/>. That hook runs
+	/// after every pin so host content cannot move a recorded pin row, which is the right contract
+	/// for arbitrary content and the wrong place for a parameter, which belongs on its pin's line.
+	/// The two compose: editors on the rows, host content underneath.
+	/// <para>
+	/// The string editor caps input at 256 characters (<c>ImGui.InputText</c>'s own buffer limit).
+	/// <see cref="PinValueStore.TrySet(Pin, object?)"/> and the inspector's string row accept any
+	/// length; only typing through this inline editor is capped.
+	/// </para>
+	/// </remarks>
+	public bool DrawInlinePinEditors { get; set; } = true;
+
+	/// <summary>
+	/// How wide an inline editor is drawn, before zoom. Defaults to 90.
+	/// </summary>
+	public float InlineEditorWidth { get; set; } = 90f;
+
 	/// <summary>The node the pointer was over as of the last frame drawn, if any.</summary>
 	public int? HoveredNodeId { get; private set; }
+
+	/// <summary>The nodes ImNodes had selected as of the last frame drawn.</summary>
+	/// <remarks>
+	/// Read after the editor ends, like the hover state and for the same reason: ImNodes only answers
+	/// once it has laid the frame out.
+	/// <para>
+	/// "As of the last frame drawn" is literal: this is updated only while <see cref="Render"/> keeps
+	/// running. If the editor stops being drawn, the set does not clear itself, it simply holds
+	/// whatever was selected the last time it did run.
+	/// </para>
+	/// </remarks>
+	public IReadOnlySet<int> SelectedNodeIds => selectedNodes;
 
 	/// <summary>The link the pointer was over as of the last frame drawn, if any.</summary>
 	public int? HoveredLinkId { get; private set; }
@@ -357,7 +424,14 @@ public class NodeEditorRenderer
 		foreach (Pin pin in node.InputPins)
 		{
 			ImNodes.BeginInputAttribute(pin.Id);
+
+			// The label and any editor are one row, and the row is what a link attaches to the middle
+			// of. Grouped so that RecordPinRow measures both rather than whichever was submitted last.
+			ImGui.BeginGroup();
 			ImGui.Text(pin.EffectiveDisplayName);
+			DrawInlineEditor(engine, pin);
+			ImGui.EndGroup();
+
 			ImNodes.EndInputAttribute();
 			RecordPinRow(pin.Id, isInput: true);
 		}
@@ -378,7 +452,7 @@ public class NodeEditorRenderer
 			Vector2 textSize = ImGui.CalcTextSize(pinText);
 
 			// Calculate the node's content width based on the longest text
-			float nodeContentWidth = CalculateNodeContentWidth(node);
+			float nodeContentWidth = CalculateNodeContentWidth(engine, node);
 			float paddingWidth = nodeContentWidth - textSize.X;
 
 			// Add padding to push text to the right
@@ -393,6 +467,9 @@ public class NodeEditorRenderer
 			RecordPinRow(pin.Id, isInput: false);
 		}
 
+		// Host content goes last, where it cannot disturb the pin rows already recorded above.
+		DrawNodeBody?.Invoke(node);
+
 		ImNodes.EndNode();
 
 		if (highlighted)
@@ -402,6 +479,188 @@ public class NodeEditorRenderer
 		}
 
 		PublishPinOffsets(engine, node);
+	}
+
+	/// <summary>
+	/// Draw an editor for a pin's value, when the pin has one to edit.
+	/// </summary>
+	/// <param name="engine">The engine holding the value.</param>
+	/// <param name="pin">The pin.</param>
+	/// <remarks>
+	/// Nothing is drawn for a pin that is connected, whose type has no editor, or when
+	/// <see cref="DrawInlinePinEditors"/> is off. Submitted inside the pin's attribute, so ImNodes
+	/// marks the attribute active while the widget is and does not read the drag as a node drag.
+	/// </remarks>
+	private void DrawInlineEditor(NodeEditorEngine engine, Pin pin)
+	{
+		if (!DrawInlinePinEditors || engine.IsPinConnected(pin.Id))
+		{
+			return;
+		}
+
+		PinValueKind kind = PinValueKinds.Classify(pin.DataType);
+		if (kind == PinValueKind.Unsupported)
+		{
+			return;
+		}
+
+		ImGui.SameLine();
+		ImGui.SetNextItemWidth(InlineEditorWidth * Zoom);
+
+		string id = $"##pin{pin.Id}";
+		object? current = engine.GetPinValue(pin.Id);
+
+		switch (kind)
+		{
+			case PinValueKind.Boolean:
+				DrawBooleanEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Int32:
+				DrawInt32Editor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Single:
+				DrawSingleEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Double:
+				DrawDoubleEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.String:
+				DrawStringEditor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Vector2:
+				DrawVector2Editor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Vector3:
+				DrawVector3Editor(engine, pin, id, current);
+				break;
+
+			case PinValueKind.Enum:
+				DrawEnumEditor(engine, pin, id, current);
+				break;
+
+			// No Unsupported case: the early return above has already taken that path, and default
+			// covers every kind regardless.
+			default:
+				break;
+		}
+	}
+
+	/// <summary>Draw a <see cref="bool"/> pin as a checkbox.</summary>
+	private static void DrawBooleanEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		bool value = current as bool? ?? false;
+		if (ImGui.Checkbox(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw an <see cref="int"/> pin as a drag box.</summary>
+	private static void DrawInt32Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		int value = current as int? ?? 0;
+		if (ImGui.DragInt(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="float"/> pin as a drag box.</summary>
+	private static void DrawSingleEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		float value = current as float? ?? 0f;
+		if (ImGui.DragFloat(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="double"/> pin as an input box.</summary>
+	private static void DrawDoubleEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		double value = current as double? ?? 0.0;
+		if (ImGui.InputDouble(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="string"/> pin as a text box.</summary>
+	private static void DrawStringEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		string value = current as string ?? string.Empty;
+		if (ImGui.InputText(id, ref value, 256))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="Vector2"/> pin as a two-component input box.</summary>
+	private static void DrawVector2Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		Vector2 value = current as Vector2? ?? Vector2.Zero;
+		if (ImGui.InputFloat2(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>Draw a <see cref="Vector3"/> pin as a three-component input box.</summary>
+	private static void DrawVector3Editor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		Vector3 value = current as Vector3? ?? Vector3.Zero;
+		if (ImGui.InputFloat3(id, ref value))
+		{
+			engine.SetPinValue(pin.Id, value);
+		}
+	}
+
+	/// <summary>
+	/// Draw an enum pin as a list of its names.
+	/// </summary>
+	/// <param name="engine">The engine holding the value.</param>
+	/// <param name="pin">The pin.</param>
+	/// <param name="id">The widget's id.</param>
+	/// <param name="current">What the pin holds now.</param>
+	/// <remarks>
+	/// Matched by value, not by <c>ToString()</c> against the defined names: a value not defined in
+	/// the type (a cast integer, a flags combination) has no matching name, and picking index 0 for
+	/// it would display a name the pin does not actually hold, without writing it back. Such a value
+	/// shows a blank preview instead until the user picks a defined one.
+	/// </remarks>
+	private static void DrawEnumEditor(NodeEditorEngine engine, Pin pin, string id, object? current)
+	{
+		Type enumType = Nullable.GetUnderlyingType(pin.DataType!) ?? pin.DataType!;
+		string[] names = Enum.GetNames(enumType);
+		Array values = Enum.GetValues(enumType);
+
+		int index = current is null ? -1 : Array.IndexOf(values, current);
+		string preview = index >= 0 ? names[index] : string.Empty;
+
+		if (ImGui.BeginCombo(id, preview))
+		{
+			for (int i = 0; i < names.Length; i++)
+			{
+				bool selected = i == index;
+				if (ImGui.Selectable(names[i], selected))
+				{
+					engine.SetPinValue(pin.Id, values.GetValue(i));
+				}
+
+				if (selected)
+				{
+					ImGui.SetItemDefaultFocus();
+				}
+			}
+
+			ImGui.EndCombo();
+		}
 	}
 
 	/// <summary>
@@ -485,6 +744,7 @@ public class NodeEditorRenderer
 	/// ImNodes only answers these once the editor has ended, which is why they describe the frame
 	/// that just finished rather than the one about to be built.
 	/// </remarks>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; the pointer is scoped to the call and not retained.")]
 	private void ReadHoverState()
 	{
 		int nodeId = 0;
@@ -492,6 +752,25 @@ public class NodeEditorRenderer
 
 		int linkId = 0;
 		HoveredLinkId = ImNodes.IsLinkHovered(ref linkId) ? linkId : null;
+
+		selectedNodes.Clear();
+		int selectedCount = ImNodes.NumSelectedNodes();
+		if (selectedCount > 0)
+		{
+			int[] buffer = new int[selectedCount];
+			unsafe
+			{
+				fixed (int* first = buffer)
+				{
+					ImNodes.GetSelectedNodes(first);
+				}
+			}
+
+			foreach (int id in buffer)
+			{
+				selectedNodes.Add(id);
+			}
+		}
 	}
 
 	/// <summary>
@@ -1016,7 +1295,14 @@ public class NodeEditorRenderer
 	/// <summary>
 	/// Calculate the content width of a node based on its longest text element
 	/// </summary>
-	private static float CalculateNodeContentWidth(Node node)
+	/// <remarks>
+	/// An input row that draws an inline editor is wider than its label alone: it is
+	/// <c>label + ItemSpacing + InlineEditorWidth * Zoom</c>, exactly the row <see cref="DrawInlineEditor"/>
+	/// draws under the same three conditions. Without accounting for that here, the output-pin padding
+	/// below is computed against a node that is narrower than the one ImNodes actually drew, and an
+	/// output pin's label drifts away from its own pin circle.
+	/// </remarks>
+	private float CalculateNodeContentWidth(NodeEditorEngine engine, Node node)
 	{
 		float maxWidth = 0;
 
@@ -1024,11 +1310,20 @@ public class NodeEditorRenderer
 		Vector2 titleSize = ImGui.CalcTextSize(node.Name);
 		maxWidth = Math.Max(maxWidth, titleSize.X);
 
-		// Check all input pin names
+		// Check all input pin names, plus whatever inline editor is drawn alongside them
 		foreach (Pin pin in node.InputPins)
 		{
 			Vector2 pinSize = ImGui.CalcTextSize(pin.EffectiveDisplayName);
-			maxWidth = Math.Max(maxWidth, pinSize.X);
+			float rowWidth = pinSize.X;
+
+			if (DrawInlinePinEditors
+				&& !engine.IsPinConnected(pin.Id)
+				&& PinValueKinds.Classify(pin.DataType) != PinValueKind.Unsupported)
+			{
+				rowWidth += ImGui.GetStyle().ItemSpacing.X + (InlineEditorWidth * Zoom);
+			}
+
+			maxWidth = Math.Max(maxWidth, rowWidth);
 		}
 
 		// Check all output pin names

@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.NodeEditor;
 
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -40,12 +41,17 @@ public record Link(
 /// How many links may meet this pin, or null to take the default for its direction. See
 /// <see cref="AllowsMultipleConnections"/>.
 /// </param>
+/// <param name="DataType">
+/// The .NET type this pin carries, or null when it is not known. Null is what the name-only
+/// overloads produce, and it means the pin accepts any value rather than none.
+/// </param>
 public record Pin(
 	int Id,
 	PinDirection Direction,
 	string Name,
 	string? DisplayName = null,
-	bool? AllowMultipleConnections = null
+	bool? AllowMultipleConnections = null,
+	Type? DataType = null
 )
 {
 	/// <summary>
@@ -69,6 +75,41 @@ public record Pin(
 	/// </remarks>
 	public bool AllowsMultipleConnections => AllowMultipleConnections ?? (Direction == PinDirection.Output);
 };
+
+/// <summary>
+/// What a pin should be created as: everything the engine needs in one value, so a caller does not
+/// create a pin and then patch it.
+/// </summary>
+/// <param name="Name">The pin's display name.</param>
+/// <param name="DataType">The .NET type it carries, or null for an untyped pin.</param>
+/// <param name="DefaultValue">
+/// What the pin holds before anything sets it, or null for nothing. This is the value
+/// <see cref="PinValueStore.Reset"/> goes back to.
+/// </param>
+/// <param name="AllowMultipleConnections">
+/// How many links it accepts, or null to take the default for its direction.
+/// </param>
+public readonly record struct PinSpec(
+	string Name,
+	Type? DataType = null,
+	object? DefaultValue = null,
+	bool? AllowMultipleConnections = null
+);
+
+/// <summary>
+/// Says which node was removed from the graph.
+/// </summary>
+/// <param name="nodeId">The removed node's identifier.</param>
+/// <remarks>
+/// The node itself is deliberately not carried. By the time the event is raised the node is gone
+/// from the graph, and handing back a record of it invites a handler to treat it as still live.
+/// The id is what a handler keyed by node id actually needs.
+/// </remarks>
+public sealed class NodeRemovedEventArgs(int nodeId) : EventArgs
+{
+	/// <summary>Gets the removed node's identifier.</summary>
+	public int NodeId { get; } = nodeId;
+}
 
 /// <summary>
 /// Direction of pin (input or output)

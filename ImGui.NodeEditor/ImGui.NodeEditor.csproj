@@ -21,5 +21,6 @@
     <ProjectReference Include="..\NodeGraph\NodeGraph.csproj" />
     <ProjectReference Include="..\ForceDirectedLayout\ForceDirectedLayout.csproj" />
     <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+    <ProjectReference Include="..\ImGui.Widgets\ImGui.Widgets.csproj" />
   </ItemGroup>
 </Project>

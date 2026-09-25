@@ -92,12 +92,28 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		renderer.RenderDebugOverlays(engine, editorAreaPos, editorAreaSize, showDebugVisualization);
 	}
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "Loop body has side effects (engine.TryCreateLink, field writes); a Where rewrite would not be equivalent.")]
+	/// <summary>
+	/// Hands each kind of request the handler reported to the engine.
+	/// </summary>
+	/// <remarks>
+	/// One method per request kind rather than four loops in a row: the gestures grew one at a time
+	/// and the combined method had crossed the cognitive-complexity threshold. Each still reads top
+	/// to bottom in the order the requests are drained, which is the part that matters — a link
+	/// selected alongside the node it hangs off is removed by its own request rather than silently
+	/// by RemoveNode.
+	/// </remarks>
 	private void ProcessInputEvents()
 	{
 		InputEvents events = inputHandler.ProcessInput();
 
-		// Process link creation requests
+		ProcessLinkCreationRequests(events);
+		ProcessLinkDeletionRequests(events);
+		ProcessNodeDeletionRequests(events);
+		ProcessNodeDuplicationRequests(events);
+	}
+
+	private void ProcessLinkCreationRequests(InputEvents events)
+	{
 		foreach (LinkCreationRequest request in events.LinkCreationRequests)
 		{
 			LinkCreationResult result = engine.TryCreateLink(request.FromPinId, request.ToPinId);
@@ -113,8 +129,11 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				lastActionColor = new Vector4(1.0f, 0.3f, 0.3f, 1.0f); // Red
 			}
 		}
+	}
 
-		// Process link deletion requests
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "RemoveLink is the mutation, not a predicate; a Where rewrite would hide a graph edit inside a lazily-evaluated filter.")]
+	private void ProcessLinkDeletionRequests(InputEvents events)
+	{
 		foreach (int linkId in events.LinkDeletionRequests)
 		{
 			if (engine.RemoveLink(linkId))
@@ -122,6 +141,44 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				lastActionMessage = $"Link {linkId} deleted";
 				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
 			}
+		}
+	}
+
+	/// <remarks>
+	/// Drained after the links so a link selected alongside the node it hangs off is removed by its
+	/// own request rather than silently by RemoveNode; either order leaves the same graph.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "RemoveNode is the mutation, not a predicate; a Where rewrite would hide a graph edit inside a lazily-evaluated filter.")]
+	private void ProcessNodeDeletionRequests(InputEvents events)
+	{
+		foreach (int nodeId in events.NodeDeletionRequests)
+		{
+			if (engine.RemoveNode(nodeId))
+			{
+				lastActionMessage = $"Node {nodeId} deleted";
+				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
+			}
+		}
+	}
+
+	/// <remarks>
+	/// The whole selection goes over in one call rather than one node at a time, so a link between
+	/// two selected nodes is copied along with them.
+	/// </remarks>
+	private void ProcessNodeDuplicationRequests(InputEvents events)
+	{
+		if (events.NodeDuplicationRequests.Count == 0)
+		{
+			return;
+		}
+
+		IReadOnlyList<Node> copies = engine.DuplicateNodes(events.NodeDuplicationRequests, NodeEditorEngine.DefaultDuplicationOffset);
+		if (copies.Count > 0)
+		{
+			lastActionMessage = copies.Count == 1
+				? $"Node {copies[0].Id} duplicated"
+				: $"{copies.Count} nodes duplicated";
+			lastActionColor = new Vector4(0.4f, 0.8f, 1.0f, 1.0f); // Blue
 		}
 	}
 
@@ -238,6 +295,12 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		if (!string.IsNullOrEmpty(lastActionMessage))
 		{
 			ImGui.TextColored(lastActionColor, lastActionMessage);
+		}
+
+		if (renderer.SelectedNodeIds.Count > 0)
+		{
+			ImGui.SeparatorText("Parameters");
+			NodeInspectorPanel.Draw(engine, renderer.SelectedNodeIds.First());
 		}
 
 		// Debug information
@@ -452,5 +515,18 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		engine.TryCreateLink(multiplyNode.OutputPins[0].Id, setVector.InputPins[1].Id); // X² as new X
 		engine.TryCreateLink(splitVector1.OutputPins[1].Id, setVector.InputPins[2].Id); // Keep Y unchanged
 		engine.TryCreateLink(setVector.OutputPins[0].Id, splitVector2.InputPins[0].Id); // Final vector analysis
+
+		// A node whose parameters are edited rather than connected, which is what issue #437 asked
+		// about. Typed pins with defaults are all an inline editor needs.
+		engine.CreateNodeFromSpecs(
+			new Vector2(50, 550),
+			"Blob Filter",
+			[
+				new PinSpec("Threshold", typeof(double), 128.0),
+				new PinSpec("AreaMin", typeof(double), 50.0),
+				new PinSpec("Sigma", typeof(double), 2.0),
+				new PinSpec("Invert", typeof(bool), false),
+			],
+			[new PinSpec("Count", typeof(int))]);
 	}
 }

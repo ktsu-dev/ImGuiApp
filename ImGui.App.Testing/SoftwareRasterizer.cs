@@ -39,7 +39,7 @@ public readonly record struct Rectangle(int MinX, int MinY, int MaxX, int MaxY)
 /// per draw command, vertex color modulation, straight-alpha blending, and scissor rectangles.
 /// Deliberately not general purpose.
 /// </summary>
-public static class SoftwareRasterizer
+public static partial class SoftwareRasterizer
 {
 	/// <summary>Fills one triangle into the target, blending over what is already there.</summary>
 	/// <param name="target">The bitmap to draw into.</param>

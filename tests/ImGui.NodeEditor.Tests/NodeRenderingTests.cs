@@ -26,6 +26,9 @@ public sealed class NodeRenderingTests
 {
 	private static readonly HarnessOptions Viewport = new() { Width = 900, Height = 700 };
 
+	/// <summary>The nodes <see cref="DrawNodeBody_ReachesEveryNodeAndDrawsWithoutError"/> draws.</summary>
+	private static readonly string[] EveryNodeName = ["Source", "Target", "Lonely"];
+
 	private readonly NodeEditorEngine engine = new();
 	private readonly NodeEditorRenderer renderer = new();
 
@@ -123,6 +126,88 @@ public sealed class NodeRenderingTests
 	}
 
 	/// <summary>
+	/// A host with something to draw on a node face had no way in short of forking the renderer, so
+	/// the hook is only worth having if it reaches every node and ImGui accepts what it submits.
+	/// </summary>
+	[TestMethod]
+	public void DrawNodeBody_ReachesEveryNodeAndDrawsWithoutError()
+	{
+		engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		engine.CreateNode(new Vector2(500, 200), "Target", ["Source.Value"], []);
+		engine.CreateNode(new Vector2(350, 420), "Lonely", [], []);
+
+		List<string> drawnFor = [];
+		renderer.DrawNodeBody = node =>
+		{
+			drawnFor.Add(node.Name);
+			ImGui.Button($"edit##{node.Id}");
+		};
+
+		Start();
+		drawnFor.Clear();
+		harness.Step(1);
+
+		// In the engine's own node order, which is the order the renderer walks them in.
+		Assert.AreSequenceEqual(
+			EveryNodeName,
+			drawnFor,
+			"The hook should reach every node drawn, once each, a pinless node included.");
+
+		Assert.AreEqual(0, ErrorsLastFrame(), "ImGui reported the node bodies' drawing as misuse.");
+	}
+
+	/// <summary>
+	/// ImNodes sizes a node from everything submitted inside it, so a body is only usable if the node
+	/// grows to hold it — and then holds still, rather than growing again every frame.
+	/// </summary>
+	[TestMethod]
+	public void DrawNodeBody_ContentIsSizedIntoTheNodeAndSettles()
+	{
+		engine.CreateNode(new Vector2(250, 200), "Sized", [], ["Value"]);
+		Start();
+
+		Vector2 bare = SizeOf(0);
+
+		renderer.DrawNodeBody = _ => ImGui.Button("a button wider than the pin", new Vector2(240, 30));
+		harness.Step(5);
+		Vector2 withBody = SizeOf(0);
+
+		Assert.IsGreaterThan(bare.X, withBody.X, "The node should have widened to hold the body.");
+		Assert.IsGreaterThan(bare.Y, withBody.Y, "The node should have grown taller to hold the body.");
+
+		harness.Step(10);
+		Assert.AreEqual(
+			withBody,
+			SizeOf(0),
+			$"The node grew from {withBody} to {SizeOf(0)} while nothing happened to it.");
+	}
+
+	/// <summary>
+	/// The body is drawn after the pins for one reason: the rows the pin offsets are measured from
+	/// are already recorded by then, so nothing a host draws can move the pin a link is drawn to.
+	/// </summary>
+	[TestMethod]
+	public void DrawNodeBody_LeavesThePinPositionsWhereTheyWere()
+	{
+		Node source = engine.CreateNode(new Vector2(200, 200), "Source", [], ["Value"]);
+		Node target = engine.CreateNode(new Vector2(560, 200), "Target", ["Source.Value"], []);
+		engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+		Start();
+
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(source.OutputPins[0].Id, out Vector2 outBefore));
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(target.InputPins[0].Id, out Vector2 inBefore));
+
+		renderer.DrawNodeBody = _ => ImGui.Button("body", new Vector2(120, 24));
+		harness.Step(5);
+
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(source.OutputPins[0].Id, out Vector2 outAfter));
+		Assert.IsTrue(renderer.TryGetPinScreenPosition(target.InputPins[0].Id, out Vector2 inAfter));
+
+		Assert.AreEqual(outBefore.Y, outAfter.Y, 0.5f, "A body drawn under the pins moved an output pin.");
+		Assert.AreEqual(inBefore.Y, inAfter.Y, 0.5f, "A body drawn under the pins moved an input pin.");
+	}
+
+	/// <summary>
 	/// Both kinds of node in one graph, which is what a real one looks like: some referenced,
 	/// some not.
 	/// </summary>
@@ -138,5 +223,24 @@ public sealed class NodeRenderingTests
 		harness.Step(10);
 
 		Assert.AreEqual(0, ErrorsLastFrame(), "ImGui reported the graph's drawing as misuse.");
+	}
+
+	/// <summary>
+	/// ImNodes knows what is selected and nothing exposed it, so an inspector had no way to know what
+	/// it was inspecting.
+	/// </summary>
+	[TestMethod]
+	public void SelectedNodeIds_ReportsWhatTheUserClicked()
+	{
+		Node node = engine.CreateNode(new Vector2(250, 200), "Target", ["In"], []);
+		Start();
+
+		Assert.IsEmpty(renderer.SelectedNodeIds, "Nothing is selected before anything is clicked.");
+
+		Assert.IsTrue(renderer.TryGetNodeScreenRect(node.Id, out ScreenRect rect));
+		harness.Mouse.Click(rect.Centre.X, rect.Min.Y + 6f);
+		harness.Step(3);
+
+		Assert.Contains(node.Id, renderer.SelectedNodeIds);
 	}
 }

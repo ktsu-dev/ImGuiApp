@@ -464,7 +464,11 @@ Application lifecycle and utilities.
 | `SetGlobalScale(float)` | `void` | Set accessibility UI scale (0.5-3.0) |
 | `SetWindowIcon(string)` | `void` | Set window icon from image file (also updates the dock icon on macOS) |
 | `GetOrLoadTexture(AbsoluteFilePath)` | `ImGuiAppTextureInfo` | Load or retrieve cached GPU texture |
-| `DeleteTexture(uint)` | `void` | Remove texture from GPU |
+| `CreateTexture(ReadOnlySpan<byte>, int, int)` | `ImGuiAppTextureInfo` | Upload an RGBA8 pixel buffer as a caller-owned texture |
+| `UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan<byte>, int, int)` | `void` | Replace a texture's pixels, in place when the size is unchanged |
+| `CreateTexture(ReadOnlySpan<byte>, int, int, PixelLayout, int)` | `ImGuiAppTextureInfo` | Upload BGRA, RGB, BGR or greyscale pixels, with optional row padding |
+| `UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan<byte>, int, int, PixelLayout, int)` | `void` | Replace a texture's pixels from any `PixelLayout`, with optional row padding |
+| `DeleteTexture(nint)` | `void` | Remove texture from GPU |
 | `EmsToPx(float)` | `int` | Convert EMs to pixels |
 | `PtsToPx(int)` | `int` | Convert points to pixels |
 

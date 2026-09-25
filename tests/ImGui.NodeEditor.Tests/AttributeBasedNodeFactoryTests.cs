@@ -299,6 +299,242 @@ public sealed class AttributeBasedNodeFactoryTests
 	}
 
 	[TestMethod]
+	public void CreateNode_CarriesEachPinsTypeOntoTheGraph()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.AreEqual(typeof(double), node.InputPins[0].DataType);
+		Assert.AreEqual(typeof(double), node.InputPins[1].DataType);
+	}
+
+	/// <summary>
+	/// The definition has known each pin's default since #439 taught it to read a C# initializer.
+	/// Until now it dropped them on the way to the graph, so a node was created holding nothing.
+	/// </summary>
+	[TestMethod]
+	public void CreateNode_SeedsEachPinFromItsDeclaredDefault()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.AreEqual(128.0, engine.GetPinValue(node.InputPins[0].Id), "Read from the property initializer.");
+		Assert.AreEqual(50.0, engine.GetPinValue(node.InputPins[1].Id), "Read from the attribute.");
+	}
+
+	[TestMethod]
+	public void CreateNode_StillAppliesDeclaredConnectionCapacities()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.IsFalse(
+			node.OutputPins.Single(p => p.EffectiveDisplayName == "Count").AllowsMultipleConnections,
+			"An output fans out by default, and this one declared otherwise.");
+	}
+
+	/// <summary>
+	/// Every default in the shipped node library is written as a C# initializer rather than as
+	/// <c>[InputPin(DefaultValue = ...)]</c>, so a menu or inspector built from the definitions saw
+	/// null for all of them. The factory reads the initializer off a prototype instance instead.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_ReadsAnInputDefaultFromItsPropertyInitializer()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(128.0, Input(definition, "Threshold").DefaultValue);
+		Assert.AreEqual("unnamed", Input(definition, "Label").DefaultValue);
+		Assert.AreEqual(7, Input(definition, "Count").DefaultValue, "A field initializer is a default too.");
+	}
+
+	[TestMethod]
+	public void RegisterNodeType_PrefersTheAttributeDefaultOverTheInitializer()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(
+			50.0,
+			Input(definition, "AreaMin").DefaultValue,
+			"An explicit DefaultValue is the author saying what it is, initializer or not.");
+	}
+
+	/// <summary>
+	/// A property with neither form reports what the node will actually hold when it is constructed,
+	/// which for a value type is its zero rather than null.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_ReportsTheZeroForAnUninitializedValueTypePin()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Assert.AreEqual(0.0, Input(definition, "Untouched").DefaultValue);
+	}
+
+	/// <summary>
+	/// Reading initializers means constructing the type, and there are two ways that does not
+	/// happen: the type takes constructor arguments, so it is never attempted, or its constructor
+	/// throws when it is. Registration has to survive both, reporting no default rather than failing.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_SurvivesATypeItCannotConstruct()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+
+		factory.RegisterNodeType<ParameterisedNode>();
+		factory.RegisterNodeType<UnconstructableNode>();
+
+		Assert.IsNull(
+			Input(Registered(factory.GetNodeDefinition(typeof(ParameterisedNode))), "Factor").DefaultValue,
+			"A type that takes constructor arguments has no prototype to read an initializer off.");
+		Assert.IsNull(
+			Input(Registered(factory.GetNodeDefinition(typeof(UnconstructableNode))), "In").DefaultValue,
+			"A constructor that throws leaves the pin as it was.");
+	}
+
+	/// <summary>
+	/// A property that refuses to be read before it is written is a real shape, and reading the
+	/// prototype must not turn it into a registration failure.
+	/// </summary>
+	[TestMethod]
+	public void RegisterNodeType_SurvivesAPinWhoseGetterThrows()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+
+		factory.RegisterNodeType<TouchyGetterNode>();
+
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(TouchyGetterNode)));
+
+		Assert.IsNull(Input(definition, "Fragile").DefaultValue, "A getter that throws has no default to report.");
+		Assert.AreEqual(4, Input(definition, "Sturdy").DefaultValue, "Its neighbour is still read.");
+	}
+
+	[TestMethod]
+	public void CreateNode_ConstructsAnInstanceCarryingTheDeclaredDefaults()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		Node node = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+
+		Assert.IsTrue(factory.TryGetNodeInstance(node.Id, out object? instance), "A node's parameter values need somewhere to live.");
+		InitializedDefaultsNode backing = (InitializedDefaultsNode)instance;
+
+		Assert.AreEqual(128.0, backing.Threshold, "The member's own initializer.");
+		Assert.AreEqual(7, backing.Count, "A field's initializer, not just a property's.");
+		Assert.AreEqual(50.0, backing.AreaMin, "The attribute's default wins over the initializer's 1.0, so the instance and the pin agree.");
+	}
+
+	[TestMethod]
+	public void CreateNode_GivesEachNodeItsOwnInstance()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+		NodeDefinition definition = Registered(factory.GetNodeDefinition(typeof(InitializedDefaultsNode)));
+
+		Node first = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+		Node second = factory.CreateNode<InitializedDefaultsNode>(new Vector2(100, 0));
+
+		Assert.IsTrue(factory.TryGetNodeInstance(first.Id, out object? firstInstance));
+		Assert.IsTrue(factory.TryGetNodeInstance(second.Id, out object? secondInstance));
+
+		// The round trip a host's inspector panel makes: edit a parameter through the pin that declared it.
+		PinDefinition threshold = Input(definition, "Threshold");
+		threshold.SetValue(firstInstance, 200.0);
+
+		Assert.AreEqual(200.0, threshold.GetValue(firstInstance));
+		Assert.AreEqual(128.0, threshold.GetValue(secondInstance), "Two nodes of one type are two nodes, not one shared instance.");
+	}
+
+	[TestMethod]
+	public void GetNodeDefinition_MapsANodeIdBackToTheTypeItCameFrom()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<AddNumbersNode>();
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+
+		Node added = factory.CreateNode<AddNumbersNode>(Vector2.Zero);
+		Node initialized = factory.CreateNode<InitializedDefaultsNode>(new Vector2(100, 0));
+
+		Assert.AreEqual(typeof(AddNumbersNode), factory.GetNodeDefinition(added.Id)?.NodeType);
+		Assert.AreEqual(typeof(InitializedDefaultsNode), factory.GetNodeDefinition(initialized.Id)?.NodeType);
+		Assert.IsNull(factory.GetNodeDefinition(added.Id + initialized.Id + 1), "A node this factory never created has no binding.");
+	}
+
+	[TestMethod]
+	public void CreateNode_BindsTheDefinitionEvenWhenTheTypeCannotBeConstructed()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<ParameterisedNode>();
+
+		Node node = factory.CreateNode<ParameterisedNode>(Vector2.Zero);
+
+		Assert.IsFalse(factory.TryGetNodeInstance(node.Id, out object? instance), "There is no parameterless constructor to build one with.");
+		Assert.IsNull(instance);
+		Assert.AreEqual(typeof(ParameterisedNode), factory.GetNodeDefinition(node.Id)?.NodeType, "The definition is still known; only the instance is missing.");
+	}
+
+	[TestMethod]
+	public void CreateMethodNode_BindsTheDefinitionWithoutManufacturingAReceiver()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<Counter>();
+
+		Node node = factory.CreateMethodNode(IncrementMethod, Vector2.Zero);
+
+		Assert.AreEqual(IncrementMethod, factory.GetNodeDefinition(node.Id)?.Method);
+		Assert.IsFalse(
+			factory.TryGetNodeInstance(node.Id, out _),
+			"A non-static method node takes its receiver over the Instance input pin, so the factory must not invent a second one.");
+	}
+
+	[TestMethod]
+	public void RemoveNode_DropsTheBinding()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+		Node node = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+
+		Assert.IsTrue(engine.RemoveNode(node.Id));
+
+		Assert.IsNull(factory.GetBinding(node.Id), "The id no longer stands for a node, so it must not still resolve.");
+		Assert.IsFalse(factory.TryGetNodeInstance(node.Id, out _));
+	}
+
+	[TestMethod]
+	public void Clear_DropsEveryBindingSoAReissuedNodeIdIsNotInherited()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<InitializedDefaultsNode>();
+		factory.RegisterNodeType<AddNumbersNode>();
+		Node before = factory.CreateNode<InitializedDefaultsNode>(Vector2.Zero);
+
+		engine.Clear();
+
+		Assert.IsNull(factory.GetBinding(before.Id));
+
+		// Clear restarts the id counter, so this unrelated node is handed the same id.
+		Node after = factory.CreateNode<AddNumbersNode>(Vector2.Zero);
+		Assert.AreEqual(before.Id, after.Id, "The premise of this test is that the id is reissued.");
+		Assert.AreEqual(typeof(AddNumbersNode), factory.GetNodeDefinition(after.Id)?.NodeType, "The new node must not inherit the cleared node's binding.");
+	}
+
+	[TestMethod]
 	public void GetNodeDefinition_ReturnsNullForAnythingUnregistered()
 	{
 		AttributeBasedNodeFactory factory = Factory;
@@ -318,6 +554,11 @@ public sealed class AttributeBasedNodeFactoryTests
 	/// <summary>Asserts a lookup found something, and hands back the non-null definition.</summary>
 	private static NodeDefinition Registered(NodeDefinition? definition) =>
 		definition ?? throw new AssertFailedException("The definition was not registered.");
+
+	/// <summary>Finds the one input pin with the given display name.</summary>
+	private static PinDefinition Input(NodeDefinition definition, string displayName) =>
+		definition.InputPins.SingleOrDefault(p => p.DisplayName == displayName)
+			?? throw new AssertFailedException($"No input pin named '{displayName}'.");
 
 	[Node("Add Numbers", ColorHint = "#4488ff", Tags = ["math", "arithmetic"])]
 	[NodeBehavior(
@@ -388,9 +629,74 @@ public sealed class AttributeBasedNodeFactoryTests
 		public double One { get; set; }
 	}
 
+	[Node("Blob Filter")]
+	public sealed class BlobFilterNode
+	{
+		[InputPin("Threshold", Order = 0)]
+		public double Threshold { get; set; } = 128.0;
+
+		[InputPin("AreaMin", Order = 1, DefaultValue = 50.0)]
+		public double AreaMin { get; set; }
+
+		[OutputPin("Count", AllowMultipleConnections = false)]
+		public int Count => 0;
+	}
+
 	public sealed class NotANode
 	{
 		public int Value { get; set; }
+	}
+
+	/// <summary>Mirrors how the shipped library writes its defaults: initializers, not attributes.</summary>
+	[Node("Initialized Defaults")]
+	public sealed class InitializedDefaultsNode
+	{
+		[InputPin("Threshold")]
+		public double Threshold { get; set; } = 128.0;
+
+		[InputPin("Label")]
+		public string Label { get; set; } = "unnamed";
+
+		[InputPin("Count")]
+		public int Count = 7;
+
+		[InputPin("AreaMin", DefaultValue = 50.0)]
+		public double AreaMin { get; set; } = 1.0;
+
+		[InputPin("Untouched")]
+		public double Untouched { get; set; }
+	}
+
+	[Node("Unconstructable")]
+	public sealed class UnconstructableNode
+	{
+		public UnconstructableNode() => throw new InvalidOperationException("Not from here.");
+
+		[InputPin("In")]
+		public int In { get; set; } = 3;
+	}
+
+	/// <summary>Takes a constructor argument, so there is nothing to construct a prototype from.</summary>
+	[Node("Parameterised")]
+	public sealed class ParameterisedNode(double scale)
+	{
+		[InputPin("Factor")]
+		public double Factor { get; set; } = scale;
+	}
+
+	/// <summary>A property that refuses to be read until it has been written.</summary>
+	[Node("Touchy")]
+	public sealed class TouchyGetterNode
+	{
+		[InputPin("Fragile")]
+		public string? Fragile
+		{
+			get => field ?? throw new InvalidOperationException("Set me before reading me.");
+			set;
+		}
+
+		[InputPin("Sturdy")]
+		public int Sturdy { get; set; } = 4;
 	}
 
 	public static class MathNodes

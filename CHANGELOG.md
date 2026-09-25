@@ -1,3 +1,122 @@
+## v3.47.0 (minor)
+
+Changes since v3.46.0:
+
+- Compare the GL context, not the ImGui context, when detecting a context change ([@Claude](https://github.com/Claude))
+
+## v3.46.1 (patch)
+
+Changes since v3.46.0:
+
+- Bump Moq from 4.20.72 to 4.21.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.46.0 (minor)
+
+Changes since v3.45.0:
+
+- Assert the dolly bound with IsLessThan rather than IsTrue ([@Claude](https://github.com/Claude))
+- Cover the render-to-target round trip, the one path Viewport3D is made of ([@Claude](https://github.com/Claude))
+- Add Viewport3DState, the ImGui-free orbit camera behind Viewport3D ([@Claude](https://github.com/Claude))
+
+## v3.45.0 (minor)
+
+Changes since v3.44.0:
+
+- [minor] Create and update textures from BGRA, RGB, BGR and greyscale pixels with row padding ([@Claude](https://github.com/Claude))
+- Pump worker-thread texture tests without Thread.Sleep ([@Claude](https://github.com/Claude))
+- [patch] Marshal UpdateTexture's in-place path to the window thread and document dynamic textures ([@Claude](https://github.com/Claude))
+
+## v3.44.1 (patch)
+
+Changes since v3.44.0:
+
+- Pump worker-thread texture tests without Thread.Sleep ([@Claude](https://github.com/Claude))
+- [patch] Marshal UpdateTexture's in-place path to the window thread and document dynamic textures ([@Claude](https://github.com/Claude))
+
+## v3.44.0 (minor)
+
+Changes since v3.43.0:
+
+- Split ProcessInputEvents, one method per request kind ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge main, and carry pin values onto a duplicated node ([@matt-edmondson](https://github.com/matt-edmondson))
+- Test the WantTextInput guard on the duplicate chord ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Duplicate selected nodes with Ctrl+D ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.43.0 (minor)
+
+Changes since v3.42.0:
+
+- Test the WantTextInput guard, which nothing exercised ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Delete selected nodes with Delete or Backspace ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge the branch's own remote, which had gained a second merge of main ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge main into the node-parameters branch ([@matt-edmondson](https://github.com/matt-edmondson))
+- Describe both homes a parameter can have ([@matt-edmondson](https://github.com/matt-edmondson))
+- Drive every pin value kind on both editing surfaces ([@matt-edmondson](https://github.com/matt-edmondson))
+- Drop two constant conditions the quality bot flagged ([@matt-edmondson](https://github.com/matt-edmondson))
+- Give a pin one home, whether or not it has an instance ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge origin/main into node parameter editing ([@matt-edmondson](https://github.com/matt-edmondson))
+- Cheap wording and cleanup fixes from the branch review ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix enum editors silently misrepresenting unmatched or null values ([@matt-edmondson](https://github.com/matt-edmondson))
+- Amend the design spec to name the shipped CreateNodeFromSpecs ([@matt-edmondson](https://github.com/matt-edmondson))
+- Document the parameter-editing surface and its dependency cost in CLAUDE.md ([@matt-edmondson](https://github.com/matt-edmondson))
+- Coerce a mistyped declared pin default before seeding it ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix output pin labels detaching from their pins with inline editors ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Show parameter editing in the demo and the README ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Fix enum rows in the node inspector silently discarding edits ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw one node's parameters as a property grid ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Report which nodes are selected ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw an editor on an unconnected input pin ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Name the pin types that can be edited ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Carry a declared pin's type and default onto the graph ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Give the engine a value per pin ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Hold a value and a default per pin ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Let a pin declare the type it carries ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Plan node parameter editing ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Design node parameter editing ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.42.0 (minor)
+
+Changes since v3.41.0:
+
+- Merge remote-tracking branch 'origin/main' into claude/imguiapp-409-textfilter-glob ([@Claude](https://github.com/Claude))
+- refactor: filter the selected link ids explicitly ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: delete selected links with Delete or Backspace [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: keep a path-tracked texture published across UpdateTexture's recreate [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- refactor: filter the file browser's listing with ktsu.TextFilter [patch] ([@Claude](https://github.com/Claude))
+
+## v3.41.2 (patch)
+
+Changes since v3.41.1:
+
+- Merge remote-tracking branch 'origin/main' into claude/imguiapp-409-textfilter-glob ([@Claude](https://github.com/Claude))
+- refactor: filter the file browser's listing with ktsu.TextFilter [patch] ([@Claude](https://github.com/Claude))
+
+## v3.41.1 (patch)
+
+Changes since v3.41.0:
+
+- Bump the ktsu group with 16 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.41.0 (minor)
+
+Changes since v3.40.0:
+
+- Group the node-id lookups with the other GetNodeDefinition overloads ([@Claude](https://github.com/Claude))
+- Bind each created node to an instance its parameters live on [minor] ([@Claude](https://github.com/Claude))
+
+## v3.40.0 (minor)
+
+Changes since v3.39.0:
+
+- Split the 3D triangle fill into setup and per-pixel shading ([@Claude](https://github.com/Claude))
+- Add IRenderer3D and its software implementation [minor] ([@Claude](https://github.com/Claude))
+- [patch] Assert the node body hook's reach in order, per MSTEST0068 ([@Claude](https://github.com/Claude))
+- [patch] Cover the prototype-reading paths, and drop two catches that cannot fire ([@Claude](https://github.com/Claude))
+- [patch] Say plainly that NodeGraph declares execution rather than running it ([@Claude](https://github.com/Claude))
+- [minor] Give NodeEditorRenderer a hook for host content in a node body ([@Claude](https://github.com/Claude))
+- [patch] Read an input pin's default from its C# initializer ([@Claude](https://github.com/Claude))
+
 ## v3.39.0 (minor)
 
 Changes since v3.38.0:
