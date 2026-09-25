@@ -15,6 +15,10 @@ ImGui.NodeEditor is a visual node editor built on ImNodes, with the graph itself
 - **Connections are checked**: `TryCreateLink` returns a result with a message rather than throwing, and refuses a link that joins two pins of the same direction, duplicates one that exists, exceeds what a pin will accept, or joins a node to itself. It does not yet compare the pins' declared types
 - **Physics-based layout**: nodes repel, links pull, and the graph settles; powered by [`ktsu.ForceDirectedLayout`](https://github.com/ktsu-dev/ImGuiApp), with per-frame stability and energy readings for debug overlays
 - **Drag-aware**: nodes being dragged are excluded from the simulation, and the renderer reports position and size changes back to the engine
+- **Undo and redo**: `NodeEditorHistory` records every change as the difference it made, onto a [`ktsu.UndoRedo`](https://github.com/ktsu-dev/UndoRedo) stack — node creation, deletion and duplication, links, drags, comment boxes and pin values, with a slider dragged across many frames undoing in one step
+- **Keymap-driven commands**: `NodeEditorInputHandler` reads delete, duplicate, undo and redo from a [`ktsu.Keybinding`](https://github.com/ktsu-dev/Keybinding) keymap when given one, so the host's profiles and rebinding apply to the graph; without one it uses Delete, Ctrl+D, Ctrl+Z and Ctrl+Y
+- **Grid snapping**: `NodeEditorRenderer.SnapToGrid` snaps dragged nodes to the grid drawn behind them, and `SnapNodesToGrid` brings nodes placed in code onto it
+- **Comment boxes**: labelled, coloured regions drawn behind the nodes; dragging a box's title carries the nodes inside it, and boxes can be resized, renamed in place and closed
 
 ## Installation
 
@@ -224,6 +228,77 @@ float energy = engine.TotalSystemEnergy;
 renderer.RenderDebugOverlays(engine, editorPosition, editorSize, showDebug: true);
 ```
 
+### Undo and redo
+
+```csharp
+NodeEditorHistory history = new(engine, factory);   // the factory is optional
+renderer.History = history;                         // records drags and comment box gestures
+
+// Structural edits go through the history, or are wrapped in Record
+history.TryCreateLink(fromPin, toPin);
+history.RemoveNodes(selectedIds);
+Node made = history.Record("Add filter", () => factory.CreateNode<BlobFilter>(position));
+
+// Keys arrive as requests, like every other gesture
+InputEvents events = inputHandler.ProcessInput();
+if (events.UndoRequested) { history.Undo(); }
+if (events.RedoRequested) { history.Redo(); }
+```
+
+A step is the difference a change made, not a copy of the graph. Undoing a deletion puts back the
+node — under its old id, with its pins, values and links — and leaves every other node where the
+layout has since moved it. Pin values written by the inline editors and `NodeInspectorPanel` are
+recorded without being asked, and the writes of one gesture (a drag of a slider, one session of
+typing) merge into a single step. Pass the `AttributeBasedNodeFactory` the nodes were made with so
+an undone deletion reattaches the node's instance.
+
+Creating, deleting and linking nodes directly on the engine is not recorded — route those through
+the history. `engine.Clear()` called outside `Record` empties the history, since it restarts the id
+counters; inside `Record` it is an ordinary undoable step.
+
+The stack is an ordinary `IUndoRedoService`, so a host that already keeps one for the rest of its
+document can pass it to `new NodeEditorHistory(engine, service, factory)` and the graph's steps
+interleave with its own. Each graph step carries a `node:<id>` navigation context for an
+`INavigationProvider` to pan to.
+
+### Keyboard commands from a keymap
+
+```csharp
+KeybindingManager keys = new("./keybindings");
+await keys.InitializeAsync();
+keys.CreateDefaultProfile();
+NodeEditorCommands.Register(keys.Commands, keys.Keybindings);   // binds defaults only where unbound
+
+NodeEditorInputHandler inputHandler = new(keys.Keybindings);
+```
+
+`NodeEditorCommands` names the four commands (`nodeeditor.undo`, `nodeeditor.redo`,
+`nodeeditor.delete`, `nodeeditor.duplicate`) and their default chords. The handler reads each
+command's chord from the active profile every frame, so a chord the user rebinds takes effect at
+once. A chord matches only when its modifiers are exactly the ones held, and none of the commands
+fire while a text field has the keyboard.
+
+### Grid snapping and comment boxes
+
+```csharp
+renderer.SnapToGrid = true;
+renderer.GridSpacing = 16f;                                   // the drawn grid follows it
+renderer.SnapNodesToGrid(engine, renderer.SelectedNodeIds);   // for nodes that did not arrive by drag
+
+CommentBox box = history.CreateCommentBoxAround(renderer.SelectedNodeIds, "Image Preprocessing")!;
+engine.SetCommentBoxColor(box.Id, new Vector4(0.2f, 0.5f, 0.9f, 0.25f));
+```
+
+Snapping is ImNodes' own, so the lattice is the grid on screen and a multi-node selection keeps its
+shape as it snaps. Only a drag snaps: a node the layout moves goes where the layout puts it, so a
+graph meant to stay on the grid wants physics off or its nodes pinned.
+
+A comment box is drawn behind every node and link. It does not own nodes: what it contains is
+whatever lies wholly inside it when asked, so dragging a node out takes it out. Dragging a box's
+title carries its nodes and any boxes nested in it, the handle in its bottom-right corner resizes
+it, a double-click on its title renames it in place, and the cross closes it without touching its
+nodes. Comment boxes take no part in the layout.
+
 ## API Reference
 
 ### `NodeEditorEngine`
@@ -253,6 +328,26 @@ The graph and its physics. No ImGui calls.
 | `UpdatePhysics(float)` | `void` | Advances the layout by a frame delta |
 | `NodeRemoved` | `event EventHandler<NodeRemovedEventArgs>` | Raised after a node is removed, so anything keyed by node id can drop its entry |
 | `Cleared` | `event EventHandler<EventArgs>` | Raised after `Clear()`, which also restarts the id counters |
+| `PinValueChanged` | `event EventHandler<PinValueChangedEventArgs>` | Raised after `SetPinValue` or `ResetPinValue` writes, with the old and new value and the edit gesture |
+| `SetPinValue(int, object?, long?)` | `bool` | Writes a value as part of an edit gesture, so the writes of one drag are one change |
+| `CommentBoxes` | `IReadOnlyList<CommentBox>` | Every comment box, in drawing order |
+| `CreateCommentBox(...)` / `CreateCommentBoxAround(...)` | `CommentBox` / `CommentBox?` | Adds a box at a rectangle, or around a set of nodes |
+| `MoveCommentBox(int, Vector2)` | `IReadOnlyList<NodeMove>` | Moves a box with everything inside it |
+| `RenameCommentBox` / `ResizeCommentBox` / `SetCommentBoxColor` / `RemoveCommentBox` | `bool` | Edits or removes a box |
+| `GetNodesInCommentBox(int)` | `IReadOnlyList<int>` | The nodes lying wholly inside a box |
+
+### `NodeEditorHistory`
+
+| Name | Return Type | Description |
+| ---- | ----------- | ----------- |
+| `Record<T>(string, Func<T>)` / `Record(string, Action)` | `T` / `void` | Runs a change and records what it did as one step |
+| `Undo()` / `Redo()` | `bool` | Undoes or redoes a step |
+| `CanUndo` / `CanRedo` | `bool` | Whether there is one |
+| `NextUndoDescription` / `NextRedoDescription` | `string?` | What it would be, for a menu |
+| `TryCreateLink`, `RemoveLink(s)`, `RemoveNode(s)`, `DuplicateNodes` | as on the engine | The engine's structural edits, recorded |
+| `CreateCommentBox(Around)`, `MoveCommentBox`, `RenameCommentBox`, `RemoveCommentBox` | as on the engine | The comment box edits, recorded |
+| `RecordNodeMoves(IEnumerable<NodeMove>, string?)` | `bool` | Records moves already made, such as a finished drag |
+| `Service` | `IUndoRedoService` | The underlying `ktsu.UndoRedo` stack |
 
 ### `NodeEditorRenderer`
 
@@ -264,6 +359,12 @@ The graph and its physics. No ImGui calls.
 | `RenderDebugOverlays(...)` | `void` | Force and stability overlays |
 | `CurrentlyDraggedNodes` | `IReadOnlySet<int>` | Nodes the user is dragging this frame |
 | `DrawNodeBody` | `Action<Node>?` | Called inside each node, after its pins, to draw host content in the node body |
+| `History` | `NodeEditorHistory?` | Where finished drags and comment box gestures are recorded |
+| `SnapToGrid` / `GridSpacing` | `bool` / `float?` | Snaps dragged nodes to the drawn grid, and sets its spacing |
+| `SnapNodesToGrid(NodeEditorEngine, IEnumerable<int>)` | `int` | Moves nodes onto the grid |
+| `CompletedNodeMoves` | `IReadOnlyList<NodeMove>` | The moves made by a drag that finished this frame |
+| `DrawCommentBoxes` / `CommentBoxColor` | `bool` / `Vector4?` | Whether comment boxes are drawn, and their default fill |
+| `TryGetCommentBoxScreenRect(int, out ScreenRect)` | `bool` | Where a comment box was drawn |
 
 #### Host content in a node body
 
@@ -311,7 +412,7 @@ PhysicsSettingsPanel.DrawDiagnostics(engine);
 
 ### `NodeEditorInputHandler`
 
-`ProcessInput()` returns `InputEvents`, holding `LinkCreationRequests` (`LinkCreationRequest(FromPinId, ToPinId)`) and `LinkDeletionRequests`.
+`ProcessInput()` returns `InputEvents`, holding `LinkCreationRequests` (`LinkCreationRequest(FromPinId, ToPinId)`), `LinkDeletionRequests`, `NodeDeletionRequests`, `NodeDuplicationRequests`, `UndoRequested` and `RedoRequested`. Construct it with an `IKeybindingService`, or set `Keybindings`, to take the keys from a keymap; see `NodeEditorCommands`.
 
 ### `AttributeBasedNodeFactory`
 
@@ -330,6 +431,8 @@ PhysicsSettingsPanel.DrawDiagnostics(engine);
 ### Domain models
 
 `Node(Id, Position, Name, InputPins, OutputPins, Dimensions, Velocity, Force, IsPinned)`, `Link(Id, OutputPinId, InputPinId)` and `Pin(Id, Direction, Name, DisplayName)` are records; `PinDirection` is `Input` or `Output`.
+
+`CommentBox(Id, Title, Position, Size, Color)` is a comment box, and `NodeMove(NodeId, From, To)` one node's move.
 
 `NodeBinding(NodeId, Definition, Instance)` ties a node back to what it was created from; `NodeRemovedEventArgs` carries the `NodeId` of a removed node. `PinValueAccessor(Get, Set)` says where a pin's value lives when it does not live in the engine's store, and `PinSpec(Name, DataType, DefaultValue, AllowMultipleConnections)` is what a pin is created from.
 

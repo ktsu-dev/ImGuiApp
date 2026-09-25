@@ -7,16 +7,45 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
+using ktsu.Keybinding.Core.Contracts;
+using ktsu.Keybinding.Core.Models;
 
 /// <summary>
 /// Pure input handling class - only handles ImNodes input events, no business logic
 /// </summary>
+/// <remarks>
+/// The keyboard commands — delete, duplicate, undo and redo — are read from a
+/// <c>ktsu.Keybinding</c> service when one is given, so they follow the host's keymap; see
+/// <see cref="NodeEditorCommands"/>. Without one they are Delete or Backspace, Ctrl+D, Ctrl+Z, and
+/// Ctrl+Y or Ctrl+Shift+Z. Either way none of them fires while a text field has the keyboard.
+/// </remarks>
 public class NodeEditorInputHandler
 {
+	/// <summary>Create a handler with the default keys.</summary>
+	public NodeEditorInputHandler()
+	{
+	}
+
+	/// <summary>Create a handler that takes its keys from a keymap.</summary>
+	/// <param name="keybindings">
+	/// The keymap. Register <see cref="NodeEditorCommands"/> with it, or no command has a chord and
+	/// none of them fires.
+	/// </param>
+	public NodeEditorInputHandler(IKeybindingService keybindings) => Keybindings = Ensure.NotNull(keybindings);
+
+	/// <summary>
+	/// Where the keyboard commands' chords come from, or null for the default keys.
+	/// </summary>
+	/// <remarks>
+	/// Read every frame, so a chord the user rebinds takes effect on the next one. A command with no
+	/// chord in the active profile does not fire, and nor does any command when the service has no
+	/// active profile.
+	/// </remarks>
+	public IKeybindingService? Keybindings { get; set; }
+
 	/// <summary>
 	/// Process all input events and return the actions that should be taken
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S2325:Make 'ProcessInput' a static method.", Justification = "Public instance method; making it static would be a breaking API change.")]
 	public InputEvents ProcessInput()
 	{
 		InputEvents events = new();
@@ -27,39 +56,61 @@ public class NodeEditorInputHandler
 		// Check for link deletion
 		ProcessLinkDeletion(events);
 
+		// A key aimed at a text field is not aimed at the graph. Without this, typing in any input
+		// box on the same frame would silently drop the user's selection, and Ctrl+Z in a text box
+		// would undo the graph rather than the typing.
+		if (ImGui.GetIO().WantTextInput)
+		{
+			return events;
+		}
+
 		// One press clears everything the user selected, links and nodes alike, so the key is read
 		// once and both selections are drained from it. Reading it per selection kind would work
 		// today but invites the two to drift apart, which is how "Delete removed my links but left
 		// the node" happens.
-		if (IsDeleteSelectionPressed())
+		if (IsCommandPressed(NodeEditorCommands.Delete))
 		{
 			ProcessSelectedLinkDeletion(events);
 			ProcessSelectedNodeDeletion(events);
 		}
 
 		// Check for nodes the user selected and asked to duplicate
-		ProcessSelectedNodeDuplication(events);
+		if (IsCommandPressed(NodeEditorCommands.Duplicate))
+		{
+			ProcessSelectedNodeDuplication(events);
+		}
+
+		events.UndoRequested = IsCommandPressed(NodeEditorCommands.Undo);
+		events.RedoRequested = IsCommandPressed(NodeEditorCommands.Redo);
 
 		return events;
 	}
 
 	/// <summary>
-	/// Whether this frame carries the "remove what I have selected" gesture.
+	/// Whether this frame carries the gesture for one of the keyboard commands.
 	/// </summary>
-	private static bool IsDeleteSelectionPressed()
+	/// <param name="commandId">One of the <see cref="NodeEditorCommands"/> ids.</param>
+	private bool IsCommandPressed(string commandId)
 	{
-		// A Delete aimed at a text field is not aimed at the graph. Without this, typing in any
-		// input box on the same frame would silently drop the user's selection.
-		if (ImGui.GetIO().WantTextInput)
+		if (Keybindings is IKeybindingService keybindings)
 		{
-			return false;
+			return keybindings.GetChord(commandId) is Chord chord && KeyChordMatcher.IsPressed(chord);
 		}
 
-		// Backspace is included because on a Mac keyboard it is the key labelled Delete; the
-		// forward-delete key is a chord most users never reach for.
-		// repeat: false, so holding the key down deletes the selection once rather than firing
-		// again every repeat interval.
-		return ImGui.IsKeyPressed(ImGuiKey.Delete, repeat: false) || ImGui.IsKeyPressed(ImGuiKey.Backspace, repeat: false);
+		// No repeat, so holding the keys down acts once rather than again every repeat interval. A
+		// chord rather than a key plus a modifier test: a chord matches the modifiers exactly, so
+		// Ctrl+Shift+D stays available to whatever else wants it, and ImGuiKey.ModCtrl is the Command
+		// key on a Mac when the host sets ConfigMacOSXBehaviors.
+		return commandId switch
+		{
+			// Backspace is included because on a Mac keyboard it is the key labelled Delete; the
+			// forward-delete key is a chord most users never reach for.
+			NodeEditorCommands.Delete => ImGui.IsKeyPressed(ImGuiKey.Delete, repeat: false) || ImGui.IsKeyPressed(ImGuiKey.Backspace, repeat: false),
+			NodeEditorCommands.Duplicate => ImGui.IsKeyChordPressed((int)(ImGuiKey.ModCtrl | ImGuiKey.D)),
+			NodeEditorCommands.Undo => ImGui.IsKeyChordPressed((int)(ImGuiKey.ModCtrl | ImGuiKey.Z)),
+			NodeEditorCommands.Redo => ImGui.IsKeyChordPressed((int)(ImGuiKey.ModCtrl | ImGuiKey.Y)) || ImGui.IsKeyChordPressed((int)(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.Z)),
+			_ => false,
+		};
 	}
 
 	/// <summary>
@@ -74,21 +125,6 @@ public class NodeEditorInputHandler
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Required for native ImNodes interop; the buffer is pinned for the call and not retained.")]
 	private static void ProcessSelectedNodeDuplication(InputEvents events)
 	{
-		// A Ctrl+D aimed at a text field is not aimed at the graph.
-		if (ImGui.GetIO().WantTextInput)
-		{
-			return;
-		}
-
-		// As a chord rather than a key plus a modifier test: a chord matches the modifiers exactly,
-		// so Ctrl+Shift+D stays available to whatever else wants it, and ImGuiKey.ModCtrl is the
-		// Command key on a Mac when the host sets ConfigMacOSXBehaviors. No repeat, so holding the
-		// keys down duplicates once rather than filling the graph.
-		if (!ImGui.IsKeyChordPressed((int)(ImGuiKey.ModCtrl | ImGuiKey.D)))
-		{
-			return;
-		}
-
 		int selectedCount = ImNodes.NumSelectedNodes();
 		if (selectedCount <= 0)
 		{
@@ -255,6 +291,12 @@ public class InputEvents
 	/// application that decides where the copies land.
 	/// </summary>
 	public List<int> NodeDuplicationRequests { get; } = [];
+
+	/// <summary>Whether the user asked to undo the last change. See <see cref="NodeEditorHistory.Undo"/>.</summary>
+	public bool UndoRequested { get; set; }
+
+	/// <summary>Whether the user asked to redo the last change undone. See <see cref="NodeEditorHistory.Redo"/>.</summary>
+	public bool RedoRequested { get; set; }
 }
 
 /// <summary>

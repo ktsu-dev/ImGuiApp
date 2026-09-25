@@ -17,4 +17,9 @@
     <ProjectReference Include="..\..\ImGui.App.Testing\ImGui.App.Testing.csproj" />
     <ProjectReference Include="..\..\ImGui.NodeEditor\ImGui.NodeEditor.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ktsu.Keybinding" />
+    <PackageReference Include="ktsu.UndoRedo" />
+  </ItemGroup>
 </Project>

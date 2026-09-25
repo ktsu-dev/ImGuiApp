@@ -98,6 +98,42 @@ public sealed class PinValueStore
 	}
 
 	/// <summary>
+	/// Read a pin's seeded default, if it has one.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="hasDefault">Whether it was seeded.</param>
+	/// <param name="defaultValue">What it was seeded with.</param>
+	internal void TryGetDefault(int pinId, out bool hasDefault, out object? defaultValue) =>
+		hasDefault = defaults.TryGetValue(pinId, out defaultValue);
+
+	/// <summary>
+	/// Put a pin back exactly as it was held, default and all, with no type check.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="value">Its value.</param>
+	/// <param name="hasDefault">Whether it had a seeded default.</param>
+	/// <param name="defaultValue">That default.</param>
+	internal void Restore(int pinId, object? value, bool hasDefault, object? defaultValue)
+	{
+		values[pinId] = value;
+		if (hasDefault)
+		{
+			defaults[pinId] = defaultValue;
+		}
+		else
+		{
+			defaults.Remove(pinId);
+		}
+	}
+
+	/// <summary>
+	/// Put a pin's value back with no type check, leaving its default alone.
+	/// </summary>
+	/// <param name="pinId">The pin.</param>
+	/// <param name="value">Its value.</param>
+	internal void Restore(int pinId, object? value) => values[pinId] = value;
+
+	/// <summary>
 	/// Whether a pin of this type will take this value.
 	/// </summary>
 	/// <param name="dataType">The pin's declared type, or null when it has none.</param>

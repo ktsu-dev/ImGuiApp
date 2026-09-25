@@ -6,6 +6,8 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ForceDirectedLayout;
 using ktsu.ImGui.NodeEditor;
+using ktsu.ImGui.Widgets;
+using ktsu.Keybinding.Core.Services;
 using ktsu.NodeGraph.Library.Operations;
 using ktsu.NodeGraph.Library.Primitives;
 using ktsu.NodeGraph.Library.Utilities;
@@ -13,7 +15,12 @@ using ktsu.NodeGraph.Library.Utilities;
 /// <summary>
 /// Clean architecture ImNodes demo with proper separation of concerns
 /// </summary>
-internal sealed class CleanImNodesDemo : IDemoTab
+/// <remarks>
+/// Every edit goes through a <see cref="NodeEditorHistory"/>, so the whole tab is undoable with
+/// Ctrl+Z and Ctrl+Y. The keys come from an in-memory <c>ktsu.Keybinding</c> keymap, the way an
+/// application with its own keymap would supply them.
+/// </remarks>
+internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 {
 	public string TabName => "Clean ImNodes";
 
@@ -21,9 +28,13 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	private readonly NodeEditorEngine engine = new();
 	private readonly AttributeBasedNodeFactory nodeFactory;
 
+	// Undo and redo for everything below
+	private readonly NodeEditorHistory history;
+
 	// Presentation layers
 	private readonly NodeEditorRenderer renderer = new();
-	private readonly NodeEditorInputHandler inputHandler = new();
+	private readonly NodeEditorInputHandler inputHandler;
+	private readonly KeybindingService keybindings;
 
 	// UI state
 	private bool showDebugVisualization;
@@ -36,7 +47,21 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		RegisterNodeTypes();
 		CreateDemoData();
 		engine.InitializeWorldOriginToCentroid();
+
+		// Created after the demo data, so the starting graph is where the history begins rather than
+		// something Ctrl+Z can take apart.
+		history = new NodeEditorHistory(engine, nodeFactory);
+		renderer.History = history;
+
+		CommandRegistry commands = new();
+		keybindings = new KeybindingService(commands, new ProfileManager());
+		keybindings.CreateProfile("default", "Default");
+		keybindings.SetActiveProfile("default");
+		NodeEditorCommands.Register(commands, keybindings);
+		inputHandler = new NodeEditorInputHandler(keybindings);
 	}
+
+	public void Dispose() => history.Dispose();
 
 	public void Update(float deltaTime)
 	{
@@ -110,13 +135,47 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		ProcessLinkDeletionRequests(events);
 		ProcessNodeDeletionRequests(events);
 		ProcessNodeDuplicationRequests(events);
+		ProcessHistoryRequests(events);
+	}
+
+	private void ProcessHistoryRequests(InputEvents events)
+	{
+		if (events.UndoRequested)
+		{
+			Undo();
+		}
+
+		if (events.RedoRequested)
+		{
+			Redo();
+		}
+	}
+
+	private void Undo()
+	{
+		string? description = history.NextUndoDescription;
+		if (history.Undo())
+		{
+			lastActionMessage = $"Undid: {description}";
+			lastActionColor = new Vector4(0.8f, 0.8f, 1.0f, 1.0f);
+		}
+	}
+
+	private void Redo()
+	{
+		string? description = history.NextRedoDescription;
+		if (history.Redo())
+		{
+			lastActionMessage = $"Redid: {description}";
+			lastActionColor = new Vector4(0.8f, 0.8f, 1.0f, 1.0f);
+		}
 	}
 
 	private void ProcessLinkCreationRequests(InputEvents events)
 	{
 		foreach (LinkCreationRequest request in events.LinkCreationRequests)
 		{
-			LinkCreationResult result = engine.TryCreateLink(request.FromPinId, request.ToPinId);
+			LinkCreationResult result = history.TryCreateLink(request.FromPinId, request.ToPinId);
 
 			if (result.Success)
 			{
@@ -136,7 +195,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	{
 		foreach (int linkId in events.LinkDeletionRequests)
 		{
-			if (engine.RemoveLink(linkId))
+			if (history.RemoveLink(linkId))
 			{
 				lastActionMessage = $"Link {linkId} deleted";
 				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
@@ -153,7 +212,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	{
 		foreach (int nodeId in events.NodeDeletionRequests)
 		{
-			if (engine.RemoveNode(nodeId))
+			if (history.RemoveNode(nodeId))
 			{
 				lastActionMessage = $"Node {nodeId} deleted";
 				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
@@ -172,7 +231,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			return;
 		}
 
-		IReadOnlyList<Node> copies = engine.DuplicateNodes(events.NodeDuplicationRequests, NodeEditorEngine.DefaultDuplicationOffset);
+		IReadOnlyList<Node> copies = history.DuplicateNodes(events.NodeDuplicationRequests, NodeEditorEngine.DefaultDuplicationOffset);
 		if (copies.Count > 0)
 		{
 			lastActionMessage = copies.Count == 1
@@ -241,28 +300,32 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		if (DemoProbe.Button("Add Input Node"))
 		{
 			Vector2 position = new(100, 100 + (engine.Nodes.Count * 50));
-			engine.CreateNode(position, $"Input {engine.Nodes.Count + 1}", 0, 2);
+			history.Record("Add input node", () => engine.CreateNode(position, $"Input {engine.Nodes.Count + 1}", 0, 2));
 		}
 
 		ImGui.SameLine();
 		if (DemoProbe.Button("Add Process Node"))
 		{
 			Vector2 position = new(300, 100 + (engine.Nodes.Count * 50));
-			engine.CreateNode(position, $"Process {engine.Nodes.Count + 1}", 2, 2);
+			history.Record("Add process node", () => engine.CreateNode(position, $"Process {engine.Nodes.Count + 1}", 2, 2));
 		}
 
 		ImGui.SameLine();
 		if (DemoProbe.Button("Add Output Node"))
 		{
 			Vector2 position = new(500, 100 + (engine.Nodes.Count * 50));
-			engine.CreateNode(position, $"Output {engine.Nodes.Count + 1}", 2, 0);
+			history.Record("Add output node", () => engine.CreateNode(position, $"Output {engine.Nodes.Count + 1}", 2, 0));
 		}
 
+		// Recorded like any other edit, so a reset or a clear is one Ctrl+Z away from being undone.
 		if (DemoProbe.Button("Reset Demo"))
 		{
-			engine.Clear();
-			CreateDemoData();
-			engine.InitializeWorldOriginToCentroid();
+			history.Record("Reset demo", () =>
+			{
+				engine.Clear();
+				CreateDemoData();
+				engine.InitializeWorldOriginToCentroid();
+			});
 			lastActionMessage = "Reset to demo data";
 			lastActionColor = new Vector4(0.0f, 0.8f, 1.0f, 1.0f); // Cyan
 		}
@@ -270,10 +333,16 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		ImGui.SameLine();
 		if (DemoProbe.Button("Clear All"))
 		{
-			engine.Clear();
+			history.Record("Clear all", engine.Clear);
 			lastActionMessage = "All nodes and links cleared";
 			lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
 		}
+
+		ImGui.SeparatorText("History");
+		RenderHistoryControls();
+
+		ImGui.SeparatorText("Layout Tools");
+		RenderLayoutTools();
 
 		// Physics settings
 		ImGui.SeparatorText("Physics Simulation");
@@ -308,6 +377,73 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		{
 			RenderDebugInformation();
 		}
+	}
+
+	/// <summary>
+	/// Draws undo and redo, with what each would do, and the keys the keymap has them on.
+	/// </summary>
+	private void RenderHistoryControls()
+	{
+		using (new ScopedDisable(!history.CanUndo))
+		{
+			if (DemoProbe.Button("Undo"))
+			{
+				Undo();
+			}
+		}
+
+		ImGui.SameLine();
+		using (new ScopedDisable(!history.CanRedo))
+		{
+			if (DemoProbe.Button("Redo"))
+			{
+				Redo();
+			}
+		}
+
+		ImGui.TextDisabled($"Next undo: {history.NextUndoDescription ?? "nothing"}");
+		ImGui.TextDisabled($"Next redo: {history.NextRedoDescription ?? "nothing"}");
+
+		foreach (ktsu.Keybinding.Core.Models.Command command in NodeEditorCommands.All)
+		{
+			ImGui.TextDisabled($"{command.Name}: {keybindings.GetChord(command.Id)?.ToString() ?? "unbound"}");
+		}
+	}
+
+	/// <summary>
+	/// Draws grid snapping and comment boxes, the tools for laying a pipeline out by hand.
+	/// </summary>
+	private void RenderLayoutTools()
+	{
+		bool snap = renderer.SnapToGrid;
+		if (DemoProbe.Checkbox("Snap to grid", ref snap))
+		{
+			renderer.SnapToGrid = snap;
+		}
+
+		ImGui.SameLine();
+		float spacing = renderer.GridSpacing ?? 24f;
+		ImGui.SetNextItemWidth(120f);
+		if (DemoProbe.SliderFloat("Grid spacing", ref spacing, 8f, 64f, "%.0f"))
+		{
+			renderer.GridSpacing = spacing;
+		}
+
+		using (new ScopedDisable(renderer.SelectedNodeIds.Count == 0))
+		{
+			if (DemoProbe.Button("Snap Selection To Grid"))
+			{
+				renderer.SnapNodesToGrid(engine, renderer.SelectedNodeIds);
+			}
+
+			ImGui.SameLine();
+			if (DemoProbe.Button("Comment Selection"))
+			{
+				history.CreateCommentBoxAround(renderer.SelectedNodeIds, "Comment");
+			}
+		}
+
+		ImGui.TextDisabled("Drag a comment's title to move it with its nodes; double-click to rename.");
 	}
 
 	/// <summary>
@@ -528,5 +664,9 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				new PinSpec("Invert", typeof(bool), false),
 			],
 			[new PinSpec("Count", typeof(int))]);
+
+		// A comment box labelling a region of the graph, the way issue #468 asked for. It sits behind
+		// the nodes, and dragging its title carries whatever lies inside it.
+		engine.CreateCommentBox(new Vector2(20, 500), new Vector2(340, 240), "Parameters, not connections");
 	}
 }

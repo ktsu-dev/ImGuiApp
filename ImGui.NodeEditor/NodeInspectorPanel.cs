@@ -113,63 +113,77 @@ public static class NodeInspectorPanel
 	private static void DrawBoolean(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		bool value = current as bool? ?? false;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
 	private static void DrawInt32(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		int value = current as int? ?? 0;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
 	private static void DrawSingle(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		float value = current as float? ?? 0f;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
 	private static void DrawDouble(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		double value = current as double? ?? 0.0;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
 	private static void DrawString(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		string value = current as string ?? string.Empty;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
 	private static void DrawVector2(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		Vector2 value = current as Vector2? ?? Vector2.Zero;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
 	private static void DrawVector3(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		Vector3 value = current as Vector3? ?? Vector3.Zero;
-		if (grid.Value(label, ref value) && editable)
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
 		{
-			engine.SetPinValue(pin.Id, value);
+			engine.SetPinValue(pin.Id, value, gesture);
 		}
 	}
 
@@ -180,6 +194,12 @@ public static class NodeInspectorPanel
 	}
 
 	/// <summary>The open generic <c>PropertyGrid.Enum&lt;TEnum&gt;</c> method, resolved once.</summary>
+	/// <summary>
+	/// Tells one edit of a row's pin from the next, so a history folds a drag or a typing session
+	/// into one step. See <see cref="PinEditGestures"/>.
+	/// </summary>
+	private static readonly PinEditGestures Gestures = new();
+
 	private static readonly MethodInfo EnumRowMethod = typeof(ImGuiWidgets.PropertyGrid).GetMethod(nameof(ImGuiWidgets.PropertyGrid.Enum))
 		?? throw new MissingMethodException(nameof(ImGuiWidgets.PropertyGrid), nameof(ImGuiWidgets.PropertyGrid.Enum));
 
