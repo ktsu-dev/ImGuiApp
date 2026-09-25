@@ -252,7 +252,8 @@ internal sealed class Viewport3DDemo : IDemoTab
 			}
 		}
 
-		if (ImGui.IsItemHovered() && io.MouseWheel != 0f)
+		// Dolly is multiplicative, so a frame with no wheel input scales the distance by exactly one.
+		if (ImGui.IsItemHovered())
 		{
 			Camera.Dolly(io.MouseWheel * 0.1f);
 		}
