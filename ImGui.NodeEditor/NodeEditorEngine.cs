@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using ktsu.ForceDirectedLayout;
+using ktsu.NodeGraph;
 
 /// <summary>
 /// Core business logic for the node editor - completely independent of ImNodes.
@@ -539,6 +540,12 @@ public partial class NodeEditorEngine
 	/// <summary>
 	/// Attempt to create a link between two pins.
 	/// </summary>
+	/// <remarks>
+	/// A pair that both declare a <see cref="Pin.DataType"/> must also be type-compatible under
+	/// <see cref="PinTypeUtilities.CanConnect"/>, and the returned message names both types when
+	/// they are not, so a host can say why the link was refused rather than only that it was.
+	/// A pin with no declared type is untyped and is not type-checked.
+	/// </remarks>
 	public LinkCreationResult TryCreateLink(int fromPinId, int toPinId)
 	{
 		Pin? fromPin = FindPin(fromPinId);
@@ -556,6 +563,18 @@ public partial class NodeEditorEngine
 
 		Pin outputPin = fromPin.Direction == PinDirection.Output ? fromPin : toPin;
 		Pin inputPin = fromPin.Direction == PinDirection.Input ? fromPin : toPin;
+
+		// Whether the value can survive the trip is a property of the pair itself, like direction,
+		// so it is settled before the graph's own state is consulted. Only a pair that both declare
+		// a type is checked: a null DataType is an untyped pin, which PinSpec documents as a
+		// supported way to describe one, and CanConnect answers false for a null rather than
+		// "unknown" - so asking it about an untyped pin would refuse every link the pin appears in.
+		if (outputPin.DataType is Type outputType
+			&& inputPin.DataType is Type inputType
+			&& !PinTypeUtilities.CanConnect(outputType, inputType))
+		{
+			return new LinkCreationResult(false, $"Cannot connect {outputType.Name} output '{outputPin.EffectiveDisplayName}' to {inputType.Name} input '{inputPin.EffectiveDisplayName}'");
+		}
 
 		if (links.Any(l => l.OutputPinId == outputPin.Id && l.InputPinId == inputPin.Id))
 		{
