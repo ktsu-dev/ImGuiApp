@@ -677,8 +677,11 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 		Node setNumber1 = nodeFactory.CreateNode<SetNumberNode>(new Vector2(450, 100));
 		Node splitNumber2 = nodeFactory.CreateNode<SplitNumberNode>(new Vector2(650, 100));
 
-		// Mathematical operation chain with data mutation
+		// Mathematical operation chain with data mutation. Add takes two doubles, so each operand
+		// reaches it through a Split rather than straight off a Make: a Make's output is the
+		// NumberData structure, and TryCreateLink refuses that into a double parameter.
 		Node makeNumber2 = nodeFactory.CreateNode<MakeNumberNode>(new Vector2(50, 250));
+		Node splitNumber3 = nodeFactory.CreateNode<SplitNumberNode>(new Vector2(150, 250));
 		Node addNode = nodeFactory.CreateMethodNode(addMethod, new Vector2(250, 250));
 		Node setNumber2 = nodeFactory.CreateNode<SetNumberNode>(new Vector2(450, 250));
 
@@ -696,9 +699,11 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 		engine.TryCreateLink(splitNumber1.OutputPins[1].Id, setNumber1.InputPins[1].Id); // Absolute value as new value
 		engine.TryCreateLink(setNumber1.OutputPins[0].Id, splitNumber2.InputPins[0].Id); // Updated data to final Split
 
-		// Math operation with data update: Make → Add → Set (update existing with result)
-		engine.TryCreateLink(makeNumber1.OutputPins[0].Id, addNode.InputPins[0].Id);
-		engine.TryCreateLink(makeNumber2.OutputPins[0].Id, addNode.InputPins[1].Id);
+		// Math operation with data update: Make → Split → Add → Set (update existing with result).
+		// Each operand is the Split's double Value, not the Make's NumberData.
+		engine.TryCreateLink(makeNumber2.OutputPins[0].Id, splitNumber3.InputPins[0].Id);
+		engine.TryCreateLink(splitNumber1.OutputPins[0].Id, addNode.InputPins[0].Id);
+		engine.TryCreateLink(splitNumber3.OutputPins[0].Id, addNode.InputPins[1].Id);
 		engine.TryCreateLink(makeNumber1.OutputPins[0].Id, setNumber2.InputPins[0].Id); // Original data
 		engine.TryCreateLink(addNode.OutputPins[0].Id, setNumber2.InputPins[1].Id); // Add result as new value
 

@@ -125,6 +125,89 @@ public sealed class NodeEditorEngineTests
 		Assert.Contains("Cannot connect", result.Message);
 	}
 
+	/// <summary>
+	/// The defect: direction, duplicates, limits and self-links were all checked, but the pins'
+	/// declared types never were, so a string output fed an int input and the result said Success.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_RefusesPinsWhoseDeclaredTypesCannotConnect()
+	{
+		Node source = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Source", [], [new PinSpec("Text", typeof(string))]);
+		Node target = engine.CreateNodeFromSpecs(new Vector2(300, 0), "Target", [new PinSpec("Count", typeof(int))], []);
+
+		LinkCreationResult result = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+
+		Assert.IsFalse(result.Success, "A string output should not feed an int input.");
+		Assert.IsNull(result.Link);
+		Assert.IsEmpty(engine.Links);
+
+		// The message has to name the mismatch, not merely report a refusal, so a host can say
+		// which end is wrong instead of only that the drag failed.
+		Assert.Contains(nameof(String), result.Message);
+		Assert.Contains(nameof(Int32), result.Message);
+		Assert.Contains("Text", result.Message);
+		Assert.Contains("Count", result.Message);
+	}
+
+	/// <summary>
+	/// The over-correction: refusing every typed pair, or reusing the direction check's own
+	/// notion of compatibility, would pass the test above while breaking the graphs that work.
+	/// A widening numeric conversion is compatible under
+	/// <see cref="ktsu.NodeGraph.PinTypeUtilities.CanConnect"/> and must stay connectable.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_ConnectsPinsWhoseDeclaredTypesAreCompatible()
+	{
+		Node source = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Source", [], [new PinSpec("Value", typeof(int))]);
+		Node target = engine.CreateNodeFromSpecs(new Vector2(300, 0), "Target", [new PinSpec("Scale", typeof(double))], []);
+
+		LinkCreationResult result = engine.TryCreateLink(source.OutputPins[0].Id, target.InputPins[0].Id);
+
+		Assert.IsTrue(result.Success, result.Message);
+		Assert.HasCount(1, engine.Links);
+	}
+
+	/// <summary>
+	/// <see cref="PinSpec"/> documents a null <c>DataType</c> as an untyped pin, and
+	/// <c>CanConnect</c> answers false for a null rather than "unknown" - so a check that asked it
+	/// about one would refuse every link an untyped pin appears in, which is most of this suite and
+	/// every caller of the name-only <c>CreateNode</c> overloads.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_DoesNotTypeCheckAnUntypedPin()
+	{
+		Node untyped = engine.CreateNode(new Vector2(0, 0), "Untyped", [], ["Out"]);
+		Node typed = engine.CreateNodeFromSpecs(new Vector2(300, 0), "Typed", [new PinSpec("Count", typeof(int))], []);
+
+		// One end declared, one end not: still a link, since there is no declared pair to compare.
+		LinkCreationResult onlyInputTyped = engine.TryCreateLink(untyped.OutputPins[0].Id, typed.InputPins[0].Id);
+
+		Node alsoUntyped = engine.CreateNode(new Vector2(300, 200), "AlsoUntyped", ["In"], []);
+		LinkCreationResult neitherTyped = engine.TryCreateLink(untyped.OutputPins[0].Id, alsoUntyped.InputPins[0].Id);
+
+		Assert.IsTrue(onlyInputTyped.Success, onlyInputTyped.Message);
+		Assert.IsTrue(neitherTyped.Success, neitherTyped.Message);
+	}
+
+	/// <summary>
+	/// An execution pin carries no value and is typed <c>void</c>, which
+	/// <c>CanConnect</c> allows only against another <c>void</c>. Wiring execution flow into a data
+	/// input is the same class of mistake as the string-to-int case and is refused with it.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_RefusesExecutionFlowIntoADataPin()
+	{
+		Node source = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Source", [], [new PinSpec("Then", typeof(void))]);
+		Node data = engine.CreateNodeFromSpecs(new Vector2(300, 0), "Data", [new PinSpec("Count", typeof(int))], []);
+		Node execution = engine.CreateNodeFromSpecs(new Vector2(300, 200), "Execution", [new PinSpec("Run", typeof(void))], []);
+
+		LinkCreationResult intoData = engine.TryCreateLink(source.OutputPins[0].Id, data.InputPins[0].Id);
+		LinkCreationResult intoExecution = engine.TryCreateLink(source.OutputPins[0].Id, execution.InputPins[0].Id);
+
+		Assert.IsFalse(intoData.Success, "Execution flow should not feed a data pin.");
+		Assert.IsTrue(intoExecution.Success, intoExecution.Message);
+	}
+
 	[TestMethod]
 	public void TryCreateLink_RefusesASecondConnectionIntoOneInput()
 	{
