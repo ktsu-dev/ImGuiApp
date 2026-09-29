@@ -21,6 +21,7 @@
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.TextFilter" />
+    <PackageReference Include="ktsu.UndoRedo" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 

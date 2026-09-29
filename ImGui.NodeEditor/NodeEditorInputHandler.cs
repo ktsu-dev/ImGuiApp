@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
+using ktsu.ImGui.Widgets;
 using ktsu.Keybinding.Core.Contracts;
 using ktsu.Keybinding.Core.Models;
 
