@@ -17,12 +17,14 @@ internal static class SectionDemos
 		DataTableDemo.ResetState();
 	}
 
-	/// <summary>Shows every grouped section, in demo order.</summary>
+	/// <summary>
+	/// Shows the grouped sections that sit among the basic widgets, in demo order. The data table's
+	/// section is reset here but shown with the advanced demos.
+	/// </summary>
 	internal static void Show()
 	{
 		SignalDemos.Show();
 		ColorWheelDemo.Show();
-		DataTableDemo.Show();
 		DiffViewDemo.Show();
 	}
 }
