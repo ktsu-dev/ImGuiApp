@@ -10,6 +10,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App.Testing;
+using ktsu.Keybinding.Core.Services;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -225,6 +226,27 @@ public sealed class DataTableTests : WidgetTest
 		Harness.Keyboard.Press(ImGuiKey.DownArrow);
 
 		Assert.AreEqual(new ImGuiWidgets.DataTableCell(1, 0), state.ActiveCell);
+	}
+
+	[TestMethod]
+	public void WithAKeymap_TheBoundChordMovesAndTheOldDefaultDoesNot()
+	{
+		CommandRegistry registry = new();
+		KeybindingService keybindings = new(registry, new ProfileManager());
+		keybindings.CreateProfile("default", "Default");
+		keybindings.SetActiveProfile("default");
+		ImGuiWidgets.DataTableCommands.Register(registry, keybindings);
+		keybindings.BindChord(ImGuiWidgets.DataTableCommands.MoveDown, keybindings.ParseChord("J"));
+
+		options = new() { RowHeight = 22f, OuterSize = new Vector2(0f, 300f), Keybindings = keybindings };
+		Start(Draw);
+		Click(Cell(0, "Name"));
+
+		Harness.Keyboard.Press(ImGuiKey.DownArrow);
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(0, 0), state.ActiveCell, "Down still moved after move down was bound to J.");
+
+		Harness.Keyboard.Press(ImGuiKey.J);
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(1, 0), state.ActiveCell, "J, bound to move down, did not move.");
 	}
 
 	[TestMethod]
