@@ -12,13 +12,17 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal abstract class DataTableEditSession(int column, int sourceIndex)
 	{
+		/// <summary>Gets the index of the column being edited.</summary>
 		public int Column { get; } = column;
 
+		/// <summary>Gets the row's index in the list the caller passed, never its position on screen.</summary>
 		public int SourceIndex { get; } = sourceIndex;
 
 		/// <summary>Gets how many frames the editor has been drawn, which is how the renderer knows to focus it once.</summary>
 		public int FramesDrawn { get; private set; }
 
+		/// <summary>Draws the editor for this session's cell, filling it.</summary>
+		/// <param name="id">The ImGui id to give the editor.</param>
 		public void Draw(string id)
 		{
 			DrawEditor(id, FramesDrawn);
@@ -47,6 +51,7 @@ public static partial class ImGuiWidgets
 		// character follows it instead of replacing it.
 		private const int CaretFrames = 3;
 
+		/// <summary>Gets or sets the working text, updated as the person types and read back when the session commits.</summary>
 		public string Text { get; set; } = text;
 
 		public override bool Commit()
@@ -80,6 +85,7 @@ public static partial class ImGuiWidgets
 		private readonly TValue originalValue = original;
 		private TValue current = original;
 
+		/// <summary>Gets or sets the working value, updated as the person edits it and read back when the session commits.</summary>
 		public TValue Value
 		{
 			get => current;
