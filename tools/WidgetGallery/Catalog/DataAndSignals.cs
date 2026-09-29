@@ -76,6 +76,16 @@ internal static class DataAndSignalsTiles
 		yield return new("Waveform", Category, [nameof(ImGuiWidgets.Waveform), nameof(ImGuiWidgets.ComputeWaveformPeaks)], _ =>
 			ImGuiWidgets.Waveform("##waveform", peakMinimums, peakMaximums, 10f, ref playhead, ref loopStart, ref loopEnd, new Vector2(360f, 90f)));
 
+		ImGuiWidgets.WaveformPeakCache zoomPeaks = new(audio, 10f);
+		ImGuiWidgets.TimelineView zoomView = new();
+		zoomView.SetDuration(10f);
+		zoomView.SetView(2.5f, 2.5f);
+		float zoomPlayhead = 3.4f;
+		float zoomLoopStart = 3f;
+		float zoomLoopEnd = 4.2f;
+		yield return new("Waveform (zoomed)", Category, [nameof(ImGuiWidgets.TimelineView), nameof(ImGuiWidgets.WaveformPeakSource), nameof(ImGuiWidgets.WaveformPeakCache)], _ =>
+			ImGuiWidgets.Waveform("##waveformZoomed", zoomPeaks, zoomView, ref zoomPlayhead, ref zoomLoopStart, ref zoomLoopEnd, new Vector2(360f, 100f)));
+
 		ImGuiWidgets.SpectrumAnalyzerState spectrum = new(bandCount: 40);
 		spectrum.Update(BuildSpectrum(1025, boost: 8f), 48_000f, 0.02f);
 		spectrum.Update(BuildSpectrum(1025, boost: 0f), 48_000f, 0.5f);

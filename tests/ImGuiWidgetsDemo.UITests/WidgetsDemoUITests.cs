@@ -431,6 +431,21 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void WaveformDemo_LongClipIsDrawn()
+	{
+		OpenSection(WidgetDemosTab, "Waveform");
+
+		// The long clip's peak cache is built on a worker thread the first time the section is
+		// shown, so the waveform appears some frames later rather than on the first one.
+		for (int frame = 0; frame < 300 && !IsVisible("Waveform/long clip/scrollbar"); frame++)
+		{
+			harness.Step();
+		}
+
+		Assert.IsTrue(IsVisible("Waveform/long clip/scrollbar"), "The long clip's zoomable waveform was never drawn.");
+	}
+
+	[TestMethod]
 	public void DiffView_DrawsAHunkPerViewAndTicksTheOneThatWasClicked()
 	{
 		OpenSection(WidgetDemosTab, "Diff view");
