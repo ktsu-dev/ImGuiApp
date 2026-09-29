@@ -14,6 +14,7 @@ internal static class SignalDemos
 	{
 		WaveformDemo.ResetState();
 		SpectrumAnalyzerDemo.ResetState();
+		EnvelopeEditorDemo.ResetState();
 		ParametricEqDemo.ResetState();
 	}
 
@@ -22,6 +23,7 @@ internal static class SignalDemos
 	{
 		WaveformDemo.Show();
 		SpectrumAnalyzerDemo.Show();
+		EnvelopeEditorDemo.Show();
 		ParametricEqDemo.Show();
 	}
 }

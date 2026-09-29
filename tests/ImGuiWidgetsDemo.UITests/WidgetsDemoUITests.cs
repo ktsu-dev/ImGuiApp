@@ -44,6 +44,7 @@ public sealed class WidgetsDemoUITests
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Spectrum Analyzer", "Color wheels", "Diff view",
 		"Parametric EQ",
+		"Envelope Editor",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
