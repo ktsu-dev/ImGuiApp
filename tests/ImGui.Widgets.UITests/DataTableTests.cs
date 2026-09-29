@@ -75,6 +75,13 @@ public sealed class DataTableTests : WidgetTest
 		Step();
 	}
 
+	private void RightClick(string name)
+	{
+		Vector2 center = CenterOf(name);
+		Harness.Mouse.Click(center.X, center.Y, button: 1);
+		Step();
+	}
+
 	private void WithCtrlHeld(System.Action action)
 	{
 		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
@@ -402,5 +409,40 @@ public sealed class DataTableTests : WidgetTest
 		Step(2);
 
 		Assert.IsFalse(state.IsEditing, "A character above U+FFFF began an edit.");
+	}
+
+	[TestMethod]
+	public void RightClickingACell_OpensTheContextMenuForIt()
+	{
+		Start(Draw);
+
+		RightClick(Cell(2, "Age"));
+
+		Assert.IsNotEmpty(menus, "The context menu callback never ran.");
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(2, 1), menus[^1].Cell);
+		Assert.AreSequenceEqual([2], menus[^1].SelectedRows.Order());
+	}
+
+	[TestMethod]
+	public void RightClickingASelectedRow_KeepsTheSelection()
+	{
+		Start(Draw);
+		Click(Cell(0, "Name"));
+		WithCtrlHeld(() => Click(Cell(2, "Name")));
+
+		RightClick(Cell(2, "Age"));
+
+		Assert.AreSequenceEqual([0, 2], menus[^1].SelectedRows.Order());
+	}
+
+	[TestMethod]
+	public void RightClickingWithNoMenu_StillActivatesTheCell()
+	{
+		options = new() { RowHeight = 22f };
+		Start(Draw);
+
+		RightClick(Cell(3, "Name"));
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(3, 0), state.ActiveCell);
 	}
 }

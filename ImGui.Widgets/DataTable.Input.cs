@@ -177,4 +177,34 @@ public static partial class ImGuiWidgets
 			&& !ImGui.IsMouseHoveringRect(rect.Min, rect.Max, false)
 			&& !ImGui.IsPopupOpen(string.Empty, ImGuiPopupFlags.AnyPopupId | ImGuiPopupFlags.AnyPopupLevel);
 	}
+
+	/// <summary>Opens and draws a data table's context menu.</summary>
+	internal static class DataTableContextMenus
+	{
+		private const string PopupId = "##dataTableContextMenu";
+
+		/// <summary>
+		/// Draws the menu. Called inside the table, so the popup is opened and drawn in the same id scope
+		/// wherever in the table the right-click landed.
+		/// </summary>
+		internal static void Draw<TRow>(DataTableState<TRow> state, DataTableOptions options)
+		{
+			// Taken whether or not there's a menu, so a request never lingers into a later frame.
+			if (state.TakeContextMenuRequest() && options.OnContextMenu is not null)
+			{
+				ImGui.OpenPopup(PopupId);
+			}
+
+			if (options.OnContextMenu is null || state.ContextMenu is not DataTableContextMenu menu)
+			{
+				return;
+			}
+
+			if (ImGui.BeginPopup(PopupId))
+			{
+				options.OnContextMenu(menu);
+				ImGui.EndPopup();
+			}
+		}
+	}
 }

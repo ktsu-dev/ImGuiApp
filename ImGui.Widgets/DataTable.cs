@@ -142,6 +142,7 @@ public static partial class ImGuiWidgets
 				CellRect? editorRect = DrawRows(label, state, rowHeight);
 				state.PageSize = (int)(ImGui.GetWindowHeight() / rowHeight) - frozenRows;
 				DataTableInput.Handle(state, options, editorRect);
+				DataTableContextMenus.Draw(state, options);
 			}
 			finally
 			{
@@ -378,6 +379,12 @@ public static partial class ImGuiWidgets
 
 		private static void HandleCellMouse(DataTableState<TRow> state, DataTableCell cell, bool isClicked)
 		{
+			if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+			{
+				state.OpenContextMenu(cell);
+				return;
+			}
+
 			if (!isClicked)
 			{
 				return;
