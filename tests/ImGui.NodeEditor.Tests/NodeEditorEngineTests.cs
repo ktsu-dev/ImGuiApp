@@ -990,6 +990,39 @@ public sealed class NodeEditorEngineTests
 	}
 
 	[TestMethod]
+	public void DuplicateNode_CopiedPinResetsToTheOriginalsDefault()
+	{
+		// A reset on the copy should do what the same reset on the original does. Without the seeded
+		// default coming across, the copy's reset reports nothing to go back to and keeps the edit.
+		Node original = engine.CreateNodeFromSpecs(Vector2.Zero, "N", [new PinSpec("X", typeof(int), 5)], []);
+		Assert.IsTrue(engine.SetPinValue(original.InputPins[0].Id, 42));
+
+		Node? copy = engine.DuplicateNode(original.Id, new Vector2(40, 40));
+		Assert.IsNotNull(copy);
+		Assert.AreEqual(42, engine.GetPinValue(copy.InputPins[0].Id), "The copy should still arrive with the edited value");
+
+		Assert.IsTrue(engine.ResetPinValue(copy.InputPins[0].Id), "The copy's pin should have a default to go back to");
+		Assert.AreEqual(5, engine.GetPinValue(copy.InputPins[0].Id));
+		Assert.AreEqual(42, engine.GetPinValue(original.InputPins[0].Id), "Resetting the copy must not reach the original");
+	}
+
+	[TestMethod]
+	public void DuplicateNode_CarriesANullValueOverANonNullDefault()
+	{
+		// Seeding the copy's default also sets its value, which must not stand in for a null the
+		// original actually holds.
+		Node original = engine.CreateNodeFromSpecs(Vector2.Zero, "N", [new PinSpec("Name", typeof(string), "start")], []);
+		Assert.IsTrue(engine.SetPinValue(original.InputPins[0].Id, null));
+
+		Node? copy = engine.DuplicateNode(original.Id, new Vector2(40, 40));
+
+		Assert.IsNotNull(copy);
+		Assert.IsNull(engine.GetPinValue(copy.InputPins[0].Id));
+		Assert.IsTrue(engine.ResetPinValue(copy.InputPins[0].Id));
+		Assert.AreEqual("start", engine.GetPinValue(copy.InputPins[0].Id));
+	}
+
+	[TestMethod]
 	public void DuplicateNode_CarriesTheDeclaredTypeOntoTheCopiedPin()
 	{
 		// Without the type the copy's pin would take anything, and SetPinValue's refusal - the thing

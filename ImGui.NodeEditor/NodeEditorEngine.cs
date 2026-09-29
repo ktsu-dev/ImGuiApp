@@ -461,8 +461,8 @@ public partial class NodeEditorEngine
 	/// A copied pin's value is written the way <see cref="SetPinValue(int, object?)"/> writes one, and so lands
 	/// in this engine's own store, even where the original's lives on an instance a factory bound
 	/// through <see cref="BindPinValue(int, PinValueAccessor)"/>: a copy has no instance of its own.
-	/// It has no seeded default either, so <see cref="ResetPinValue(int)"/> on a copied pin reports
-	/// that there is nothing to go back to.
+	/// It does carry the original's seeded default, so <see cref="ResetPinValue(int)"/> on a copied
+	/// pin puts back the value the original would reset to.
 	/// </para>
 	/// </remarks>
 	public IReadOnlyList<Node> DuplicateNodes(IEnumerable<int> nodeIds, Vector2 offset)
@@ -505,11 +505,25 @@ public partial class NodeEditorEngine
 		// engine's own store under the new pin id - the same value, a different home.
 		//
 		// The copies are all in `nodes` by now, which is what lets SetPinValue find their pins.
+		//
+		// The original's seeded default comes across first, so a reset of the copy puts back what a
+		// reset of the original would. Seeding also sets the value, so an original holding null over
+		// a non-null default has that null restored rather than leaving the copy at its default.
 		foreach ((int originalPinId, int copiedPinId) in originalPinToCopiedPin)
 		{
+			pinValues.TryGetDefault(originalPinId, out bool hasDefault, out object? defaultValue);
+			if (hasDefault)
+			{
+				pinValues.Seed(copiedPinId, defaultValue);
+			}
+
 			if (GetPinValue(originalPinId) is object value)
 			{
 				WritePinValue(copiedPinId, value);
+			}
+			else if (hasDefault)
+			{
+				pinValues.Restore(copiedPinId, null);
 			}
 		}
 
