@@ -119,6 +119,10 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
+			// No tab stops inside the table. Tab is the table's own command, and if ImGui's tabbing could
+			// move the keyboard, Tab out of an editor would land in a filter box.
+			ImGui.PushItemFlag(ImGuiItemFlags.NoTabStop, true);
+
 			try
 			{
 				float rowHeight = options.RowHeight > 0f ? options.RowHeight : ImGui.GetFrameHeight();
@@ -135,11 +139,13 @@ public static partial class ImGuiWidgets
 					DrawFilterRow(label, state);
 				}
 
-				DrawRows(label, state, rowHeight);
+				CellRect? editorRect = DrawRows(label, state, rowHeight);
 				state.PageSize = (int)(ImGui.GetWindowHeight() / rowHeight) - frozenRows;
+				DataTableInput.Handle(state, options, editorRect);
 			}
 			finally
 			{
+				ImGui.PopItemFlag();
 				ImGui.EndTable();
 			}
 
@@ -245,10 +251,11 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private static void DrawRows(string label, DataTableState<TRow> state, float rowHeight)
+		private static CellRect? DrawRows(string label, DataTableState<TRow> state, float rowHeight)
 		{
 			IReadOnlyList<int> view = state.View;
 			int scrollSource = state.TakeScrollRequest();
+			CellRect? editorRect = null;
 
 			ImGuiListClipper clipper = default;
 			TableClipping.Begin(ref clipper, view.Count, rowHeight, state.ViewPositionOf(scrollSource));
@@ -258,14 +265,15 @@ public static partial class ImGuiWidgets
 				for (int position = clipper.DisplayStart; position < clipper.DisplayEnd; position++)
 				{
 					int source = view[position];
-					DrawRow(label, state, source, rowHeight, source == scrollSource);
+					DrawRow(label, state, source, rowHeight, source == scrollSource, ref editorRect);
 				}
 			}
 
 			clipper.End();
+			return editorRect;
 		}
 
-		private static void DrawRow(string label, DataTableState<TRow> state, int source, float rowHeight, bool isScrollTarget)
+		private static void DrawRow(string label, DataTableState<TRow> state, int source, float rowHeight, bool isScrollTarget, ref CellRect? editorRect)
 		{
 			ImGui.TableNextRow(ImGuiTableRowFlags.None, rowHeight);
 
@@ -292,7 +300,7 @@ public static partial class ImGuiWidgets
 					// drawn anyway, because a scroll can only anchor on something drawn.
 					if (ImGui.TableSetColumnIndex(column) || isScrollCell)
 					{
-						DrawCell(label, state, new DataTableCell(source, column), rowHeight, isScrollCell);
+						DrawCell(label, state, new DataTableCell(source, column), rowHeight, isScrollCell, ref editorRect);
 					}
 				}
 			}
@@ -302,7 +310,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private static void DrawCell(string label, DataTableState<TRow> state, DataTableCell cell, float rowHeight, bool isScrollTarget)
+		private static void DrawCell(string label, DataTableState<TRow> state, DataTableCell cell, float rowHeight, bool isScrollTarget, ref CellRect? editorRect)
 		{
 			DataTableColumn<TRow> column = state.Columns[cell.Column];
 			bool isActive = state.ActiveCell == cell;
@@ -337,7 +345,21 @@ public static partial class ImGuiWidgets
 				HandleCellMouse(state, cell, isClicked);
 
 				ImGui.SetCursorScreenPos(start);
-				if (column.DrawContent(state.RowAt(cell.SourceIndex)))
+
+				// Read after the mouse, so a double-click shows its editor on the next frame, and a click on
+				// another cell that committed this one draws it as text again straight away.
+				DataTableEditSession? session = state.EditSession;
+				if (session is not null && session.SourceIndex == cell.SourceIndex && session.Column == cell.Column)
+				{
+					if (session.FramesDrawn == 0)
+					{
+						ImGui.SetKeyboardFocusHere();
+					}
+
+					session.Draw("##editor");
+					editorRect = new CellRect(start, end);
+				}
+				else if (column.DrawContent(state.RowAt(cell.SourceIndex)))
 				{
 					state.Click(cell, isCtrlHeld: false, isShiftHeld: false);
 					state.Toggle();

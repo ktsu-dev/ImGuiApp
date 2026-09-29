@@ -201,4 +201,182 @@ public sealed class DataTableTests : WidgetTest
 
 		Assert.IsFalse(IsVisible(Filter("Name")), "A filter box was drawn with the filter row turned off.");
 	}
+
+	private void BeginEditing(int sourceIndex, string column)
+	{
+		Click(Cell(sourceIndex, column));
+		Harness.Keyboard.Press(ImGuiKey.F2);
+		Step(2);
+	}
+
+	[TestMethod]
+	public void ArrowDown_MovesTheActiveCell()
+	{
+		Start(Draw);
+		Click(Cell(0, "Name"));
+
+		Harness.Keyboard.Press(ImGuiKey.DownArrow);
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(1, 0), state.ActiveCell);
+	}
+
+	[TestMethod]
+	public void ShiftArrowDown_ExtendsTheSelection()
+	{
+		Start(Draw);
+		Click(Cell(0, "Name"));
+
+		Harness.Keyboard.Press(ImGuiKey.DownArrow, shift: true);
+
+		Assert.AreSequenceEqual([0, 1], state.SelectedRows.Order());
+	}
+
+	[TestMethod]
+	public void CtrlEnd_ScrollsTheLastRowIntoView()
+	{
+		AddPeople(1_000);
+		Start(Draw);
+		Click(Cell(0, "Name"));
+
+		Harness.Keyboard.Press(ImGuiKey.End, ctrl: true);
+		Step();
+
+		Assert.IsTrue(IsVisible(Cell(999, "Name")), "Ctrl+End did not bring the last row into view.");
+	}
+
+	[TestMethod]
+	public void F2ThenTypingThenEnter_ReportsTheEditAndMovesDown()
+	{
+		Start(Draw);
+		BeginEditing(1, "Name");
+
+		Harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		Harness.Keyboard.Type("Robert");
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableEdit<DataTablePerson, string>(1, people[1], "Bob", "Robert"), nameEdits.Single());
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(2, 0), state.ActiveCell);
+	}
+
+	[TestMethod]
+	public void Escape_CancelsTheEdit()
+	{
+		Start(Draw);
+		BeginEditing(1, "Name");
+
+		Harness.Keyboard.Type("zzz");
+		Harness.Keyboard.Press(ImGuiKey.Escape);
+		Step();
+
+		Assert.IsFalse(state.IsEditing);
+		Assert.IsEmpty(nameEdits);
+	}
+
+	[TestMethod]
+	public void ClickingAway_CommitsTheEdit()
+	{
+		Start(Draw);
+		BeginEditing(1, "Name");
+		Harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		Harness.Keyboard.Type("Robert");
+
+		// Below the table, inside the window, where nothing else is drawn.
+		Harness.Mouse.Click(RectOf(Label).MinX + 20f, RectOf(Label).MaxY + 20f);
+		Step();
+
+		Assert.IsFalse(state.IsEditing);
+		Assert.AreEqual("Robert", nameEdits.Single().NewValue);
+	}
+
+	/// <summary>
+	/// Review focus: ImGui selects all of an input's text when it takes the keyboard, so without care the
+	/// second typed character replaces the first.
+	/// </summary>
+	[TestMethod]
+	public void TypingACharacter_BeginsAnEditThatKeepsTyping()
+	{
+		Start(Draw);
+		Click(Cell(1, "Name"));
+
+		Harness.Keyboard.Type("Q");
+		Step(3);
+		Harness.Keyboard.Type("ux");
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.AreEqual("Qux", nameEdits.Single().NewValue);
+	}
+
+	/// <summary>
+	/// Review focus: Tab must move the active cell and leave the keyboard with the table, rather than
+	/// ImGui's own tabbing handing it to another item.
+	/// </summary>
+	[TestMethod]
+	public void Tab_WhileEditing_MovesRightAndKeepsTheKeyboard()
+	{
+		Start(Draw);
+		BeginEditing(1, "Name");
+
+		Harness.Keyboard.Press(ImGuiKey.Tab);
+		Step();
+
+		Assert.IsFalse(state.IsEditing);
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(1, 1), state.ActiveCell);
+
+		Harness.Keyboard.Press(ImGuiKey.DownArrow);
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(2, 1), state.ActiveCell, "After Tab, the arrow keys no longer reached the table.");
+	}
+
+	/// <summary>
+	/// Review focus: keys typed into a filter box belong to the filter, not to the active cell.
+	/// </summary>
+	[TestMethod]
+	public void KeysTypedIntoAFilter_DoNotMoveOrEditTheActiveCell()
+	{
+		Start(Draw);
+		Click(Cell(0, "Name"));
+		Click(Filter("Age"));
+
+		Harness.Keyboard.Press(ImGuiKey.DownArrow);
+		Harness.Keyboard.Type("3");
+		Step();
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableCell(0, 0), state.ActiveCell);
+		Assert.IsFalse(state.IsEditing, "Typing into a filter began editing the active cell.");
+	}
+
+	[TestMethod]
+	public void Space_TogglesABoolCell()
+	{
+		Start(Draw);
+
+		// Clicked near the right edge, clear of the checkbox, so the click only activates the cell.
+		ClickFraction(Cell(1, "Active"), 0.9f);
+		Harness.Keyboard.Press(ImGuiKey.Space);
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableEdit<DataTablePerson, bool>(1, people[1], false, true), activeEdits.Single());
+	}
+
+	[TestMethod]
+	public void ClickingTheCheckbox_TogglesTheCell()
+	{
+		Start(Draw);
+
+		ClickWithin(Cell(2, "Active"), 8f, RectOf(Cell(2, "Active")).Height / 2f);
+
+		Assert.AreEqual(new ImGuiWidgets.DataTableEdit<DataTablePerson, bool>(2, people[2], true, false), activeEdits.Single());
+	}
+
+	[TestMethod]
+	public void CtrlC_CopiesTheSelectedRows()
+	{
+		Start(Draw);
+		Click(Cell(1, "Name"));
+
+		Harness.Keyboard.Press(ImGuiKey.C, ctrl: true);
+
+		Assert.AreEqual("Bob\t25\tFalse", ImGui.GetClipboardTextS());
+	}
 }
