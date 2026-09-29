@@ -14,6 +14,7 @@ dotnet run --project examples/ImGuiWidgetsDemo    # Run widgets demo
 dotnet run --project examples/ImGuiStylerDemo     # Run styler demo
 dotnet run --project examples/ImGuiPopupsDemo     # Run popups demo
 dotnet build -c Release                           # Build release configuration
+dotnet run -c Release --project tools/WidgetGallery  # Render widget gallery images into docs/gallery
 ```
 
 ## Project Structure
@@ -46,6 +47,14 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `examples/ImGuiPopupsDemo/` - Popup demonstrations
 - `examples/ImGuiMarkdownDemo/` - Markdown rendering demo
 - `examples/ImGuiSyntaxHighlightingDemo/` - Syntax highlighting demo, including markdown code blocks routed through the highlighter
+
+### Tools
+
+- `tools/WidgetGallery/` - Renders every widget in `ktsu.ImGui.Widgets` headlessly, one tile per
+  widget, and composites them into captioned gallery images under `docs/gallery/`. Tiles live in
+  `Catalog/`, one file per README feature group; `--check` fails when an `ImGuiWidgets` member has no
+  tile, so **a new widget needs a gallery entry as well as a demo and an isolation suite**. See its
+  README for cropping, fonts and dialog cleanup.
 
 ### Tests
 
@@ -903,6 +912,7 @@ Things that bite here, beyond the demo-suite list above:
 2. Follow existing widget patterns (static methods or instance classes)
 3. Add demo to `examples/ImGuiWidgetsDemo/`
 4. Add an isolation suite to `tests/ImGui.Widgets.UITests/`
+5. Add a tile to `tools/WidgetGallery/Catalog/` (`--check` reports widgets without one)
 
 ### New Language (Syntax Highlighting)
 
