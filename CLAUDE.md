@@ -128,7 +128,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.NodeEditor/NodeEditorRenderer.CommentBoxes.cs` - Comment box drawing and gestures
 - `ImGui.NodeEditor/NodeEditorCommands.cs` - The keyboard commands as `ktsu.Keybinding` commands
 - `ImGui.Widgets/KeyChordMatcher.cs` - The chord-to-ImGui matcher shared by the node editor and the data table, with optional key repeat and optional Shift
-- `ImGui.Widgets/DataTableState.cs` - The data table's state, split across `DataTableState.Navigation.cs` and `DataTableState.Editing.cs`, with no ImGui calls; `DataTable.cs` and `DataTable.Input.cs` draw it
+- `ImGui.Widgets/DataTableState.cs` - The data table's state, split across `DataTableState.Navigation.cs` and `DataTableState.Editing.cs`, with no ImGui calls. `DataTable.cs` and `DataTable.Input.cs` draw it
 
 ### Dependencies
 
