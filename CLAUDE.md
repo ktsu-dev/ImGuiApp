@@ -14,6 +14,7 @@ dotnet run --project examples/ImGuiWidgetsDemo    # Run widgets demo
 dotnet run --project examples/ImGuiStylerDemo     # Run styler demo
 dotnet run --project examples/ImGuiPopupsDemo     # Run popups demo
 dotnet build -c Release                           # Build release configuration
+dotnet run -c Release --project tools/WidgetGallery  # Render widget gallery images into docs/gallery
 ```
 
 ## Project Structure
@@ -47,6 +48,14 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `examples/ImGuiMarkdownDemo/` - Markdown rendering demo
 - `examples/ImGuiSyntaxHighlightingDemo/` - Syntax highlighting demo, including markdown code blocks routed through the highlighter
 
+### Tools
+
+- `tools/WidgetGallery/` - Renders every widget in `ktsu.ImGui.Widgets` headlessly, one tile per
+  widget, and composites them into captioned gallery images under `docs/gallery/`. Tiles live in
+  `Catalog/`, one file per README feature group; `--check` fails when an `ImGuiWidgets` member has no
+  tile, so **a new widget needs a gallery entry as well as a demo and an isolation suite**. See its
+  README for cropping, fonts and dialog cleanup.
+
 ### Tests
 
 - `tests/ImGui.App.Tests/` - App framework tests with mock OpenGL provider, plus `Images/` covering the
@@ -75,6 +84,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
   [Demo UI tests](#demo-ui-tests) below.
 - `tests/ImGui.Widgets.UITests/` - One headless UI test class per widget, each driving that widget
   alone with nothing else on screen. See [Widget UI tests](#widget-ui-tests) below.
+- `tests/WidgetGallery.UITests/` - Runs `tools/WidgetGallery` end to end into a temporary folder:
+  `--check`, argument parsing, `--only`, and a full render asserting every tile and composite is
+  written, so a tile that throws or asserts natively fails here rather than at the next regeneration.
 - `tests/SyntaxHighlighting.Tests/` - Tokenizer, line-splitter, registry, embedded-language, theme and
   cache tests. These are pure unit tests against `ktsu.SyntaxHighlighting`, which has no ImGui
   dependency at all; the ImGui drawing layer is covered by `ImGuiSyntaxHighlightingDemo.UITests`.
@@ -904,6 +916,7 @@ Things that bite here, beyond the demo-suite list above:
 2. Follow existing widget patterns (static methods or instance classes)
 3. Add demo to `examples/ImGuiWidgetsDemo/`
 4. Add an isolation suite to `tests/ImGui.Widgets.UITests/`
+5. Add a tile to `tools/WidgetGallery/Catalog/` (`--check` reports widgets without one)
 
 ### New Language (Syntax Highlighting)
 

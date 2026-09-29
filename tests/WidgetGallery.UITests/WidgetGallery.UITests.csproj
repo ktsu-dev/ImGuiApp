@@ -1,0 +1,18 @@
+<Project>
+  <Sdk Name="MSTest.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <RootNamespace>ktsu.ImGui.WidgetGallery.UITests</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+    <EnableSourceLink>false</EnableSourceLink>
+    <NoWarn>CA1515;CA1707;MSTEST0039</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\tools\WidgetGallery\WidgetGallery.csproj" />
+  </ItemGroup>
+</Project>
