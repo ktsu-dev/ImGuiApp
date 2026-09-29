@@ -63,6 +63,67 @@ public class ForceLayoutTests
 		Assert.AreEqual(1, layout.EdgeCount);
 	}
 
+	private static ForceLayout LayoutWithBodies(params int[] ids)
+	{
+		ForceLayout layout = new(EnabledDefaults());
+		layout.SetNodes(Bodies(ids));
+		return layout;
+	}
+
+	private static NodeInit[] Bodies(params int[] ids) =>
+		[.. ids.Select(id => new NodeInit { Id = id, Position = new Vec2D(id * 200.0, 0), Dimensions = new Vec2D(50, 50) })];
+
+	[TestMethod]
+	public void SetNodes_RemovingAnUnconnectedBody_KeepsTheEdgeBetweenTheRest()
+	{
+		ForceLayout layout = LayoutWithBodies(1, 2, 3);
+		layout.SetEdges([new() { SourceBodyId = 2, TargetBodyId = 3 }]);
+
+		layout.SetNodes(Bodies(2, 3));
+
+		Assert.AreEqual((layout.GetIndexOf(2), layout.GetIndexOf(3)), layout.GetEdgeIndices(0));
+	}
+
+	[TestMethod]
+	public void SetNodes_RemovingAnEndpoint_DropsItsEdgeRatherThanRetargetingIt()
+	{
+		ForceLayout layout = LayoutWithBodies(1, 2, 3);
+		layout.SetEdges([new() { SourceBodyId = 1, TargetBodyId = 2 }]);
+
+		layout.SetNodes(Bodies(2, 3));
+
+		Assert.AreEqual((-1, -1), layout.GetEdgeIndices(0), "The edge must not move onto bodies 2 and 3, which were never linked.");
+	}
+
+	[TestMethod]
+	public void SetNodes_Reordering_KeepsEachEdgeOnTheSamePairOfIds()
+	{
+		ForceLayout layout = LayoutWithBodies(1, 2, 3);
+		layout.SetEdges(
+		[
+			new() { SourceBodyId = 1, TargetBodyId = 2 },
+			new() { SourceBodyId = 3, TargetBodyId = 1 },
+		]);
+
+		layout.SetNodes(Bodies(3, 2, 1));
+
+		Assert.AreEqual((layout.GetIndexOf(1), layout.GetIndexOf(2)), layout.GetEdgeIndices(0));
+		Assert.AreEqual((layout.GetIndexOf(3), layout.GetIndexOf(1)), layout.GetEdgeIndices(1));
+	}
+
+	[TestMethod]
+	public void SetNodes_RestoringARemovedEndpoint_ReconnectsItsEdge()
+	{
+		// The edge is keyed by id, so a body that leaves and comes back is linked again.
+		ForceLayout layout = LayoutWithBodies(1, 2);
+		layout.SetEdges([new() { SourceBodyId = 1, TargetBodyId = 2 }]);
+
+		layout.SetNodes(Bodies(2));
+		layout.SetNodes(Bodies(2, 1));
+
+		Assert.AreEqual((layout.GetIndexOf(1), layout.GetIndexOf(2)), layout.GetEdgeIndices(0));
+	}
+
 	[TestMethod]
 	public void Step_WithDisabled_IsNoOp()
 	{
