@@ -71,7 +71,7 @@ public class ForceLayoutTests
 	}
 
 	private static NodeInit[] Bodies(params int[] ids) =>
-		[.. ids.Select(id => new NodeInit { Id = id, Position = new Vec2D(id * 200, 0), Dimensions = new Vec2D(50, 50) })];
+		[.. ids.Select(id => new NodeInit { Id = id, Position = new Vec2D(id * 200.0, 0), Dimensions = new Vec2D(50, 50) })];
 
 	[TestMethod]
 	public void SetNodes_RemovingAnUnconnectedBody_KeepsTheEdgeBetweenTheRest()
