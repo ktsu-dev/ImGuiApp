@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.Widgets.Tests;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -106,6 +107,22 @@ public class DataTableStateEditingTests
 		state.CommitEdit();
 
 		Assert.IsEmpty(fixture.NameEdits);
+	}
+
+	/// <summary>Review focus: a null string opens as empty text, and committing that unchanged isn't an edit.</summary>
+	[TestMethod]
+	public void CommitEdit_OnANullStringLeftEmpty_RaisesNothing()
+	{
+		List<ImGuiWidgets.DataTableEdit<DataTablePerson, string?>> edits = [];
+		ImGuiWidgets.DataTableColumn<DataTablePerson, string?> nickname = new() { Label = "Nickname", Value = _ => null, OnEdit = edits.Add };
+		ImGuiWidgets.DataTableState<DataTablePerson> state = new([nickname]);
+		state.Sync(fixture.People);
+		state.Click(Cell(1, 0), isCtrlHeld: false, isShiftHeld: false);
+
+		Assert.IsTrue(state.BeginEdit());
+		state.CommitEdit();
+
+		Assert.IsEmpty(edits);
 	}
 
 	[TestMethod]

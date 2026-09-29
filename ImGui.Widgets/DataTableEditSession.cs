@@ -61,6 +61,12 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
+			// A null string opens as empty text, so empty text back is the value unchanged, not an edit.
+			if (original is null && parsed is string { Length: 0 })
+			{
+				return false;
+			}
+
 			owner.OnEdit!(new DataTableEdit<TRow, TValue>(SourceIndex, row, original, parsed!));
 			return true;
 		}
