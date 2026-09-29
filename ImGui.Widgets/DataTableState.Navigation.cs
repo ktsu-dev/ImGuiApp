@@ -49,6 +49,54 @@ public static partial class ImGuiWidgets
 		/// <param name="sourceIndex">The row's index in the caller's list. Ignored if that row isn't shown.</param>
 		public void ScrollToRow(int sourceIndex) => scrollRequest = sourceIndex;
 
+		/// <summary>Clears the selected rows. The active cell stays where it is.</summary>
+		public void ClearSelection()
+		{
+			selectedRows.Clear();
+			anchorSource = -1;
+		}
+
+		/// <summary>Replaces the selection with the given rows, for a caller restoring one after <see cref="Refresh"/>.</summary>
+		/// <param name="sourceIndices">
+		/// The rows to select, as indices into the caller's list. Rows that aren't shown are ignored. The
+		/// first one shown becomes the anchor a later Shift-click selects from.
+		/// </param>
+		/// <exception cref="ArgumentNullException"><paramref name="sourceIndices"/> is <see langword="null"/>.</exception>
+		public void SelectRows(IEnumerable<int> sourceIndices)
+		{
+			Ensure.NotNull(sourceIndices);
+
+			selectedRows.Clear();
+			anchorSource = -1;
+
+			foreach (int sourceIndex in sourceIndices.Where(sourceIndex => ViewPositionOf(sourceIndex) >= 0))
+			{
+				selectedRows.Add(sourceIndex);
+				if (anchorSource < 0)
+				{
+					anchorSource = sourceIndex;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Makes a cell active and brings it into view the next time the table is drawn, leaving the
+		/// selection as it is.
+		/// </summary>
+		/// <param name="cell">The cell. Ignored if its row isn't shown or its column doesn't exist.</param>
+		/// <remarks>An edit in progress is committed first, unless it's in this cell, as a click would.</remarks>
+		public void ActivateCell(DataTableCell cell)
+		{
+			if (!IsShown(cell))
+			{
+				return;
+			}
+
+			FinishEditingUnless(cell);
+			ActiveCell = cell;
+			scrollRequest = cell.SourceIndex;
+		}
+
 		/// <summary>Takes the pending scroll request, so it's acted on once.</summary>
 		/// <returns>The source index to scroll to, or -1 for none.</returns>
 		internal int TakeScrollRequest()

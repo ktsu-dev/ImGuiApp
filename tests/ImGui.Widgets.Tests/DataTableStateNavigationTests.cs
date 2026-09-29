@@ -337,4 +337,116 @@ public class DataTableStateNavigationTests
 	[TestMethod]
 	public void BuildCopyText_WithNothingSelected_IsEmpty() =>
 		Assert.AreEqual(string.Empty, fixture.CreateState().BuildCopyText());
+
+	[TestMethod]
+	public void ClearSelection_EmptiesTheSelection()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(0, Name);
+		state.SelectAll();
+
+		state.ClearSelection();
+
+		AssertSelected(state);
+		Assert.AreEqual(Cell(0, Name), state.ActiveCell, "Clearing the selection moved the active cell.");
+	}
+
+	[TestMethod]
+	public void SelectRows_ReplacesTheSelection()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(0, Name);
+
+		state.SelectRows([1, 3]);
+
+		AssertSelected(state, 1, 3);
+	}
+
+	[TestMethod]
+	public void SelectRows_IgnoresRowsNotShown()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = fixture.CreateState();
+		state.RowFilter = person => person.IsActive;
+
+		// Bob, at 1, is the one inactive person. Index 9 is past the end.
+		state.SelectRows([1, 2, 9]);
+
+		AssertSelected(state, 2);
+	}
+
+	/// <summary>
+	/// Bob is hidden, so Dave is the first shown row asked for and becomes the anchor. Shift-clicking
+	/// Alice then selects everything shown from Alice to Dave.
+	/// </summary>
+	[TestMethod]
+	public void SelectRows_MakesTheFirstShownRowTheAnchor()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = fixture.CreateState();
+		state.RowFilter = person => person.IsActive;
+		state.SelectRows([1, 3]);
+
+		state.Click(Cell(0, Name), isCtrlHeld: false, isShiftHeld: true);
+
+		AssertSelected(state, 0, 2, 3);
+	}
+
+	[TestMethod]
+	public void SelectRows_WithNull_Throws() =>
+		Assert.ThrowsExactly<ArgumentNullException>(() => fixture.CreateState().SelectRows(null!));
+
+	[TestMethod]
+	public void ActivateCell_MakesTheCellActiveAndKeepsTheSelection()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(0, Name);
+
+		state.ActivateCell(Cell(2, Age));
+
+		Assert.AreEqual(Cell(2, Age), state.ActiveCell);
+		AssertSelected(state, 0);
+	}
+
+	[TestMethod]
+	public void ActivateCell_ScrollsTheCellIntoView()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = fixture.CreateState();
+
+		state.ActivateCell(Cell(3, Age));
+
+		Assert.AreEqual(3, state.TakeScrollRequest());
+	}
+
+	[TestMethod]
+	public void ActivateCell_IgnoresACellNotShown()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(0, Name);
+		state.RowFilter = person => person.IsActive;
+
+		state.ActivateCell(Cell(1, Age));
+		state.ActivateCell(Cell(2, 99));
+
+		Assert.AreEqual(Cell(0, Name), state.ActiveCell);
+		Assert.AreEqual(-1, state.TakeScrollRequest());
+	}
+
+	[TestMethod]
+	public void ActivateCell_CommitsAnEditElsewhere()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, Name);
+		state.BeginEdit();
+		((ImGuiWidgets.DataTableTextSession<DataTablePerson, string>)state.EditSession!).Text = "Robert";
+
+		state.ActivateCell(Cell(2, Name));
+
+		Assert.IsFalse(state.IsEditing);
+		Assert.AreEqual("Robert", fixture.NameEdits.Single().NewValue);
+	}
+
+	[TestMethod]
+	public void ActivateCell_OnTheEditedCell_KeepsEditing()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, Name);
+		state.BeginEdit();
+
+		state.ActivateCell(Cell(1, Name));
+
+		Assert.IsTrue(state.IsEditing);
+	}
 }
