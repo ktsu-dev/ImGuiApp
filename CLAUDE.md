@@ -128,6 +128,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.NodeEditor/NodeEditorRenderer.CommentBoxes.cs` - Comment box drawing and gestures
 - `ImGui.NodeEditor/NodeEditorCommands.cs` - The keyboard commands as `ktsu.Keybinding` commands
 - `ImGui.Widgets/KeyChordMatcher.cs` - The chord-to-ImGui matcher shared by the node editor and the data table, with optional key repeat and optional Shift
+- `ImGui.Widgets/DataTableState.cs` - The data table's state, split across `DataTableState.Navigation.cs` and `DataTableState.Editing.cs`, with no ImGui calls; `DataTable.cs` and `DataTable.Input.cs` draw it
 
 ### Dependencies
 
@@ -151,7 +152,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ktsu.Invoker** (1.1.2) - Delegate invocation utilities
 - **ktsu.ScopedAction** (1.1.6) - RAII-pattern scoped actions
 - **ktsu.UndoRedo** (2.0.3) - Undo/redo stack backing `NodeEditorHistory` in `ImGui.NodeEditor`
-- **ktsu.Keybinding** (2.0.3) - Keymap `NodeEditorInputHandler` can read its commands from (`NodeEditorCommands`)
+- **ktsu.Keybinding** (2.0.3) - Keymap `NodeEditorInputHandler` and `DataTable` read their commands from (`NodeEditorCommands`, `DataTableCommands`). Referenced by `ImGui.Widgets` since the data table, so every consumer of `ktsu.ImGui.Widgets` restores it, and with it `Microsoft.Extensions.DependencyInjection.Abstractions` and `System.Text.Json`. Accepted because it's small and the table's keys have to follow the host's keymap.
 - **Polyfill** (9.7.7) - Backport newer .NET APIs
 - **Markdig** - CommonMark markdown parser backing `ImGui.Markdown`
 
@@ -380,6 +381,18 @@ Five things are worth knowing before changing any of it:
   probe names `<list>/[0]` rather than a bare `[0]` shared by every list in the grid, and a bare one
   is ambiguous to `ItemProbe`, so tests address elements as `Tags/[0]` and their remove buttons as
   `Tags/[0]/remove`.
+
+### Data table
+
+`DataTable` is two pieces. `DataTableState<TRow>` holds the view (source indices, filtered and then sorted, with ties broken by source index), the active cell, the selection, and the one edit session, and makes no ImGui calls, so its rules are unit tests. The renderer draws a frame from it and turns input into its commands.
+
+Rows are always addressed by source index. The view rebuilds only when the sort, a filter, or the row count changes, or when the caller calls `Refresh()`, so an edited row stays put. A change in row count clears the selection and cancels an edit, because the table can't tell which rows the old indices meant.
+
+Edits are reported, never applied. The session is cleared before `OnEdit` runs, so a callback can apply the edit and call `Refresh()`.
+
+Tab stops are off inside the table (`ImGuiItemFlags.NoTabStop`), because Tab is the table's own command and ImGui's tabbing would otherwise hand the keyboard to a filter box.
+
+`ImGui.Widgets.csproj` sets `PolyUseEmbeddedAttribute` because `NodeEditorInputHandler` needs internal access to the shared `KeyChordMatcher`, and giving `ImGui.NodeEditor` that access through `InternalsVisibleTo` would otherwise make Polyfill's generated extension methods ambiguous between the two assemblies.
 
 ### Hexa-backed vs ktsu widgets
 
