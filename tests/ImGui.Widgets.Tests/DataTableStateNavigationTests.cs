@@ -271,7 +271,7 @@ public class DataTableStateNavigationTests
 	}
 
 	/// <summary>
-	/// Review focus: the caller removes rows while one near the end is active. The active cell must end
+	/// The caller removes rows while one near the end is active. The active cell must end
 	/// up on a row that still exists, or the next draw indexes past the end of the list.
 	/// </summary>
 	[TestMethod]
@@ -282,8 +282,13 @@ public class DataTableStateNavigationTests
 		fixture.People.RemoveRange(2, 2);
 		state.Sync(fixture.People);
 
-		Assert.IsNotNull(state.ActiveCell);
-		Assert.IsLessThan(2, state.ActiveCell.Value.SourceIndex, "The active cell points past the end of the rows.");
+		if (state.ActiveCell is not ImGuiWidgets.DataTableCell active)
+		{
+			Assert.Fail("Removing rows cleared the active cell instead of keeping it on a row that exists.");
+			return;
+		}
+
+		Assert.IsLessThan(2, active.SourceIndex, "The active cell points past the end of the rows.");
 	}
 
 	[TestMethod]

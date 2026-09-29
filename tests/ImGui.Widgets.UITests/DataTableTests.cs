@@ -3,9 +3,11 @@
 namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using Hexa.NET.ImGui;
 
@@ -301,7 +303,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: ImGui's text box treats keypad Enter as Enter and lets go of the keyboard, so the
+	/// ImGui's text box treats keypad Enter as Enter and lets go of the keyboard, so the
 	/// table has to commit on it too or be left editing a dead text box.
 	/// </summary>
 	[TestMethod]
@@ -332,7 +334,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: an editor scrolled out of view must still finish on a click away. ImGui's clipper
+	/// An editor scrolled out of view must still finish on a click away. ImGui's clipper
 	/// keeps the row holding the keyboard drawn by itself, and this guards that it stays so.
 	/// </summary>
 	[TestMethod]
@@ -357,7 +359,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: ImGui drops the keyboard from an editor that isn't drawn, and a click away can't
+	/// ImGui drops the keyboard from an editor that isn't drawn, and a click away can't
 	/// commit an editor that has no rectangle. The clipper only keeps drawing the keyboard's old place
 	/// on screen, so a row the view moves far away while it's being edited has to be drawn by the table.
 	/// </summary>
@@ -414,7 +416,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: ImGui selects all of an input's text when it takes the keyboard, so without care the
+	/// ImGui selects all of an input's text when it takes the keyboard, so without care the
 	/// second typed character replaces the first.
 	/// </summary>
 	[TestMethod]
@@ -433,7 +435,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: Tab must move the active cell and leave the keyboard with the table, rather than
+	/// Tab must move the active cell and leave the keyboard with the table, rather than
 	/// ImGui's own tabbing handing it to another item.
 	/// </summary>
 	[TestMethod]
@@ -454,7 +456,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: keys typed into a filter box belong to the filter, not to the active cell.
+	/// Keys typed into a filter box belong to the filter, not to the active cell.
 	/// </summary>
 	[TestMethod]
 	public void KeysTypedIntoAFilter_DoNotMoveOrEditTheActiveCell()
@@ -500,19 +502,34 @@ public sealed class DataTableTests : WidgetTest
 
 		// ImGuiApp installs no clipboard functions, so this reaches the real OS clipboard. Put back what
 		// the person running the suite had there.
-		string saved = ImGui.GetClipboardTextS() ?? string.Empty;
+		string saved = ReadClipboard();
 		try
 		{
 			Click(Cell(1, "Name"));
 
 			Harness.Keyboard.Press(ImGuiKey.C, ctrl: true);
 
-			Assert.AreEqual("Bob\t25\tFalse", ImGui.GetClipboardTextS());
+			Assert.AreEqual("Bob\t25\tFalse", ReadClipboard());
 		}
 		finally
 		{
 			ImGui.SetClipboardText(saved);
 		}
+	}
+
+	/// <summary>
+	/// Reads the clipboard, treating an empty one as an empty string.
+	/// </summary>
+	/// <remarks>
+	/// Where there's no OS clipboard, as on a Linux build agent, Dear ImGui keeps its own, and an empty
+	/// one reads back as a null pointer. <c>GetClipboardTextS</c> throws on that null, so the pointer is
+	/// read directly.
+	/// </remarks>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Reads a pointer ImGui returns for the duration of the call, and checks it for null before use.")]
+	private static unsafe string ReadClipboard()
+	{
+		byte* text = ImGui.GetClipboardText();
+		return text is null ? string.Empty : Marshal.PtrToStringUTF8((nint)text) ?? string.Empty;
 	}
 
 	[TestMethod]
@@ -529,7 +546,7 @@ public sealed class DataTableTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: AltGr reports Ctrl and Alt together, and it's how European layouts type @ and the
+	/// AltGr reports Ctrl and Alt together, and it's how European layouts type @ and the
 	/// euro sign, so a character typed that way begins an edit like any other.
 	/// </summary>
 	[TestMethod]

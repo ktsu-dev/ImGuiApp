@@ -47,9 +47,12 @@ public static partial class ImGuiWidgets
 			ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
 			if (ImGui.BeginCombo(id, current))
 			{
+				// Every name is drawn, because the list shows them all, so the loop can't be filtered. Only a
+				// click on a name other than the current one is a change.
 				foreach (string name in Enum.GetNames(type))
 				{
-					if (ImGui.Selectable(name, name == current) && name != current)
+					bool isClicked = ImGui.Selectable(name, name == current);
+					if (isClicked && name != current)
 					{
 						value = (TValue)Enum.Parse(type, name);
 						isChanged = true;

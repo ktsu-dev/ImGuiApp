@@ -109,7 +109,7 @@ public class DataTableStateEditingTests
 		Assert.IsEmpty(fixture.NameEdits);
 	}
 
-	/// <summary>Review focus: a null string opens as empty text, and committing that unchanged isn't an edit.</summary>
+	/// <summary>A null string opens as empty text, and committing that unchanged isn't an edit.</summary>
 	[TestMethod]
 	public void CommitEdit_OnANullStringLeftEmpty_RaisesNothing()
 	{
@@ -225,7 +225,7 @@ public class DataTableStateEditingTests
 	}
 
 	/// <summary>
-	/// Review focus: the documented way to use the table is an edit callback that applies the edit and
+	/// The documented way to use the table is an edit callback that applies the edit and
 	/// calls Refresh. The state must have left editing before the callback runs.
 	/// </summary>
 	[TestMethod]
@@ -256,7 +256,7 @@ public class DataTableStateEditingTests
 		Assert.AreSequenceEqual([3, 0, 2, 1], state.View);
 	}
 
-	/// <summary>Review focus: a callback that throws must not leave the table stuck editing.</summary>
+	/// <summary>A callback that throws must not leave the table stuck editing.</summary>
 	[TestMethod]
 	public void AnEditCallbackThatThrows_LeavesTheStateNotEditing()
 	{
@@ -322,7 +322,7 @@ public class DataTableStateEditingTests
 	}
 
 	/// <summary>
-	/// Review focus: a caller holding an immutable list applies an edit by replacing the list, then calls
+	/// A caller holding an immutable list applies an edit by replacing the list, then calls
 	/// <c>Refresh</c> before the table has seen the new one. The next sync must rebuild over it, or the
 	/// view stays sorted by the old values with an unchanged count to tell it otherwise.
 	/// </summary>

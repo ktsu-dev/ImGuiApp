@@ -114,7 +114,7 @@ public sealed class KeyChordMatcherTests : WidgetTest
 	}
 
 	/// <summary>
-	/// Review focus: ignoring Shift lets it be held for a chord that doesn't name it. A chord that does
+	/// Ignoring Shift lets it be held for a chord that doesn't name it. A chord that does
 	/// name it, such as a user's Shift+J for moving down, still needs it.
 	/// </summary>
 	[TestMethod]
