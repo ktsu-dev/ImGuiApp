@@ -4,6 +4,7 @@ namespace ktsu.ImGui.Examples.Widgets;
 
 using System;
 using System.Numerics;
+using System.Threading.Tasks;
 
 using Hexa.NET.ImGui;
 
@@ -26,6 +27,21 @@ internal static class WaveformDemo
 	private static bool looping = true;
 	private static WaveformChange lastChange;
 
+	// The long clip: ten minutes at 4 kHz is 2.4 M samples, which is why its peak cache is built on
+	// a worker thread the first time the section is shown rather than when the demo starts.
+	private const int LongClipSampleRate = 4000;
+	private const float LongClipSeconds = 600.0f;
+	private const float LongLoopStart = 120.0f;
+	private const float LongLoopEnd = 150.0f;
+
+	private static Task<ImGuiWidgets.WaveformPeakCache>? longClip;
+	private static ImGuiWidgets.TimelineView longView = new();
+	private static float longPlayhead;
+	private static float longLoopStart = LongLoopStart;
+	private static float longLoopEnd = LongLoopEnd;
+	private static bool longPlaying;
+	private static WaveformChange longLastChange;
+
 	static WaveformDemo() => BuildOverview();
 
 	/// <summary>Gets the playhead's position, in seconds.</summary>
@@ -43,6 +59,12 @@ internal static class WaveformDemo
 		playing = false;
 		looping = true;
 		lastChange = WaveformChange.None;
+		longView = new();
+		longPlayhead = 0.0f;
+		longLoopStart = LongLoopStart;
+		longLoopEnd = LongLoopEnd;
+		longPlaying = false;
+		longLastChange = WaveformChange.None;
 	}
 
 	// The overview is built once, from samples, the way a real caller would build it when a clip
@@ -117,5 +139,99 @@ internal static class WaveformDemo
 
 		ImGui.TextUnformatted("Click or drag to seek, drag a loop edge to move it, Shift-drag to draw a new loop.");
 		ImGui.TextUnformatted($"Playhead: {playhead:0.00}s   Loop: {loopStart:0.00}s - {loopEnd:0.00}s   Last change: {lastChange}");
+
+		ShowLongClip();
+	}
+
+	// A synthesized ten-minute clip: a pulse whose tempo and loudness drift over the whole length,
+	// with a single loud click every twenty seconds. The clicks are one sample wide, so they are
+	// what shows that the peak cache keeps a spike at every zoom.
+	private static ImGuiWidgets.WaveformPeakCache BuildLongClip()
+	{
+		float[] samples = new float[(int)(LongClipSampleRate * LongClipSeconds)];
+		for (int i = 0; i < samples.Length; i++)
+		{
+			float t = i / (float)LongClipSampleRate;
+			float swell = 0.35f + (0.3f * MathF.Sin(t * 0.02f));
+			float beat = 0.4f + (0.1f * MathF.Sin(t * 0.005f));
+			float envelope = MathF.Exp(-(t % beat) * 12.0f);
+			samples[i] = swell * envelope * MathF.Sin(2.0f * MathF.PI * 90.0f * t);
+		}
+
+		for (int i = 0; i < samples.Length; i += LongClipSampleRate * 20)
+		{
+			samples[i] = 0.95f;
+		}
+
+		return new ImGuiWidgets.WaveformPeakCache(samples, LongClipSeconds);
+	}
+
+	private static void ShowLongClip()
+	{
+		ImGui.Separator();
+		ImGui.TextUnformatted("Long clip: ten minutes, zoomable down to single samples.");
+
+		longClip ??= Task.Run(BuildLongClip);
+		if (!longClip.IsCompletedSuccessfully)
+		{
+			ImGui.TextUnformatted("Building peak cache…");
+			return;
+		}
+
+		if (longPlaying)
+		{
+			longPlayhead += ImGui.GetIO().DeltaTime;
+			bool hasLoop = longLoopEnd > longLoopStart;
+			if (hasLoop && longPlayhead >= longLoopEnd)
+			{
+				longPlayhead = longLoopStart;
+			}
+			else if (longPlayhead >= LongClipSeconds)
+			{
+				longPlayhead = 0.0f;
+				longPlaying = false;
+			}
+		}
+
+		// The scope qualifies the probe name, so a test addresses this one as "Waveform/long clip".
+		using (new ImGuiWidgets.ScopedId("Waveform"))
+		{
+			WaveformChange change = ImGuiWidgets.Waveform(
+				"long clip",
+				longClip.Result,
+				longView,
+				ref longPlayhead,
+				ref longLoopStart,
+				ref longLoopEnd,
+				new Vector2(560.0f, 120.0f),
+				minLoopLength: 0.1f);
+
+			if (change != WaveformChange.None)
+			{
+				longLastChange = change;
+			}
+		}
+
+		if (DemoProbe.Button("Show all##longWaveform"))
+		{
+			longView.ShowAll();
+		}
+
+		ImGui.SameLine();
+		if (ImGui.Button(longPlaying ? "Pause##longWaveform" : "Play##longWaveform"))
+		{
+			longPlaying = !longPlaying;
+		}
+
+		ImGui.SameLine();
+		bool follow = longView.FollowPlayhead;
+		if (ImGui.Checkbox("Follow playhead##longWaveform", ref follow))
+		{
+			longView.FollowPlayhead = follow;
+		}
+
+		ImGui.TextUnformatted("Ctrl+wheel zooms, Shift+wheel scrolls, middle-drag pans.");
+		ImGui.TextUnformatted(
+			$"View: {longView.ViewStart:0.000}s - {longView.ViewEnd:0.000}s   Playhead: {longPlayhead:0.00}s   Last change: {longLastChange}");
 	}
 }
