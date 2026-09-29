@@ -300,14 +300,16 @@ public static partial class ImGuiWidgets
 		private static bool Fits(float candidate, float viewLength, float width, float minPixelSpacing) =>
 			candidate / viewLength * width >= minPixelSpacing;
 
-		// Exact comparison on purpose, as TimelineGestureState's Same is: a one-frame move on a long
-		// clip must still register. NaN on the old side counts as a change.
 		/// <summary>Whether an in/out pair describes a range; equal points mean there is none.</summary>
 		/// <param name="inPoint">The in point.</param>
 		/// <param name="outPoint">The out point.</param>
 		/// <returns><see langword="true"/> when the two points differ.</returns>
-		internal static bool HasRange(float inPoint, float outPoint) => !inPoint.Equals(outPoint);
+		internal static bool HasRange(float inPoint, float outPoint) => Changed(inPoint, outPoint);
 
-		private static bool Changed(float before, float after) => !before.Equals(after);
+		// Exact in effect, as TimelineGestureState's Same is: two distinct finite floats always differ by
+		// at least float.Epsilon, so a one-frame move on a long clip still registers. NaN counts as a change.
+		internal static bool Changed(float before, float after) => !Same(before, after);
+
+		private static bool Same(float a, float b) => MathF.Abs(a - b) <= float.Epsilon;
 	}
 }

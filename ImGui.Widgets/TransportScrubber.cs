@@ -347,7 +347,7 @@ public static partial class ImGuiWidgets
 			}
 
 			TimelineChange change = TimelineChange.None;
-			if (!target.Equals(playhead))
+			if (TransportScrubberState.Changed(playhead, target))
 			{
 				playhead = target;
 				change |= TimelineChange.Playhead;
