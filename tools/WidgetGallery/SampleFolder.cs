@@ -17,8 +17,27 @@ internal static class SampleFolder
 
 	private static readonly DateTime Timestamp = new(2026, 9, 29, 9, 0, 0, DateTimeKind.Local);
 
-	/// <summary>Gets the folder's path, creating it on first use.</summary>
-	public static string Root { get; } = Create();
+	/// <summary>
+	/// A fixed name, so a rerun on the same machine draws the same pixels and regenerated images only
+	/// show up in a diff when a widget actually changed.
+	/// </summary>
+	private static readonly string Parent = Path.GetFullPath(Path.Join(Path.GetTempPath(), "ktsu-widget-gallery"));
+
+	private static readonly string RootPath = Path.Join(Parent, "home");
+
+	/// <summary>Gets the folder's path, creating it whenever it does not exist, including after <see cref="Delete"/>.</summary>
+	public static string Root
+	{
+		get
+		{
+			if (!Directory.Exists(RootPath))
+			{
+				Create();
+			}
+
+			return RootPath;
+		}
+	}
 
 	/// <summary>Gets the path of a file inside the folder.</summary>
 	/// <param name="relative">The file's path relative to the folder.</param>
@@ -28,26 +47,17 @@ internal static class SampleFolder
 	/// <summary>Deletes the folder and the uniquely named directory it was created in.</summary>
 	public static void Delete()
 	{
-		string? parent = Path.GetDirectoryName(Root);
-
-		if (parent is not null && Directory.Exists(parent))
+		if (Directory.Exists(Parent))
 		{
-			Directory.Delete(parent, recursive: true);
+			Directory.Delete(Parent, recursive: true);
 		}
 	}
 
-	private static string Create()
+	private static void Create()
 	{
-		// A fixed name and fixed timestamps, so a rerun on the same machine draws the same pixels and
-		// regenerated images only show up in a diff when a widget actually changed.
-		string parent = Path.Join(Path.GetTempPath(), "ktsu-widget-gallery");
-
-		if (Directory.Exists(parent))
-		{
-			Directory.Delete(parent, recursive: true);
-		}
-
-		string root = Path.Join(parent, "home");
+		// Anything a crashed run left behind goes first, so the listing is exactly what is below.
+		Delete();
+		string root = RootPath;
 
 		foreach (string folder in Folders)
 		{
@@ -63,7 +73,5 @@ internal static class SampleFolder
 		{
 			File.SetLastWriteTime(entry, Timestamp);
 		}
-
-		return Path.GetFullPath(root);
 	}
 }

@@ -121,7 +121,6 @@ internal sealed class GalleryContext(ImGuiAppHarness harness)
 	private List<Rectangle> FindDialogButtons()
 	{
 		int width = Harness.Options.Width;
-		int height = Harness.Options.Height;
 		byte[] pixels = Harness.Target.Pixels.ToArray();
 
 		bool IsBlue(int x, int y)
@@ -130,39 +129,42 @@ internal sealed class GalleryContext(ImGuiAppHarness harness)
 			return pixels[i + 2] > pixels[i] + 40 && pixels[i + 2] > 90;
 		}
 
-		int bottom = -1;
+		int bottom = LowestRowWhere(width, Harness.Options.Height, IsBlue);
+		return bottom < 0 ? [] : RunsAlongRow(width, Math.Max(bottom - 4, 0), bottom, IsBlue);
+	}
 
-		for (int y = height - 1; y >= 0 && bottom < 0; y--)
+	/// <summary>Finds the lowest row holding a pixel that matches.</summary>
+	private static int LowestRowWhere(int width, int height, Func<int, int, bool> matches)
+	{
+		for (int y = height - 1; y >= 0; y--)
 		{
 			for (int x = 0; x < width; x++)
 			{
-				if (IsBlue(x, y))
+				if (matches(x, y))
 				{
-					bottom = y;
-					break;
+					return y;
 				}
 			}
 		}
 
+		return -1;
+	}
+
+	/// <summary>Turns each run of matching pixels along one row into a button rectangle ending at <paramref name="bottom"/>.</summary>
+	private static List<Rectangle> RunsAlongRow(int width, int row, int bottom, Func<int, int, bool> matches)
+	{
 		List<Rectangle> buttons = [];
-
-		if (bottom < 0)
-		{
-			return buttons;
-		}
-
-		int row = Math.Max(bottom - 4, 0);
 		int runStart = -1;
 
 		for (int x = 0; x <= width; x++)
 		{
-			bool blue = x < width && IsBlue(x, row);
+			bool match = x < width && matches(x, row);
 
-			if (blue && runStart < 0)
+			if (match && runStart < 0)
 			{
 				runStart = x;
 			}
-			else if (!blue && runStart >= 0)
+			else if (!match && runStart >= 0)
 			{
 				buttons.Add(new Rectangle(runStart, bottom - 8, x, bottom));
 				runStart = -1;

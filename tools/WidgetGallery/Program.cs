@@ -29,29 +29,17 @@ internal static class Program
 		  --help                  Show this text.
 		""";
 
-	private static int Main(string[] args)
+	private static int Main(string[] args) => Run(args);
+
+	/// <summary>Runs the tool.</summary>
+	/// <param name="args">The command line.</param>
+	/// <returns>The process exit code: 0 on success, 1 when a tile failed or a widget has none, 2 on a bad command line.</returns>
+	internal static int Run(string[] args)
 	{
-		Dictionary<string, string> options = [];
-		HashSet<string> flags = [];
-
-		for (int i = 0; i < args.Length; i++)
+		if (!TryParse(args, out Dictionary<string, string> options, out HashSet<string> flags))
 		{
-			string arg = args[i];
-
-			if (arg is "--check" or "--help" or "-h")
-			{
-				flags.Add(arg);
-			}
-			else if (arg.StartsWith("--", StringComparison.Ordinal) && i + 1 < args.Length)
-			{
-				options[arg] = args[++i];
-			}
-			else
-			{
-				Console.Error.WriteLine($"Unrecognised argument '{arg}'.");
-				Console.Error.WriteLine(Usage);
-				return 2;
-			}
+			Console.Error.WriteLine(Usage);
+			return 2;
 		}
 
 		if (flags.Contains("--help") || flags.Contains("-h"))
@@ -68,14 +56,7 @@ internal static class Program
 			return ReportCoverage(uncovered) ? 0 : 1;
 		}
 
-		GallerySettings settings = new()
-		{
-			OutputDirectory = options.TryGetValue("--out", out string? output) ? Path.GetFullPath(output) : DefaultOutputDirectory(),
-			CompositeWidth = options.TryGetValue("--width", out string? width) ? int.Parse(width, CultureInfo.InvariantCulture) : 1200,
-			MaterialIconsPath = options.TryGetValue("--material-icons", out string? icons)
-				? Path.GetFullPath(icons)
-				: Path.Join(AppContext.BaseDirectory, "MaterialIcons-Regular.ttf"),
-		};
+		GallerySettings settings = BuildSettings(options);
 
 		if (!File.Exists(settings.MaterialIconsPath))
 		{
@@ -96,6 +77,50 @@ internal static class Program
 			ReportCoverage(uncovered);
 		}
 	}
+
+	/// <summary>Splits the command line into options that take a value and flags that do not.</summary>
+	/// <param name="args">The command line.</param>
+	/// <param name="options">Receives each option and its value.</param>
+	/// <param name="flags">Receives each flag.</param>
+	/// <returns>False, having reported it, when an argument is not recognised.</returns>
+	internal static bool TryParse(string[] args, out Dictionary<string, string> options, out HashSet<string> flags)
+	{
+		options = [];
+		flags = [];
+		int i = 0;
+
+		while (i < args.Length)
+		{
+			string arg = args[i];
+
+			if (arg is "--check" or "--help" or "-h")
+			{
+				flags.Add(arg);
+				i++;
+			}
+			else if (arg.StartsWith("--", StringComparison.Ordinal) && i + 1 < args.Length)
+			{
+				options[arg] = args[i + 1];
+				i += 2;
+			}
+			else
+			{
+				Console.Error.WriteLine($"Unrecognised argument '{arg}'.");
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static GallerySettings BuildSettings(Dictionary<string, string> options) => new()
+	{
+		OutputDirectory = options.TryGetValue("--out", out string? output) ? Path.GetFullPath(output) : DefaultOutputDirectory(),
+		CompositeWidth = options.TryGetValue("--width", out string? width) ? int.Parse(width, CultureInfo.InvariantCulture) : 1200,
+		MaterialIconsPath = options.TryGetValue("--material-icons", out string? icons)
+			? Path.GetFullPath(icons)
+			: Path.Join(AppContext.BaseDirectory, "MaterialIcons-Regular.ttf"),
+	};
 
 	private static bool Render(List<GalleryEntry> entries, GallerySettings settings, bool writeComposites)
 	{

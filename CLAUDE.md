@@ -84,6 +84,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
   [Demo UI tests](#demo-ui-tests) below.
 - `tests/ImGui.Widgets.UITests/` - One headless UI test class per widget, each driving that widget
   alone with nothing else on screen. See [Widget UI tests](#widget-ui-tests) below.
+- `tests/WidgetGallery.UITests/` - Runs `tools/WidgetGallery` end to end into a temporary folder:
+  `--check`, argument parsing, `--only`, and a full render asserting every tile and composite is
+  written, so a tile that throws or asserts natively fails here rather than at the next regeneration.
 - `tests/SyntaxHighlighting.Tests/` - Tokenizer, line-splitter, registry, embedded-language, theme and
   cache tests. These are pure unit tests against `ktsu.SyntaxHighlighting`, which has no ImGui
   dependency at all; the ImGui drawing layer is covered by `ImGuiSyntaxHighlightingDemo.UITests`.

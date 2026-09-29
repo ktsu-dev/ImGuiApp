@@ -11,6 +11,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.Widgets;
 
 /// <summary>
 /// Lays captured tiles out in captioned rows under category headings and renders the result,
@@ -70,7 +71,7 @@ internal static class GalleryCompositor
 		return TileCapture.Crop(harness.Target, new Rectangle(0, 0, width, layout.Height), 0);
 	}
 
-	private static unsafe void Draw(string title, IReadOnlyList<CapturedTile> tiles, List<ImGuiAppTextureInfo> textures, GalleryLayout layout, int width)
+	private static void Draw(string title, IReadOnlyList<CapturedTile> tiles, List<ImGuiAppTextureInfo> textures, GalleryLayout layout, int width)
 	{
 		ImGuiViewportPtr viewport = ImGui.GetMainViewport();
 		ImGui.SetNextWindowPos(viewport.Pos);
@@ -108,7 +109,7 @@ internal static class GalleryCompositor
 				CapturedTile tile = tiles[i];
 
 				ImGui.SetCursorScreenPos(placement.Image);
-				ImGui.Image(new ImTextureRef(texId: textures[i].TextureId), new Vector2(tile.Pixels.Width, tile.Pixels.Height));
+				ImGuiWidgets.Image(textures[i].TextureId, new Vector2(tile.Pixels.Width, tile.Pixels.Height));
 
 				ImGui.SetCursorScreenPos(placement.Caption);
 				ImGui.TextDisabled(tile.Entry.Name);
