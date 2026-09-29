@@ -246,9 +246,21 @@ public sealed class DataTableTests : WidgetTest
 		Click(Cell(0, "Name"));
 
 		Harness.Keyboard.Press(ImGuiKey.End, ctrl: true);
-		Step();
+		Step(4);
 
-		Assert.IsTrue(IsVisible(Cell(999, "Name")), "Ctrl+End did not bring the last row into view.");
+		// Visible alone isn't enough, because the clipper draws a forced row even when it lands off
+		// screen. The row has to sit inside the table's own rectangle.
+		Assert.IsTrue(IsVisible(Cell(999, "Name")), "Ctrl+End did not draw the last row.");
+		AssertInsideTable(Cell(999, "Name"));
+	}
+
+	private void AssertInsideTable(string name)
+	{
+		Rectangle table = RectOf(Label);
+		Rectangle cell = RectOf(name);
+
+		Assert.IsGreaterThanOrEqualTo(table.MinY, cell.MinY, $"{name} starts above the table.");
+		Assert.IsLessThanOrEqualTo(table.MaxY, cell.MaxY, $"{name} ends below the table, at {cell.MaxY} against the table's {table.MaxY}.");
 	}
 
 	[TestMethod]

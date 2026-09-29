@@ -139,8 +139,12 @@ public static partial class ImGuiWidgets
 					DrawFilterRow(label, state);
 				}
 
-				CellRect? editorRect = DrawRows(label, state, rowHeight);
-				state.PageSize = (int)(ImGui.GetWindowHeight() / rowHeight) - frozenRows;
+				// The table pads every row above and below its content, so rows sit this far apart. The
+				// clipper and paging need the pitch, where the row's own items need only the content height.
+				float rowPitch = rowHeight + (2f * ImGui.GetStyle().CellPadding.Y);
+
+				CellRect? editorRect = DrawRows(label, state, rowHeight, rowPitch);
+				state.PageSize = (int)(ImGui.GetWindowHeight() / rowPitch) - frozenRows;
 				DataTableInput.Handle(state, options, editorRect);
 				DataTableContextMenus.Draw(state, options);
 			}
@@ -252,14 +256,14 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private static CellRect? DrawRows(string label, DataTableState<TRow> state, float rowHeight)
+		private static CellRect? DrawRows(string label, DataTableState<TRow> state, float rowHeight, float rowPitch)
 		{
 			IReadOnlyList<int> view = state.View;
 			int scrollSource = state.TakeScrollRequest();
 			CellRect? editorRect = null;
 
 			ImGuiListClipper clipper = default;
-			TableClipping.Begin(ref clipper, view.Count, rowHeight, state.ViewPositionOf(scrollSource));
+			TableClipping.Begin(ref clipper, view.Count, rowPitch, state.ViewPositionOf(scrollSource));
 
 			while (clipper.Step())
 			{
