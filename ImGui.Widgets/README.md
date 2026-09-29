@@ -16,6 +16,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Stepper`**: A `[-] value [+]` integer stepper with hold-to-repeat after a short delay
 - **`RangeSlider`**: Dual-handle slider for a span within a range; the handles cannot cross and stay a minimum distance apart
 - **`XYPad`**: Edits two normalized parameters at once from one pad
+- **`ColorWheel`** / **`LiftGammaGain`**: Colour-grading wheels, singly or as the lift, gamma and gain set a grade is made of. Each is a trackball editing a hue and strength over a master slider for luminance, held in a `ColorWheelValue`. Drags are relative, so a press never jumps the handle; Shift adjusts finely and a double-click resets the ball or the slider. `ColorWheelValue.ToRgbOffset` turns a wheel into a per-channel offset, and applying it is left to you
 - **`Knob`** / **`KnobWithDrag`**: Dial-style knobs in several variants, ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
 - **`Rating`**: Interactive star rating that previews the value under the cursor before it is committed
 - **`Chip`** / **`ChipGroup`**: Pill-shaped filter or choice tags, filled when selected, and a wrapping single-select group of them
@@ -50,6 +51,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Scope`**: An oscilloscope-style waveform over a block of audio samples
 - **`Waveform`**: A waveform overview of a whole clip, drawn from a min/max peak overview (`ComputeWaveformPeaks` builds one), with a click-or-drag playhead and a loop region whose edges drag like a `HandleTrack`'s; Shift-drag draws a new loop
 - **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply
+- **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
 
 ### Layout and Containers
 
@@ -798,6 +800,28 @@ A column with no `OnEdit` is read-only. Strings, numbers, `bool` and enums get b
 An edited row stays where it is until you call `state.Refresh()`, even if its new value sorts elsewhere, so it doesn't jump away while someone is working on it. The table rebuilds by itself when the sort, a filter, or the row count changes.
 
 Pass `DataTableOptions.Keybindings` to drive the keys from a `ktsu.Keybinding` keymap, after registering the commands with `ImGuiWidgets.DataTableCommands.Register`.
+
+### Spectrum Analyzer
+
+The FFT stays with the host: hand in the `N / 2 + 1` bin magnitudes of a real FFT, in decibels, and
+the state folds them into logarithmically spaced bands. A band takes its loudest bin, and a band too
+narrow to hold one reads the level interpolated at its centre. Bars rise at once and fall at
+`BarFallRate`; each band's peak holds for `PeakHoldSeconds`, then falls at `PeakFallRate`.
+
+```csharp
+// Kept across frames, like any other widget state.
+ImGuiWidgets.SpectrumAnalyzerState spectrum = new(bandCount: 32, minFrequency: 20f, maxFrequency: 20000f);
+
+// Each frame: fold in this frame's bins, advance by the frame's delta time, and draw.
+ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, binsDb, sampleRate: 48000f, new Vector2(480, 180));
+
+// Or draw a line instead of bars, and advance the state yourself.
+spectrum.Update(binsDb, 48000f, deltaSeconds);
+ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, new Vector2(480, 180), style: ImGuiWidgets.SpectrumAnalyzerStyle.Line);
+```
+
+`GetBandIndex`, `GetBandCenter` and `FrequencyToPosition` expose the log-frequency axis for hit
+testing or labels.
 
 ### Hexa-backed Widgets
 

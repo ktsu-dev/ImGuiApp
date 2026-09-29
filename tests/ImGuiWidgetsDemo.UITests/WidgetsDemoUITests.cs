@@ -42,7 +42,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Diff view",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Spectrum Analyzer", "Color wheels", "Diff view",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
@@ -448,6 +448,30 @@ public sealed class WidgetsDemoUITests
 			FirstHunkOnly,
 			DiffViewDemo.FirstSelected,
 			"Ticking a hunk's checkbox is the whole point of the widget, so it has to reach the caller's set.");
+	}
+
+	[TestMethod]
+	public void ColorWheels_DraggingGainReachesTheDemoAndResetClearsIt()
+	{
+		OpenSection(WidgetDemosTab, "Color wheels");
+
+		Assert.IsTrue(IsVisible("##grade/Lift"), "The lift wheel was not drawn.");
+		Assert.IsTrue(IsVisible("##grade/Gamma"), "The gamma wheel was not drawn.");
+		Assert.IsTrue(IsVisible("##grade/Gain"), "The gain wheel was not drawn.");
+
+		Rectangle gain = harness.Probe.Rect("##grade/Gain")!.Value;
+		float x = gain.MinX + (gain.Width / 2f);
+		float y = gain.MinY + (gain.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 30f, y - 30f);
+		harness.Step(2);
+
+		Assert.IsTrue(ColorWheelDemo.Gain.Strength > 0f, "Dragging the gain wheel did not reach the demo's value.");
+		Assert.IsTrue(ColorWheelDemo.Lift.IsNeutral, "Dragging the gain wheel moved lift.");
+
+		harness.Click("Reset all");
+		harness.Step(2);
+
+		Assert.IsTrue(ColorWheelDemo.Gain.IsNeutral, "Reset all left the gain wheel pushed.");
 	}
 
 	[TestMethod]

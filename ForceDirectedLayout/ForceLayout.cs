@@ -89,6 +89,10 @@ public sealed class ForceLayout
 	private readonly Dictionary<int, int> idToIndex = [];
 	private NodePosition[] positionBuffer = [];
 
+	// The body ids each edge was submitted with, parallel to the core's edge buffer, so SetNodes can
+	// re-resolve an edge's indices when the body set changes under it.
+	private (int SourceId, int TargetId)[] edgeEndpointIds = [];
+
 	/// <summary>Construct with default settings.</summary>
 	public ForceLayout()
 	{
@@ -157,16 +161,33 @@ public sealed class ForceLayout
 			idToIndex[init.Id] = i;
 		}
 
-		// Drop any edges whose endpoints no longer exist - they would silently get pruned next Step otherwise.
+		// Re-resolve each edge's endpoints from the ids it was submitted with. A stored index names
+		// whichever body now sits at that slot, so keeping it would move an edge onto bodies it never
+		// joined when the set is reordered or shrunk. An edge is dropped only when an endpoint id is gone.
 		Span<EdgeRef> edgeBuf = core.Edges;
 		for (int i = 0; i < edgeBuf.Length; i++)
 		{
-			if ((uint)edgeBuf[i].SourceIndex >= (uint)nodes.Length || (uint)edgeBuf[i].TargetIndex >= (uint)nodes.Length)
+			(int sourceId, int targetId) = edgeEndpointIds[i];
+			if (idToIndex.TryGetValue(sourceId, out int s) && idToIndex.TryGetValue(targetId, out int t))
+			{
+				edgeBuf[i].SourceIndex = s;
+				edgeBuf[i].TargetIndex = t;
+			}
+			else
 			{
 				edgeBuf[i].SourceIndex = -1;
 				edgeBuf[i].TargetIndex = -1;
 			}
 		}
+	}
+
+	/// <summary>
+	/// The body indices an edge currently resolves to, or -1 for an endpoint that is not present.
+	/// </summary>
+	internal (int SourceIndex, int TargetIndex) GetEdgeIndices(int edgeIndex)
+	{
+		EdgeRef edge = core.Edges[edgeIndex];
+		return (edge.SourceIndex, edge.TargetIndex);
 	}
 
 	/// <summary>
@@ -176,10 +197,15 @@ public sealed class ForceLayout
 	{
 		core.ResizeEdges(edges.Length);
 		Span<EdgeRef> dst = core.Edges;
+		if (edgeEndpointIds.Length < edges.Length)
+		{
+			Array.Resize(ref edgeEndpointIds, edges.Length);
+		}
 
 		for (int i = 0; i < edges.Length; i++)
 		{
 			EdgeInit init = edges[i];
+			edgeEndpointIds[i] = (init.SourceBodyId, init.TargetBodyId);
 			int sourceIndex = idToIndex.TryGetValue(init.SourceBodyId, out int s) ? s : -1;
 			int targetIndex = idToIndex.TryGetValue(init.TargetBodyId, out int t) ? t : -1;
 			dst[i] = new EdgeRef

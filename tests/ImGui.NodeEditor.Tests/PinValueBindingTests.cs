@@ -205,6 +205,28 @@ public sealed class PinValueBindingTests
 	}
 
 	/// <summary>
+	/// A copy of a bound node has no instance, so its value moves into the store. Its default has to
+	/// move with it, or a reset of the copy has nothing to go back to.
+	/// </summary>
+	[TestMethod]
+	public void ResetPinValue_OnACopyOfABoundNode_PutsTheOriginalsDefaultBack()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType<TunableNode>();
+		Node node = factory.CreateNode<TunableNode>(Vector2.Zero);
+		engine.SetPinValue(Input(node, "Threshold").Id, 200.0);
+
+		Node? copy = engine.DuplicateNode(node.Id, new Vector2(40, 40));
+		Assert.IsNotNull(copy);
+		Assert.AreEqual(200.0, engine.GetPinValue(Input(copy, "Threshold").Id));
+
+		Assert.IsTrue(engine.ResetPinValue(Input(copy, "Threshold").Id));
+
+		Assert.AreEqual(128.0, engine.GetPinValue(Input(copy, "Threshold").Id));
+		Assert.AreEqual(200.0, engine.GetPinValue(Input(node, "Threshold").Id), "Resetting the copy must not reach the original's instance");
+	}
+
+	/// <summary>
 	/// A removed node's pins stop existing, so the accessors closed over its instance have to go with
 	/// them or the factory's binding is dropped while the engine still holds a delegate to the object.
 	/// </summary>

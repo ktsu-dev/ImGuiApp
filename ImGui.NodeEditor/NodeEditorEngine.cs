@@ -461,8 +461,8 @@ public partial class NodeEditorEngine
 	/// A copied pin's value is written the way <see cref="SetPinValue(int, object?)"/> writes one, and so lands
 	/// in this engine's own store, even where the original's lives on an instance a factory bound
 	/// through <see cref="BindPinValue(int, PinValueAccessor)"/>: a copy has no instance of its own.
-	/// It has no seeded default either, so <see cref="ResetPinValue(int)"/> on a copied pin reports
-	/// that there is nothing to go back to.
+	/// It does carry the original's seeded default, so <see cref="ResetPinValue(int)"/> on a copied
+	/// pin puts back the value the original would reset to.
 	/// </para>
 	/// </remarks>
 	public IReadOnlyList<Node> DuplicateNodes(IEnumerable<int> nodeIds, Vector2 offset)
@@ -505,11 +505,25 @@ public partial class NodeEditorEngine
 		// engine's own store under the new pin id - the same value, a different home.
 		//
 		// The copies are all in `nodes` by now, which is what lets SetPinValue find their pins.
+		//
+		// The original's seeded default comes across first, so a reset of the copy puts back what a
+		// reset of the original would. Seeding also sets the value, so an original holding null over
+		// a non-null default has that null restored rather than leaving the copy at its default.
 		foreach ((int originalPinId, int copiedPinId) in originalPinToCopiedPin)
 		{
+			pinValues.TryGetDefault(originalPinId, out bool hasDefault, out object? defaultValue);
+			if (hasDefault)
+			{
+				pinValues.Seed(copiedPinId, defaultValue);
+			}
+
 			if (GetPinValue(originalPinId) is object value)
 			{
 				WritePinValue(copiedPinId, value);
+			}
+			else if (hasDefault)
+			{
+				pinValues.Restore(copiedPinId, null);
 			}
 		}
 
@@ -544,7 +558,8 @@ public partial class NodeEditorEngine
 	/// A pair that both declare a <see cref="Pin.DataType"/> must also be type-compatible under
 	/// <see cref="PinTypeUtilities.CanConnect"/>, and the returned message names both types when
 	/// they are not, so a host can say why the link was refused rather than only that it was.
-	/// A pin with no declared type is untyped and is not type-checked.
+	/// A pin with no declared type is untyped and is not type-checked, and neither is a pin whose
+	/// type is an open generic, such as the <c>T[]</c> parameter of a generic method node.
 	/// </remarks>
 	public LinkCreationResult TryCreateLink(int fromPinId, int toPinId)
 	{
@@ -569,8 +584,12 @@ public partial class NodeEditorEngine
 		// a type is checked: a null DataType is an untyped pin, which PinSpec documents as a
 		// supported way to describe one, and CanConnect answers false for a null rather than
 		// "unknown" - so asking it about an untyped pin would refuse every link the pin appears in.
+		// An open generic type such as a generic method's T or T[] is skipped the same way: it is not
+		// fixed until the method is called, and IsAssignableFrom says no to it for every concrete type.
 		if (outputPin.DataType is Type outputType
 			&& inputPin.DataType is Type inputType
+			&& !outputType.ContainsGenericParameters
+			&& !inputType.ContainsGenericParameters
 			&& !PinTypeUtilities.CanConnect(outputType, inputType))
 		{
 			return new LinkCreationResult(false, $"Cannot connect {outputType.Name} output '{outputPin.EffectiveDisplayName}' to {inputType.Name} input '{inputPin.EffectiveDisplayName}'");

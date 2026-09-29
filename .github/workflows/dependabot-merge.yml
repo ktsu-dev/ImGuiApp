@@ -15,7 +15,7 @@ name: Dependabot auto-merge
 on:
   workflow_run:
     workflows:
-      - ".NET Workflow"
+      - "CI"
       - "iOS Workflow"
     types: [completed]
 
@@ -29,6 +29,6 @@ jobs:
     if: >
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
-    uses: ktsu-dev/.github/.github/workflows/dependabot-merge.yml@main
+    uses: ktsu-dev/.github/.github/workflows/dependabot-merge.yml@release
     with:
       head-sha: ${{ github.event.workflow_run.head_sha }}
