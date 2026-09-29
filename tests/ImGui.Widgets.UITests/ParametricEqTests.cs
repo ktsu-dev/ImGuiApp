@@ -138,11 +138,10 @@ public sealed class ParametricEqTests : WidgetTest
 		Assert.IsGreaterThan(0, PixelsChangedSince(flat), "A different response changed nothing on screen.");
 
 		Rectangle rect = RectOf(Label);
-		Rectangle? difference = BoundsOfDifference(flat);
-		Assert.IsNotNull(difference);
+		Rectangle difference = BoundsOfDifference(flat) ?? throw new AssertFailedException("A different response changed nothing on screen.");
 		Assert.IsTrue(
-			difference.Value.MinX >= rect.MinX && difference.Value.MaxX <= rect.MaxX
-			&& difference.Value.MinY >= rect.MinY && difference.Value.MaxY <= rect.MaxY,
+			difference.MinX >= rect.MinX && difference.MaxX <= rect.MaxX
+			&& difference.MinY >= rect.MinY && difference.MaxY <= rect.MaxY,
 			$"The plot drew outside its rectangle: {difference} against {rect}.");
 	}
 }

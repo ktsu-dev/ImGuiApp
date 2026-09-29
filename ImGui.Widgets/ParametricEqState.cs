@@ -152,7 +152,7 @@ public static partial class ImGuiWidgets
 		/// <remarks>Each detent multiplies Q by 1.2, so the wheel feels the same at every width.</remarks>
 		public static bool AdjustQ(Span<EqBand> bands, int index, float wheel)
 		{
-			if (index < 0 || index >= bands.Length || wheel == 0f)
+			if (index < 0 || index >= bands.Length || MathF.Abs(wheel) <= float.Epsilon)
 			{
 				return false;
 			}

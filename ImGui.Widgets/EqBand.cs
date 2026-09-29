@@ -81,7 +81,7 @@ public static partial class ImGuiWidgets
 		public static float BandDb(EqBand band, float frequency, float sampleRate = 48000f)
 		{
 			double nyquistLimit = 0.499 * sampleRate;
-			if (!float.IsFinite(sampleRate) || !(nyquistLimit >= 1.0))
+			if (!float.IsFinite(sampleRate) || nyquistLimit < 1.0)
 			{
 				throw new ArgumentOutOfRangeException(nameof(sampleRate), sampleRate, "The sample rate must be finite and above about 2 Hz.");
 			}

@@ -138,7 +138,7 @@ public static partial class ImGuiWidgets
 
 			// The same guard SpectrumAnalyzer has: a reversed, empty or non-finite range has nowhere to
 			// put a gain, so there is nothing to draw and nothing to normalise towards.
-			if (!(minDb < maxDb) || !float.IsFinite(minDb) || !float.IsFinite(maxDb))
+			if (minDb >= maxDb || !float.IsFinite(minDb) || !float.IsFinite(maxDb))
 			{
 				drawList.AddRect(min, max, border);
 				drawList.PopClipRect();
@@ -180,7 +180,7 @@ public static partial class ImGuiWidgets
 			}
 
 			bool hovered = ImGui.IsItemHovered();
-			if (hovered && io.MouseWheel != 0f)
+			if (hovered && MathF.Abs(io.MouseWheel) > float.Epsilon)
 			{
 				int under = ParametricEqState.Pick(nodes, pointer, radius);
 				if (under >= 0)
@@ -254,7 +254,7 @@ public static partial class ImGuiWidgets
 			{
 				float gain = step * GridStepDb;
 				float y = GainToY(gain, minDb, maxDb, min, size);
-				if (gain == 0f)
+				if (MathF.Abs(gain) < GridStepDb * 0.5f)
 				{
 					// Two pixels wide, so centred on a pixel boundary rather than a pixel.
 					y = MathF.Round(y) - 0.5f;
