@@ -72,7 +72,7 @@ public static partial class ImGuiWidgets
 			{
 				state.CancelEdit();
 			}
-			else if (IsPressed(options, DataTableCommands.Commit))
+			else if (IsPressed(options, DataTableCommands.Commit) || IsKeypadEnterWithoutKeymap(options))
 			{
 				state.CommitEdit();
 				state.Move(DataTableMove.Down);
@@ -143,10 +143,15 @@ public static partial class ImGuiWidgets
 			return chord is not null && KeyChordMatcher.IsPressed(chord, canRepeat, isShiftIgnored);
 		}
 
-		// Enter begins editing as well as F2 when there's no keymap. A profile holds one chord per
-		// command, so with a keymap only the bound chord counts.
+		// Enter and keypad Enter begin editing as well as F2 when there's no keymap. A profile holds one
+		// chord per command, so with a keymap only the bound chord counts.
 		private static bool IsEnterWithoutKeymap(DataTableOptions options) =>
-			options.Keybindings is null && ImGui.IsKeyPressed(ImGuiKey.Enter, false);
+			options.Keybindings is null && (ImGui.IsKeyPressed(ImGuiKey.Enter, false) || IsKeypadEnterWithoutKeymap(options));
+
+		// ImGui's text box lets go of the keyboard on keypad Enter as it does on Enter, so without a keymap
+		// the table commits on it too, rather than leave the edit open behind a text box that's let go.
+		private static bool IsKeypadEnterWithoutKeymap(DataTableOptions options) =>
+			options.Keybindings is null && ImGui.IsKeyPressed(ImGuiKey.KeypadEnter, false);
 
 		/// <summary>Takes the first printable character typed this frame, which begins an edit with it.</summary>
 		private static bool TryTakeTypedCharacter(out char typed)

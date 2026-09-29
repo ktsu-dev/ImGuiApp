@@ -265,6 +265,14 @@ public static partial class ImGuiWidgets
 			ImGuiListClipper clipper = default;
 			TableClipping.Begin(ref clipper, view.Count, rowPitch, state.ViewPositionOf(scrollSource));
 
+			// The edited row is drawn wherever it is. ImGui drops the keyboard from an editor that isn't
+			// submitted, and a click away can only commit an editor that has a rectangle.
+			int editedPosition = state.EditSession is DataTableEditSession session ? state.ViewPositionOf(session.SourceIndex) : -1;
+			if (editedPosition >= 0)
+			{
+				clipper.IncludeItemByIndex(editedPosition);
+			}
+
 			while (clipper.Step())
 			{
 				for (int position = clipper.DisplayStart; position < clipper.DisplayEnd; position++)

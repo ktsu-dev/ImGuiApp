@@ -278,6 +278,89 @@ public sealed class DataTableTests : WidgetTest
 		Assert.AreEqual(new ImGuiWidgets.DataTableCell(2, 0), state.ActiveCell);
 	}
 
+	/// <summary>
+	/// Review focus: ImGui's text box treats keypad Enter as Enter and lets go of the keyboard, so the
+	/// table has to commit on it too or be left editing a dead text box.
+	/// </summary>
+	[TestMethod]
+	public void KeypadEnter_CommitsTheEdit()
+	{
+		Start(Draw);
+		BeginEditing(1, "Name");
+
+		Harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		Harness.Keyboard.Type("Robert");
+		Harness.Keyboard.Press(ImGuiKey.KeypadEnter);
+		Step();
+
+		Assert.IsFalse(state.IsEditing, "Keypad Enter left the table editing.");
+		Assert.AreEqual("Robert", nameEdits.Single().NewValue);
+	}
+
+	[TestMethod]
+	public void KeypadEnter_BeginsEditing()
+	{
+		Start(Draw);
+		Click(Cell(1, "Name"));
+
+		Harness.Keyboard.Press(ImGuiKey.KeypadEnter);
+		Step();
+
+		Assert.IsTrue(state.IsEditing, "Keypad Enter did not begin editing.");
+	}
+
+	/// <summary>
+	/// Review focus: an editor scrolled out of view must still finish on a click away. ImGui's clipper
+	/// keeps the row holding the keyboard drawn by itself, and this guards that it stays so.
+	/// </summary>
+	[TestMethod]
+	public void ScrollingTheEditorAway_StillCommitsOnClickAway()
+	{
+		AddPeople(1_000);
+		Start(Draw);
+		BeginEditing(1, "Name");
+		Harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		Harness.Keyboard.Type("Robert");
+
+		Vector2 middle = CenterOf(Cell(3, "Age"));
+		Harness.Mouse.Wheel(middle.X, middle.Y, -20);
+		Step(2);
+		Assert.IsLessThan(RectOf(Label).MinY, RectOf(Cell(1, "Name")).MaxY, "The wheel did not scroll the edited row out of view.");
+
+		Harness.Mouse.Click(RectOf(Label).MinX + 20f, RectOf(Label).MaxY + 20f);
+		Step();
+
+		Assert.IsFalse(state.IsEditing, "The table was left editing a row scrolled out of view.");
+		Assert.AreEqual("Robert", nameEdits.Single().NewValue);
+	}
+
+	/// <summary>
+	/// Review focus: ImGui drops the keyboard from an editor that isn't drawn, and a click away can't
+	/// commit an editor that has no rectangle. The clipper only keeps drawing the keyboard's old place
+	/// on screen, so a row the view moves far away while it's being edited has to be drawn by the table.
+	/// </summary>
+	[TestMethod]
+	public void MovingTheEditedRowOutOfView_StillCommitsOnClickAway()
+	{
+		AddPeople(1_000);
+		Start(Draw);
+		Click(Header("Name"));
+		BeginEditing(1, "Name");
+		Harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		Harness.Keyboard.Type("Robert");
+
+		// The caller's data changes under the edit, and sorted by name the row now belongs last.
+		people[1] = people[1] with { Name = "Zed" };
+		state.Refresh();
+		Step(2);
+
+		Harness.Mouse.Click(RectOf(Label).MinX + 20f, RectOf(Label).MaxY + 20f);
+		Step();
+
+		Assert.IsFalse(state.IsEditing, "The table was left editing a row moved out of view.");
+		Assert.AreEqual("Robert", nameEdits.Single().NewValue);
+	}
+
 	[TestMethod]
 	public void Escape_CancelsTheEdit()
 	{
