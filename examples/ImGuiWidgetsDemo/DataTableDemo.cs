@@ -156,11 +156,10 @@ internal static class DataTableDemo
 
 		if (ImGui.MenuItem("Mark in stock"))
 		{
-			foreach (int sourceIndex in menu.SelectedRows)
+			// Parts already in stock are skipped, so marking them records no undo step and no edit.
+			foreach (DemoPart part in menu.SelectedRows.Select(sourceIndex => Parts[sourceIndex]).Where(part => !part.IsInStock))
 			{
-				DemoPart part = Parts[sourceIndex];
-				bool wasInStock = part.IsInStock;
-				history.Execute(new DelegateCommand("Mark in stock", () => part.IsInStock = true, () => part.IsInStock = wasInStock));
+				history.Execute(new DelegateCommand("Mark in stock", () => part.IsInStock = true, () => part.IsInStock = false));
 				EditCount++;
 			}
 
