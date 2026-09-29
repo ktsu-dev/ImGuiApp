@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -625,6 +625,23 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.IsGreaterThan(0.55f, ImageCompareDemo.Split, "Dragging the divider should move the split right.");
+	}
+
+	[TestMethod]
+	public void CropDemo_DraggingTheBodyMovesTheCrop()
+	{
+		OpenSection(AdvancedDemosTab, "Crop Overlay");
+
+		Assert.IsTrue(IsVisible("crop_demo/body"), "The crop overlay did not mark its body.");
+		float before = CropDemo.Crop.Center.X;
+
+		Rectangle body = harness.Probe.Rect("crop_demo/body")!.Value;
+		float x = body.MinX + (body.Width / 2f);
+		float y = body.MinY + (body.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 30f, y);
+		harness.Step(2);
+
+		Assert.IsTrue(CropDemo.Crop.Center.X > before, "Dragging the crop did not move it.");
 	}
 
 	[TestMethod]

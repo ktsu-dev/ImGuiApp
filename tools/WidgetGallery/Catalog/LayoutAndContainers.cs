@@ -115,6 +115,8 @@ internal static class LayoutAndContainersTiles
 
 		yield return ImageCompareEntry(Category);
 
+		yield return CropOverlayTile(Category);
+
 		bool enabled = true;
 		int count = 12;
 		float ratio = 0.62f;
@@ -214,5 +216,28 @@ internal static class LayoutAndContainersTiles
 		float split = 0.45f;
 		return new("ImageCompare", category, [nameof(ImGuiWidgets.ImageCompare)], context =>
 			ImGuiWidgets.ImageCompare("##compare", context.SampleTextureId, context.InvertedSampleTexture.TextureId, imageSize, state, ref split, canvasSize));
+	}
+
+	/// <summary>
+	/// A crop over its own canvas: rotated a little so the handles, the dimmed surround and the
+	/// rotate handle all show. Its own method to keep <see cref="Build"/> under the coupling limit.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The tile.</returns>
+	private static GalleryEntry CropOverlayTile(GalleryCategory category)
+	{
+		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);
+		Vector2 canvasSize = new(260f, 170f);
+		ImGuiWidgets.ImageCanvasState canvas = new();
+		canvas.FitToViewport(imageSize, canvasSize);
+		CropRect crop = new(imageSize / 2f, imageSize * new Vector2(0.55f, 0.45f), 8f);
+		return new("CropOverlay", category, [nameof(ImGuiWidgets.CropOverlay)], context =>
+		{
+			ImGuiWidgets.ImageCanvas("##cropCanvas", context.SampleTextureId, imageSize, canvas, canvasSize);
+			ImGuiWidgets.CropOverlay("##crop", ref crop, imageSize, canvas, ImGui.GetItemRectMin(), canvasSize);
+
+			// The overlay restores the cursor, so something has to follow it before the window ends.
+			ImGui.Dummy(Vector2.Zero);
+		});
 	}
 }

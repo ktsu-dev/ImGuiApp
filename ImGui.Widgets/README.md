@@ -79,6 +79,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 - **`ImageCompare`**: Two textures of the same image, before and after, in one pannable, zoomable view, either split by a draggable divider (a wipe) or side by side in two panes that pan and zoom together. Both are placed by one caller-owned `ImageCanvasState`, so they line up to the pixel
 
+### Image and Colour
+
+- **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, rule-of-thirds guides, edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
