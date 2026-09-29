@@ -144,6 +144,20 @@ internal static class InputAndControlsTiles
 			Interact = context => context.Click("Flavour"),
 		};
 
+		ImGuiWidgets.TimelineView transportView = new();
+		float transportPlayhead = 3.5f;
+		float transportIn = 2f;
+		float transportOut = 6f;
+		yield return new("TransportScrubber", Category, [nameof(ImGuiWidgets.TransportScrubber)], context =>
+		{
+			ImGuiWidgets.TransportScrubberOptions transportOptions = new()
+			{
+				FrameDuration = 1f / 24f,
+				ThumbnailResolver = _ => context.SampleTextureId,
+			};
+			ImGuiWidgets.TransportScrubber("##transport", 10f, transportView, ref transportPlayhead, ref transportIn, ref transportOut, transportOptions, new Vector2(360f, 0f));
+		});
+
 		CatalogHelpers.Difficulty enumDifficulty = CatalogHelpers.Difficulty.Hard;
 		yield return new("EnumCombo", Category, [nameof(ImGuiWidgets.EnumCombo)], _ =>
 		{

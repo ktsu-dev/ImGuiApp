@@ -13,6 +13,7 @@ internal static class SignalDemos
 	internal static void ResetState()
 	{
 		WaveformDemo.ResetState();
+		TransportScrubberDemo.ResetState();
 		SpectrumAnalyzerDemo.ResetState();
 	}
 
@@ -20,6 +21,7 @@ internal static class SignalDemos
 	public static void Show()
 	{
 		WaveformDemo.Show();
+		TransportScrubberDemo.Show();
 		SpectrumAnalyzerDemo.Show();
 	}
 }

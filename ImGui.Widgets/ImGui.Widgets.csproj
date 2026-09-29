@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ktsu.ImGui.Widgets.Tests" />
+    <InternalsVisibleTo Include="ktsu.ImGui.Widgets.UITests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />

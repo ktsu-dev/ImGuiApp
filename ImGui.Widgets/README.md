@@ -23,6 +23,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`PinInput`**: An N-box PIN or one-time-passcode entry that auto-advances, and steps back on backspace
 - **`SearchBox`** / **`SearchBoxRanked`**: Filters a collection with `ktsu.TextFilter` (glob, regex, fuzzy) or ranks it with a fuzzy match
 - **`Combo`**: Type-safe combo boxes for enums, strings, and semantic strings
+- **`TransportScrubber`**: A video-editor style transport over a caller-owned `TimelineView`: time ruler, thumbnail strip from a caller resolver, playhead and in/out range, with frame snapping, I/O and arrow-key shortcuts, and a right-click menu
 
 ### Display and Status
 
