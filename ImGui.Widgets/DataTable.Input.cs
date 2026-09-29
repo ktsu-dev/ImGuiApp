@@ -160,7 +160,15 @@ public static partial class ImGuiWidgets
 				return false;
 			}
 
-			typed = (char)io.InputQueueCharacters[0];
+			// A codepoint above U+FFFF doesn't fit in one char, and a lone surrogate isn't a character, so
+			// neither can begin an edit.
+			uint codepoint = io.InputQueueCharacters[0];
+			if (codepoint > char.MaxValue || char.IsSurrogate((char)codepoint))
+			{
+				return false;
+			}
+
+			typed = (char)codepoint;
 			return !char.IsControl(typed) && !char.IsWhiteSpace(typed);
 		}
 

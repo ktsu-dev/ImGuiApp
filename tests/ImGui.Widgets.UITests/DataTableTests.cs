@@ -373,10 +373,34 @@ public sealed class DataTableTests : WidgetTest
 	public void CtrlC_CopiesTheSelectedRows()
 	{
 		Start(Draw);
+
+		// ImGuiApp installs no clipboard functions, so this reaches the real OS clipboard. Put back what
+		// the person running the suite had there.
+		string saved = ImGui.GetClipboardTextS() ?? string.Empty;
+		try
+		{
+			Click(Cell(1, "Name"));
+
+			Harness.Keyboard.Press(ImGuiKey.C, ctrl: true);
+
+			Assert.AreEqual("Bob\t25\tFalse", ImGui.GetClipboardTextS());
+		}
+		finally
+		{
+			ImGui.SetClipboardText(saved);
+		}
+	}
+
+	[TestMethod]
+	public void TypingACharacterOutsideTheBasicPlane_DoesNotBeginAnEdit()
+	{
+		Start(Draw);
 		Click(Cell(1, "Name"));
 
-		Harness.Keyboard.Press(ImGuiKey.C, ctrl: true);
+		// Queued as one codepoint, as a platform backend would, rather than as a surrogate pair.
+		ImGui.GetIO().AddInputCharacter(0x1F600u);
+		Step(2);
 
-		Assert.AreEqual("Bob\t25\tFalse", ImGui.GetClipboardTextS());
+		Assert.IsFalse(state.IsEditing, "A character above U+FFFF began an edit.");
 	}
 }
