@@ -196,9 +196,15 @@ public static partial class ImGuiWidgets
 			// The drag and the wheel may have moved the bands, so draw and record where they are now.
 			PlaceNodes(bands, nodes, axis, minDb, maxDb, min, size);
 
-			int hot = state.ActiveBand >= 0 && state.ActiveBand < bands.Length && ImGui.IsItemActive()
-				? state.ActiveBand
-				: hovered ? ParametricEqState.Pick(nodes, pointer, radius) : -1;
+			int hot = -1;
+			if (state.ActiveBand >= 0 && state.ActiveBand < bands.Length && ImGui.IsItemActive())
+			{
+				hot = state.ActiveBand;
+			}
+			else if (hovered)
+			{
+				hot = ParametricEqState.Pick(nodes, pointer, radius);
+			}
 
 			DrawGrid(drawList, axis, minDb, maxDb, min, max, size, border);
 			PlotResponse(drawList, responseDb, axis, minDb, maxDb, min, size, colors);

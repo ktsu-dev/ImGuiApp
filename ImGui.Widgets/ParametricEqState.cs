@@ -135,12 +135,15 @@ public static partial class ImGuiWidgets
 				? Math.Clamp(maxDb - ((target.Y - min.Y) / size.Y * (maxDb - minDb)), minDb, maxDb)
 				: band.GainDb;
 
-			if (frequency.Equals(band.Frequency) && gain.Equals(band.GainDb))
+			// Compared as a whole band: a record compares its fields exactly, which is the question
+			// here, whether anything moved at all, rather than whether it moved far.
+			EqBand moved = band with { Frequency = frequency, GainDb = gain };
+			if (moved == band)
 			{
 				return false;
 			}
 
-			bands[ActiveBand] = band with { Frequency = frequency, GainDb = gain };
+			bands[ActiveBand] = moved;
 			return true;
 		}
 
@@ -158,13 +161,13 @@ public static partial class ImGuiWidgets
 			}
 
 			EqBand band = bands[index];
-			float q = Math.Clamp(band.Q * MathF.Pow(QStepPerDetent, wheel), EqBand.MinQ, EqBand.MaxQ);
-			if (q.Equals(band.Q))
+			EqBand adjusted = band with { Q = Math.Clamp(band.Q * MathF.Pow(QStepPerDetent, wheel), EqBand.MinQ, EqBand.MaxQ) };
+			if (adjusted == band)
 			{
 				return false;
 			}
 
-			bands[index] = band with { Q = q };
+			bands[index] = adjusted;
 			return true;
 		}
 
@@ -195,12 +198,13 @@ public static partial class ImGuiWidgets
 				float gain = float.IsNaN(band.GainDb) ? 0f : Math.Clamp(band.GainDb, minDb, maxDb);
 				float q = float.IsNaN(band.Q) ? EqBand.DefaultQ : Math.Clamp(band.Q, EqBand.MinQ, EqBand.MaxQ);
 
-				if (frequency.Equals(band.Frequency) && gain.Equals(band.GainDb) && q.Equals(band.Q))
+				EqBand normalized = band with { Frequency = frequency, GainDb = gain, Q = q };
+				if (normalized == band)
 				{
 					continue;
 				}
 
-				bands[i] = band with { Frequency = frequency, GainDb = gain, Q = q };
+				bands[i] = normalized;
 				changed = true;
 			}
 
