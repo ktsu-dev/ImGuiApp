@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -587,6 +587,19 @@ public sealed class WidgetsDemoUITests
 
 		Assert.AreSequenceEqual([2], AssetBrowserDemo.State.SelectedIndices);
 		Assert.IsTrue(IsVisible("Asset drop target"), "The drop target sits under the browser.");
+	}
+
+	[TestMethod]
+	public void GradientDemo_ClickingTheBarAddsAStop()
+	{
+		OpenSection(AdvancedDemosTab, "Gradient Editor");
+
+		Rectangle bar = harness.Probe.Rect("gradient_demo/bar")
+			?? throw new InvalidOperationException("The gradient bar was never recorded by the probe.");
+		harness.Mouse.Click(bar.MinX + (bar.Width * 0.9f), bar.MinY + (bar.Height * 0.3f));
+		harness.Step(2);
+
+		Assert.AreEqual(5, GradientDemo.StopCount, "Clicking empty space on the bar should add a stop.");
 	}
 
 	[TestMethod]

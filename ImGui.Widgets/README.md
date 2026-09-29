@@ -67,6 +67,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 - **`LevelsControl`**: A levels control — a histogram with black, grey and white input handles, an output ramp with its own black and white handles, and a numeric readout. It edits a caller-owned `LevelsAdjustment`, whose `Apply` is the same transfer function the handles describe, so the curve on screen and the curve applied to pixels cannot disagree. Grey point and gamma follow the Photoshop convention
 
+### Image and Colour
+
+- **`GradientEditor`**: A colour-stop gradient editor over a caller-owned list of `GradientStop`: click the bar to add a stop sampled from the gradient, drag a stop to move it (never past a neighbour), drag it away or press Delete to remove it, and edit the selected stop's colour with a colour picker underneath. `SampleGradient` is the evaluator the bar is drawn with, interpolating in linear RGB, so the gradient on screen and the gradient a consumer applies are the same function
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
