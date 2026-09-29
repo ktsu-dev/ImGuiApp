@@ -131,6 +131,7 @@ internal static class ImGuiWidgetsDemo
 		propertySwatches.Clear();
 		propertySwatches.AddRange([Color.FromSrgb(0.9f, 0.3f, 0.3f, 1.0f), Color.FromSrgb(0.3f, 0.8f, 0.4f, 1.0f)]);
 		DiffViewDemo.ResetState();
+		ColorWheelDemo.ResetState();
 	}
 
 	/// <summary>Gets the tags held by the property grid section's list row.</summary>
@@ -459,6 +460,7 @@ internal static class ImGuiWidgetsDemo
 		ShowMobileContainersDemo();
 		ShowHistogramAndHandleTrackDemo();
 		ShowCurveTrackDemo();
+		ColorWheelDemo.Show();
 		DiffViewDemo.Show();
 	}
 

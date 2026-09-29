@@ -16,6 +16,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Stepper`**: A `[-] value [+]` integer stepper with hold-to-repeat after a short delay
 - **`RangeSlider`**: Dual-handle slider for a span within a range; the handles cannot cross and stay a minimum distance apart
 - **`XYPad`**: Edits two normalized parameters at once from one pad
+- **`ColorWheel`** / **`LiftGammaGain`**: Colour-grading wheels, singly or as the lift, gamma and gain set a grade is made of. Each is a trackball editing a hue and strength over a master slider for luminance, held in a `ColorWheelValue`. Drags are relative, so a press never jumps the handle; Shift adjusts finely and a double-click resets the ball or the slider. `ColorWheelValue.ToRgbOffset` turns a wheel into a per-channel offset, and applying it is left to you
 - **`Knob`** / **`KnobWithDrag`**: Dial-style knobs in several variants, ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
 - **`Rating`**: Interactive star rating that previews the value under the cursor before it is committed
 - **`Chip`** / **`ChipGroup`**: Pill-shaped filter or choice tags, filled when selected, and a wrapping single-select group of them
