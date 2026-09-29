@@ -71,6 +71,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 - **`GradientEditor`**: A colour-stop gradient editor over a caller-owned list of `GradientStop`: click the bar to add a stop sampled from the gradient, drag a stop to move it (never past a neighbour), drag it away or press Delete to remove it, and edit the selected stop's colour with a colour picker underneath. `SampleGradient` is the evaluator the bar is drawn with, interpolating in linear RGB, so the gradient on screen and the gradient a consumer applies are the same function
 
+### Image and Colour
+
+- **`SwatchPalette`**: A wrapping grid of colour swatches over a caller-owned list: click a swatch to select it, drag one to reorder the list in place, with the selection following the swatch it named. Adding, removing and editing colours is left to the host, which reads the selected index
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest

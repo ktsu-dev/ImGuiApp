@@ -113,6 +113,17 @@ internal static class InputAndControlsTiles
 			ImGui.Dummy(new Vector2(300f, 12f));
 		});
 
+		// A palette with the third swatch selected, so the selection ring shows.
+		List<Color> swatches =
+		[
+			NamedColors.Black, NamedColors.White, NamedColors.Red, NamedColors.Green,
+			NamedColors.Blue, NamedColors.Yellow, NamedColors.Cyan, NamedColors.Magenta,
+			NamedColors.Gray, NamedColors.Orange, NamedColors.Purple, NamedColors.Transparent,
+		];
+		int selectedSwatch = 2;
+		yield return new("SwatchPalette", Category, [nameof(ImGuiWidgets.SwatchPalette)], _ =>
+			ImGuiWidgets.SwatchPalette("Palette", swatches, ref selectedSwatch, 24f, 6));
+
 		ImGuiKnobVariant[] variants = [ImGuiKnobVariant.Tick, ImGuiKnobVariant.Dot, ImGuiKnobVariant.Wiper, ImGuiKnobVariant.WiperDot, ImGuiKnobVariant.Stepped, ImGuiKnobVariant.Space];
 		float[] knobValues = [0.25f, 0.5f, 0.8f, 0.4f, 0.6f, 0.7f];
 		yield return new("Knob", Category, [nameof(ImGuiWidgets.Knob)], _ =>

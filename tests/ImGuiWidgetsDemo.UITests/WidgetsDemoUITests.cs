@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -600,6 +600,17 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.AreEqual(5, GradientDemo.StopCount, "Clicking empty space on the bar should add a stop.");
+	}
+
+	[TestMethod]
+	public void SwatchPaletteDemo_ClickingASwatchSelectsIt()
+	{
+		OpenSection(AdvancedDemosTab, "Swatch Palette");
+
+		harness.Click("swatch_demo/3");
+		harness.Step(2);
+
+		Assert.AreEqual(3, SwatchPaletteDemo.Selected, "Clicking a swatch should select it.");
 	}
 
 	[TestMethod]
