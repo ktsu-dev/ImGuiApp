@@ -33,7 +33,8 @@ public sealed class DemoSectionRegistryTests
 	private static readonly string[] AdvancedDemoOrder =
 	[
 		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(TabPanelDemo),
-		nameof(SearchBoxDemo), nameof(GridDemo), nameof(VirtualTableDemo), nameof(DividerDemo),
+		nameof(SearchBoxDemo), nameof(GridDemo), nameof(VirtualTableDemo), nameof(DataTableDemo),
+		nameof(DividerDemo),
 	];
 
 	private static IEnumerable<DemoSection> AllSections => DemoSections.WidgetDemos.Concat(DemoSections.AdvancedDemos);
