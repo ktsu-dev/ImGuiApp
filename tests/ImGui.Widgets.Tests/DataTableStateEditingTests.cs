@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.Widgets.Tests;
 
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -301,5 +302,42 @@ public class DataTableStateEditingTests
 
 		Assert.IsTrue(state.TakeContextMenuRequest());
 		Assert.IsFalse(state.TakeContextMenuRequest());
+	}
+
+	/// <summary>
+	/// Review focus: a caller holding an immutable list applies an edit by replacing the list, then calls
+	/// <c>Refresh</c> before the table has seen the new one. The next sync must rebuild over it, or the
+	/// view stays sorted by the old values with an unchanged count to tell it otherwise.
+	/// </summary>
+	[TestMethod]
+	public void Refresh_FromOnEdit_WithAReplacedList_RebuildsOverTheNewList()
+	{
+		ImmutableList<DataTablePerson> people = [.. fixture.People];
+		ImGuiWidgets.DataTableState<DataTablePerson> state = null!;
+
+		ImGuiWidgets.DataTableColumn<DataTablePerson, int> age = new()
+		{
+			Label = "Age",
+			Value = person => person.Age,
+			OnEdit = edit =>
+			{
+				DataTablePerson changed = new(edit.Row.Name, edit.NewValue, edit.Row.IsActive, edit.Row.Mood);
+				people = people.SetItem(edit.SourceIndex, changed);
+				state.Refresh();
+			},
+		};
+
+		state = new([fixture.Name, age]);
+		state.Sync(people);
+		state.SetSort(1, isAscending: true);
+
+		// Alice is 30. At 40 she sorts after Carol, who is 35.
+		state.Click(Cell(0, 1), isCtrlHeld: false, isShiftHeld: false);
+		state.BeginEdit();
+		Type(state, "40");
+		state.CommitEdit();
+		state.Sync(people);
+
+		Assert.AreSequenceEqual([1, 3, 2, 0], state.View);
 	}
 }

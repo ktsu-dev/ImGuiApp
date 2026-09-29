@@ -29,6 +29,7 @@ public static partial class ImGuiWidgets
 		private int[] view = [];
 		private int[] viewPositions = [];
 		private int syncedCount = -1;
+		private bool isRefreshPending;
 
 		/// <summary>Creates the state for a table with the given columns.</summary>
 		/// <param name="columns">The columns, left to right. Labels must be unique.</param>
@@ -94,11 +95,22 @@ public static partial class ImGuiWidgets
 		/// table sorts or filters on, to move the row to where it now belongs.
 		/// </summary>
 		/// <remarks>
+		/// <para>
 		/// The table rebuilds by itself when the sort, a filter, or the row count changes. It doesn't
 		/// rebuild when a value changes in place, because it can't see that happen, and because a row
 		/// that jumps away while it's being edited is disorienting.
+		/// </para>
+		/// <para>
+		/// A caller that applies an edit by replacing its list may call this before the table has seen the
+		/// new list. The table rebuilds again when it's next given a different list, so the view follows
+		/// the new values.
+		/// </para>
 		/// </remarks>
-		public void Refresh() => Rebuild();
+		public void Refresh()
+		{
+			isRefreshPending = true;
+			Rebuild();
+		}
 
 		internal TRow RowAt(int sourceIndex) => rows[sourceIndex];
 
@@ -113,14 +125,24 @@ public static partial class ImGuiWidgets
 
 		internal SearchBoxOptions GetFilterOptions(int column) => filterOptions[column];
 
-		/// <summary>Takes the caller's rows for this frame, and rebuilds if their number changed.</summary>
+		/// <summary>
+		/// Takes the caller's rows for this frame, and rebuilds if their number changed, or if a refresh
+		/// was asked for before the caller replaced the list.
+		/// </summary>
 		internal void Sync(IReadOnlyList<TRow> source)
 		{
 			Ensure.NotNull(source);
+			bool isReplacedAfterRefresh = isRefreshPending && !ReferenceEquals(source, rows);
+			isRefreshPending = false;
 			rows = source;
 
 			if (source.Count == syncedCount)
 			{
+				if (isReplacedAfterRefresh)
+				{
+					Rebuild();
+				}
+
 				return;
 			}
 
