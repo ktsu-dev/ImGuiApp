@@ -48,6 +48,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`FlameGraph`**: A flame graph over managed sample data
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
 - **`Scope`**: An oscilloscope-style waveform over a block of audio samples
+- **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
 
 ### Layout and Containers
 
@@ -763,6 +764,28 @@ height does not change once a picture appears.
 The other options are `ReadOnly` (every row drawn disabled), `LabelColumnWeight` /
 `LabelColumnWidth`, `ListsStartExpanded`, `ThumbnailSize`, and the printf-style `FloatFormat` /
 `DoubleFormat`.
+
+### Spectrum Analyzer
+
+The FFT stays with the host: hand in the `N / 2 + 1` bin magnitudes of a real FFT, in decibels, and
+the state folds them into logarithmically spaced bands. A band takes its loudest bin, and a band too
+narrow to hold one reads the level interpolated at its centre. Bars rise at once and fall at
+`BarFallRate`; each band's peak holds for `PeakHoldSeconds`, then falls at `PeakFallRate`.
+
+```csharp
+// Kept across frames, like any other widget state.
+ImGuiWidgets.SpectrumAnalyzerState spectrum = new(bandCount: 32, minFrequency: 20f, maxFrequency: 20000f);
+
+// Each frame: fold in this frame's bins, advance by the frame's delta time, and draw.
+ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, binsDb, sampleRate: 48000f, new Vector2(480, 180));
+
+// Or draw a line instead of bars, and advance the state yourself.
+spectrum.Update(binsDb, 48000f, deltaSeconds);
+ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, new Vector2(480, 180), style: ImGuiWidgets.SpectrumAnalyzerStyle.Line);
+```
+
+`GetBandIndex`, `GetBandCenter` and `FrequencyToPosition` expose the log-frequency axis for hit
+testing or labels.
 
 ### Hexa-backed Widgets
 
