@@ -14,8 +14,8 @@ using ktsu.ImGui.Widgets;
 /// against a catalogue large enough that the virtualization is the visible feature.
 /// </summary>
 /// <remarks>
-/// In its own class rather than in <c>ImGuiWidgetsDemo</c>, which is already at the class-coupling
-/// limit the analyzers enforce.
+/// One class per section, registered in <see cref="DemoSections"/>; see "Adding Components" in
+/// CLAUDE.md for the rule.
 /// </remarks>
 internal static class VirtualTableDemo
 {
@@ -67,6 +67,16 @@ internal static class VirtualTableDemo
 		ImGui.TextUnformatted(string.Create(CultureInfo.InvariantCulture, $"{row % 180}.{row % 10}"));
 		ImGui.TableNextColumn();
 		ImGui.TextUnformatted(string.Create(CultureInfo.InvariantCulture, $"{400 + (row % 35_000):N0}"));
+	}
+
+	/// <summary>
+	/// Returns this section's state to its starting values. The demo keeps its state in statics, which
+	/// outlive a harness.
+	/// </summary>
+	internal static void ResetState()
+	{
+		// Nothing to reset: the demo's reset has never restored the table's selection, scroll or
+		// row target, so this section keeps it that way rather than changing what a test starts from.
 	}
 
 	/// <summary>Draws the demo section.</summary>
