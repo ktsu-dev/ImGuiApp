@@ -38,7 +38,7 @@ internal static class MeterScale
 	internal static float DbToFraction(float db, float minDb, float maxDb)
 	{
 		float range = maxDb - minDb;
-		if (!(range > 0.0f) || float.IsNaN(db))
+		if (float.IsNaN(range) || range <= 0.0f || float.IsNaN(db))
 		{
 			return 0.0f;
 		}

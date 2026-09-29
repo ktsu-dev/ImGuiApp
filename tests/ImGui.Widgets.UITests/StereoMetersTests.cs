@@ -105,10 +105,9 @@ public sealed class StereoMetersTests : WidgetTest
 		reductionDb = 12f;
 		Step(2);
 
-		Rectangle? fill = BoundsOfDifference(empty);
-		Assert.IsNotNull(fill, "12 dB of reduction drew nothing.");
-		Assert.IsTrue(Math.Abs(fill.Value.MinY - rect.MinY) <= 2, $"The fill started at y={fill.Value.MinY}, not at the top edge y={rect.MinY}.");
-		Assert.IsTrue(Math.Abs(fill.Value.MaxY - (rect.MinY + 100)) <= 3, $"Half of full scale filled down to y={fill.Value.MaxY}, not to y={rect.MinY + 100}.");
+		Rectangle fill = BoundsOfDifference(empty) ?? throw new InvalidOperationException("12 dB of reduction drew nothing.");
+		Assert.IsTrue(Math.Abs(fill.MinY - rect.MinY) <= 2, $"The fill started at y={fill.MinY}, not at the top edge y={rect.MinY}.");
+		Assert.IsTrue(Math.Abs(fill.MaxY - (rect.MinY + 100)) <= 3, $"Half of full scale filled down to y={fill.MaxY}, not to y={rect.MinY + 100}.");
 	}
 
 	[TestMethod]
@@ -138,10 +137,9 @@ public sealed class StereoMetersTests : WidgetTest
 		correlation = 1f;
 		Step(2);
 
-		Rectangle? fill = BoundsOfDifference(centred);
-		Assert.IsNotNull(fill, "A correlation of +1 drew nothing.");
-		Assert.IsGreaterThanOrEqualTo(centreX - 2, fill.Value.MinX, "Positive correlation filled left of centre.");
-		Assert.IsGreaterThanOrEqualTo(rect.MaxX - 3, fill.Value.MaxX, "Positive correlation did not fill to the right edge.");
+		Rectangle fill = BoundsOfDifference(centred) ?? throw new InvalidOperationException("A correlation of +1 drew nothing.");
+		Assert.IsGreaterThanOrEqualTo(centreX - 2, fill.MinX, "Positive correlation filled left of centre.");
+		Assert.IsGreaterThanOrEqualTo(rect.MaxX - 3, fill.MaxX, "Positive correlation did not fill to the right edge.");
 	}
 
 	[TestMethod]
@@ -157,10 +155,9 @@ public sealed class StereoMetersTests : WidgetTest
 		correlation = -1f;
 		Step(2);
 
-		Rectangle? fill = BoundsOfDifference(centred);
-		Assert.IsNotNull(fill, "A correlation of -1 drew nothing.");
-		Assert.IsLessThanOrEqualTo(centreX + 2, fill.Value.MaxX, "Negative correlation filled right of centre.");
-		Assert.IsLessThanOrEqualTo(rect.MinX + 3, fill.Value.MinX, "Negative correlation did not fill to the left edge.");
+		Rectangle fill = BoundsOfDifference(centred) ?? throw new InvalidOperationException("A correlation of -1 drew nothing.");
+		Assert.IsLessThanOrEqualTo(centreX + 2, fill.MaxX, "Negative correlation filled right of centre.");
+		Assert.IsLessThanOrEqualTo(rect.MinX + 3, fill.MinX, "Negative correlation did not fill to the left edge.");
 	}
 
 	[TestMethod]
@@ -173,10 +170,9 @@ public sealed class StereoMetersTests : WidgetTest
 		right = Sine(0.8f);
 		Step(2);
 
-		Rectangle? trace = BoundsOfDifference(empty);
-		Assert.IsNotNull(trace, "Mono material drew no trace.");
-		Assert.IsLessThanOrEqualTo(4, trace.Value.Width, $"Mono material drew a trace {trace.Value.Width}px wide rather than a vertical line.");
-		Assert.IsGreaterThanOrEqualTo(70, trace.Value.Height, $"Mono material drew a trace only {trace.Value.Height}px tall.");
+		Rectangle trace = BoundsOfDifference(empty) ?? throw new InvalidOperationException("Mono material drew no trace.");
+		Assert.IsLessThanOrEqualTo(4, trace.Width, $"Mono material drew a trace {trace.Width}px wide rather than a vertical line.");
+		Assert.IsGreaterThanOrEqualTo(70, trace.Height, $"Mono material drew a trace only {trace.Height}px tall.");
 	}
 
 	[TestMethod]
@@ -189,10 +185,9 @@ public sealed class StereoMetersTests : WidgetTest
 		right = Negate(left);
 		Step(2);
 
-		Rectangle? trace = BoundsOfDifference(empty);
-		Assert.IsNotNull(trace, "Opposite-polarity material drew no trace.");
-		Assert.IsLessThanOrEqualTo(4, trace.Value.Height, $"Opposite-polarity material drew a trace {trace.Value.Height}px tall rather than a horizontal line.");
-		Assert.IsGreaterThanOrEqualTo(70, trace.Value.Width, $"Opposite-polarity material drew a trace only {trace.Value.Width}px wide.");
+		Rectangle trace = BoundsOfDifference(empty) ?? throw new InvalidOperationException("Opposite-polarity material drew no trace.");
+		Assert.IsLessThanOrEqualTo(4, trace.Height, $"Opposite-polarity material drew a trace {trace.Height}px tall rather than a horizontal line.");
+		Assert.IsGreaterThanOrEqualTo(70, trace.Width, $"Opposite-polarity material drew a trace only {trace.Width}px wide.");
 	}
 
 	[TestMethod]

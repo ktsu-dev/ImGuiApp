@@ -46,12 +46,12 @@ public static partial class ImGuiWidgets
 		public void Push(ReadOnlySpan<float> left, ReadOnlySpan<float> right, float deltaSeconds)
 		{
 			float target = Correlate(left, right);
-			if (!(deltaSeconds > 0.0f))
+			if (float.IsNaN(deltaSeconds) || deltaSeconds <= 0.0f)
 			{
 				return;
 			}
 
-			if (IntegrationTime == 0.0f)
+			if (IntegrationTime <= 0.0f)
 			{
 				Correlation = target;
 				return;

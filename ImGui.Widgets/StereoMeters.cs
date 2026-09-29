@@ -97,9 +97,12 @@ public static partial class ImGuiWidgets
 		if (!float.IsNaN(correlation))
 		{
 			float c = Math.Clamp(correlation, -1.0f, 1.0f);
-			if (c != 0.0f)
+			float extent = c * meterSize.X * 0.5f;
+
+			// A fill narrower than half a pixel covers no pixel centre, so there is nothing to draw.
+			if (MathF.Abs(extent) >= 0.5f)
 			{
-				float endX = centreX + (c * meterSize.X * 0.5f);
+				float endX = centreX + extent;
 				ImColor fillColor = c < 0.0f ? MeterScale.Clip : MeterScale.Safe;
 				drawList.AddRectFilled(new Vector2(MathF.Min(centreX, endX), min.Y), new Vector2(MathF.Max(centreX, endX), max.Y), fillColor.ToImGuiU32());
 			}
