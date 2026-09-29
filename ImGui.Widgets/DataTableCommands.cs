@@ -12,7 +12,7 @@ public static partial class ImGuiWidgets
 {
 	/// <summary>The data table's keyboard commands, in the form <c>ktsu.Keybinding</c> registers and binds.</summary>
 	/// <remarks>
-	/// A table given an <see cref="IKeybindingService"/> through <c>DataTableOptions.Keybindings</c>
+	/// A table given an <see cref="IKeybindingService"/> through <see cref="DataTableOptions.Keybindings"/>
 	/// reads each command's chord from the service's active profile, so the host's keymap decides which
 	/// keys drive it. Without a service the table uses <see cref="DefaultChords"/>, plus Enter to begin
 	/// editing, which a profile holding one chord per command can't express alongside F2.
