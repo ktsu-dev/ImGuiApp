@@ -9,6 +9,7 @@ using System.Reflection;
 
 using ktsu.ImGui.NodeEditor;
 using ktsu.NodeGraph;
+using ktsu.NodeGraph.Library.Operations;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -272,6 +273,33 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		MethodInfo unregistered = IncrementMethod;
 		Assert.ThrowsExactly<InvalidOperationException>(() => factory.CreateMethodNode(unregistered, Vector2.Zero));
+	}
+
+	/// <summary>
+	/// A generic method node's pins are typed with open generics such as <c>T[]</c> and <c>T</c>,
+	/// which no concrete type is assignable to. Type-checking them refused every link to or from the
+	/// shipped Collections nodes, so they could be placed but not wired.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_ConnectsGenericMethodNodesToConcretePins()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType(typeof(Collections));
+
+		Node range = factory.CreateMethodNode(typeof(Collections).GetMethod(nameof(Collections.Range))!, Vector2.Zero);
+		Node arrayLength = factory.CreateMethodNode(typeof(Collections).GetMethod(nameof(Collections.ArrayLength))!, new Vector2(300, 0));
+		Node arrayFirst = factory.CreateMethodNode(typeof(Collections).GetMethod(nameof(Collections.ArrayFirst))!, new Vector2(300, 200));
+
+		Pin rangeResult = range.OutputPins.Single(p => p.EffectiveDisplayName == "Result");
+		Pin rangeStart = range.InputPins.Single(p => p.EffectiveDisplayName == "start");
+		Pin lengthArray = arrayLength.InputPins.Single(p => p.EffectiveDisplayName == "array");
+		Pin firstResult = arrayFirst.OutputPins.Single(p => p.EffectiveDisplayName == "Result");
+
+		LinkCreationResult intoGeneric = engine.TryCreateLink(rangeResult.Id, lengthArray.Id);
+		LinkCreationResult outOfGeneric = engine.TryCreateLink(firstResult.Id, rangeStart.Id);
+
+		Assert.IsTrue(intoGeneric.Success, intoGeneric.Message);
+		Assert.IsTrue(outOfGeneric.Success, outOfGeneric.Message);
 	}
 
 	/// <summary>
