@@ -53,6 +53,17 @@ internal static class InputAndControlsTiles
 		yield return new("XYPad", Category, [nameof(ImGuiWidgets.XYPad)], _ =>
 			ImGuiWidgets.XYPad("Pan", ref padX, ref padY, new Vector2(140f, 140f)));
 
+		ColorWheelValue wheel = new(Hue: 205f, Strength: 0.45f, Master: 0.2f);
+		yield return new("ColorWheel", Category, [nameof(ImGuiWidgets.ColorWheel)], _ =>
+			ImGuiWidgets.ColorWheel("Tint", ref wheel, 140f));
+
+		// A teal-and-orange grade: cool shadows, a touch of warmth in the mids, warm highlights.
+		ColorWheelValue lift = new(Hue: 190f, Strength: 0.35f, Master: -0.1f);
+		ColorWheelValue gamma = new(Hue: 35f, Strength: 0.15f);
+		ColorWheelValue gain = new(Hue: 30f, Strength: 0.4f, Master: 0.15f);
+		yield return new("LiftGammaGain", Category, [nameof(ImGuiWidgets.LiftGammaGain)], _ =>
+			ImGuiWidgets.LiftGammaGain("Grade", ref lift, ref gamma, ref gain, 130f));
+
 		ImGuiKnobVariant[] variants = [ImGuiKnobVariant.Tick, ImGuiKnobVariant.Dot, ImGuiKnobVariant.Wiper, ImGuiKnobVariant.WiperDot, ImGuiKnobVariant.Stepped, ImGuiKnobVariant.Space];
 		float[] knobValues = [0.25f, 0.5f, 0.8f, 0.4f, 0.6f, 0.7f];
 		yield return new("Knob", Category, [nameof(ImGuiWidgets.Knob)], _ =>
