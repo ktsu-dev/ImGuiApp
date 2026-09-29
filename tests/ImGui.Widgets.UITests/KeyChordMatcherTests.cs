@@ -112,4 +112,22 @@ public sealed class KeyChordMatcherTests : WidgetTest
 		Harness.Keyboard.Press(ImGuiKey.Tab, shift: true);
 		Assert.AreEqual(1, presses, "Shift+Tab did not match Shift+Tab.");
 	}
+
+	/// <summary>
+	/// Review focus: ignoring Shift lets it be held for a chord that doesn't name it. A chord that does
+	/// name it, such as a user's Shift+J for moving down, still needs it.
+	/// </summary>
+	[TestMethod]
+	public void IsPressed_WithShiftIgnored_AChordWithShiftStillNeedsShift()
+	{
+		chord = Chord.Parse("Shift+J");
+		isShiftIgnored = true;
+		StartCounting();
+
+		Harness.Keyboard.Press(ImGuiKey.J);
+		Assert.AreEqual(0, presses, "J alone matched Shift+J because Shift was ignored.");
+
+		Harness.Keyboard.Press(ImGuiKey.J, shift: true);
+		Assert.AreEqual(1, presses, "Shift+J did not match Shift+J with Shift ignored.");
+	}
 }

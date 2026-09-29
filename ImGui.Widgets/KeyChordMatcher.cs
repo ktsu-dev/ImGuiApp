@@ -46,8 +46,9 @@ internal static class KeyChordMatcher
 	/// once per press, such as undo, and on for movement, where holding an arrow should keep moving.
 	/// </param>
 	/// <param name="isShiftIgnored">
-	/// Whether Shift may be held or not without affecting the match. Lets one movement chord serve for
-	/// moving and, with Shift, for extending a selection. Every other modifier must still match.
+	/// Whether Shift may be held or not without affecting the match, for a chord that doesn't name Shift.
+	/// Lets one movement chord serve for moving and, with Shift, for extending a selection. A chord that
+	/// names Shift still needs it held, and every other modifier must still match.
 	/// </param>
 	/// <returns>True when the chord was pressed this frame.</returns>
 	public static bool IsPressed(Chord chord, bool canRepeat = false, bool isShiftIgnored = false)
@@ -98,7 +99,9 @@ internal static class KeyChordMatcher
 		}
 
 		ImGuiIOPtr io = ImGui.GetIO();
-		if (io.KeyCtrl != ctrl || io.KeyAlt != alt || io.KeySuper != meta || (!isShiftIgnored && io.KeyShift != shift))
+		// Shift is only optional for a chord that doesn't ask for it.
+		bool isShiftMatched = io.KeyShift == shift || (isShiftIgnored && !shift);
+		if (io.KeyCtrl != ctrl || io.KeyAlt != alt || io.KeySuper != meta || !isShiftMatched)
 		{
 			return false;
 		}
