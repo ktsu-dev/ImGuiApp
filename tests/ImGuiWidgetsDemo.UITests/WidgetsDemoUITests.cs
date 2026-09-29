@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -611,6 +611,20 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.AreEqual(3, SwatchPaletteDemo.Selected, "Clicking a swatch should select it.");
+	}
+
+	[TestMethod]
+	public void ImageCompareDemo_DraggingTheDividerMovesTheSplit()
+	{
+		OpenSection(AdvancedDemosTab, "Image Compare");
+
+		Rectangle divider = harness.Probe.Rect("compare_demo/divider")!.Value;
+		float x = divider.MinX + (divider.Width / 2f);
+		float y = divider.MinY + (divider.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 200f, y);
+		harness.Step(2);
+
+		Assert.IsGreaterThan(0.55f, ImageCompareDemo.Split, "Dragging the divider should move the split right.");
 	}
 
 	[TestMethod]

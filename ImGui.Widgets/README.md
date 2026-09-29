@@ -75,6 +75,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 - **`SwatchPalette`**: A wrapping grid of colour swatches over a caller-owned list: click a swatch to select it, drag one to reorder the list in place, with the selection following the swatch it named. Adding, removing and editing colours is left to the host, which reads the selected index
 
+### Image and Colour
+
+- **`ImageCompare`**: Two textures of the same image, before and after, in one pannable, zoomable view, either split by a draggable divider (a wipe) or side by side in two panes that pan and zoom together. Both are placed by one caller-owned `ImageCanvasState`, so they line up to the pixel
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest

@@ -113,6 +113,8 @@ internal static class LayoutAndContainersTiles
 
 		yield return AssetBrowser(Category);
 
+		yield return ImageCompareEntry(Category);
+
 		bool enabled = true;
 		int count = 12;
 		float ratio = 0.62f;
@@ -195,5 +197,22 @@ internal static class LayoutAndContainersTiles
 				index => index % 3 == 0 ? 0 : context.SampleTextureId,
 				assets,
 				options));
+	}
+
+	/// <summary>
+	/// Builds the ImageCompare tile: the sample image against its inverse, split a little left of
+	/// centre so both sides of the divider show the picture.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The entry.</returns>
+	private static GalleryEntry ImageCompareEntry(GalleryCategory category)
+	{
+		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);
+		Vector2 canvasSize = new(260f, 170f);
+		ImGuiWidgets.ImageCanvasState state = new();
+		state.FitToViewport(imageSize, canvasSize);
+		float split = 0.45f;
+		return new("ImageCompare", category, [nameof(ImGuiWidgets.ImageCompare)], context =>
+			ImGuiWidgets.ImageCompare("##compare", context.SampleTextureId, context.InvertedSampleTexture.TextureId, imageSize, state, ref split, canvasSize));
 	}
 }
