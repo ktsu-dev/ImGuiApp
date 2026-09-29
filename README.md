@@ -43,6 +43,10 @@ Complete application scaffolding for Dear ImGui applications with windowing, ren
 
 Rich collection of custom widgets, grouped by what they are for: input and controls (Switch, SegmentedControl, Stepper, RangeSlider, XYPad, ColorWheel/LiftGammaGain, Knob, Rating, Chip, PinInput, SearchBox, Combo), display and status (Avatar, Badge, ColorIndicator, Icon, Text, Image, PageIndicator, Tooltip, Breadcrumb), progress and loading (RadialProgressBar, BufferingBar, Spinner, skeleton placeholders), data and signals (Histogram, HandleTrack, CurveTrack, FlameGraph, DbMeter, Scope, Waveform, SpectrumAnalyzer), code review (DiffView), layout and containers (DividerContainer, Grid, TabPanel, Card, Tree, ImageCanvas, PropertyGrid, OverlayHost, ScopedId, ScopedDisable), motion and gestures (Tween, Spring, Easing, InertialScroll, GestureDetector), callback-driven editors (Sequencer, CurveEditor, BezierEditor), and stateful dialogs.
 
+![Every widget in ktsu.ImGui.Widgets](docs/gallery/widgets.png)
+
+One sheet per group lives beside it in [`docs/gallery`](docs/gallery), and each widget on its own in [`docs/gallery/widgets`](docs/gallery/widgets). All of them are rendered headlessly by `dotnet run -c Release --project tools/WidgetGallery`.
+
 ### ImGui.Popups - Modal Dialogs
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Popups?label=ktsu.ImGui.Popups&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Popups)
