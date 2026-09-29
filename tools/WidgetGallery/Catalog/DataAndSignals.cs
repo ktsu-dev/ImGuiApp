@@ -76,6 +76,12 @@ internal static class DataAndSignalsTiles
 		yield return new("Waveform", Category, [nameof(ImGuiWidgets.Waveform), nameof(ImGuiWidgets.ComputeWaveformPeaks)], _ =>
 			ImGuiWidgets.Waveform("##waveform", peakMinimums, peakMaximums, 10f, ref playhead, ref loopStart, ref loopEnd, new Vector2(360f, 90f)));
 
+		ImGuiWidgets.SpectrumAnalyzerState spectrum = new(bandCount: 40);
+		spectrum.Update(BuildSpectrum(1025, boost: 8f), 48_000f, 0.02f);
+		spectrum.Update(BuildSpectrum(1025, boost: 0f), 48_000f, 0.5f);
+		yield return new("SpectrumAnalyzer", Category, [nameof(ImGuiWidgets.SpectrumAnalyzer), nameof(ImGuiWidgets.SpectrumAnalyzerState)], _ =>
+			ImGuiWidgets.SpectrumAnalyzer("##spectrum", spectrum, new Vector2(360f, 130f)));
+
 		FlameGraphSample[] samples =
 		[
 			new(0f, 100f, 0, "main"),
@@ -123,6 +129,28 @@ internal static class DataAndSignalsTiles
 		}
 
 		return samples;
+	}
+
+	/// <summary>
+	/// FFT bin levels in decibels from 0 Hz to Nyquist: a pink-ish slope with a bass bump and a couple
+	/// of tonal peaks, raised by <paramref name="boost"/> so an earlier louder frame leaves peak markers.
+	/// </summary>
+	private static float[] BuildSpectrum(int bins, float boost)
+	{
+		float[] levels = new float[bins];
+
+		for (int i = 0; i < bins; i++)
+		{
+			float frequency = MathF.Max(i * 24_000f / (bins - 1), 1f);
+			float octave = MathF.Log2(frequency / 1000f);
+			float slope = -40f - (3.5f * octave);
+			float bass = 22f * MathF.Exp(-MathF.Pow(MathF.Log2(frequency / 90f) / 0.8f, 2f));
+			float tone = 18f * MathF.Exp(-MathF.Pow(MathF.Log2(frequency / 2500f) / 0.15f, 2f));
+			float air = -24f * MathF.Max(0f, MathF.Log2(frequency / 12_000f));
+			levels[i] = slope + bass + tone + air + boost - (4f * (1f + MathF.Sin(i * 0.9f)));
+		}
+
+		return levels;
 	}
 
 	/// <summary>A few phrases of a decaying tone with quieter gaps, so the overview has shape.</summary>
