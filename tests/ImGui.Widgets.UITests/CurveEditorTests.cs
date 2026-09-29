@@ -271,9 +271,11 @@ public sealed class CurveEditorTests : WidgetTest
 		MoveAway();
 
 		Rectangle frame = RectOf(name);
-		Rectangle? difference = BoundsOfDifference(blank);
-		Assert.IsNotNull(difference, "The editor drew nothing.");
-		Rectangle drawn = difference.Value;
+		if (BoundsOfDifference(blank) is not Rectangle drawn)
+		{
+			Assert.Fail("The editor drew nothing.");
+			return;
+		}
 
 		// Point markers sit on the frame's edges, so allow them half their width outside it.
 		const int Margin = 7;
