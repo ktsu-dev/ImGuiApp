@@ -75,7 +75,7 @@ public sealed class WidgetGalleryTests
 		Assert.AreEqual(0, Program.Run(["--out", output, "--only", "Switch"]));
 
 		string[] tiles = [.. Directory.GetFiles(Path.Join(output, "widgets")).Select(Path.GetFileName).OfType<string>().Order(StringComparer.Ordinal)];
-		CollectionAssert.AreEqual(SwitchTiles, tiles);
+		Assert.AreSequenceEqual(SwitchTiles, tiles);
 		Assert.IsFalse(File.Exists(Path.Join(output, "widgets.png")));
 	}
 
@@ -105,6 +105,6 @@ public sealed class WidgetGalleryTests
 		byte[] header = new byte[8];
 		using FileStream stream = File.OpenRead(path);
 		Assert.AreEqual(header.Length, stream.Read(header));
-		CollectionAssert.AreEqual(PngSignature, header);
+		Assert.AreSequenceEqual(PngSignature, header);
 	}
 }
