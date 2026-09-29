@@ -14,6 +14,7 @@ internal static class SignalDemos
 	{
 		WaveformDemo.ResetState();
 		SpectrumAnalyzerDemo.ResetState();
+		StereoMetersDemo.ResetState();
 	}
 
 	/// <summary>Draws every signal section.</summary>
@@ -21,5 +22,6 @@ internal static class SignalDemos
 	{
 		WaveformDemo.Show();
 		SpectrumAnalyzerDemo.Show();
+		StereoMetersDemo.Show();
 	}
 }
