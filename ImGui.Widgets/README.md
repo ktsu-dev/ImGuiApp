@@ -50,6 +50,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
 - **`Scope`**: An oscilloscope-style waveform over a block of audio samples
 - **`Waveform`**: A waveform overview of a whole clip, drawn from a min/max peak overview (`ComputeWaveformPeaks` builds one), with a click-or-drag playhead and a loop region whose edges drag like a `HandleTrack`'s; Shift-drag draws a new loop. A zoomable overload draws the window of a long clip that a caller-owned `TimelineView` shows, from a `WaveformPeakSource` such as the built-in `WaveformPeakCache`, a min/max pyramid that keeps a one-sample spike at every zoom; Ctrl+wheel zooms about the pointer, Shift+wheel and the scrollbar scroll, middle-drag pans, a scrub held past an edge scrolls, and the view pages to follow the playhead
+- **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply
 - **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
 
 ### Layout and Containers
@@ -766,6 +767,39 @@ height does not change once a picture appears.
 The other options are `ReadOnly` (every row drawn disabled), `LabelColumnWeight` /
 `LabelColumnWidth`, `ListsStartExpanded`, `ThumbnailSize`, and the printf-style `FloatFormat` /
 `DoubleFormat`.
+
+### Data Table
+
+`DataTable` draws typed rows, only the ones on screen, with sortable headers and a filter box under each. A person moves an active cell with the arrow keys, Tab and Page Down, and edits a cell by double-clicking it, pressing F2, or typing. Enter commits and moves down, and Escape cancels.
+
+The table never writes to your rows. Each editable column gets an `OnEdit` callback, and you apply the edit, which is what makes undo straightforward:
+
+```csharp
+private static readonly List<Part> parts = LoadParts();
+
+private static readonly ImGuiWidgets.DataTableState<Part> state = new(
+[
+	new ImGuiWidgets.DataTableColumn<Part, string>
+	{
+		Label = "Name",
+		Value = part => part.Name,
+		OnEdit = edit => edit.Row.Name = edit.NewValue,
+	},
+	new ImGuiWidgets.DataTableColumn<Part, int>
+	{
+		Label = "Quantity",
+		Value = part => part.Quantity,
+	},
+]);
+
+ImGuiWidgets.DataTable("parts", parts, state);
+```
+
+A column with no `OnEdit` is read-only. Strings, numbers, `bool` and enums get built-in editors, and any other type supplies an `Editor`.
+
+An edited row stays where it is until you call `state.Refresh()`, even if its new value sorts elsewhere, so it doesn't jump away while someone is working on it. The table rebuilds by itself when the sort, a filter, or the row count changes.
+
+Pass `DataTableOptions.Keybindings` to drive the keys from a `ktsu.Keybinding` keymap, after registering the commands with `ImGuiWidgets.DataTableCommands.Register`.
 
 ### Spectrum Analyzer
 

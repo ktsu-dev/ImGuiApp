@@ -153,6 +153,51 @@ public sealed class LoaderTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void SkeletonCircle_ShimmerStaysInsideTheCircle()
+	{
+		// The band used to be clipped to the circle's bounding square rather than to the circle,
+		// so as it passed it painted the square's corners as a bar beside the placeholder.
+		const float Diameter = 64f;
+		bool show = false;
+		Vector2 origin = Vector2.Zero;
+
+		Start(() =>
+		{
+			origin = ImGui.GetCursorScreenPos();
+			if (show)
+			{
+				ImGuiWidgets.SkeletonCircle("avatar", Diameter);
+			}
+		});
+
+		byte[] blank = Snapshot();
+		show = true;
+		Vector2 center = origin + new Vector2(Diameter * 0.5f);
+
+		// A little over one full sweep of the band, checked every few frames.
+		for (int frame = 0; frame < 100; frame += 4)
+		{
+			Step(4);
+			Span<byte> now = Harness.Target.Pixels;
+			for (int y = (int)origin.Y; y < (int)(origin.Y + Diameter); y++)
+			{
+				for (int x = (int)origin.X; x < (int)(origin.X + Diameter); x++)
+				{
+					if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), center) < (Diameter * 0.5f) + 1.5f)
+					{
+						continue;
+					}
+
+					int i = ((y * Harness.Options.Width) + x) * 4;
+					Assert.IsTrue(
+						now[i] == blank[i] && now[i + 1] == blank[i + 1] && now[i + 2] == blank[i + 2],
+						$"The shimmer painted ({x},{y}), outside the circle, on frame {frame}.");
+				}
+			}
+		}
+	}
+
+	[TestMethod]
 	public void Skeleton_ZeroSize_DrawsNothing()
 	{
 		// A zero-sized placeholder returns before submitting anything, so there is no item to
