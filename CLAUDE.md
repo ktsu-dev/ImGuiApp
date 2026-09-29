@@ -126,7 +126,8 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.NodeEditor/NodeEditorEngine.cs` - Node graph business logic (`NodeEditorEngine.CommentBoxes.cs` holds comment boxes, `NodeEditorEngine.Snapshots.cs` the internal capture/restore primitives the history uses)
 - `ImGui.NodeEditor/NodeEditorHistory.cs` - Undo/redo over `ktsu.UndoRedo`; see [Undo, snapping and comment boxes](#undo-snapping-and-comment-boxes)
 - `ImGui.NodeEditor/NodeEditorRenderer.CommentBoxes.cs` - Comment box drawing and gestures
-- `ImGui.NodeEditor/NodeEditorCommands.cs` - The keyboard commands as `ktsu.Keybinding` commands, and the chord-to-ImGui matcher
+- `ImGui.NodeEditor/NodeEditorCommands.cs` - The keyboard commands as `ktsu.Keybinding` commands
+- `ImGui.Widgets/KeyChordMatcher.cs` - The chord-to-ImGui matcher shared by the node editor and the data table, with optional key repeat and optional Shift
 
 ### Dependencies
 
