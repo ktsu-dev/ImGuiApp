@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using System;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -34,6 +35,37 @@ public sealed class RadialProgressBarTests : WidgetTest
 
 		Assert.IsTrue(IsVisible(Name), "The progress bar drew nothing.");
 		AssertSomethingWasDrawn("the radial progress bar");
+	}
+
+	[TestMethod]
+	public void RadialProgressBar_RingIsEvenAllTheWayRound()
+	{
+		// The ring used to be a separate thick line per segment, which notched the outside of every
+		// joint and blended the overlap on the inside twice, so the translucent track read as
+		// dashed. A joined path has the same coverage all the way round.
+		progress = 0f;
+		Start(Draw);
+		MoveAway();
+
+		Rectangle rect = RectOf(Name);
+		Vector2 center = new(rect.MinX + Radius, rect.MinY + Radius);
+		float thickness = Radius * 0.2f;
+
+		foreach (float offset in new[] { -thickness * 0.3f, 0f, thickness * 0.3f })
+		{
+			int lowest = int.MaxValue;
+			int highest = int.MinValue;
+			for (int step = 0; step < 720; step++)
+			{
+				float angle = step / 720f * MathF.Tau;
+				Vector2 point = center + (new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (Radius + offset));
+				int value = Harness.Target.GetPixel((int)point.X, (int)point.Y).B;
+				lowest = Math.Min(lowest, value);
+				highest = Math.Max(highest, value);
+			}
+
+			Assert.IsTrue(highest - lowest <= 6, $"The track {offset:0.0}px from its centre line varies from {lowest} to {highest} going round.");
+		}
 	}
 
 	[TestMethod]

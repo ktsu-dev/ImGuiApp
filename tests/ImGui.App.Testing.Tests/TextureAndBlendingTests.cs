@@ -34,6 +34,29 @@ public sealed class TextureAndBlendingTests
 		Assert.AreEqual(new Rgba32(255, 0, 0, 255), TwoByTwo().Sample(-3f, -3f));
 
 	[TestMethod]
+	public void Sample_TexelCentre_ReturnsThatTexelExactly() =>
+		Assert.AreEqual(new Rgba32(0, 255, 0, 255), TwoByTwo().Sample(0.75f, 0.25f));
+
+	[TestMethod]
+	public void Sample_BetweenTexelCentres_BlendsLinearly()
+	{
+		// Half way between the red and green texel centres on the top row, as a GPU's linear
+		// filter samples it. Every backend in ktsu.ImGui.App sets linear filtering.
+		Rgba32 result = TwoByTwo().Sample(0.5f, 0.25f);
+
+		Assert.AreEqual(new Rgba32(128, 128, 0, 255), result);
+	}
+
+	[TestMethod]
+	public void Sample_BetweenFourTexels_WeighsEachByItsDistance()
+	{
+		// The texture's centre is equidistant from all four texels.
+		Rgba32 result = TwoByTwo().Sample(0.5f, 0.5f);
+
+		Assert.AreEqual(new Rgba32(128, 128, 64, 255), result);
+	}
+
+	[TestMethod]
 	public void BlendOver_OpaqueSource_ReplacesDestination() =>
 		Assert.AreEqual(
 			new Rgba32(255, 0, 0, 255),

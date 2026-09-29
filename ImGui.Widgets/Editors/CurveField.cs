@@ -87,9 +87,22 @@ public static partial class ImGuiWidgets
 		// then lands in memory belonging to something else. Call the pointer overload directly with
 		// a real fixed so nobody "simplifies" this back to the broken convenience overload. Same
 		// deliberate refusal of a vendor ref overload, for the same defect class, as Sequencer.cs:64-72.
-		fixed (int* pSelection = &selection)
+		// Upstream spaces its horizontal grid lines by the editor's width and its vertical ones by
+		// its height, so on any editor that is not square the lines run past the frame (a 300x170
+		// editor drew grid 110px below itself). It pushes no clip rect of its own; this one keeps
+		// its drawing within the frame, with room for a point marker sitting on an edge.
+		Vector2 origin = ImGui.GetCursorScreenPos();
+		ImGui.PushClipRect(origin - new Vector2(PointMarkerMargin), origin + size + new Vector2(PointMarkerMargin), true);
+		try
 		{
-			changed = HexaCurveEditor.Curve(label, size, ref vendorCurve, rangeMin, rangeMax, pSelection);
+			fixed (int* pSelection = &selection)
+			{
+				changed = HexaCurveEditor.Curve(label, size, ref vendorCurve, rangeMin, rangeMax, pSelection);
+			}
+		}
+		finally
+		{
+			ImGui.PopClipRect();
 		}
 
 		selection = ResolveSelectionAfterEdit(selection, pointCountBefore, curve.PointCount);
