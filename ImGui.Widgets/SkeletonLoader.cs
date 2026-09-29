@@ -196,7 +196,7 @@ public static partial class ImGuiWidgets
 			int start = -1;
 			for (int i = 0; i < outline.Count; i++)
 			{
-				if (outline[i].X == center && (start < 0 || outline[i].Y < outline[start].Y))
+				if (MathF.Abs(outline[i].X - center) <= 1e-4f && (start < 0 || outline[i].Y < outline[start].Y))
 				{
 					start = i;
 				}
@@ -287,11 +287,11 @@ public static partial class ImGuiWidgets
 		private static List<Vector2> WithoutRepeats(List<Vector2> polygon)
 		{
 			List<Vector2> result = [];
-			foreach (Vector2 point in polygon)
+			for (int i = 0; i < polygon.Count; i++)
 			{
-				if (result.Count == 0 || Vector2.DistanceSquared(result[^1], point) > 1e-6f)
+				if (result.Count == 0 || Vector2.DistanceSquared(result[^1], polygon[i]) > 1e-6f)
 				{
-					result.Add(point);
+					result.Add(polygon[i]);
 				}
 			}
 

@@ -74,6 +74,8 @@ public static partial class ImGuiWidgets
 	/// </remarks>
 	private sealed class CurveAdapter : HexaCurveContext
 	{
+		private const float CollapsedRange = 1e-6f;
+
 		private readonly CurveSource source;
 		private readonly Vector2 viewMin;
 		private readonly Vector2 viewRange;
@@ -89,7 +91,9 @@ public static partial class ImGuiWidgets
 
 			// A collapsed axis has no fraction to map to; show it as a unit range rather than
 			// dividing by zero and drawing nothing at all.
-			viewRange = new Vector2(range.X == 0f ? 1f : range.X, range.Y == 0f ? 1f : range.Y);
+			viewRange = new Vector2(
+				MathF.Abs(range.X) < CollapsedRange ? 1f : range.X,
+				MathF.Abs(range.Y) < CollapsedRange ? 1f : range.Y);
 			Min = Vector2.Zero;
 			Max = Vector2.One;
 		}

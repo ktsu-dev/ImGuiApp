@@ -233,6 +233,12 @@ public static partial class SoftwareRasterizer
 	}
 
 	/// <summary>
+	/// How close to zero an edge function, or an edge's rise, counts as on the edge or horizontal.
+	/// Far below a pixel's area, so it only decides ties that rounding would otherwise decide.
+	/// </summary>
+	private const float EdgeTolerance = 1e-6f;
+
+	/// <summary>
 	/// The edge function of <paramref name="p"/> against the directed edge from
 	/// <paramref name="a"/> to <paramref name="b"/>. It is evaluated with the endpoints in a fixed
 	/// order and negated when they arrive reversed, so the two triangles either side of a shared
@@ -241,7 +247,7 @@ public static partial class SoftwareRasterizer
 	/// </summary>
 	private static float Edge(Vector2 a, Vector2 b, Vector2 p)
 	{
-		bool reversed = a.Y > b.Y || (a.Y == b.Y && a.X > b.X);
+		bool reversed = MathF.Abs(a.Y - b.Y) <= EdgeTolerance ? a.X > b.X : a.Y > b.Y;
 		(Vector2 from, Vector2 to) = reversed ? (b, a) : (a, b);
 		float value = ((to.X - from.X) * (p.Y - from.Y)) - ((to.Y - from.Y) * (p.X - from.X));
 		return reversed ? -value : value;
@@ -256,10 +262,15 @@ public static partial class SoftwareRasterizer
 	{
 		float dx = to.X - from.X;
 		float dy = to.Y - from.Y;
-		return dy < 0 || (dy == 0 && dx > 0);
+		return MathF.Abs(dy) <= EdgeTolerance ? dx > 0 : dy < 0;
 	}
 
-	private static bool Covers(float w, bool ownsEdge) => w > 0 || (w == 0 && ownsEdge);
+	/// <summary>
+	/// Whether a pixel is inside one edge. Within <see cref="EdgeTolerance"/> of the edge it is
+	/// the owning triangle's alone; the neighbour computes the exact negation, so between them the
+	/// pixel is taken exactly once.
+	/// </summary>
+	private static bool Covers(float w, bool ownsEdge) => MathF.Abs(w) <= EdgeTolerance ? ownsEdge : w > 0;
 
 	private static float Min3(float a, float b, float c) => MathF.Min(a, MathF.Min(b, c));
 

@@ -271,15 +271,16 @@ public sealed class CurveEditorTests : WidgetTest
 		MoveAway();
 
 		Rectangle frame = RectOf(name);
-		Rectangle? drawn = BoundsOfDifference(blank);
-		Assert.IsNotNull(drawn, "The editor drew nothing.");
+		Rectangle? difference = BoundsOfDifference(blank);
+		Assert.IsNotNull(difference, "The editor drew nothing.");
+		Rectangle drawn = difference.Value;
 
 		// Point markers sit on the frame's edges, so allow them half their width outside it.
 		const int Margin = 7;
 		Assert.IsTrue(
-			drawn.Value.MinX >= frame.MinX - Margin && drawn.Value.MinY >= frame.MinY - Margin
-				&& drawn.Value.MaxX <= frame.MaxX + Margin && drawn.Value.MaxY <= frame.MaxY + Margin,
-			$"The editor's frame is {frame}, but it drew over {drawn.Value}.");
+			drawn.MinX >= frame.MinX - Margin && drawn.MinY >= frame.MinY - Margin
+				&& drawn.MaxX <= frame.MaxX + Margin && drawn.MaxY <= frame.MaxY + Margin,
+			$"The editor's frame is {frame}, but it drew over {drawn}.");
 	}
 
 	[TestMethod]

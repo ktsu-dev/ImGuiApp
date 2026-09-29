@@ -60,7 +60,7 @@ public sealed class TextureSource
 
 		// On a texel centre, or on a one-texel texture, there is nothing to blend. That covers the
 		// white texel every solid ImGui shape samples, so the common case stays a single read.
-		if ((tx == 0f || x0 == x1) && (ty == 0f || y0 == y1))
+		if ((tx <= NoBlend || x0 == x1) && (ty <= NoBlend || y0 == y1))
 		{
 			return c00;
 		}
@@ -80,6 +80,9 @@ public sealed class TextureSource
 			Blend(c00.B, c10.B, c01.B, c11.B, w00, w10, w01, w11),
 			Blend(c00.A, c10.A, c01.A, c11.A, w00, w10, w01, w11));
 	}
+
+	/// <summary>A neighbour weight too small to move any channel by a unit.</summary>
+	private const float NoBlend = 1e-6f;
 
 	private static byte Blend(byte c00, byte c10, byte c01, byte c11, float w00, float w10, float w01, float w11) =>
 		(byte)Math.Clamp(MathF.Round((c00 * w00) + (c10 * w10) + (c01 * w01) + (c11 * w11)), 0f, 255f);
