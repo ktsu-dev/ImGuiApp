@@ -44,12 +44,12 @@ public static partial class ImGuiWidgets
 			ArgumentOutOfRangeException.ThrowIfLessThan(bandCount, 1);
 
 			// A logarithmic axis has no zero, and a reversed or empty range has no bands.
-			if (!(minFrequency > 0f) || !float.IsFinite(minFrequency))
+			if (minFrequency <= 0f || !float.IsFinite(minFrequency))
 			{
 				throw new ArgumentOutOfRangeException(nameof(minFrequency), minFrequency, "The lowest frequency must be positive and finite.");
 			}
 
-			if (!(maxFrequency > minFrequency) || !float.IsFinite(maxFrequency))
+			if (maxFrequency <= minFrequency || !float.IsFinite(maxFrequency))
 			{
 				throw new ArgumentOutOfRangeException(nameof(maxFrequency), maxFrequency, "The highest frequency must be finite and above the lowest.");
 			}
@@ -133,7 +133,7 @@ public static partial class ImGuiWidgets
 		/// <remarks>Each band includes its lower edge and excludes its upper one, except the last, which includes both.</remarks>
 		public int GetBandIndex(float frequency)
 		{
-			if (!(frequency >= MinFrequency) || frequency > MaxFrequency)
+			if (float.IsNaN(frequency) || frequency < MinFrequency || frequency > MaxFrequency)
 			{
 				return -1;
 			}
@@ -200,7 +200,7 @@ public static partial class ImGuiWidgets
 
 		private void ComputeBandTargets(ReadOnlySpan<float> binsDb, float sampleRate, Span<float> targets)
 		{
-			if (binsDb.Length < 2 || !(sampleRate > 0f) || !float.IsFinite(sampleRate))
+			if (binsDb.Length < 2 || sampleRate <= 0f || !float.IsFinite(sampleRate))
 			{
 				targets.Fill(float.NegativeInfinity);
 				return;
@@ -280,7 +280,7 @@ public static partial class ImGuiWidgets
 				target = float.NegativeInfinity;
 			}
 
-			if (target >= current || !(rate < float.PositiveInfinity))
+			if (target >= current || float.IsNaN(rate) || float.IsPositiveInfinity(rate))
 			{
 				return target;
 			}
