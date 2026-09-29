@@ -3,6 +3,9 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -105,14 +108,205 @@ public static partial class ImGuiWidgets
 			float left = center - (bandWidth * 0.5f);
 			float right = center + (bandWidth * 0.5f);
 
-			uint edge = highlight.WithAlpha(0f).ToImGuiU32();
-			uint core = highlight.ToImGuiU32();
-
-			// Two halves form a transparent -> bright -> transparent horizontal gradient.
-			drawList.AddRectFilledMultiColor(new Vector2(left, min.Y), new Vector2(center, max.Y), edge, core, core, edge);
-			drawList.AddRectFilledMultiColor(new Vector2(center, min.Y), new Vector2(right, max.Y), core, edge, edge, core);
-
+			// The band is the placeholder's own shape cut down to the band's width, not a rectangle
+			// clipped to its bounding box: a clip rect is square, so a band crossing a circle or a
+			// rounded corner used to paint the corners outside the shape as a vertical bar.
+			DrawBand(drawList, min, max, rounding, left, center, right, highlight.Value);
 			drawList.PopClipRect();
+		}
+
+		/// <summary>
+		/// Fills the part of the rounded rectangle between <paramref name="left"/> and
+		/// <paramref name="right"/> with <paramref name="color"/>, transparent at both ends and
+		/// fully bright at <paramref name="center"/>.
+		/// </summary>
+		/// <remarks>
+		/// The fill goes through ImGui's anti-aliased convex fill and is recoloured afterwards, one
+		/// vertex at a time, by where each vertex sits in the band. Barycentric interpolation only
+		/// reproduces a linear ramp, and the band is two, so the outline carries a vertex wherever
+		/// it crosses the centre and starts from the top one: ImGui fans the fill out from the
+		/// first vertex, which then puts the centre line along a triangle edge and every triangle
+		/// on one side of it.
+		/// </remarks>
+		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Drawing primitive parameterized by geometry; grouping would obscure the single call site.")]
+		private static void DrawBand(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float left, float center, float right, Vector4 color)
+		{
+			List<Vector2> band = BandOutline(min, max, rounding, left, center, right);
+			if (band.Count < 3)
+			{
+				return;
+			}
+
+			int first = drawList.VtxBuffer.Size;
+			foreach (Vector2 point in band)
+			{
+				drawList.PathLineTo(point);
+			}
+
+			drawList.PathFillConvex(uint.MaxValue);
+
+			// ImVector is a view over native memory, so a copy of it writes through to the list.
+			ImVector<ImDrawVert> vertices = drawList.VtxBuffer;
+			for (int i = first; i < vertices.Size; i++)
+			{
+				ImDrawVert vertex = vertices[i];
+
+				// The anti-aliasing fringe arrives transparent; keep that and scale the band's
+				// strength into what is left.
+				float coverage = (vertex.Col >> 24) / 255f;
+				float strength = BandStrength(vertex.Pos.X, left, center, right);
+				vertex.Col = ImGui.GetColorU32(color with { W = color.W * strength * coverage });
+				vertices[i] = vertex;
+			}
+		}
+
+		/// <summary>How bright the band is at <paramref name="x"/>: zero at either end, one at the centre.</summary>
+		/// <param name="x">Horizontal position.</param>
+		/// <param name="left">Where the band starts.</param>
+		/// <param name="center">Where the band is brightest.</param>
+		/// <param name="right">Where the band ends.</param>
+		/// <returns>The band's strength, from 0 to 1.</returns>
+		internal static float BandStrength(float x, float left, float center, float right)
+		{
+			float t = x <= center
+				? (x - left) / MathF.Max(center - left, 1e-6f)
+				: (right - x) / MathF.Max(right - center, 1e-6f);
+			return Math.Clamp(t, 0f, 1f);
+		}
+
+		/// <summary>
+		/// The outline of a rounded rectangle cut to the band between <paramref name="left"/> and
+		/// <paramref name="right"/>, clockwise, with a vertex wherever it crosses
+		/// <paramref name="center"/> and starting from the topmost of those when there is one.
+		/// </summary>
+		/// <param name="min">Top-left of the rectangle.</param>
+		/// <param name="max">Bottom-right of the rectangle.</param>
+		/// <param name="rounding">Corner radius, clamped to half the shorter side as ImGui does.</param>
+		/// <param name="left">Left edge of the band.</param>
+		/// <param name="center">Centre of the band.</param>
+		/// <param name="right">Right edge of the band.</param>
+		/// <returns>The outline, or fewer than three points when the band misses the shape.</returns>
+		internal static List<Vector2> BandOutline(Vector2 min, Vector2 max, float rounding, float left, float center, float right)
+		{
+			List<Vector2> outline = RoundedOutline(min, max, rounding);
+			outline = ClipToHalfPlane(outline, left, keepRight: true);
+			outline = ClipToHalfPlane(outline, right, keepRight: false);
+			outline = WithoutRepeats(SplitAt(outline, center));
+
+			int start = -1;
+			for (int i = 0; i < outline.Count; i++)
+			{
+				if (outline[i].X == center && (start < 0 || outline[i].Y < outline[start].Y))
+				{
+					start = i;
+				}
+			}
+
+			return start <= 0 ? outline : [.. outline.Skip(start), .. outline.Take(start)];
+		}
+
+		private static List<Vector2> RoundedOutline(Vector2 min, Vector2 max, float rounding)
+		{
+			Vector2 size = max - min;
+			float radius = Math.Clamp(rounding, 0f, MathF.Min(size.X, size.Y) * 0.5f);
+			List<Vector2> points = [];
+
+			// Clockwise on screen from the top-left corner, each corner a quarter turn.
+			(Vector2 Center, float StartAngle)[] corners =
+			[
+				(new Vector2(min.X + radius, min.Y + radius), MathF.PI),
+				(new Vector2(max.X - radius, min.Y + radius), MathF.PI * 1.5f),
+				(new Vector2(max.X - radius, max.Y - radius), 0f),
+				(new Vector2(min.X + radius, max.Y - radius), MathF.PI * 0.5f),
+			];
+
+			int steps = radius <= 0f ? 0 : Math.Max(2, (int)MathF.Ceiling(radius * 0.5f));
+			foreach ((Vector2 cornerCenter, float startAngle) in corners)
+			{
+				for (int i = 0; i <= steps; i++)
+				{
+					float angle = startAngle + (MathF.PI * 0.5f * i / Math.Max(steps, 1));
+					points.Add(cornerCenter + (new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius));
+					if (steps == 0)
+					{
+						break;
+					}
+				}
+			}
+
+			return points;
+		}
+
+		/// <summary>Sutherland-Hodgman against one vertical line.</summary>
+		private static List<Vector2> ClipToHalfPlane(List<Vector2> polygon, float x, bool keepRight)
+		{
+			List<Vector2> result = [];
+			for (int i = 0; i < polygon.Count; i++)
+			{
+				Vector2 current = polygon[i];
+				Vector2 next = polygon[(i + 1) % polygon.Count];
+				bool currentInside = keepRight ? current.X >= x : current.X <= x;
+				bool nextInside = keepRight ? next.X >= x : next.X <= x;
+
+				if (currentInside)
+				{
+					result.Add(current);
+				}
+
+				if (currentInside != nextInside)
+				{
+					result.Add(CrossingAt(current, next, x));
+				}
+			}
+
+			return result;
+		}
+
+		private static List<Vector2> SplitAt(List<Vector2> polygon, float x)
+		{
+			List<Vector2> result = [];
+			for (int i = 0; i < polygon.Count; i++)
+			{
+				Vector2 current = polygon[i];
+				Vector2 next = polygon[(i + 1) % polygon.Count];
+				result.Add(current);
+
+				if ((current.X < x && next.X > x) || (current.X > x && next.X < x))
+				{
+					result.Add(CrossingAt(current, next, x));
+				}
+			}
+
+			return result;
+		}
+
+		/// <summary>
+		/// Drops points that repeat their predecessor. Arcs meet the straight sides at shared points,
+		/// and a zero-length edge gives ImGui's fill no normal to build its fringe from.
+		/// </summary>
+		private static List<Vector2> WithoutRepeats(List<Vector2> polygon)
+		{
+			List<Vector2> result = [];
+			foreach (Vector2 point in polygon)
+			{
+				if (result.Count == 0 || Vector2.DistanceSquared(result[^1], point) > 1e-6f)
+				{
+					result.Add(point);
+				}
+			}
+
+			while (result.Count > 1 && Vector2.DistanceSquared(result[0], result[^1]) <= 1e-6f)
+			{
+				result.RemoveAt(result.Count - 1);
+			}
+
+			return result;
+		}
+
+		private static Vector2 CrossingAt(Vector2 from, Vector2 to, float x)
+		{
+			float t = (x - from.X) / (to.X - from.X);
+			return new Vector2(x, from.Y + ((to.Y - from.Y) * t));
 		}
 	}
 }
