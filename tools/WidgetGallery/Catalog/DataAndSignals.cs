@@ -92,6 +92,10 @@ internal static class DataAndSignalsTiles
 		yield return new("SpectrumAnalyzer", Category, [nameof(ImGuiWidgets.SpectrumAnalyzer), nameof(ImGuiWidgets.SpectrumAnalyzerState)], _ =>
 			ImGuiWidgets.SpectrumAnalyzer("##spectrum", spectrum, new Vector2(360f, 130f)));
 
+		ImGuiWidgets.Envelope envelope = new(0.05f, 0.2f, 0.1f, 0.4f, 0.6f, 0.8f, 0.4f, 0.5f, 0.6f);
+		yield return new("EnvelopeEditor", Category, [nameof(ImGuiWidgets.EnvelopeEditor), nameof(ImGuiWidgets.Envelope)], _ =>
+			ImGuiWidgets.EnvelopeEditor("##envelope", ref envelope, new Vector2(360f, 130f), 3f));
+
 		FlameGraphSample[] samples =
 		[
 			new(0f, 100f, 0, "main"),
