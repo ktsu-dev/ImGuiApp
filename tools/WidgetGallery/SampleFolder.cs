@@ -69,9 +69,18 @@ internal static class SampleFolder
 			File.WriteAllText(Path.Join(root, file), "sample");
 		}
 
+		// Directories go through Directory: Windows refuses to open a directory as a file, so
+		// File.SetLastWriteTime on one throws there while Linux and macOS allow it.
 		foreach (string entry in Directory.EnumerateFileSystemEntries(root, "*", SearchOption.AllDirectories))
 		{
-			File.SetLastWriteTime(entry, Timestamp);
+			if (Directory.Exists(entry))
+			{
+				Directory.SetLastWriteTime(entry, Timestamp);
+			}
+			else
+			{
+				File.SetLastWriteTime(entry, Timestamp);
+			}
 		}
 	}
 }

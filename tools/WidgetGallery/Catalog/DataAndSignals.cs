@@ -114,10 +114,24 @@ internal static class DataAndSignalsTiles
 		[
 			new ImGuiWidgets.DataTableColumn<GalleryPart, string> { Label = "Name", Value = part => part.Name },
 			new ImGuiWidgets.DataTableColumn<GalleryPart, int> { Label = "Quantity", Value = part => part.Quantity },
-			new ImGuiWidgets.DataTableColumn<GalleryPart, bool> { Label = "In stock", Value = part => part.InStock },
+
+			// Editable, so the column draws as checkboxes. The gallery never edits it.
+			new ImGuiWidgets.DataTableColumn<GalleryPart, bool> { Label = "In stock", Value = part => part.InStock, OnEdit = _ => { } },
 		]);
+		ImGuiWidgets.DataTableOptions partsOptions = new() { RowHeight = 20f, OuterSize = new Vector2(270f, 150f) };
+		bool isPartsSelectionSet = false;
 		yield return new("DataTable", Category, [nameof(ImGuiWidgets.DataTable), typeof(ImGuiWidgets.DataTableState<>).Name, typeof(ImGuiWidgets.DataTableColumn<>).Name, typeof(ImGuiWidgets.DataTableColumn<,>).Name], _ =>
-			ImGuiWidgets.DataTable("##parts", parts, partsTable));
+		{
+			ImGuiWidgets.DataTable("##parts", parts, partsTable, partsOptions);
+
+			// The table learns its rows on its first draw, so the selection can only be set after it.
+			if (!isPartsSelectionSet)
+			{
+				partsTable.SelectRows([2]);
+				partsTable.ActivateCell(new ImGuiWidgets.DataTableCell(2, 1));
+				isPartsSelectionSet = true;
+			}
+		});
 	}
 
 	/// <summary>A row of the data table tile.</summary>
