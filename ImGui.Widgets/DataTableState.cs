@@ -124,6 +124,13 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
+			// Inserting or deleting rows shifts every source index after the change, so the selection
+			// no longer names the rows it did. The first sync has nothing to forget.
+			if (syncedCount >= 0)
+			{
+				ForgetRowIdentity();
+			}
+
 			syncedCount = source.Count;
 			Rebuild();
 		}
@@ -150,6 +157,8 @@ public static partial class ImGuiWidgets
 
 		private void Rebuild()
 		{
+			int previousPosition = ActiveViewRow;
+
 			int[] next = [.. Enumerable.Range(0, rows.Count).Where(Survives)];
 
 			if (SortColumn >= 0 && SortColumn < Columns.Count && Columns[SortColumn].CanSort)
@@ -174,6 +183,8 @@ public static partial class ImGuiWidgets
 			{
 				viewPositions[view[position]] = position;
 			}
+
+			AfterRebuild(previousPosition);
 		}
 
 		private bool Survives(int sourceIndex)
