@@ -33,6 +33,7 @@ internal static class DemoSections
 		new(CurveTrackDemo.Show, CurveTrackDemo.ResetState),
 		new(WaveformDemo.Show, WaveformDemo.ResetState),
 		new(SpectrumAnalyzerDemo.Show, SpectrumAnalyzerDemo.ResetState),
+		new(EnvelopeEditorDemo.Show, EnvelopeEditorDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
 	];

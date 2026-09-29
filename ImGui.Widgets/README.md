@@ -52,6 +52,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Waveform`**: A waveform overview of a whole clip, drawn from a min/max peak overview (`ComputeWaveformPeaks` builds one), with a click-or-drag playhead and a loop region whose edges drag like a `HandleTrack`'s; Shift-drag draws a new loop
 - **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply
 - **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
+- **`EnvelopeEditor`**: A DAHDSR envelope drawn from the same `Envelope.LevelAt` a synth would call; drag breakpoints to retime segments and set the sustain level, drag tension handles to bend a segment, right-click one to straighten it
 
 ### Layout and Containers
 
@@ -822,6 +823,33 @@ ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, new Vector2(480, 180), style: 
 
 `GetBandIndex`, `GetBandCenter` and `FrequencyToPosition` expose the log-frequency axis for hit
 testing or labels.
+
+### Envelope Editor
+
+`Envelope` is a DAHDSR envelope: delay, attack, hold, decay and release in seconds, a sustain level
+from 0 to 1, and a tension from -1 to 1 on each of the three curved segments, where 0 is a straight
+line. `LevelAt(time, noteOffTime)` is the evaluator the editor draws, so the curve on screen is the
+curve your synth applies.
+
+```csharp
+ImGuiWidgets.Envelope envelope = ImGuiWidgets.Envelope.Adsr(0.01f, 0.2f, 0.7f, 0.5f);
+
+// Returns true on any frame the envelope changed. The time span is the seconds across the width.
+if (ImGuiWidgets.EnvelopeEditor("Amp", ref envelope, new Vector2(0, 160), timeSpan: 3f))
+{
+	voice.Envelope = envelope;
+}
+
+// Hide the delay and hold handles for a plain ADSR.
+ImGuiWidgets.EnvelopeEditor("Filter", ref filterEnvelope, showDelayAndHold: false);
+
+float level = envelope.LevelAt(secondsSinceNoteOn, noteOffTime: secondsHeld);
+```
+
+Drag a breakpoint to retime its segment (and, for the decay end and sustain, set the sustain level);
+drag a tension handle vertically to bend its segment, and right-click it to straighten it. Values
+that are not finite or are out of range are repaired on the first frame and reported as a change.
+Each handle is marked for probes as `<label>/attack`, `<label>/decayTension` and so on.
 
 ### Hexa-backed Widgets
 
