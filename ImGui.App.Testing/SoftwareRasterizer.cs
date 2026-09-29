@@ -104,6 +104,14 @@ public static partial class SoftwareRasterizer
 
 		bool opaqueFlat = constantSource && flat.A == 255;
 
+		// A pixel centre lying exactly on an edge belongs to only one of the two triangles sharing
+		// that edge: the one for which it is a top or left edge, as a GPU decides it. Taking it in
+		// both would blend it twice, which draws the diagonal of every translucent rectangle ImGui
+		// emits as a visible line.
+		bool owns0 = IsTopLeft(v1.Position, v2.Position);
+		bool owns1 = IsTopLeft(v2.Position, v0.Position);
+		bool owns2 = IsTopLeft(v0.Position, v1.Position);
+
 		Span<byte> pixels = target.Pixels;
 		int width = target.Width;
 
@@ -118,19 +126,19 @@ public static partial class SoftwareRasterizer
 				// Tested one at a time so a pixel outside the triangle costs one edge function
 				// rather than three. Most pixels in a triangle's bounding box are outside it.
 				float w0 = Edge(v1.Position, v2.Position, p);
-				if (w0 < 0)
+				if (!Covers(w0, owns0))
 				{
 					continue;
 				}
 
 				float w1 = Edge(v2.Position, v0.Position, p);
-				if (w1 < 0)
+				if (!Covers(w1, owns1))
 				{
 					continue;
 				}
 
 				float w2 = Edge(v0.Position, v1.Position, p);
-				if (w2 < 0)
+				if (!Covers(w2, owns2))
 				{
 					continue;
 				}
@@ -224,8 +232,34 @@ public static partial class SoftwareRasterizer
 			ToByte(outAlpha * 255f));
 	}
 
-	private static float Edge(Vector2 a, Vector2 b, Vector2 p) =>
-		((b.X - a.X) * (p.Y - a.Y)) - ((b.Y - a.Y) * (p.X - a.X));
+	/// <summary>
+	/// The edge function of <paramref name="p"/> against the directed edge from
+	/// <paramref name="a"/> to <paramref name="b"/>. It is evaluated with the endpoints in a fixed
+	/// order and negated when they arrive reversed, so the two triangles either side of a shared
+	/// edge compute exactly opposite values for a pixel. Evaluated naively, rounding can leave a
+	/// pixel near the edge outside both, which shows as a pinhole in otherwise solid geometry.
+	/// </summary>
+	private static float Edge(Vector2 a, Vector2 b, Vector2 p)
+	{
+		bool reversed = a.Y > b.Y || (a.Y == b.Y && a.X > b.X);
+		(Vector2 from, Vector2 to) = reversed ? (b, a) : (a, b);
+		float value = ((to.X - from.X) * (p.Y - from.Y)) - ((to.Y - from.Y) * (p.X - from.X));
+		return reversed ? -value : value;
+	}
+
+	/// <summary>
+	/// Whether a directed edge of a triangle wound so its edge functions are positive inside is a
+	/// top edge (horizontal, interior below) or a left edge (interior to its right, which with y
+	/// pointing down means the edge runs upwards).
+	/// </summary>
+	private static bool IsTopLeft(Vector2 from, Vector2 to)
+	{
+		float dx = to.X - from.X;
+		float dy = to.Y - from.Y;
+		return dy < 0 || (dy == 0 && dx > 0);
+	}
+
+	private static bool Covers(float w, bool ownsEdge) => w > 0 || (w == 0 && ownsEdge);
 
 	private static float Min3(float a, float b, float c) => MathF.Min(a, MathF.Min(b, c));
 
