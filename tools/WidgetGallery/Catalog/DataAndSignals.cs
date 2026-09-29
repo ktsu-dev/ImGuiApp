@@ -110,7 +110,26 @@ internal static class DataAndSignalsTiles
 		FlameGraphOptions flameOptions = new() { GraphSize = new Vector2(380f, 110f) };
 		yield return new("FlameGraph", Category, [nameof(ImGuiWidgets.FlameGraph)], _ =>
 			ImGuiWidgets.FlameGraph("##profile", samples, ref selectedSample, flameOptions));
+
+		List<GalleryPart> parts =
+		[
+			new("Bracket", 12, true),
+			new("Hinge", 40, false),
+			new("Screw", 250, true),
+			new("Washer", 180, true),
+		];
+		ImGuiWidgets.DataTableState<GalleryPart> partsTable = new(
+		[
+			new ImGuiWidgets.DataTableColumn<GalleryPart, string> { Label = "Name", Value = part => part.Name },
+			new ImGuiWidgets.DataTableColumn<GalleryPart, int> { Label = "Quantity", Value = part => part.Quantity },
+			new ImGuiWidgets.DataTableColumn<GalleryPart, bool> { Label = "In stock", Value = part => part.InStock },
+		]);
+		yield return new("DataTable", Category, [nameof(ImGuiWidgets.DataTable), typeof(ImGuiWidgets.DataTableState<>).Name, typeof(ImGuiWidgets.DataTableColumn<>).Name, typeof(ImGuiWidgets.DataTableColumn<,>).Name], _ =>
+			ImGuiWidgets.DataTable("##parts", parts, partsTable));
 	}
+
+	/// <summary>A row of the data table tile.</summary>
+	private sealed record GalleryPart(string Name, int Quantity, bool InStock);
 
 	/// <summary>A bimodal distribution, the shape a photograph's luminance histogram usually has.</summary>
 	private static float[] BuildHistogram(int count)
