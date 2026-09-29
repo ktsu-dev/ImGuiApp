@@ -7,6 +7,7 @@
 namespace ktsu.examples.ImGuiWidgetsDemo.UITests;
 
 using System;
+using System.Collections.Generic;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
@@ -309,6 +310,21 @@ public sealed class WidgetsDemoUITests
 		}
 
 		Assert.IsTrue(IsVisible("Reset to 0.5"), "The knobs section should offer its reset button.");
+	}
+
+	[TestMethod]
+	public void TimecodeFieldDemo_IncrementAdvancesTheFrame()
+	{
+		OpenSection(WidgetDemosTab, "Timecode Field");
+
+		// The field's buttons are marked inside its own scope, so the name is qualified by the
+		// demo window as well as by the field's label.
+		IReadOnlyList<string> increment = harness.Probe.Matches("Position/inc");
+		Assert.HasCount(1, increment, "The position field's increment button should be marked exactly once.");
+		harness.Click(increment[0]);
+		harness.Step(SettleFrames);
+
+		Assert.AreEqual(1, TimecodeFieldDemo.Frame);
 	}
 
 	[TestMethod]

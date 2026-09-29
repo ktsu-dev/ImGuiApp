@@ -39,6 +39,11 @@ internal static class InputAndControlsTiles
 		yield return new("Stepper", Category, [nameof(ImGuiWidgets.Stepper)], _ =>
 			ImGuiWidgets.Stepper("Quantity", ref quantity, 1, 0, 99));
 
+		// One minute in at 29.97 drop-frame, which is the label the scheme skips to.
+		int position = 1800;
+		yield return new("TimecodeField", Category, [nameof(ImGuiWidgets.TimecodeField)], _ =>
+			ImGuiWidgets.TimecodeField("Position", ref position, TimecodeRate.Fps29_97Drop));
+
 		float lower = 20f;
 		float upper = 65f;
 		yield return new("RangeSlider", Category, [nameof(ImGuiWidgets.RangeSlider)], _ =>
