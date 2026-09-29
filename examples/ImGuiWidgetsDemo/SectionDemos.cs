@@ -12,14 +12,14 @@ internal static class SectionDemos
 	internal static void ResetState()
 	{
 		DiffViewDemo.ResetState();
-		WaveformDemo.ResetState();
+		SignalDemos.ResetState();
 		ColorWheelDemo.ResetState();
 	}
 
 	/// <summary>Shows every grouped section, in demo order.</summary>
 	internal static void Show()
 	{
-		WaveformDemo.Show();
+		SignalDemos.Show();
 		ColorWheelDemo.Show();
 		DiffViewDemo.Show();
 	}

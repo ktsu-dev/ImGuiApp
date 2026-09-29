@@ -42,7 +42,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Color wheels", "Diff view",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Spectrum Analyzer", "Color wheels", "Diff view",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
