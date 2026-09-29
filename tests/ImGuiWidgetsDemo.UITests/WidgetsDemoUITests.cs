@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -642,6 +642,23 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.IsTrue(CropDemo.Crop.Center.X > before, "Dragging the crop did not move it.");
+	}
+
+	[TestMethod]
+	public void PixelLoupe_HoveringTheImageReportsAPixel()
+	{
+		OpenSection(AdvancedDemosTab, "Pixel Loupe");
+
+		Assert.IsTrue(IsVisible("pixel_loupe"), "The loupe should be drawn beside the canvas.");
+		Assert.AreEqual(-1, PixelLoupeDemo.PixelX, "Nothing has been hovered yet.");
+
+		Rectangle canvas = harness.Probe.Rect("pixel_loupe_canvas")
+			?? throw new InvalidOperationException("The loupe's canvas was never recorded by the probe.");
+		harness.Mouse.MoveTo(canvas.MinX + (canvas.Width / 2), canvas.MinY + (canvas.Height / 2));
+		harness.Step(2);
+
+		Assert.IsTrue(PixelLoupeDemo.PixelX >= 0, "Hovering the middle of the image should pick a pixel.");
+		Assert.IsTrue(PixelLoupeDemo.PixelY >= 0, "Hovering the middle of the image should pick a pixel.");
 	}
 
 	[TestMethod]

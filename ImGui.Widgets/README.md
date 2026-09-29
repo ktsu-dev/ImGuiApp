@@ -83,6 +83,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 - **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, rule-of-thirds guides, edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
 
+### Image and Colour
+
+- **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
