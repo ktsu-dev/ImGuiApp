@@ -57,6 +57,8 @@ public sealed class DataTableTests : WidgetTest
 
 	private static string Header(string column) => $"{Label}/{column}";
 
+	private static string Filter(string column) => $"{Label}/filter/{column}";
+
 	private void AddPeople(int count)
 	{
 		for (int index = people.Count; index < count; index++)
@@ -176,5 +178,27 @@ public sealed class DataTableTests : WidgetTest
 		DoubleClick(Cell(1, "Name"));
 
 		Assert.IsTrue(state.IsEditing, "A double-click did not begin editing.");
+	}
+
+	[TestMethod]
+	public void TypingInAFilter_NarrowsTheRows()
+	{
+		Start(Draw);
+
+		Click(Filter("Name"));
+		Harness.Keyboard.Type("ob");
+		Step();
+
+		Assert.IsTrue(IsVisible(Cell(1, "Name")), "Bob was filtered out by 'ob'.");
+		Assert.IsFalse(IsVisible(Cell(0, "Name")), "Alice survived a filter of 'ob'.");
+	}
+
+	[TestMethod]
+	public void WithoutAFilterRow_NoFilterBoxesAreDrawn()
+	{
+		options = new() { RowHeight = 22f, HasFilterRow = false };
+		Start(Draw);
+
+		Assert.IsFalse(IsVisible(Filter("Name")), "A filter box was drawn with the filter row turned off.");
 	}
 }

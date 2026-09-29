@@ -129,6 +129,12 @@ public static partial class ImGuiWidgets
 				DrawHeaders(label, columns);
 				ReadSort(state);
 				ReadColumnVisibility(state);
+
+				if (options.HasFilterRow)
+				{
+					DrawFilterRow(label, state);
+				}
+
 				DrawRows(label, state, rowHeight);
 				state.PageSize = (int)(ImGui.GetWindowHeight() / rowHeight) - frozenRows;
 			}
@@ -199,6 +205,43 @@ public static partial class ImGuiWidgets
 			{
 				bool isVisible = (ImGui.TableGetColumnFlags(column) & ImGuiTableColumnFlags.IsEnabled) != 0;
 				state.SetColumnVisible(column, isVisible);
+			}
+		}
+
+		/// <summary>
+		/// Draws a search box under each header. The search box's own right-click menu switches a column
+		/// between fuzzy, glob and regex, and a change of mode is passed on as a change of filter.
+		/// </summary>
+		private static void DrawFilterRow(string label, DataTableState<TRow> state)
+		{
+			ImGui.TableNextRow();
+			string prefix = $"{label}/filter";
+
+			for (int column = 0; column < state.Columns.Count; column++)
+			{
+				if (!ImGui.TableSetColumnIndex(column))
+				{
+					continue;
+				}
+
+				ImGui.PushID(column);
+				try
+				{
+					SearchBoxOptions filterOptions = state.GetFilterOptions(column);
+					string text = state.GetFilter(column);
+
+					bool isChanged = SearchBox(ref filterOptions, ref text);
+					ImGuiProbes.MarkItem(prefix, state.Columns[column].Label);
+
+					if (isChanged || filterOptions != state.GetFilterOptions(column))
+					{
+						state.SetFilter(column, text, filterOptions);
+					}
+				}
+				finally
+				{
+					ImGui.PopID();
+				}
 			}
 		}
 
