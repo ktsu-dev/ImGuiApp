@@ -506,6 +506,50 @@ public sealed class DataTableTests : WidgetTest
 		Assert.IsFalse(state.IsEditing, "A character above U+FFFF began an edit.");
 	}
 
+	/// <summary>
+	/// Review focus: AltGr reports Ctrl and Alt together, and it's how European layouts type @ and the
+	/// euro sign, so a character typed that way begins an edit like any other.
+	/// </summary>
+	[TestMethod]
+	public void TypingACharacterWithAltGr_BeginsAnEditWithIt()
+	{
+		Start(Draw);
+		Click(Cell(1, "Name"));
+
+		// The modifiers settle in a frame of their own before the character arrives.
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		HarnessKeyboard.KeyDown(ImGuiKey.ModAlt);
+		Step();
+		ImGui.GetIO().AddInputCharacter('@');
+		Step();
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		HarnessKeyboard.KeyUp(ImGuiKey.ModAlt);
+		Step(3);
+
+		Assert.IsTrue(state.IsEditing, "A character typed with AltGr did not begin an edit.");
+
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.AreEqual("@", nameEdits.Single().NewValue);
+	}
+
+	[TestMethod]
+	public void TypingACharacterWithCtrl_DoesNotBeginAnEdit()
+	{
+		Start(Draw);
+		Click(Cell(1, "Name"));
+
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		Step();
+		ImGui.GetIO().AddInputCharacter('q');
+		Step();
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		Step(2);
+
+		Assert.IsFalse(state.IsEditing, "A character typed with Ctrl held began an edit.");
+	}
+
 	[TestMethod]
 	public void RightClickingACell_OpensTheContextMenuForIt()
 	{

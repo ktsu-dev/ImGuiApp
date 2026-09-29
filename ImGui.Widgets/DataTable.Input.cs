@@ -159,8 +159,11 @@ public static partial class ImGuiWidgets
 			typed = default;
 			ImGuiIOPtr io = ImGui.GetIO();
 
-			// Space is the toggle chord, and a character typed with Ctrl or Alt held is a shortcut.
-			if (io.KeyCtrl || io.KeyAlt || io.KeySuper || io.InputQueueCharacters.Size == 0)
+			// Space is the toggle chord, and a character typed with Ctrl, Alt or Super held is a shortcut.
+			// Ctrl and Alt together are AltGr, though, which is how many layouts type @ and the euro sign.
+			bool isAltGr = io.KeyCtrl && io.KeyAlt;
+			bool isShortcut = io.KeySuper || ((io.KeyCtrl || io.KeyAlt) && !isAltGr);
+			if (isShortcut || io.InputQueueCharacters.Size == 0)
 			{
 				return false;
 			}
