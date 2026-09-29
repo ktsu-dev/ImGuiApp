@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      ["**.md", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
+  pull_request:
+  schedule:
+    - cron: "0 23 * * *" # Daily at 11 PM UTC
+  workflow_dispatch:
+    inputs:
+      version-bump:
+        description: 'Version bump type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The caller grants; a called workflow can only reduce. This is the union of what the
+# pipelines request -- dotnet.yml's release job needs contents and packages, its security
+# job needs id-token -- and a pipeline that needs a permission missing here fails the run
+# at startup, before any job exists to report it.
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  ci:
+    uses: ktsu-dev/.github/.github/workflows/ci-shared.yml@release
+    secrets: inherit
+    with:
+      # `inputs` is empty on push, pull_request and schedule; only a dispatch sets it.
+      version-bump: ${{ inputs.version-bump || 'auto' }}
