@@ -558,7 +558,8 @@ public partial class NodeEditorEngine
 	/// A pair that both declare a <see cref="Pin.DataType"/> must also be type-compatible under
 	/// <see cref="PinTypeUtilities.CanConnect"/>, and the returned message names both types when
 	/// they are not, so a host can say why the link was refused rather than only that it was.
-	/// A pin with no declared type is untyped and is not type-checked.
+	/// A pin with no declared type is untyped and is not type-checked, and neither is a pin whose
+	/// type is an open generic, such as the <c>T[]</c> parameter of a generic method node.
 	/// </remarks>
 	public LinkCreationResult TryCreateLink(int fromPinId, int toPinId)
 	{
@@ -583,8 +584,12 @@ public partial class NodeEditorEngine
 		// a type is checked: a null DataType is an untyped pin, which PinSpec documents as a
 		// supported way to describe one, and CanConnect answers false for a null rather than
 		// "unknown" - so asking it about an untyped pin would refuse every link the pin appears in.
+		// An open generic type such as a generic method's T or T[] is skipped the same way: it is not
+		// fixed until the method is called, and IsAssignableFrom says no to it for every concrete type.
 		if (outputPin.DataType is Type outputType
 			&& inputPin.DataType is Type inputType
+			&& !outputType.ContainsGenericParameters
+			&& !inputType.ContainsGenericParameters
 			&& !PinTypeUtilities.CanConnect(outputType, inputType))
 		{
 			return new LinkCreationResult(false, $"Cannot connect {outputType.Name} output '{outputPin.EffectiveDisplayName}' to {inputType.Name} input '{inputPin.EffectiveDisplayName}'");
