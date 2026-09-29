@@ -42,7 +42,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Diff view",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Diff view",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
@@ -411,6 +411,23 @@ public sealed class WidgetsDemoUITests
 		{
 			Assert.IsTrue(IsVisible(combo), $"The combo section is missing '{combo}'.");
 		}
+	}
+
+	[TestMethod]
+	public void Waveform_ClickSeeksThePlayhead()
+	{
+		OpenSection(WidgetDemosTab, "Waveform");
+
+		Assert.IsTrue(IsVisible("##demoWaveform"), "The waveform section drew no waveform.");
+		Assert.AreEqual(0f, WaveformDemo.Playhead, "Precondition: the demo starts with the playhead at the top.");
+
+		// Three quarters of the way across: clear of both loop edges, which sit at a quarter and a half.
+		Rectangle rect = harness.Probe.Rect("##demoWaveform")
+			?? throw new InvalidOperationException("The waveform was never recorded by the probe.");
+		harness.Mouse.Click(rect.MinX + (rect.Width * 0.75f), rect.MinY + (rect.Height * 0.5f));
+		harness.Step();
+
+		Assert.AreEqual(4.5f, WaveformDemo.Playhead, 0.2f, "A click on the waveform did not seek to where it landed.");
 	}
 
 	[TestMethod]

@@ -48,6 +48,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`FlameGraph`**: A flame graph over managed sample data
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
 - **`Scope`**: An oscilloscope-style waveform over a block of audio samples
+- **`Waveform`**: A waveform overview of a whole clip, drawn from a min/max peak overview (`ComputeWaveformPeaks` builds one), with a click-or-drag playhead and a loop region whose edges drag like a `HandleTrack`'s; Shift-drag draws a new loop
 - **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply
 
 ### Layout and Containers
