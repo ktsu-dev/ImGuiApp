@@ -21,11 +21,18 @@ using ktsu.Semantics.Color;
 /// </remarks>
 public readonly record struct ColorWheelValue(float Hue, float Strength, float Master = 0.0f)
 {
+	/// <summary>How close to zero a master value has to be to count as zero.</summary>
+	/// <remarks>
+	/// A millionth of the slider's range, which is well under a pixel of any bar that could be drawn,
+	/// so a master that reads as zero here also looks like zero on screen.
+	/// </remarks>
+	internal const float MasterTolerance = 1e-6f;
+
 	/// <summary>Gets a wheel that does nothing: zero strength and master, pointing at red.</summary>
 	public static ColorWheelValue Neutral { get; } = new(0.0f, 0.0f);
 
 	/// <summary>Gets a value indicating whether the wheel has no effect.</summary>
-	public bool IsNeutral => Strength <= 0.0f && Master == 0.0f;
+	public bool IsNeutral => Strength <= 0.0f && MathF.Abs(Master) <= MasterTolerance;
 
 	/// <summary>
 	/// Returns the per-channel colour offset this wheel stands for: the colour of <see cref="Hue"/>

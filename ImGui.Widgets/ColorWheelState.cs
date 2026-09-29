@@ -170,7 +170,7 @@ public static partial class ImGuiWidgets
 				AnchorMaster(master, pointer, fine);
 			}
 
-			return MathF.Abs(master - current) <= 1e-7f ? current : master;
+			return MathF.Abs(master - current) <= ColorWheelValue.MasterTolerance ? current : master;
 		}
 
 		/// <summary>Ends the master slider's drag.</summary>

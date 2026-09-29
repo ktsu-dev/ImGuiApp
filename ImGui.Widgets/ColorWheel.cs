@@ -232,7 +232,7 @@ public static partial class ImGuiWidgets
 
 			if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
 			{
-				changed = value.Master != 0.0f;
+				changed = MathF.Abs(value.Master) > ColorWheelValue.MasterTolerance;
 				value = value with { Master = 0.0f };
 				state.EndMaster();
 			}
@@ -246,7 +246,7 @@ public static partial class ImGuiWidgets
 				if (ImGui.IsItemActive())
 				{
 					float next = state.DragMaster(value.Master, pointer, fine);
-					changed = next != value.Master;
+					changed = MathF.Abs(next - value.Master) > ColorWheelValue.MasterTolerance;
 					value = value with { Master = next };
 				}
 				else
@@ -266,7 +266,7 @@ public static partial class ImGuiWidgets
 
 			float master = float.IsFinite(value.Master) ? Math.Clamp(value.Master, -1.0f, 1.0f) : 0.0f;
 			float valueX = centerX + (master * half);
-			if (master != 0.0f)
+			if (MathF.Abs(master) > ColorWheelValue.MasterTolerance)
 			{
 				uint fill = ImGui.GetColorU32(colors[(int)(hot ? ImGuiCol.SliderGrabActive : ImGuiCol.SliderGrab)]);
 				drawList.AddRectFilled(new Vector2(MathF.Min(centerX, valueX), min.Y), new Vector2(MathF.Max(centerX, valueX), max.Y), fill);
