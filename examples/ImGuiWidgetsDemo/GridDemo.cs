@@ -50,9 +50,10 @@ internal static class GridDemo
 	internal static void Initialize()
 	{
 		Random random = new();
+		StringBuilder randomStringBuilder = new();
 		for (int i = 0; i < InitialGridItemCount; i++)
 		{
-			StringBuilder randomStringBuilder = new();
+			randomStringBuilder.Clear();
 			randomStringBuilder.Append(i);
 			randomStringBuilder.Append(':');
 
