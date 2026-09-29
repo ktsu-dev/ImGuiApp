@@ -82,6 +82,18 @@ internal static class DataAndSignalsTiles
 		yield return new("SpectrumAnalyzer", Category, [nameof(ImGuiWidgets.SpectrumAnalyzer), nameof(ImGuiWidgets.SpectrumAnalyzerState)], _ =>
 			ImGuiWidgets.SpectrumAnalyzer("##spectrum", spectrum, new Vector2(360f, 130f)));
 
+		ImGuiWidgets.EqBand[] eqBands =
+		[
+			new(40f, 0f, ImGuiWidgets.EqBand.DefaultQ, ImGuiWidgets.EqBandType.LowCut),
+			new(250f, -4f, 1.2f),
+			new(2500f, 6f, 2f),
+			new(8000f, 3f, ImGuiWidgets.EqBand.DefaultQ, ImGuiWidgets.EqBandType.HighShelf),
+		];
+		ImGuiWidgets.LogFrequencyAxis eqAxis = new();
+		int selectedEqBand = 2;
+		yield return new("ParametricEq", Category, [nameof(ImGuiWidgets.ParametricEq), nameof(ImGuiWidgets.EqResponse), nameof(ImGuiWidgets.LogFrequencyAxis)], _ =>
+			ImGuiWidgets.ParametricEq("##eq", eqBands, f => ImGuiWidgets.EqResponse.TotalDb(eqBands, f), eqAxis, ref selectedEqBand, new Vector2(360f, 150f)));
+
 		FlameGraphSample[] samples =
 		[
 			new(0f, 100f, 0, "main"),
