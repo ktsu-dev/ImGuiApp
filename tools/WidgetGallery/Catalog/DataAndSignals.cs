@@ -66,6 +66,16 @@ internal static class DataAndSignalsTiles
 		yield return new("Scope", Category, [nameof(ImGuiWidgets.Scope)], _ =>
 			ImGuiWidgets.Scope("##scope", wave, plot, 1.2f));
 
+		float[] audio = BuildAudio(48_000);
+		float[] peakMinimums = new float[360];
+		float[] peakMaximums = new float[360];
+		ImGuiWidgets.ComputeWaveformPeaks(audio, peakMinimums, peakMaximums);
+		float playhead = 3.4f;
+		float loopStart = 5.2f;
+		float loopEnd = 7.6f;
+		yield return new("Waveform", Category, [nameof(ImGuiWidgets.Waveform), nameof(ImGuiWidgets.ComputeWaveformPeaks)], _ =>
+			ImGuiWidgets.Waveform("##waveform", peakMinimums, peakMaximums, 10f, ref playhead, ref loopStart, ref loopEnd, new Vector2(360f, 90f)));
+
 		FlameGraphSample[] samples =
 		[
 			new(0f, 100f, 0, "main"),
@@ -110,6 +120,22 @@ internal static class DataAndSignalsTiles
 		{
 			float t = i / (float)count * MathF.Tau * 2f;
 			samples[i] = (0.6f * MathF.Sin(t)) + (0.25f * MathF.Sin(3f * t)) + (0.1f * MathF.Sin(7f * t));
+		}
+
+		return samples;
+	}
+
+	/// <summary>A few phrases of a decaying tone with quieter gaps, so the overview has shape.</summary>
+	private static float[] BuildAudio(int count)
+	{
+		float[] samples = new float[count];
+
+		for (int i = 0; i < count; i++)
+		{
+			float t = i / (float)count;
+			float phrase = t * 6f % 1f;
+			float envelope = MathF.Exp(-phrase * 4f) * (0.55f + (0.4f * MathF.Sin(t * 9f)));
+			samples[i] = envelope * MathF.Sin(i * 0.31f) * (0.8f + (0.2f * MathF.Sin(i * 0.013f)));
 		}
 
 		return samples;
