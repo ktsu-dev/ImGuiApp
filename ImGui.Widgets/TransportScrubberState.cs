@@ -105,7 +105,7 @@ public static partial class ImGuiWidgets
 			float oldIn = inPoint;
 			float oldOut = outPoint;
 			float position = Math.Clamp(playhead, 0f, duration);
-			bool hadRange = inPoint != outPoint;
+			bool hadRange = HasRange(inPoint, outPoint);
 			float minimum = float.IsFinite(minLength) ? MathF.Max(minLength, 0f) : 0f;
 
 			inPoint = position;
@@ -141,7 +141,7 @@ public static partial class ImGuiWidgets
 			float oldIn = inPoint;
 			float oldOut = outPoint;
 			float position = Math.Clamp(playhead, 0f, duration);
-			bool hadRange = inPoint != outPoint;
+			bool hadRange = HasRange(inPoint, outPoint);
 			float minimum = float.IsFinite(minLength) ? MathF.Max(minLength, 0f) : 0f;
 
 			outPoint = position;
@@ -165,7 +165,7 @@ public static partial class ImGuiWidgets
 		/// <returns><see langword="true"/> when there was a range to remove.</returns>
 		public static bool ClearInOut(ref float inPoint, ref float outPoint)
 		{
-			if (inPoint == outPoint)
+			if (!HasRange(inPoint, outPoint))
 			{
 				return false;
 			}
@@ -302,6 +302,12 @@ public static partial class ImGuiWidgets
 
 		// Exact comparison on purpose, as TimelineGestureState's Same is: a one-frame move on a long
 		// clip must still register. NaN on the old side counts as a change.
+		/// <summary>Whether an in/out pair describes a range; equal points mean there is none.</summary>
+		/// <param name="inPoint">The in point.</param>
+		/// <param name="outPoint">The out point.</param>
+		/// <returns><see langword="true"/> when the two points differ.</returns>
+		internal static bool HasRange(float inPoint, float outPoint) => !inPoint.Equals(outPoint);
+
 		private static bool Changed(float before, float after) => !before.Equals(after);
 	}
 }

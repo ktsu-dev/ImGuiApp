@@ -392,7 +392,7 @@ public static partial class ImGuiWidgets
 
 				ImGuiProbes.MarkItem("Mark out");
 
-				if (ImGui.MenuItem("Clear in/out", string.Empty, false, usable && region[0] != region[1]) && TransportScrubberState.ClearInOut(ref region[0], ref region[1]))
+				if (ImGui.MenuItem("Clear in/out", string.Empty, false, usable && TransportScrubberState.HasRange(region[0], region[1])) && TransportScrubberState.ClearInOut(ref region[0], ref region[1]))
 				{
 					change |= TimelineChange.Region;
 				}

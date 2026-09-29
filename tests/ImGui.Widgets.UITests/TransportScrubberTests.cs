@@ -222,9 +222,8 @@ public sealed class TransportScrubberTests : WidgetTest
 		Step();
 
 		Assert.IsTrue(PixelsChangedSince(before) > 0, "Handing the scrubber a texture changed nothing on screen.");
-		Rectangle? changed = BoundsOfDifference(before);
-		Assert.IsNotNull(changed);
-		Assert.IsTrue(Contains(RectOf(Track), changed.Value, slack: 1), $"The thumbnail drew at {changed.Value}, outside the track {RectOf(Track)}.");
+		Rectangle changed = BoundsOfDifference(before) ?? throw new InvalidOperationException("The thumbnail drew nothing.");
+		Assert.IsTrue(Contains(RectOf(Track), changed, slack: 1), $"The thumbnail drew at {changed}, outside the track {RectOf(Track)}.");
 	}
 
 	[TestMethod]
@@ -259,9 +258,8 @@ public sealed class TransportScrubberTests : WidgetTest
 
 		Assert.AreEqual(8f, view.ViewLength, 0.01f, "One notch did not zoom in by a quarter.");
 		Assert.IsTrue(changes.HasFlag(TransportScrubberChange.View), "The zoom was not reported.");
-		Rectangle? changed = BoundsOfDifference(before);
-		Assert.IsNotNull(changed, "Zooming changed nothing on screen.");
-		Assert.IsTrue(Intersects(changed.Value, RectOf("wave")), "The waveform sharing the view did not redraw at the new zoom.");
+		Rectangle changed = BoundsOfDifference(before) ?? throw new InvalidOperationException("Zooming changed nothing on screen.");
+		Assert.IsTrue(Intersects(changed, RectOf("wave")), "The waveform sharing the view did not redraw at the new zoom.");
 	}
 
 	[TestMethod]
