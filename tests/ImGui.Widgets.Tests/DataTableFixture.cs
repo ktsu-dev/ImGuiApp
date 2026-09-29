@@ -54,4 +54,11 @@ internal sealed class DataTableFixture
 	public ImGuiWidgets.DataTableColumn<DataTablePerson, DataTableMood> Mood { get; }
 
 	public ImGuiWidgets.DataTableColumn<DataTablePerson, int> Length { get; }
+
+	public ImGuiWidgets.DataTableState<DataTablePerson> CreateState()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = new([Name, Age, Active, Mood, Length]);
+		state.Sync(People);
+		return state;
+	}
 }

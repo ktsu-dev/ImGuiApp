@@ -11,7 +11,7 @@ public static partial class ImGuiWidgets
 {
 	/// <summary>A cell of a data table, addressed by its row's place in the caller's list and its column.</summary>
 	/// <param name="SourceIndex">The row's index in the list the caller passed, never its position on screen.</param>
-	/// <param name="Column">The column's index in the table's list of columns.</param>
+	/// <param name="Column">The column's index in <see cref="DataTableState{TRow}.Columns"/>.</param>
 	public readonly record struct DataTableCell(int SourceIndex, int Column);
 
 	/// <summary>
