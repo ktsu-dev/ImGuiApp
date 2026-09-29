@@ -898,6 +898,13 @@ Things that bite here, beyond the demo-suite list above:
 - **Some state is process-global and cannot be tested from here.** The pumpless animation-clock
   fallback (`TickAnimationClockIfUnpumped`) latches off as soon as any test in the assembly runs a
   pump, so it is covered by the unit tests around `EvaluateFallbackTick` instead.
+- **The rasterizer follows a GPU's rules wherever Dear ImGui relies on them.** A pixel centre on
+  an edge two triangles share goes to one of them (the top-left rule), and textures are sampled
+  bilinearly with clamp-to-edge, which is how every `ktsu.ImGui.App` backend configures them. ImGui
+  draws every rectangle as two triangles and anti-aliases thick lines through its texture, so
+  without the first a translucent rectangle shows its diagonal, and without the second a thick
+  line comes out as a staircase with hard edges. The widget gallery is the quickest way to see a
+  regression in either.
 - **Vendor widgets are reached by geometry, not by name.** Hexa's dialogs mark nothing:
   `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
   pixels, and the file pickers — whose action row is not blue enough to find that way — are
