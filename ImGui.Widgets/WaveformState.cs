@@ -3,7 +3,6 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 /// <summary>
@@ -55,8 +54,7 @@ public static partial class ImGuiWidgets
 		/// zero-width region with two grabbable handles would make a press at that spot drag an
 		/// invisible handle instead of seeking, which reads as the widget ignoring the click.
 		/// </remarks>
-		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "An empty loop is one whose ends are the same value; a tolerance would hide a genuinely narrow loop.")]
-		public static bool HasLoop(ReadOnlySpan<float> loop) => loop.Length == 2 && loop[0] != loop[1];
+		public static bool HasLoop(ReadOnlySpan<float> loop) => loop.Length == 2 && !Same(loop[0], loop[1]);
 
 		/// <summary>
 		/// Returns the loop handle within <paramref name="grabRadius"/> of <paramref name="value"/>,
@@ -126,7 +124,6 @@ public static partial class ImGuiWidgets
 		/// <see cref="HandleTrackState.Drag"/> does: a held, stationary pointer must not mint an undo
 		/// entry or a seek every frame.
 		/// </remarks>
-		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparison is intentional: it detects whether the value differs from the stored one at all, and a tolerance would suppress genuine small moves.")]
 		public WaveformChange Drag(float value, ref float playhead, Span<float> loop, float duration, float minLoopLength)
 		{
 			float end = MathF.Max(duration, 0f);
@@ -135,7 +132,7 @@ public static partial class ImGuiWidgets
 			switch (Gesture)
 			{
 				case WaveformGesture.Scrub:
-					if (position == playhead)
+					if (Same(position, playhead))
 					{
 						return WaveformChange.None;
 					}
@@ -157,11 +154,10 @@ public static partial class ImGuiWidgets
 
 		// Held on the anchor until the pointer leaves it, so a modifier-click that never moves
 		// leaves the existing loop alone rather than replacing it with one of the minimum length.
-		[SuppressMessage("Major Code Smell", "S1244:Do not check floating point inequality with exact values, use a range instead.", Justification = "Exact comparisons are intentional: any movement off the anchor starts the region, and any difference from the stored ends is a change.")]
 		private WaveformChange DrawOutLoop(float position, Span<float> loop, float end, float minLoopLength)
 		{
 			float start = Math.Clamp(anchor, 0f, end);
-			if (position == start)
+			if (Same(position, start))
 			{
 				return WaveformChange.None;
 			}
@@ -173,8 +169,14 @@ public static partial class ImGuiWidgets
 			loop[1] = MathF.Max(start, position);
 			HandleTrackState.Normalize(loop, 0f, end, minLoopLength);
 
-			return loop[0] == previousStart && loop[1] == previousEnd ? WaveformChange.None : WaveformChange.Loop;
+			return Same(loop[0], previousStart) && Same(loop[1], previousEnd) ? WaveformChange.None : WaveformChange.Loop;
 		}
+
+		// Whether two positions are the same value. Compared against float.Epsilon, the smallest
+		// denormal, so this is "exactly equal" and not a tolerance: a genuinely narrow loop or a
+		// one-pixel move on a long timeline must still register. Every position reaching here has
+		// been clamped onto the timeline, so neither side is ever NaN or infinite.
+		private static bool Same(float a, float b) => MathF.Abs(a - b) <= float.Epsilon;
 
 		/// <summary>Ends the current press.</summary>
 		public void Release()
