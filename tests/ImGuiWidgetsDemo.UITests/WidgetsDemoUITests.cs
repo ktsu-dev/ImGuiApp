@@ -43,12 +43,13 @@ public sealed class WidgetsDemoUITests
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Spectrum Analyzer", "Stereo Meters", "Color wheels", "Diff view",
+		"Envelope Editor",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
 	[
 		"Images & Icons", "ImageCanvas", "TabPanel", "SearchBox", "Grid Layout", "Virtual Table",
-		"Divider Container",
+		"Data Table", "Divider Container",
 	];
 
 	private static readonly string[] NetNewSections =

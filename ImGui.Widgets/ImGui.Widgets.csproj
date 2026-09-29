@@ -5,9 +5,16 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <!-- ktsu.ImGui.NodeEditor also references Polyfill and now gets InternalsVisibleTo below, so
+         without this its own copy of the Polyfill extension methods collides with this assembly's,
+         making every such call ambiguous. EmbeddedAttribute keeps this assembly's polyfilled
+         members out of what a friend assembly's overload resolution sees. -->
+    <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ktsu.ImGui.Widgets.Tests" />
+    <InternalsVisibleTo Include="ktsu.ImGui.NodeEditor" />
+    <InternalsVisibleTo Include="ktsu.ImGui.Widgets.UITests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
@@ -15,6 +22,7 @@
     <PackageReference Include="Hexa.NET.ImGui.Widgets.Extras" />
     <PackageReference Include="Hexa.NET.Math" />
     <PackageReference Include="ktsu.Extensions" />
+    <PackageReference Include="ktsu.Keybinding" />
     <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="ktsu.Semantics.Color" />
     <PackageReference Include="ktsu.Semantics.Paths" />
