@@ -152,7 +152,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ktsu.Invoker** (1.1.2) - Delegate invocation utilities
 - **ktsu.ScopedAction** (1.1.6) - RAII-pattern scoped actions
 - **ktsu.UndoRedo** (2.0.3) - Undo/redo stack backing `NodeEditorHistory` in `ImGui.NodeEditor`
-- **ktsu.Keybinding** (2.0.3) - Keymap `NodeEditorInputHandler` and `DataTable` read their commands from (`NodeEditorCommands`, `DataTableCommands`). Referenced by `ImGui.Widgets` since the data table, so every consumer of `ktsu.ImGui.Widgets` restores it, and with it `Microsoft.Extensions.DependencyInjection.Abstractions` and `System.Text.Json`. Accepted because it's small and the table's keys have to follow the host's keymap.
+- **ktsu.Keybinding** (2.0.3) - Keymap `NodeEditorInputHandler` and `DataTable` read their commands from (`NodeEditorCommands`, `DataTableCommands`). Referenced by `ImGui.Widgets` since the data table, so every consumer of `ktsu.ImGui.Widgets` restores it, and with it `Microsoft.Extensions.DependencyInjection.Abstractions` on every target framework, plus `System.Text.Json` on net8.0 and net9.0 only. Accepted because it's small and the table's keys have to follow the host's keymap.
 - **Polyfill** (9.7.7) - Backport newer .NET APIs
 - **Markdig** - CommonMark markdown parser backing `ImGui.Markdown`
 
