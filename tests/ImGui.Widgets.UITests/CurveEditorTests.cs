@@ -203,14 +203,86 @@ public sealed class CurveEditorTests : WidgetTest
 
 		Rectangle rect = RectOf("curves");
 
-		// The two straight lines cross at the middle of the plot, so a press there is within grab
-		// distance of a point on one of them whichever way the editor breaks the tie.
-		float x = rect.MinX + (rect.Width / 2f);
-		float y = rect.MinY + (rect.Height / 2f);
-		Harness.Mouse.Drag(x, y, x - 30f, y - 30f);
+		// The first line starts at (0, 0), the bottom-left corner of the plot.
+		float x = rect.MinX + 1f;
+		float y = rect.MaxY - 1f;
+		Harness.Mouse.Drag(x, y, x + 30f, y - 30f);
 		Step(2);
 
 		Assert.IsTrue(source.Edits.Count > 0, "Dragging a point sent no edit to the source.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_MultiCurve_DrawsInsideItsFrame()
+	{
+		// Hexa reads points in a canvas centred on zero, not in the source's value space. Handed
+		// value-space points, the editor put each curve's origin at its centre and ran the rest off
+		// its right and bottom edges.
+		source = new TwoLineSource();
+		AssertDrawsWithinFrame(DrawMultiCurve, "curves");
+	}
+
+	[TestMethod]
+	public void CurveEditor_MultiCurve_EditsArriveInTheSourcesValueSpace()
+	{
+		source = new TwoLineSource();
+		Start(DrawMultiCurve);
+
+		// The first line's end point is (1, 1): the top-right corner, since larger values draw
+		// higher. Dragging it down a quarter of the height should land it at (1, 0.75).
+		Rectangle rect = RectOf("curves");
+		float x = rect.MaxX - 1f;
+		float y = rect.MinY + 1f;
+		Harness.Mouse.Drag(x, y, x, y + (rect.Height * 0.25f));
+		Step(2);
+
+		Assert.IsTrue(source.Edits.Count > 0, "Dragging the corner point sent no edit to the source.");
+		(int curveIndex, int pointIndex, Vector2 value) = source.Edits[^1];
+		Assert.AreEqual(0, curveIndex, "The drag edited a different curve.");
+		Assert.AreEqual(1, pointIndex, "The drag edited a different point.");
+		Assert.AreEqual(1f, value.X, 0.05f, $"The point should have stayed at x = 1, but arrived at {value}.");
+		Assert.AreEqual(0.75f, value.Y, 0.05f, $"Dragging down a quarter of the height should give y = 0.75, but gave {value}.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_SingleCurve_DrawsInsideItsFrame()
+	{
+		// Upstream spaces its grid by the wrong axis, so on an editor that is not square the
+		// horizontal lines used to run on below the frame.
+		curve = BuildCurve();
+		AssertDrawsWithinFrame(DrawSingleCurve, Label);
+	}
+
+	private void AssertDrawsWithinFrame(Action draw, string name)
+	{
+		bool show = false;
+		Start(() =>
+		{
+			if (show)
+			{
+				draw();
+			}
+		});
+		MoveAway();
+		byte[] blank = Snapshot();
+
+		show = true;
+		Step(2);
+		MoveAway();
+
+		Rectangle frame = RectOf(name);
+		if (BoundsOfDifference(blank) is not Rectangle drawn)
+		{
+			Assert.Fail("The editor drew nothing.");
+			return;
+		}
+
+		// Point markers sit on the frame's edges, so allow them half their width outside it.
+		const int Margin = 7;
+		Assert.IsTrue(
+			drawn.MinX >= frame.MinX - Margin && drawn.MinY >= frame.MinY - Margin
+				&& drawn.MaxX <= frame.MaxX + Margin && drawn.MaxY <= frame.MaxY + Margin,
+			$"The editor's frame is {frame}, but it drew over {drawn}.");
 	}
 
 	[TestMethod]

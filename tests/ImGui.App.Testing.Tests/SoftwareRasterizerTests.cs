@@ -150,4 +150,70 @@ public sealed class SoftwareRasterizerTests
 			V(0, 0, Red), V(1, 0, Red), V(0, 1, Red),
 			texture: null,
 			scissor: new Rectangle(0, 0, 1, 1)));
+	[TestMethod]
+	public void FillTriangle_TranslucentQuad_BlendsItsDiagonalOnce()
+	{
+		// ImGui draws a rectangle as two triangles sharing a diagonal. On a square whose corners sit
+		// on pixel corners, that diagonal passes exactly through a row of pixel centres; taking
+		// them in both triangles blended them twice and drew the diagonal as a line.
+		Bitmap32 target = new(8, 8);
+		target.Clear(Black);
+		Rgba32 translucent = new(255, 255, 255, 128);
+
+		FillQuad(target, 0, 0, 8, 8, translucent);
+
+		Rgba32 expected = target.GetPixel(6, 1);
+		for (int i = 0; i < 8; i++)
+		{
+			Assert.AreEqual(expected, target.GetPixel(i, i), $"Pixel ({i},{i}) on the diagonal was blended a different number of times from its neighbours.");
+		}
+	}
+
+	[TestMethod]
+	public void FillTriangle_AdjacentQuads_ShareTheirEdgeWithoutGapOrOverlap()
+	{
+		// Two rectangles meeting at x = 4.5, a line through a column of pixel centres. Each of those
+		// pixels belongs to exactly one of them.
+		Bitmap32 target = new(8, 4);
+		target.Clear(Black);
+		Rgba32 translucent = new(255, 255, 255, 128);
+
+		FillQuad(target, 0.5f, 0, 4.5f, 4, translucent);
+		FillQuad(target, 4.5f, 0, 8, 4, translucent);
+
+		Rgba32 once = target.GetPixel(2, 1);
+		Assert.AreNotEqual(Black, once);
+		for (int y = 0; y < 4; y++)
+		{
+			Assert.AreEqual(once, target.GetPixel(4, y), $"Pixel (4,{y}) on the shared edge must be blended exactly once.");
+		}
+	}
+
+	[TestMethod]
+	public void FillTriangle_TopLeftRule_TakesTopAndLeftEdgesOnly()
+	{
+		// A rectangle from 0.5 to 3.5 has pixel centres on all four of its edges. The rule a GPU
+		// applies takes the top and left ones and leaves the bottom and right to the neighbours.
+		Bitmap32 target = new(5, 5);
+		target.Clear(Black);
+
+		FillQuad(target, 0.5f, 0.5f, 3.5f, 3.5f, Red);
+
+		Assert.AreEqual(Red, target.GetPixel(0, 0), "Top-left corner pixel lies on a top and a left edge.");
+		Assert.AreEqual(Red, target.GetPixel(2, 0), "Top edge pixels are taken.");
+		Assert.AreEqual(Red, target.GetPixel(0, 2), "Left edge pixels are taken.");
+		Assert.AreEqual(Black, target.GetPixel(3, 2), "Right edge pixels are left to the neighbour.");
+		Assert.AreEqual(Black, target.GetPixel(2, 3), "Bottom edge pixels are left to the neighbour.");
+	}
+
+	private static void FillQuad(Bitmap32 target, float x0, float y0, float x1, float y1, Rgba32 color)
+	{
+		// The index order ImGui's PrimRect uses: (0, 1, 2) and (0, 2, 3), clockwise on screen.
+		Vertex a = V(x0, y0, color);
+		Vertex b = V(x1, y0, color);
+		Vertex c = V(x1, y1, color);
+		Vertex d = V(x0, y1, color);
+		SoftwareRasterizer.FillTriangle(target, a, b, c, texture: null, Rectangle.FullSize(target));
+		SoftwareRasterizer.FillTriangle(target, a, c, d, texture: null, Rectangle.FullSize(target));
+	}
 }
