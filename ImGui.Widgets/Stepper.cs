@@ -99,7 +99,7 @@ public static partial class ImGuiWidgets
 		}
 
 		// A button that fires once on press, then repeatedly while held past the initial delay.
-		private static bool RepeatButton(string label, Vector2 size)
+		internal static bool RepeatButton(string label, Vector2 size)
 		{
 			uint id = ImGui.GetID(label);
 			bool fired = ImGui.Button(label, size);

@@ -15,6 +15,7 @@ internal static class SectionDemos
 		SignalDemos.ResetState();
 		ColorWheelDemo.ResetState();
 		DataTableDemo.ResetState();
+		TimecodeFieldDemo.ResetState();
 	}
 
 	/// <summary>
@@ -23,6 +24,7 @@ internal static class SectionDemos
 	/// </summary>
 	internal static void Show()
 	{
+		TimecodeFieldDemo.Show();
 		SignalDemos.Show();
 		ColorWheelDemo.Show();
 		DiffViewDemo.Show();
