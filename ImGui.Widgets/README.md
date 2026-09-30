@@ -25,6 +25,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`PinInput`**: An N-box PIN or one-time-passcode entry that auto-advances, and steps back on backspace
 - **`SearchBox`** / **`SearchBoxRanked`**: Filters a collection with `ktsu.TextFilter` (glob, regex, fuzzy) or ranks it with a fuzzy match
 - **`Combo`**: Type-safe combo boxes for enums, strings, and semantic strings
+- **`PianoKeyboard`**: A horizontal piano keyboard played with the pointer. Returns note-on and note-off as plain MIDI note numbers, with velocity from how far down the key the press lands, slides from key to key while dragging, and highlights notes the caller reports as held. `PianoKeyboardLayout` holds the key geometry with no ImGui dependency, so a piano roll can share it
 - **`TransportScrubber`**: A video-editor style transport over a caller-owned `TimelineView`: time ruler, thumbnail strip from a caller resolver, playhead and in/out range, with frame snapping, I/O and arrow-key shortcuts, and a right-click menu
 
 ### Display and Status
@@ -689,6 +690,36 @@ stackedContainer.Tick(deltaTime);
 ```
 
 The dividers can be dragged by the user to resize the content regions dynamically.
+
+### Piano Keyboard
+
+The layout says which notes to draw; both ends must be white keys. Notes are plain MIDI numbers
+(middle C is 60, named `C4`), and nothing makes a sound: the widget reports what was played, and
+the host sends it wherever sound comes from.
+
+```csharp
+// Two octaves, C3 to C5. Immutable, so one layout can be shared.
+ImGuiWidgets.PianoKeyboardLayout layout = new(48, 72);
+
+// Each frame. Width 0 fills the row; notes held elsewhere (MIDI input, a sequencer) light up.
+ImGuiWidgets.PianoKeyEvent played = ImGuiWidgets.PianoKeyboard("Keys", layout, new Vector2(0, 90), heldNotes);
+
+if (played.HasNoteOff)
+{
+    synth.NoteOff(played.NoteOff);
+}
+
+if (played.HasNoteOn)
+{
+    synth.NoteOn(played.NoteOn, played.Velocity);
+}
+```
+
+The pointer holds one note at a time. Dragging onto another key stops the old note and starts the
+new one in the same event, so handle the note-off first. Velocity runs from 1 at the back of a key
+to 127 at its front edge. `HitTest`, `GetKeySpan`, `VelocityAt` and `NoteName` expose the geometry
+for a piano roll's rows or labels, and each key is marked for probes as `{label}/{note name}`, for
+example `Keys/C#4`.
 
 ### Property Grid
 

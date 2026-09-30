@@ -167,6 +167,12 @@ internal static class InputAndControlsTiles
 			Interact = context => context.Click("Flavour"),
 		};
 
+		// Two octaves with a C major chord held from outside, which is how held notes are drawn.
+		ImGuiWidgets.PianoKeyboardLayout keyboard = new(48, 72);
+		int[] chord = [60, 64, 67];
+		yield return new("PianoKeyboard", Category, [nameof(ImGuiWidgets.PianoKeyboard)], _ =>
+			ImGuiWidgets.PianoKeyboard("Keys", keyboard, new Vector2(420f, 90f), chord));
+
 		ImGuiWidgets.TimelineView transportView = new();
 		float transportPlayhead = 3.5f;
 		float transportIn = 2f;
