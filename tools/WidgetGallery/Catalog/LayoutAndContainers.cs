@@ -284,27 +284,30 @@ internal static class LayoutAndContainersTiles
 	// Its own method because the toolbar's option types push Build past the analyzers' class-coupling limit.
 	private static GalleryEntry ToolbarTile(GalleryCategory category)
 	{
-		bool bold = true;
+		bool preview = true;
 		return new("Toolbar", category,
 			[nameof(ImGuiWidgets.Toolbar), nameof(ImGuiWidgets.ToolbarSeparator), nameof(ImGuiWidgets.ToolbarButton), nameof(ImGuiWidgets.ToolbarToggleButton)], _ =>
 		{
-			// Material Icons code points, which the gallery merges into its font when it has them.
+			// Material Icons code points, which the gallery merges into its font when it has them. Merged
+			// fonts keep the first glyph for a code point, so these avoid the Nerd Font's ranges: U+E238,
+			// Material's format_bold, falls in its Font Awesome Extension block and U+E8B8, settings, in its
+			// Devicons block, and each draws as that instead.
 			using (ImGuiWidgets.Toolbar("##toolbar", new ToolbarOptions { Width = 340f }))
 			{
 				ImGuiWidgets.ToolbarButton("Open", "\uE2C7");
 				ImGuiWidgets.ToolbarButton("Save", "\uE161");
 				ImGuiWidgets.ToolbarSeparator();
-				ImGuiWidgets.ToolbarToggleButton("Bold", "\uE238", ref bold, new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly });
+				ImGuiWidgets.ToolbarToggleButton("Preview", "\uE8F4", ref preview, new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly });
 				ImGuiWidgets.ToolbarButton("Redo", "\uE15A", new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly, Enabled = false });
 			}
 
 			ImGui.Spacing();
-			using (ImGuiWidgets.Toolbar("##toolbarAbove", new ToolbarOptions { Width = 340f, Layout = ToolbarButtonLayout.GlyphAbove }))
+			using (ImGuiWidgets.Toolbar("##toolbarAbove", new ToolbarOptions { Width = 340f, Layout = ToolbarButtonLayout.GlyphAbove, GlyphSize = 24f }))
 			{
 				ImGuiWidgets.ToolbarButton("Play", "\uE037", new ToolbarButtonOptions { MinWidth = 56f });
 				ImGuiWidgets.ToolbarButton("Stop", "\uE047", new ToolbarButtonOptions { MinWidth = 56f });
 				ImGuiWidgets.ToolbarSeparator();
-				ImGuiWidgets.ToolbarButton("Settings", "\uE8B8", new ToolbarButtonOptions { MinWidth = 56f });
+				ImGuiWidgets.ToolbarButton("Tune", "\uE429", new ToolbarButtonOptions { MinWidth = 56f });
 			}
 		});
 	}

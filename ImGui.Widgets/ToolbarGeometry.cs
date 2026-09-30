@@ -163,14 +163,56 @@ public static class ToolbarGeometry
 	/// <param name="frameHeight">The standard frame height.</param>
 	/// <returns>The row height in pixels.</returns>
 	public static float RowHeight(ToolbarButtonLayout toolbarLayout, float lineHeight, Vector2 framePadding, Vector2 innerSpacing, float frameHeight) =>
+		RowHeight(toolbarLayout, lineHeight, lineHeight, framePadding, innerSpacing, frameHeight);
+
+	/// <summary>
+	/// Gets the height of a toolbar's button row when its glyphs are drawn at a different size from
+	/// its labels: a glyph line over a label line for a <see cref="ToolbarButtonLayout.GlyphAbove"/>
+	/// toolbar, otherwise one frame tall or the glyph line and padding, whichever is taller.
+	/// </summary>
+	/// <param name="toolbarLayout">The toolbar's layout.</param>
+	/// <param name="lineHeight">The height of one line of label text.</param>
+	/// <param name="glyphLineHeight">The height of one line of text at the glyph size.</param>
+	/// <param name="framePadding">The padding between a button frame and its content.</param>
+	/// <param name="innerSpacing">The gap between glyph and label.</param>
+	/// <param name="frameHeight">The standard frame height.</param>
+	/// <returns>The row height in pixels.</returns>
+	public static float RowHeight(ToolbarButtonLayout toolbarLayout, float lineHeight, float glyphLineHeight, Vector2 framePadding, Vector2 innerSpacing, float frameHeight) =>
 		toolbarLayout == ToolbarButtonLayout.GlyphAbove
-			? framePadding.Y + lineHeight + innerSpacing.Y + lineHeight + framePadding.Y
-			: frameHeight;
+			? framePadding.Y + glyphLineHeight + innerSpacing.Y + lineHeight + framePadding.Y
+			: MathF.Max(frameHeight, glyphLineHeight + (2.0f * framePadding.Y));
 
 	/// <summary>Gets the width a toolbar separator reserves: a one-pixel line with inner spacing either side.</summary>
 	/// <param name="innerSpacing">The inner item spacing.</param>
 	/// <returns>The width in pixels.</returns>
 	public static float SeparatorWidth(Vector2 innerSpacing) => (2.0f * innerSpacing.X) + 1.0f;
+
+	/// <summary>
+	/// Gets how far to move a glyph from where <see cref="Measure"/> placed its text box so that its
+	/// drawn pixels, rather than its text box, sit centred there. An icon font merged into a text font
+	/// keeps its own vertical metrics, so an icon usually draws well above the middle of the line it
+	/// occupies; centring its text box leaves it visibly high beside a label and leaves a gap under it
+	/// above one. Vertical centring always applies; horizontal centring only where the glyph is centred
+	/// in the button, since a leading glyph keeps its advance so the gap to its label stays the style's.
+	/// </summary>
+	/// <param name="textSize">The glyph size <see cref="Measure"/> was given, which is the slot the drawn pixels are centred in.</param>
+	/// <param name="inkMin">The top-left of the glyph's drawn pixels, relative to its text box.</param>
+	/// <param name="inkMax">The bottom-right of the glyph's drawn pixels, relative to its text box.</param>
+	/// <param name="layout">The resolved layout.</param>
+	/// <returns>The correction, or zero when the glyph draws nothing.</returns>
+	public static Vector2 GlyphInkCorrection(Vector2 textSize, Vector2 inkMin, Vector2 inkMax, ToolbarButtonLayout layout)
+	{
+		if (inkMax.X <= inkMin.X || inkMax.Y <= inkMin.Y)
+		{
+			return Vector2.Zero;
+		}
+
+		float y = MathF.Round((textSize.Y - (inkMin.Y + inkMax.Y)) * 0.5f);
+		float x = layout == ToolbarButtonLayout.GlyphLeading
+			? 0.0f
+			: MathF.Round((textSize.X - (inkMin.X + inkMax.X)) * 0.5f);
+		return new Vector2(x, y);
+	}
 
 	private static float SingleLineHeight(float glyphHeight, float labelHeight, Vector2 framePadding, float frameHeight) =>
 		MathF.Max(frameHeight, MathF.Max(glyphHeight, labelHeight) + (2.0f * framePadding.Y));

@@ -13,13 +13,14 @@ public sealed class ToolbarTests : WidgetTest
 	private const string Strip = "Tools";
 
 	private ToolbarButtonLayout layout = ToolbarButtonLayout.GlyphLeading;
+	private float? glyphSize;
 	private bool separator;
 	private bool openClicked;
 	private bool saveClicked;
 
 	private void DrawToolbar()
 	{
-		using (ImGuiWidgets.Toolbar(Strip, new ToolbarOptions { Layout = layout }))
+		using (ImGuiWidgets.Toolbar(Strip, new ToolbarOptions { Layout = layout, GlyphSize = glyphSize }))
 		{
 			openClicked |= ImGuiWidgets.ToolbarButton("Open", "O");
 			if (separator)
@@ -132,5 +133,36 @@ public sealed class ToolbarTests : WidgetTest
 		Rectangle strip = RectOf(Strip);
 
 		Assert.IsTrue(button.MaxY <= strip.MaxY, "A GlyphAbove button overflowed a single-line toolbar.");
+	}
+
+	[TestMethod]
+	public void GlyphSize_GrowsTheRowAndKeepsItsButtonsInside()
+	{
+		layout = ToolbarButtonLayout.GlyphAbove;
+		Start(DrawToolbar);
+		Rectangle normalStrip = RectOf(Strip);
+
+		glyphSize = 40.0f;
+		Step(2);
+		Rectangle largeStrip = RectOf(Strip);
+		Rectangle button = RectOf($"{Strip}/Open");
+
+		Assert.IsTrue(largeStrip.Height > normalStrip.Height, $"A 40px glyph left the strip {largeStrip.Height}px tall against {normalStrip.Height}px.");
+		Assert.IsTrue(button.MaxY <= largeStrip.MaxY && button.MinY >= largeStrip.MinY, "A button with a large glyph overflowed its toolbar.");
+	}
+
+	[TestMethod]
+	public void GlyphSize_GrowsASingleLineRowToFitTheGlyph()
+	{
+		Start(DrawToolbar);
+		Rectangle normalStrip = RectOf(Strip);
+
+		glyphSize = 40.0f;
+		Step(2);
+		Rectangle largeStrip = RectOf(Strip);
+		Rectangle button = RectOf($"{Strip}/Open");
+
+		Assert.IsTrue(largeStrip.Height > normalStrip.Height, "A 40px glyph did not grow a single-line toolbar.");
+		Assert.IsTrue(button.MaxY <= largeStrip.MaxY, "A button with a large glyph overflowed a single-line toolbar.");
 	}
 }

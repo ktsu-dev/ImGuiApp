@@ -17,10 +17,11 @@ public sealed class ToolbarButtonTests : WidgetTest
 	private bool toggled;
 	private bool enabled = true;
 	private ToolbarButtonLayout layout = ToolbarButtonLayout.GlyphLeading;
+	private float? glyphSize;
 
 	// Latched: a click is reported for the single frame it happens on.
 	private void DrawButton() =>
-		clicked |= ImGuiWidgets.ToolbarButton(Label, Glyph, new ToolbarButtonOptions { Layout = layout, Enabled = enabled });
+		clicked |= ImGuiWidgets.ToolbarButton(Label, Glyph, new ToolbarButtonOptions { Layout = layout, Enabled = enabled, GlyphSize = glyphSize });
 
 	private void DrawToggle() => ImGuiWidgets.ToolbarToggleButton(Label, Glyph, ref toggled);
 
@@ -136,5 +137,35 @@ public sealed class ToolbarButtonTests : WidgetTest
 		Click(Label);
 
 		Assert.IsTrue(clicked, "The two-line button did not report being clicked.");
+	}
+
+	[TestMethod]
+	public void GlyphSize_EnlargesAGlyphOnlyButton()
+	{
+		layout = ToolbarButtonLayout.GlyphOnly;
+		Start(DrawButton);
+		Rectangle normal = RectOf(Label);
+
+		glyphSize = 40.0f;
+		Step(2);
+		Rectangle large = RectOf(Label);
+
+		Assert.IsTrue(large.Height > normal.Height, $"A 40px glyph gave a {large.Height}px button against {normal.Height}px.");
+		Assert.IsTrue(large.Width > normal.Width, $"A 40px glyph gave a {large.Width}px wide button against {normal.Width}px.");
+	}
+
+	[TestMethod]
+	public void GlyphSize_LeavesALabelOnlyButtonAlone()
+	{
+		layout = ToolbarButtonLayout.LabelOnly;
+		Start(DrawButton);
+		Rectangle normal = RectOf(Label);
+
+		glyphSize = 40.0f;
+		Step(2);
+		Rectangle large = RectOf(Label);
+
+		Assert.AreEqual(normal.Width, large.Width, "A glyph size changed a button that draws no glyph.");
+		Assert.AreEqual(normal.Height, large.Height, "A glyph size changed a button that draws no glyph.");
 	}
 }
