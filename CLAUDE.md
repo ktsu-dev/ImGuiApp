@@ -1020,11 +1020,13 @@ Linux only: they are the whole cost of the job, and the CPU rasterizer they driv
 on either host. The `Test` step tests for Linux rather than against Windows, so any platform added
 later gets that cheap treatment by default.
 
-`.github/workflows/widget-gallery.yml` regenerates `docs/gallery/` on pushes to `main` and commits
-the images back as `[bot][skip ci] Regenerate the widget gallery`. It pushes with `GITHUB_TOKEN`,
-which starts no workflow run, and the `[bot][skip ci]` prefix keeps KtsuBuild from versioning it,
-so the commit neither loops nor cuts a release. Its `paths:` filter lists the projects
-`tools/WidgetGallery` builds from; a project added to that closure belongs in the filter too.
+`.github/workflows/widget-gallery.yml` regenerates `docs/gallery/` once CI has passed on a push to
+`main` (a `workflow_run` trigger) and commits the images back as `[bot][skip ci] Regenerate the
+widget gallery`. It pushes with `GITHUB_TOKEN`, which starts no workflow run, and the
+`[bot][skip ci]` prefix keeps KtsuBuild from versioning it, so the commit neither loops nor cuts a
+release. It must not go back to triggering on the push itself: the release job pushes its metadata
+commit with a plain `git push` from the commit CI started on, so a gallery commit landing first
+makes that push non-fast-forward and the release fails, which is what the first version did.
 
 Uses `scripts/PSBuild.psm1` PowerShell module for CI pipeline. Version increments are controlled by commit message tags: `[major]`, `[minor]`, `[patch]`, `[pre]`. Auto-generated files (VERSION.md, CHANGELOG.md, LICENSE.md) should not be manually edited. CI runs on Windows, publishes to NuGet, uses SonarQube for analysis.
 
