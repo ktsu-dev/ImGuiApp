@@ -16,6 +16,7 @@ internal static class SignalDemos
 		TransportScrubberDemo.ResetState();
 		SpectrumAnalyzerDemo.ResetState();
 		EnvelopeEditorDemo.ResetState();
+		ParametricEqDemo.ResetState();
 	}
 
 	/// <summary>Draws every signal section.</summary>
@@ -25,5 +26,6 @@ internal static class SignalDemos
 		TransportScrubberDemo.Show();
 		SpectrumAnalyzerDemo.Show();
 		EnvelopeEditorDemo.Show();
+		ParametricEqDemo.Show();
 	}
 }

@@ -44,6 +44,7 @@ public sealed class WidgetsDemoUITests
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Color wheels", "Diff view",
+		"Parametric EQ",
 		"Envelope Editor",
 	];
 

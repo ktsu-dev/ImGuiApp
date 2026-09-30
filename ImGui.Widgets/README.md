@@ -55,6 +55,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply
 - **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
 - **`EnvelopeEditor`**: A DAHDSR envelope drawn from the same `Envelope.LevelAt` a synth would call; drag breakpoints to retime segments and set the sustain level, drag tension handles to bend a segment, right-click one to straighten it
+- **`ParametricEq`**: An EQ response curve with a draggable node per band: drag for frequency and gain, wheel for Q. You plot your own response, or `EqResponse`'s RBJ cookbook biquads; `LogFrequencyAxis` is shared with `SpectrumAnalyzer`, so the two line up when stacked
 
 ### Layout and Containers
 
@@ -852,6 +853,34 @@ Drag a breakpoint to retime its segment (and, for the decay end and sustain, set
 drag a tension handle vertically to bend its segment, and right-click it to straighten it. Values
 that are not finite or are out of range are repaired on the first frame and reported as a change.
 Each handle is marked for probes as `<label>/attack`, `<label>/decayTension` and so on.
+
+### Parametric EQ
+
+The caller owns the bands and the response. Drag a node to move its band, sideways for frequency
+and vertically for gain; the wheel over a node changes its Q. `LowCut`, `HighCut` and `Notch` have no
+gain, so their nodes sit on the 0 dB line and only move sideways. The widget returns true on any
+frame a band's value actually changed, so a held pointer does not mint undo entries.
+
+```csharp
+ImGuiWidgets.EqBand[] bands =
+[
+    new(40f, 0f, ImGuiWidgets.EqBand.DefaultQ, ImGuiWidgets.EqBandType.LowCut),
+    new(250f, -3f, 1.2f),
+    new(8000f, 2f, ImGuiWidgets.EqBand.DefaultQ, ImGuiWidgets.EqBandType.HighShelf),
+];
+ImGuiWidgets.LogFrequencyAxis axis = new(20f, 20000f);
+int selected = -1;
+
+// Each frame. Plot your own DSP's response if it has one, so the curve is the one you apply.
+if (ImGuiWidgets.ParametricEq("EQ", bands, f => ImGuiWidgets.EqResponse.TotalDb(bands, f, 48000f), axis, ref selected, new Vector2(480, 220)))
+{
+    // Recompute your filters.
+}
+```
+
+Pass a `SpectrumAnalyzerState`'s own `Axis` to put the EQ on exactly the analyzer's frequency scale:
+a frequency then lands at the same fraction of the width in both. Each node is probe-visible as
+`{label}/band{i}`.
 
 ### Hexa-backed Widgets
 
