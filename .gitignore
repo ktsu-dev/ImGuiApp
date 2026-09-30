@@ -669,3 +669,9 @@ imgui.ini
 # negation has to come after that rule to win, and is scoped to the asset tree so the Visual
 # Studio artifact stays ignored everywhere else.
 !**/[Aa]ssets/**/*.meta
+
+# Worktrees and agent scratch, which must never be committed into the tree they branch from.
+# The SDK regenerates this file on every build and drops anything it does not own, so if these
+# two lines are missing, that is why, and they need putting back before staging.
+.worktrees/
+.superpowers/
