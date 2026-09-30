@@ -16,6 +16,7 @@ internal static class SignalDemos
 		TransportScrubberDemo.ResetState();
 		SpectrumAnalyzerDemo.ResetState();
 		EnvelopeEditorDemo.ResetState();
+		ParametricEqDemo.ResetState();
 		StereoMetersDemo.ResetState();
 	}
 
@@ -26,6 +27,7 @@ internal static class SignalDemos
 		TransportScrubberDemo.Show();
 		SpectrumAnalyzerDemo.Show();
 		EnvelopeEditorDemo.Show();
+		ParametricEqDemo.Show();
 		StereoMetersDemo.Show();
 	}
 }

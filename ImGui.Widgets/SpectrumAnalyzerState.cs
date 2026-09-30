@@ -43,20 +43,11 @@ public static partial class ImGuiWidgets
 		{
 			ArgumentOutOfRangeException.ThrowIfLessThan(bandCount, 1);
 
-			// A logarithmic axis has no zero, and a reversed or empty range has no bands.
-			if (minFrequency <= 0f || !float.IsFinite(minFrequency))
-			{
-				throw new ArgumentOutOfRangeException(nameof(minFrequency), minFrequency, "The lowest frequency must be positive and finite.");
-			}
-
-			if (maxFrequency <= minFrequency || !float.IsFinite(maxFrequency))
-			{
-				throw new ArgumentOutOfRangeException(nameof(maxFrequency), maxFrequency, "The highest frequency must be finite and above the lowest.");
-			}
+			// The axis enforces the frequency range: a logarithmic axis has no zero, and a reversed or
+			// empty range has no bands.
+			Axis = new LogFrequencyAxis(minFrequency, maxFrequency);
 
 			BandCount = bandCount;
-			MinFrequency = minFrequency;
-			MaxFrequency = maxFrequency;
 
 			edges = new float[bandCount + 1];
 			double ratio = Math.Log((double)maxFrequency / minFrequency);
@@ -80,11 +71,17 @@ public static partial class ImGuiWidgets
 		/// <summary>Gets the number of bands.</summary>
 		public int BandCount { get; }
 
+		/// <summary>
+		/// Gets the log-frequency axis the bands are spaced along, which is also where the analyzer
+		/// draws them. Hand it to <see cref="ParametricEq"/> to line an EQ up with this analyzer.
+		/// </summary>
+		public LogFrequencyAxis Axis { get; }
+
 		/// <summary>Gets the lower edge of the lowest band, in hertz.</summary>
-		public float MinFrequency { get; }
+		public float MinFrequency => Axis.MinFrequency;
 
 		/// <summary>Gets the upper edge of the highest band, in hertz.</summary>
-		public float MaxFrequency { get; }
+		public float MaxFrequency => Axis.MaxFrequency;
 
 		/// <summary>
 		/// Gets or sets how fast a bar may fall, in decibels per second. A bar rises to a louder
@@ -153,9 +150,8 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		/// <param name="frequency">The frequency, in hertz.</param>
 		/// <returns>The position, not clamped; non-positive frequencies return <see cref="float.NegativeInfinity"/>.</returns>
-		public float FrequencyToPosition(float frequency) => frequency > 0f
-			? MathF.Log(frequency / MinFrequency) / MathF.Log(MaxFrequency / MinFrequency)
-			: float.NegativeInfinity;
+		/// <remarks>The same mapping as <see cref="LogFrequencyAxis.FrequencyToPosition"/> on <see cref="Axis"/>, which this delegates to.</remarks>
+		public float FrequencyToPosition(float frequency) => Axis.FrequencyToPosition(frequency);
 
 		/// <summary>Returns every bar and peak to <see cref="float.NegativeInfinity"/>.</summary>
 		public void Reset()

@@ -91,7 +91,7 @@ public static partial class ImGuiWidgets
 		drawList.AddRectFilled(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.FrameBg]));
 
 		// Gridlines, drawn under the bars: decades across, level steps down from 0 dB.
-		for (float decade = MathF.Pow(10f, MathF.Ceiling(MathF.Log10(state.MinFrequency))); decade < state.MaxFrequency; decade *= 10f)
+		for (float decade = state.Axis.FirstDecade; decade < state.MaxFrequency; decade *= 10f)
 		{
 			float x = min.X + (state.FrequencyToPosition(decade) * analyzerSize.X);
 			if (x > min.X)
