@@ -1,8 +1,10 @@
-## v3.58.1-pre.1 (prerelease)
+## v3.59.0 (minor)
 
 Changes since v3.58.0:
 
-- Bump the ktsu group with 8 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-5le24s ([@Claude](https://github.com/Claude))
+- Add GlyphSize to toolbars and toolbar buttons ([@Claude](https://github.com/Claude))
+- Centre toolbar glyphs by their drawn pixels, and fix the gallery tile's Bold icon ([@Claude](https://github.com/Claude))
 
 ## v3.58.0 (minor)
 
