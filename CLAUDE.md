@@ -144,6 +144,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.NodeEditor/NodeEditorCommands.cs` - The keyboard commands as `ktsu.Keybinding` commands
 - `ImGui.Widgets/KeyChordMatcher.cs` - The chord-to-ImGui matcher shared by the node editor and the data table, with optional key repeat and optional Shift
 - `ImGui.Widgets/DataTableState.cs` - The data table's state, split across `DataTableState.Navigation.cs` and `DataTableState.Editing.cs`, with no ImGui calls. `DataTable.cs` and `DataTable.Input.cs` draw it
+- `examples/ImGuiWidgetsDemo/DemoSections.cs` - The widgets demo's section registry: one `DemoSection` line per `<Widget>Demo` class, in the order the Widget Demos and Advanced Demos tabs draw them
 
 ### Dependencies
 
@@ -937,7 +938,16 @@ Things that bite here, beyond the demo-suite list above:
 
 1. Add class to `ImGui.Widgets/`
 2. Follow existing widget patterns (static methods or instance classes)
-3. Add demo to `examples/ImGuiWidgetsDemo/`
+3. Add a demo section to `examples/ImGuiWidgetsDemo/` as its own `<Widget>Demo.cs`:
+   - The class owns its state, a parameterless static `Show()` and `ResetState()`, and an `Initialize()`
+     only if it has start-up work. `ResetState()` restores every field a UI test can disturb, because
+     the demo's statics outlive a harness.
+   - Register it with one `new DemoSection(...)` line in `DemoSections.cs`, in the list for its tab.
+     Do not touch `ImGuiWidgetsDemo.cs`: it is at the analyzers' class-coupling limit, which is why the
+     registry exists. `DemoSectionRegistryTests` fails for a section class that is not registered.
+   - Plain ImGui controls go through `DemoProbe` so tests can click them by name, and any accessor a
+     test reads lives on the section's own class.
+   - One section per class. No grouping classes that hold several unrelated sections.
 4. Add an isolation suite to `tests/ImGui.Widgets.UITests/`
 5. Add a tile to `tools/WidgetGallery/Catalog/` (`--check` reports widgets without one)
 
