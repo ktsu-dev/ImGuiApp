@@ -110,7 +110,7 @@ public static partial class ImGuiWidgets
 			{
 				float position = stops[i].Position;
 				float fixedPosition = float.IsFinite(position) ? Math.Clamp(position, 0f, 1f) : 0f;
-				if (!fixedPosition.Equals(position))
+				if (FloatBits.Differ(fixedPosition, position))
 				{
 					stops[i] = stops[i] with { Position = fixedPosition };
 					changed = true;
@@ -220,7 +220,7 @@ public static partial class ImGuiWidgets
 			{
 				for (int i = 0; i < stops.Count; i++)
 				{
-					if (!positions[i].Equals(stops[i].Position))
+					if (FloatBits.Differ(positions[i], stops[i].Position))
 					{
 						stops[i] = stops[i] with { Position = positions[i] };
 						changed = true;
