@@ -39,6 +39,7 @@ internal static class DemoSections
 		new(ParametricEqDemo.Show, ParametricEqDemo.ResetState),
 		new(StereoMetersDemo.Show, StereoMetersDemo.ResetState),
 		new(ChannelFaderDemo.Show, ChannelFaderDemo.ResetState),
+		new(PianoKeyboardDemo.Show, PianoKeyboardDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
 	];

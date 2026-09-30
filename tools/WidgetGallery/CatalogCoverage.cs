@@ -42,6 +42,7 @@ internal static class CatalogCoverage
 		[nameof(ImGuiWidgets.SetPinSlot)] = "input handling for the PIN input",
 		[nameof(ImGuiWidgets.RatingValueFromOffset)] = "hit testing for the rating",
 		[nameof(ImGuiWidgets.StarFillFraction)] = "arithmetic for the rating",
+		[nameof(ImGuiWidgets.PianoKeyboardLayout)] = "the key geometry of the piano keyboard tile",
 		[nameof(ImGuiWidgets.DataTableCommands)] = "keymap command registration for the data table tile",
 	};
 
