@@ -5,17 +5,24 @@ name: Widget Gallery
 # renders on the CPU rasterizer with pinned dates, a generated sample folder and a pinned font, so
 # the only thing that moves a picture is a change to the code that draws it.
 #
-# Why after CI rather than on the push itself: CI's release job commits VERSION.md and friends back
-# to main with a plain `git push` from the commit it was started on. A gallery commit landing on
-# main first makes that push non-fast-forward, and the release fails. Regenerating on a push always
-# won that race, because the gallery takes two minutes and CI's tests take ten. Waiting for CI to
-# complete means main already carries the release commit, and CI's own cancel-in-progress group
-# means no other main run is part way to a release of its own when this one pushes.
+# ci.yml calls this as a job that needs its pipeline, only for a push to main; it can also be run by
+# hand on main. It is deliberately not a workflow_run workflow. workflow_run runs with the
+# repository's own token and secrets whatever started the run it follows, including a pull request
+# from a fork, so building checked-out code there is the pattern githubactions:S7631 exists to catch.
+# Here the only things that can start a run are a push to main, which needs write access, and a
+# dispatch by someone with write access, so nothing a fork wrote is ever checked out or built with
+# this job's permissions.
 #
-# There is no paths filter, because workflow_run cannot have one and because the triggering commit
-# is not the only one this run covers: CI cancels a superseded run, so a widget change can reach
-# main under the CI run of the push after it. Regenerating after every successful main run costs a
-# couple of minutes and commits nothing when nothing changed.
+# Why after CI rather than beside it: CI's release job commits VERSION.md and friends back to main
+# with a plain `git push` from the commit it was started on. A gallery commit landing on main first
+# makes that push non-fast-forward, and the release fails. Needing the pipeline means main already
+# carries the release commit, and CI's own cancel-in-progress group means no other main run is part
+# way to a release of its own when this one pushes. A failed pipeline skips this job.
+#
+# There is no paths filter, because the triggering commit is not the only one this run covers: CI
+# cancels a superseded run, so a widget change can reach main under the CI run of the push after it.
+# Regenerating after every successful main run costs a couple of minutes and commits nothing when
+# nothing changed.
 #
 # Why the commit back cannot loop or cut a release:
 #   - It is pushed with the workflow's own GITHUB_TOKEN, and GitHub starts no workflow run for a
@@ -32,17 +39,8 @@ name: Widget Gallery
 # of pull-request workflows.
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
-
-# A newer run supersedes an older one: both regenerate from the current main, so an older run that
-# is still going has nothing left worth committing.
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -60,13 +58,15 @@ jobs:
     name: Regenerate widget gallery
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Only after a push to main that CI passed: not after a pull request, the nightly schedule or a
-    # failed or cancelled run. Never on a fork, where there is nothing of ours to commit to.
-    if: >-
-      github.repository == 'ktsu-dev/ImGuiApp' &&
-      (github.event_name == 'workflow_dispatch' ||
-       (github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.conclusion == 'success'))
+    # Only on main, and never on a fork, where there is nothing of ours to commit to. ci.yml only
+    # calls this for a push to main, so this is what keeps a manual run off other branches.
+    if: github.repository == 'ktsu-dev/ImGuiApp' && github.ref == 'refs/heads/main'
+    # A newer run supersedes an older one: both regenerate from the current main, so an older run
+    # that is still going has nothing left worth committing. Set on the job rather than the
+    # workflow, because a called workflow's github.workflow is the caller's name.
+    concurrency:
+      group: widget-gallery
+      cancel-in-progress: true
     permissions:
       contents: write # To push the regenerated images to main
 
@@ -78,6 +78,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           # The current main, which by now carries CI's release commit, not the commit CI ran on.
+          # Never the triggering event's ref or SHA.
           ref: main
           fetch-depth: 1
           lfs: false
