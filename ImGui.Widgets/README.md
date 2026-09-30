@@ -61,6 +61,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`EnvelopeEditor`**: A DAHDSR envelope drawn from the same `Envelope.LevelAt` a synth would call; drag breakpoints to retime segments and set the sustain level, drag tension handles to bend a segment, right-click one to straighten it
 - **`ParametricEq`**: An EQ response curve with a draggable node per band: drag for frequency and gain, wheel for Q. You plot your own response, or `EqResponse`'s RBJ cookbook biquads; `LogFrequencyAxis` is shared with `SpectrumAnalyzer`, so the two line up when stacked
 
+### Image and Colour
+
+- **`LevelsControl`**: A levels control — a histogram with black, grey and white input handles, an output ramp with its own black and white handles, and a numeric readout. It edits a caller-owned `LevelsAdjustment`, whose `Apply` is the same transfer function the handles describe, so the curve on screen and the curve applied to pixels cannot disagree. Grey point and gamma follow the Photoshop convention
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
