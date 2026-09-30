@@ -74,7 +74,7 @@ public static partial class ImGuiWidgets
 			ImGuiProbes.MarkItem("canvas");
 
 			float normalized = ImageCompareState.NormalizeSplit(split);
-			bool changed = !normalized.Equals(split);
+			bool changed = FloatBits.Differ(normalized, split);
 			split = normalized;
 
 			ImGuiIOPtr io = ImGui.GetIO();
@@ -92,7 +92,7 @@ public static partial class ImGuiWidgets
 				if (compare.Target == ImageCompareState.DragTarget.Divider)
 				{
 					float next = ImageCompareState.SplitFromPointer(local.X, size.X);
-					if (!next.Equals(split))
+					if (FloatBits.Differ(next, split))
 					{
 						split = next;
 						changed = true;
