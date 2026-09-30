@@ -44,6 +44,7 @@ internal static class DemoSections
 		new(StepGridDemo.Show, StepGridDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
+		new(ToolbarDemo.Show, ToolbarDemo.ResetState),
 	];
 
 	/// <summary>Gets the sections of the Advanced Demos tab, in demo order.</summary>
@@ -53,6 +54,11 @@ internal static class DemoSections
 		new(ImageCanvasDemo.Show, ImageCanvasDemo.ResetState),
 		new(LevelsDemo.Show, LevelsDemo.ResetState),
 		new(AssetBrowserDemo.Show, AssetBrowserDemo.ResetState),
+		new(GradientDemo.Show, GradientDemo.ResetState),
+		new(SwatchPaletteDemo.Show, SwatchPaletteDemo.ResetState),
+		new(ImageCompareDemo.Show, ImageCompareDemo.ResetState),
+		new(CropDemo.Show, CropDemo.ResetState),
+		new(PixelLoupeDemo.Show, PixelLoupeDemo.ResetState),
 		new(TabPanelDemo.Show, TabPanelDemo.ResetState, TabPanelDemo.Initialize),
 		new(SearchBoxDemo.Show, SearchBoxDemo.ResetState),
 		new(GridDemo.Show, GridDemo.ResetState, GridDemo.Initialize),

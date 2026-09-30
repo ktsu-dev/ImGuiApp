@@ -68,6 +68,26 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 - **`LevelsControl`**: A levels control — a histogram with black, grey and white input handles, an output ramp with its own black and white handles, and a numeric readout. It edits a caller-owned `LevelsAdjustment`, whose `Apply` is the same transfer function the handles describe, so the curve on screen and the curve applied to pixels cannot disagree. Grey point and gamma follow the Photoshop convention
 
+### Image and Colour
+
+- **`GradientEditor`**: A colour-stop gradient editor over a caller-owned list of `GradientStop`: click the bar to add a stop sampled from the gradient, drag a stop to move it (never past a neighbour), drag it away or press Delete to remove it, and edit the selected stop's colour with a colour picker underneath. `SampleGradient` is the evaluator the bar is drawn with, interpolating in linear RGB, so the gradient on screen and the gradient a consumer applies are the same function
+
+### Image and Colour
+
+- **`SwatchPalette`**: A wrapping grid of colour swatches over a caller-owned list: click a swatch to select it, drag one to reorder the list in place, with the selection following the swatch it named. Adding, removing and editing colours is left to the host, which reads the selected index
+
+### Image and Colour
+
+- **`ImageCompare`**: Two textures of the same image, before and after, in one pannable, zoomable view, either split by a draggable divider (a wipe) or side by side in two panes that pan and zoom together. Both are placed by one caller-owned `ImageCanvasState`, so they line up to the pixel
+
+### Image and Colour
+
+- **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, rule-of-thirds guides, edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
+
+### Image and Colour
+
+- **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
+
 ### Layout and Containers
 
 - **`DividerContainer`** / **`DividerZone`**: A retained container divided into draggable zones, with persistable sizes; containers nest
@@ -77,6 +97,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Tree`**: Collapsible `Branch` and terminal `Leaf` nodes, with connector lines drawn between them
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
 - **`AssetBrowser`**: A virtualized grid of thumbnail tiles over a caller-owned `AssetBrowserState`, with click, Ctrl+click and Shift+click selection, arrow-key focus, Ctrl+wheel tile resizing, double-click or Enter to activate, and dragging the selection out as a payload a drop target reads with `TryAcceptAssetPayload`. Only the visible rows ask for a label or thumbnail, so fifty thousand assets cost a screenful
+- **`Toolbar`** / **`ToolbarButton`** / **`ToolbarToggleButton`** / **`ToolbarSeparator`**: A horizontal strip of buttons, each holding a glyph and a label inside one frame — glyph leading, glyph above with the label centred beneath, glyph only (the label becomes the tooltip) or label only. See [Toolbar](#toolbar) below
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
@@ -946,6 +967,51 @@ A press toggles the cell it lands on, and the rest of the drag paints that cell'
 gesture either fills or clears a run and never flickers cells back and forth. `stepsPerBeat`
 (default 4) shades each beat's first column, and `cellSize` defaults to a square of the frame height.
 Cells are probed as `"{label}/r{row}s{step}"`.
+
+### Toolbar
+
+A toolbar is a `using` scope; buttons and separators submitted inside it are laid out left to right
+on one row. Each button draws its glyph and its label inside the same frame, so a glyph is any
+string in the current font — merge an icon font such as Material Icons or a Nerd Font to use icons.
+
+```csharp
+using (ImGuiWidgets.Toolbar("##edit"))
+{
+	if (ImGuiWidgets.ToolbarButton("Open", "\uE2C7", new() { Shortcut = "Ctrl+O" }))
+	{
+		OpenFile();
+	}
+
+	ImGuiWidgets.ToolbarSeparator();
+	ImGuiWidgets.ToolbarToggleButton("Bold", "\uE238", ref bold, new() { Layout = ToolbarButtonLayout.GlyphOnly });
+}
+
+// A two-line strip: every button puts its label centred under its glyph.
+using (ImGuiWidgets.Toolbar("##transport", new ToolbarOptions { Layout = ToolbarButtonLayout.GlyphAbove }))
+{
+	ImGuiWidgets.ToolbarButton("Play", "\uE037", new() { MinWidth = 56 });
+	ImGuiWidgets.ToolbarButton("Stop", "\uE047", new() { MinWidth = 56 });
+}
+```
+
+`ToolbarButtonLayout` picks where the label goes:
+
+| Layout | Glyph | Label |
+|---|---|---|
+| `GlyphLeading` (default) | left | right of the glyph, on the same line |
+| `GlyphAbove` | top, centred | below the glyph, centred |
+| `GlyphOnly` | centred | shown as the tooltip unless one is set |
+| `LabelOnly` | not drawn | centred |
+
+A button takes its toolbar's layout unless it sets its own. A single-line toolbar has no room for
+a two-line button, so `GlyphAbove` falls back to `GlyphLeading` there; a single-line button in a
+`GlyphAbove` toolbar is centred vertically in the taller row. A missing glyph or label collapses
+the layout to the part that is present. Buttons also work outside a toolbar, where they size to
+themselves. `ToolbarGeometry` holds the layout arithmetic and takes plain sizes, so it can be used
+or tested without an ImGui context.
+
+Each button is probed under its label inside the toolbar's id (`"##edit/Open"`), its tooltip text
+under a name ending `Open/tooltip`, and the strip itself under its id.
 
 ### Hexa-backed Widgets
 

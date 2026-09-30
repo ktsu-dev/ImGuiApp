@@ -28,12 +28,12 @@ public sealed class DemoSectionRegistryTests
 		nameof(MobileDecoratorsDemo), nameof(MobileContainersDemo), nameof(HistogramAndHandleTrackDemo),
 		nameof(CurveTrackDemo), nameof(TimecodeFieldDemo), nameof(WaveformDemo), nameof(TransportScrubberDemo),
 		nameof(SpectrumAnalyzerDemo), nameof(FrameTimeGraphDemo), nameof(EnvelopeEditorDemo), nameof(ParametricEqDemo), nameof(StereoMetersDemo), nameof(ChannelFaderDemo), nameof(PianoKeyboardDemo), nameof(StepGridDemo), nameof(ColorWheelDemo),
-		nameof(DiffViewDemo),
+		nameof(DiffViewDemo), nameof(ToolbarDemo),
 	];
 
 	private static readonly string[] AdvancedDemoOrder =
 	[
-		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(LevelsDemo), nameof(AssetBrowserDemo),
+		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(LevelsDemo), nameof(AssetBrowserDemo), nameof(GradientDemo), nameof(SwatchPaletteDemo), nameof(ImageCompareDemo), nameof(CropDemo), nameof(PixelLoupeDemo),
 		nameof(TabPanelDemo), nameof(SearchBoxDemo), nameof(GridDemo), nameof(VirtualTableDemo), nameof(DataTableDemo),
 		nameof(DividerDemo),
 	];

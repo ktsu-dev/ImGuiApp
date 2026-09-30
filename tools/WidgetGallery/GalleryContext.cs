@@ -38,6 +38,9 @@ internal sealed class GalleryContext(ImGuiAppHarness harness)
 	/// <summary>Gets the sample image's texture id.</summary>
 	public nint SampleTextureId => SampleTexture.TextureId;
 
+	/// <summary>Gets the sample image with its colours inverted, for the widgets that compare two images.</summary>
+	public ImGuiAppTextureInfo InvertedSampleTexture => field ??= SampleImage.Create(inverted: true);
+
 	/// <summary>Moves the pointer to a point and lets hover state settle.</summary>
 	/// <param name="point">The point, in display pixels.</param>
 	public void HoverAt(Vector2 point)

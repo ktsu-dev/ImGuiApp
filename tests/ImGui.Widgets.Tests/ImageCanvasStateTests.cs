@@ -100,4 +100,39 @@ public class ImageCanvasStateTests
 		Assert.AreEqual(minBefore.X + 10f, minAfter.X, 0.0001f);
 		Assert.AreEqual(minBefore.Y - 5f, minAfter.Y, 0.0001f);
 	}
+
+	[TestMethod]
+	public void ImageToViewport_IsTheInverseOfViewportToImage()
+	{
+		Vector2 imageSize = new(64, 48);
+		Vector2 viewportSize = new(320, 240);
+		ImGuiWidgets.ImageCanvasState state = new();
+		state.ZoomAt(2.5f, viewportSize / 2f, viewportSize);
+		state.PanBy(new Vector2(13, -7));
+		Assert.AreEqual(2.5f, state.Zoom, 0.0001f);
+
+		foreach (Vector2 point in new[] { new Vector2(0, 0), new Vector2(64, 48), new Vector2(10.5f, 33.25f) })
+		{
+			Vector2 roundTrip = state.ViewportToImage(state.ImageToViewport(point, imageSize, viewportSize), imageSize, viewportSize);
+
+			Assert.AreEqual(point.X, roundTrip.X, 1e-4f);
+			Assert.AreEqual(point.Y, roundTrip.Y, 1e-4f);
+		}
+	}
+
+	[TestMethod]
+	public void ImageToViewport_MapsTheImageOriginToTheRectMin()
+	{
+		Vector2 imageSize = new(64, 48);
+		Vector2 viewportSize = new(320, 240);
+		ImGuiWidgets.ImageCanvasState state = new();
+		state.FitToViewport(imageSize, viewportSize);
+		state.PanBy(new Vector2(13, -7));
+
+		Vector2 origin = state.ImageToViewport(Vector2.Zero, imageSize, viewportSize);
+		(Vector2 min, _) = state.ImageRectInViewport(imageSize, viewportSize);
+
+		Assert.AreEqual(min.X, origin.X, 1e-4f);
+		Assert.AreEqual(min.Y, origin.Y, 1e-4f);
+	}
 }
