@@ -1,9 +1,35 @@
-## v3.56.3 (patch)
+## v3.57.0 (minor)
 
-Changes since v3.56.2:
+Changes since v3.56.0:
 
 - Regenerate the widget gallery after CI rather than on the push ([@Claude](https://github.com/Claude))
 - Regenerate the widget gallery on pushes to main ([@Claude](https://github.com/Claude))
+- Merge main into the widget branch, registering its demo as a DemoSections entry ([@Claude](https://github.com/Claude))
+- Restore the worktree ignore lines the SDK build dropped from .gitignore ([@Claude](https://github.com/Claude))
+- Merge main into the stereo meters branch, bringing in ParametricEq ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering ParametricEqDemo as its own section ([@Claude](https://github.com/Claude))
+- [patch] Map symbol-spelled chord keys and pin Tab to the named-key bound ([@Claude](https://github.com/Claude))
+- Merge main's metadata update ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering TimecodeFieldDemo in DemoSections ([@Claude](https://github.com/Claude))
+- Merge main into the parametric EQ branch, adding TimecodeField to the widget list ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-g9k1ol-parametric-eq ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering TransportScrubberDemo in DemoSections ([@Claude](https://github.com/Claude))
+- Restore the worktree ignore lines the merge from main dropped ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-g9k1ol-parametric-eq ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-026l9x ([@Claude](https://github.com/Claude))
+- Merge main into the parametric-eq branch ([@Claude](https://github.com/Claude))
+- Expect the data table in the registry's advanced demo order ([@Claude](https://github.com/Claude))
+- Merge main into the demo split branch ([@Claude](https://github.com/Claude))
+- Compare whole EqBands rather than floats for change detection ([@Claude](https://github.com/Claude))
+- Address code-quality findings on the stereo meters ([@Claude](https://github.com/Claude))
+- Reuse one StringBuilder when generating the grid demo's strings [patch] ([@Claude](https://github.com/Claude))
+- Simplify ParametricEq guards flagged by code scanning ([@Claude](https://github.com/Claude))
+- Add ParametricEq widget and extract LogFrequencyAxis (#505) ([@Claude](https://github.com/Claude))
+- Add StereoMeters: gain-reduction, correlation and goniometer meters [minor] ([@Claude](https://github.com/Claude))
+- Split the widgets demo into one class per section [patch] ([@Claude](https://github.com/Claude))
 
 ## v3.56.2 (patch)
 
