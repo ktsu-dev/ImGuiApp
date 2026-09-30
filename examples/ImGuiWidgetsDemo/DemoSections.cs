@@ -53,6 +53,7 @@ internal static class DemoSections
 		new(ImageCanvasDemo.Show, ImageCanvasDemo.ResetState),
 		new(LevelsDemo.Show, LevelsDemo.ResetState),
 		new(AssetBrowserDemo.Show, AssetBrowserDemo.ResetState),
+		new(GradientDemo.Show, GradientDemo.ResetState),
 		new(TabPanelDemo.Show, TabPanelDemo.ResetState, TabPanelDemo.Initialize),
 		new(SearchBoxDemo.Show, SearchBoxDemo.ResetState),
 		new(GridDemo.Show, GridDemo.ResetState, GridDemo.Initialize),

@@ -33,7 +33,7 @@ public sealed class DemoSectionRegistryTests
 
 	private static readonly string[] AdvancedDemoOrder =
 	[
-		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(LevelsDemo), nameof(AssetBrowserDemo),
+		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(LevelsDemo), nameof(AssetBrowserDemo), nameof(GradientDemo),
 		nameof(TabPanelDemo), nameof(SearchBoxDemo), nameof(GridDemo), nameof(VirtualTableDemo), nameof(DataTableDemo),
 		nameof(DividerDemo),
 	];
