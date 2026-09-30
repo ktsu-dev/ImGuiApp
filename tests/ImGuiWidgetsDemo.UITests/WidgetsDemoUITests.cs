@@ -50,7 +50,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "TabPanel", "SearchBox", "Grid Layout", "Virtual Table",
+		"Images & Icons", "ImageCanvas", "Levels Control", "TabPanel", "SearchBox", "Grid Layout", "Virtual Table",
 		"Data Table", "Divider Container",
 	];
 
@@ -522,6 +522,26 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.IsTrue(ColorWheelDemo.Gain.IsNeutral, "Reset all left the gain wheel pushed.");
+	}
+
+	[TestMethod]
+	public void LevelsDemo_DraggingTheBlackPointChangesTheLevels()
+	{
+		OpenSection(AdvancedDemosTab, "Levels Control");
+
+		Assert.IsTrue(IsVisible("levels_demo/input"), "The levels control's input handles were not drawn.");
+
+		Rectangle input = harness.Probe.Rect("levels_demo/input")!.Value;
+		float y = input.MinY + (input.Height / 2f);
+		harness.Mouse.Drag(input.MinX + (input.Width * 0.01f), y, input.MinX + (input.Width * 0.3f), y);
+		harness.Step(2);
+
+		Assert.IsTrue(LevelsDemo.Levels.InputBlack > 0.2f, $"Dragging the black point left it at {LevelsDemo.Levels.InputBlack}.");
+
+		harness.Click("Reset levels");
+		harness.Step(2);
+
+		Assert.AreEqual(ktsu.ImGui.Widgets.LevelsAdjustment.Identity, LevelsDemo.Levels, "Reset levels left the adjustment changed.");
 	}
 
 	[TestMethod]

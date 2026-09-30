@@ -38,6 +38,10 @@ internal static class DataAndSignalsTiles
 			ImGui.Dummy(strip);
 		});
 
+		LevelsAdjustment levelsAdjustment = new(0.08f, 0.9f, 1.4f, 0.04f, 0.96f);
+		yield return new("LevelsControl", Category, [nameof(ImGuiWidgets.LevelsControl)], _ =>
+			ImGuiWidgets.LevelsControl("##levelsControl", bins, 1, ref levelsAdjustment, plot));
+
 		List<Vector2> curve = [new(0f, 0f), new(0.3f, 0.2f), new(0.7f, 0.85f), new(1f, 1f)];
 		yield return new("CurveTrack", Category, [nameof(ImGuiWidgets.CurveTrack)], _ =>
 		{
