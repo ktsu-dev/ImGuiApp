@@ -90,21 +90,39 @@ internal static class MeterScale
 	/// <param name="peakDb">The held peak in decibels; a non-finite value draws no peak line.</param>
 	internal static void DrawVerticalMeter(ImDrawListPtr drawList, Vector2 min, Vector2 max, float db, float minDb, float maxDb, float peakDb)
 	{
+		// An empty or inverted range has no scale for the peak to sit on, so it draws no peak line.
+		float peak = maxDb - minDb > 0.0f ? peakDb : float.NegativeInfinity;
+		DrawVerticalMeter(drawList, min, max, db, peak, level => DbToFraction(level, minDb, maxDb));
+	}
+
+	/// <summary>
+	/// Draws a vertical level meter with an arbitrary level-to-height mapping: the frame background,
+	/// a zone-coloured fill rising from the bottom, an optional 2 px peak line, and the border. The
+	/// zone colour is still chosen from the dB value, not from the height.
+	/// </summary>
+	/// <param name="drawList">The draw list to draw into.</param>
+	/// <param name="min">The top-left corner of the meter.</param>
+	/// <param name="max">The bottom-right corner of the meter.</param>
+	/// <param name="db">The level in decibels; <see cref="float.NaN"/> draws no fill.</param>
+	/// <param name="peakDb">The held peak in decibels; a non-finite value draws no peak line.</param>
+	/// <param name="dbToFraction">Maps a level to the fraction of the meter's height it reaches.</param>
+	internal static void DrawVerticalMeter(ImDrawListPtr drawList, Vector2 min, Vector2 max, float db, float peakDb, Func<float, float> dbToFraction)
+	{
 		Span<Vector4> colors = ImGui.GetStyle().Colors;
 		float height = max.Y - min.Y;
 
 		drawList.AddRectFilled(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.FrameBg]));
 
-		float fill = DbToFraction(db, minDb, maxDb);
+		float fill = float.IsNaN(db) ? 0.0f : Math.Clamp(dbToFraction(db), 0.0f, 1.0f);
 		if (fill > 0.0f)
 		{
 			float fillTop = max.Y - (fill * height);
 			drawList.AddRectFilled(new Vector2(min.X, fillTop), max, ZoneColor(db).ToImGuiU32());
 		}
 
-		if (float.IsFinite(peakDb) && maxDb - minDb > 0.0f)
+		if (float.IsFinite(peakDb))
 		{
-			float peak = DbToFraction(peakDb, minDb, maxDb);
+			float peak = Math.Clamp(dbToFraction(peakDb), 0.0f, 1.0f);
 			float peakY = max.Y - (peak * height);
 			drawList.AddLine(new Vector2(min.X, peakY), new Vector2(max.X, peakY), ZoneColor(peakDb).ToImGuiU32(), 2.0f);
 		}
