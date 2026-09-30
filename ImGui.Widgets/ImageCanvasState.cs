@@ -94,5 +94,13 @@ public static partial class ImGuiWidgets
 			(Vector2 min, _) = ImageRectInViewport(imageSize, viewportSize);
 			return (viewportPoint - min) / Zoom;
 		}
+
+		/// <summary>Converts image pixel coordinates to a viewport position; the inverse of <see cref="ViewportToImage"/>.</summary>
+		/// <param name="imagePoint">Position in image pixels.</param>
+		/// <param name="imageSize">Native image size in pixels.</param>
+		/// <param name="viewportSize">Viewport size in pixels.</param>
+		/// <returns>The corresponding position in viewport pixels, relative to the viewport's top-left.</returns>
+		public Vector2 ImageToViewport(Vector2 imagePoint, Vector2 imageSize, Vector2 viewportSize) =>
+			ImageRectInViewport(imageSize, viewportSize).Min + (imagePoint * Zoom);
 	}
 }

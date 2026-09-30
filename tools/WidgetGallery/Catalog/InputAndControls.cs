@@ -10,7 +10,9 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Color;
 using ktsu.ImGui.Widgets;
+using ktsu.Semantics.Color;
 
 /// <summary>The tiles in the InputAndControls group.</summary>
 internal static class InputAndControlsTiles
@@ -86,6 +88,41 @@ internal static class InputAndControlsTiles
 		ColorWheelValue gain = new(Hue: 30f, Strength: 0.4f, Master: 0.15f);
 		yield return new("LiftGammaGain", Category, [nameof(ImGuiWidgets.LiftGammaGain)], _ =>
 			ImGuiWidgets.LiftGammaGain("Grade", ref lift, ref gamma, ref gain, 130f));
+
+		// A heat palette, the one the demo opens with.
+		List<GradientStop> gradient =
+		[
+			new(0f, Color.FromBytes(0, 0, 0, 255)),
+			new(0.35f, Color.FromBytes(255, 0, 0, 255)),
+			new(0.7f, Color.FromBytes(255, 255, 0, 255)),
+			new(1f, Color.FromBytes(255, 255, 255, 255)),
+		];
+		yield return new("GradientEditor", Category, [nameof(ImGuiWidgets.GradientEditor), nameof(ImGuiWidgets.SampleGradient)], _ =>
+		{
+			ImGuiWidgets.GradientEditor("Heat", gradient, new Vector2(300f, 24f));
+
+			// SampleGradient is what a consumer applies the stops with: a strip of it under the editor.
+			Vector2 origin = ImGui.GetCursorScreenPos();
+			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+			for (int x = 0; x < 300; x += 4)
+			{
+				Vector2 min = origin + new Vector2(x, 0f);
+				drawList.AddRectFilled(min, min + new Vector2(4f, 12f), ImGuiWidgets.SampleGradient(gradient, x / 299f).ToImGuiU32());
+			}
+
+			ImGui.Dummy(new Vector2(300f, 12f));
+		});
+
+		// A palette with the third swatch selected, so the selection ring shows.
+		List<Color> swatches =
+		[
+			NamedColors.Black, NamedColors.White, NamedColors.Red, NamedColors.Green,
+			NamedColors.Blue, NamedColors.Yellow, NamedColors.Cyan, NamedColors.Magenta,
+			NamedColors.Gray, NamedColors.Orange, NamedColors.Purple, NamedColors.Transparent,
+		];
+		int selectedSwatch = 2;
+		yield return new("SwatchPalette", Category, [nameof(ImGuiWidgets.SwatchPalette)], _ =>
+			ImGuiWidgets.SwatchPalette("Palette", swatches, ref selectedSwatch, 24f, 6));
 
 		ImGuiKnobVariant[] variants = [ImGuiKnobVariant.Tick, ImGuiKnobVariant.Dot, ImGuiKnobVariant.Wiper, ImGuiKnobVariant.WiperDot, ImGuiKnobVariant.Stepped, ImGuiKnobVariant.Space];
 		float[] knobValues = [0.25f, 0.5f, 0.8f, 0.4f, 0.6f, 0.7f];

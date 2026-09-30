@@ -24,6 +24,10 @@ internal static class DataAndSignalsTiles
 		yield return new("Histogram", Category, [nameof(ImGuiWidgets.Histogram)], _ =>
 			ImGuiWidgets.Histogram("##histogram", bins, 1, plot));
 
+		FrameTimeHistory frameTimes = BuildFrameTimes(180);
+		yield return new("FrameTimeGraph", Category, [nameof(ImGuiWidgets.FrameTimeGraph), nameof(FrameTimeHistory)], _ =>
+			ImGuiWidgets.FrameTimeGraph("##frameTimes", frameTimes, new FrameTimeGraphOptions { Size = plot }));
+
 		float[] levels = [12f, 45f, 88f];
 		yield return new("HandleTrack", Category, [nameof(ImGuiWidgets.HandleTrack)], _ =>
 		{
@@ -191,6 +195,30 @@ internal static class DataAndSignalsTiles
 	private sealed record GalleryPart(string Name, int Quantity, bool InStock);
 
 	/// <summary>A bimodal distribution, the shape a photograph's luminance histogram usually has.</summary>
+	private static FrameTimeHistory BuildFrameTimes(int count)
+	{
+		// Steady frames just under a 60 fps budget, a hitch every fortieth frame and one stall that
+		// runs past the scale, so the tile shows all three bar colours and a clipped cap.
+		FrameTimeHistory history = new(count);
+		for (int i = 0; i < count; i++)
+		{
+			float frame = 11f + (2.5f * MathF.Sin(i * 0.37f));
+			if (i % 40 == 39)
+			{
+				frame = 24f;
+			}
+
+			if (i == count - 50)
+			{
+				frame = 90f;
+			}
+
+			history.Add(frame);
+		}
+
+		return history;
+	}
+
 	private static float[] BuildHistogram(int count)
 	{
 		float[] bins = new float[count];

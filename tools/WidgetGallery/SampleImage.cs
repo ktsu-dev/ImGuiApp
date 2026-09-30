@@ -16,8 +16,9 @@ internal static class SampleImage
 	/// Uploads a sunset-like gradient with a sun disc in it: recognisably a picture at thumbnail
 	/// size, and asymmetric enough that a flipped or cropped image looks wrong.
 	/// </summary>
+	/// <param name="inverted">Whether to invert the colours, for a second image to compare against the first.</param>
 	/// <returns>The uploaded texture.</returns>
-	public static ImGuiAppTextureInfo Create()
+	public static ImGuiAppTextureInfo Create(bool inverted = false)
 	{
 		byte[] rgba = new byte[Size * Size * 4];
 
@@ -25,47 +26,68 @@ internal static class SampleImage
 		{
 			for (int x = 0; x < Size; x++)
 			{
-				float u = x / (float)(Size - 1);
-				float v = y / (float)(Size - 1);
-
-				// Sky from deep blue at the top to warm orange at the horizon, ground below it.
-				float r;
-				float g;
-				float b;
-
-				if (v < 0.68f)
-				{
-					float t = v / 0.68f;
-					r = Lerp(0.16f, 0.98f, t);
-					g = Lerp(0.20f, 0.55f, t);
-					b = Lerp(0.45f, 0.30f, t);
-				}
-				else
-				{
-					float t = (v - 0.68f) / 0.32f;
-					r = Lerp(0.20f, 0.08f, t);
-					g = Lerp(0.30f, 0.16f, t);
-					b = Lerp(0.22f, 0.10f, t);
-				}
-
-				// The sun, a little left of centre and sitting on the horizon.
-				float dx = u - 0.38f;
-				float dy = v - 0.60f;
-				float distance = MathF.Sqrt((dx * dx) + (dy * dy));
-				float sun = Math.Clamp((0.17f - distance) / 0.02f, 0f, 1f) * (v < 0.68f ? 1f : 0f);
-				r = Lerp(r, 1.00f, sun);
-				g = Lerp(g, 0.90f, sun);
-				b = Lerp(b, 0.55f, sun);
-
+				(byte r, byte g, byte b) = PixelAt(x, y, inverted);
 				int i = ((y * Size) + x) * 4;
-				rgba[i + 0] = ToByte(r);
-				rgba[i + 1] = ToByte(g);
-				rgba[i + 2] = ToByte(b);
+				rgba[i + 0] = r;
+				rgba[i + 1] = g;
+				rgba[i + 2] = b;
 				rgba[i + 3] = 255;
 			}
 		}
 
 		return ImGuiApp.CreateTexture(rgba, Size, Size);
+	}
+
+	/// <summary>
+	/// Computes one pixel of the image, so a widget that reads pixels back sees exactly what the
+	/// uploaded texture holds.
+	/// </summary>
+	/// <param name="x">The column, 0 to <see cref="Size"/> - 1.</param>
+	/// <param name="y">The row, 0 to <see cref="Size"/> - 1.</param>
+	/// <param name="inverted">Whether to invert the colours, as <see cref="Create"/> does.</param>
+	/// <returns>The pixel's sRGB channels. The image is opaque.</returns>
+	public static (byte R, byte G, byte B) PixelAt(int x, int y, bool inverted = false)
+	{
+		float u = x / (float)(Size - 1);
+		float v = y / (float)(Size - 1);
+
+		// Sky from deep blue at the top to warm orange at the horizon, ground below it.
+		float r;
+		float g;
+		float b;
+
+		if (v < 0.68f)
+		{
+			float t = v / 0.68f;
+			r = Lerp(0.16f, 0.98f, t);
+			g = Lerp(0.20f, 0.55f, t);
+			b = Lerp(0.45f, 0.30f, t);
+		}
+		else
+		{
+			float t = (v - 0.68f) / 0.32f;
+			r = Lerp(0.20f, 0.08f, t);
+			g = Lerp(0.30f, 0.16f, t);
+			b = Lerp(0.22f, 0.10f, t);
+		}
+
+		// The sun, a little left of centre and sitting on the horizon.
+		float dx = u - 0.38f;
+		float dy = v - 0.60f;
+		float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+		float sun = Math.Clamp((0.17f - distance) / 0.02f, 0f, 1f) * (v < 0.68f ? 1f : 0f);
+		r = Lerp(r, 1.00f, sun);
+		g = Lerp(g, 0.90f, sun);
+		b = Lerp(b, 0.55f, sun);
+
+		if (inverted)
+		{
+			r = 1f - r;
+			g = 1f - g;
+			b = 1f - b;
+		}
+
+		return (ToByte(r), ToByte(g), ToByte(b));
 	}
 
 	private static float Lerp(float a, float b, float t) => a + ((b - a) * t);

@@ -50,6 +50,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 ### Data and Signals
 
 - **`Histogram`**: One or more binned distributions as overlaid bars, scaled to the tallest bin; it takes pre-computed bins, so the binning scan stays off the render thread
+- **`FrameTimeGraph`**: Per-frame times as bars, newest on the right, against a budget line and a line at twice it, with over-budget bars recoloured, a cap on spikes past the scale, a hover tooltip, and a readout of the average, 99th percentile, worst frame and how many went over budget; feed a caller-owned `FrameTimeHistory` once a frame, or pass any span of milliseconds
 - **`HandleTrack`**: Draggable handles over a rectangle you supply — a histogram plot, say — kept ordered and a minimum distance apart
 - **`FlameGraph`**: A flame graph over managed sample data
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
@@ -66,6 +67,26 @@ The widgets below are grouped by what they are for. Everything is a static metho
 ### Image and Colour
 
 - **`LevelsControl`**: A levels control — a histogram with black, grey and white input handles, an output ramp with its own black and white handles, and a numeric readout. It edits a caller-owned `LevelsAdjustment`, whose `Apply` is the same transfer function the handles describe, so the curve on screen and the curve applied to pixels cannot disagree. Grey point and gamma follow the Photoshop convention
+
+### Image and Colour
+
+- **`GradientEditor`**: A colour-stop gradient editor over a caller-owned list of `GradientStop`: click the bar to add a stop sampled from the gradient, drag a stop to move it (never past a neighbour), drag it away or press Delete to remove it, and edit the selected stop's colour with a colour picker underneath. `SampleGradient` is the evaluator the bar is drawn with, interpolating in linear RGB, so the gradient on screen and the gradient a consumer applies are the same function
+
+### Image and Colour
+
+- **`SwatchPalette`**: A wrapping grid of colour swatches over a caller-owned list: click a swatch to select it, drag one to reorder the list in place, with the selection following the swatch it named. Adding, removing and editing colours is left to the host, which reads the selected index
+
+### Image and Colour
+
+- **`ImageCompare`**: Two textures of the same image, before and after, in one pannable, zoomable view, either split by a draggable divider (a wipe) or side by side in two panes that pan and zoom together. Both are placed by one caller-owned `ImageCanvasState`, so they line up to the pixel
+
+### Image and Colour
+
+- **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, rule-of-thirds guides, edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
+
+### Image and Colour
+
+- **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
 
 ### Layout and Containers
 

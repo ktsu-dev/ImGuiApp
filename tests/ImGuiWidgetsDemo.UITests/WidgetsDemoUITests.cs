@@ -43,7 +43,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
 		"Parametric EQ",
 		"Step Grid",
@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -501,6 +501,19 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void FrameTimeGraphDemo_InjectSpikeRecordsAFrame()
+	{
+		OpenSection(WidgetDemosTab, "Frame Time Graph");
+
+		Assert.IsTrue(IsVisible("Live##demoFrameTimeLive"), "The frame time section drew no live graph.");
+
+		harness.Click("Inject spike");
+		harness.Step(SettleFrames);
+
+		Assert.IsGreaterThanOrEqualTo(50f, FrameTimeGraphDemo.History.Maximum, "Inject spike did not record a 50 ms frame.");
+	}
+
+	[TestMethod]
 	public void DiffView_DrawsAHunkPerViewAndTicksTheOneThatWasClicked()
 	{
 		OpenSection(WidgetDemosTab, "Diff view");
@@ -612,6 +625,78 @@ public sealed class WidgetsDemoUITests
 
 		Assert.AreSequenceEqual([2], AssetBrowserDemo.State.SelectedIndices);
 		Assert.IsTrue(IsVisible("Asset drop target"), "The drop target sits under the browser.");
+	}
+
+	[TestMethod]
+	public void GradientDemo_ClickingTheBarAddsAStop()
+	{
+		OpenSection(AdvancedDemosTab, "Gradient Editor");
+
+		Rectangle bar = harness.Probe.Rect("gradient_demo/bar")
+			?? throw new InvalidOperationException("The gradient bar was never recorded by the probe.");
+		harness.Mouse.Click(bar.MinX + (bar.Width * 0.9f), bar.MinY + (bar.Height * 0.3f));
+		harness.Step(2);
+
+		Assert.AreEqual(5, GradientDemo.StopCount, "Clicking empty space on the bar should add a stop.");
+	}
+
+	[TestMethod]
+	public void SwatchPaletteDemo_ClickingASwatchSelectsIt()
+	{
+		OpenSection(AdvancedDemosTab, "Swatch Palette");
+
+		harness.Click("swatch_demo/3");
+		harness.Step(2);
+
+		Assert.AreEqual(3, SwatchPaletteDemo.Selected, "Clicking a swatch should select it.");
+	}
+
+	[TestMethod]
+	public void ImageCompareDemo_DraggingTheDividerMovesTheSplit()
+	{
+		OpenSection(AdvancedDemosTab, "Image Compare");
+
+		Rectangle divider = harness.Probe.Rect("compare_demo/divider")!.Value;
+		float x = divider.MinX + (divider.Width / 2f);
+		float y = divider.MinY + (divider.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 200f, y);
+		harness.Step(2);
+
+		Assert.IsGreaterThan(0.55f, ImageCompareDemo.Split, "Dragging the divider should move the split right.");
+	}
+
+	[TestMethod]
+	public void CropDemo_DraggingTheBodyMovesTheCrop()
+	{
+		OpenSection(AdvancedDemosTab, "Crop Overlay");
+
+		Assert.IsTrue(IsVisible("crop_demo/body"), "The crop overlay did not mark its body.");
+		float before = CropDemo.Crop.Center.X;
+
+		Rectangle body = harness.Probe.Rect("crop_demo/body")!.Value;
+		float x = body.MinX + (body.Width / 2f);
+		float y = body.MinY + (body.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 30f, y);
+		harness.Step(2);
+
+		Assert.IsTrue(CropDemo.Crop.Center.X > before, "Dragging the crop did not move it.");
+	}
+
+	[TestMethod]
+	public void PixelLoupe_HoveringTheImageReportsAPixel()
+	{
+		OpenSection(AdvancedDemosTab, "Pixel Loupe");
+
+		Assert.IsTrue(IsVisible("pixel_loupe"), "The loupe should be drawn beside the canvas.");
+		Assert.AreEqual(-1, PixelLoupeDemo.PixelX, "Nothing has been hovered yet.");
+
+		Rectangle canvas = harness.Probe.Rect("pixel_loupe_canvas")
+			?? throw new InvalidOperationException("The loupe's canvas was never recorded by the probe.");
+		harness.Mouse.MoveTo(canvas.MinX + (canvas.Width / 2), canvas.MinY + (canvas.Height / 2));
+		harness.Step(2);
+
+		Assert.IsTrue(PixelLoupeDemo.PixelX >= 0, "Hovering the middle of the image should pick a pixel.");
+		Assert.IsTrue(PixelLoupeDemo.PixelY >= 0, "Hovering the middle of the image should pick a pixel.");
 	}
 
 	[TestMethod]
