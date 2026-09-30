@@ -1,49 +1,47 @@
 name: Widget Gallery
 
-# Regenerates docs/gallery on every push to main that can change what a widget looks like, and
-# commits the images back to main when they differ. Nothing is committed when the output is
-# byte-identical, which it is run to run: the tool renders on the CPU rasterizer with pinned dates,
-# a generated sample folder and a pinned font, so the only thing that moves a picture is a change
-# to the code that draws it.
+# Regenerates docs/gallery after CI finishes on main, and commits the images back to main when they
+# differ. Nothing is committed when the output is byte-identical, which it is run to run: the tool
+# renders on the CPU rasterizer with pinned dates, a generated sample folder and a pinned font, so
+# the only thing that moves a picture is a change to the code that draws it.
+#
+# Why after CI rather than on the push itself: CI's release job commits VERSION.md and friends back
+# to main with a plain `git push` from the commit it was started on. A gallery commit landing on
+# main first makes that push non-fast-forward, and the release fails. Regenerating on a push always
+# won that race, because the gallery takes two minutes and CI's tests take ten. Waiting for CI to
+# complete means main already carries the release commit, and CI's own cancel-in-progress group
+# means no other main run is part way to a release of its own when this one pushes.
+#
+# There is no paths filter, because workflow_run cannot have one and because the triggering commit
+# is not the only one this run covers: CI cancels a superseded run, so a widget change can reach
+# main under the CI run of the push after it. Regenerating after every successful main run costs a
+# couple of minutes and commits nothing when nothing changed.
 #
 # Why the commit back cannot loop or cut a release:
 #   - It is pushed with the workflow's own GITHUB_TOKEN, and GitHub starts no workflow run for a
-#     push made with that token. Neither this workflow nor ci.yml sees it.
+#     push made with that token. Neither CI nor, through it, this workflow sees it.
 #   - It carries `[bot][skip ci]`, the prefix KtsuBuild's own metadata commits use. Should the
 #     token ever change to one that does trigger runs, GitHub still skips push workflows for it,
 #     and KtsuBuild leaves it out of the version calculation and the changelog either way.
-#   - It only touches docs/gallery, which is outside the `paths:` filter below.
 #
 # Why it can push to a protected main: the main ruleset lists github-actions[bot] (the identity
 # behind GITHUB_TOKEN) as an always-bypass actor, which is also how KtsuBuild pushes its metadata
 # commits. No extra token or ruleset change is needed.
 #
-# This workflow runs on push only, so it does not belong in dependabot-merge.yml's list of
-# pull-request workflows.
+# This workflow never runs for a pull request, so it does not belong in dependabot-merge.yml's list
+# of pull-request workflows.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    # Everything tools/WidgetGallery builds from, by project reference, plus what decides which
-    # package versions and SDK it builds with. A project added to that closure belongs here too.
-    paths:
-      - "ImGui.App/**"
-      - "ImGui.App.Testing/**"
-      - "ImGui.Color/**"
-      - "ImGui.Popups/**"
-      - "ImGui.Probes/**"
-      - "ImGui.Styler/**"
-      - "ImGui.Widgets/**"
-      - "tools/WidgetGallery/**"
-      - "Directory.Packages.props"
-      - "global.json"
-      - ".github/workflows/widget-gallery.yml"
   workflow_dispatch:
 
-# A newer push supersedes an older one: the newest run regenerates from the newest code, so an
-# older run that is still going has nothing left worth committing.
+# A newer run supersedes an older one: both regenerate from the current main, so an older run that
+# is still going has nothing left worth committing.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 permissions:
@@ -62,8 +60,13 @@ jobs:
     name: Regenerate widget gallery
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Never on a fork's main, where there is nothing of ours to commit to.
-    if: github.repository == 'ktsu-dev/ImGuiApp'
+    # Only after a push to main that CI passed: not after a pull request, the nightly schedule or a
+    # failed or cancelled run. Never on a fork, where there is nothing of ours to commit to.
+    if: >-
+      github.repository == 'ktsu-dev/ImGuiApp' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.conclusion == 'success'))
     permissions:
       contents: write # To push the regenerated images to main
 
@@ -74,6 +77,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
         with:
+          # The current main, which by now carries CI's release commit, not the commit CI ran on.
+          ref: main
           fetch-depth: 1
           lfs: false
           persist-credentials: true
@@ -113,11 +118,11 @@ jobs:
       # .gitignore and friends from its own copy), and none of that belongs in this commit.
       - name: Commit and push the images
         env:
-          SOURCE_SHA: ${{ github.sha }}
           # A rebase below checks files out, and nothing here reads an image's content, so there
           # is no reason to download LFS objects for it. Pointers stay pointers.
           GIT_LFS_SKIP_SMUDGE: "1"
         run: |
+          source_sha=$(git rev-parse HEAD)
           git add --all docs/gallery
 
           if git diff --cached --quiet; then
@@ -140,13 +145,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit --quiet --message "[bot][skip ci] Regenerate the widget gallery" \
-            --message "Rendered by .github/workflows/widget-gallery.yml from $SOURCE_SHA."
+            --message "Rendered by .github/workflows/widget-gallery.yml from $source_sha."
 
           # Drop what the build rewrote and was left unstaged, which a rebase refuses to run over.
           git reset --hard --quiet HEAD
 
-          # The release job commits its metadata back to main from the same push, so main may have
-          # moved on since checkout. The two commits touch different files, so a rebase is clean.
+          # Main may still have moved on since checkout, a manual dispatch racing a release being
+          # the likely way. The commits touch different files, so a rebase is clean.
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
               exit 0
