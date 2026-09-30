@@ -1,0 +1,161 @@
+name: Widget Gallery
+
+# Regenerates docs/gallery on every push to main that can change what a widget looks like, and
+# commits the images back to main when they differ. Nothing is committed when the output is
+# byte-identical, which it is run to run: the tool renders on the CPU rasterizer with pinned dates,
+# a generated sample folder and a pinned font, so the only thing that moves a picture is a change
+# to the code that draws it.
+#
+# Why the commit back cannot loop or cut a release:
+#   - It is pushed with the workflow's own GITHUB_TOKEN, and GitHub starts no workflow run for a
+#     push made with that token. Neither this workflow nor ci.yml sees it.
+#   - It carries `[bot][skip ci]`, the prefix KtsuBuild's own metadata commits use. Should the
+#     token ever change to one that does trigger runs, GitHub still skips push workflows for it,
+#     and KtsuBuild leaves it out of the version calculation and the changelog either way.
+#   - It only touches docs/gallery, which is outside the `paths:` filter below.
+#
+# Why it can push to a protected main: the main ruleset lists github-actions[bot] (the identity
+# behind GITHUB_TOKEN) as an always-bypass actor, which is also how KtsuBuild pushes its metadata
+# commits. No extra token or ruleset change is needed.
+#
+# This workflow runs on push only, so it does not belong in dependabot-merge.yml's list of
+# pull-request workflows.
+
+on:
+  push:
+    branches: [main]
+    # Everything tools/WidgetGallery builds from, by project reference, plus what decides which
+    # package versions and SDK it builds with. A project added to that closure belongs here too.
+    paths:
+      - "ImGui.App/**"
+      - "ImGui.App.Testing/**"
+      - "ImGui.Color/**"
+      - "ImGui.Popups/**"
+      - "ImGui.Probes/**"
+      - "ImGui.Styler/**"
+      - "ImGui.Widgets/**"
+      - "tools/WidgetGallery/**"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/widget-gallery.yml"
+  workflow_dispatch:
+
+# A newer push supersedes an older one: the newest run regenerates from the newest code, so an
+# older run that is still going has nothing left worth committing.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0"
+  # google/material-design-icons, pinned to a commit and checked against its hash. The date picker,
+  # file tree and file dialogs draw Material Icons glyphs; without the font their tiles show
+  # placeholder boxes. The font is Apache-2.0 and is not committed to this repository.
+  MATERIAL_ICONS_URL: https://raw.githubusercontent.com/google/material-design-icons/bd8cb85bd4bad964fe6918f79665bb40c3a8efef/font/MaterialIcons-Regular.ttf
+  MATERIAL_ICONS_SHA256: ef149f08bdd2ff09a4e2c8573476b7b0f3fbb15b623954ade59899e7175bedda
+
+jobs:
+  regenerate:
+    name: Regenerate widget gallery
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Never on a fork's main, where there is nothing of ours to commit to.
+    if: github.repository == 'ktsu-dev/ImGuiApp'
+    permissions:
+      contents: write # To push the regenerated images to main
+
+    steps:
+      # LFS content is not fetched: nothing the tool builds from is in LFS, and every image it
+      # writes replaces the pointer that was there. The LFS filters are installed below instead,
+      # which is what makes git compare and commit the images as LFS objects.
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: true
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
+
+      - name: Install Git LFS filters
+        run: git lfs install --local
+
+      - name: Download Material Icons
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$RUNNER_TEMP/MaterialIcons-Regular.ttf" "$MATERIAL_ICONS_URL"
+          echo "$MATERIAL_ICONS_SHA256  $RUNNER_TEMP/MaterialIcons-Regular.ttf" | sha256sum --check
+
+      - name: Build the widget gallery tool
+        run: dotnet build tools/WidgetGallery/WidgetGallery.csproj -c Release
+
+      # The old images are removed first so that a tile whose widget was renamed or removed goes
+      # with it, rather than lingering beside its replacement. The tool exits non-zero when any
+      # tile fails, which fails the job before anything is committed.
+      - name: Regenerate the gallery
+        run: |
+          rm -f docs/gallery/widgets/*.png docs/gallery/widgets*.png
+          dotnet run -c Release --no-build --project tools/WidgetGallery -- \
+            --material-icons "$RUNNER_TEMP/MaterialIcons-Regular.ttf"
+
+      # Only docs/gallery is staged. The build also rewrites some tracked files (ktsu.Sdk syncs
+      # .gitignore and friends from its own copy), and none of that belongs in this commit.
+      - name: Commit and push the images
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          # A rebase below checks files out, and nothing here reads an image's content, so there
+          # is no reason to download LFS objects for it. Pointers stay pointers.
+          GIT_LFS_SKIP_SMUDGE: "1"
+        run: |
+          git add --all docs/gallery
+
+          if git diff --cached --quiet; then
+            echo "The widget gallery is up to date."
+            exit 0
+          fi
+
+          git diff --cached --stat
+
+          # A PNG committed as a blob rather than as an LFS pointer would bloat the history for
+          # good, so refuse to push one.
+          for path in $(git diff --cached --name-only --diff-filter=AM); do
+            header=$(git cat-file blob ":$path" | head -c 42 | tr -d '\0' || true)
+            if [[ "$header" != "version https://git-lfs.github.com/spec/v1" ]]; then
+              echo "::error file=$path::Staged as a raw blob rather than an LFS pointer."
+              exit 1
+            fi
+          done
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet --message "[bot][skip ci] Regenerate the widget gallery" \
+            --message "Rendered by .github/workflows/widget-gallery.yml from $SOURCE_SHA."
+
+          # Drop what the build rewrote and was left unstaged, which a rebase refuses to run over.
+          git reset --hard --quiet HEAD
+
+          # The release job commits its metadata back to main from the same push, so main may have
+          # moved on since checkout. The two commits touch different files, so a rebase is clean.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt); rebasing onto the current main."
+            sleep $((attempt * 5))
+            git fetch --depth=50 origin main
+            git rebase FETCH_HEAD
+          done
+
+          echo "::error::Could not push the regenerated gallery to main."
+          exit 1
