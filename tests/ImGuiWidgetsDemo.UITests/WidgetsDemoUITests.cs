@@ -43,7 +43,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
 		"Parametric EQ",
 		"Step Grid",
@@ -518,6 +518,31 @@ public sealed class WidgetsDemoUITests
 			FirstHunkOnly,
 			DiffViewDemo.FirstSelected,
 			"Ticking a hunk's checkbox is the whole point of the widget, so it has to reach the caller's set.");
+	}
+
+	[TestMethod]
+	public void Toolbar_ButtonsReportTheirClicksAndTogglesLatch()
+	{
+		OpenSection(WidgetDemosTab, "Toolbar");
+
+		Assert.IsTrue(IsVisible("##editToolbar"), "The single-line toolbar was not drawn.");
+		Assert.IsTrue(IsVisible("##transportToolbar"), "The two-line toolbar was not drawn.");
+
+		harness.Click("##editToolbar/Save");
+		harness.Step(2);
+		Assert.AreEqual("Save", ToolbarDemo.LastAction, "Clicking Save did not reach the demo.");
+
+		harness.Click("##transportToolbar/Play");
+		harness.Step(2);
+		Assert.AreEqual("Play", ToolbarDemo.LastAction, "Clicking Play in the two-line toolbar did not reach the demo.");
+
+		harness.Click("##editToolbar/Redo");
+		harness.Step(2);
+		Assert.AreEqual("Play", ToolbarDemo.LastAction, "The disabled Redo button reported a click.");
+
+		harness.Click("##editToolbar/Bold");
+		harness.Step(2);
+		Assert.IsTrue(ToolbarDemo.Bold, "The Bold toggle did not turn on.");
 	}
 
 	[TestMethod]

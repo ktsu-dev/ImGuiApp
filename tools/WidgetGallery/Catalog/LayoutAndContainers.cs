@@ -32,6 +32,8 @@ internal static class LayoutAndContainersTiles
 			}
 		});
 
+		yield return ToolbarTile(Category);
+
 		string[] cells = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India"];
 		yield return new("Grid", Category, [nameof(ImGuiWidgets.RowMajorGrid), nameof(ImGuiWidgets.ColumnMajorGrid)], _ =>
 			ImGuiWidgets.RowMajorGrid(
@@ -277,5 +279,33 @@ internal static class LayoutAndContainersTiles
 	{
 		(byte r, byte g, byte b) = SampleImage.PixelAt(x, y);
 		return Color.FromBytes(r, g, b);
+	}
+
+	// Its own method because the toolbar's option types push Build past the analyzers' class-coupling limit.
+	private static GalleryEntry ToolbarTile(GalleryCategory category)
+	{
+		bool bold = true;
+		return new("Toolbar", category,
+			[nameof(ImGuiWidgets.Toolbar), nameof(ImGuiWidgets.ToolbarSeparator), nameof(ImGuiWidgets.ToolbarButton), nameof(ImGuiWidgets.ToolbarToggleButton)], _ =>
+		{
+			// Material Icons code points, which the gallery merges into its font when it has them.
+			using (ImGuiWidgets.Toolbar("##toolbar", new ToolbarOptions { Width = 340f }))
+			{
+				ImGuiWidgets.ToolbarButton("Open", "\uE2C7");
+				ImGuiWidgets.ToolbarButton("Save", "\uE161");
+				ImGuiWidgets.ToolbarSeparator();
+				ImGuiWidgets.ToolbarToggleButton("Bold", "\uE238", ref bold, new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly });
+				ImGuiWidgets.ToolbarButton("Redo", "\uE15A", new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly, Enabled = false });
+			}
+
+			ImGui.Spacing();
+			using (ImGuiWidgets.Toolbar("##toolbarAbove", new ToolbarOptions { Width = 340f, Layout = ToolbarButtonLayout.GlyphAbove }))
+			{
+				ImGuiWidgets.ToolbarButton("Play", "\uE037", new ToolbarButtonOptions { MinWidth = 56f });
+				ImGuiWidgets.ToolbarButton("Stop", "\uE047", new ToolbarButtonOptions { MinWidth = 56f });
+				ImGuiWidgets.ToolbarSeparator();
+				ImGuiWidgets.ToolbarButton("Settings", "\uE8B8", new ToolbarButtonOptions { MinWidth = 56f });
+			}
+		});
 	}
 }
