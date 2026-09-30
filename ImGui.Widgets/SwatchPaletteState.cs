@@ -228,6 +228,9 @@ public static partial class ImGuiWidgets
 			Dragging = false;
 		}
 
-		private static int FloorOrZero(float value) => float.IsNaN(value) ? 0 : (int)Math.Clamp(MathF.Floor(value), int.MinValue / 2, int.MaxValue / 2);
+		/// <summary>How far either way a floored index is clamped, so the cast back to <see cref="int"/> cannot overflow.</summary>
+		private const float IndexLimit = 1 << 30;
+
+		private static int FloorOrZero(float value) => float.IsNaN(value) ? 0 : (int)Math.Clamp(MathF.Floor(value), -IndexLimit, IndexLimit);
 	}
 }
