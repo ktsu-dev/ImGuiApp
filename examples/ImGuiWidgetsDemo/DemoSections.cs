@@ -36,6 +36,7 @@ internal static class DemoSections
 		new(TransportScrubberDemo.Show, TransportScrubberDemo.ResetState),
 		new(SpectrumAnalyzerDemo.Show, SpectrumAnalyzerDemo.ResetState),
 		new(EnvelopeEditorDemo.Show, EnvelopeEditorDemo.ResetState),
+		new(ParametricEqDemo.Show, ParametricEqDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
 	];

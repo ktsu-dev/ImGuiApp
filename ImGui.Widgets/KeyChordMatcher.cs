@@ -37,6 +37,19 @@ internal static class KeyChordMatcher
 		["PGUP"] = ImGuiKey.PageUp,
 		["PGDN"] = ImGuiKey.PageDown,
 		["SPACEBAR"] = ImGuiKey.Space,
+		// A chord written with the symbol itself, such as Ctrl+= or Ctrl+/, keeps the symbol as the
+		// note's name, and ImGui only knows these keys by their spelled-out names.
+		["'"] = ImGuiKey.Apostrophe,
+		[","] = ImGuiKey.Comma,
+		["-"] = ImGuiKey.Minus,
+		["."] = ImGuiKey.Period,
+		["/"] = ImGuiKey.Slash,
+		[";"] = ImGuiKey.Semicolon,
+		["="] = ImGuiKey.Equal,
+		["["] = ImGuiKey.LeftBracket,
+		["\\"] = ImGuiKey.Backslash,
+		["]"] = ImGuiKey.RightBracket,
+		["`"] = ImGuiKey.GraveAccent,
 	};
 
 	/// <summary>Reports whether a chord was pressed this frame.</summary>
