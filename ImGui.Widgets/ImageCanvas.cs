@@ -35,7 +35,9 @@ public static partial class ImGuiWidgets
 
 		Vector2 origin = ImGui.GetCursorScreenPos();
 
-		// Claims the region with its own invisible button, so IsItemHovered below refers to it.
+		// Claims the region with its own invisible button, so IsItemHovered below refers to it. Overlap is
+		// allowed so an overlay submitted over the canvas afterwards, such as a crop, takes the hover.
+		ImGui.SetNextItemAllowOverlap();
 		GestureResult gesture = GestureDetector("##canvas", canvasSize);
 		ImGuiProbes.MarkItem(id);
 		bool hovered = ImGui.IsItemHovered();
