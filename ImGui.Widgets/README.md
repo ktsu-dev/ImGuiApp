@@ -75,6 +75,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Card`**: A scoped elevated panel that draws its shadow and rounded background behind whatever the `using` block renders
 - **`Tree`**: Collapsible `Branch` and terminal `Leaf` nodes, with connector lines drawn between them
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
+- **`AssetBrowser`**: A virtualized grid of thumbnail tiles over a caller-owned `AssetBrowserState`, with click, Ctrl+click and Shift+click selection, arrow-key focus, Ctrl+wheel tile resizing, double-click or Enter to activate, and dragging the selection out as a payload a drop target reads with `TryAcceptAssetPayload`. Only the visible rows ask for a label or thumbnail, so fifty thousand assets cost a screenful
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
