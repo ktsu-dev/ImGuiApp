@@ -50,6 +50,9 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`HandleTrack`**: Draggable handles over a rectangle you supply — a histogram plot, say — kept ordered and a minimum distance apart
 - **`FlameGraph`**: A flame graph over managed sample data
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
+- **`GainReductionMeter`**: A vertical meter of how many dB a compressor or limiter is pulling down, filling from the top edge, with an optional held peak
+- **`CorrelationMeter`**: A horizontal phase-correlation bar from -1 through 0 to +1, filling outward from the centre; the ballistics live in a caller-owned `StereoMetersState`
+- **`Goniometer`**: A Lissajous plot of mid against side for a stereo block, so mono draws a vertical line and inverted material a horizontal one
 - **`Scope`**: An oscilloscope-style waveform over a block of audio samples
 - **`Waveform`**: A waveform overview of a whole clip, drawn from a min/max peak overview (`ComputeWaveformPeaks` builds one), with a click-or-drag playhead and a loop region whose edges drag like a `HandleTrack`'s; Shift-drag draws a new loop. A zoomable overload draws the window of a long clip that a caller-owned `TimelineView` shows, from a `WaveformPeakSource` such as the built-in `WaveformPeakCache`, a min/max pyramid that keeps a one-sample spike at every zoom; Ctrl+wheel zooms about the pointer, Shift+wheel and the scrollbar scroll, middle-drag pans, a scrub held past an edge scrolls, and the view pages to follow the playhead
 - **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply

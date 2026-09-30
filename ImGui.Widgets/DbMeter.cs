@@ -2,13 +2,9 @@
 
 namespace ktsu.ImGui.Widgets;
 
-using System;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
-
-using ktsu.ImGui.Color;
-using ktsu.Semantics.Color;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -39,44 +35,8 @@ public static partial class ImGuiWidgets
 		Vector2 cursorPos = ImGui.GetCursorScreenPos();
 		ImGui.Dummy(meterSize);
 
-		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-		Span<Vector4> colors = ImGui.GetStyle().Colors;
-		Vector2 min = cursorPos;
 		Vector2 max = new(cursorPos.X + meterSize.X, cursorPos.Y + meterSize.Y);
-
-		// Background and border.
-		drawList.AddRectFilled(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.FrameBg]));
-
-		float range = maxDb - minDb;
-		float fill = range > 0 ? Math.Clamp((db - minDb) / range, 0.0f, 1.0f) : 0.0f;
-		float fillTop = max.Y - (fill * meterSize.Y);
-
-		if (fill > 0.0f)
-		{
-			drawList.AddRectFilled(new Vector2(min.X, fillTop), max, ZoneColor(db).ToImGuiU32());
-		}
-
-		// Peak-hold marker.
-		if (float.IsFinite(peakDb) && range > 0)
-		{
-			float peak = Math.Clamp((peakDb - minDb) / range, 0.0f, 1.0f);
-			float peakY = max.Y - (peak * meterSize.Y);
-			drawList.AddLine(new Vector2(min.X, peakY), new Vector2(max.X, peakY), ZoneColor(peakDb).ToImGuiU32(), 2.0f);
-		}
-
-		drawList.AddRect(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.Border]));
+		MeterScale.DrawVerticalMeter(ImGui.GetWindowDrawList(), cursorPos, max, db, minDb, maxDb, peakDb);
 		ImGui.PopID();
 	}
-
-	/// <summary>
-	/// Returns the conventional meter color for a level in decibels.
-	/// </summary>
-	/// <param name="db">The level, in decibels.</param>
-	/// <returns>Green below -6 dB, amber up to 0 dB, otherwise red.</returns>
-	private static ImColor ZoneColor(float db) => db switch
-	{
-		> 0.0f => new Srgb(0.90f, 0.20f, 0.20f).ToImColor(1.0f),
-		> -6.0f => new Srgb(0.90f, 0.78f, 0.20f).ToImColor(1.0f),
-		_ => new Srgb(0.25f, 0.80f, 0.35f).ToImColor(1.0f),
-	};
 }

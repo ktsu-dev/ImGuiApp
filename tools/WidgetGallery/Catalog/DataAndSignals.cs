@@ -62,6 +62,33 @@ internal static class DataAndSignalsTiles
 			}
 		});
 
+		(float Reduction, float Peak)[] reductions = [(3f, 6f), (9f, 12f), (18f, 20f)];
+		yield return new("GainReductionMeter", Category, [nameof(ImGuiWidgets.GainReductionMeter)], _ =>
+		{
+			for (int i = 0; i < reductions.Length; i++)
+			{
+				if (i > 0)
+				{
+					ImGui.SameLine();
+				}
+
+				ImGuiWidgets.GainReductionMeter($"##reduction{i}", reductions[i].Reduction, new Vector2(18f, 140f), peakReductionDb: reductions[i].Peak);
+			}
+		});
+
+		float[] correlations = [0.8f, 0.2f, -0.6f];
+		yield return new("CorrelationMeter", Category, [nameof(ImGuiWidgets.CorrelationMeter), nameof(ImGuiWidgets.StereoMetersState)], _ =>
+		{
+			for (int i = 0; i < correlations.Length; i++)
+			{
+				ImGuiWidgets.CorrelationMeter($"##correlation{i}", correlations[i], new Vector2(240f, 18f));
+			}
+		});
+
+		(float[] goniometerLeft, float[] goniometerRight) = BuildStereo(512);
+		yield return new("Goniometer", Category, [nameof(ImGuiWidgets.Goniometer)], _ =>
+			ImGuiWidgets.Goniometer("##goniometer", goniometerLeft, goniometerRight, new Vector2(140f, 140f)));
+
 		float[] wave = BuildWave(256);
 		yield return new("Scope", Category, [nameof(ImGuiWidgets.Scope)], _ =>
 			ImGuiWidgets.Scope("##scope", wave, plot, 1.2f));
@@ -177,6 +204,23 @@ internal static class DataAndSignalsTiles
 	}
 
 	/// <summary>A fundamental with a couple of harmonics, so the trace looks like a signal and not a textbook sine.</summary>
+	// A slightly widened stereo pair: the right channel lags and carries a little of its own harmonic,
+	// so the goniometer draws an ellipse leaning up the mid axis rather than a bare line.
+	private static (float[] Left, float[] Right) BuildStereo(int count)
+	{
+		float[] left = new float[count];
+		float[] right = new float[count];
+
+		for (int i = 0; i < count; i++)
+		{
+			float t = i / (float)count * MathF.Tau * 3f;
+			left[i] = 0.75f * MathF.Sin(t);
+			right[i] = (0.6f * MathF.Sin(t + 0.5f)) + (0.15f * MathF.Sin(5f * t));
+		}
+
+		return (left, right);
+	}
+
 	private static float[] BuildWave(int count)
 	{
 		float[] samples = new float[count];

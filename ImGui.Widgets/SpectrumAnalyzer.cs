@@ -141,14 +141,14 @@ public static partial class ImGuiWidgets
 						// Each segment takes the zone of its louder end, so the line turns red
 						// exactly where a bar would have.
 						float louder = Math.Max(level, levels[band - 1]);
-						drawList.AddLine(previousPoint, point, ZoneColor(louder).ToImGuiU32(), 1.5f);
+						drawList.AddLine(previousPoint, point, MeterScale.ZoneColor(louder).ToImGuiU32(), 1.5f);
 					}
 
 					previousPoint = point;
 				}
 				else if (fill > 0f)
 				{
-					drawList.AddRectFilled(new Vector2(left, top), new Vector2(right, max.Y), ZoneColor(level).ToImGuiU32());
+					drawList.AddRectFilled(new Vector2(left, top), new Vector2(right, max.Y), MeterScale.ZoneColor(level).ToImGuiU32());
 				}
 
 				float peakDb = peaks[band];
@@ -156,7 +156,7 @@ public static partial class ImGuiWidgets
 				{
 					float peak = Math.Clamp((peakDb - minDb) / range, 0f, 1f);
 					float peakY = max.Y - (peak * analyzerSize.Y);
-					drawList.AddLine(new Vector2(left, peakY), new Vector2(right, peakY), ZoneColor(peakDb).ToImGuiU32(), 2.0f);
+					drawList.AddLine(new Vector2(left, peakY), new Vector2(right, peakY), MeterScale.ZoneColor(peakDb).ToImGuiU32(), 2.0f);
 				}
 			}
 		}
