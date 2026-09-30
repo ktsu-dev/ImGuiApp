@@ -36,6 +36,15 @@ public sealed record class ToolbarButtonOptions
 	/// <summary>Gets the glyph colour. Null uses <see cref="ImGuiCol.Text"/>, or <see cref="ImGuiCol.TextDisabled"/> when disabled.</summary>
 	public ImColor? GlyphColor { get; init; }
 
+	/// <summary>
+	/// Gets the glyph size in pixels, drawn from the current font at that size, so an icon can be
+	/// larger or smaller than the label beside it. Null means the enclosing toolbar's
+	/// <see cref="ToolbarOptions.GlyphSize"/>, or the current font size. Non-positive values are ignored.
+	/// A button's glyph larger than its toolbar's makes the button taller than the toolbar's row, so
+	/// set a toolbar-wide size on <see cref="ToolbarOptions.GlyphSize"/>.
+	/// </summary>
+	public float? GlyphSize { get; init; }
+
 	/// <summary>Gets the minimum button width in pixels. Content is centred in any extra width. Defaults to 0.</summary>
 	public float MinWidth { get; init; }
 
@@ -104,20 +113,23 @@ public static partial class ImGuiWidgets
 			bool drawsLabel = layout is ToolbarButtonLayout.GlyphLeading or ToolbarButtonLayout.GlyphAbove or ToolbarButtonLayout.LabelOnly;
 
 			ImGuiStylePtr style = ImGui.GetStyle();
-			// The glyph gets a slot one font size tall, with its drawn pixels centred in it, rather than a
+			// The glyph gets a slot one glyph size tall, with its drawn pixels centred in it, rather than a
 			// line of text: an icon font merged into a text font keeps its own vertical metrics, so a line
-			// leaves a glyph above its label with a gap under it. The slot is the same for every glyph, so
-			// labels in a row stay level whatever each icon's own height.
+			// leaves a glyph above its label with a gap under it. The slot is the same for every glyph of a
+			// size, so labels in a row stay level whatever each icon's own height.
+			float glyphPixels = ResolveGlyphPixels(options, toolbar);
 			Vector2 glyphSize = Vector2.Zero;
 			Vector2 inkMin = Vector2.Zero;
 			Vector2 inkMax = Vector2.Zero;
 			if (drawsGlyph)
 			{
+				ImGui.PushFont(ImGui.GetFont(), glyphPixels);
 				glyphSize = ImGui.CalcTextSize(glyph);
 				inkMin = GlyphInk(glyph, out inkMax);
+				ImGui.PopFont();
 				if (inkMax.Y > inkMin.Y)
 				{
-					glyphSize.Y = MathF.Min(glyphSize.Y, MathF.Max(ImGui.GetFontSize(), inkMax.Y - inkMin.Y));
+					glyphSize.Y = MathF.Min(glyphSize.Y, MathF.Max(glyphPixels, inkMax.Y - inkMin.Y));
 				}
 			}
 
@@ -143,7 +155,9 @@ public static partial class ImGuiWidgets
 			{
 				uint glyphColor = enabled && options.GlyphColor is ImColor custom ? custom.ToImGuiU32() : textColor;
 				Vector2 correction = ToolbarGeometry.GlyphInkCorrection(glyphSize, inkMin, inkMax, layout);
+				ImGui.PushFont(ImGui.GetFont(), glyphPixels);
 				drawList.AddText(origin + metrics.GlyphOffset + correction, glyphColor, glyph);
+				ImGui.PopFont();
 			}
 
 			if (drawsLabel)
@@ -157,6 +171,17 @@ public static partial class ImGuiWidgets
 			DrawTooltip(label, visible, layout, options);
 
 			return clicked && enabled;
+		}
+
+		/// <summary>The size to draw a button's glyph at: its own, then its toolbar's, then the current font's.</summary>
+		private static float ResolveGlyphPixels(ToolbarButtonOptions options, ToolbarContext? toolbar)
+		{
+			if (options.GlyphSize is float own && own > 0.0f)
+			{
+				return own;
+			}
+
+			return toolbar?.GlyphSize is float shared && shared > 0.0f ? shared : ImGui.GetFontSize();
 		}
 
 		/// <summary>

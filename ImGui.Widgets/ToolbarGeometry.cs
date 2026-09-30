@@ -163,9 +163,24 @@ public static class ToolbarGeometry
 	/// <param name="frameHeight">The standard frame height.</param>
 	/// <returns>The row height in pixels.</returns>
 	public static float RowHeight(ToolbarButtonLayout toolbarLayout, float lineHeight, Vector2 framePadding, Vector2 innerSpacing, float frameHeight) =>
+		RowHeight(toolbarLayout, lineHeight, lineHeight, framePadding, innerSpacing, frameHeight);
+
+	/// <summary>
+	/// Gets the height of a toolbar's button row when its glyphs are drawn at a different size from
+	/// its labels: a glyph line over a label line for a <see cref="ToolbarButtonLayout.GlyphAbove"/>
+	/// toolbar, otherwise one frame tall or the glyph line and padding, whichever is taller.
+	/// </summary>
+	/// <param name="toolbarLayout">The toolbar's layout.</param>
+	/// <param name="lineHeight">The height of one line of label text.</param>
+	/// <param name="glyphLineHeight">The height of one line of text at the glyph size.</param>
+	/// <param name="framePadding">The padding between a button frame and its content.</param>
+	/// <param name="innerSpacing">The gap between glyph and label.</param>
+	/// <param name="frameHeight">The standard frame height.</param>
+	/// <returns>The row height in pixels.</returns>
+	public static float RowHeight(ToolbarButtonLayout toolbarLayout, float lineHeight, float glyphLineHeight, Vector2 framePadding, Vector2 innerSpacing, float frameHeight) =>
 		toolbarLayout == ToolbarButtonLayout.GlyphAbove
-			? framePadding.Y + lineHeight + innerSpacing.Y + lineHeight + framePadding.Y
-			: frameHeight;
+			? framePadding.Y + glyphLineHeight + innerSpacing.Y + lineHeight + framePadding.Y
+			: MathF.Max(frameHeight, glyphLineHeight + (2.0f * framePadding.Y));
 
 	/// <summary>Gets the width a toolbar separator reserves: a one-pixel line with inner spacing either side.</summary>
 	/// <param name="innerSpacing">The inner item spacing.</param>

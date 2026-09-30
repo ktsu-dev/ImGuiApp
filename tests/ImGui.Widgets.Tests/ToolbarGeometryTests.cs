@@ -113,6 +113,20 @@ public sealed class ToolbarGeometryTests
 	}
 
 	[TestMethod]
+	public void RowHeight_MakesRoomForALargerGlyphLine()
+	{
+		// 3 + 26 + 4 + 13 + 3: the glyph line grows, the label line does not.
+		Assert.AreEqual(49, ToolbarGeometry.RowHeight(ToolbarButtonLayout.GlyphAbove, 13, 26, Pad, Inner, FrameHeight));
+		Assert.AreEqual(32, ToolbarGeometry.RowHeight(ToolbarButtonLayout.GlyphLeading, 13, 26, Pad, Inner, FrameHeight));
+	}
+
+	[TestMethod]
+	public void RowHeight_NeverShrinksBelowAFrameForASmallerGlyph()
+	{
+		Assert.AreEqual(FrameHeight, ToolbarGeometry.RowHeight(ToolbarButtonLayout.GlyphLeading, 13, 8, Pad, Inner, FrameHeight));
+	}
+
+	[TestMethod]
 	public void SeparatorWidth_IsALineWithSpacingEitherSide() =>
 		Assert.AreEqual(9, ToolbarGeometry.SeparatorWidth(Inner));
 

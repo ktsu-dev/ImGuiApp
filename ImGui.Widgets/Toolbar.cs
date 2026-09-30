@@ -21,6 +21,13 @@ public sealed record class ToolbarOptions
 	/// </summary>
 	public ToolbarButtonLayout Layout { get; init; } = ToolbarButtonLayout.GlyphLeading;
 
+	/// <summary>
+	/// Gets the glyph size in pixels for every button in the toolbar that does not set its own
+	/// <see cref="ToolbarButtonOptions.GlyphSize"/>. The row grows to fit it, and labels stay at the
+	/// current font size. Null or non-positive uses the current font size.
+	/// </summary>
+	public float? GlyphSize { get; init; }
+
 	/// <summary>Gets the strip width in pixels. Null or non-positive fills <c>ImGui.GetContentRegionAvail().X</c>.</summary>
 	public float? Width { get; init; }
 
@@ -38,7 +45,7 @@ public sealed record class ToolbarOptions
 /// The toolbar currently being drawn: what its buttons and separators need to know to lay
 /// themselves out inside it.
 /// </summary>
-internal sealed class ToolbarContext(ToolbarButtonLayout layout, float rowHeight, float spacing, float paddingY)
+internal sealed class ToolbarContext(ToolbarButtonLayout layout, float rowHeight, float spacing, float paddingY, float? glyphSize)
 {
 	// The toolbars currently open, innermost last. ImGui is itself an ambient-context API and a
 	// strip's contents are lexical, so the buttons find their toolbar here rather than being handed
@@ -55,6 +62,8 @@ internal sealed class ToolbarContext(ToolbarButtonLayout layout, float rowHeight
 	public float RowHeight { get; } = rowHeight;
 
 	public float PaddingY { get; } = paddingY;
+
+	public float? GlyphSize { get; } = glyphSize is > 0.0f ? glyphSize : null;
 
 	public static void Push(ToolbarContext context) => (open ??= new Stack<ToolbarContext>()).Push(context);
 
@@ -136,7 +145,12 @@ public static partial class ImGuiWidgets
 			ImGuiStylePtr style = ImGui.GetStyle();
 			Vector2 padding = options.Padding ?? style.FramePadding;
 			float spacing = options.Spacing ?? (style.ItemSpacing.X * 0.5f);
-			float rowHeight = ToolbarGeometry.RowHeight(options.Layout, ImGui.GetTextLineHeight(),
+			// A glyph drawn at another size gets a line of that size, the height its button measures to at most.
+			float lineHeight = ImGui.GetTextLineHeight();
+			float glyphLineHeight = options.GlyphSize is float glyphPixels && glyphPixels > 0.0f
+				? lineHeight * glyphPixels / ImGui.GetFontSize()
+				: lineHeight;
+			float rowHeight = ToolbarGeometry.RowHeight(options.Layout, lineHeight, glyphLineHeight,
 				style.FramePadding, style.ItemInnerSpacing, ImGui.GetFrameHeight());
 
 			float width = options.Width is float requested && requested > 0.0f ? requested : ImGui.GetContentRegionAvail().X;
@@ -157,7 +171,7 @@ public static partial class ImGuiWidgets
 			ImGui.PushClipRect(origin, max, true);
 			ImGui.SetCursorScreenPos(origin + padding);
 
-			context = new ToolbarContext(options.Layout, rowHeight, spacing, padding.Y);
+			context = new ToolbarContext(options.Layout, rowHeight, spacing, padding.Y, options.GlyphSize);
 			ToolbarContext.Push(context);
 		}
 
