@@ -50,6 +50,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 ### Data and Signals
 
 - **`Histogram`**: One or more binned distributions as overlaid bars, scaled to the tallest bin; it takes pre-computed bins, so the binning scan stays off the render thread
+- **`FrameTimeGraph`**: Per-frame times as bars, newest on the right, against a budget line and a line at twice it, with over-budget bars recoloured, a cap on spikes past the scale, a hover tooltip, and a readout of the average, 99th percentile, worst frame and how many went over budget; feed a caller-owned `FrameTimeHistory` once a frame, or pass any span of milliseconds
 - **`HandleTrack`**: Draggable handles over a rectangle you supply — a histogram plot, say — kept ordered and a minimum distance apart
 - **`FlameGraph`**: A flame graph over managed sample data
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
