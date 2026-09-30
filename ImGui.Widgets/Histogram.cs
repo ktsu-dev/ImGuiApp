@@ -199,10 +199,15 @@ internal readonly record struct HistogramBarColors(uint Normal, float WarningAbo
 	/// <summary>Returns the colour for <paramref name="value"/>.</summary>
 	/// <param name="value">The bar's value.</param>
 	/// <returns><see cref="Error"/>, <see cref="Warning"/> or <see cref="Normal"/>.</returns>
-	public uint ColorFor(float value) =>
-		value > ErrorAbove ? Error
-		: value > WarningAbove ? Warning
-		: Normal;
+	public uint ColorFor(float value)
+	{
+		if (value > ErrorAbove)
+		{
+			return Error;
+		}
+
+		return value > WarningAbove ? Warning : Normal;
+	}
 
 	/// <summary>Returns colours that draw every bar in <paramref name="color"/>.</summary>
 	/// <param name="color">The one colour.</param>
