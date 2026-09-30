@@ -119,6 +119,8 @@ internal static class LayoutAndContainersTiles
 
 		yield return CropOverlayTile(Category);
 
+		yield return PixelLoupeTile(Category);
+
 		bool enabled = true;
 		int count = 12;
 		float ratio = 0.62f;
@@ -241,6 +243,42 @@ internal static class LayoutAndContainersTiles
 			// The overlay restores the cursor, so something has to follow it before the window ends.
 			ImGui.Dummy(Vector2.Zero);
 		});
+	}
+
+	/// <summary>
+	/// A loupe beside its own canvas, hovered on the sun's edge so the grid shows a gradient and a
+	/// readout. Its own method to keep <see cref="Build"/> under the coupling limit.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The tile.</returns>
+	private static GalleryEntry PixelLoupeTile(GalleryCategory category)
+	{
+		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);
+		Vector2 canvasSize = new(170f, 170f);
+		ImGuiWidgets.ImageCanvasState canvas = new();
+		canvas.FitToViewport(imageSize, canvasSize);
+		return new("PixelLoupe", category, [nameof(ImGuiWidgets.PixelLoupe)], context =>
+		{
+			ImGuiWidgets.ImageCanvas("##loupeCanvas", context.SampleTextureId, imageSize, canvas, canvasSize);
+			Vector2 canvasMin = ImGui.GetItemRectMin();
+			ImGui.SameLine();
+			ImGuiWidgets.PixelLoupe("##loupe", canvas, imageSize, canvasMin, canvasSize, ReadSamplePixel, out _, out _, radius: 5, cellSize: 11f);
+		})
+		{
+			Interact = context =>
+			{
+				// On the sun's rim, where the loupe has a gradient to show rather than a flat colour.
+				Vector2 canvasMin = context.CenterOf("##loupeCanvas") - (canvasSize / 2f);
+				Vector2 imagePoint = new(SampleImage.Size * 0.38f, SampleImage.Size * 0.44f);
+				context.HoverAt(canvasMin + canvas.ImageToViewport(imagePoint, imageSize, canvasSize));
+			},
+		};
+	}
+
+	private static Color ReadSamplePixel(int x, int y)
+	{
+		(byte r, byte g, byte b) = SampleImage.PixelAt(x, y);
+		return Color.FromBytes(r, g, b);
 	}
 
 	// Its own method because the toolbar's option types push Build past the analyzers' class-coupling limit.

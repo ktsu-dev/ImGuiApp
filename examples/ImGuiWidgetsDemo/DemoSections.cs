@@ -57,6 +57,7 @@ internal static class DemoSections
 		new(SwatchPaletteDemo.Show, SwatchPaletteDemo.ResetState),
 		new(ImageCompareDemo.Show, ImageCompareDemo.ResetState),
 		new(CropDemo.Show, CropDemo.ResetState),
+		new(PixelLoupeDemo.Show, PixelLoupeDemo.ResetState),
 		new(TabPanelDemo.Show, TabPanelDemo.ResetState, TabPanelDemo.Initialize),
 		new(SearchBoxDemo.Show, SearchBoxDemo.ResetState),
 		new(GridDemo.Show, GridDemo.ResetState, GridDemo.Initialize),
