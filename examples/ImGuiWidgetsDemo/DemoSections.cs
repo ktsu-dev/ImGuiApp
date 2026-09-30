@@ -43,6 +43,7 @@ internal static class DemoSections
 		new(StepGridDemo.Show, StepGridDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
+		new(ToolbarDemo.Show, ToolbarDemo.ResetState),
 	];
 
 	/// <summary>Gets the sections of the Advanced Demos tab, in demo order.</summary>
