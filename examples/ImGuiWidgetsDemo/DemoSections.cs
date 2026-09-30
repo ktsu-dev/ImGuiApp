@@ -38,6 +38,7 @@ internal static class DemoSections
 		new(EnvelopeEditorDemo.Show, EnvelopeEditorDemo.ResetState),
 		new(ParametricEqDemo.Show, ParametricEqDemo.ResetState),
 		new(StereoMetersDemo.Show, StereoMetersDemo.ResetState),
+		new(ChannelFaderDemo.Show, ChannelFaderDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
 	];

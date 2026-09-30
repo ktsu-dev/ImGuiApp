@@ -53,6 +53,24 @@ internal static class InputAndControlsTiles
 			ImGui.PopItemWidth();
 		});
 
+		// A small mixer strip: the channel sits below unity, meters a little under it, and holds a peak.
+		float[] faderGains = [-4.5f, 0f];
+		float[] faderLevels = [-14f, -9f];
+		float[] faderPeaks = [-8f, -3f];
+		string[] faderLabels = ["Ch 1##galleryFader1", "Master##galleryFader2"];
+		yield return new("ChannelFader", Category, [nameof(ImGuiWidgets.ChannelFader), nameof(ImGuiWidgets.FaderTaper)], _ =>
+		{
+			for (int i = 0; i < faderLabels.Length; i++)
+			{
+				if (i > 0)
+				{
+					ImGui.SameLine();
+				}
+
+				ImGuiWidgets.ChannelFader(faderLabels[i], ref faderGains[i], faderLevels[i], faderPeaks[i], new Vector2(60f, 180f));
+			}
+		});
+
 		float padX = 0.35f;
 		float padY = 0.7f;
 		yield return new("XYPad", Category, [nameof(ImGuiWidgets.XYPad)], _ =>
