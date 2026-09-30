@@ -16,8 +16,9 @@ internal static class SampleImage
 	/// Uploads a sunset-like gradient with a sun disc in it: recognisably a picture at thumbnail
 	/// size, and asymmetric enough that a flipped or cropped image looks wrong.
 	/// </summary>
+	/// <param name="inverted">Whether to invert the colours, for a second image to compare against the first.</param>
 	/// <returns>The uploaded texture.</returns>
-	public static ImGuiAppTextureInfo Create()
+	public static ImGuiAppTextureInfo Create(bool inverted = false)
 	{
 		byte[] rgba = new byte[Size * Size * 4];
 
@@ -56,6 +57,13 @@ internal static class SampleImage
 				r = Lerp(r, 1.00f, sun);
 				g = Lerp(g, 0.90f, sun);
 				b = Lerp(b, 0.55f, sun);
+
+				if (inverted)
+				{
+					r = 1f - r;
+					g = 1f - g;
+					b = 1f - b;
+				}
 
 				int i = ((y * Size) + x) * 4;
 				rgba[i + 0] = ToByte(r);

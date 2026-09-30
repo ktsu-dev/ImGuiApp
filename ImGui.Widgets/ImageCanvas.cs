@@ -54,13 +54,7 @@ public static partial class ImGuiWidgets
 
 		if (hovered)
 		{
-			float wheel = ImGui.GetIO().MouseWheel;
-			if (wheel != 0f)
-			{
-				// 1.1 per notch is a shallow enough curve to feel controllable at high zoom.
-				float factor = MathF.Pow(1.1f, wheel);
-				state.ZoomAt(factor, ImGui.GetMousePos() - origin, canvasSize);
-			}
+			ImageCanvasInput.ApplyWheelZoom(state, origin, canvasSize);
 		}
 
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
