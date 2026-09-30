@@ -202,17 +202,19 @@ internal static class LayoutAndContainersTiles
 	// Its own method because the toolbar's option types push Build past the analyzers' class-coupling limit.
 	private static GalleryEntry ToolbarTile(GalleryCategory category)
 	{
-		bool bold = true;
+		bool preview = true;
 		return new("Toolbar", category,
 			[nameof(ImGuiWidgets.Toolbar), nameof(ImGuiWidgets.ToolbarSeparator), nameof(ImGuiWidgets.ToolbarButton), nameof(ImGuiWidgets.ToolbarToggleButton)], _ =>
 		{
-			// Material Icons code points, which the gallery merges into its font when it has them.
+			// Material Icons code points, which the gallery merges into its font when it has them. Merged
+			// fonts keep the first glyph for a code point, so these avoid the Nerd Font's ranges: U+E238,
+			// Material's format_bold, falls in its Font Awesome Extension block and draws as that instead.
 			using (ImGuiWidgets.Toolbar("##toolbar", new ToolbarOptions { Width = 340f }))
 			{
 				ImGuiWidgets.ToolbarButton("Open", "\uE2C7");
 				ImGuiWidgets.ToolbarButton("Save", "\uE161");
 				ImGuiWidgets.ToolbarSeparator();
-				ImGuiWidgets.ToolbarToggleButton("Bold", "\uE238", ref bold, new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly });
+				ImGuiWidgets.ToolbarToggleButton("Preview", "\uE8F4", ref preview, new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly });
 				ImGuiWidgets.ToolbarButton("Redo", "\uE15A", new ToolbarButtonOptions { Layout = ToolbarButtonLayout.GlyphOnly, Enabled = false });
 			}
 

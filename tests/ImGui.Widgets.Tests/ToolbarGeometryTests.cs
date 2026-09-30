@@ -139,4 +139,29 @@ public sealed class ToolbarGeometryTests
 		Assert.AreEqual(ToolbarButtonLayout.GlyphOnly,
 			ToolbarGeometry.ResolveInToolbar(ToolbarButtonLayout.GlyphOnly, ToolbarButtonLayout.GlyphAbove));
 	}
+
+	[TestMethod]
+	public void GlyphInkCorrection_CentresAGlyphDrawnHighInItsSlot()
+	{
+		// An icon drawing in rows 1-9 of a 14px slot is 2.5px above centre; it moves down by that, rounded.
+		Vector2 correction = ToolbarGeometry.GlyphInkCorrection(new Vector2(14, 14), new Vector2(1, 1), new Vector2(13, 9), ToolbarButtonLayout.GlyphAbove);
+
+		Assert.AreEqual(new Vector2(0, 2), correction);
+	}
+
+	[TestMethod]
+	public void GlyphInkCorrection_CentresHorizontallyOnlyWhereTheGlyphIsCentred()
+	{
+		Vector2 slot = new(14, 14);
+		Vector2 inkMin = new(0, 3);
+		Vector2 inkMax = new(10, 11);
+
+		Assert.AreEqual(new Vector2(2, 0), ToolbarGeometry.GlyphInkCorrection(slot, inkMin, inkMax, ToolbarButtonLayout.GlyphOnly));
+		Assert.AreEqual(new Vector2(2, 0), ToolbarGeometry.GlyphInkCorrection(slot, inkMin, inkMax, ToolbarButtonLayout.GlyphAbove));
+		Assert.AreEqual(Vector2.Zero, ToolbarGeometry.GlyphInkCorrection(slot, inkMin, inkMax, ToolbarButtonLayout.GlyphLeading));
+	}
+
+	[TestMethod]
+	public void GlyphInkCorrection_LeavesAGlyphThatDrawsNothingWhereItIs() =>
+		Assert.AreEqual(Vector2.Zero, ToolbarGeometry.GlyphInkCorrection(new Vector2(14, 14), new Vector2(float.MaxValue), new Vector2(float.MinValue), ToolbarButtonLayout.GlyphOnly));
 }

@@ -2,7 +2,10 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Text;
 
 using Hexa.NET.ImGui;
 
@@ -101,7 +104,23 @@ public static partial class ImGuiWidgets
 			bool drawsLabel = layout is ToolbarButtonLayout.GlyphLeading or ToolbarButtonLayout.GlyphAbove or ToolbarButtonLayout.LabelOnly;
 
 			ImGuiStylePtr style = ImGui.GetStyle();
-			Vector2 glyphSize = drawsGlyph ? ImGui.CalcTextSize(glyph) : Vector2.Zero;
+			// The glyph gets a slot one font size tall, with its drawn pixels centred in it, rather than a
+			// line of text: an icon font merged into a text font keeps its own vertical metrics, so a line
+			// leaves a glyph above its label with a gap under it. The slot is the same for every glyph, so
+			// labels in a row stay level whatever each icon's own height.
+			Vector2 glyphSize = Vector2.Zero;
+			Vector2 inkMin = Vector2.Zero;
+			Vector2 inkMax = Vector2.Zero;
+			if (drawsGlyph)
+			{
+				glyphSize = ImGui.CalcTextSize(glyph);
+				inkMin = GlyphInk(glyph, out inkMax);
+				if (inkMax.Y > inkMin.Y)
+				{
+					glyphSize.Y = MathF.Min(glyphSize.Y, MathF.Max(ImGui.GetFontSize(), inkMax.Y - inkMin.Y));
+				}
+			}
+
 			Vector2 labelSize = drawsLabel ? ImGui.CalcTextSize(visible) : Vector2.Zero;
 
 			ToolbarButtonMetrics metrics = ToolbarGeometry.Measure(glyphSize, labelSize, layout,
@@ -123,7 +142,8 @@ public static partial class ImGuiWidgets
 			if (drawsGlyph)
 			{
 				uint glyphColor = enabled && options.GlyphColor is ImColor custom ? custom.ToImGuiU32() : textColor;
-				drawList.AddText(origin + metrics.GlyphOffset, glyphColor, glyph);
+				Vector2 correction = ToolbarGeometry.GlyphInkCorrection(glyphSize, inkMin, inkMax, layout);
+				drawList.AddText(origin + metrics.GlyphOffset + correction, glyphColor, glyph);
 			}
 
 			if (drawsLabel)
@@ -137,6 +157,40 @@ public static partial class ImGuiWidgets
 			DrawTooltip(label, visible, layout, options);
 
 			return clicked && enabled;
+		}
+
+		/// <summary>
+		/// Measures the pixels the glyph string draws, relative to its text box, from the current
+		/// font's baked glyphs. Returns an empty box when nothing in it draws.
+		/// </summary>
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Reads glyph metrics from the current font's baked glyph table within this call; no pointer is retained.")]
+		private static Vector2 GlyphInk(string glyph, out Vector2 inkMax)
+		{
+			ImFontBakedPtr font = ImGui.GetFontBaked();
+			Vector2 inkMin = new(float.MaxValue);
+			inkMax = new Vector2(float.MinValue);
+			float penX = 0.0f;
+			foreach (Rune rune in glyph.EnumerateRunes())
+			{
+				unsafe
+				{
+					ImFontGlyph* found = font.FindGlyph((uint)rune.Value);
+					if (found is null)
+					{
+						continue;
+					}
+
+					if (found->Visible != 0)
+					{
+						inkMin = Vector2.Min(inkMin, new Vector2(penX + found->X0, found->Y0));
+						inkMax = Vector2.Max(inkMax, new Vector2(penX + found->X1, found->Y1));
+					}
+
+					penX += found->AdvanceX;
+				}
+			}
+
+			return inkMin;
 		}
 
 		private static void DrawFrame(ImGuiStylePtr style, Vector2 origin, Vector2 size, bool hovered, bool held, bool selected, bool flat)
