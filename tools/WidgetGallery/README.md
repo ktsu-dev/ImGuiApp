@@ -20,6 +20,13 @@ Options: `--out <dir>`, `--only <text>` (capture matching tiles only, and skip t
 `--width <pixels>` for the composites, and `--check`, which reports any `ImGuiWidgets` member with no
 tile and exits 1 if there is one.
 
+## Regenerated on main
+
+`.github/workflows/widget-gallery.yml` reruns the tool on every push to `main` that touches a project
+it builds from, and commits `docs/gallery/` back when the pictures changed. A pull request therefore
+does not need to commit regenerated images, though it may to show a change in review. The workflow
+downloads a pinned copy of Material Icons, so the icon-font tiles render real glyphs there.
+
 ## Adding a widget
 
 Add a `GalleryEntry` to the file in `Catalog/` for its group, and name the `ImGuiWidgets` members it
