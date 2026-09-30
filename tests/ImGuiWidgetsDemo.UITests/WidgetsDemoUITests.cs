@@ -43,7 +43,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view",
 		"Piano Keyboard",
 		"Parametric EQ",
 		"Step Grid",
@@ -498,6 +498,19 @@ public sealed class WidgetsDemoUITests
 		harness.Step();
 
 		Assert.AreEqual(15f, TransportScrubberDemo.Playhead, 0.1f, "A click on the scrubber's track did not seek to where it landed.");
+	}
+
+	[TestMethod]
+	public void FrameTimeGraphDemo_InjectSpikeRecordsAFrame()
+	{
+		OpenSection(WidgetDemosTab, "Frame Time Graph");
+
+		Assert.IsTrue(IsVisible("Live##demoFrameTimeLive"), "The frame time section drew no live graph.");
+
+		harness.Click("Inject spike");
+		harness.Step(SettleFrames);
+
+		Assert.IsGreaterThanOrEqualTo(50f, FrameTimeGraphDemo.History.Maximum, "Inject spike did not record a 50 ms frame.");
 	}
 
 	[TestMethod]

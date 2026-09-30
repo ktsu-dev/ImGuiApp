@@ -35,6 +35,7 @@ internal static class DemoSections
 		new(WaveformDemo.Show, WaveformDemo.ResetState),
 		new(TransportScrubberDemo.Show, TransportScrubberDemo.ResetState),
 		new(SpectrumAnalyzerDemo.Show, SpectrumAnalyzerDemo.ResetState),
+		new(FrameTimeGraphDemo.Show, FrameTimeGraphDemo.ResetState),
 		new(EnvelopeEditorDemo.Show, EnvelopeEditorDemo.ResetState),
 		new(ParametricEqDemo.Show, ParametricEqDemo.ResetState),
 		new(StereoMetersDemo.Show, StereoMetersDemo.ResetState),

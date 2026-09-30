@@ -51,6 +51,8 @@ public static partial class ImGuiWidgets
 
 	internal static class HistogramImpl
 	{
+		private const float ClipCapHeight = 2.0f;
+
 		public static void Draw(string label, ReadOnlySpan<float> bins, int seriesCount, Vector2 size, ReadOnlySpan<uint> seriesColors)
 		{
 			float lineHeight = ImGui.GetTextLineHeight();
@@ -106,25 +108,55 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
-			float barWidth = boxSize.X / binCount;
-
 			for (int series = 0; series < seriesCount; series++)
 			{
 				uint color = SeriesColor(series, seriesCount, seriesColors, colors);
-				ReadOnlySpan<float> run = bins.Slice(series * binCount, binCount);
+				DrawBars(drawList, min, max, bins.Slice(series * binCount, binCount), peak, HistogramBarColors.Solid(color));
+			}
+		}
 
-				for (int bin = 0; bin < binCount; bin++)
+		/// <summary>
+		/// Draws one run of bars filling <paramref name="min"/>..<paramref name="max"/> from the bottom,
+		/// shared by <see cref="Histogram"/> and <see cref="FrameTimeGraph(string, ReadOnlySpan{float}, FrameTimeGraphOptions?)"/>.
+		/// </summary>
+		/// <param name="drawList">The draw list to add to.</param>
+		/// <param name="min">The box's top-left corner.</param>
+		/// <param name="max">The box's bottom-right corner.</param>
+		/// <param name="values">One value per bar, left to right. Each bar is the box width over <c>values.Length</c> wide.</param>
+		/// <param name="scale">The value that fills the box. Not finite and positive draws nothing.</param>
+		/// <param name="colors">The colour of each bar, chosen by its value.</param>
+		/// <param name="clipCapColor">
+		/// When non-zero, a bar whose value exceeds <paramref name="scale"/> gets a 2 px cap in this colour
+		/// at the top, so a clipped bar is told apart from one that merely fills the box.
+		/// </param>
+		/// <remarks>A non-finite value, or one less than or equal to zero, draws nothing but keeps its slot.</remarks>
+		internal static void DrawBars(ImDrawListPtr drawList, Vector2 min, Vector2 max, ReadOnlySpan<float> values, float scale, HistogramBarColors colors, uint clipCapColor = 0)
+		{
+			if (values.IsEmpty || !float.IsFinite(scale) || scale <= 0.0f)
+			{
+				return;
+			}
+
+			float width = max.X - min.X;
+			float height = max.Y - min.Y;
+			float barWidth = width / values.Length;
+
+			for (int bar = 0; bar < values.Length; bar++)
+			{
+				float value = values[bar];
+				if (!float.IsFinite(value) || value <= 0.0f)
 				{
-					float value = run[bin];
-					if (!float.IsFinite(value) || value <= 0.0f)
-					{
-						continue;
-					}
+					continue;
+				}
 
-					float fraction = MathF.Min(value / peak, 1.0f);
-					float x = min.X + (bin * barWidth);
-					float top = max.Y - (fraction * boxSize.Y);
-					drawList.AddRectFilled(new Vector2(x, top), new Vector2(x + barWidth, max.Y), color);
+				float fraction = MathF.Min(value / scale, 1.0f);
+				float x = min.X + (bar * barWidth);
+				float top = max.Y - (fraction * height);
+				drawList.AddRectFilled(new Vector2(x, top), new Vector2(x + barWidth, max.Y), colors.ColorFor(value));
+
+				if (clipCapColor != 0 && value > scale)
+				{
+					drawList.AddRectFilled(new Vector2(x, top), new Vector2(x + barWidth, top + ClipCapHeight), clipCapColor);
 				}
 			}
 		}
@@ -152,4 +184,28 @@ public static partial class ImGuiWidgets
 			};
 		}
 	}
+}
+
+/// <summary>
+/// The colour of a bar drawn by <c>HistogramImpl.DrawBars</c>, chosen by the bar's value against two thresholds.
+/// </summary>
+/// <param name="Normal">The colour at or under <paramref name="WarningAbove"/>.</param>
+/// <param name="WarningAbove">Values strictly above this are <paramref name="Warning"/>.</param>
+/// <param name="Warning">The colour above <paramref name="WarningAbove"/> and at or under <paramref name="ErrorAbove"/>.</param>
+/// <param name="ErrorAbove">Values strictly above this are <paramref name="Error"/>.</param>
+/// <param name="Error">The colour above <paramref name="ErrorAbove"/>.</param>
+internal readonly record struct HistogramBarColors(uint Normal, float WarningAbove, uint Warning, float ErrorAbove, uint Error)
+{
+	/// <summary>Returns the colour for <paramref name="value"/>.</summary>
+	/// <param name="value">The bar's value.</param>
+	/// <returns><see cref="Error"/>, <see cref="Warning"/> or <see cref="Normal"/>.</returns>
+	public uint ColorFor(float value) =>
+		value > ErrorAbove ? Error
+		: value > WarningAbove ? Warning
+		: Normal;
+
+	/// <summary>Returns colours that draw every bar in <paramref name="color"/>.</summary>
+	/// <param name="color">The one colour.</param>
+	/// <returns>The colours.</returns>
+	public static HistogramBarColors Solid(uint color) => new(color, float.PositiveInfinity, color, float.PositiveInfinity, color);
 }
