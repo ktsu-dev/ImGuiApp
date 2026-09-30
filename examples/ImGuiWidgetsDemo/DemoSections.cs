@@ -32,6 +32,7 @@ internal static class DemoSections
 		new(HistogramAndHandleTrackDemo.Show, HistogramAndHandleTrackDemo.ResetState),
 		new(CurveTrackDemo.Show, CurveTrackDemo.ResetState),
 		new(WaveformDemo.Show, WaveformDemo.ResetState),
+		new(TransportScrubberDemo.Show, TransportScrubberDemo.ResetState),
 		new(SpectrumAnalyzerDemo.Show, SpectrumAnalyzerDemo.ResetState),
 		new(EnvelopeEditorDemo.Show, EnvelopeEditorDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),

@@ -42,7 +42,7 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Spectrum Analyzer", "Color wheels", "Diff view",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Color wheels", "Diff view",
 		"Envelope Editor",
 	];
 
@@ -429,6 +429,38 @@ public sealed class WidgetsDemoUITests
 		harness.Step();
 
 		Assert.AreEqual(4.5f, WaveformDemo.Playhead, 0.2f, "A click on the waveform did not seek to where it landed.");
+	}
+
+	[TestMethod]
+	public void WaveformDemo_LongClipIsDrawn()
+	{
+		OpenSection(WidgetDemosTab, "Waveform");
+
+		// The long clip's peak cache is built on a worker thread the first time the section is
+		// shown, so the waveform appears some frames later rather than on the first one.
+		for (int frame = 0; frame < 300 && !IsVisible("Waveform/long clip/scrollbar"); frame++)
+		{
+			harness.Step();
+		}
+
+		Assert.IsTrue(IsVisible("Waveform/long clip/scrollbar"), "The long clip's zoomable waveform was never drawn.");
+	}
+
+	[TestMethod]
+	public void TransportScrubberDemo_ClickSeeks()
+	{
+		OpenSection(WidgetDemosTab, "Transport Scrubber");
+
+		Assert.IsTrue(IsVisible("Transport Scrubber/scrubber/track"), "The transport scrubber section drew no track.");
+		Assert.AreEqual(0f, TransportScrubberDemo.Playhead, "Precondition: the demo starts with the playhead at the top.");
+
+		// The middle of a 30-second clip: well clear of the in and out points, which sit at 4 and 10.
+		Rectangle rect = harness.Probe.Rect("Transport Scrubber/scrubber/track")
+			?? throw new InvalidOperationException("The scrubber's track was never recorded by the probe.");
+		harness.Mouse.Click(rect.MinX + (rect.Width * 0.5f), rect.MinY + (rect.Height * 0.5f));
+		harness.Step();
+
+		Assert.AreEqual(15f, TransportScrubberDemo.Playhead, 0.1f, "A click on the scrubber's track did not seek to where it landed.");
 	}
 
 	[TestMethod]
