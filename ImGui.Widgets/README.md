@@ -88,6 +88,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Tree`**: Collapsible `Branch` and terminal `Leaf` nodes, with connector lines drawn between them
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
 - **`AssetBrowser`**: A virtualized grid of thumbnail tiles over a caller-owned `AssetBrowserState`, with click, Ctrl+click and Shift+click selection, arrow-key focus, Ctrl+wheel tile resizing, double-click or Enter to activate, and dragging the selection out as a payload a drop target reads with `TryAcceptAssetPayload`. Only the visible rows ask for a label or thumbnail, so fifty thousand assets cost a screenful
+- **`Toolbar`** / **`ToolbarButton`** / **`ToolbarToggleButton`** / **`ToolbarSeparator`**: A horizontal strip of buttons, each holding a glyph and a label inside one frame — glyph leading, glyph above with the label centred beneath, glyph only (the label becomes the tooltip) or label only. See [Toolbar](#toolbar) below
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
@@ -957,6 +958,51 @@ A press toggles the cell it lands on, and the rest of the drag paints that cell'
 gesture either fills or clears a run and never flickers cells back and forth. `stepsPerBeat`
 (default 4) shades each beat's first column, and `cellSize` defaults to a square of the frame height.
 Cells are probed as `"{label}/r{row}s{step}"`.
+
+### Toolbar
+
+A toolbar is a `using` scope; buttons and separators submitted inside it are laid out left to right
+on one row. Each button draws its glyph and its label inside the same frame, so a glyph is any
+string in the current font — merge an icon font such as Material Icons or a Nerd Font to use icons.
+
+```csharp
+using (ImGuiWidgets.Toolbar("##edit"))
+{
+	if (ImGuiWidgets.ToolbarButton("Open", "\uE2C7", new() { Shortcut = "Ctrl+O" }))
+	{
+		OpenFile();
+	}
+
+	ImGuiWidgets.ToolbarSeparator();
+	ImGuiWidgets.ToolbarToggleButton("Bold", "\uE238", ref bold, new() { Layout = ToolbarButtonLayout.GlyphOnly });
+}
+
+// A two-line strip: every button puts its label centred under its glyph.
+using (ImGuiWidgets.Toolbar("##transport", new ToolbarOptions { Layout = ToolbarButtonLayout.GlyphAbove }))
+{
+	ImGuiWidgets.ToolbarButton("Play", "\uE037", new() { MinWidth = 56 });
+	ImGuiWidgets.ToolbarButton("Stop", "\uE047", new() { MinWidth = 56 });
+}
+```
+
+`ToolbarButtonLayout` picks where the label goes:
+
+| Layout | Glyph | Label |
+|---|---|---|
+| `GlyphLeading` (default) | left | right of the glyph, on the same line |
+| `GlyphAbove` | top, centred | below the glyph, centred |
+| `GlyphOnly` | centred | shown as the tooltip unless one is set |
+| `LabelOnly` | not drawn | centred |
+
+A button takes its toolbar's layout unless it sets its own. A single-line toolbar has no room for
+a two-line button, so `GlyphAbove` falls back to `GlyphLeading` there; a single-line button in a
+`GlyphAbove` toolbar is centred vertically in the taller row. A missing glyph or label collapses
+the layout to the part that is present. Buttons also work outside a toolbar, where they size to
+themselves. `ToolbarGeometry` holds the layout arithmetic and takes plain sizes, so it can be used
+or tested without an ImGui context.
+
+Each button is probed under its label inside the toolbar's id (`"##edit/Open"`), its tooltip text
+under a name ending `Open/tooltip`, and the strip itself under its id.
 
 ### Hexa-backed Widgets
 
