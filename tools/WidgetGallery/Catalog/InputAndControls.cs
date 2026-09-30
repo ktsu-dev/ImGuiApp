@@ -237,5 +237,26 @@ internal static class InputAndControlsTiles
 			Vector2 max = ImGui.GetItemRectMax();
 			ImGuiWidgets.InlineButton("x", min, max, new Vector2(1f, 0.5f));
 		});
+
+		string[] voices = ["Kick", "Snare", "Hat", "Clap"];
+		bool[] pattern = new bool[4 * 16];
+		foreach (int step in (int[])[0, 8, 10])
+		{
+			pattern[step] = true;
+		}
+
+		foreach (int step in (int[])[4, 12])
+		{
+			pattern[16 + step] = true;
+		}
+
+		for (int step = 0; step < 16; step += 2)
+		{
+			pattern[32 + step] = true;
+		}
+
+		pattern[48 + 12] = true;
+		yield return new("StepGrid", Category, [nameof(ImGuiWidgets.StepGrid)], _ =>
+			ImGuiWidgets.StepGrid("##steps", pattern, 4, 16, playingStep: 5, rowLabels: voices));
 	}
 }

@@ -26,6 +26,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`SearchBox`** / **`SearchBoxRanked`**: Filters a collection with `ktsu.TextFilter` (glob, regex, fuzzy) or ranks it with a fuzzy match
 - **`Combo`**: Type-safe combo boxes for enums, strings, and semantic strings
 - **`PianoKeyboard`**: A horizontal piano keyboard played with the pointer. Returns note-on and note-off as plain MIDI note numbers, with velocity from how far down the key the press lands, slides from key to key while dragging, and highlights notes the caller reports as held. `PianoKeyboardLayout` holds the key geometry with no ImGui dependency, so a piano roll can share it
+- **`StepGrid`**: A step-sequencer grid of on/off cells, one row per voice and one column per step. A press toggles a cell and a drag paints that cell's new value across a run; the host owns the clock and passes the playing step to highlight
 - **`TransportScrubber`**: A video-editor style transport over a caller-owned `TimelineView`: time ruler, thumbnail strip from a caller resolver, playhead and in/out range, with frame snapping, I/O and arrow-key shortcuts, and a right-click menu
 
 ### Display and Status
@@ -920,6 +921,29 @@ if (ImGuiWidgets.ParametricEq("EQ", bands, f => ImGuiWidgets.EqResponse.TotalDb(
 Pass a `SpectrumAnalyzerState`'s own `Axis` to put the EQ on exactly the analyzer's frequency scale:
 a frequency then lands at the same fraction of the width in both. Each node is probe-visible as
 `{label}/band{i}`.
+
+### Step Grid
+
+The pattern is yours, row-major and edited in place: cell (row, step) is
+`steps[row * stepCount + step]`. The grid never reflows, so column `i` is always step `i`, and it
+reserves exactly its label column plus the cells; put a long pattern in a child window of your own.
+
+```csharp
+// Kept across frames: four voices of sixteen steps.
+bool[] pattern = new bool[4 * 16];
+string[] voices = ["Kick", "Snare", "Hat", "Clap"];
+
+// Each frame. The host advances playingStep from its own clock; -1 highlights nothing.
+if (ImGuiWidgets.StepGrid("Drums", pattern, rows: 4, stepCount: 16, playingStep, rowLabels: voices))
+{
+	// At least one cell changed this frame.
+}
+```
+
+A press toggles the cell it lands on, and the rest of the drag paints that cell's new value, so one
+gesture either fills or clears a run and never flickers cells back and forth. `stepsPerBeat`
+(default 4) shades each beat's first column, and `cellSize` defaults to a square of the frame height.
+Cells are probed as `"{label}/r{row}s{step}"`.
 
 ### Hexa-backed Widgets
 

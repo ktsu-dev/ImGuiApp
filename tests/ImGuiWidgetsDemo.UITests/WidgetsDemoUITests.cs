@@ -46,6 +46,7 @@ public sealed class WidgetsDemoUITests
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view",
 		"Piano Keyboard",
 		"Parametric EQ",
+		"Step Grid",
 		"Envelope Editor",
 	];
 
@@ -447,6 +448,24 @@ public sealed class WidgetsDemoUITests
 		harness.Step();
 
 		Assert.AreEqual(4.5f, WaveformDemo.Playhead, 0.2f, "A click on the waveform did not seek to where it landed.");
+	}
+
+	[TestMethod]
+	public void StepGrid_ClickTogglesACell()
+	{
+		OpenSection(WidgetDemosTab, "Step Grid");
+
+		Assert.IsTrue(IsVisible("##demoStepGrid"), "The step grid section drew no grid.");
+		int before = StepGridDemo.StepsOn;
+
+		// The clap row (the last of four) starts empty; aim at its second step.
+		Rectangle rect = harness.Probe.Rect("##demoStepGrid")
+			?? throw new InvalidOperationException("The step grid was never recorded by the probe.");
+		harness.Mouse.Click(rect.MinX + (rect.Width * 1.5f / 16f), rect.MinY + (rect.Height * 3.5f / 4f));
+		harness.Step();
+
+		Assert.AreEqual(before + 1, StepGridDemo.StepsOn, "A click on an empty cell did not turn it on.");
+		Assert.IsTrue(StepGridDemo.CurrentPattern[(3 * 16) + 1], "The click landed on the wrong cell.");
 	}
 
 	[TestMethod]
