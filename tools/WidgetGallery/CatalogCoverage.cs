@@ -33,6 +33,8 @@ internal static class CatalogCoverage
 		[nameof(ImGuiWidgets.SequenceSource)] = "the data source of the sequencer tile",
 		[nameof(ImGuiWidgets.CurveSource)] = "the data source of the multi-curve editor tile",
 		[nameof(ImGuiWidgets.ImageCanvasState)] = "the state of the image canvas tile",
+		[nameof(ImGuiWidgets.AssetBrowserState)] = "the selection behind the asset browser tile",
+		[nameof(ImGuiWidgets.TryAcceptAssetPayload)] = "the drop-target half of the asset browser tile's drag",
 		[nameof(ImGuiWidgets.Viewport3DState)] = "the state behind a 3D viewport that has no widget yet",
 		[nameof(ImGuiWidgets.CalcIconSize)] = "layout arithmetic for the icon tile",
 		[nameof(ImGuiWidgets.ClampPage)] = "arithmetic for the page indicator",

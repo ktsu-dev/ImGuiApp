@@ -52,8 +52,8 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "TabPanel", "SearchBox", "Grid Layout", "Virtual Table",
-		"Data Table", "Divider Container",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "TabPanel", "SearchBox", "Grid Layout",
+		"Virtual Table", "Data Table", "Divider Container",
 	];
 
 	private static readonly string[] NetNewSections =
@@ -575,6 +575,18 @@ public sealed class WidgetsDemoUITests
 		harness.Click("Fit");
 		harness.Step(2);
 		Assert.IsTrue(IsVisible("Fit"), "The canvas should survive being fitted.");
+	}
+
+	[TestMethod]
+	public void AssetBrowserDemo_ClickSelects()
+	{
+		OpenSection(AdvancedDemosTab, "Asset Browser");
+
+		harness.Click("asset_browser_demo/[2]");
+		harness.Step(2);
+
+		Assert.AreSequenceEqual([2], AssetBrowserDemo.State.SelectedIndices);
+		Assert.IsTrue(IsVisible("Asset drop target"), "The drop target sits under the browser.");
 	}
 
 	[TestMethod]

@@ -111,6 +111,8 @@ internal static class LayoutAndContainersTiles
 		yield return new("ImageCanvas", Category, [nameof(ImGuiWidgets.ImageCanvas)], context =>
 			ImGuiWidgets.ImageCanvas("##canvas", context.SampleTextureId, new Vector2(SampleImage.Size, SampleImage.Size), canvas, new Vector2(260f, 170f)));
 
+		yield return AssetBrowser(Category);
+
 		bool enabled = true;
 		int count = 12;
 		float ratio = 0.62f;
@@ -173,5 +175,25 @@ internal static class LayoutAndContainersTiles
 			ImGui.End();
 		});
 		yield return new("OverlayHost", Category, [], _ => overlays.Render());
+	}
+
+	/// <summary>Builds the asset browser tile, with two tiles selected so the highlight shows.</summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The entry.</returns>
+	private static GalleryEntry AssetBrowser(GalleryCategory category)
+	{
+		ImGuiWidgets.AssetBrowserState assets = new();
+		_ = assets.Click(1, ctrl: false, shift: false);
+		_ = assets.Click(2, ctrl: true, shift: false);
+		ImGuiWidgets.AssetBrowserOptions options = new() { TileSize = 64f, Size = new Vector2(300f, 170f) };
+
+		return new("AssetBrowser", category, [nameof(ImGuiWidgets.AssetBrowser)], context =>
+			ImGuiWidgets.AssetBrowser(
+				"##assets",
+				200,
+				index => string.Create(CultureInfo.InvariantCulture, $"asset_{index:D3}.png"),
+				index => index % 3 == 0 ? 0 : context.SampleTextureId,
+				assets,
+				options));
 	}
 }
