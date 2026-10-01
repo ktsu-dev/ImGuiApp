@@ -41,3 +41,13 @@ jobs:
     with:
       # `inputs` is empty on push, pull_request and schedule; only a dispatch sets it.
       version-bump: ${{ inputs.version-bump || 'auto' }}
+
+  # Regenerates docs/gallery once the pipeline has released, and commits it back to main. Only for
+  # a push to main, so nothing from a pull request, and so nothing from a fork, is ever built with
+  # this job's write access. See widget-gallery.yml.
+  widget-gallery:
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/widget-gallery.yml
+    permissions:
+      contents: write
