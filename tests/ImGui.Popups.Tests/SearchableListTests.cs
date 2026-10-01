@@ -246,4 +246,16 @@ public sealed class SearchableListTests
 		Assert.IsNotNull(confirmed);
 		Assert.AreEqual("Banana", confirmed.Label);
 	}
+
+	[TestMethod]
+	public void EnterWithNothingTypedAndNoChoiceConfirmsTheFirstItem()
+	{
+		Open();
+
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(2);
+
+		Assert.IsNotNull(confirmed);
+		Assert.AreEqual("Apple", confirmed.Label);
+	}
 }
