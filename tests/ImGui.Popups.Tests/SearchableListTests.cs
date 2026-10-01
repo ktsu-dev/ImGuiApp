@@ -10,6 +10,8 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 
@@ -184,5 +186,64 @@ public sealed class SearchableListTests
 
 		Assert.IsNull(confirmed, "Cancelling should confirm nothing.");
 		Assert.IsFalse(IsVisible("searchable-list/search"), "Cancelling should close the list.");
+	}
+
+	/// <summary>
+	/// The search term reaches the ranking as it is typed, not only once Enter is pressed.
+	/// </summary>
+	[TestMethod]
+	public void TypingReordersTheRows()
+	{
+		Open();
+
+		Assert.IsTrue(
+			CentreOf("searchable-list/Apple").Y < CentreOf("searchable-list/Cherry").Y,
+			"Before typing, Apple should be listed above Cherry.");
+
+		harness.Keyboard.Type("Cherry");
+		harness.Step(2);
+
+		Assert.IsTrue(
+			CentreOf("searchable-list/Cherry").Y < CentreOf("searchable-list/Apple").Y,
+			"Typing Cherry should rank Cherry above Apple.");
+	}
+
+	[TestMethod]
+	public void EnterConfirmsTheBestMatchForWhatWasTyped()
+	{
+		Open();
+
+		harness.Keyboard.Type("Cherry");
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(2);
+
+		Assert.IsNotNull(confirmed, "Enter should confirm the best match.");
+		Assert.AreEqual("Cherry", confirmed.Label);
+		Assert.IsFalse(IsVisible("searchable-list/search"), "Confirming should close the list.");
+	}
+
+	[TestMethod]
+	public void EnterConfirmsTheBestMatchOverTheCurrentChoice()
+	{
+		Open(current: new Choice("Apple"));
+
+		harness.Keyboard.Type("Cherry");
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(2);
+
+		Assert.IsNotNull(confirmed, "Enter should confirm the best match.");
+		Assert.AreEqual("Cherry", confirmed.Label);
+	}
+
+	[TestMethod]
+	public void EnterWithNothingTypedConfirmsTheCurrentChoice()
+	{
+		Open(current: new Choice("Banana"));
+
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(2);
+
+		Assert.IsNotNull(confirmed);
+		Assert.AreEqual("Banana", confirmed.Label);
 	}
 }

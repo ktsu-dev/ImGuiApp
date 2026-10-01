@@ -94,12 +94,13 @@ public partial class ImGuiPopups
 				ImGui.SetKeyboardFocusHere();
 			}
 
-			bool searchChanged = ImGui.InputText("##Search", ref searchTerm, 255, ImGuiInputTextFlags.EnterReturnsTrue);
+			// No EnterReturnsTrue: with it ImGui holds the edit back until Enter or loss of focus, so
+			// the term never reaches the ranking while the user types. Enter is read separately and
+			// handled once the list has been ranked with the term as it now stands.
+			ImGui.InputText("##Search", ref searchTerm, 255);
+			bool enterPressed = (ImGui.IsItemActive() || ImGui.IsItemDeactivated())
+				&& (ImGui.IsKeyPressed(ImGuiKey.Enter) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter));
 			ImGuiProbes.MarkItem("searchable-list/search");
-			if (searchChanged)
-			{
-				ConfirmSelectedItem();
-			}
 
 			// Keyed on the text the item is drawn with, not on ToString(): items that share a
 			// ToString() but display differently (Array(Int) and Array(String), say) stay distinct
@@ -110,12 +111,24 @@ public partial class ImGuiPopups
 				.DistinctBy(x => x.itemString)
 				.ToDictionary(x => x.itemString, x => x.item);
 
-			IEnumerable<string> sortedStrings = TextFilter.Rank(itemLookup.Keys, searchTerm);
+			List<string> sortedStrings = [.. TextFilter.Rank(itemLookup.Keys, searchTerm)];
 
 			if (ImGui.BeginListBox("##List"))
 			{
 				DrawItemList(sortedStrings, itemLookup);
 				ImGui.EndListBox();
+			}
+
+			// With a term typed, Enter takes the best match for it; with none, it confirms the
+			// current choice, or the first item when there is none.
+			if (enterPressed)
+			{
+				if (!string.IsNullOrEmpty(searchTerm) && sortedStrings.Count > 0)
+				{
+					cachedValue = itemLookup[sortedStrings[0]];
+				}
+
+				ConfirmSelectedItem();
 			}
 
 			// Picking an item is the choice, so it confirms rather than waiting for OK. Confirmed
