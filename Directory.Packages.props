@@ -6,10 +6,10 @@
     <PackageVersion Include="ktsu.Extensions" Version="1.9.1" />
     <PackageVersion Include="ktsu.ThemeProvider" Version="3.1.0" />
     <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="3.1.0" />
-    <PackageVersion Include="ktsu.Semantics.Color" Version="5.10.0" />
-    <PackageVersion Include="ktsu.Semantics.Paths" Version="5.10.0" />
-    <PackageVersion Include="ktsu.Semantics.Strings" Version="5.10.0" />
-    <PackageVersion Include="ktsu.Semantics.Quantities" Version="5.10.0" />
+    <PackageVersion Include="ktsu.Semantics.Color" Version="5.11.0" />
+    <PackageVersion Include="ktsu.Semantics.Paths" Version="5.11.0" />
+    <PackageVersion Include="ktsu.Semantics.Strings" Version="5.11.0" />
+    <PackageVersion Include="ktsu.Semantics.Quantities" Version="5.11.0" />
     <PackageVersion Include="ktsu.CaseConverter" Version="1.8.5" />
     <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImGuizmo" Version="2.2.9" />
