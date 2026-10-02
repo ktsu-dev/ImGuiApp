@@ -1,6 +1,8 @@
-## v3.59.1
+## v3.59.2-pre.1 (prerelease)
 
-No significant changes detected since v3.59.1.
+Changes since v3.59.1:
+
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
 ## v3.59.1 (patch)
 
