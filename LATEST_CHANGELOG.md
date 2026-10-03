@@ -1,6 +1,8 @@
-## v3.59.2-pre.1 (prerelease)
+## v3.59.2-pre.2 (prerelease)
 
-Changes since v3.59.1:
+Changes since v3.59.2-pre.1:
 
-- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Test that Enter with nothing typed and no choice confirms the first item ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Re-rank SearchableList as the user types and confirm the best match on Enter ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
 
