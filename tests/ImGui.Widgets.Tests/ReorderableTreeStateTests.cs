@@ -59,11 +59,12 @@ public class ReorderableTreeStateTests
 	private static ImGuiWidgets.ReorderableTreeDrop? Drop(int dragged, Vector2 pointer) =>
 		ImGuiWidgets.ReorderableTreeState.Resolve(Rows, SpansFor(Rows.Length), 0f, Indent, dragged, pointer);
 
-	private static void AssertDrop(ImGuiWidgets.ReorderableTreeDrop? drop, int parent, int index)
+	private static ImGuiWidgets.ReorderableTreeDrop AssertDrop(ImGuiWidgets.ReorderableTreeDrop? drop, int parent, int index)
 	{
-		Assert.IsNotNull(drop);
-		Assert.AreEqual(parent, drop.Value.ParentRow, "parent");
-		Assert.AreEqual(index, drop.Value.Index, "index");
+		ImGuiWidgets.ReorderableTreeDrop landed = drop ?? throw new AssertFailedException("The drag dropped nowhere.");
+		Assert.AreEqual(parent, landed.ParentRow, "parent");
+		Assert.AreEqual(index, landed.Index, "index");
+		return landed;
 	}
 
 	[TestMethod]
@@ -104,10 +105,9 @@ public class ReorderableTreeStateTests
 	[TestMethod]
 	public void Container_MiddleHalfDropsInsideIt()
 	{
-		ImGuiWidgets.ReorderableTreeDrop? drop = Drop(B, At(C, 0.5f));
+		ImGuiWidgets.ReorderableTreeDrop drop = AssertDrop(Drop(B, At(C, 0.5f)), C, 0);
 
-		AssertDrop(drop, C, 0);
-		Assert.AreEqual(ImGuiWidgets.ReorderableTreeDropKind.Inside, drop!.Value.Kind);
+		Assert.AreEqual(ImGuiWidgets.ReorderableTreeDropKind.Inside, drop.Kind);
 	}
 
 	[TestMethod]
@@ -126,10 +126,9 @@ public class ReorderableTreeStateTests
 	{
 		// The gap below an expanded group's row is the gap above its first child, so that is where the
 		// line is drawn and where the drop lands.
-		ImGuiWidgets.ReorderableTreeDrop? drop = Drop(B, At(A, 0.9f));
+		ImGuiWidgets.ReorderableTreeDrop drop = AssertDrop(Drop(B, At(A, 0.9f)), A, 0);
 
-		AssertDrop(drop, A, 0);
-		Assert.AreEqual(1, drop!.Value.LineDepth);
+		Assert.AreEqual(1, drop.LineDepth);
 	}
 
 	[TestMethod]
@@ -138,10 +137,9 @@ public class ReorderableTreeStateTests
 	[TestMethod]
 	public void EndOfSubtree_PointerAtTheLeftDropsAfterTheAncestor()
 	{
-		ImGuiWidgets.ReorderableTreeDrop? drop = Drop(C, At(A2, 0.9f, depth: 0));
+		ImGuiWidgets.ReorderableTreeDrop drop = AssertDrop(Drop(C, At(A2, 0.9f, depth: 0)), -1, 1);
 
-		AssertDrop(drop, -1, 1);
-		Assert.AreEqual(0, drop!.Value.LineDepth);
+		Assert.AreEqual(0, drop.LineDepth);
 	}
 
 	[TestMethod]
