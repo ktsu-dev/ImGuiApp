@@ -24,7 +24,7 @@ public sealed class DemoSectionRegistryTests
 	[
 		nameof(MobileFormControlsDemo), nameof(PropertyGridDemo), nameof(KnobDemo),
 		nameof(RadialProgressBarDemo), nameof(ColorIndicatorDemo), nameof(ComboDemo),
-		nameof(TextUtilitiesDemo), nameof(ScopedUtilitiesDemo), nameof(TreeViewDemo),
+		nameof(TextUtilitiesDemo), nameof(ScopedUtilitiesDemo), nameof(TreeViewDemo), nameof(ReorderableTreeDemo),
 		nameof(MobileDecoratorsDemo), nameof(MobileContainersDemo), nameof(HistogramAndHandleTrackDemo),
 		nameof(CurveTrackDemo), nameof(TimecodeFieldDemo), nameof(WaveformDemo), nameof(TransportScrubberDemo),
 		nameof(SpectrumAnalyzerDemo), nameof(FrameTimeGraphDemo), nameof(EnvelopeEditorDemo), nameof(ParametricEqDemo), nameof(StereoMetersDemo), nameof(ChannelFaderDemo), nameof(PianoKeyboardDemo), nameof(StepGridDemo), nameof(ColorWheelDemo),

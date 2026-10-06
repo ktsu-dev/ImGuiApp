@@ -95,6 +95,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`TabPanel`**: Tabbed interface with closable, reorderable tabs and dirty indicators
 - **`Card`**: A scoped elevated panel that draws its shadow and rounded background behind whatever the `using` block renders
 - **`Tree`**: Collapsible `Branch` and terminal `Leaf` nodes, with connector lines drawn between them
+- **`ReorderableTree`**: Rows the caller draws, laid out as a tree and dragged to reorder them or move them in and out of containers. Reports the move rather than applying it. See [Reorderable Tree](#reorderable-tree) below
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
 - **`AssetBrowser`**: A virtualized grid of thumbnail tiles over a caller-owned `AssetBrowserState`, with click, Ctrl+click and Shift+click selection, arrow-key focus, Ctrl+wheel tile resizing, double-click or Enter to activate, and dragging the selection out as a payload a drop target reads with `TryAcceptAssetPayload`. Only the visible rows ask for a label or thumbnail, so fifty thousand assets cost a screenful
 - **`Toolbar`** / **`ToolbarButton`** / **`ToolbarToggleButton`** / **`ToolbarSeparator`**: A horizontal strip of buttons, each holding a glyph and a label inside one frame — glyph leading, glyph above with the label centred beneath, glyph only (the label becomes the tooltip) or label only. See [Toolbar](#toolbar) below
@@ -584,6 +585,42 @@ using (var tree = new ImGuiWidgets.Tree())
     }
 }
 ```
+
+### Reorderable Tree
+
+A tree whose rows can be dragged. The caller flattens its own tree into rows, top first, leaving out
+the children of anything collapsed, and draws each row's content itself; the widget lays the rows
+out, draws where a drag would land, and reports the move on release. It never applies it, so the move
+goes through the caller's own model and undo history:
+
+```csharp
+ReorderableTreeRow[] rows = [new(0, false), new(0, true), new(1, false), new(1, false)];
+
+if (ImGuiWidgets.ReorderableTree("layers", rows, i => ImGui.Selectable(names[i])) is ReorderableTreeMove move)
+{
+    // move.Row moves under move.ParentRow (-1 for the top level), into the gap move.Index.
+}
+```
+
+The top quarter of a container row drops above it, the bottom quarter below it, and the middle half
+inside it. A leaf splits at the middle. Below the last row of a subtree, how far left the pointer is
+picks how far out the drop lands. A drop onto the dragged row or anywhere in its subtree is refused,
+and so is one that would leave the row where it is.
+
+`Index` counts the new parent's children **before the move**, which is the gap the insertion line was
+drawn in. When a row moves down within its own parent, its old place is among those children, so a
+caller whose insert takes the final position subtracts one in exactly that case:
+
+```csharp
+if (sameParent && oldIndex < move.Index)
+{
+    index = move.Index - 1;
+}
+```
+
+A drag starts from a press anywhere on a row once the mouse moves past ImGui's drag threshold, so a
+click that does not move is left to the row's own items. Each row is marked for probes as
+`row{index}` inside the tree's label.
 
 ### Scoped Id
 

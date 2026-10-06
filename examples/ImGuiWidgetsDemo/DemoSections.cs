@@ -27,6 +27,7 @@ internal static class DemoSections
 		new(TextUtilitiesDemo.Show, TextUtilitiesDemo.ResetState),
 		new(ScopedUtilitiesDemo.Show, ScopedUtilitiesDemo.ResetState),
 		new(TreeViewDemo.Show, TreeViewDemo.ResetState),
+		new(ReorderableTreeDemo.Show, ReorderableTreeDemo.ResetState),
 		new(MobileDecoratorsDemo.Show, MobileDecoratorsDemo.ResetState),
 		new(MobileContainersDemo.Show, MobileContainersDemo.ResetState),
 		new(HistogramAndHandleTrackDemo.Show, HistogramAndHandleTrackDemo.ResetState),
