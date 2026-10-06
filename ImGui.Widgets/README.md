@@ -14,14 +14,20 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Switch`**: iOS-style toggle with an animated thumb, whose track interpolates between the frame background and the accent color
 - **`SegmentedControl`**: A row of mutually exclusive options with a sliding, animated highlight behind the selected one
 - **`Stepper`**: A `[-] value [+]` integer stepper with hold-to-repeat after a short delay
+- **`TimecodeField`**: Edits a frame count shown as SMPTE timecode, `HH:MM:SS:FF` (`;FF` for drop-frame), laid out as `[-] value [+]`. The buttons step a frame, or a second with Shift; dragging across the value scrubs a frame per pixel (ten with Shift); clicking it opens it for typing, where `1:00`, `2:00:00` or bare digits such as `10000` are read right-aligned; Up and Down step while hovered. The rate is a `TimecodeRate`, a numerator/denominator pair so 29.97 is exactly 30000/1001, with presets from `Fps23_976` to `Fps60` including both drop-frame rates. The static `Timecode` class formats, parses and converts to and from seconds with no ImGui context
 - **`RangeSlider`**: Dual-handle slider for a span within a range; the handles cannot cross and stay a minimum distance apart
+- **`ChannelFader`**: Mixing-console gain fader in dB on an audio taper (unity at three quarters of the travel), with a level meter beside the track, a readout underneath, right-click to reset to unity and wheel nudges; `FaderTaper` exposes the position-to-dB mapping
 - **`XYPad`**: Edits two normalized parameters at once from one pad
+- **`ColorWheel`** / **`LiftGammaGain`**: Colour-grading wheels, singly or as the lift, gamma and gain set a grade is made of. Each is a trackball editing a hue and strength over a master slider for luminance, held in a `ColorWheelValue`. Drags are relative, so a press never jumps the handle; Shift adjusts finely and a double-click resets the ball or the slider. `ColorWheelValue.ToRgbOffset` turns a wheel into a per-channel offset, and applying it is left to you
 - **`Knob`** / **`KnobWithDrag`**: Dial-style knobs in several variants, ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
 - **`Rating`**: Interactive star rating that previews the value under the cursor before it is committed
 - **`Chip`** / **`ChipGroup`**: Pill-shaped filter or choice tags, filled when selected, and a wrapping single-select group of them
 - **`PinInput`**: An N-box PIN or one-time-passcode entry that auto-advances, and steps back on backspace
 - **`SearchBox`** / **`SearchBoxRanked`**: Filters a collection with `ktsu.TextFilter` (glob, regex, fuzzy) or ranks it with a fuzzy match
 - **`Combo`**: Type-safe combo boxes for enums, strings, and semantic strings
+- **`PianoKeyboard`**: A horizontal piano keyboard played with the pointer. Returns note-on and note-off as plain MIDI note numbers, with velocity from how far down the key the press lands, slides from key to key while dragging, and highlights notes the caller reports as held. `PianoKeyboardLayout` holds the key geometry with no ImGui dependency, so a piano roll can share it
+- **`StepGrid`**: A step-sequencer grid of on/off cells, one row per voice and one column per step. A press toggles a cell and a drag paints that cell's new value across a run; the host owns the clock and passes the playing step to highlight
+- **`TransportScrubber`**: A video-editor style transport over a caller-owned `TimelineView`: time ruler, thumbnail strip from a caller resolver, playhead and in/out range, with frame snapping, I/O and arrow-key shortcuts, and a right-click menu
 
 ### Display and Status
 
@@ -33,6 +39,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Image`**: Images with alignment (`ImageCentered`, `ImageCenteredWithin`), returning whether they were clicked
 - **`PageIndicator`**: A row of carousel dots, optionally clickable to jump to a page
 - **`Tooltip`** / **`Breadcrumb`**: A hover tooltip and a path-style breadcrumb trail
+- **`DiffView`**: Draws a diff someone else computed, unified or side by side, with a checkbox per hunk and a proportional summary bar
 
 ### Progress and Loading
 
@@ -43,10 +50,43 @@ The widgets below are grouped by what they are for. Everything is a static metho
 ### Data and Signals
 
 - **`Histogram`**: One or more binned distributions as overlaid bars, scaled to the tallest bin; it takes pre-computed bins, so the binning scan stays off the render thread
+- **`FrameTimeGraph`**: Per-frame times as bars, newest on the right, against a budget line and a line at twice it, with over-budget bars recoloured, a cap on spikes past the scale, a hover tooltip, and a readout of the average, 99th percentile, worst frame and how many went over budget; feed a caller-owned `FrameTimeHistory` once a frame, or pass any span of milliseconds
 - **`HandleTrack`**: Draggable handles over a rectangle you supply — a histogram plot, say — kept ordered and a minimum distance apart
 - **`FlameGraph`**: A flame graph over managed sample data
 - **`DbMeter`**: A vertical audio level meter in decibels, with an optional peak-hold marker
+- **`GainReductionMeter`**: A vertical meter of how many dB a compressor or limiter is pulling down, filling from the top edge, with an optional held peak
+- **`CorrelationMeter`**: A horizontal phase-correlation bar from -1 through 0 to +1, filling outward from the centre; the ballistics live in a caller-owned `StereoMetersState`
+- **`Goniometer`**: A Lissajous plot of mid against side for a stereo block, so mono draws a vertical line and inverted material a horizontal one
 - **`Scope`**: An oscilloscope-style waveform over a block of audio samples
+- **`Waveform`**: A waveform overview of a whole clip, drawn from a min/max peak overview (`ComputeWaveformPeaks` builds one), with a click-or-drag playhead and a loop region whose edges drag like a `HandleTrack`'s; Shift-drag draws a new loop. A zoomable overload draws the window of a long clip that a caller-owned `TimelineView` shows, from a `WaveformPeakSource` such as the built-in `WaveformPeakCache`, a min/max pyramid that keeps a one-sample spike at every zoom; Ctrl+wheel zooms about the pointer, Shift+wheel and the scrollbar scroll, middle-drag pans, a scrub held past an edge scrolls, and the view pages to follow the playhead
+- **`DataTable`**: A table of typed rows that sorts and filters itself, moves an active cell with the keyboard, and edits one cell at a time, reporting each edit for you to apply
+- **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
+- **`EnvelopeEditor`**: A DAHDSR envelope drawn from the same `Envelope.LevelAt` a synth would call; drag breakpoints to retime segments and set the sustain level, drag tension handles to bend a segment, right-click one to straighten it
+- **`ParametricEq`**: An EQ response curve with a draggable node per band: drag for frequency and gain, wheel for Q. You plot your own response, or `EqResponse`'s RBJ cookbook biquads; `LogFrequencyAxis` is shared with `SpectrumAnalyzer`, so the two line up when stacked
+
+### Image and Colour
+
+- **`LevelsControl`**: A levels control — a histogram with black, grey and white input handles, an output ramp with its own black and white handles, and a numeric readout. It edits a caller-owned `LevelsAdjustment`, whose `Apply` is the same transfer function the handles describe, so the curve on screen and the curve applied to pixels cannot disagree. Grey point and gamma follow the Photoshop convention
+
+### Image and Colour
+
+- **`GradientEditor`**: A colour-stop gradient editor over a caller-owned list of `GradientStop`: click the bar to add a stop sampled from the gradient, drag a stop to move it (never past a neighbour), drag it away or press Delete to remove it, and edit the selected stop's colour with a colour picker underneath. `SampleGradient` is the evaluator the bar is drawn with, interpolating in linear RGB, so the gradient on screen and the gradient a consumer applies are the same function
+
+### Image and Colour
+
+- **`SwatchPalette`**: A wrapping grid of colour swatches over a caller-owned list: click a swatch to select it, drag one to reorder the list in place, with the selection following the swatch it named. Adding, removing and editing colours is left to the host, which reads the selected index
+
+### Image and Colour
+
+- **`ImageCompare`**: Two textures of the same image, before and after, in one pannable, zoomable view, either split by a draggable divider (a wipe) or side by side in two panes that pan and zoom together. Both are placed by one caller-owned `ImageCanvasState`, so they line up to the pixel
+
+### Image and Colour
+
+- **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, rule-of-thirds guides, edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
+
+### Image and Colour
+
+- **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
 
 ### Layout and Containers
 
@@ -56,6 +96,8 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`Card`**: A scoped elevated panel that draws its shadow and rounded background behind whatever the `using` block renders
 - **`Tree`**: Collapsible `Branch` and terminal `Leaf` nodes, with connector lines drawn between them
 - **`ImageCanvas`**: A pannable, zoomable image canvas with a checkerboard backing for transparency
+- **`AssetBrowser`**: A virtualized grid of thumbnail tiles over a caller-owned `AssetBrowserState`, with click, Ctrl+click and Shift+click selection, arrow-key focus, Ctrl+wheel tile resizing, double-click or Enter to activate, and dragging the selection out as a payload a drop target reads with `TryAcceptAssetPayload`. Only the visible rows ask for a label or thumbnail, so fifty thousand assets cost a screenful
+- **`Toolbar`** / **`ToolbarButton`** / **`ToolbarToggleButton`** / **`ToolbarSeparator`**: A horizontal strip of buttons, each holding a glyph and a label inside one frame — glyph leading, glyph above with the label centred beneath, glyph only (the label becomes the tooltip) or label only. See [Toolbar](#toolbar) below
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
@@ -673,6 +715,36 @@ stackedContainer.Tick(deltaTime);
 
 The dividers can be dragged by the user to resize the content regions dynamically.
 
+### Piano Keyboard
+
+The layout says which notes to draw; both ends must be white keys. Notes are plain MIDI numbers
+(middle C is 60, named `C4`), and nothing makes a sound: the widget reports what was played, and
+the host sends it wherever sound comes from.
+
+```csharp
+// Two octaves, C3 to C5. Immutable, so one layout can be shared.
+ImGuiWidgets.PianoKeyboardLayout layout = new(48, 72);
+
+// Each frame. Width 0 fills the row; notes held elsewhere (MIDI input, a sequencer) light up.
+ImGuiWidgets.PianoKeyEvent played = ImGuiWidgets.PianoKeyboard("Keys", layout, new Vector2(0, 90), heldNotes);
+
+if (played.HasNoteOff)
+{
+    synth.NoteOff(played.NoteOff);
+}
+
+if (played.HasNoteOn)
+{
+    synth.NoteOn(played.NoteOn, played.Velocity);
+}
+```
+
+The pointer holds one note at a time. Dragging onto another key stops the old note and starts the
+new one in the same event, so handle the note-off first. Velocity runs from 1 at the back of a key
+to 127 at its front edge. `HitTest`, `GetKeySpan`, `VelocityAt` and `NoteName` expose the geometry
+for a piano roll's rows or labels, and each key is marked for probes as `{label}/{note name}`, for
+example `Keys/C#4`.
+
 ### Property Grid
 
 `ImGuiWidgets.PropertyGrid` lays out one labelled editor per property in a two-column, resizable
@@ -762,6 +834,184 @@ height does not change once a picture appears.
 The other options are `ReadOnly` (every row drawn disabled), `LabelColumnWeight` /
 `LabelColumnWidth`, `ListsStartExpanded`, `ThumbnailSize`, and the printf-style `FloatFormat` /
 `DoubleFormat`.
+
+### Data Table
+
+`DataTable` draws typed rows, only the ones on screen, with sortable headers and a filter box under each. A person moves an active cell with the arrow keys, Tab and Page Down, and edits a cell by double-clicking it, pressing F2, or typing. Enter commits and moves down, and Escape cancels.
+
+The table never writes to your rows. Each editable column gets an `OnEdit` callback, and you apply the edit, which is what makes undo straightforward:
+
+```csharp
+private static readonly List<Part> parts = LoadParts();
+
+private static readonly ImGuiWidgets.DataTableState<Part> state = new(
+[
+	new ImGuiWidgets.DataTableColumn<Part, string>
+	{
+		Label = "Name",
+		Value = part => part.Name,
+		OnEdit = edit => edit.Row.Name = edit.NewValue,
+	},
+	new ImGuiWidgets.DataTableColumn<Part, int>
+	{
+		Label = "Quantity",
+		Value = part => part.Quantity,
+	},
+]);
+
+ImGuiWidgets.DataTable("parts", parts, state);
+```
+
+A column with no `OnEdit` is read-only. Strings, numbers, `bool` and enums get built-in editors, and any other type supplies an `Editor`.
+
+An edited row stays where it is until you call `state.Refresh()`, even if its new value sorts elsewhere, so it doesn't jump away while someone is working on it. The table rebuilds by itself when the sort, a filter, or the row count changes.
+
+Pass `DataTableOptions.Keybindings` to drive the keys from a `ktsu.Keybinding` keymap, after registering the commands with `ImGuiWidgets.DataTableCommands.Register`.
+
+### Spectrum Analyzer
+
+The FFT stays with the host: hand in the `N / 2 + 1` bin magnitudes of a real FFT, in decibels, and
+the state folds them into logarithmically spaced bands. A band takes its loudest bin, and a band too
+narrow to hold one reads the level interpolated at its centre. Bars rise at once and fall at
+`BarFallRate`; each band's peak holds for `PeakHoldSeconds`, then falls at `PeakFallRate`.
+
+```csharp
+// Kept across frames, like any other widget state.
+ImGuiWidgets.SpectrumAnalyzerState spectrum = new(bandCount: 32, minFrequency: 20f, maxFrequency: 20000f);
+
+// Each frame: fold in this frame's bins, advance by the frame's delta time, and draw.
+ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, binsDb, sampleRate: 48000f, new Vector2(480, 180));
+
+// Or draw a line instead of bars, and advance the state yourself.
+spectrum.Update(binsDb, 48000f, deltaSeconds);
+ImGuiWidgets.SpectrumAnalyzer("Output", spectrum, new Vector2(480, 180), style: ImGuiWidgets.SpectrumAnalyzerStyle.Line);
+```
+
+`GetBandIndex`, `GetBandCenter` and `FrequencyToPosition` expose the log-frequency axis for hit
+testing or labels.
+
+### Envelope Editor
+
+`Envelope` is a DAHDSR envelope: delay, attack, hold, decay and release in seconds, a sustain level
+from 0 to 1, and a tension from -1 to 1 on each of the three curved segments, where 0 is a straight
+line. `LevelAt(time, noteOffTime)` is the evaluator the editor draws, so the curve on screen is the
+curve your synth applies.
+
+```csharp
+ImGuiWidgets.Envelope envelope = ImGuiWidgets.Envelope.Adsr(0.01f, 0.2f, 0.7f, 0.5f);
+
+// Returns true on any frame the envelope changed. The time span is the seconds across the width.
+if (ImGuiWidgets.EnvelopeEditor("Amp", ref envelope, new Vector2(0, 160), timeSpan: 3f))
+{
+	voice.Envelope = envelope;
+}
+
+// Hide the delay and hold handles for a plain ADSR.
+ImGuiWidgets.EnvelopeEditor("Filter", ref filterEnvelope, showDelayAndHold: false);
+
+float level = envelope.LevelAt(secondsSinceNoteOn, noteOffTime: secondsHeld);
+```
+
+Drag a breakpoint to retime its segment (and, for the decay end and sustain, set the sustain level);
+drag a tension handle vertically to bend its segment, and right-click it to straighten it. Values
+that are not finite or are out of range are repaired on the first frame and reported as a change.
+Each handle is marked for probes as `<label>/attack`, `<label>/decayTension` and so on.
+
+### Parametric EQ
+
+The caller owns the bands and the response. Drag a node to move its band, sideways for frequency
+and vertically for gain; the wheel over a node changes its Q. `LowCut`, `HighCut` and `Notch` have no
+gain, so their nodes sit on the 0 dB line and only move sideways. The widget returns true on any
+frame a band's value actually changed, so a held pointer does not mint undo entries.
+
+```csharp
+ImGuiWidgets.EqBand[] bands =
+[
+    new(40f, 0f, ImGuiWidgets.EqBand.DefaultQ, ImGuiWidgets.EqBandType.LowCut),
+    new(250f, -3f, 1.2f),
+    new(8000f, 2f, ImGuiWidgets.EqBand.DefaultQ, ImGuiWidgets.EqBandType.HighShelf),
+];
+ImGuiWidgets.LogFrequencyAxis axis = new(20f, 20000f);
+int selected = -1;
+
+// Each frame. Plot your own DSP's response if it has one, so the curve is the one you apply.
+if (ImGuiWidgets.ParametricEq("EQ", bands, f => ImGuiWidgets.EqResponse.TotalDb(bands, f, 48000f), axis, ref selected, new Vector2(480, 220)))
+{
+    // Recompute your filters.
+}
+```
+
+Pass a `SpectrumAnalyzerState`'s own `Axis` to put the EQ on exactly the analyzer's frequency scale:
+a frequency then lands at the same fraction of the width in both. Each node is probe-visible as
+`{label}/band{i}`.
+
+### Step Grid
+
+The pattern is yours, row-major and edited in place: cell (row, step) is
+`steps[row * stepCount + step]`. The grid never reflows, so column `i` is always step `i`, and it
+reserves exactly its label column plus the cells; put a long pattern in a child window of your own.
+
+```csharp
+// Kept across frames: four voices of sixteen steps.
+bool[] pattern = new bool[4 * 16];
+string[] voices = ["Kick", "Snare", "Hat", "Clap"];
+
+// Each frame. The host advances playingStep from its own clock; -1 highlights nothing.
+if (ImGuiWidgets.StepGrid("Drums", pattern, rows: 4, stepCount: 16, playingStep, rowLabels: voices))
+{
+	// At least one cell changed this frame.
+}
+```
+
+A press toggles the cell it lands on, and the rest of the drag paints that cell's new value, so one
+gesture either fills or clears a run and never flickers cells back and forth. `stepsPerBeat`
+(default 4) shades each beat's first column, and `cellSize` defaults to a square of the frame height.
+Cells are probed as `"{label}/r{row}s{step}"`.
+
+### Toolbar
+
+A toolbar is a `using` scope; buttons and separators submitted inside it are laid out left to right
+on one row. Each button draws its glyph and its label inside the same frame, so a glyph is any
+string in the current font — merge an icon font such as Material Icons or a Nerd Font to use icons.
+
+```csharp
+using (ImGuiWidgets.Toolbar("##edit"))
+{
+	if (ImGuiWidgets.ToolbarButton("Open", "\uE2C7", new() { Shortcut = "Ctrl+O" }))
+	{
+		OpenFile();
+	}
+
+	ImGuiWidgets.ToolbarSeparator();
+	ImGuiWidgets.ToolbarToggleButton("Bold", "\uE238", ref bold, new() { Layout = ToolbarButtonLayout.GlyphOnly });
+}
+
+// A two-line strip: every button puts its label centred under its glyph.
+using (ImGuiWidgets.Toolbar("##transport", new ToolbarOptions { Layout = ToolbarButtonLayout.GlyphAbove }))
+{
+	ImGuiWidgets.ToolbarButton("Play", "\uE037", new() { MinWidth = 56 });
+	ImGuiWidgets.ToolbarButton("Stop", "\uE047", new() { MinWidth = 56 });
+}
+```
+
+`ToolbarButtonLayout` picks where the label goes:
+
+| Layout | Glyph | Label |
+|---|---|---|
+| `GlyphLeading` (default) | left | right of the glyph, on the same line |
+| `GlyphAbove` | top, centred | below the glyph, centred |
+| `GlyphOnly` | centred | shown as the tooltip unless one is set |
+| `LabelOnly` | not drawn | centred |
+
+A button takes its toolbar's layout unless it sets its own. A single-line toolbar has no room for
+a two-line button, so `GlyphAbove` falls back to `GlyphLeading` there; a single-line button in a
+`GlyphAbove` toolbar is centred vertically in the taller row. A missing glyph or label collapses
+the layout to the part that is present. Buttons also work outside a toolbar, where they size to
+themselves. `ToolbarGeometry` holds the layout arithmetic and takes plain sizes, so it can be used
+or tested without an ImGui context.
+
+Each button is probed under its label inside the toolbar's id (`"##edit/Open"`), its tooltip text
+under a name ending `Open/tooltip`, and the strip itself under its id.
 
 ### Hexa-backed Widgets
 

@@ -28,6 +28,7 @@
     <PackageReference Include="Hexa.NET.ImNodes" />
     <PackageReference Include="Hexa.NET.ImPlot" />
     <PackageReference Include="ktsu.Extensions" />
+    <PackageReference Include="ktsu.Keybinding" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.Semantics.Quantities" />

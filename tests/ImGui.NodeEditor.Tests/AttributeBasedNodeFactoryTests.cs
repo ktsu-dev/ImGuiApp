@@ -9,6 +9,7 @@ using System.Reflection;
 
 using ktsu.ImGui.NodeEditor;
 using ktsu.NodeGraph;
+using ktsu.NodeGraph.Library.Operations;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -275,6 +276,33 @@ public sealed class AttributeBasedNodeFactoryTests
 	}
 
 	/// <summary>
+	/// A generic method node's pins are typed with open generics such as <c>T[]</c> and <c>T</c>,
+	/// which no concrete type is assignable to. Type-checking them refused every link to or from the
+	/// shipped Collections nodes, so they could be placed but not wired.
+	/// </summary>
+	[TestMethod]
+	public void TryCreateLink_ConnectsGenericMethodNodesToConcretePins()
+	{
+		AttributeBasedNodeFactory factory = Factory;
+		factory.RegisterNodeType(typeof(Collections));
+
+		Node range = factory.CreateMethodNode(typeof(Collections).GetMethod(nameof(Collections.Range))!, Vector2.Zero);
+		Node arrayLength = factory.CreateMethodNode(typeof(Collections).GetMethod(nameof(Collections.ArrayLength))!, new Vector2(300, 0));
+		Node arrayFirst = factory.CreateMethodNode(typeof(Collections).GetMethod(nameof(Collections.ArrayFirst))!, new Vector2(300, 200));
+
+		Pin rangeResult = range.OutputPins.Single(p => p.EffectiveDisplayName == "Result");
+		Pin rangeStart = range.InputPins.Single(p => p.EffectiveDisplayName == "start");
+		Pin lengthArray = arrayLength.InputPins.Single(p => p.EffectiveDisplayName == "array");
+		Pin firstResult = arrayFirst.OutputPins.Single(p => p.EffectiveDisplayName == "Result");
+
+		LinkCreationResult intoGeneric = engine.TryCreateLink(rangeResult.Id, lengthArray.Id);
+		LinkCreationResult outOfGeneric = engine.TryCreateLink(firstResult.Id, rangeStart.Id);
+
+		Assert.IsTrue(intoGeneric.Success, intoGeneric.Message);
+		Assert.IsTrue(outOfGeneric.Success, outOfGeneric.Message);
+	}
+
+	/// <summary>
 	/// A pin's declared capacity is only worth declaring if it reaches the graph: the engine builds
 	/// pins from names, so without the factory carrying this across, an
 	/// <c>[OutputPin(AllowMultipleConnections = false)]</c> would be read and then dropped.
@@ -296,6 +324,47 @@ public sealed class AttributeBasedNodeFactoryTests
 		Assert.IsTrue(
 			node.OutputPins.Single(p => p.EffectiveDisplayName == "Instance").AllowsMultipleConnections,
 			"The instance output is there to be chained onward, by as many nodes as want it.");
+	}
+
+	[TestMethod]
+	public void CreateNode_CarriesEachPinsTypeOntoTheGraph()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.AreEqual(typeof(double), node.InputPins[0].DataType);
+		Assert.AreEqual(typeof(double), node.InputPins[1].DataType);
+	}
+
+	/// <summary>
+	/// The definition has known each pin's default since #439 taught it to read a C# initializer.
+	/// Until now it dropped them on the way to the graph, so a node was created holding nothing.
+	/// </summary>
+	[TestMethod]
+	public void CreateNode_SeedsEachPinFromItsDeclaredDefault()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.AreEqual(128.0, engine.GetPinValue(node.InputPins[0].Id), "Read from the property initializer.");
+		Assert.AreEqual(50.0, engine.GetPinValue(node.InputPins[1].Id), "Read from the attribute.");
+	}
+
+	[TestMethod]
+	public void CreateNode_StillAppliesDeclaredConnectionCapacities()
+	{
+		AttributeBasedNodeFactory factory = new(engine);
+		factory.RegisterNodeType<BlobFilterNode>();
+
+		Node node = factory.CreateNode<BlobFilterNode>(new Vector2(0, 0));
+
+		Assert.IsFalse(
+			node.OutputPins.Single(p => p.EffectiveDisplayName == "Count").AllowsMultipleConnections,
+			"An output fans out by default, and this one declared otherwise.");
 	}
 
 	/// <summary>
@@ -586,6 +655,19 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		[OutputPin("One", AllowMultipleConnections = false)]
 		public double One { get; set; }
+	}
+
+	[Node("Blob Filter")]
+	public sealed class BlobFilterNode
+	{
+		[InputPin("Threshold", Order = 0)]
+		public double Threshold { get; set; } = 128.0;
+
+		[InputPin("AreaMin", Order = 1, DefaultValue = 50.0)]
+		public double AreaMin { get; set; }
+
+		[OutputPin("Count", AllowMultipleConnections = false)]
+		public int Count => 0;
 	}
 
 	public sealed class NotANode

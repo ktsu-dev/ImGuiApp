@@ -6,6 +6,8 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ForceDirectedLayout;
 using ktsu.ImGui.NodeEditor;
+using ktsu.ImGui.Widgets;
+using ktsu.Keybinding.Core.Services;
 using ktsu.NodeGraph.Library.Operations;
 using ktsu.NodeGraph.Library.Primitives;
 using ktsu.NodeGraph.Library.Utilities;
@@ -13,7 +15,12 @@ using ktsu.NodeGraph.Library.Utilities;
 /// <summary>
 /// Clean architecture ImNodes demo with proper separation of concerns
 /// </summary>
-internal sealed class CleanImNodesDemo : IDemoTab
+/// <remarks>
+/// Every edit goes through a <see cref="NodeEditorHistory"/>, so the whole tab is undoable with
+/// Ctrl+Z and Ctrl+Y. The keys come from an in-memory <c>ktsu.Keybinding</c> keymap, the way an
+/// application with its own keymap would supply them.
+/// </remarks>
+internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 {
 	public string TabName => "Clean ImNodes";
 
@@ -21,12 +28,18 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	private readonly NodeEditorEngine engine = new();
 	private readonly AttributeBasedNodeFactory nodeFactory;
 
+	// Undo and redo for everything below
+	private readonly NodeEditorHistory history;
+
 	// Presentation layers
 	private readonly NodeEditorRenderer renderer = new();
-	private readonly NodeEditorInputHandler inputHandler = new();
+	private readonly NodeEditorInputHandler inputHandler;
+	private readonly KeybindingService keybindings;
 
 	// UI state
 	private bool showDebugVisualization;
+	private bool showNodeBodies;
+	private Vector2 lastEditorSize;
 	private string lastActionMessage = "";
 	private Vector4 lastActionColor = new(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -36,7 +49,21 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		RegisterNodeTypes();
 		CreateDemoData();
 		engine.InitializeWorldOriginToCentroid();
+
+		// Created after the demo data, so the starting graph is where the history begins rather than
+		// something Ctrl+Z can take apart.
+		history = new NodeEditorHistory(engine, nodeFactory);
+		renderer.History = history;
+
+		CommandRegistry commands = new();
+		keybindings = new KeybindingService(commands, new ProfileManager());
+		keybindings.CreateProfile("default", "Default");
+		keybindings.SetActiveProfile("default");
+		NodeEditorCommands.Register(commands, keybindings);
+		inputHandler = new NodeEditorInputHandler(keybindings);
 	}
+
+	public void Dispose() => history.Dispose();
 
 	public void Update(float deltaTime)
 	{
@@ -78,6 +105,7 @@ internal sealed class CleanImNodesDemo : IDemoTab
 	{
 		Vector2 editorAreaPos = ImGui.GetCursorScreenPos();
 		Vector2 editorAreaSize = ImGui.GetContentRegionAvail();
+		lastEditorSize = editorAreaSize;
 
 		// Handle input events first
 		ProcessInputEvents();
@@ -92,15 +120,65 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		renderer.RenderDebugOverlays(engine, editorAreaPos, editorAreaSize, showDebugVisualization);
 	}
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "Loop body has side effects (engine.TryCreateLink, field writes); a Where rewrite would not be equivalent.")]
+	/// <summary>
+	/// Hands each kind of request the handler reported to the engine.
+	/// </summary>
+	/// <remarks>
+	/// One method per request kind rather than four loops in a row: the gestures grew one at a time
+	/// and the combined method had crossed the cognitive-complexity threshold. Each still reads top
+	/// to bottom in the order the requests are drained, which is the part that matters — a link
+	/// selected alongside the node it hangs off is removed by its own request rather than silently
+	/// by RemoveNode.
+	/// </remarks>
 	private void ProcessInputEvents()
 	{
 		InputEvents events = inputHandler.ProcessInput();
 
-		// Process link creation requests
+		ProcessLinkCreationRequests(events);
+		ProcessLinkDeletionRequests(events);
+		ProcessNodeDeletionRequests(events);
+		ProcessNodeDuplicationRequests(events);
+		ProcessHistoryRequests(events);
+	}
+
+	private void ProcessHistoryRequests(InputEvents events)
+	{
+		if (events.UndoRequested)
+		{
+			Undo();
+		}
+
+		if (events.RedoRequested)
+		{
+			Redo();
+		}
+	}
+
+	private void Undo()
+	{
+		string? description = history.NextUndoDescription;
+		if (history.Undo())
+		{
+			lastActionMessage = $"Undid: {description}";
+			lastActionColor = new Vector4(0.8f, 0.8f, 1.0f, 1.0f);
+		}
+	}
+
+	private void Redo()
+	{
+		string? description = history.NextRedoDescription;
+		if (history.Redo())
+		{
+			lastActionMessage = $"Redid: {description}";
+			lastActionColor = new Vector4(0.8f, 0.8f, 1.0f, 1.0f);
+		}
+	}
+
+	private void ProcessLinkCreationRequests(InputEvents events)
+	{
 		foreach (LinkCreationRequest request in events.LinkCreationRequests)
 		{
-			LinkCreationResult result = engine.TryCreateLink(request.FromPinId, request.ToPinId);
+			LinkCreationResult result = history.TryCreateLink(request.FromPinId, request.ToPinId);
 
 			if (result.Success)
 			{
@@ -113,15 +191,56 @@ internal sealed class CleanImNodesDemo : IDemoTab
 				lastActionColor = new Vector4(1.0f, 0.3f, 0.3f, 1.0f); // Red
 			}
 		}
+	}
 
-		// Process link deletion requests
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "RemoveLink is the mutation, not a predicate; a Where rewrite would hide a graph edit inside a lazily-evaluated filter.")]
+	private void ProcessLinkDeletionRequests(InputEvents events)
+	{
 		foreach (int linkId in events.LinkDeletionRequests)
 		{
-			if (engine.RemoveLink(linkId))
+			if (history.RemoveLink(linkId))
 			{
 				lastActionMessage = $"Link {linkId} deleted";
 				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
 			}
+		}
+	}
+
+	/// <remarks>
+	/// Drained after the links so a link selected alongside the node it hangs off is removed by its
+	/// own request rather than silently by RemoveNode; either order leaves the same graph.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S3267:Loops should be simplified using the \"Where\" LINQ method.", Justification = "RemoveNode is the mutation, not a predicate; a Where rewrite would hide a graph edit inside a lazily-evaluated filter.")]
+	private void ProcessNodeDeletionRequests(InputEvents events)
+	{
+		foreach (int nodeId in events.NodeDeletionRequests)
+		{
+			if (history.RemoveNode(nodeId))
+			{
+				lastActionMessage = $"Node {nodeId} deleted";
+				lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
+			}
+		}
+	}
+
+	/// <remarks>
+	/// The whole selection goes over in one call rather than one node at a time, so a link between
+	/// two selected nodes is copied along with them.
+	/// </remarks>
+	private void ProcessNodeDuplicationRequests(InputEvents events)
+	{
+		if (events.NodeDuplicationRequests.Count == 0)
+		{
+			return;
+		}
+
+		IReadOnlyList<Node> copies = history.DuplicateNodes(events.NodeDuplicationRequests, NodeEditorEngine.DefaultDuplicationOffset);
+		if (copies.Count > 0)
+		{
+			lastActionMessage = copies.Count == 1
+				? $"Node {copies[0].Id} duplicated"
+				: $"{copies.Count} nodes duplicated";
+			lastActionColor = new Vector4(0.4f, 0.8f, 1.0f, 1.0f); // Blue
 		}
 	}
 
@@ -184,28 +303,32 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		if (DemoProbe.Button("Add Input Node"))
 		{
 			Vector2 position = new(100, 100 + (engine.Nodes.Count * 50));
-			engine.CreateNode(position, $"Input {engine.Nodes.Count + 1}", 0, 2);
+			history.Record("Add input node", () => engine.CreateNode(position, $"Input {engine.Nodes.Count + 1}", 0, 2));
 		}
 
 		ImGui.SameLine();
 		if (DemoProbe.Button("Add Process Node"))
 		{
 			Vector2 position = new(300, 100 + (engine.Nodes.Count * 50));
-			engine.CreateNode(position, $"Process {engine.Nodes.Count + 1}", 2, 2);
+			history.Record("Add process node", () => engine.CreateNode(position, $"Process {engine.Nodes.Count + 1}", 2, 2));
 		}
 
 		ImGui.SameLine();
 		if (DemoProbe.Button("Add Output Node"))
 		{
 			Vector2 position = new(500, 100 + (engine.Nodes.Count * 50));
-			engine.CreateNode(position, $"Output {engine.Nodes.Count + 1}", 2, 0);
+			history.Record("Add output node", () => engine.CreateNode(position, $"Output {engine.Nodes.Count + 1}", 2, 0));
 		}
 
+		// Recorded like any other edit, so a reset or a clear is one Ctrl+Z away from being undone.
 		if (DemoProbe.Button("Reset Demo"))
 		{
-			engine.Clear();
-			CreateDemoData();
-			engine.InitializeWorldOriginToCentroid();
+			history.Record("Reset demo", () =>
+			{
+				engine.Clear();
+				CreateDemoData();
+				engine.InitializeWorldOriginToCentroid();
+			});
 			lastActionMessage = "Reset to demo data";
 			lastActionColor = new Vector4(0.0f, 0.8f, 1.0f, 1.0f); // Cyan
 		}
@@ -213,10 +336,19 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		ImGui.SameLine();
 		if (DemoProbe.Button("Clear All"))
 		{
-			engine.Clear();
+			history.Record("Clear all", engine.Clear);
 			lastActionMessage = "All nodes and links cleared";
 			lastActionColor = new Vector4(1.0f, 0.7f, 0.0f, 1.0f); // Orange
 		}
+
+		ImGui.SeparatorText("History");
+		RenderHistoryControls();
+
+		ImGui.SeparatorText("Layout Tools");
+		RenderLayoutTools();
+
+		ImGui.SeparatorText("View & Node Content");
+		RenderViewControls();
 
 		// Physics settings
 		ImGui.SeparatorText("Physics Simulation");
@@ -240,11 +372,137 @@ internal sealed class CleanImNodesDemo : IDemoTab
 			ImGui.TextColored(lastActionColor, lastActionMessage);
 		}
 
+		if (renderer.SelectedNodeIds.Count > 0)
+		{
+			ImGui.SeparatorText("Parameters");
+			NodeInspectorPanel.Draw(engine, renderer.SelectedNodeIds.First());
+		}
+
 		// Debug information
 		if (showDebugVisualization)
 		{
 			RenderDebugInformation();
 		}
+	}
+
+	/// <summary>
+	/// Draws undo and redo, with what each would do, and the keys the keymap has them on.
+	/// </summary>
+	private void RenderHistoryControls()
+	{
+		using (new ScopedDisable(!history.CanUndo))
+		{
+			if (DemoProbe.Button("Undo"))
+			{
+				Undo();
+			}
+		}
+
+		ImGui.SameLine();
+		using (new ScopedDisable(!history.CanRedo))
+		{
+			if (DemoProbe.Button("Redo"))
+			{
+				Redo();
+			}
+		}
+
+		ImGui.TextDisabled($"Next undo: {history.NextUndoDescription ?? "nothing"}");
+		ImGui.TextDisabled($"Next redo: {history.NextRedoDescription ?? "nothing"}");
+
+		foreach (ktsu.Keybinding.Core.Models.Command command in NodeEditorCommands.All)
+		{
+			ImGui.TextDisabled($"{command.Name}: {keybindings.GetChord(command.Id)?.ToString() ?? "unbound"}");
+		}
+	}
+
+	/// <summary>
+	/// Draws grid snapping and comment boxes, the tools for laying a pipeline out by hand.
+	/// </summary>
+	private void RenderLayoutTools()
+	{
+		bool snap = renderer.SnapToGrid;
+		if (DemoProbe.Checkbox("Snap to grid", ref snap))
+		{
+			renderer.SnapToGrid = snap;
+		}
+
+		ImGui.SameLine();
+		float spacing = renderer.GridSpacing ?? 24f;
+		ImGui.SetNextItemWidth(120f);
+		if (DemoProbe.SliderFloat("Grid spacing", ref spacing, 8f, 64f, "%.0f"))
+		{
+			renderer.GridSpacing = spacing;
+		}
+
+		using (new ScopedDisable(renderer.SelectedNodeIds.Count == 0))
+		{
+			if (DemoProbe.Button("Snap Selection To Grid"))
+			{
+				renderer.SnapNodesToGrid(engine, renderer.SelectedNodeIds);
+			}
+
+			ImGui.SameLine();
+			if (DemoProbe.Button("Comment Selection"))
+			{
+				history.CreateCommentBoxAround(renderer.SelectedNodeIds, "Comment");
+			}
+		}
+
+		ImGui.TextDisabled("Drag a comment's title to move it with its nodes; double-click to rename.");
+	}
+
+	/// <summary>
+	/// Draws the renderer's zoom, the fit-to-view action, and what is drawn inside each node: the
+	/// inline editors on unconnected parameter rows, and host content through the body hook.
+	/// </summary>
+	private void RenderViewControls()
+	{
+		float zoom = renderer.Zoom;
+		ImGui.SetNextItemWidth(120f);
+		if (DemoProbe.SliderFloat("Zoom", ref zoom, NodeEditorRenderer.MinZoom, NodeEditorRenderer.MaxZoom, "%.2fx"))
+		{
+			renderer.Zoom = zoom;
+		}
+
+		ImGui.SameLine();
+		if (DemoProbe.Button("Fit To View") && renderer.FitToView(engine, lastEditorSize))
+		{
+			lastActionMessage = $"Fitted the graph at {renderer.Zoom:0.00}x";
+			lastActionColor = new Vector4(0.0f, 0.8f, 1.0f, 1.0f); // Cyan
+		}
+
+		bool inlineEditors = renderer.DrawInlinePinEditors;
+		if (DemoProbe.Checkbox("Inline parameter editors", ref inlineEditors))
+		{
+			renderer.DrawInlinePinEditors = inlineEditors;
+		}
+
+		ImGui.SameLine();
+		float inlineWidth = renderer.InlineEditorWidth;
+		ImGui.SetNextItemWidth(120f);
+		if (DemoProbe.SliderFloat("Editor width", ref inlineWidth, 40f, 200f, "%.0f"))
+		{
+			renderer.InlineEditorWidth = inlineWidth;
+		}
+
+		// The body hook runs inside each node after its pins, so host content sits under the rows
+		// rather than among them. Here it summarises how the node sits in the graph.
+		if (DemoProbe.Checkbox("Show connection summary in each node", ref showNodeBodies))
+		{
+			renderer.DrawNodeBody = showNodeBodies ? DrawNodeSummary : null;
+		}
+	}
+
+	/// <summary>
+	/// The host content drawn in each node's body while the summary is on.
+	/// </summary>
+	private void DrawNodeSummary(Node node)
+	{
+		int incoming = engine.GetIncomingLinks(node.Id).Count();
+		int outgoing = engine.GetOutgoingLinks(node.Id).Count();
+		int reach = engine.GetDownstream(node.Id).NodeIds.Count;
+		ImGui.TextDisabled($"in {incoming} / out {outgoing} / reaches {reach}");
 	}
 
 	/// <summary>
@@ -419,8 +677,11 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		Node setNumber1 = nodeFactory.CreateNode<SetNumberNode>(new Vector2(450, 100));
 		Node splitNumber2 = nodeFactory.CreateNode<SplitNumberNode>(new Vector2(650, 100));
 
-		// Mathematical operation chain with data mutation
+		// Mathematical operation chain with data mutation. Add takes two doubles, so each operand
+		// reaches it through a Split rather than straight off a Make: a Make's output is the
+		// NumberData structure, and TryCreateLink refuses that into a double parameter.
 		Node makeNumber2 = nodeFactory.CreateNode<MakeNumberNode>(new Vector2(50, 250));
+		Node splitNumber3 = nodeFactory.CreateNode<SplitNumberNode>(new Vector2(150, 250));
 		Node addNode = nodeFactory.CreateMethodNode(addMethod, new Vector2(250, 250));
 		Node setNumber2 = nodeFactory.CreateNode<SetNumberNode>(new Vector2(450, 250));
 
@@ -438,9 +699,11 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		engine.TryCreateLink(splitNumber1.OutputPins[1].Id, setNumber1.InputPins[1].Id); // Absolute value as new value
 		engine.TryCreateLink(setNumber1.OutputPins[0].Id, splitNumber2.InputPins[0].Id); // Updated data to final Split
 
-		// Math operation with data update: Make → Add → Set (update existing with result)
-		engine.TryCreateLink(makeNumber1.OutputPins[0].Id, addNode.InputPins[0].Id);
-		engine.TryCreateLink(makeNumber2.OutputPins[0].Id, addNode.InputPins[1].Id);
+		// Math operation with data update: Make → Split → Add → Set (update existing with result).
+		// Each operand is the Split's double Value, not the Make's NumberData.
+		engine.TryCreateLink(makeNumber2.OutputPins[0].Id, splitNumber3.InputPins[0].Id);
+		engine.TryCreateLink(splitNumber1.OutputPins[0].Id, addNode.InputPins[0].Id);
+		engine.TryCreateLink(splitNumber3.OutputPins[0].Id, addNode.InputPins[1].Id);
 		engine.TryCreateLink(makeNumber1.OutputPins[0].Id, setNumber2.InputPins[0].Id); // Original data
 		engine.TryCreateLink(addNode.OutputPins[0].Id, setNumber2.InputPins[1].Id); // Add result as new value
 
@@ -452,5 +715,22 @@ internal sealed class CleanImNodesDemo : IDemoTab
 		engine.TryCreateLink(multiplyNode.OutputPins[0].Id, setVector.InputPins[1].Id); // X² as new X
 		engine.TryCreateLink(splitVector1.OutputPins[1].Id, setVector.InputPins[2].Id); // Keep Y unchanged
 		engine.TryCreateLink(setVector.OutputPins[0].Id, splitVector2.InputPins[0].Id); // Final vector analysis
+
+		// A node whose parameters are edited rather than connected, which is what issue #437 asked
+		// about. Typed pins with defaults are all an inline editor needs.
+		engine.CreateNodeFromSpecs(
+			new Vector2(50, 550),
+			"Blob Filter",
+			[
+				new PinSpec("Threshold", typeof(double), 128.0),
+				new PinSpec("AreaMin", typeof(double), 50.0),
+				new PinSpec("Sigma", typeof(double), 2.0),
+				new PinSpec("Invert", typeof(bool), false),
+			],
+			[new PinSpec("Count", typeof(int))]);
+
+		// A comment box labelling a region of the graph, the way issue #468 asked for. It sits behind
+		// the nodes, and dragging its title carries whatever lies inside it.
+		engine.CreateCommentBox(new Vector2(20, 500), new Vector2(340, 240), "Parameters, not connections");
 	}
 }

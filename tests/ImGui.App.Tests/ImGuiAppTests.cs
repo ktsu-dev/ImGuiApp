@@ -6,6 +6,7 @@ namespace ktsu.ImGui.App.Tests;
 
 using System.Diagnostics;
 using System.Numerics;
+using ktsu.ImGui.App.Images;
 using ktsu.ImGui.App.Tests.Images;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
@@ -18,6 +19,8 @@ using Silk.NET.Windowing;
 [TestClass]
 public sealed class ImGuiAppTests : IDisposable
 {
+	public TestContext TestContext { get; set; } = null!;
+
 	private Mock<IWindow>? _mockWindow;
 	private Mock<IMonitor>? _mockMonitor;
 	private TestGL? _testGL;
@@ -469,16 +472,21 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		public nint LastUpdatedTextureId { get; private set; }
 		public byte[] LastUpdatedPixels { get; private set; } = [];
 		public bool UpdateTextureResult { get; init; } = true;
+		public int LastUpdateThreadId { get; private set; }
+
+		public byte[] LastCreatedPixels { get; private set; } = [];
 
 		public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 		{
 			CreateTextureCallCount++;
+			LastCreatedPixels = rgba.ToArray();
 			return NextHandle;
 		}
 
 		public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
 		{
 			LastUpdatedTextureId = id;
+			LastUpdateThreadId = Environment.CurrentManagedThreadId;
 			LastUpdatedPixels = rgba.ToArray();
 			return UpdateTextureResult;
 		}
@@ -538,6 +546,106 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		ImGuiApp.DeleteTexture(123);
 
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "Delete should route through the registered backend");
+	}
+
+	/// <summary>
+	/// Builds a GL bound to nothing. Constructing one is enough for reference comparison, and the
+	/// reload path uploads through <see cref="IRendererBackend"/> rather than through this object, so
+	/// no GL entry point is ever called.
+	/// </summary>
+	private static Silk.NET.OpenGL.GL UnboundGL() => new(Mock.Of<INativeContext>());
+
+	[TestMethod]
+	public void CheckAndHandleContextChange_WhenTheGLIsReplaced_ReloadsTrackedTextures()
+	{
+		// The detector used to compare ImGui.GetCurrentContext().Handle, which is created once in
+		// ImGuiController.Init and never replaced, so a replaced GL context went unnoticed and every
+		// tracked texture id kept naming an object the new context had never created.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 2001 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiAppTextureInfo texture = new()
+			{
+				Path = path,
+				TextureId = 1001,
+				Width = 1,
+				Height = 1
+			};
+			ImGuiApp.Textures[path] = texture;
+
+			using Silk.NET.OpenGL.GL first = UnboundGL();
+			ImGuiApp.gl = first;
+			ImGuiApp.CheckAndHandleContextChange();
+
+			Assert.AreEqual(0, backend.CreateTextureCallCount, "The first observation of a GL has nothing to reload against");
+			Assert.AreEqual(1001, texture.TextureId, "The first observation should leave the tracked texture alone");
+
+			using Silk.NET.OpenGL.GL second = UnboundGL();
+			ImGuiApp.gl = second;
+			ImGuiApp.CheckAndHandleContextChange();
+
+			Assert.AreEqual(1, backend.CreateTextureCallCount, "Replacing the GL should reload the tracked textures");
+			Assert.AreEqual(2001, texture.TextureId, "The tracked texture should carry the id the new context handed back");
+		}
+		finally
+		{
+			ImGuiApp.gl = null;
+			File.Delete(file);
+		}
+	}
+
+	[TestMethod]
+	public void CheckAndHandleContextChange_WithTheSameGL_DoesNotReload()
+	{
+		// The guard against the opposite failure: RemapCanvas calls this on every window move and
+		// resize, so reloading whenever it is called would re-upload every texture and orphan the
+		// handles it replaced, since the reload does not delete them.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 2002 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiApp.Textures[path] = new ImGuiAppTextureInfo
+			{
+				Path = path,
+				TextureId = 1001,
+				Width = 1,
+				Height = 1
+			};
+
+			using Silk.NET.OpenGL.GL only = UnboundGL();
+			ImGuiApp.gl = only;
+
+			ImGuiApp.CheckAndHandleContextChange();
+			ImGuiApp.CheckAndHandleContextChange();
+			ImGuiApp.CheckAndHandleContextChange();
+
+			Assert.AreEqual(0, backend.CreateTextureCallCount, "An unchanged GL should never trigger a reload");
+			Assert.AreEqual(1001, ImGuiApp.Textures[path].TextureId, "An unchanged GL should leave the tracked texture alone");
+		}
+		finally
+		{
+			ImGuiApp.gl = null;
+			File.Delete(file);
+		}
 	}
 
 	[TestMethod]
@@ -668,6 +776,152 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
 	}
 
+	// Runs work on a thread-pool thread while this thread plays the window thread, pumping the
+	// invoker until the work finishes, so anything the work marshals through the invoker runs here.
+	private Task RunOnWorkerWhilePumping(Action work)
+	{
+		Task worker = Task.Run(work, TestContext.CancellationToken);
+		Stopwatch pump = Stopwatch.StartNew();
+		while (!worker.IsCompleted && pump.Elapsed < TimeSpan.FromSeconds(30))
+		{
+			ImGuiApp.Invoker.DoInvokes();
+			SpinWait.SpinUntil(() => worker.IsCompleted, TimeSpan.FromMilliseconds(1));
+		}
+
+		return worker;
+	}
+
+	[TestMethod]
+	public void UpdateTexture_FromAWorkerThread_UpdatesOnTheInvokerThread()
+	{
+		// The in-place path used to call the backend on whatever thread called UpdateTexture. On
+		// OpenGL that is a GL call with no current context, which is exactly what an application
+		// producing frames on a worker thread does. The update has to reach the backend on the
+		// thread that owns the invoker, and the caller has to wait for it.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+		byte[] pixels = [5, 6, 7, 8];
+
+		Task worker = RunOnWorkerWhilePumping(() => ImGuiApp.UpdateTexture(info, pixels, 1, 1));
+
+		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
+		Assert.AreEqual(Environment.CurrentManagedThreadId, backend.LastUpdateThreadId, "The backend must be called on the invoker's thread, not the worker's");
+		Assert.AreEqual(info.TextureId, backend.LastUpdatedTextureId, "In-place update should target the existing handle");
+		Assert.AreSequenceEqual(pixels, backend.LastUpdatedPixels, "The pixel payload should reach the backend unchanged");
+		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_FromAWorkerThread_WhenBackendDeclines_FallsBackToRecreate()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42, UpdateTextureResult = false };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		Task worker = RunOnWorkerWhilePumping(() => ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1));
+
+		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A declined update must delete the old texture");
+		Assert.AreEqual(2, backend.CreateTextureCallCount, "A declined update must recreate the texture");
+	}
+
+	private static FakeRendererBackend StartFakeRenderer(bool updateTextureResult = true)
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42, UpdateTextureResult = updateTextureResult };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		return backend;
+	}
+
+	[TestMethod]
+	public void CreateTexture_WithBgr8AndPaddedRows_UploadsConvertedRgba()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+
+		// Two rows of one BGR pixel, each padded to four bytes as an OpenCV Mat or a DIB would be.
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture([3, 2, 1, 0xEE, 6, 5, 4, 0xEE], 1, 2, PixelLayout.Bgr8, rowStride: 4);
+
+		Assert.AreEqual(1, info.Width);
+		Assert.AreEqual(2, info.Height);
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 255, 4, 5, 6, 255 }, backend.LastCreatedPixels, "The backend should receive tightly packed RGBA8");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithBgra8_UpdatesInPlaceWithConvertedPixels()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		ImGuiApp.UpdateTexture(info, [30, 20, 10, 40], 1, 1, PixelLayout.Bgra8);
+
+		Assert.AreEqual(info.TextureId, backend.LastUpdatedTextureId, "In-place update should target the existing handle");
+		Assert.AreSequenceEqual(new byte[] { 10, 20, 30, 40 }, backend.LastUpdatedPixels, "The backend should receive the pixels as RGBA8");
+		Assert.AreEqual(1, backend.CreateTextureCallCount, "A successful in-place update must not recreate the texture");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithTightRgba8Layout_PassesThePixelsThroughUnchanged()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		// A buffer longer than the image is accepted: only the first width * height * 4 bytes are pixels.
+		ImGuiApp.UpdateTexture(info, [1, 2, 3, 4, 0xEE, 0xEE], 1, 1, PixelLayout.Rgba8);
+
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 4 }, backend.LastUpdatedPixels);
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutAndDifferentSize_RecreatesFromConvertedPixels()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		ImGuiApp.UpdateTexture(info, [9, 8], 2, 1, PixelLayout.Gray8);
+
+		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A size change must delete the old texture");
+		Assert.AreEqual(2, backend.CreateTextureCallCount, "A size change must recreate the texture");
+		Assert.AreSequenceEqual(new byte[] { 9, 9, 9, 255, 8, 8, 8, 255 }, backend.LastCreatedPixels, "The recreated texture should hold the converted pixels");
+		Assert.AreEqual(2, info.Width, "The info must carry the new width");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutFromAWorkerThread_UpdatesOnTheInvokerThread()
+	{
+		FakeRendererBackend backend = StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[1 * 1 * 4], 1, 1);
+
+		Task worker = RunOnWorkerWhilePumping(() => ImGuiApp.UpdateTexture(info, [3, 2, 1], 1, 1, PixelLayout.Bgr8));
+
+		Assert.IsTrue(worker.IsCompletedSuccessfully, $"The worker's update should complete: {worker.Status} {worker.Exception?.Message}");
+		Assert.AreEqual(Environment.CurrentManagedThreadId, backend.LastUpdateThreadId, "The backend must be called on the invoker's thread, not the worker's");
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 255 }, backend.LastUpdatedPixels, "The pixel payload should reach the backend converted");
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutAndNullInfo_Throws()
+	{
+		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.UpdateTexture(null!, new byte[3], 1, 1, PixelLayout.Rgb8));
+	}
+
+	[TestMethod]
+	public void UpdateTexture_WithLayoutAndTooFewBytes_Throws()
+	{
+		StartFakeRenderer();
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[2 * 2 * 4], 2, 2);
+
+		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.UpdateTexture(info, new byte[11], 2, 2, PixelLayout.Rgb8));
+	}
+
 	[TestMethod]
 	public void UpdateTexture_WithDifferentSize_RecreatesTexture()
 	{
@@ -700,6 +954,103 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 
 		Assert.AreEqual(1, backend.DeleteTextureCallCount, "A declined update must delete the old texture");
 		Assert.AreEqual(2, backend.CreateTextureCallCount, "A declined update must recreate the texture");
+	}
+
+	// Writes a decodable PNG to a temp file and returns its path. The caller deletes it.
+	private static string WriteTempPng(int width, int height)
+	{
+		byte[] pixels = new byte[width * height * 4];
+		Array.Fill(pixels, (byte)0xFF);
+		byte[] png = TestImageBuilder.Png(width, height, colorType: 6, bitDepth: 8, pixels);
+		string file = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		File.WriteAllBytes(file, png);
+		return file;
+	}
+
+	[TestMethod]
+	public void UpdateTexture_OnAPathTrackedTexture_KeepsItPublishedInTheCache()
+	{
+		// UpdateTexture's recreate fallback went through DeleteTexture, which drops every cache entry
+		// pointing at the deleted handle - including the entry GetOrLoadTexture published for this
+		// path - and then never restored it. The texture stayed live on the GPU but became invisible
+		// to TryGetTexture, so callers were told a loaded texture was missing.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 4242 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		string file = WriteTempPng(2, 2);
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiAppTextureInfo info = ImGuiApp.GetOrLoadTexture(path);
+
+			// A size change forces the delete/recreate fallback regardless of what the backend can do
+			// in place, which is the path the issue reports.
+			ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+			Assert.IsTrue(ImGuiApp.TryGetTexture(path, out ImGuiAppTextureInfo? cached), "A path-tracked texture must stay published after a resize");
+			Assert.AreSame(info, cached, "The cache should still hold the instance the caller is using");
+			Assert.AreEqual(1, cached!.Width, "The published entry must carry the new size");
+			Assert.AreEqual(1, cached.Height, "The published entry must carry the new size");
+			Assert.AreEqual(backend.NextHandle, cached.TextureId, "The published entry must carry the recreated handle");
+		}
+		finally
+		{
+			File.Delete(file);
+		}
+	}
+
+	[TestMethod]
+	public void UpdateTexture_OnAPathTrackedTexture_DoesNotUploadADuplicateOnTheNextLoad()
+	{
+		// The downstream cost of the desync, which the cache-presence assertion above does not by
+		// itself pin: with the path evicted, the next GetOrLoadTexture missed, re-decoded the file and
+		// uploaded a second GPU texture, leaving the first one reachable only through the caller's own
+		// ImGuiAppTextureInfo. CleanupAllTextures walks Textures.Keys, so whichever handle was not
+		// published could never be freed - the leak the issue reports.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 4242 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+
+		string file = WriteTempPng(2, 2);
+		try
+		{
+			AbsoluteFilePath path = file.As<AbsoluteFilePath>();
+			ImGuiAppTextureInfo info = ImGuiApp.GetOrLoadTexture(path);
+			ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+			int uploadsAfterUpdate = backend.CreateTextureCallCount;
+			ImGuiAppTextureInfo reloaded = ImGuiApp.GetOrLoadTexture(path);
+
+			Assert.AreSame(info, reloaded, "Re-loading the path should hand back the texture already in use");
+			Assert.AreEqual(uploadsAfterUpdate, backend.CreateTextureCallCount, "Re-loading a still-cached path must not upload a duplicate GPU texture");
+			CollectionAssert.Contains(ImGuiApp.Textures.Keys.ToList(), path, "CleanupAllTextures walks Textures.Keys, so the path must still be among them for the handle to be freeable");
+		}
+		finally
+		{
+			File.Delete(file);
+		}
+	}
+
+	[TestMethod]
+	public void UpdateTexture_OnAnUntrackedTexture_StaysOutOfTheCache()
+	{
+		// The republish must restore only entries this instance was already published under. A texture
+		// from CreateTexture has no path and was never in the cache, so a resize must not add one.
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 42 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		ImGuiAppTextureInfo info = ImGuiApp.CreateTexture(new byte[2 * 2 * 4], 2, 2);
+
+		ImGuiApp.UpdateTexture(info, new byte[1 * 1 * 4], 1, 1);
+
+		Assert.AreEqual(0, ImGuiApp.Textures.Count, "A memory texture must stay out of the path-keyed cache across a resize");
 	}
 
 	[TestMethod]

@@ -1,7 +1,7 @@
-## v3.41.0 (minor)
+## v3.59.2-pre.3 (prerelease)
 
-Changes since v3.40.0:
+Changes since v3.59.2-pre.2:
 
-- Group the node-id lookups with the other GetNodeDefinition overloads ([@Claude](https://github.com/Claude))
-- Bind each created node to an instance its parameters live on [minor] ([@Claude](https://github.com/Claude))
+- Bump Polyfill from 11.4.1 to 11.4.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

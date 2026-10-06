@@ -277,26 +277,7 @@ public static partial class ImGuiWidgets
 			int forcedRow)
 		{
 			ImGuiListClipper clipper = default;
-
-			// An explicit height lets the clipper skip its measuring pass. Left to ImGui when the
-			// caller did not set one, rather than guessed at from the font: a guess that disagreed
-			// with the real row pitch would put every skipped row at the wrong offset.
-			if (options.RowHeight > 0f)
-			{
-				clipper.Begin(rowCount, options.RowHeight);
-			}
-			else
-			{
-				clipper.Begin(rowCount);
-			}
-
-			// The scroll is anchored on the row itself further down, which can only happen if the
-			// row is drawn — and a row far outside the visible range would not be. This is what
-			// makes ScrollToRow land on the first frame instead of the one after it.
-			if (forcedRow >= 0)
-			{
-				clipper.IncludeItemByIndex(forcedRow);
-			}
+			TableClipping.Begin(ref clipper, rowCount, options.RowHeight, forcedRow);
 
 			while (clipper.Step())
 			{
@@ -364,8 +345,7 @@ public static partial class ImGuiWidgets
 		/// Builds a row's probe name. Follows the <c>Tags/[0]</c> shape the property grid's lists
 		/// already use, so a bracketed index means the same thing across the library.
 		/// </summary>
-		internal static string RowName(string label, int row) =>
-			string.Create(CultureInfo.InvariantCulture, $"{label}/[{row}]");
+		internal static string RowName(string label, int row) => TableClipping.RowName(label, row);
 
 		private static void ReportSortChange(VirtualTableOptions options)
 		{

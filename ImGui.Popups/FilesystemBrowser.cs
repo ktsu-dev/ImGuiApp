@@ -14,8 +14,7 @@ using ktsu.Extensions;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 using ktsu.ImGui.Probes;
-
-using Microsoft.Extensions.FileSystemGlobbing;
+using ktsu.TextFilter;
 
 /// <summary>
 /// Partial class containing various ImGui popup implementations.
@@ -116,18 +115,14 @@ public partial class ImGuiPopups
 		/// </summary>
 		private Collection<string> Drives { get; set; } = [];
 
-		/// <summary>
-		/// The glob pattern used for filtering files.
-		/// </summary>
 		/// <summary>Name prefix for probe marks, so tests address rows and buttons by name.</summary>
 		private const string ProbePrefix = "filesystem-browser";
 
-		private string Glob { get; set; } = "*";
-
 		/// <summary>
-		/// Matcher used for file globbing.
+		/// The glob pattern used for filtering files. Several patterns may be separated by
+		/// semicolons, for example <c>*.png;*.jpg</c>.
 		/// </summary>
-		private Matcher Matcher { get; set; } = new();
+		private string Glob { get; set; } = "*";
 
 		/// <summary>
 		/// The filename entered by the user.
@@ -221,7 +216,6 @@ public partial class ImGuiPopups
 			OnChooseFile = onChooseFile;
 			OnChooseDirectory = onChooseDirectory;
 			Glob = glob;
-			Matcher = BuildMatcher(glob);
 			Drives.Clear();
 			GetNavigableDrives().ForEach(Drives.Add);
 			RefreshContents();
@@ -229,22 +223,26 @@ public partial class ImGuiPopups
 		}
 
 		/// <summary>
-		/// Builds a matcher from a glob string. Several patterns may be supplied separated by
-		/// semicolons, for example <c>*.png;*.jpg</c>. The underlying globbing library treats a
-		/// whole string as a single pattern and has no separator of its own, so each pattern has
-		/// to be added as its own include or the combined string matches nothing at all.
+		/// Tests a file name against a glob string. Several patterns may be supplied separated by
+		/// semicolons, for example <c>*.png;*.jpg</c>, and the name matches if any one of them
+		/// matches. The semicolon split is ours because <see cref="TextFilter"/> reserves the space
+		/// as its own token separator, so a combined string cannot be handed to it whole.
 		/// </summary>
+		/// <param name="fileName">The file name to test.</param>
 		/// <param name="glob">Glob pattern, or several separated by semicolons.</param>
-		/// <returns>A matcher including every pattern supplied.</returns>
-		internal static Matcher BuildMatcher(string glob)
+		/// <returns><c>true</c> if the name matches any pattern supplied; otherwise <c>false</c>.</returns>
+		internal static bool MatchesGlob(string fileName, string glob)
 		{
-			Matcher matcher = new();
-			foreach (string pattern in glob.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-			{
-				matcher.AddInclude(pattern);
-			}
-
-			return matcher;
+			// Each pattern is matched on its own against the whole name: ByWordAny would split the
+			// name on spaces too, so "a.jpg b.txt" would match "*.jpg" on its first word alone.
+			// File dialogs have always matched case insensitively, which is not the glob default.
+			return glob.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+				.Any(pattern => TextFilter.IsMatch(
+					fileName,
+					pattern,
+					TextFilterType.Glob,
+					TextFilterMatchOptions.ByWholeString,
+					TextFilterCaseSensitivity.CaseInsensitive));
 		}
 
 		/// <summary>
@@ -489,7 +487,7 @@ public partial class ImGuiPopups
 			if (BrowserTarget == FilesystemBrowserTarget.File)
 			{
 				AbsoluteFilePath chosenFile = CurrentDirectory / FileName;
-				if (!Matcher.Match(FileName).HasMatches)
+				if (!MatchesGlob(FileName, Glob))
 				{
 					PopupMessageOK.Open("Invalid File Name", "The file name does not match the glob pattern.");
 					return;
@@ -520,7 +518,7 @@ public partial class ImGuiPopups
 						CurrentContents.Add(directory);
 						break;
 
-					case AbsoluteFilePath file when BrowserTarget == FilesystemBrowserTarget.File && Matcher.Match(file.FileName).HasMatches:
+					case AbsoluteFilePath file when BrowserTarget == FilesystemBrowserTarget.File && MatchesGlob(file.FileName, Glob):
 						CurrentContents.Add(file);
 						break;
 

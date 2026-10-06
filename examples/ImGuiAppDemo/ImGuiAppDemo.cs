@@ -38,6 +38,7 @@ internal static class ImGuiAppDemo
 		demoTabs.Add(new UnicodeDemo());
 		demoTabs.Add(new NerdFontDemo());
 		demoTabs.Add(new ImGuizmoDemo());
+		demoTabs.Add(new Viewport3DDemo());
 		demoTabs.Add(new ImNodesDemo());
 		demoTabs.Add(new ImPlotDemo());
 		demoTabs.Add(new CleanImNodesDemo());
@@ -96,7 +97,13 @@ internal static class ImGuiAppDemo
 		overlayOpacity = 0.9f;
 		overlayClickThrough = false;
 		overlayCorner = OverlayCorner.TopRight;
+		GetTab<Viewport3DDemo>().ResetState();
 	}
+
+	/// <summary>Gets the registered tab of the given type, so a test can read its state.</summary>
+	/// <typeparam name="T">The tab's type.</typeparam>
+	/// <returns>The tab.</returns>
+	internal static T GetTab<T>() where T : IDemoTab => demoTabs.OfType<T>().Single();
 
 	/// <summary>Gets the names of the tabs the demo registers, in the order they are drawn.</summary>
 	internal static IReadOnlyList<string> TabNames => [.. demoTabs.Select(tab => tab.TabName)];

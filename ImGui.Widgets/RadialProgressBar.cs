@@ -184,24 +184,21 @@ public static partial class ImGuiWidgets
 		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Drawing primitive parameterized by geometry (center, radius, angles, thickness, color, segments); grouping would obscure the call sites.")]
 		private static void DrawArc(ImDrawListPtr drawList, Vector2 center, float radius, float startAngle, float endAngle, float thickness, uint color, int segments)
 		{
-			// Calculate the number of segments based on the arc length
 			float arcLength = MathF.Abs(endAngle - startAngle);
 			int numSegments = Math.Max(1, (int)(segments * arcLength / (2.0f * MathF.PI)));
 
-			// Draw the arc as a series of lines
-			for (int i = 0; i < numSegments; i++)
+			// One stroked path rather than a line per segment. Separate thick lines leave a notch
+			// on the outside of every joint and double-blend the overlap on the inside, so a ring
+			// drawn that way reads as dashed; a path is joined, and a full turn is closed.
+			bool fullTurn = arcLength >= (2.0f * MathF.PI) - 1e-4f;
+			if (fullTurn)
 			{
-				float t0 = i / (float)numSegments;
-				float t1 = (i + 1) / (float)numSegments;
-
-				float angle0 = startAngle + (arcLength * t0);
-				float angle1 = startAngle + (arcLength * t1);
-
-				Vector2 point0 = new(center.X + (MathF.Cos(angle0) * radius), center.Y + (MathF.Sin(angle0) * radius));
-				Vector2 point1 = new(center.X + (MathF.Cos(angle1) * radius), center.Y + (MathF.Sin(angle1) * radius));
-
-				drawList.AddLine(point0, point1, color, thickness);
+				drawList.AddCircle(center, radius, color, numSegments, thickness);
+				return;
 			}
+
+			drawList.PathArcTo(center, radius, startAngle, endAngle, numSegments);
+			drawList.PathStroke(color, ImDrawFlags.None, thickness);
 		}
 
 		/// <summary>

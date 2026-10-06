@@ -14,6 +14,7 @@ dotnet run --project examples/ImGuiWidgetsDemo    # Run widgets demo
 dotnet run --project examples/ImGuiStylerDemo     # Run styler demo
 dotnet run --project examples/ImGuiPopupsDemo     # Run popups demo
 dotnet build -c Release                           # Build release configuration
+dotnet run -c Release --project tools/WidgetGallery  # Render widget gallery images into docs/gallery
 ```
 
 ## Project Structure
@@ -27,13 +28,13 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 ### Libraries
 
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness. Image decoding is self-contained (`ImGui.App/Images/`), so the package carries no imaging dependency; see [Image decoding](#image-decoding) below.
-- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `RangeSlider`, `XYPad`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `HandleTrack`, `CurveTrack`, `DbMeter`, `Scope`); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ImageCanvas`, `PropertyGrid`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
+- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `TimecodeField` over the ImGui-free `Timecode`/`TimecodeRate`, `RangeSlider`, `ChannelFader`/`FaderTaper`, `XYPad`, `ColorWheel`/`LiftGammaGain`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`, `StepGrid`, `PianoKeyboard` over a caller-owned `PianoKeyboardLayout`, `TransportScrubber`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `FrameTimeGraph` over a caller-owned `FrameTimeHistory`, `HandleTrack`, `CurveTrack`, `DbMeter`, `GainReductionMeter`, `CorrelationMeter`/`StereoMetersState`, `Goniometer`, `Scope`, `Waveform` (zoomable over a caller-owned `TimelineView` and a `WaveformPeakSource`/`WaveformPeakCache`), `SpectrumAnalyzer` over a caller-owned `SpectrumAnalyzerState`, `EnvelopeEditor` over an `Envelope`, `ParametricEq` over `EqBand`s with `EqResponse` for the RBJ biquad response, and image and colour (`LevelsControl` over a caller-owned `LevelsAdjustment`, `AssetBrowser` over a caller-owned `AssetBrowserState`, whose `Apply` is the transfer function the widget draws, `GradientEditor` over a caller-owned list of `GradientStop`, with `SampleGradient` as the evaluator the bar `Toolbar`/`ToolbarSeparator` with `ToolbarButton`/`ToolbarToggleButton` (glyph and label in one frame, `ToolbarButtonLayout` picking leading, above-and-centred, glyph-only or label-only, the arithmetic in the ImGui-free `ToolbarGeometry`; `GlyphSize` on the toolbar or a button draws icons at their own pixel size beside normal-size labels), is drawn with, `SwatchPalette`, `ImageCompare`, `CropOverlay` over an `ImageCanvas`, `PixelLoupe` beside an `ImageCanvas`); the `LogFrequencyAxis` both share); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ImageCanvas`, `PropertyGrid`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
 - **NodeGraph** (`ktsu.NodeGraph`) - UI-agnostic attribute-based node graph metadata: `[Node]`, `[InputPin]`, `[OutputPin]`, `[NodeExecute]`, `[NodeBehavior]`, pin type utilities
 - **ForceDirectedLayout** (`ktsu.ForceDirectedLayout`) - Renderer-agnostic graph layout simulation, with no UI dependency and no runtime package dependencies. Bodies repel across the clear space between their bounding boxes (not between their centres — see [Layout benchmarking](#layout-benchmarking)), edges pull like springs between the pins they actually attach at, gravity holds the graph together, edges are pulled towards horizontal, an overlap pass separates any boxes left drawn over one another, and a recentring pass slides the whole arrangement so its drawn box sits on the world origin (see [Placement is not cohesion](#placement-is-not-cohesion)). Three surfaces over one `LayoutCore`: a generic facade over your own types, an id-based `ForceLayout` for bulk POD submission, and the flat core. Also published as a Native AOT shared library with a C ABI. `ImGui.NodeEditor` is one consumer.
-- **ImGui.NodeEditor** (`ktsu.ImGui.NodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`. `PhysicsSettingsPanel.Draw(ref PhysicsSettings)` draws every layout setting grouped by force and captioned, and `DrawDiagnostics(engine)` the live energy and settled state, so a consuming application gets the whole tuning surface rather than reimplementing a subset of it. ImNodes has no zoom of its own, so `NodeEditorRenderer.Zoom` supplies one and `FitToView` centres a graph and picks the zoom it fits at; the engine's positions and sizes stay at their own scale throughout, since that is the space the layout's lengths are measured in. Hovering is answered by the renderer: `HighlightLinksOnNodeHover` (on) colours the links meeting the hovered node, `HighlightDownstreamOnNodeHover` (off) also colours everything that node's value reaches, and `DrawHoveredLinkOnTop` (on) redraws the hovered link over the nodes ImNodes drew on top of it. See [Hover highlighting](#hover-highlighting) below. How many links a pin accepts is the pin's own business: `Pin.AllowsMultipleConnections` defaults to many for an output and one for an input, `[InputPin(AllowMultipleConnections = true)]` / `[OutputPin(AllowMultipleConnections = false)]` override it through the factory, and `NodeEditorEngine.SetPinAllowsMultipleConnections` sets it directly. `GetOutgoingLinks`, `GetIncomingLinks`, `GetDownstream` and `GetUpstream` walk the graph
+- **ImGui.NodeEditor** (`ktsu.ImGui.NodeEditor`) - ImNodes-based visual node editor with `NodeEditorEngine`, `AttributeBasedNodeFactory`, physics-based layout, `NodeEditorRenderer`, `NodeEditorInputHandler`. `PhysicsSettingsPanel.Draw(ref PhysicsSettings)` draws every layout setting grouped by force and captioned, and `DrawDiagnostics(engine)` the live energy and settled state, so a consuming application gets the whole tuning surface rather than reimplementing a subset of it. ImNodes has no zoom of its own, so `NodeEditorRenderer.Zoom` supplies one and `FitToView` centres a graph and picks the zoom it fits at; `NodeEditorHistory` makes every edit undoable over `ktsu.UndoRedo`, `NodeEditorInputHandler` can take its keys from a `ktsu.Keybinding` keymap (`NodeEditorCommands`), `NodeEditorRenderer.SnapToGrid` snaps dragged nodes to the drawn grid, and `CommentBox`es label regions drawn behind the nodes and carry their contents when dragged — see [Undo, snapping and comment boxes](#undo-snapping-and-comment-boxes); the engine's positions and sizes stay at their own scale throughout, since that is the space the layout's lengths are measured in. Hovering is answered by the renderer: `HighlightLinksOnNodeHover` (on) colours the links meeting the hovered node, `HighlightDownstreamOnNodeHover` (off) also colours everything that node's value reaches, and `DrawHoveredLinkOnTop` (on) redraws the hovered link over the nodes ImNodes drew on top of it. See [Hover highlighting](#hover-highlighting) below. How many links a pin accepts is the pin's own business: `Pin.AllowsMultipleConnections` defaults to many for an output and one for an input, `[InputPin(AllowMultipleConnections = true)]` / `[OutputPin(AllowMultipleConnections = false)]` override it through the factory, and `NodeEditorEngine.SetPinAllowsMultipleConnections` sets it directly. `GetOutgoingLinks`, `GetIncomingLinks`, `GetDownstream` and `GetUpstream` walk the graph. A node's parameters are editable, not only its pins' connections: `Pin.DataType` carries the .NET type a pin was declared with (null for an untyped pin, which is what the plain-name `CreateNode` overloads still produce), and `PinValueStore` holds a value per pin id, seeded from a `PinSpec.DefaultValue` when `NodeEditorEngine.CreateNodeFromSpecs(Vector2, string, IReadOnlyList<PinSpec>, IReadOnlyList<PinSpec>)` creates the node (`PinSpec` is `(Name, DataType, DefaultValue, AllowMultipleConnections)`). That method is deliberately not a third `CreateNode` overload: a `CreateNode` taking `IReadOnlyList<PinSpec>` is ambiguous against the existing `List<string>` overload for a `[]` collection-expression argument, which broke the build. `PinValueKinds.Classify(Type?)` is the single classifier both editing surfaces consult (`Boolean`, `Int32`, `Single`, `Double`, `String`, `Vector2`, `Vector3`, `Enum`, or `Unsupported`; `long` is deliberately `Unsupported`, since Dear ImGui has no `InputLong`), so a type has an editor on both surfaces or neither, never one and not the other. The two surfaces: `NodeEditorRenderer` draws one inline, on an unconnected input pin's own row, gated on `DrawInlinePinEditors` (on by default) and `InlineEditorWidth`; and `NodeInspectorPanel.Draw(engine, nodeId)` draws every input pin of one node as a `ktsu.ImGui.Widgets.PropertyGrid`, disabled where a pin is connected or unsupported rather than omitted, so the panel never shows less than the node has. The renderer also reports `SelectedNodeIds`, read back from ImNodes the same way hover state is, which is what a host hands to `NodeInspectorPanel` for "inspect whatever is selected." A parameter has exactly one home, and `GetPinValue`/`SetPinValue`/`ResetPinValue` reach it whichever that is. `AttributeBasedNodeFactory.CreateNode` constructs the declared type once per node (recorded as a `NodeBinding(NodeId, Definition, Instance)`, read back with `GetBinding`, `GetNodeDefinition(int)` and `TryGetNodeInstance`) and registers a `PinValueAccessor(Func<object?> Get, Func<object?, bool> Set)` for each input pin backed by a writable property or field, so for those pins **the instance is the value** and an inline editor, an inspector row and `PinDefinition.GetValue` cannot disagree. Everything else falls back to `PinValueStore`: a method node (whose receiver arrives over its `Instance` input pin), a type with no parameterless constructor, a constructor or method parameter pin, an output pin, and any node built through the plain-name `CreateNode` overloads. `SetPinValue` type-checks against the pin's `DataType` first either way, so a refused value reaches neither home; `ResetPinValue` writes the seeded default back through the accessor; and `RemoveNode`/`Clear` unbind. See [Where a value lives](#editing-node-parameters) in the library's README. The engine learns nothing about reflection, `PinDefinition` or `ktsu.NodeGraph` — it holds delegates, and `BindPinValue`/`UnbindPinValue` are public, so a host with its own model can bind its own. One shared coercion (`PinValueStore.Coerce(Type?, object?)`) brings a declared default in line with the pin's type on both paths, so `[InputPin("X", DefaultValue = 50)]` on a `double` means `50.0` wherever it is read; a default that cannot convert at all leaves the member's own initializer standing.
 - **ImGui.Markdown** (`ktsu.ImGui.Markdown`) - CommonMark markdown renderer built on Markdig (pipe tables, task lists, autolinks), layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiMarkdown.Render(string, MarkdownConfig?)` parses with an internal source-keyed cache; `MarkdownDocument` parses once for hot render paths. `MarkdownConfig` exposes `FontResolver`, `OnLinkClicked`, `ImageResolver`, `HeadingScales`, `WrapWidth`, `ListIndentPixels`, `ParagraphSpacingPixels`, and `LinkColor`. Heading sizes derive from the live font size, so DPI and `ImGuiApp.GlobalScale` are respected automatically. Bold/italic use real glyphs when the host app registers named font variants via `FontResolver`, otherwise faux styling (faux-bold double-draw, faux-italic renders upright). Fenced and indented code blocks go to `MarkdownConfig.CodeBlockRenderer` (`Action<string?, string>?` — the fence's info string and the block text) when one is supplied, which takes over drawing *and* reserving the block's layout space; `ImGui.SyntaxHighlighting` plugs into it, and neither library references the other. v1 has no built-in code-block syntax highlighting, no async remote image download, and renders HTML as escaped text.
 - **SyntaxHighlighting** (`ktsu.SyntaxHighlighting`) - Renderer-agnostic tokenizing: no ImGui, no graphics API, no third-party parser, so it can move to its own repository unchanged. `SyntaxHighlighter.Highlight(code, language, tabWidth)` returns the classified `HighlightedLine`/`HighlightedToken` runs; `SyntaxHighlighter.HighlightCached` goes through a bounded cache keyed by source, language and tab width; `HighlightedCode` tokenizes once for hot render paths. Languages are data (`LanguageDefinition`: line/block comment, string, keyword, type, constant, operator, identifier and embedded-language rules) held in `LanguageRegistry`, which resolves names and aliases case-insensitively and falls back to plain text for unknown names rather than throwing. Fifteen built-ins in `BuiltInLanguages`: text, csharp, c, cpp, javascript, typescript, python, json, yaml, xml, html, css, sql, shell, lua. Two tokenizers back them — the general `CodeTokenizer`, and `MarkupTokenizer` for definitions with `IsMarkup` (XML/HTML), which classify structurally rather than by keyword. `SyntaxTheme` holds one `ktsu.Semantics.Color.Color` per `TokenKind`, with `Dark`/`Light` built in and `Background`/`Plain`/`LineNumber` left unset for the host to fill. Comments and strings are searched for an embedded language; see [Embedded languages](#embedded-languages) below. Highlighting is lexical.
 - **ImGui.SyntaxHighlighting** (`ktsu.ImGui.SyntaxHighlighting`) - The Dear ImGui drawing layer over `ktsu.SyntaxHighlighting`, layered on `ImGui.Color` only, with no dependency on `ImGui.App`. Static `ImGuiSyntaxHighlighting.Render(code, language, SyntaxHighlightConfig?)` tokenizes through the shared cache and draws; `Render(HighlightedCode, config)` draws pre-tokenized code, and `HighlightedCodeExtensions` re-adds `code.Render(config)` as an extension since the tokenized type itself knows nothing about ImGui. `Highlight` forwards to `SyntaxHighlighter.Highlight`. Leaving `SyntaxHighlightConfig.Theme` null picks between `SyntaxTheme.Dark`/`Light` per frame from the window background's luminance, and unset `Background`/`Plain`/`LineNumber` come from `FrameBg`/`Text`/`TextDisabled`. Code is never wrapped, and there is no scrolling, selection or editing. `ImGui.Markdown`'s `CodeBlockRenderer` plugs into this, and neither library references the other.
@@ -46,6 +47,14 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `examples/ImGuiPopupsDemo/` - Popup demonstrations
 - `examples/ImGuiMarkdownDemo/` - Markdown rendering demo
 - `examples/ImGuiSyntaxHighlightingDemo/` - Syntax highlighting demo, including markdown code blocks routed through the highlighter
+
+### Tools
+
+- `tools/WidgetGallery/` - Renders every widget in `ktsu.ImGui.Widgets` headlessly, one tile per
+  widget, and composites them into captioned gallery images under `docs/gallery/`. Tiles live in
+  `Catalog/`, one file per README feature group; `--check` fails when an `ImGuiWidgets` member has no
+  tile, so **a new widget needs a gallery entry as well as a demo and an isolation suite**. See its
+  README for cropping, fonts and dialog cleanup.
 
 ### Tests
 
@@ -60,7 +69,14 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `tests/ImGui.NodeEditor.Tests/` - Engine, factory and rendering tests for the node editor. The
   engine and factory ones need no context; `NodeRenderingTests`, `ZoomTests` and
   `HoverHighlightTests` drive real frames through `ImGuiAppHarness`, since zoom and hover are made
-  of what the renderer writes into ImNodes and reads back out, and neither exists without drawing
+  of what the renderer writes into ImNodes and reads back out, and neither exists without drawing.
+  `NodeEditorHistoryTests` and `CommentBoxTests` cover undo/redo and comment boxes against the
+  engine alone; `NodeEditorGestureTests` drives drags, snapping, the undo keys, a keymap and the
+  comment box gestures through real frames.
+  `PinValueBindingTests` covers the seam between the two homes a parameter can have, and
+  `InlinePinEditorKindTests`/`NodeInspectorPanelKindTests` drive one test per `PinValueKind` on each
+  editing surface, which is what turns "a type has an editor on both surfaces or on neither" into
+  something the suite checks
 - `tests/<Demo>.UITests/` - One headless UI test project per example, driving the demo's real
   `BuildConfig()` through `ImGuiAppHarness`: `ImGuiAppDemo.UITests`, `ImGuiWidgetsDemo.UITests`,
   `ImGuiStylerDemo.UITests`, `ImGuiPopupsDemo.UITests`, `ImGuiMarkdownDemo.UITests`,
@@ -68,6 +84,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
   [Demo UI tests](#demo-ui-tests) below.
 - `tests/ImGui.Widgets.UITests/` - One headless UI test class per widget, each driving that widget
   alone with nothing else on screen. See [Widget UI tests](#widget-ui-tests) below.
+- `tests/WidgetGallery.UITests/` - Runs `tools/WidgetGallery` end to end into a temporary folder:
+  `--check`, argument parsing, `--only`, and a full render asserting every tile and composite is
+  written, so a tile that throws or asserts natively fails here rather than at the next regeneration.
 - `tests/SyntaxHighlighting.Tests/` - Tokenizer, line-splitter, registry, embedded-language, theme and
   cache tests. These are pure unit tests against `ktsu.SyntaxHighlighting`, which has no ImGui
   dependency at all; the ImGui drawing layer is covered by `ImGuiSyntaxHighlightingDemo.UITests`.
@@ -91,8 +110,12 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/Images/JpegDecoder.cs` - Baseline, extended sequential and progressive Huffman JPEG
 - `ImGui.App/Images/BmpDecoder.cs` - BMP: core and info headers, 1/4/8/16/24/32 bit, `BI_RGB` and `BI_BITFIELDS`
 - `ImGui.App/Images/TgaDecoder.cs` - TGA: colour-mapped, true-colour and greyscale, raw and run-length encoded
+- `ImGui.App/Images/PixelConverter.cs` - Converts caller buffers in any `PixelLayout` (RGBA/BGRA/RGB/BGR/grey, optional row stride) to the RGBA8 behind the layout overloads of `ImGuiApp.CreateTexture`/`UpdateTexture`
 - `ImGui.App/Images/ImageResampler.cs` - Separable Lanczos-3 scaling on premultiplied alpha, behind `SetWindowIcon`
 - `ImGui.Widgets/PropertyGrid.cs` - Two-column property grid: options, the path-browse request, and the table/row plumbing (`PropertyGridRows.cs` holds the typed rows, `PropertyGridLists.cs` the list rows). See [Property grid](#property-grid) below
+- `ImGui.Widgets/Waveform.cs` - Waveform overview: draws a caller-supplied min/max peak overview reduced to the box's pixel width (every peak kept, so sub-pixel transients show), a playhead, and a loop region. `TimelineGestureState.cs` holds the gestures (scrub, loop edge, Shift-drag loop, pan, scrollbar thumb) with no ImGui dependency, shared with any widget over a `TimelineView`, and delegates the loop edges to `HandleTrackState`, so they stay ordered and `minLoopLength` apart by the same rules as a `HandleTrack`. A loop whose ends are equal is "no loop": not drawn, not grabbable, and a press there seeks
+- `ImGui.Widgets/TimelineView.cs` - The caller-owned window onto a timeline (duration, view start and length, follow-playhead) that the zoomable `Waveform` draws through. No ImGui dependency; two widgets over one clip share one instance, so zooming one zooms the other. `TimelineViewChrome.cs` holds the wheel handling and scrollbar drawing every such widget uses
+- `ImGui.Widgets/WaveformPeakCache.cs` - A min/max pyramid (blocks of 16, 64, 256… samples) answering any window in O(columns). Each column reduces every block its sample range touches, so its extremes are never narrower than the true ones and a one-sample spike shows at every zoom. Immutable, so it can be built on a worker thread. `WaveformPeakSource.cs` is the base a caller subclasses to serve peaks from its own store
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
 - `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshaling
@@ -115,7 +138,13 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Styler/ScopedColor.cs` - RAII-pattern color styling (`ImColor`/`Color`/`Srgb` overloads; `ScopedTextColor` too)
 - `NodeGraph/NodeAttribute.cs` - Core node attributes
 - `NodeGraph/PinAttribute.cs` - Pin declaration attributes
-- `ImGui.NodeEditor/NodeEditorEngine.cs` - Node graph business logic
+- `ImGui.NodeEditor/NodeEditorEngine.cs` - Node graph business logic (`NodeEditorEngine.CommentBoxes.cs` holds comment boxes, `NodeEditorEngine.Snapshots.cs` the internal capture/restore primitives the history uses)
+- `ImGui.NodeEditor/NodeEditorHistory.cs` - Undo/redo over `ktsu.UndoRedo`; see [Undo, snapping and comment boxes](#undo-snapping-and-comment-boxes)
+- `ImGui.NodeEditor/NodeEditorRenderer.CommentBoxes.cs` - Comment box drawing and gestures
+- `ImGui.NodeEditor/NodeEditorCommands.cs` - The keyboard commands as `ktsu.Keybinding` commands
+- `ImGui.Widgets/KeyChordMatcher.cs` - The chord-to-ImGui matcher shared by the node editor and the data table, with optional key repeat and optional Shift
+- `ImGui.Widgets/DataTableState.cs` - The data table's state, split across `DataTableState.Navigation.cs` and `DataTableState.Editing.cs`, with no ImGui calls. `DataTable.cs` and `DataTable.Input.cs` draw it
+- `examples/ImGuiWidgetsDemo/DemoSections.cs` - The widgets demo's section registry: one `DemoSection` line per `<Widget>Demo` class, in the order the Widget Demos and Advanced Demos tabs draw them
 
 ### Dependencies
 
@@ -135,9 +164,11 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - **ktsu.Semantics.Strings** (1.0.28) - Type-safe string wrappers
 - **ktsu.Semantics.Quantities** (1.0.29) - Typed quantity calculations
 - **Hexa.NET.ImGui.Widgets** (1.2.18) - Upstream widget collection backing the Hexa-delegated widgets in `ImGui.Widgets`
-- **Hexa.NET.ImGui.Widgets.Extras** (1.0.9) - Curve editor, bezier and text editor extras. Used by exactly two call sites, both under `ImGui.Widgets/Editors`: `CurveField.cs` (`ImGuiCurveEditor.Curve`) and `BezierEditor.cs` (`ImGuiBezierWidget.Bezier`). Pulls `Hexa.NET.Math` and `Microsoft.CodeAnalysis.CSharp.Scripting` into the dependency graph, and the latter brings the Roslyn compiler and scripting host with it — 5 packages, ~107 MB unpacked, which every consumer of `ktsu.ImGui.Widgets` restores and publishes whether or not it draws a curve. Roslyn is reachable only from Extras' `CSharpSyntaxHighlight`, a TextEditor type nothing here touches, so this is a restore and publish cost rather than a runtime one. Do not expect `ExcludeAssets`/`PrivateAssets` to remove it: the Roslyn dependency is declared in Extras' own nuspec, and a package cannot prune its dependency's dependencies for its consumers. Dropping the weight means splitting the two editors into an opt-in package or reimplementing them — tracked in #384.
+- **Hexa.NET.ImGui.Widgets.Extras** (1.0.9) - Curve editor, bezier and text editor extras. Used by exactly two call sites, both under `ImGui.Widgets/Editors`: `CurveField.cs` (`ImGuiCurveEditor.Curve`) and `BezierEditor.cs` (`ImGuiBezierWidget.Bezier`). Pulls `Hexa.NET.Math` and `Microsoft.CodeAnalysis.CSharp.Scripting` into the dependency graph, and the latter brings the Roslyn compiler and scripting host with it — 5 packages, ~107 MB unpacked, which every consumer of `ktsu.ImGui.Widgets` restores and publishes whether or not it draws a curve. Roslyn is reachable only from Extras' `CSharpSyntaxHighlight`, a TextEditor type nothing here touches, so this is a restore and publish cost rather than a runtime one. Do not expect `ExcludeAssets`/`PrivateAssets` to remove it: the Roslyn dependency is declared in Extras' own nuspec, and a package cannot prune its dependency's dependencies for its consumers. Dropping the weight means splitting the two editors into an opt-in package or reimplementing them — tracked in #384. `ktsu.ImGui.NodeEditor` now carries this same weight at one remove: its inspector panel needs `PropertyGrid`, so `ImGui.NodeEditor.csproj` references `ImGui.Widgets`, which drags in `ImGui.Styler`, `ImGui.Color`, `ktsu.ThemeProvider`(+`.ImGui`) and this whole Extras/Roslyn graph behind it. Every consumer of `ktsu.ImGui.NodeEditor` restores and publishes it now too, whether or not they ever open the inspector.
 - **ktsu.Invoker** (1.1.2) - Delegate invocation utilities
 - **ktsu.ScopedAction** (1.1.6) - RAII-pattern scoped actions
+- **ktsu.UndoRedo** (2.0.3) - Undo/redo stack backing `NodeEditorHistory` in `ImGui.NodeEditor`
+- **ktsu.Keybinding** (2.0.3) - Keymap `NodeEditorInputHandler` and `DataTable` read their commands from (`NodeEditorCommands`, `DataTableCommands`). Referenced by `ImGui.Widgets` since the data table, so every consumer of `ktsu.ImGui.Widgets` restores it, and with it `Microsoft.Extensions.DependencyInjection.Abstractions` on every target framework, plus `System.Text.Json` on net8.0 and net9.0 only. Accepted because it's small and the table's keys have to follow the host's keymap.
 - **Polyfill** (9.7.7) - Backport newer .NET APIs
 - **Markdig** - CommonMark markdown parser backing `ImGui.Markdown`
 
@@ -367,6 +398,18 @@ Five things are worth knowing before changing any of it:
   is ambiguous to `ItemProbe`, so tests address elements as `Tags/[0]` and their remove buttons as
   `Tags/[0]/remove`.
 
+### Data table
+
+`DataTable` is two pieces. `DataTableState<TRow>` holds the view (source indices, filtered and then sorted, with ties broken by source index), the active cell, the selection, and the one edit session, and makes no ImGui calls, so its rules are unit tests. The renderer draws a frame from it and turns input into its commands.
+
+Rows are always addressed by source index. The view rebuilds only when the sort, a filter, or the row count changes, or when the caller calls `Refresh()`, so an edited row stays put. A change in row count clears the selection and cancels an edit, because the table can't tell which rows the old indices meant.
+
+Edits are reported, never applied. The session is cleared before `OnEdit` runs, so a callback can apply the edit and call `Refresh()`.
+
+Tab stops are off inside the table (`ImGuiItemFlags.NoTabStop`), because Tab is the table's own command and ImGui's tabbing would otherwise hand the keyboard to a filter box.
+
+`ImGui.Widgets.csproj` sets `PolyUseEmbeddedAttribute` because `NodeEditorInputHandler` needs internal access to the shared `KeyChordMatcher`, and giving `ImGui.NodeEditor` that access through `InternalsVisibleTo` would otherwise make Polyfill's generated extension methods ambiguous between the two assemblies.
+
 ### Hexa-backed vs ktsu widgets
 
 Seven widget pairs were recorded as deliberate duplication pending a verdict (#338). The verdict:
@@ -534,6 +577,44 @@ The node graph system follows a clean separation of concerns:
   made of node positions rather than of panning: a pan is undone as soon as it is read back, which
   is why `FitToView` moves the nodes. Zoom is applied on the way into ImNodes and undone on the way
   back out, so nothing zoomed ever reaches the engine.
+
+### Undo, snapping and comment boxes
+
+`NodeEditorHistory` (issue #467) records onto a `ktsu.UndoRedo` `IUndoRedoService`. A step is the
+*difference* a change made — captured before and after `Record(...)` runs it — never a copy of the
+graph, so undoing a deletion restores that node and leaves every node the layout moved since where
+it is. Things to know before changing it:
+
+- **Restoring is by original id.** `NodeEditorEngine.RestoreNode`/`RestoreLink` (internal, in
+  `NodeEditorEngine.Snapshots.cs`) put a node back under its old id with its pins, values, seeded
+  defaults, bound accessors and measured offsets, and raise the id counters past it. Anything keyed
+  by id — factory bindings, a host's selection — depends on that. `AttributeBasedNodeFactory.RestoreBinding`
+  reattaches the instance, which is why the history takes the factory.
+- **`Clear` reissues ids.** Outside a recording it empties the history. Inside one (a "reset"
+  button) the diff is read as "everything before was removed, everything after was added", because
+  id 1 on both sides may name two unrelated nodes.
+- **Pin value edits merge by gesture, not by time.** `SetPinValue(int, object?, long?)` carries an
+  edit gesture; `PinEditGestures` issues a new one each time the editing widget is *activated*, and
+  must be called on every frame the widget draws, not only on change — a checkbox activates on
+  press and changes on release. Enum picks carry no gesture.
+- **The renderer forgets nodes it did not draw.** ImNodes drops a node it was not given for a frame,
+  so a node restored by an undo is new to ImNodes; remembering its last drawn position would skip
+  the position write and read ImNodes' default back as a drag. `ForgetNodesNotRendered` is that fix.
+- **A drag is a selected node moving while the left button is down**, recorded once on release
+  (`CompletedNodeMoves`). A node moving any other way has been panned.
+
+Grid snapping (issue #468) is ImNodes' own `GridSnapping` style flag, pushed for the duration of
+`Render`, so the lattice is the grid on screen and a selection keeps its shape. `SnapPositionToGrid`
+reproduces the same lattice (grid space = editor space less panning, spacing scaled by zoom) for
+comment boxes and `SnapNodesToGrid`.
+
+Comment boxes are drawn into ImNodes' background channel — right after `BeginNodeEditor`, before
+the first node — which puts them over the grid and under every node and link; `ACommentBox_IsDrawnUnderTheNodes`
+pins this with pixels. Their gestures are ImGui `InvisibleButton`s, which also stop ImNodes starting
+a box selection (it checks `IsAnyItemHovered`); they are not submitted while ImNodes reports a
+hovered node or link, so a node overlapping a title bar keeps its own drag. Containment is geometric
+and decided when a drag starts. Screen position is `canvasOrigin + ToView(p)`, where `canvasOrigin`
+is the cursor right after `BeginNodeEditor`.
 
 ### Hover highlighting
 
@@ -834,6 +915,13 @@ Things that bite here, beyond the demo-suite list above:
 - **Some state is process-global and cannot be tested from here.** The pumpless animation-clock
   fallback (`TickAnimationClockIfUnpumped`) latches off as soon as any test in the assembly runs a
   pump, so it is covered by the unit tests around `EvaluateFallbackTick` instead.
+- **The rasterizer follows a GPU's rules wherever Dear ImGui relies on them.** A pixel centre on
+  an edge two triangles share goes to one of them (the top-left rule), and textures are sampled
+  bilinearly with clamp-to-edge, which is how every `ktsu.ImGui.App` backend configures them. ImGui
+  draws every rectangle as two triangles and anti-aliases thick lines through its texture, so
+  without the first a translucent rectangle shows its diagonal, and without the second a thick
+  line comes out as a staircase with hard edges. The widget gallery is the quickest way to see a
+  regression in either.
 - **Vendor widgets are reached by geometry, not by name.** Hexa's dialogs mark nothing:
   `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
   pixels, and the file pickers — whose action row is not blue enough to find that way — are
@@ -850,8 +938,18 @@ Things that bite here, beyond the demo-suite list above:
 
 1. Add class to `ImGui.Widgets/`
 2. Follow existing widget patterns (static methods or instance classes)
-3. Add demo to `examples/ImGuiWidgetsDemo/`
+3. Add a demo section to `examples/ImGuiWidgetsDemo/` as its own `<Widget>Demo.cs`:
+   - The class owns its state, a parameterless static `Show()` and `ResetState()`, and an `Initialize()`
+     only if it has start-up work. `ResetState()` restores every field a UI test can disturb, because
+     the demo's statics outlive a harness.
+   - Register it with one `new DemoSection(...)` line in `DemoSections.cs`, in the list for its tab.
+     Do not touch `ImGuiWidgetsDemo.cs`: it is at the analyzers' class-coupling limit, which is why the
+     registry exists. `DemoSectionRegistryTests` fails for a section class that is not registered.
+   - Plain ImGui controls go through `DemoProbe` so tests can click them by name, and any accessor a
+     test reads lives on the section's own class.
+   - One section per class. No grouping classes that hold several unrelated sections.
 4. Add an isolation suite to `tests/ImGui.Widgets.UITests/`
+5. Add a tile to `tools/WidgetGallery/Catalog/` (`--check` reports widgets without one)
 
 ### New Language (Syntax Highlighting)
 
@@ -921,6 +1019,17 @@ The test matrix in `dotnet.yml` fans out over Linux, Windows and macOS. The six 
 Linux only: they are the whole cost of the job, and the CPU rasterizer they drive measures the same
 on either host. The `Test` step tests for Linux rather than against Windows, so any platform added
 later gets that cheap treatment by default.
+
+`.github/workflows/widget-gallery.yml` regenerates `docs/gallery/` once CI has passed on a push to
+`main` (a `widget-gallery` job in `ci.yml` that `needs` the pipeline) and commits the images back as `[bot][skip ci] Regenerate the
+widget gallery`. It pushes with `GITHUB_TOKEN`, which starts no workflow run, and the
+`[bot][skip ci]` prefix keeps KtsuBuild from versioning it, so the commit neither loops nor cuts a
+release. It must not go back to triggering on the push itself: the release job pushes its metadata
+commit with a plain `git push` from the commit CI started on, so a gallery commit landing first
+makes that push non-fast-forward and the release fails, which is what the first version did. It
+must not become a `workflow_run` workflow either: that runs with the repository's token after a
+fork's pull request too, which SonarCloud rejects as githubactions:S7631 and which failed the main
+quality gate once already. The gallery only ever builds main.
 
 Uses `scripts/PSBuild.psm1` PowerShell module for CI pipeline. Version increments are controlled by commit message tags: `[major]`, `[minor]`, `[patch]`, `[pre]`. Auto-generated files (VERSION.md, CHANGELOG.md, LICENSE.md) should not be manually edited. CI runs on Windows, publishes to NuGet, uses SonarQube for analysis.
 

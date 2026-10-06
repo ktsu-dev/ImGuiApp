@@ -285,6 +285,98 @@ public sealed class Renderer3DTests : IDisposable
 	}
 
 	[TestMethod]
+	public void ATargetCanBeSampledAsATextureByALaterDraw()
+	{
+		// The round trip Viewport3D is made of: render the scene into an offscreen target, then
+		// draw that target's colour buffer as a textured quad. Everything else in this suite draws
+		// into a target and reads its pixels directly, which never exercises the target's texture
+		// id as an input — so a backend whose GetTargetTexture returned a plausible-looking handle
+		// that sampled nothing would pass every other test here and produce a blank viewport.
+		//
+		// The quad is a pixel-for-pixel copy, so the destination should reproduce the source. The
+		// vertex colour is white because the shader modulates by it, and a tinted quad would hide
+		// a texture that arrived wrong.
+		DrawTriangle(Ortho(), 0f, Red);
+
+		nint destination = renderer.CreateRenderTarget(Size, Size, depth: false);
+
+		try
+		{
+			renderer.Clear(destination, new Vector4(0f, 1f, 0f, 1f), 1f);
+			BlitFullScreen(destination, renderer.GetTargetTexture(target));
+
+			Assert.AreEqual(Red, PixelOf(destination, Size / 2, (Size / 2) + 10),
+				"The triangle should have arrived through the target's own texture id.");
+			Assert.AreEqual(Background, PixelOf(destination, 2, 2),
+				"And so should the source's cleared corner — not the destination's green clear, "
+				+ "which would mean the quad drew nothing at all.");
+		}
+		finally
+		{
+			renderer.DeleteRenderTarget(destination);
+		}
+	}
+
+	[TestMethod]
+	public void ASampledTargetArrivesTheRightWayUp()
+	{
+		// Separated from the round trip above because a vertical flip survives it: the triangle
+		// spans raster rows 25.6 to 102.4, a range symmetric about the middle of a 128 px target,
+		// so a flipped copy covers the same rows and a centre probe reads red either way.
+		//
+		// What a flip does change is which end is narrow. At row 40 the correctly oriented copy is
+		// near the apex and 7.2 px wide either side of centre; flipped, row 40 is near the base and
+		// 31 px wide. A probe 20 px off centre is outside the first and inside the second.
+		DrawTriangle(Ortho(), 0f, Red);
+
+		nint destination = renderer.CreateRenderTarget(Size, Size, depth: false);
+
+		try
+		{
+			renderer.Clear(destination, Vector4.Zero with { W = 1f }, 1f);
+			BlitFullScreen(destination, renderer.GetTargetTexture(target));
+
+			Assert.AreEqual(Background, PixelOf(destination, (Size / 2) + 20, 40),
+				"20 px off centre at row 40 is outside the apex end of the triangle; reading red "
+				+ "there means the sampled target arrived upside down.");
+			Assert.AreEqual(Red, PixelOf(destination, (Size / 2) + 20, 90),
+				"The same offset near the base end is inside it, which is what makes the probe "
+				+ "above a statement about orientation rather than about the quad missing.");
+		}
+		finally
+		{
+			renderer.DeleteRenderTarget(destination);
+		}
+	}
+
+	/// <summary>Draws <paramref name="texture"/> over the whole of <paramref name="into"/>, unscaled and untinted.</summary>
+	/// <remarks>
+	/// NDC y runs up and raster y runs down, so v is <c>(1 - y) / 2</c> rather than <c>(y + 1) / 2</c>.
+	/// </remarks>
+	private void BlitFullScreen(nint into, nint texture)
+	{
+		const uint white = 0xFFFFFFFFu;
+
+		Vertex3D[] vertices =
+		[
+			new(new Vector3(-1f, -1f, 0f), new Vector2(0f, 1f), white),
+			new(new Vector3(1f, -1f, 0f), new Vector2(1f, 1f), white),
+			new(new Vector3(1f, 1f, 0f), new Vector2(1f, 0f), white),
+			new(new Vector3(-1f, 1f, 0f), new Vector2(0f, 0f), white),
+		];
+
+		renderer.Draw(into, vertices, [0u, 1u, 2u, 0u, 2u, 3u], new DrawState3D
+		{
+			ModelViewProjection = Ortho(),
+			TextureId = texture,
+			Depth = DepthMode.None,
+			Cull = CullMode.None,
+			Blend = BlendMode.Opaque,
+			Topology = PrimitiveTopology.TriangleList,
+		});
+	}
+
+	[TestMethod]
 	public void TheBackendAdvertisesItselfThroughTryGetRenderer3D()
 	{
 		ImGuiApp.BeginExternalFrameSession(renderer);

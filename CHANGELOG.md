@@ -1,3 +1,394 @@
+## v3.59.2-pre.3 (prerelease)
+
+Changes since v3.59.2-pre.2:
+
+- Bump Polyfill from 11.4.1 to 11.4.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.59.2-pre.2 (prerelease)
+
+Changes since v3.59.2-pre.1:
+
+- Test that Enter with nothing typed and no choice confirms the first item ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Re-rank SearchableList as the user types and confirm the best match on Enter ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+
+## v3.59.2-pre.1 (prerelease)
+
+Changes since v3.59.1:
+
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.59.1 (patch)
+
+Changes since v3.59.0:
+
+- [patch] Run the widget gallery from CI rather than workflow_run ([@Claude](https://github.com/Claude))
+
+## v3.59.0 (minor)
+
+Changes since v3.58.0:
+
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-5le24s ([@Claude](https://github.com/Claude))
+- Add GlyphSize to toolbars and toolbar buttons ([@Claude](https://github.com/Claude))
+- Centre toolbar glyphs by their drawn pixels, and fix the gallery tile's Bold icon ([@Claude](https://github.com/Claude))
+
+## v3.58.0 (minor)
+
+Changes since v3.57.0:
+
+- Merge branch 'widget/stack-loupe' into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Pick a bar colour without a nested ternary ([@Claude](https://github.com/Claude))
+- Merge branch 'widget/stack-crop' into widget/stack-loupe ([@Claude](https://github.com/Claude))
+- Merge branch 'widget/stack-compare' into widget/stack-crop ([@Claude](https://github.com/Claude))
+- Compare ImageCompare's split by its bits, not float equality ([@Claude](https://github.com/Claude))
+- Clamp SwatchPalette's floored index with a float constant ([@Claude](https://github.com/Claude))
+- Merge branch 'widget/stack-swatch' into widget/stack-compare ([@Claude](https://github.com/Claude))
+- Compare GradientEditor's stop positions by their bits, not float equality ([@Claude](https://github.com/Claude))
+- Merge branch 'widget/stack-gradient' into widget/stack-swatch ([@Claude](https://github.com/Claude))
+- Put the stack's demo tests back where the base keeps them ([@Claude](https://github.com/Claude))
+- Merge the branch below into this one, bringing in main ([@Claude](https://github.com/Claude))
+- Merge the branch below into this one, bringing in main ([@Claude](https://github.com/Claude))
+- Merge the branch below into this one, bringing in main ([@Claude](https://github.com/Claude))
+- Merge the branch below into this one, bringing in main ([@Claude](https://github.com/Claude))
+- Merge the branch below into this one, bringing in main ([@Claude](https://github.com/Claude))
+- Merge main into the gradient editor branch, now that the Toolbar has landed ([@Claude](https://github.com/Claude))
+- Add FrameTimeGraph and FrameTimeHistory [minor] ([@Claude](https://github.com/Claude))
+- [minor] Add Toolbar and ToolbarButton widgets ([@Claude](https://github.com/Claude))
+- Add PixelLoupe: a magnified pixel readout beside an ImageCanvas ([@Claude](https://github.com/Claude))
+- Add CropOverlay: a crop rectangle drawn over an ImageCanvas ([@Claude](https://github.com/Claude))
+- Add ImageCompare: a before/after wipe or side-by-side view ([@Claude](https://github.com/Claude))
+- [minor] Add SwatchPalette: a selectable, drag-reorderable grid of colour swatches ([@Claude](https://github.com/Claude))
+- Add GradientEditor, a colour-stop gradient editor ([@Claude](https://github.com/Claude))
+- [minor] Add AssetBrowser, a virtualized thumbnail grid with multi-select and drag-out ([@Claude](https://github.com/Claude))
+- Add StepGrid step-sequencer widget [minor] ([@Claude](https://github.com/Claude))
+- Add PianoKeyboard widget (#503) ([@Claude](https://github.com/Claude))
+- Add LevelsControl, a histogram with input, gamma and output handles ([@Claude](https://github.com/Claude))
+- Add ChannelFader: audio-taper gain fader with a meter [minor] ([@Claude](https://github.com/Claude))
+
+## v3.57.0 (minor)
+
+Changes since v3.56.0:
+
+- Regenerate the widget gallery after CI rather than on the push ([@Claude](https://github.com/Claude))
+- Regenerate the widget gallery on pushes to main ([@Claude](https://github.com/Claude))
+- Merge main into the widget branch, registering its demo as a DemoSections entry ([@Claude](https://github.com/Claude))
+- Restore the worktree ignore lines the SDK build dropped from .gitignore ([@Claude](https://github.com/Claude))
+- Merge main into the stereo meters branch, bringing in ParametricEq ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering ParametricEqDemo as its own section ([@Claude](https://github.com/Claude))
+- [patch] Map symbol-spelled chord keys and pin Tab to the named-key bound ([@Claude](https://github.com/Claude))
+- Merge main's metadata update ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering TimecodeFieldDemo in DemoSections ([@Claude](https://github.com/Claude))
+- Merge main into the parametric EQ branch, adding TimecodeField to the widget list ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-g9k1ol-parametric-eq ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering TransportScrubberDemo in DemoSections ([@Claude](https://github.com/Claude))
+- Restore the worktree ignore lines the merge from main dropped ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-g9k1ol-parametric-eq ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-wmrk2b ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-026l9x ([@Claude](https://github.com/Claude))
+- Merge main into the parametric-eq branch ([@Claude](https://github.com/Claude))
+- Expect the data table in the registry's advanced demo order ([@Claude](https://github.com/Claude))
+- Merge main into the demo split branch ([@Claude](https://github.com/Claude))
+- Compare whole EqBands rather than floats for change detection ([@Claude](https://github.com/Claude))
+- Address code-quality findings on the stereo meters ([@Claude](https://github.com/Claude))
+- Reuse one StringBuilder when generating the grid demo's strings [patch] ([@Claude](https://github.com/Claude))
+- Simplify ParametricEq guards flagged by code scanning ([@Claude](https://github.com/Claude))
+- Add ParametricEq widget and extract LogFrequencyAxis (#505) ([@Claude](https://github.com/Claude))
+- Add StereoMeters: gain-reduction, correlation and goniometer meters [minor] ([@Claude](https://github.com/Claude))
+- Split the widgets demo into one class per section [patch] ([@Claude](https://github.com/Claude))
+
+## v3.56.2 (patch)
+
+Changes since v3.56.1:
+
+- Restore the worktree ignore lines the SDK build dropped from .gitignore ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering ParametricEqDemo as its own section ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering TimecodeFieldDemo in DemoSections ([@Claude](https://github.com/Claude))
+- Merge main into the demo split, registering TransportScrubberDemo in DemoSections ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-026l9x ([@Claude](https://github.com/Claude))
+- Expect the data table in the registry's advanced demo order ([@Claude](https://github.com/Claude))
+- Merge main into the demo split branch ([@Claude](https://github.com/Claude))
+- Reuse one StringBuilder when generating the grid demo's strings [patch] ([@Claude](https://github.com/Claude))
+- Split the widgets demo into one class per section [patch] ([@Claude](https://github.com/Claude))
+
+## v3.56.1 (patch)
+
+Changes since v3.56.0:
+
+- [patch] Map symbol-spelled chord keys and pin Tab to the named-key bound ([@Claude](https://github.com/Claude))
+- Merge main's metadata update ([@Claude](https://github.com/Claude))
+- Merge main into the parametric EQ branch, adding TimecodeField to the widget list ([@Claude](https://github.com/Claude))
+- Merge main into claude/project-thread-g9k1ol-parametric-eq ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/project-thread-g9k1ol-parametric-eq ([@Claude](https://github.com/Claude))
+- Merge main into the parametric-eq branch ([@Claude](https://github.com/Claude))
+- Compare whole EqBands rather than floats for change detection ([@Claude](https://github.com/Claude))
+- Simplify ParametricEq guards flagged by code scanning ([@Claude](https://github.com/Claude))
+- Add ParametricEq widget and extract LogFrequencyAxis (#505) ([@Claude](https://github.com/Claude))
+
+## v3.56.0 (minor)
+
+Changes since v3.55.0:
+
+- Merge main into TimecodeField ([@Claude](https://github.com/Claude))
+- Merge main into TimecodeField ([@Claude](https://github.com/Claude))
+- Add TimecodeField widget and Timecode helpers (#525) ([@Claude](https://github.com/Claude))
+
+## v3.55.0 (minor)
+
+Changes since v3.54.0:
+
+- Merge main into TransportScrubber via the Waveform zoom branch ([@Claude](https://github.com/Claude))
+- Merge main into the waveform zoom branch ([@Claude](https://github.com/Claude))
+- Merge main into the transport scrubber branch ([@Claude](https://github.com/Claude))
+- Merge main into the waveform zoom branch ([@Claude](https://github.com/Claude))
+- [patch] Add the data table to the widget gallery ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Stamp the gallery's sample folders with Directory.SetLastWriteTime ([@matt-edmondson](https://github.com/matt-edmondson))
+- Compare TransportScrubber positions with an epsilon helper ([@Claude](https://github.com/Claude))
+- Compare TransportScrubber in/out points without float equality ([@Claude](https://github.com/Claude))
+- Add TransportScrubber: ruler, thumbnail strip, playhead and in/out range [minor] ([@Claude](https://github.com/Claude))
+- Add EnvelopeEditor, a DAHDSR envelope editor (#510) ([@Claude](https://github.com/Claude))
+- Waveform: zoom and scroll over a shared TimelineView [minor] ([@Claude](https://github.com/Claude))
+
+## v3.54.0 (minor)
+
+Changes since v3.53.0:
+
+- Merge main into the data table branch and give DataTable a gallery tile ([@matt-edmondson](https://github.com/matt-edmondson))
+- Check the curve editor's drawn bounds without a nullable dereference ([@Claude](https://github.com/Claude))
+- Compare floats with tolerances where the code-quality bot flagged them ([@Claude](https://github.com/Claude))
+- [patch] Show the data table demo once, with the advanced demos ([@matt-edmondson](https://github.com/matt-edmondson))
+- Regenerate the widget gallery with the fixed renderer and widgets ([@Claude](https://github.com/Claude))
+- Fix four widgets that drew wrongly in the gallery ([@Claude](https://github.com/Claude))
+- Make the software rasterizer follow the GPU rules ImGui relies on ([@Claude](https://github.com/Claude))
+- [patch] Read an empty clipboard without throwing and address code quality findings ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge main into the data table branch ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge main into the data table branch ([@Claude](https://github.com/Claude))
+- [patch] Drop a semicolon from the data table's Key Files line ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Skip parts already in stock when the demo marks them in stock ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Drive the data table through a keymap in the UI tests ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Require Shift for a chord that names it even with Shift ignored ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Begin a data table edit from a character typed with AltGr ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Report no edit for a null string committed unchanged ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Let a caller set a data table's selection and active cell ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Rebuild a data table over a list replaced after Refresh ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Commit a data table edit on keypad Enter and keep the edited row drawn ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Give the data table's clipper the row pitch with cell padding ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] State which frameworks ktsu.Keybinding brings System.Text.Json to ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Show the data table in the widgets demo and document it ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Open a caller-drawn context menu on a data table cell ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Leave the clipboard as found and ignore characters a cell can't start from ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Drive a data table from the keyboard and edit cells in place ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Filter a data table's columns from a row under the headers ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw a data table with sortable headers and clickable cells ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Declare the data table's keyboard commands for ktsu.Keybinding ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Edit one data table cell at a time and report each edit ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Move a data table's active cell and select its rows ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Sort and filter a data table's rows into a view ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Document the data table edit sessions' members ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add typed data table columns and their edit sessions ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Share the key chord matcher and let held chords repeat ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Plan the data table widget implementation ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Design a data table widget with sorting, filtering, and cell editing ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.53.0 (minor)
+
+Changes since v3.52.0:
+
+- Add colour wheel tiles and show the widget gallery in the README ([@Claude](https://github.com/Claude))
+- Add a spectrum analyzer tile to the widget gallery ([@Claude](https://github.com/Claude))
+- Move CI onto the shared ci-shared.yml pipeline ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/widget-gallery-harness-ouh9b5 ([@Claude](https://github.com/Claude))
+- Test the widget gallery tool and clear its SonarCloud findings ([@Claude](https://github.com/Claude))
+- Merge main into the colour wheels branch ([@Claude](https://github.com/Claude))
+- Compute test body positions in floating point ([@Claude](https://github.com/Claude))
+- Re-resolve ForceLayout edges by body id when the body set changes ([@Claude](https://github.com/Claude))
+- Don't type-check link ends typed with open generics ([@Claude](https://github.com/Claude))
+- Seed a duplicated pin's default from the original so reset works on copies ([@Claude](https://github.com/Claude))
+- Merge main into the colour wheels branch ([@Claude](https://github.com/Claude))
+- Add a waveform tile to the widget gallery ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into claude/widget-gallery-harness-ouh9b5 ([@Claude](https://github.com/Claude))
+- Add the generated widget gallery images ([@Claude](https://github.com/Claude))
+- Add a headless widget gallery tool for README images ([@Claude](https://github.com/Claude))
+- [patch] Compare colour wheel master values with a tolerance ([@Claude](https://github.com/Claude))
+- [minor] Add lift/gamma/gain colour wheels ([@Claude](https://github.com/Claude))
+
+## v3.52.0 (minor)
+
+Changes since v3.51.0:
+
+- Merge main into the spectrum analyzer branch ([@Claude](https://github.com/Claude))
+- Spell out the NaN cases in SpectrumAnalyzerState's guards ([@Claude](https://github.com/Claude))
+- [minor] Add SpectrumAnalyzer widget ([@Claude](https://github.com/Claude))
+
+## v3.51.0 (minor)
+
+Changes since v3.50.0:
+
+- Compare waveform positions without float equality ([@Claude](https://github.com/Claude))
+- [minor] Add Waveform overview widget with playhead and loop region ([@Claude](https://github.com/Claude))
+- Add domain widget shortlist plan ([@Claude](https://github.com/Claude))
+
+## v3.50.1-pre.1 (prerelease)
+
+Changes since v3.50.0:
+
+- Bump Polyfill from 11.4.0 to 11.4.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 12 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.50.0 (minor)
+
+Changes since v3.49.0:
+
+- [minor] Type-check pins when creating a link ([@Claude](https://github.com/Claude))
+- [patch] Keep the new demo code free of unsafe blocks ([@Claude](https://github.com/Claude))
+- [patch] Drop the float equality guard on the viewport's wheel dolly ([@Claude](https://github.com/Claude))
+- [patch] Cover recent features in the ImGuiApp demo ([@Claude](https://github.com/Claude))
+
+## v3.49.2 (patch)
+
+Changes since v3.49.1:
+
+- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.49.1 (patch)
+
+Changes since v3.49.0:
+
+- [patch] Keep the new demo code free of unsafe blocks ([@Claude](https://github.com/Claude))
+- [patch] Drop the float equality guard on the viewport's wheel dolly ([@Claude](https://github.com/Claude))
+- [patch] Cover recent features in the ImGuiApp demo ([@Claude](https://github.com/Claude))
+
+## v3.49.0 (minor)
+
+Changes since v3.48.0:
+
+- Address code-quality findings in the node editor history and comment boxes ([@Claude](https://github.com/Claude))
+- Restore the .gitignore entries the SDK build dropped ([@Claude](https://github.com/Claude))
+- [minor] NodeEditor: undo/redo, keymap commands, grid snapping and comment boxes ([@Claude](https://github.com/Claude))
+
+## v3.48.0 (minor)
+
+Changes since v3.47.0:
+
+- [patch] Put back the worktree ignores the SDK build removed ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Name the diff view's selection helpers for what they select ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Size, cache and probe the diff view, and publish its selection helpers ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Tint the paired view's number column too ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Pin the demo's second diff view to side by side ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw a diff side by side as well as unified ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Make the summary bar's style color pushes exception-safe ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Correct the remaining clipper reference in the plan ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Use the clipper type this binding actually has ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw a unified diff with selectable hunks ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Gate the drawing tasks on the headless UI harness ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Correct the plan's null guard constraint ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Add the diff view's model and its rules ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Plan the diff view widget implementation ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Design a diff view widget with selectable hunks ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Ignore worktree and agent scratch directories ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.47.0 (minor)
+
+Changes since v3.46.0:
+
+- Compare the GL context, not the ImGui context, when detecting a context change ([@Claude](https://github.com/Claude))
+
+## v3.46.1 (patch)
+
+Changes since v3.46.0:
+
+- Bump Moq from 4.20.72 to 4.21.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v3.46.0 (minor)
+
+Changes since v3.45.0:
+
+- Assert the dolly bound with IsLessThan rather than IsTrue ([@Claude](https://github.com/Claude))
+- Cover the render-to-target round trip, the one path Viewport3D is made of ([@Claude](https://github.com/Claude))
+- Add Viewport3DState, the ImGui-free orbit camera behind Viewport3D ([@Claude](https://github.com/Claude))
+
+## v3.45.0 (minor)
+
+Changes since v3.44.0:
+
+- [minor] Create and update textures from BGRA, RGB, BGR and greyscale pixels with row padding ([@Claude](https://github.com/Claude))
+- Pump worker-thread texture tests without Thread.Sleep ([@Claude](https://github.com/Claude))
+- [patch] Marshal UpdateTexture's in-place path to the window thread and document dynamic textures ([@Claude](https://github.com/Claude))
+
+## v3.44.1 (patch)
+
+Changes since v3.44.0:
+
+- Pump worker-thread texture tests without Thread.Sleep ([@Claude](https://github.com/Claude))
+- [patch] Marshal UpdateTexture's in-place path to the window thread and document dynamic textures ([@Claude](https://github.com/Claude))
+
+## v3.44.0 (minor)
+
+Changes since v3.43.0:
+
+- Split ProcessInputEvents, one method per request kind ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge main, and carry pin values onto a duplicated node ([@matt-edmondson](https://github.com/matt-edmondson))
+- Test the WantTextInput guard on the duplicate chord ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Duplicate selected nodes with Ctrl+D ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.43.0 (minor)
+
+Changes since v3.42.0:
+
+- Test the WantTextInput guard, which nothing exercised ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Delete selected nodes with Delete or Backspace ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge the branch's own remote, which had gained a second merge of main ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge main into the node-parameters branch ([@matt-edmondson](https://github.com/matt-edmondson))
+- Describe both homes a parameter can have ([@matt-edmondson](https://github.com/matt-edmondson))
+- Drive every pin value kind on both editing surfaces ([@matt-edmondson](https://github.com/matt-edmondson))
+- Drop two constant conditions the quality bot flagged ([@matt-edmondson](https://github.com/matt-edmondson))
+- Give a pin one home, whether or not it has an instance ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge origin/main into node parameter editing ([@matt-edmondson](https://github.com/matt-edmondson))
+- Cheap wording and cleanup fixes from the branch review ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix enum editors silently misrepresenting unmatched or null values ([@matt-edmondson](https://github.com/matt-edmondson))
+- Amend the design spec to name the shipped CreateNodeFromSpecs ([@matt-edmondson](https://github.com/matt-edmondson))
+- Document the parameter-editing surface and its dependency cost in CLAUDE.md ([@matt-edmondson](https://github.com/matt-edmondson))
+- Coerce a mistyped declared pin default before seeding it ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix output pin labels detaching from their pins with inline editors ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Show parameter editing in the demo and the README ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Fix enum rows in the node inspector silently discarding edits ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw one node's parameters as a property grid ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Report which nodes are selected ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Draw an editor on an unconnected input pin ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Name the pin types that can be edited ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Carry a declared pin's type and default onto the graph ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Give the engine a value per pin ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Hold a value and a default per pin ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Let a pin declare the type it carries ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Plan node parameter editing ([@matt-edmondson](https://github.com/matt-edmondson))
+- [patch] Design node parameter editing ([@matt-edmondson](https://github.com/matt-edmondson))
+
+## v3.42.0 (minor)
+
+Changes since v3.41.0:
+
+- Merge remote-tracking branch 'origin/main' into claude/imguiapp-409-textfilter-glob ([@Claude](https://github.com/Claude))
+- refactor: filter the selected link ids explicitly ([@matt-edmondson](https://github.com/matt-edmondson))
+- feat: delete selected links with Delete or Backspace [minor] ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: keep a path-tracked texture published across UpdateTexture's recreate [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- refactor: filter the file browser's listing with ktsu.TextFilter [patch] ([@Claude](https://github.com/Claude))
+
+## v3.41.2 (patch)
+
+Changes since v3.41.1:
+
+- Merge remote-tracking branch 'origin/main' into claude/imguiapp-409-textfilter-glob ([@Claude](https://github.com/Claude))
+- refactor: filter the file browser's listing with ktsu.TextFilter [patch] ([@Claude](https://github.com/Claude))
+
+## v3.41.1 (patch)
+
+Changes since v3.41.0:
+
+- Bump the ktsu group with 16 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
 ## v3.41.0 (minor)
 
 Changes since v3.40.0:
@@ -747,8 +1138,10 @@ Changes since v3.3.0:
 - Add Hexa widgets Tier 1 implementation plan ([@matt-edmondson](https://github.com/matt-edmondson))
 - Correct Hexa Tier 1 spec: nint textures, context-free test strategy ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add design spec for Hexa.NET.ImGui.Widgets integration (Tier 1) ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
 - Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - chore: update ktsu.Sdk to 2.21.1 [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
 - Sync examples\ImGuiAppDemo.iOS\icon.png ([@KtsuTools](https://github.com/KtsuTools))
 - Sync examples\ImGuiAppDemo\icon.png ([@KtsuTools](https://github.com/KtsuTools))
@@ -799,7 +1192,11 @@ Changes since v3.3.7:
 
 ## v3.3.8-pre.1 (prerelease)
 
-No significant changes detected since v3.3.8.
+Changes since v3.3.7:
+
+- Sync .github\workflows\update-sdks.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dependabot-merge.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v3.3.7 (patch)
 
@@ -1128,6 +1525,7 @@ Changes since v2.0.0:
 - Results from dotnet format ([@Damon3000s](https://github.com/Damon3000s))
 - Add DESCRIPTION.md and TAGS.md files; update README.md with comprehensive library details and usage examples ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add SonarLint configuration for connected mode ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 - feat(timers): Add countdown and count-up timer demos with radial progress indicators ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
 - Increase MaxForce values in PhysicsSettings and demo to enhance simulation capabilities ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -1156,6 +1554,7 @@ Changes since v2.0.0:
 - Add compatibility suppressions for DynamicallyAccessedMemberTypes and ExperimentalAttribute in ImGui.Popups, ImGui.Styler, and ImGui.Widgets for .NET 10.0 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refine glyph area calculations and atlas fitting checks for improved memory management ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor null checks to use Ensure.NotNull for improved readability and consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance project name matching to handle variations in repository naming conventions ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance CalculateOptimalPixelSize to consider global accessibility scale for improved rendering ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor null argument checks to use Ensure.NotNull for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -1177,12 +1576,17 @@ Changes since v2.0.0:
 - Update project structure and dependencies: Added new package versions in Directory.Packages.props, updated SDK versions in global.json, and refactored namespaces across multiple files for consistency. Removed the ImGui.Popups.Credential project and adjusted related references in the solution and project files. Enhanced test project configurations and updated example projects to reflect the new structure. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Initial combined commit ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix NuGet package source URL in Invoke-NuGetPublish function: Updated the source URL to ensure correct package publishing to packages.ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance .NET CI workflow: Added support for skipped releases in the GitHub Actions workflow. Updated conditions for SonarQube execution, coverage report upload, and Winget manifest updates to account for skipped releases, improving control over the release process. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add Ktsu package key support in build configuration: Updated the .NET CI workflow and PowerShell script to include an optional Ktsu package key for publishing. Enhanced documentation for the new parameter and added conditional publishing logic for Ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Implement modern DPI awareness handling in Windows: Updated ForceDpiAware to utilize the latest DPI awareness APIs for better compatibility with windowing libraries. Added fallback mechanisms for older Windows versions and enhanced NativeMethods with new DPI awareness context functions. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance window position validation logic: Implemented performance optimizations to skip unnecessary checks when window position and size remain unchanged. Added methods for better multi-monitor support, ensuring windows are relocated when insufficiently visible. Updated tests to verify new behavior and performance improvements. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update package versions and clean up validation logic: Bump versions for Hexa.NET.ImGui, ktsu.ScopedAction, SixLabors.ImageSharp, System.Text.Json, and MSTest packages. Remove redundant validation checks from ImGuiApp configuration and corresponding tests. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add manual trigger support to GitHub Actions workflow: Enabled workflow_dispatch to allow manual execution of the .NET CI pipeline. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor SonarQube token handling in GitHub Actions: Updated conditional checks to use environment variables for SONAR_TOKEN, ensuring consistent access across caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiApp configuration handling: Introduced AdjustConfigForStartup method to automatically convert minimized window state to normal during startup, improving application reliability. Updated tests to validate this new behavior. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update ImGuiApp configuration validation: Automatically convert minimized and fullscreen window states to normal during startup to prevent issues. Updated tests to reflect this change, ensuring proper state handling without exceptions. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor SonarQube conditional checks in GitHub Actions: Updated syntax for SONAR_TOKEN checks to use the correct expression format, ensuring proper execution of caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance SonarQube integration in GitHub Actions: Added conditional checks for SONAR_TOKEN to ensure caching and installation steps only execute when the token is available, improving workflow reliability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Additional tests ([@matt-edmondson](https://github.com/matt-edmondson))
 - Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
 - Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -1227,6 +1631,7 @@ Changes since v2.0.0:
 - Implement deferred performance updates to prevent mid-cycle rate changes ([@Cursor Agent](https://github.com/Cursor Agent))
 - Style cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
 - Cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge branch 'cursor/investigate-unfocused-app-resource-usage-045c' of https://github.com/ktsu-dev/ImGuiApp into cursor/investigate-unfocused-app-resource-usage-045c ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix performance rate sync and update throttling to prevent ImGui crashes ([@Cursor Agent](https://github.com/Cursor Agent))
 - Remove blank lines ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove VSync throttling configuration and related code ([@Cursor Agent](https://github.com/Cursor Agent))
@@ -1248,6 +1653,7 @@ Changes since v2.0.0:
 - Add support for Nerd Font icon ranges in FontHelper. Introduced AddNerdFontRanges method to include various icon sets such as Font Awesome, Material Design Icons, and Weather Icons, enhancing glyph range management. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor FontHelper to modularize glyph range additions for Latin Extended and emoji characters. Updated ImGuiApp to utilize the new methods for improved clarity and maintainability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor FontHelper to streamline Unicode and emoji range handling. Removed unused methods and improved memory management for glyph ranges. Updated ImGuiApp to utilize FontHelper for extended Unicode support. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge branch 'cursor/address-question-mark-glyphs-8940' of https://github.com/ktsu-dev/ImGuiApp into cursor/address-question-mark-glyphs-8940 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiFontConfig to enhance Unicode support by consolidating glyph range additions and improving code clarity. Removed redundant comments and streamlined the builder initialization process. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiAppDemo to streamline tab rendering and remove redundant performance tab code ([@matt-edmondson](https://github.com/matt-edmondson))
 - Improve font memory management with custom font handle tracking ([@Cursor Agent](https://github.com/Cursor Agent))
@@ -1284,6 +1690,7 @@ Changes since v2.0.0:
 - Improve rendering precision and pixel-perfect techniques in ImGui rendering ([@Cursor Agent](https://github.com/Cursor Agent))
 - Fix NuGet version retrieval and update package versions ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add Directory.Packages.props and global.json for centralized package management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add GitHub Actions workflow for automatic SDK updates ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update CLAUDE.md with additional testing and build instructions; enhance PSBuild script to improve release notes truncation logic for compliance with NuGet character limits, including detailed logging for better traceability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor Invoke-DotNetPack function in PSBuild script to improve handling of release notes. Updated logic to create a temporary file for truncated content exceeding NuGet's 35,000 character limit, ensuring compliance and enhancing logging for better traceability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance Invoke-DotNetPack function in PSBuild script to handle release notes exceeding NuGet's 35,000 character limit. Added logic to truncate long release notes and create a temporary file for compliance, with appropriate logging and cleanup of temporary files after packaging. ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -1646,6 +2053,7 @@ Changes since v2.4.0:
 - Results from dotnet format ([@Damon3000s](https://github.com/Damon3000s))
 - Add DESCRIPTION.md and TAGS.md files; update README.md with comprehensive library details and usage examples ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add SonarLint configuration for connected mode ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
 
 ## v2.4.0 (minor)
 
@@ -1712,6 +2120,7 @@ Changes since v2.2.0:
 - Add compatibility suppressions for DynamicallyAccessedMemberTypes and ExperimentalAttribute in ImGui.Popups, ImGui.Styler, and ImGui.Widgets for .NET 10.0 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refine glyph area calculations and atlas fitting checks for improved memory management ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor null checks to use Ensure.NotNull for improved readability and consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance project name matching to handle variations in repository naming conventions ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance CalculateOptimalPixelSize to consider global accessibility scale for improved rendering ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor null argument checks to use Ensure.NotNull for improved readability ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -1747,7 +2156,11 @@ Changes since v2.2.11-pre.1:
 
 ## v2.2.11-pre.1 (prerelease)
 
-No significant changes detected since v2.2.11.
+Changes since v2.2.10:
+
+- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.2.10 (patch)
 
@@ -1764,7 +2177,10 @@ Changes since v2.2.10-pre.1:
 
 ## v2.2.10-pre.1 (prerelease)
 
-No significant changes detected since v2.2.10.
+Changes since v2.2.9:
+
+- Fix workflow to skip metadata commits in forked repos ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
 
 ## v2.2.9 (patch)
 
@@ -1782,7 +2198,10 @@ Changes since v2.2.9-pre.1:
 
 ## v2.2.9-pre.1 (prerelease)
 
-No significant changes detected since v2.2.9.
+Changes since v2.2.8:
+
+- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.2.8 (patch)
 
@@ -1837,7 +2256,9 @@ Changes since v2.2.0:
 
 ## v2.2.1-pre.1 (prerelease)
 
-No significant changes detected since v2.2.1.
+Changes since v2.2.0:
+
+- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v2.2.0 (minor)
 
@@ -1857,12 +2278,17 @@ Changes since v2.1.0:
 - Update project structure and dependencies: Added new package versions in Directory.Packages.props, updated SDK versions in global.json, and refactored namespaces across multiple files for consistency. Removed the ImGui.Popups.Credential project and adjusted related references in the solution and project files. Enhanced test project configurations and updated example projects to reflect the new structure. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Initial combined commit ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix NuGet package source URL in Invoke-NuGetPublish function: Updated the source URL to ensure correct package publishing to packages.ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance .NET CI workflow: Added support for skipped releases in the GitHub Actions workflow. Updated conditions for SonarQube execution, coverage report upload, and Winget manifest updates to account for skipped releases, improving control over the release process. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add Ktsu package key support in build configuration: Updated the .NET CI workflow and PowerShell script to include an optional Ktsu package key for publishing. Enhanced documentation for the new parameter and added conditional publishing logic for Ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Implement modern DPI awareness handling in Windows: Updated ForceDpiAware to utilize the latest DPI awareness APIs for better compatibility with windowing libraries. Added fallback mechanisms for older Windows versions and enhanced NativeMethods with new DPI awareness context functions. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance window position validation logic: Implemented performance optimizations to skip unnecessary checks when window position and size remain unchanged. Added methods for better multi-monitor support, ensuring windows are relocated when insufficiently visible. Updated tests to verify new behavior and performance improvements. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update package versions and clean up validation logic: Bump versions for Hexa.NET.ImGui, ktsu.ScopedAction, SixLabors.ImageSharp, System.Text.Json, and MSTest packages. Remove redundant validation checks from ImGuiApp configuration and corresponding tests. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add manual trigger support to GitHub Actions workflow: Enabled workflow_dispatch to allow manual execution of the .NET CI pipeline. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor SonarQube token handling in GitHub Actions: Updated conditional checks to use environment variables for SONAR_TOKEN, ensuring consistent access across caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiApp configuration handling: Introduced AdjustConfigForStartup method to automatically convert minimized window state to normal during startup, improving application reliability. Updated tests to validate this new behavior. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update ImGuiApp configuration validation: Automatically convert minimized and fullscreen window states to normal during startup to prevent issues. Updated tests to reflect this change, ensuring proper state handling without exceptions. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor SonarQube conditional checks in GitHub Actions: Updated syntax for SONAR_TOKEN checks to use the correct expression format, ensuring proper execution of caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance SonarQube integration in GitHub Actions: Added conditional checks for SONAR_TOKEN to ensure caching and installation steps only execute when the token is available, improving workflow reliability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Additional tests ([@matt-edmondson](https://github.com/matt-edmondson))
 - Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
 - Move debug logger into its own file and make it output to the appdata dir ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -1893,7 +2319,18 @@ Changes since v2.1.10-pre.1:
 
 ## v2.1.10-pre.1 (prerelease)
 
-No significant changes detected since v2.1.10.
+Changes since v2.1.9:
+
+- Add comprehensive unit tests for GlobalScale feature ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Add OnGlobalScaleChanged callback example to demo app ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Add global scale control for accessibility ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Fix bounce animation alignment by centering offset range ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Skip committing metadata changes in fork repositories ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Add GitHub Copilot instructions ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
+- Initial plan ([@copilot-swe-agent[bot]](https://github.com/copilot-swe-agent[bot]))
 
 ## v2.1.9 (patch)
 
@@ -1915,6 +2352,7 @@ Changes since v2.1.7:
 Changes since v2.1.6:
 
 - Fix NuGet package source URL in Invoke-NuGetPublish function: Updated the source URL to ensure correct package publishing to packages.ktsu.dev. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance .NET CI workflow: Added support for skipped releases in the GitHub Actions workflow. Updated conditions for SonarQube execution, coverage report upload, and Winget manifest updates to account for skipped releases, improving control over the release process. ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v2.1.6 (patch)
 
@@ -1945,8 +2383,11 @@ Changes since v2.1.2:
 
 Changes since v2.1.1:
 
+- Refactor SonarQube token handling in GitHub Actions: Updated conditional checks to use environment variables for SONAR_TOKEN, ensuring consistent access across caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiApp configuration handling: Introduced AdjustConfigForStartup method to automatically convert minimized window state to normal during startup, improving application reliability. Updated tests to validate this new behavior. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update ImGuiApp configuration validation: Automatically convert minimized and fullscreen window states to normal during startup to prevent issues. Updated tests to reflect this change, ensuring proper state handling without exceptions. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor SonarQube conditional checks in GitHub Actions: Updated syntax for SONAR_TOKEN checks to use the correct expression format, ensuring proper execution of caching and installation steps. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance SonarQube integration in GitHub Actions: Added conditional checks for SONAR_TOKEN to ensure caching and installation steps only execute when the token is available, improving workflow reliability. ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v2.1.1 (patch)
 
@@ -2001,6 +2442,7 @@ Changes since v2.0.0:
 - Implement deferred performance updates to prevent mid-cycle rate changes ([@Cursor Agent](https://github.com/Cursor Agent))
 - Style cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
 - Cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge branch 'cursor/investigate-unfocused-app-resource-usage-045c' of https://github.com/ktsu-dev/ImGuiApp into cursor/investigate-unfocused-app-resource-usage-045c ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix performance rate sync and update throttling to prevent ImGui crashes ([@Cursor Agent](https://github.com/Cursor Agent))
 - Remove blank lines ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove VSync throttling configuration and related code ([@Cursor Agent](https://github.com/Cursor Agent))
@@ -2022,6 +2464,7 @@ Changes since v2.0.0:
 - Add support for Nerd Font icon ranges in FontHelper. Introduced AddNerdFontRanges method to include various icon sets such as Font Awesome, Material Design Icons, and Weather Icons, enhancing glyph range management. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor FontHelper to modularize glyph range additions for Latin Extended and emoji characters. Updated ImGuiApp to utilize the new methods for improved clarity and maintainability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor FontHelper to streamline Unicode and emoji range handling. Removed unused methods and improved memory management for glyph ranges. Updated ImGuiApp to utilize FontHelper for extended Unicode support. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge branch 'cursor/address-question-mark-glyphs-8940' of https://github.com/ktsu-dev/ImGuiApp into cursor/address-question-mark-glyphs-8940 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiFontConfig to enhance Unicode support by consolidating glyph range additions and improving code clarity. Removed redundant comments and streamlined the builder initialization process. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiAppDemo to streamline tab rendering and remove redundant performance tab code ([@matt-edmondson](https://github.com/matt-edmondson))
 - Improve font memory management with custom font handle tracking ([@Cursor Agent](https://github.com/Cursor Agent))
@@ -2058,6 +2501,7 @@ Changes since v2.0.0:
 - Improve rendering precision and pixel-perfect techniques in ImGui rendering ([@Cursor Agent](https://github.com/Cursor Agent))
 - Fix NuGet version retrieval and update package versions ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add Directory.Packages.props and global.json for centralized package management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add GitHub Actions workflow for automatic SDK updates ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update CLAUDE.md with additional testing and build instructions; enhance PSBuild script to improve release notes truncation logic for compliance with NuGet character limits, including detailed logging for better traceability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor Invoke-DotNetPack function in PSBuild script to improve handling of release notes. Updated logic to create a temporary file for truncated content exceeding NuGet's 35,000 character limit, ensuring compliance and enhancing logging for better traceability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance Invoke-DotNetPack function in PSBuild script to handle release notes exceeding NuGet's 35,000 character limit. Added logic to truncate long release notes and create a temporary file for compliance, with appropriate logging and cleanup of temporary files after packaging. ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -2112,6 +2556,7 @@ Changes since v2.0.10:
 - Implement deferred performance updates to prevent mid-cycle rate changes ([@Cursor Agent](https://github.com/Cursor Agent))
 - Style cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
 - Cleanup ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge branch 'cursor/investigate-unfocused-app-resource-usage-045c' of https://github.com/ktsu-dev/ImGuiApp into cursor/investigate-unfocused-app-resource-usage-045c ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix performance rate sync and update throttling to prevent ImGui crashes ([@Cursor Agent](https://github.com/Cursor Agent))
 - Remove blank lines ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove VSync throttling configuration and related code ([@Cursor Agent](https://github.com/Cursor Agent))
@@ -2143,6 +2588,7 @@ Changes since v2.0.8:
 - Add support for Nerd Font icon ranges in FontHelper. Introduced AddNerdFontRanges method to include various icon sets such as Font Awesome, Material Design Icons, and Weather Icons, enhancing glyph range management. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor FontHelper to modularize glyph range additions for Latin Extended and emoji characters. Updated ImGuiApp to utilize the new methods for improved clarity and maintainability. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor FontHelper to streamline Unicode and emoji range handling. Removed unused methods and improved memory management for glyph ranges. Updated ImGuiApp to utilize FontHelper for extended Unicode support. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Merge branch 'cursor/address-question-mark-glyphs-8940' of https://github.com/ktsu-dev/ImGuiApp into cursor/address-question-mark-glyphs-8940 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiFontConfig to enhance Unicode support by consolidating glyph range additions and improving code clarity. Removed redundant comments and streamlined the builder initialization process. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiAppDemo to streamline tab rendering and remove redundant performance tab code ([@matt-edmondson](https://github.com/matt-edmondson))
 - Improve font memory management with custom font handle tracking ([@Cursor Agent](https://github.com/Cursor Agent))
@@ -2191,13 +2637,16 @@ Changes since v2.0.6:
 
 ## v2.0.7-pre.1 (prerelease)
 
-No significant changes detected since v2.0.7.
+Changes since v2.0.6:
+
+- Fix NuGet version retrieval and update package versions ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v2.0.6 (patch)
 
 Changes since v2.0.5:
 
 - Add Directory.Packages.props and global.json for centralized package management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add GitHub Actions workflow for automatic SDK updates ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v2.0.5 (patch)
 
@@ -2237,6 +2686,7 @@ Changes since v1.0.0:
 - Enhance Get-GitRemoteInfo function in update-winget-manifests.ps1 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove redundant release process logging from Invoke-DotNetPublish function in PSBuild script. This cleanup enhances code clarity by eliminating unnecessary information output related to NuGet package publishing. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance PSBuild script to make NuGet API key optional ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update GitHub Actions workflow and enhance PSBuild script ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update ImGuiApp to use Hexa.NET.ImGui for Dear ImGui bindings ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor font loading logic in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
 - Enhance font management and loading in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -2258,6 +2708,7 @@ Changes since v1.0.0:
 - Add DPI scaling support for Wayland in ForceDpiAware ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiApp to support Linux and Windows console behavior ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update .editorconfig, .gitignore, and .runsettings; refactor ImGuiApp code for type consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix GitHub Actions build failures on forked repositories ([@matt-edmondson](https://github.com/matt-edmondson))
 - Remove obsolete build configuration files and scripts, including Directory.Build.props, Directory.Build.targets, and various PowerShell scripts for metadata and version management. Introduce a new PowerShell module, PSBuild, for automating the build, test, package, and release processes for .NET applications. ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update project SDK references to ktsu.Sdk version 1.8.0 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add Moq package and enhance ImGuiAppTests with new unit tests ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -2357,9 +2808,10 @@ No significant changes detected since v1.12.12-pre.1.
 
 ## v1.12.12-pre.1 (prerelease)
 
-Changes since v1.12.12:
+Changes since v1.12.11:
 
 - Merge 0aa9505c62c546778ed2242018d32dbd8f19814b into 879630f8ad5f5c68c42945b69136d1663b963154 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the system group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
 ## v1.12.11 (patch)
 
@@ -2405,6 +2857,7 @@ Changes since v1.12.6:
 - Add DPI scaling support for Wayland in ForceDpiAware ([@matt-edmondson](https://github.com/matt-edmondson))
 - Refactor ImGuiApp to support Linux and Windows console behavior ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update .editorconfig, .gitignore, and .runsettings; refactor ImGuiApp code for type consistency ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix GitHub Actions build failures on forked repositories ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v1.12.6 (patch)
 
@@ -2457,7 +2910,9 @@ No significant changes detected since v1.12.6-pre.1.
 
 ## v1.12.6-pre.1 (prerelease)
 
-No significant changes detected since v1.12.6.
+Changes since v1.12.5:
+
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v1.12.5 (patch)
 
@@ -2571,7 +3026,9 @@ Changes since v1.12.5-pre.1:
 
 ## v1.12.5-pre.1 (prerelease)
 
-No significant changes detected since v1.12.5.
+Changes since v1.12.4:
+
+- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v1.12.4 (patch)
 
@@ -2822,7 +3279,9 @@ Changes since v1.0.12-pre.1:
 
 ## v1.0.12-pre.1 (prerelease)
 
-No significant changes detected since v1.0.12.
+Changes since v1.0.11-pre.1:
+
+- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
 
 ## v1.0.11-pre.1 (prerelease)
 
@@ -2891,6 +3350,13 @@ Changes since v1.0.1:
 Changes since v1.0.0:
 
 - Bump ktsu.ScopedAction from 1.0.0 to 1.0.1 in the ktsu group ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+## v1.0.0
+
+Changes since v1.0.0-alpha.76:
+
+- Reformat ImGuiController instantiation for readability ([@matt-edmondson](https://github.com/matt-edmondson))
+- Documentation and warning fixes ([@matt-edmondson](https://github.com/matt-edmondson))
 
 ## v1.0.0-alpha.76 (prerelease)
 
@@ -3174,57 +3640,6 @@ Changes since v1.0.0-alpha.15:
 
 ## v1.0.0-alpha.15 (prerelease)
 
-No significant changes detected since v1.0.0.
-
-## v1.0.0 (major)
-
-- Reformat ImGuiController instantiation for readability ([@matt-edmondson](https://github.com/matt-edmondson))
-- Documentation and warning fixes ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor ImGuiController usage and update package ([@matt-edmondson](https://github.com/matt-edmondson))
-- Bump ktsu.StrongPaths from 1.1.29 to 1.1.30 ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor namespace and update package versions in ImGuiApp ([@matt-edmondson](https://github.com/matt-edmondson))
-- Set System.Text.Json to 8.0.5 ([@Damon3000s](https://github.com/Damon3000s))
-- More detailed exception message in TranslateInputKeyToImGuiKey ([@Damon3000s](https://github.com/Damon3000s))
-- Update ImGui.NET ([@matt-edmondson](https://github.com/matt-edmondson))
-- Sync workflows ([@matt-edmondson](https://github.com/matt-edmondson))
-- Copy ImGuiController from Silk.NET ([@matt-edmondson](https://github.com/matt-edmondson))
-- Migrate ktsu.io to ktsu namespace ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update VERSION ([@matt-edmondson](https://github.com/matt-edmondson))
-- Migrate ktsu.io to ktsu namespace ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update VERSION ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update README.md ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update LICENSE ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update AUTHORS ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update ImGuiAppDemo.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update UIScaler.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update ImGuiApp.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update GdiPlusHelper.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update ForceDpiAware.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update ImGuiApp.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update VERSION ([@matt-edmondson](https://github.com/matt-edmondson))
-- Tell imgui were responsible for owning the font atlas data and then free it ourselves on shutdown ([@matt-edmondson](https://github.com/matt-edmondson))
-- Destroy and clear fonts on shutdown before the imgui context gets destroyed ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update VERSION ([@matt-edmondson](https://github.com/matt-edmondson))
-- Reposition the window if it becomes completely offscreen ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add a method to convert ems to pixels based on the current font size ([@matt-edmondson](https://github.com/matt-edmondson))
-- Speculative fix for crash on shutdown ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add medium font ([@matt-edmondson](https://github.com/matt-edmondson))
-- Take a lock during the closing delegate ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update VERSION ([@matt-edmondson](https://github.com/matt-edmondson))
-- Expose the Scale Factor to the public api so that clients can scale their custom things accordingly ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add dpi dependent content scaling ([@matt-edmondson](https://github.com/matt-edmondson))
-- Reduce background tick rates ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update VERSION ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add frame limiting ([@matt-edmondson](https://github.com/matt-edmondson))
-- Also dont render if the window is not visible ([@matt-edmondson](https://github.com/matt-edmondson))
-- Separate application update and render so we dont render when the application is minimized ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add more locks for GL ([@matt-edmondson](https://github.com/matt-edmondson))
-- Use a concurrent dictionary for textures ([@matt-edmondson](https://github.com/matt-edmondson))
-- Added methods for loading textures ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add the ability to set the window icon ([@matt-edmondson](https://github.com/matt-edmondson))
-- Rollback net6 imports ([@matt-edmondson](https://github.com/matt-edmondson))
-- Implement net6 DllImports ([@matt-edmondson](https://github.com/matt-edmondson))
-- Minor code style changes ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update Directory.Build.targets ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update dotnet.yml ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update dotnet.yml ([@matt-edmondson](https://github.com/matt-edmondson))
@@ -3236,17 +3651,23 @@ No significant changes detected since v1.0.0.
 - Update LICENSE ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update nuget.config ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update nuget.config ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add github package support ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update VERSION to 1.0.0-alpha.15 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Prevent drawing an extra border around the main window ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update README.md ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update README.md ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update README.md ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update README.md ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update VERSION to 1.0.0-alpha.14 ([@matt-edmondson](https://github.com/matt-edmondson))
 - #1 Track the state of the window when its in the Normal state ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update VERSION to 1.0.0-alpha.13 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Move OnStart callsite to a place where font loading works with Silk.NET, and add a demo project ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update LICENSE ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update VERSION to 1.0.0-alpha.12 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix build and remove obsolete files and settings ([@matt-edmondson](https://github.com/matt-edmondson))
 - Fix issue with OnStart being invoked too early ([@matt-edmondson](https://github.com/matt-edmondson))
 - Update build actions ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update VERSION to 1.0.0-alpha.11 ([@matt-edmondson](https://github.com/matt-edmondson))
 - Add an onStart delegate ([@matt-edmondson](https://github.com/matt-edmondson))
 - Read from AUTHORS file during build ([@matt-edmondson](https://github.com/matt-edmondson))
 - Read PackageDescription from DESCRIPTION file ([@matt-edmondson](https://github.com/matt-edmondson))

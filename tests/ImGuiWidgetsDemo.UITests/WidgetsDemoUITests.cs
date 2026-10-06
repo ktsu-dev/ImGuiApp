@@ -7,6 +7,7 @@
 namespace ktsu.examples.ImGuiWidgetsDemo.UITests;
 
 using System;
+using System.Collections.Generic;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
@@ -31,6 +32,8 @@ public sealed class WidgetsDemoUITests
 	private const string NetNewTab = "Net New";
 	private const string DialogsTab = "Dialogs";
 
+	private static readonly int[] FirstHunkOnly = [0];
+
 	private static readonly string[] AllTabs =
 	[
 		WidgetDemosTab, AdvancedDemosTab, ComparisonTab, NetNewTab, DialogsTab,
@@ -40,13 +43,17 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
-		"Mobile - Decorators", "Mobile - Containers & Loaders",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
+		"Piano Keyboard",
+		"Parametric EQ",
+		"Step Grid",
+		"Envelope Editor",
 	];
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "TabPanel", "SearchBox", "Grid Layout", "Virtual Table",
-		"Divider Container",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
+		"Virtual Table", "Data Table", "Divider Container",
 	];
 
 	private static readonly string[] NetNewSections =
@@ -310,6 +317,21 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void TimecodeFieldDemo_IncrementAdvancesTheFrame()
+	{
+		OpenSection(WidgetDemosTab, "Timecode Field");
+
+		// The field's buttons are marked inside its own scope, so the name is qualified by the
+		// demo window as well as by the field's label.
+		IReadOnlyList<string> increment = harness.Probe.Matches("Position/inc");
+		Assert.HasCount(1, increment, "The position field's increment button should be marked exactly once.");
+		harness.Click(increment[0]);
+		harness.Step(SettleFrames);
+
+		Assert.AreEqual(1, TimecodeFieldDemo.Frame);
+	}
+
+	[TestMethod]
 	public void RadialProgressBar_ButtonsDriveTheValue()
 	{
 		OpenSection(WidgetDemosTab, "Radial Progress Bar");
@@ -412,6 +434,175 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void Waveform_ClickSeeksThePlayhead()
+	{
+		OpenSection(WidgetDemosTab, "Waveform");
+
+		Assert.IsTrue(IsVisible("##demoWaveform"), "The waveform section drew no waveform.");
+		Assert.AreEqual(0f, WaveformDemo.Playhead, "Precondition: the demo starts with the playhead at the top.");
+
+		// Three quarters of the way across: clear of both loop edges, which sit at a quarter and a half.
+		Rectangle rect = harness.Probe.Rect("##demoWaveform")
+			?? throw new InvalidOperationException("The waveform was never recorded by the probe.");
+		harness.Mouse.Click(rect.MinX + (rect.Width * 0.75f), rect.MinY + (rect.Height * 0.5f));
+		harness.Step();
+
+		Assert.AreEqual(4.5f, WaveformDemo.Playhead, 0.2f, "A click on the waveform did not seek to where it landed.");
+	}
+
+	[TestMethod]
+	public void StepGrid_ClickTogglesACell()
+	{
+		OpenSection(WidgetDemosTab, "Step Grid");
+
+		Assert.IsTrue(IsVisible("##demoStepGrid"), "The step grid section drew no grid.");
+		int before = StepGridDemo.StepsOn;
+
+		// The clap row (the last of four) starts empty; aim at its second step.
+		Rectangle rect = harness.Probe.Rect("##demoStepGrid")
+			?? throw new InvalidOperationException("The step grid was never recorded by the probe.");
+		harness.Mouse.Click(rect.MinX + (rect.Width * 1.5f / 16f), rect.MinY + (rect.Height * 3.5f / 4f));
+		harness.Step();
+
+		Assert.AreEqual(before + 1, StepGridDemo.StepsOn, "A click on an empty cell did not turn it on.");
+		Assert.IsTrue(StepGridDemo.CurrentPattern[(3 * 16) + 1], "The click landed on the wrong cell.");
+	}
+
+	[TestMethod]
+	public void WaveformDemo_LongClipIsDrawn()
+	{
+		OpenSection(WidgetDemosTab, "Waveform");
+
+		// The long clip's peak cache is built on a worker thread the first time the section is
+		// shown, so the waveform appears some frames later rather than on the first one.
+		for (int frame = 0; frame < 300 && !IsVisible("Waveform/long clip/scrollbar"); frame++)
+		{
+			harness.Step();
+		}
+
+		Assert.IsTrue(IsVisible("Waveform/long clip/scrollbar"), "The long clip's zoomable waveform was never drawn.");
+	}
+
+	[TestMethod]
+	public void TransportScrubberDemo_ClickSeeks()
+	{
+		OpenSection(WidgetDemosTab, "Transport Scrubber");
+
+		Assert.IsTrue(IsVisible("Transport Scrubber/scrubber/track"), "The transport scrubber section drew no track.");
+		Assert.AreEqual(0f, TransportScrubberDemo.Playhead, "Precondition: the demo starts with the playhead at the top.");
+
+		// The middle of a 30-second clip: well clear of the in and out points, which sit at 4 and 10.
+		Rectangle rect = harness.Probe.Rect("Transport Scrubber/scrubber/track")
+			?? throw new InvalidOperationException("The scrubber's track was never recorded by the probe.");
+		harness.Mouse.Click(rect.MinX + (rect.Width * 0.5f), rect.MinY + (rect.Height * 0.5f));
+		harness.Step();
+
+		Assert.AreEqual(15f, TransportScrubberDemo.Playhead, 0.1f, "A click on the scrubber's track did not seek to where it landed.");
+	}
+
+	[TestMethod]
+	public void FrameTimeGraphDemo_InjectSpikeRecordsAFrame()
+	{
+		OpenSection(WidgetDemosTab, "Frame Time Graph");
+
+		Assert.IsTrue(IsVisible("Live##demoFrameTimeLive"), "The frame time section drew no live graph.");
+
+		harness.Click("Inject spike");
+		harness.Step(SettleFrames);
+
+		Assert.IsGreaterThanOrEqualTo(50f, FrameTimeGraphDemo.History.Maximum, "Inject spike did not record a 50 ms frame.");
+	}
+
+	[TestMethod]
+	public void DiffView_DrawsAHunkPerViewAndTicksTheOneThatWasClicked()
+	{
+		OpenSection(WidgetDemosTab, "Diff view");
+
+		Assert.IsTrue(IsVisible("##diffOne/[0]/heading"), "The selectable view drew no heading for its first hunk.");
+		Assert.IsTrue(IsVisible("##diffTwo/[0]/heading"), "The side-by-side view drew no heading for its first hunk.");
+		Assert.IsTrue(IsVisible("##diffThree/[0]/heading"), "The view with neither option drew no heading for its first hunk.");
+
+		Assert.IsEmpty(DiffViewDemo.FirstSelected, "Precondition: the demo starts with nothing staged.");
+
+		harness.Click("##diffOne/[0]/select");
+		harness.Step(2);
+
+		Assert.AreSequenceEqual(
+			FirstHunkOnly,
+			DiffViewDemo.FirstSelected,
+			"Ticking a hunk's checkbox is the whole point of the widget, so it has to reach the caller's set.");
+	}
+
+	[TestMethod]
+	public void Toolbar_ButtonsReportTheirClicksAndTogglesLatch()
+	{
+		OpenSection(WidgetDemosTab, "Toolbar");
+
+		Assert.IsTrue(IsVisible("##editToolbar"), "The single-line toolbar was not drawn.");
+		Assert.IsTrue(IsVisible("##transportToolbar"), "The two-line toolbar was not drawn.");
+
+		harness.Click("##editToolbar/Save");
+		harness.Step(2);
+		Assert.AreEqual("Save", ToolbarDemo.LastAction, "Clicking Save did not reach the demo.");
+
+		harness.Click("##transportToolbar/Play");
+		harness.Step(2);
+		Assert.AreEqual("Play", ToolbarDemo.LastAction, "Clicking Play in the two-line toolbar did not reach the demo.");
+
+		harness.Click("##editToolbar/Redo");
+		harness.Step(2);
+		Assert.AreEqual("Play", ToolbarDemo.LastAction, "The disabled Redo button reported a click.");
+
+		harness.Click("##editToolbar/Bold");
+		harness.Step(2);
+		Assert.IsTrue(ToolbarDemo.Bold, "The Bold toggle did not turn on.");
+	}
+
+	[TestMethod]
+	public void ColorWheels_DraggingGainReachesTheDemoAndResetClearsIt()
+	{
+		OpenSection(WidgetDemosTab, "Color wheels");
+
+		Assert.IsTrue(IsVisible("##grade/Lift"), "The lift wheel was not drawn.");
+		Assert.IsTrue(IsVisible("##grade/Gamma"), "The gamma wheel was not drawn.");
+		Assert.IsTrue(IsVisible("##grade/Gain"), "The gain wheel was not drawn.");
+
+		Rectangle gain = harness.Probe.Rect("##grade/Gain")!.Value;
+		float x = gain.MinX + (gain.Width / 2f);
+		float y = gain.MinY + (gain.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 30f, y - 30f);
+		harness.Step(2);
+
+		Assert.IsTrue(ColorWheelDemo.Gain.Strength > 0f, "Dragging the gain wheel did not reach the demo's value.");
+		Assert.IsTrue(ColorWheelDemo.Lift.IsNeutral, "Dragging the gain wheel moved lift.");
+
+		harness.Click("Reset all");
+		harness.Step(2);
+
+		Assert.IsTrue(ColorWheelDemo.Gain.IsNeutral, "Reset all left the gain wheel pushed.");
+	}
+
+	[TestMethod]
+	public void LevelsDemo_DraggingTheBlackPointChangesTheLevels()
+	{
+		OpenSection(AdvancedDemosTab, "Levels Control");
+
+		Assert.IsTrue(IsVisible("levels_demo/input"), "The levels control's input handles were not drawn.");
+
+		Rectangle input = harness.Probe.Rect("levels_demo/input")!.Value;
+		float y = input.MinY + (input.Height / 2f);
+		harness.Mouse.Drag(input.MinX + (input.Width * 0.01f), y, input.MinX + (input.Width * 0.3f), y);
+		harness.Step(2);
+
+		Assert.IsTrue(LevelsDemo.Levels.InputBlack > 0.2f, $"Dragging the black point left it at {LevelsDemo.Levels.InputBlack}.");
+
+		harness.Click("Reset levels");
+		harness.Step(2);
+
+		Assert.AreEqual(ktsu.ImGui.Widgets.LevelsAdjustment.Identity, LevelsDemo.Levels, "Reset levels left the adjustment changed.");
+	}
+
+	[TestMethod]
 	public void ImageCanvas_OffersFitAndOneToOne()
 	{
 		OpenSection(AdvancedDemosTab, "ImageCanvas");
@@ -422,6 +613,90 @@ public sealed class WidgetsDemoUITests
 		harness.Click("Fit");
 		harness.Step(2);
 		Assert.IsTrue(IsVisible("Fit"), "The canvas should survive being fitted.");
+	}
+
+	[TestMethod]
+	public void AssetBrowserDemo_ClickSelects()
+	{
+		OpenSection(AdvancedDemosTab, "Asset Browser");
+
+		harness.Click("asset_browser_demo/[2]");
+		harness.Step(2);
+
+		Assert.AreSequenceEqual([2], AssetBrowserDemo.State.SelectedIndices);
+		Assert.IsTrue(IsVisible("Asset drop target"), "The drop target sits under the browser.");
+	}
+
+	[TestMethod]
+	public void GradientDemo_ClickingTheBarAddsAStop()
+	{
+		OpenSection(AdvancedDemosTab, "Gradient Editor");
+
+		Rectangle bar = harness.Probe.Rect("gradient_demo/bar")
+			?? throw new InvalidOperationException("The gradient bar was never recorded by the probe.");
+		harness.Mouse.Click(bar.MinX + (bar.Width * 0.9f), bar.MinY + (bar.Height * 0.3f));
+		harness.Step(2);
+
+		Assert.AreEqual(5, GradientDemo.StopCount, "Clicking empty space on the bar should add a stop.");
+	}
+
+	[TestMethod]
+	public void SwatchPaletteDemo_ClickingASwatchSelectsIt()
+	{
+		OpenSection(AdvancedDemosTab, "Swatch Palette");
+
+		harness.Click("swatch_demo/3");
+		harness.Step(2);
+
+		Assert.AreEqual(3, SwatchPaletteDemo.Selected, "Clicking a swatch should select it.");
+	}
+
+	[TestMethod]
+	public void ImageCompareDemo_DraggingTheDividerMovesTheSplit()
+	{
+		OpenSection(AdvancedDemosTab, "Image Compare");
+
+		Rectangle divider = harness.Probe.Rect("compare_demo/divider")!.Value;
+		float x = divider.MinX + (divider.Width / 2f);
+		float y = divider.MinY + (divider.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 200f, y);
+		harness.Step(2);
+
+		Assert.IsGreaterThan(0.55f, ImageCompareDemo.Split, "Dragging the divider should move the split right.");
+	}
+
+	[TestMethod]
+	public void CropDemo_DraggingTheBodyMovesTheCrop()
+	{
+		OpenSection(AdvancedDemosTab, "Crop Overlay");
+
+		Assert.IsTrue(IsVisible("crop_demo/body"), "The crop overlay did not mark its body.");
+		float before = CropDemo.Crop.Center.X;
+
+		Rectangle body = harness.Probe.Rect("crop_demo/body")!.Value;
+		float x = body.MinX + (body.Width / 2f);
+		float y = body.MinY + (body.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 30f, y);
+		harness.Step(2);
+
+		Assert.IsTrue(CropDemo.Crop.Center.X > before, "Dragging the crop did not move it.");
+	}
+
+	[TestMethod]
+	public void PixelLoupe_HoveringTheImageReportsAPixel()
+	{
+		OpenSection(AdvancedDemosTab, "Pixel Loupe");
+
+		Assert.IsTrue(IsVisible("pixel_loupe"), "The loupe should be drawn beside the canvas.");
+		Assert.AreEqual(-1, PixelLoupeDemo.PixelX, "Nothing has been hovered yet.");
+
+		Rectangle canvas = harness.Probe.Rect("pixel_loupe_canvas")
+			?? throw new InvalidOperationException("The loupe's canvas was never recorded by the probe.");
+		harness.Mouse.MoveTo(canvas.MinX + (canvas.Width / 2), canvas.MinY + (canvas.Height / 2));
+		harness.Step(2);
+
+		Assert.IsTrue(PixelLoupeDemo.PixelX >= 0, "Hovering the middle of the image should pick a pixel.");
+		Assert.IsTrue(PixelLoupeDemo.PixelY >= 0, "Hovering the middle of the image should pick a pixel.");
 	}
 
 	[TestMethod]
