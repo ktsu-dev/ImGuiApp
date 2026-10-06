@@ -4,7 +4,7 @@
     "rollForward": "latestFeature"
   },
   "msbuild-sdks": {
-    "MSTest.Sdk": "4.4.0",
+    "MSTest.Sdk": "4.4.1",
     "ktsu.Sdk": "2.31.2",
     "ktsu.Sdk.ConsoleApp": "2.31.2",
     "ktsu.Sdk.Tool": "2.31.2",

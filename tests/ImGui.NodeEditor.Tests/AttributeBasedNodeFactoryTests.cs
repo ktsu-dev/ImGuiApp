@@ -203,7 +203,7 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		Assert.AreEqual("Add Numbers", node.Name);
 		Assert.AreEqual(new Vector2(40, 50), node.Position);
-		Assert.AreSequenceEqual(["B", "A"], node.InputPins.Select(p => p.EffectiveDisplayName).ToArray());
+		Assert.AreSequenceEqual(["B", "A"], node.InputPins.Select(p => p.EffectiveDisplayName));
 		Assert.Contains("Instance", node.OutputPins.Select(p => p.EffectiveDisplayName).ToList());
 		Assert.HasCount(1, engine.Nodes, "The factory should build through the engine, not beside it.");
 	}
@@ -239,7 +239,7 @@ public sealed class AttributeBasedNodeFactoryTests
 
 		NodeDefinition definition = Registered(factory.GetNodeDefinition(ClampMethod));
 
-		Assert.AreSequenceEqual(["value", "min", "max"], definition.InputPins.Select(p => p.DisplayName).ToArray());
+		Assert.AreSequenceEqual(["value", "min", "max"], definition.InputPins.Select(p => p.DisplayName));
 		Assert.AreEqual(0.0, definition.InputPins[1].DefaultValue);
 		Assert.AreEqual("Result", definition.OutputPins.Single().DisplayName);
 		Assert.AreEqual(typeof(double), definition.OutputPins.Single().DataType);
