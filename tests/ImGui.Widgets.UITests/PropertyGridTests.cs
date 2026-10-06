@@ -166,7 +166,7 @@ public sealed class PropertyGridTests : WidgetTest
 		Click("Icon/browse");
 
 		Assert.AreSequenceEqual(
-			(ImGuiWidgets.PropertyPathKind[])[ImGuiWidgets.PropertyPathKind.Directory, ImGuiWidgets.PropertyPathKind.Image],
+			[ImGuiWidgets.PropertyPathKind.Directory, ImGuiWidgets.PropertyPathKind.Image],
 			kinds);
 	}
 
