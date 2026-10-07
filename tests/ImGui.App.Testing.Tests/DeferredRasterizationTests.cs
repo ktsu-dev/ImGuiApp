@@ -80,7 +80,7 @@ public sealed class DeferredRasterizationTests
 				OnRender = _ =>
 				{
 					frame++;
-					ImGui.GetForegroundDrawList().AddRectFilled(Vector2.Zero, new Vector2(20 * frame, 10), 0xFFFFFFFFu);
+					ImGui.GetForegroundDrawList().AddRectFilled(Vector2.Zero, new Vector2(20f * frame, 10), 0xFFFFFFFFu);
 				},
 			},
 			Window());
@@ -88,8 +88,13 @@ public sealed class DeferredRasterizationTests
 		harness.Step(4);
 
 		Rectangle? drawn = harness.Capture().FindBounds(p => p.R == 255 && p.G == 255 && p.B == 255);
-		Assert.IsNotNull(drawn);
-		Assert.AreEqual(80, drawn.Value.MaxX, "The read should show the fourth frame's rectangle, not an earlier one.");
+		if (drawn is not Rectangle rect)
+		{
+			Assert.Fail("The frame should have drawn its rectangle.");
+			return;
+		}
+
+		Assert.AreEqual(80, rect.MaxX, "The read should show the fourth frame's rectangle, not an earlier one.");
 	}
 
 	[TestMethod]
