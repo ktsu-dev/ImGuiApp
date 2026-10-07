@@ -153,4 +153,24 @@ public sealed class SplitterTests : WidgetTest
 		Assert.AreEqual(150f, height, "The splitter moved on its own.");
 		Assert.IsFalse(dragging, "The splitter reported a drag nobody made.");
 	}
+
+	[TestMethod]
+	public void VerticalSplitter_ShowsAHorizontalResizeCursor()
+	{
+		Start(DrawVertical);
+
+		Hover(Span);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeEw, Harness.MouseCursor, "Hovering a vertical splitter did not show a horizontal resize cursor.");
+	}
+
+	[TestMethod]
+	public void HorizontalSplitter_ShowsAVerticalResizeCursor()
+	{
+		Start(DrawHorizontal);
+
+		Hover(Span);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering a horizontal splitter did not show a vertical resize cursor.");
+	}
 }

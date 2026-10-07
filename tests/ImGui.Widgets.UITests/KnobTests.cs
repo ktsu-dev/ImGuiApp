@@ -4,6 +4,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -131,5 +133,15 @@ public sealed class KnobTests : WidgetTest
 		MoveAway();
 
 		Assert.IsTrue(PixelsChangedSince(atZero) > 0, "The knob drew identically at both ends of its range.");
+	}
+
+	[TestMethod]
+	public void Knob_ShowsAVerticalResizeCursor()
+	{
+		Start(DrawFloatKnob);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering a knob driven by vertical drags did not show a vertical resize cursor.");
 	}
 }

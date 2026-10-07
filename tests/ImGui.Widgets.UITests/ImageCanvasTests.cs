@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 
@@ -130,5 +132,25 @@ public sealed class ImageCanvasTests : WidgetTest
 		MoveAway();
 
 		Assert.IsTrue(PixelsChangedSince(centered) > 0, "Panning the view changed nothing on screen.");
+	}
+
+	[TestMethod]
+	public void ImageCanvas_ShowsAMoveCursorWhilePanning()
+	{
+		Start(Draw);
+
+		ImGuiMouseCursor cursor = CursorWhileDragging(Id, 0.3f, 0.5f, new Vector2(60f, 0f));
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeAll, cursor, "Panning the canvas did not show a move cursor.");
+	}
+
+	[TestMethod]
+	public void ImageCanvas_KeepsTheArrowWhenOnlyHovered()
+	{
+		Start(Draw);
+
+		Hover(Id);
+
+		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "Hovering the canvas showed a cursor before any pan began.");
 	}
 }

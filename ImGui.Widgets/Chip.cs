@@ -64,6 +64,7 @@ public static partial class ImGuiWidgets
 			Vector2 origin = ImGui.GetCursorScreenPos();
 			ImGui.InvisibleButton(label, new Vector2(width, height));
 			ImGuiProbes.MarkItem(label);
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.Hand);
 
 			bool hovered = ImGui.IsItemHovered();
 			bool bodyClicked = ImGui.IsItemClicked();

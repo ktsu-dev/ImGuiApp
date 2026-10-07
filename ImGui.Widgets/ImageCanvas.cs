@@ -47,6 +47,10 @@ public static partial class ImGuiWidgets
 		if ((gesture.Gestures & GestureFlags.Pan) != 0)
 		{
 			state.PanBy(ImGui.GetIO().MouseDelta);
+
+			// Only once the drag is a pan: a click on the canvas, and an overlay such as a crop that
+			// takes the hover, keep their own cursor.
+			ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
 		}
 
 		if (gesture.DoubleTapped)

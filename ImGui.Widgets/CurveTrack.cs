@@ -315,6 +315,13 @@ public static partial class ImGuiWidgets
 				}
 			}
 
+			// The move cursor marks a point that can be picked up; the open track keeps the arrow,
+			// since a press there adds a point rather than moving one.
+			if (ImGui.IsItemActive() || (ImGui.IsItemHovered() && new CurveTrackState().Activate(points, pointer, grabInValue)))
+			{
+				ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
+			}
+
 			return changed;
 		}
 	}

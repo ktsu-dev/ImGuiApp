@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using Hexa.NET.ImGui;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <c>ImGuiWidgets.Chip</c> and <see cref="ImGuiWidgets.ChipGroup"/> on their own.</summary>
@@ -134,5 +136,15 @@ public sealed class ChipTests : WidgetTest
 		Click("Two##chip1");
 
 		Assert.AreEqual(-1, selectedIndex, "Re-clicking the selected chip did not clear the selection.");
+	}
+
+	[TestMethod]
+	public void Chip_ShowsAHandCursorWhenHovered()
+	{
+		Start(DrawChip);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering the chip did not show a hand.");
 	}
 }

@@ -112,4 +112,14 @@ public sealed class HandleTrackTests : WidgetTest
 			Harness.Probe.KnownNames.Any(name => name.EndsWith("/" + Label, StringComparison.Ordinal)),
 			"An empty handle track still submitted an item, so it consumed layout it does not own.");
 	}
+
+	[TestMethod]
+	public void HandleTrack_ShowsAHorizontalResizeCursor()
+	{
+		Start(Draw);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeEw, Harness.MouseCursor, "Hovering the handle track did not show a horizontal resize cursor.");
+	}
 }

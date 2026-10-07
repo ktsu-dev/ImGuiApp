@@ -92,6 +92,7 @@ public static partial class ImGuiWidgets
 			ImGui.SetCursorScreenPos(gridOrigin);
 			ImGui.InvisibleButton(label, layout.Size, ImGuiButtonFlags.MouseButtonLeft);
 			ImGuiProbes.MarkItem(label);
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.Hand);
 
 			bool hovered = ImGui.IsItemHovered();
 			Vector2 local = ImGui.GetIO().MousePos - gridOrigin;

@@ -75,6 +75,10 @@ public static partial class ImGuiWidgets
 			bool clicked = ImGui.InvisibleButton(id, new Vector2(totalWidth, starSize));
 			ImGuiProbes.MarkItem(id);
 			bool hovered = !readOnly && ImGui.IsItemHovered();
+			if (!readOnly)
+			{
+				WidgetCursor.OnLastItem(ImGuiMouseCursor.Hand);
+			}
 
 			float displayValue = value;
 			bool changed = false;

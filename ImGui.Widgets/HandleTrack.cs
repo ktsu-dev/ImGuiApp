@@ -92,6 +92,7 @@ public static partial class ImGuiWidgets
 			ImGui.SetCursorScreenPos(rectMin);
 			ImGui.InvisibleButton(label, new Vector2(MathF.Max(rectMax.X - rectMin.X, 1.0f), height));
 			ImGuiProbes.MarkItem(label);
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.ResizeEw);
 			ImGui.SetCursorScreenPos(cursor);
 
 			uint id = ImGui.GetID(label);

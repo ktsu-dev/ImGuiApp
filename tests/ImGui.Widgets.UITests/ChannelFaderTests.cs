@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -183,5 +185,15 @@ public sealed class ChannelFaderTests : WidgetTest
 
 		Assert.IsFalse(changed);
 		Assert.AreEqual(-3.1f, gainDb);
+	}
+
+	[TestMethod]
+	public void ChannelFader_ShowsAVerticalResizeCursorOverTheTrack()
+	{
+		Start(Draw);
+
+		Hover(Track);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering the fader track did not show a vertical resize cursor.");
 	}
 }

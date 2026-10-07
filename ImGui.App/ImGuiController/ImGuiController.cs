@@ -23,6 +23,7 @@ internal sealed class ImGuiController : IRendererBackend
 	internal readonly List<char> _pressedChars = [];
 	internal IKeyboard? _keyboard;
 	internal IMouse? _mouse;
+	private readonly PlatformCursor _platformCursor = new();
 
 	internal int _attribLocationTex;
 	internal int _attribLocationProjMtx;
@@ -109,6 +110,11 @@ internal sealed class ImGuiController : IRendererBackend
 		// repack at runtime, so glyphs can be rasterized at whatever size a caller pushes rather
 		// than only at sizes registered up front.
 		io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset | ImGuiBackendFlags.RendererHasTextures;
+
+		// HasMouseCursors tells ImGui its cursor requests reach the window; without it ImGui also
+		// turns off resizing windows by their edges, since nothing would show the user an edge is
+		// there. ApplyMouseCursor below is what keeps that promise.
+		io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
 
 		DebugLogger.Log("ImGuiController: Creating device resources");
 		CreateDeviceResources();
@@ -278,8 +284,27 @@ internal sealed class ImGuiController : IRendererBackend
 		{
 			_frameBegun = false;
 			ImGui.Render();
+			ApplyMouseCursor();
 			RenderDrawData(ImGui.GetDrawData());
 		}
+	}
+
+	/// <summary>
+	/// Carries the cursor the frame just decided on to the window's pointer.
+	/// </summary>
+	private void ApplyMouseCursor()
+	{
+		if (_mouse is null)
+		{
+			return;
+		}
+
+		ImGuiIOPtr io = ImGui.GetIO();
+		_platformCursor.Apply(
+			_mouse.Cursor,
+			ImGui.GetMouseCursor(),
+			io.MouseDrawCursor,
+			(io.ConfigFlags & ImGuiConfigFlags.NoMouseCursorChange) != 0);
 	}
 
 	/// <inheritdoc />

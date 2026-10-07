@@ -54,6 +54,10 @@ internal sealed class HeadlessImGuiContext : IDisposable
 		// through the frame's texture list, which is what lets it rasterize new glyph sizes on
 		// demand. A harness that baked one atlas up front could not exercise that.
 		io.BackendFlags |= ImGuiBackendFlags.RendererHasTextures;
+
+		// The desktop backend shows ImGui's cursor, and ImGui behaves differently when nothing
+		// does (it stops offering window edges to resize), so the harness claims the same.
+		io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
 	}
 
 	/// <summary>Gets the ImGui IO block for this context.</summary>

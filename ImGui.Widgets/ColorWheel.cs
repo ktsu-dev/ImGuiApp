@@ -55,6 +55,7 @@ public static partial class ImGuiWidgets
 		Vector2 min = ImGui.GetCursorScreenPos();
 		ImGui.InvisibleButton(label, new Vector2(side, side));
 		ImGuiProbes.MarkItem(label);
+		WidgetCursor.OnLastItem(ImGuiMouseCursor.ResizeAll);
 
 		float radius = side * 0.5f;
 		Vector2 center = min + new Vector2(radius, radius);
@@ -222,6 +223,7 @@ public static partial class ImGuiWidgets
 			Vector2 min = ImGui.GetCursorScreenPos();
 			ImGui.InvisibleButton("master", new Vector2(width, height));
 			ImGuiProbes.MarkItem("master");
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.ResizeEw);
 
 			ImGuiIOPtr io = ImGui.GetIO();
 			float half = MathF.Max(1.0f, width * 0.5f);

@@ -56,6 +56,9 @@ public static partial class ImGuiWidgets
 			ImGui.InvisibleButton(label, new Vector2(width, height));
 			ImGuiProbes.MarkItem(label);
 
+			// A press anywhere on the track takes the nearer handle, so the whole track is a handle.
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.ResizeEw);
+
 			float trackMinX = origin.X + grabRadius;
 			float trackMaxX = origin.X + width - grabRadius;
 			float trackY = origin.Y + (height * 0.5f);

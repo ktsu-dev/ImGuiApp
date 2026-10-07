@@ -213,6 +213,55 @@ public abstract class WidgetTest
 		Harness.Step(2);
 	}
 
+	/// <summary>Moves the pointer a fraction of the way across and down a named item, and settles hover.</summary>
+	/// <param name="name">A full probe name or its trailing part.</param>
+	/// <param name="fractionX">Horizontal position, zero at the left edge and one at the right.</param>
+	/// <param name="fractionY">Vertical position, zero at the top edge and one at the bottom.</param>
+	protected void HoverFraction(string name, float fractionX, float fractionY = 0.5f)
+	{
+		Rectangle rect = RectOf(name);
+		Harness.Mouse.MoveTo(rect.MinX + (rect.Width * fractionX), rect.MinY + (rect.Height * fractionY));
+		Harness.Step(2);
+	}
+
+	/// <summary>
+	/// Presses inside a named item, drags by an offset, and reports the mouse cursor while the
+	/// button is still held, then releases.
+	/// </summary>
+	/// <remarks>
+	/// A cursor shown only during a drag has gone by the time a plain drag returns, so this reads
+	/// it on the last frame before the release.
+	/// </remarks>
+	/// <param name="name">A full probe name or its trailing part.</param>
+	/// <param name="fractionX">Where the press lands, as a fraction of the item's width.</param>
+	/// <param name="fractionY">Where the press lands, as a fraction of the item's height.</param>
+	/// <param name="offset">How far to drag from the press, in pixels.</param>
+	/// <returns>The cursor the frame asked for while the drag was under way.</returns>
+	protected ImGuiMouseCursor CursorWhileDragging(string name, float fractionX, float fractionY, Vector2 offset)
+	{
+		Rectangle rect = RectOf(name);
+		float x = rect.MinX + (rect.Width * fractionX);
+		float y = rect.MinY + (rect.Height * fractionY);
+
+		Harness.Mouse.MoveTo(x, y);
+		Harness.Step();
+		HarnessMouse.Down(0);
+		Harness.Step();
+
+		const int Steps = 8;
+		for (int i = 1; i <= Steps; i++)
+		{
+			float t = (float)i / Steps;
+			Harness.Mouse.MoveTo(x + (offset.X * t), y + (offset.Y * t));
+			Harness.Step();
+		}
+
+		ImGuiMouseCursor cursor = Harness.MouseCursor;
+		HarnessMouse.Up(0);
+		Harness.Step();
+		return cursor;
+	}
+
 	/// <summary>Clicks well clear of a named item, so the click reaches the window and nothing else.</summary>
 	/// <param name="name">A full probe name or its trailing part.</param>
 	protected void ClickAwayFrom(string name)

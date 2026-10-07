@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using Hexa.NET.ImGui;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <see cref="ImGuiWidgets.Rating"/> on its own.</summary>
@@ -89,5 +91,27 @@ public sealed class RatingTests : WidgetTest
 		MoveAway();
 
 		Assert.IsTrue(PixelsChangedSince(empty) > 0, "A full rating drew the same as an empty one.");
+	}
+
+	[TestMethod]
+	public void Rating_ShowsAHandCursorWhenHovered()
+	{
+		readOnly = false;
+		Start(Draw);
+
+		Hover(Id);
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering an editable rating did not show a hand.");
+	}
+
+	[TestMethod]
+	public void Rating_ReadOnly_KeepsTheArrow()
+	{
+		readOnly = true;
+		Start(Draw);
+
+		Hover(Id);
+
+		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "A read-only rating offered a hand for a click that does nothing.");
 	}
 }

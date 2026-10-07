@@ -186,4 +186,14 @@ public sealed class StepGridTests : WidgetTest
 		Assert.IsFalse(result);
 		Assert.IsFalse(IsVisible(Label), "An empty grid submitted an item.");
 	}
+
+	[TestMethod]
+	public void StepGrid_ShowsAHandCursorOverACell()
+	{
+		Start(Draw);
+
+		Hover("grid/r1s2");
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering a cell did not show a hand.");
+	}
 }

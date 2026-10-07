@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using Hexa.NET.ImGui;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <see cref="ImGuiWidgets.Switch"/> on its own.</summary>
@@ -71,5 +73,26 @@ public sealed class SwitchTests : WidgetTest
 		ClickAwayFrom(Label);
 
 		Assert.IsFalse(value, "A click outside the switch toggled it.");
+	}
+
+	[TestMethod]
+	public void Switch_ShowsAHandCursorWhenHovered()
+	{
+		Start(Draw);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering the switch did not show a hand.");
+	}
+
+	[TestMethod]
+	public void Switch_LeavesTheArrowWhenNotHovered()
+	{
+		Start(Draw);
+		Hover(Label);
+
+		MoveAway();
+
+		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "The hand outlived the hover.");
 	}
 }
