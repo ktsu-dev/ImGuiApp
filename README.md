@@ -497,7 +497,7 @@ Configuration for `ImGuiApp.Start()`.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `Title` | `string` | Window title (default: "ImGuiApp") |
-| `IconPath` | `string` | Path to window icon (also used for the dock icon on macOS) |
+| `IconPath` | `string` | Path to window icon (also used for the dock icon on macOS, and applied again once the window is shown on Windows so the taskbar button carries it) |
 | `OnStart` | `Action` | Initialization callback |
 | `OnUpdate` | `Action<float>` | Per-frame update callback |
 | `OnRender` | `Action<float>` | Per-frame render callback |

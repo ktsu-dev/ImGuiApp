@@ -518,7 +518,7 @@ Configuration for the ImGui application.
 |------|------|---------|-------------|
 | `TestMode` | `bool` | `false` | Whether the application is running in test mode |
 | `Title` | `string` | `"ImGuiApp"` | The window title |
-| `IconPath` | `string` | `""` | The file path to the application window icon |
+| `IconPath` | `string` | `""` | The file path to the application window icon. On Windows it is applied again once the window is shown, because the taskbar button only picks up an icon that changes after the button exists |
 | `InitialWindowState` | `ImGuiAppWindowState` | `new()` | The initial state of the application window |
 | `WindowGeometry` | `WindowGeometryMode` | `Auto` | Who owns window position and size (see [Tiling window managers](#tiling-window-managers-and-wayland)) |
 | `Fonts` | `Dictionary<string, byte[]>` | `[]` | Font name to font data mapping |

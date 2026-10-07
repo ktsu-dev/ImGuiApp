@@ -768,6 +768,89 @@ public sealed class ImGuiAppWindowManagementTests
 		}
 	}
 
+	[TestMethod]
+	public void SetWindowIcon_WithValidPng_KeepsEveryIconSizeForReapplying()
+	{
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string path = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		try
+		{
+			File.WriteAllBytes(path, png);
+			ImGuiApp.window = null;
+			ImGuiApp.Invoker = new ktsu.Invoker.Invoker();
+			ImGuiApp.SetWindowIcon(path);
+
+			Assert.IsNotNull(ImGuiApp.windowIcons);
+			Assert.AreSequenceEqual(
+				[128, 64, 48, 32, 28, 24, 22, 20, 18, 16],
+				ImGuiApp.windowIcons.Select(icon => icon.Width));
+		}
+		finally
+		{
+			if (File.Exists(path))
+			{
+				File.Delete(path);
+			}
+		}
+	}
+
+	[TestMethod]
+	public void ReapplyWindowIcon_BeforeAnyIconIsSet_DoesNothing()
+	{
+		ImGuiApp.window = null;
+
+		ImGuiApp.ReapplyWindowIcon();
+
+		Assert.IsNull(ImGuiApp.windowIcons);
+	}
+
+	/// <summary>
+	/// The window is shown over the first few frames, so a tick before its native handle exists has
+	/// to leave the reapply pending for a later tick rather than give up on it.
+	/// </summary>
+	[TestMethod]
+	public void ReapplyWindowIconOnceShown_NoWindowHandleYet_StaysPending()
+	{
+		ImGuiApp.windowIconReapplyPending = true;
+
+		ImGuiApp.ReapplyWindowIconOnceShown(0);
+
+		Assert.IsTrue(ImGuiApp.windowIconReapplyPending);
+	}
+
+	/// <summary>
+	/// Once the window is visible its taskbar button exists, so the icon is applied once more and the
+	/// pending flag clears. The desktop window stands in for the app's window: it is always visible,
+	/// even on a headless build agent.
+	/// </summary>
+	[TestMethod]
+	public void ReapplyWindowIconOnceShown_VisibleWindow_ClearsPending()
+	{
+		if (!OperatingSystem.IsWindows())
+		{
+			Assert.Inconclusive("The taskbar reapply only runs on Windows.");
+		}
+
+		ImGuiApp.window = null;
+		ImGuiApp.windowIconReapplyPending = true;
+
+		ImGuiApp.ReapplyWindowIconOnceShown(Interop.NativeMethods.GetDesktopWindow());
+
+		Assert.IsFalse(ImGuiApp.windowIconReapplyPending);
+	}
+
+	[TestMethod]
+	public void Reset_AfterAnIconWasSet_ClearsTheIconState()
+	{
+		ImGuiApp.windowIcons = [];
+		ImGuiApp.windowIconReapplyPending = true;
+
+		ImGuiApp.Reset();
+
+		Assert.IsNull(ImGuiApp.windowIcons);
+		Assert.IsFalse(ImGuiApp.windowIconReapplyPending);
+	}
+
 	#endregion
 
 	#region Texture Management Integration Tests
