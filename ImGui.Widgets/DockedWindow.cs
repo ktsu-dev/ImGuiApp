@@ -25,6 +25,10 @@ public static partial class ImGuiWidgets
 	/// <see cref="Title"/> is both the window caption and its identity, so two windows sharing a
 	/// title will collide.
 	/// </para>
+	/// <para>
+	/// Collapsing the window, or docking it as a tab behind another, keeps it registered. Only its
+	/// close button or <see cref="Close"/> unregisters it.
+	/// </para>
 	/// </remarks>
 	public abstract class DockedWindow
 	{
@@ -71,6 +75,19 @@ public static partial class ImGuiWidgets
 
 			/// <inheritdoc/>
 			public override void DrawContent() => owner.DrawContent();
+
+			/// <summary>
+			/// Vetoes every close but the close button's.
+			/// </summary>
+			/// <remarks>
+			/// Hexa calls this whenever <c>ImGui.Begin</c> returns false, which it also does for a
+			/// collapsed window and for a docked tab that is not selected. Left alone, either one
+			/// unregisters the window for good, so tabbing two windows together loses the one
+			/// behind. Only the close button clears <see cref="HexaImWindow.IsShown"/>, so that is
+			/// the one case allowed through. See ktsu-dev/ImGuiApp#600.
+			/// </remarks>
+			/// <param name="handled">Set to true to keep the window registered.</param>
+			protected override void OnClosed(ref bool handled) => handled |= IsShown;
 		}
 	}
 }

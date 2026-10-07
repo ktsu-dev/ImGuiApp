@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.Widgets.UITests;
 
 using System;
+using System.Numerics;
 
 using Hexa.NET.ImGui;
 
@@ -36,9 +37,30 @@ public sealed class DockedWindowTests : WidgetTest
 	}
 
 	private ProbeWindow window = null!;
+	private ProbeWindow? other;
+	private Action? beforePump;
 
 	[TestCleanup]
-	public void CloseWindow() => window?.Close();
+	public void CloseWindow()
+	{
+		window?.Close();
+		other?.Close();
+	}
+
+	/// <summary>Runs a one-shot action inside the next frame, ahead of the docked pump.</summary>
+	private void RunInNextFrame(Action action)
+	{
+		beforePump = action;
+		Step();
+	}
+
+	private void DrawPump()
+	{
+		Action? action = beforePump;
+		beforePump = null;
+		action?.Invoke();
+		ImGuiWidgets.DrawDeferredDocked();
+	}
 
 	[TestMethod]
 	public void DockedWindow_IsDrawnByTheDockedPump()
@@ -117,5 +139,87 @@ public sealed class DockedWindowTests : WidgetTest
 		Assert.IsTrue(
 			drawn.Width < Harness.Options.Width,
 			$"The window covered the full {Harness.Options.Width}px width, so it was docked rather than floating.");
+	}
+
+	[TestMethod]
+	public void DockedWindow_TabbedBehindAnotherIsStillThereWhenSelected()
+	{
+		// ImGui.Begin answers false for a docked tab that is not selected, and Hexa used to read that
+		// as a close and unregister the window, so the tab behind was lost for good.
+		window = new ProbeWindow("Alpha");
+		other = new ProbeWindow("Beta");
+		Start(DrawPump, enableDocking: true);
+
+		window.Show();
+		other.Show();
+		Step(3);
+
+		RunInNextFrame(() =>
+		{
+			ImGuiP.DockBuilderDockWindow("Alpha", Hexa.NET.ImGui.Widgets.WidgetManager.DockSpaceId);
+			ImGuiP.DockBuilderDockWindow("Beta", Hexa.NET.ImGui.Widgets.WidgetManager.DockSpaceId);
+		});
+		Step(5);
+
+		RunInNextFrame(() => ImGui.SetWindowFocus("Alpha"));
+		Step(2);
+		int alpha = window.DrawCount;
+		Step(3);
+		Assert.IsTrue(window.DrawCount > alpha, "Alpha was not drawn after its tab was selected.");
+
+		RunInNextFrame(() => ImGui.SetWindowFocus("Beta"));
+		Step(2);
+		int beta = other.DrawCount;
+		Step(3);
+		Assert.IsTrue(other.DrawCount > beta, "Beta was not drawn after its tab was selected.");
+	}
+
+	[TestMethod]
+	public void DockedWindow_SurvivesBeingCollapsed()
+	{
+		window = new ProbeWindow("Inspector");
+		Start(DrawPump, enableDocking: true);
+
+		window.Show();
+		Step(3);
+
+		RunInNextFrame(() => ImGui.SetWindowCollapsed("Inspector", true));
+		Step(3);
+		int collapsed = window.DrawCount;
+		Step(3);
+		Assert.AreEqual(collapsed, window.DrawCount, "A collapsed window still drew its content.");
+
+		RunInNextFrame(() => ImGui.SetWindowCollapsed("Inspector", false));
+		Step(3);
+		Assert.IsTrue(window.DrawCount > collapsed, "The window did not come back after being expanded.");
+	}
+
+	[TestMethod]
+	public void DockedWindow_CloseButtonStillCloses()
+	{
+		// The veto that keeps a collapsed or tabbed window registered must not swallow a real close.
+		window = new ProbeWindow("Inspector");
+		Start(DrawPump, enableDocking: true);
+
+		window.Show();
+		Step(3);
+
+		Vector2 closeButton = Vector2.Zero;
+		RunInNextFrame(() =>
+		{
+			ImGuiWindowPtr found = ImGuiP.FindWindowByName("Inspector");
+			ImGuiStylePtr style = ImGui.GetStyle();
+			float fontSize = ImGui.GetFontSize();
+			closeButton = new Vector2(
+				found.Pos.X + found.Size.X - style.FramePadding.X - (fontSize * 0.5f),
+				found.Pos.Y + style.FramePadding.Y + (fontSize * 0.5f));
+		});
+
+		Harness.Mouse.Click(closeButton.X, closeButton.Y);
+		Step(3);
+		int afterClose = window.DrawCount;
+		Step(3);
+
+		Assert.AreEqual(afterClose, window.DrawCount, "The close button did not close the window.");
 	}
 }
