@@ -824,19 +824,35 @@ public sealed class ImGuiAppWindowManagementTests
 	/// even on a headless build agent.
 	/// </summary>
 	[TestMethod]
+	[OSCondition(OperatingSystems.Windows)]
 	public void ReapplyWindowIconOnceShown_VisibleWindow_ClearsPending()
 	{
-		if (!OperatingSystem.IsWindows())
-		{
-			Assert.Inconclusive("The taskbar reapply only runs on Windows.");
-		}
-
 		ImGuiApp.window = null;
 		ImGuiApp.windowIconReapplyPending = true;
 
 		ImGuiApp.ReapplyWindowIconOnceShown(Interop.NativeMethods.GetDesktopWindow());
 
 		Assert.IsFalse(ImGuiApp.windowIconReapplyPending);
+	}
+
+	/// <summary>
+	/// The update tick calls this every frame, so with nothing pending it has to leave the icons alone
+	/// even when the window is visible, or every frame would hand the window new icon handles.
+	/// </summary>
+	[TestMethod]
+	[OSCondition(OperatingSystems.Windows)]
+	public void ReapplyWindowIconOnceShown_NothingPending_LeavesTheIconsAlone()
+	{
+		Silk.NET.Core.RawImage[] icons = [];
+		Mock<IWindow> mockWindow = new();
+		ImGuiApp.window = mockWindow.Object;
+		ImGuiApp.windowIcons = icons;
+		ImGuiApp.windowIconReapplyPending = false;
+
+		ImGuiApp.ReapplyWindowIconOnceShown(Interop.NativeMethods.GetDesktopWindow());
+
+		Assert.IsFalse(ImGuiApp.windowIconReapplyPending);
+		Assert.IsEmpty(mockWindow.Invocations);
 	}
 
 	[TestMethod]

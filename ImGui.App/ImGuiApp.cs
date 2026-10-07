@@ -746,10 +746,7 @@ public static partial class ImGuiApp
 				}
 			}
 
-			if (windowIconReapplyPending)
-			{
-				ReapplyWindowIconOnceShown(TryGetWindowHandle());
-			}
+			ReapplyWindowIconOnceShown(TryGetWindowHandle());
 
 			EnsureWindowPositionIsValid();
 			UpdateWindowPerformance();
@@ -1702,13 +1699,13 @@ public static partial class ImGuiApp
 
 	/// <summary>
 	/// Applies the icon again once the window is visible, so its taskbar button exists to pick it up.
-	/// Called each update tick while <see cref="windowIconReapplyPending"/> is set, because the window is
-	/// shown over the first few frames rather than at a fixed point.
+	/// Called every update tick, because the window is shown over the first few frames rather than at a
+	/// fixed point, and does nothing unless <see cref="windowIconReapplyPending"/> is set.
 	/// </summary>
 	/// <param name="hwnd">The native window handle, or zero when it is not available yet.</param>
 	internal static void ReapplyWindowIconOnceShown(nint hwnd)
 	{
-		if (hwnd == 0 || !NativeMethods.IsWindowVisible(hwnd))
+		if (!windowIconReapplyPending || hwnd == 0 || !NativeMethods.IsWindowVisible(hwnd))
 		{
 			return;
 		}
