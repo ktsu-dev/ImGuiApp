@@ -233,6 +233,9 @@ public static partial class ImGuiWidgets
 				ImGui.InvisibleButton(label_, new(Radius * 2.0f, Radius * 2.0f));
 				ImGuiProbes.MarkItem(label_);
 
+				// A knob turns by dragging along one axis, not by circling it, so the cursor names the axis.
+				WidgetCursor.OnLastItem(flags.HasFlag(ImGuiKnobOptions.DragHorizontal) ? ImGuiMouseCursor.ResizeEw : ImGuiMouseCursor.ResizeNs);
+
 				ValueChanged = DragBehavior(dataType, ref value, vMin, vMax, speed, format, flags);
 
 				// Compute the normalized value AFTER the drag so the indicator reflects

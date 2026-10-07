@@ -257,6 +257,13 @@ public static partial class ImGuiWidgets
 			bool isRightMouseClicked = ImGui.IsMouseClicked(ImGuiMouseButton.Right);
 			bool isRightMouseReleased = ImGui.IsMouseReleased(ImGuiMouseButton.Right);
 
+			// Only an icon that does something on a left click says so; one with just a tooltip or a
+			// context menu keeps the arrow.
+			if (isHovered && (options.OnClick is not null || options.OnDoubleClick is not null))
+			{
+				ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+			}
+
 			if (!string.IsNullOrEmpty(options.Tooltip))
 			{
 				ImGui.SetItemTooltip(options.Tooltip);

@@ -4,6 +4,8 @@ namespace ktsu.ImGui.App.Testing;
 
 using System;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.Probes;
 
@@ -42,6 +44,13 @@ public sealed class ImGuiAppHarness : IDisposable
 
 	/// <summary>Gets the number of frames advanced so far.</summary>
 	public int FrameCount { get; private set; }
+
+	/// <summary>
+	/// Gets the mouse cursor the most recent frame asked for, as <c>ImGui.GetMouseCursor()</c>
+	/// reported it once the frame ended. This is what the desktop backend shows on the window's
+	/// pointer, so a test asserts a widget's cursor here.
+	/// </summary>
+	public ImGuiMouseCursor MouseCursor { get; private set; }
 
 	/// <summary>Gets the render target holding the most recently rendered frame.</summary>
 	public Bitmap32 Target => renderer.Target;
@@ -159,6 +168,7 @@ public sealed class ImGuiAppHarness : IDisposable
 				ImGuiApp.RenderFrameContents(config, Options.FrameDelta);
 
 				context.EndFrame();
+				MouseCursor = ImGui.GetMouseCursor();
 			}
 			catch (Exception error) when (error is not HarnessFrameException)
 			{

@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using Hexa.NET.ImGui;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <c>ImGuiWidgets.SegmentedControl</c> on its own.</summary>
@@ -83,5 +85,15 @@ public sealed class SegmentedControlTests : WidgetTest
 		MoveAway();
 
 		Assert.IsTrue(PixelsChangedSince(atFirst) > 0, "The highlight never moved to the new selection.");
+	}
+
+	[TestMethod]
+	public void SegmentedControl_ShowsAHandCursorOverASegment()
+	{
+		Start(Draw);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering a segment did not show a hand.");
 	}
 }

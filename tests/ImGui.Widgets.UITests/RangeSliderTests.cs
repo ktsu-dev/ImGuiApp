@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using Hexa.NET.ImGui;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <see cref="ImGuiWidgets.RangeSlider"/> on its own.</summary>
@@ -80,5 +82,15 @@ public sealed class RangeSliderTests : WidgetTest
 
 		Assert.AreEqual(20f, lower);
 		Assert.AreEqual(80f, upper);
+	}
+
+	[TestMethod]
+	public void RangeSlider_ShowsAHorizontalResizeCursor()
+	{
+		Start(Draw);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeEw, Harness.MouseCursor, "Hovering the range slider did not show a horizontal resize cursor.");
 	}
 }

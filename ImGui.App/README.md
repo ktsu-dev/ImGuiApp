@@ -25,6 +25,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Context Handling**: Automatic OpenGL context change detection and texture reloading
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
+- **Mouse Cursors**: The cursor a frame asks for through `ImGui.SetMouseCursor` (resize, hand, text beam, move) is shown on the system pointer
 - **Positioning Guards**: Offscreen positioning checks to keep windows visible
 - **Modern .NET**: Supports .NET 8, 9, and 10
 - **Active Development**: Open-source and actively maintained

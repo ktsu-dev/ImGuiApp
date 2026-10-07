@@ -259,4 +259,26 @@ public sealed class CurveTrackTests : WidgetTest
 
 		AssertSomethingWasDrawn("the curve track with a partly undefined sampler");
 	}
+
+	[TestMethod]
+	public void CurveTrack_ShowsAMoveCursorOverAPoint()
+	{
+		Start(Draw);
+
+		// The middle point sits at the centre of the rectangle.
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeAll, Harness.MouseCursor, "Hovering a point did not show a move cursor.");
+	}
+
+	[TestMethod]
+	public void CurveTrack_KeepsTheArrowAwayFromThePoints()
+	{
+		Start(Draw);
+
+		// A press here adds a point rather than moving one, so there is nothing to show a move for.
+		HoverFraction(Label, 0.25f, 0.25f);
+
+		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "Open track showed a move cursor with no point under the pointer.");
+	}
 }

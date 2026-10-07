@@ -67,7 +67,9 @@ public static partial class ImGuiWidgets
 				if (interactive)
 				{
 					ImGui.SetCursorScreenPos(new Vector2(center.X - activeRadius, origin.Y));
-					if (ImGui.InvisibleButton(string.Create(CultureInfo.InvariantCulture, $"{id}_dot{i}"), new Vector2(activeRadius * 2.0f, height)))
+					bool dotClicked = ImGui.InvisibleButton(string.Create(CultureInfo.InvariantCulture, $"{id}_dot{i}"), new Vector2(activeRadius * 2.0f, height));
+					WidgetCursor.OnLastItem(ImGuiMouseCursor.Hand);
+					if (dotClicked)
 					{
 						selected = i;
 					}

@@ -91,6 +91,12 @@ public static partial class ImGuiWidgets
 		{
 			bool changed = Drag(ref gainDb, top, layout, state, position);
 
+			// Only the track takes a drag; the meter beside it and the readout under it do not.
+			if (state.IsDragging || (ImGui.IsItemHovered() && layout.TrackContains(ImGui.GetIO().MousePos)))
+			{
+				ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeNs);
+			}
+
 			if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && !IsUnity(gainDb))
 			{
 				gainDb = 0f;

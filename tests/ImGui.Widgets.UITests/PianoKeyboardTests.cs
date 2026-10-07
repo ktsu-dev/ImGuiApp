@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -154,5 +156,15 @@ public sealed class PianoKeyboardTests : WidgetTest
 		Assert.AreEqual(keys.Height, c4.Height, 1f, "A white key does not run the whole length.");
 		Assert.AreEqual(62f, cSharp4.Height, 1f, "A black key is not 0.62 of the length.");
 		Assert.IsTrue(cSharp4.MinX < c4.MaxX && cSharp4.MaxX > c4.MaxX, "C#4 does not straddle the C4/D4 boundary.");
+	}
+
+	[TestMethod]
+	public void PianoKeyboard_ShowsAHandCursorOverAKey()
+	{
+		Start(Draw);
+
+		Hover($"{Label}/C4");
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering a key did not show a hand.");
 	}
 }

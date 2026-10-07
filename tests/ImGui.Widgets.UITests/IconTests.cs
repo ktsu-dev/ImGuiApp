@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 
@@ -139,5 +141,25 @@ public sealed class IconTests : WidgetTest
 		Assert.IsTrue(
 			Math.Abs(calculated.X - rect.Width) <= 2f,
 			$"CalcIconSize reported {calculated.X}px of width for an icon that reserved {rect.Width}px.");
+	}
+
+	[TestMethod]
+	public void Icon_WithAClickHandler_ShowsAHandCursor()
+	{
+		Start(DrawWithOptions);
+
+		Hover(Name);
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "An icon that reports clicks did not show a hand.");
+	}
+
+	[TestMethod]
+	public void Icon_WithoutAClickHandler_KeepsTheArrow()
+	{
+		Start(Draw);
+
+		Hover(Name);
+
+		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "An icon with nothing to click offered a hand.");
 	}
 }

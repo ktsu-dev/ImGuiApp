@@ -218,4 +218,24 @@ public sealed class ColorWheelTests : WidgetTest
 		Assert.IsTrue(lift.IsNeutral, $"Dragging gain moved lift to {lift}.");
 		Assert.IsTrue(gamma.IsNeutral, $"Dragging gain moved gamma to {gamma}.");
 	}
+
+	[TestMethod]
+	public void ColorWheel_ShowsAMoveCursorOverTheWheel()
+	{
+		Start(Draw);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeAll, Harness.MouseCursor, "Hovering the wheel did not show a move cursor.");
+	}
+
+	[TestMethod]
+	public void ColorWheel_ShowsAHorizontalResizeCursorOverTheMaster()
+	{
+		Start(Draw);
+
+		Hover($"{Label}/master");
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeEw, Harness.MouseCursor, "Hovering the master slider did not show a horizontal resize cursor.");
+	}
 }

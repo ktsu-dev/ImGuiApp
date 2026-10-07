@@ -102,4 +102,26 @@ public sealed class PageIndicatorTests : WidgetTest
 
 		Assert.AreEqual(PageCount - 1, currentPage, "An out-of-range page was not clamped.");
 	}
+
+	[TestMethod]
+	public void PageIndicator_Interactive_ShowsAHandOverADot()
+	{
+		interactive = true;
+		Start(Draw);
+
+		HoverFraction(Span, 0.02f);
+
+		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering a clickable dot did not show a hand.");
+	}
+
+	[TestMethod]
+	public void PageIndicator_NotInteractive_KeepsTheArrow()
+	{
+		interactive = false;
+		Start(Draw);
+
+		HoverFraction(Span, 0.02f);
+
+		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "A dot that ignores clicks offered a hand.");
+	}
 }

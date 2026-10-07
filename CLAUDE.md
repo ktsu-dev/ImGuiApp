@@ -313,6 +313,28 @@ Four things to know before changing any of it:
 `ImGuiWidgets.Viewport3D` (sub-issue 4). `TryGetRenderer3D` therefore answers `false` in a real
 desktop application today and `true` under a headless harness.
 
+### Mouse cursors
+
+Dear ImGui only records which cursor a frame wants; a platform backend has to show it. Until
+`PlatformCursor` (in `ImGui.App/ImGuiController/`), nothing did, so every `ImGui.SetMouseCursor` a
+widget made was dropped and the pointer stayed an arrow everywhere. `ImGuiController.Render` now
+hands `ImGui.GetMouseCursor()` to Silk.NET's `ICursor` after each frame, and declares
+`ImGuiBackendFlags.HasMouseCursors`, which is also what turns on ImGui's resize-from-window-edges.
+It writes only when the cursor changes, honours `ImGuiConfigFlags.NoMouseCursorChange` and
+`io.MouseDrawCursor`, and leaves a pointer the application has captured (`CursorMode.Disabled` or
+`Raw`) alone.
+
+The headless context declares the same flag, and `ImGuiAppHarness.MouseCursor` reports what the
+last frame asked for, so a widget's cursor is a UI-test assertion like anything else.
+
+Widgets choose by what a press does, through `WidgetCursor.OnLastItem`: `Hand` for a custom click
+target (switch, chip, segment, star, key, step cell, page dot, an icon with a click handler),
+`ResizeEw`/`ResizeNs` for a one-axis drag (range slider, handle track, fader, knob, the colour
+wheel's master bar), and `ResizeAll` for a free drag (XY pad, colour wheel, a curve point, a
+canvas pan). Plain `ImGui.Button`s, including `ToolbarButton`, keep the arrow, as ImGui's own
+buttons do, and a read-only or click-less instance keeps it too. Text fields get the beam from
+ImGui itself.
+
 ### Deferred Drawing (dialogs and docked windows)
 
 Hexa's dialogs and `DockedWindow` are stateful: `Show()` registers the instance with a static

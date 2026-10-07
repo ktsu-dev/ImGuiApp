@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -88,5 +90,15 @@ public sealed class XYPadTests : WidgetTest
 		MoveAway();
 
 		Assert.IsTrue(PixelsChangedSince(centered) > 0, "The handle drew in the same place after the value moved.");
+	}
+
+	[TestMethod]
+	public void XYPad_ShowsAMoveCursor()
+	{
+		Start(Draw);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeAll, Harness.MouseCursor, "Hovering the pad did not show a move cursor.");
 	}
 }

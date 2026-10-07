@@ -37,6 +37,7 @@ public static partial class ImGuiWidgets
 		Vector2 cursorPos = ImGui.GetCursorScreenPos();
 		ImGui.InvisibleButton(label, padSize);
 		ImGuiProbes.MarkItem(label);
+		WidgetCursor.OnLastItem(ImGuiMouseCursor.ResizeAll);
 
 		bool changed = false;
 		if (ImGui.IsItemActive() && padSize.X > 0 && padSize.Y > 0)

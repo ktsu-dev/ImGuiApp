@@ -89,6 +89,7 @@ public static partial class ImGuiWidgets
 			Vector2 extent = new(width, height);
 			ImGui.InvisibleButton(label, extent);
 			ImGuiProbes.MarkItem(label);
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.Hand);
 
 			Vector2 max = min + extent;
 			float whiteWidth = width / layout.WhiteKeyCount;
