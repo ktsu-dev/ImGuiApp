@@ -11,6 +11,7 @@ using Silk.NET.OpenGL;
 /// Carries <see cref="IGL3D"/> calls to a real OpenGL context.
 /// </summary>
 /// <param name="gl">The context. Not owned: the application creates and disposes it.</param>
+[ExcludeFromCodeCoverage(Justification = "One-line forwards to a live OpenGL context, which unit tests do not have. Every decision is in GLRenderer3D, which is covered against a stand-in for this seam.")]
 internal sealed class GL3DWrapper(GL gl) : IGL3D
 {
 	private readonly GL gl = gl;

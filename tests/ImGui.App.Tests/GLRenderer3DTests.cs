@@ -156,6 +156,37 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void Controller_ForwardsEveryRenderer3DCallToTheOpenGLRenderer()
+	{
+		FakeGL3D gl = new();
+		IRenderer3D controller = ControllerOver(gl);
+
+		nint target = controller.CreateRenderTarget(16, 16, depth: true);
+		Assert.IsTrue(controller.ResizeRenderTarget(target, 32, 32));
+		controller.Clear(target, Vector4.One, 1f);
+		controller.Draw(target, Triangle, TriangleIndices, default);
+		Assert.AreEqual(target, controller.GetTargetTexture(target));
+		controller.DeleteRenderTarget(target);
+
+		Assert.HasCount(1, gl.Clears);
+		Assert.HasCount(1, gl.Draws);
+		CollectionAssert.Contains(gl.Calls, $"DeleteFramebuffer({FakeGL3D.FirstFramebuffer})");
+	}
+
+	[TestMethod]
+	public void Controller_WithoutAContext_RefusesRenderer3DCallsByName()
+	{
+		IRenderer3D controller = (ImGuiController)RuntimeHelpers.GetUninitializedObject(typeof(ImGuiController));
+
+		Assert.ThrowsExactly<InvalidOperationException>(() => controller.CreateRenderTarget(16, 16, depth: false));
+		Assert.ThrowsExactly<InvalidOperationException>(() => controller.ResizeRenderTarget(1, 16, 16));
+		Assert.ThrowsExactly<InvalidOperationException>(() => controller.DeleteRenderTarget(1));
+		Assert.ThrowsExactly<InvalidOperationException>(() => controller.GetTargetTexture(1));
+		Assert.ThrowsExactly<InvalidOperationException>(() => controller.Clear(1, Vector4.One, 1f));
+		Assert.ThrowsExactly<InvalidOperationException>(() => controller.Draw(1, Triangle, TriangleIndices, default));
+	}
+
+	[TestMethod]
 	public void ResizeRenderTarget_KeepsTheHandleAndRespecifiesBothAttachments()
 	{
 		FakeGL3D gl = new();
@@ -369,6 +400,20 @@ public sealed class GLRenderer3DTests
 		CollectionAssert.Contains(gl.Calls, $"DeleteTexture({FakeGL3D.FirstTexture})");
 		CollectionAssert.Contains(gl.Calls, $"DeleteFramebuffer({FakeGL3D.FirstFramebuffer})");
 		CollectionAssert.Contains(gl.Calls, $"DeleteProgram({FakeGL3D.FirstProgram})");
+	}
+
+	[TestMethod]
+	public void Dispose_Twice_ReleasesNothingTheSecondTime()
+	{
+		FakeGL3D gl = new();
+		GLRenderer3D renderer = new(gl);
+		renderer.CreateRenderTarget(8, 8, depth: false);
+		renderer.Dispose();
+		gl.Calls.Clear();
+
+		renderer.Dispose();
+
+		Assert.IsEmpty(gl.Calls);
 	}
 
 	[TestMethod]
