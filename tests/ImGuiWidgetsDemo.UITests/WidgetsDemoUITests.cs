@@ -42,7 +42,7 @@ public sealed class WidgetsDemoUITests
 	private static readonly string[] WidgetDemoSections =
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
-		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View",
+		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View", "Reorderable Tree",
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
 		"Parametric EQ",
@@ -377,6 +377,29 @@ public sealed class WidgetsDemoUITests
 		{
 			Assert.IsTrue(IsVisible(scoped), $"ScopedId should have qualified '{scoped}'.");
 		}
+	}
+
+	[TestMethod]
+	public void ReorderableTree_DragsARowIntoAGroup()
+	{
+		OpenSection(WidgetDemosTab, "Reorderable Tree");
+
+		// Rows: Background, Photos, Beach, Forest, Notes, Archive. Notes onto the middle of Archive.
+		Rectangle notes = harness.Probe.Rect("demoTree/row4")
+			?? throw new InvalidOperationException("The reorderable tree marked no row 4.");
+		Rectangle archive = harness.Probe.Rect("demoTree/row5")
+			?? throw new InvalidOperationException("The reorderable tree marked no row 5.");
+
+		harness.Mouse.Drag(
+			notes.MinX + 40f,
+			notes.MinY + (notes.Height / 2f),
+			archive.MinX + 40f,
+			archive.MinY + (archive.Height / 2f),
+			steps: 8,
+			button: 0);
+		harness.Step(SettleFrames);
+
+		Assert.AreEqual("Background Photos .Beach .Forest Archive .Notes", ReorderableTreeDemo.Shape);
 	}
 
 	[TestMethod]

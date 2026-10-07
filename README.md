@@ -554,6 +554,7 @@ Custom UI components.
 | `ScopedDisable` | RAII wrapper to disable UI elements |
 | `ScopedId` | RAII wrapper to push ImGui IDs |
 | `Tree` | Tree view with nested children |
+| `ReorderableTree` | Drag-reorderable tree of caller-drawn rows |
 
 ### `ImGuiPopups` Classes
 

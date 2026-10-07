@@ -94,6 +94,8 @@ internal static class LayoutAndContainersTiles
 			});
 		});
 
+		yield return ReorderableTreeTile(Category);
+
 		yield return new("IconTreeNode", Category, [nameof(ImGuiWidgets.IconTreeNode)], _ =>
 		{
 			if (ImGuiWidgets.IconTreeNode("Project", "\uE2C7", Color.FromHex("#e6b333"), ImGuiTreeNodeFlags.DefaultOpen))
@@ -228,6 +230,16 @@ internal static class LayoutAndContainersTiles
 	/// </summary>
 	/// <param name="category">The group the tile belongs to.</param>
 	/// <returns>The tile.</returns>
+	private static GalleryEntry ReorderableTreeTile(GalleryCategory category)
+	{
+		// A still frame shows the rows and their indent; the drag affordances only exist while a row is
+		// held, which a tile cannot show.
+		string[] names = ["Background", "Photos", "Beach", "Forest", "Notes"];
+		ReorderableTreeRow[] rows = [new(0, false), new(0, true), new(1, false), new(1, false), new(0, false)];
+		return new("ReorderableTree", category, [nameof(ImGuiWidgets.ReorderableTree)], _ =>
+			ImGuiWidgets.ReorderableTree("##reorderable", rows, i => ImGui.Selectable(names[i], i == 2)));
+	}
+
 	private static GalleryEntry CropOverlayTile(GalleryCategory category)
 	{
 		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);
