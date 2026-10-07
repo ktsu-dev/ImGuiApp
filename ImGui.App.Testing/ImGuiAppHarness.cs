@@ -25,7 +25,6 @@ public sealed class ImGuiAppHarness : IDisposable
 	private static ImGuiAppHarness? live;
 
 	private readonly ImGuiAppConfig config;
-	private readonly SoftwareRenderer renderer;
 	private readonly HeadlessImGuiContext context;
 	private bool disposed;
 
@@ -33,8 +32,8 @@ public sealed class ImGuiAppHarness : IDisposable
 	{
 		this.config = config;
 		Options = options;
-		renderer = new SoftwareRenderer(options.Width, options.Height);
-		context = new HeadlessImGuiContext(options.Width, options.Height, options.DpiScale, renderer);
+		Renderer = new SoftwareRenderer(options.Width, options.Height);
+		context = new HeadlessImGuiContext(options.Width, options.Height, options.DpiScale, Renderer);
 		Mouse = new HarnessMouse(this);
 		Keyboard = new HarnessKeyboard(this);
 	}
@@ -53,7 +52,16 @@ public sealed class ImGuiAppHarness : IDisposable
 	public ImGuiMouseCursor MouseCursor { get; private set; }
 
 	/// <summary>Gets the render target holding the most recently rendered frame.</summary>
-	public Bitmap32 Target => renderer.Target;
+	/// <remarks>
+	/// A frame is rasterized when its pixels are first read, here or through <see cref="Capture"/>,
+	/// rather than when it is stepped, so read this again after each step instead of holding the
+	/// bitmap across one. After the harness is disposed it no longer reflects a frame that was
+	/// stepped but never read.
+	/// </remarks>
+	public Bitmap32 Target => Renderer.Target;
+
+	/// <summary>Gets the rasterizer drawing this harness's frames.</summary>
+	internal SoftwareRenderer Renderer { get; }
 
 	/// <summary>Gets the mouse input injector.</summary>
 	public HarnessMouse Mouse { get; }
@@ -92,7 +100,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		// backend that was never installed.
 		try
 		{
-			ImGuiApp.BeginExternalFrameSession(harness.renderer);
+			ImGuiApp.BeginExternalFrameSession(harness.Renderer);
 		}
 		catch
 		{
@@ -153,6 +161,12 @@ public sealed class ImGuiAppHarness : IDisposable
 
 			try
 			{
+				// The previous frame is discarded unread here unless something read its pixels,
+				// which is the point: rasterizing is nearly all a headless frame costs, and most
+				// frames a test steps through are never looked at. Every frame clears the whole
+				// target, so the last frame alone decides what a read sees. This has to precede
+				// NewFrame, which reuses the draw data the discarded frame points at.
+				Renderer.BeginDeferredFrame(Options.ClearColor);
 				context.BeginFrame(Options.FrameDelta);
 
 				// Must follow NewFrame, as it does in ImGuiController.
@@ -164,10 +178,9 @@ public sealed class ImGuiAppHarness : IDisposable
 				config.OnUpdate?.Invoke(Options.FrameDelta);
 				ImGuiApp.Invoker.DoInvokes();
 
-				renderer.Clear(Options.ClearColor);
 				ImGuiApp.RenderFrameContents(config, Options.FrameDelta);
 
-				context.EndFrame();
+				context.EndFrameDeferred();
 				MouseCursor = ImGui.GetMouseCursor();
 			}
 			catch (Exception error) when (error is not HarnessFrameException)
@@ -258,7 +271,7 @@ public sealed class ImGuiAppHarness : IDisposable
 
 		return FrameCount == 0
 			? throw new InvalidOperationException("No frame has been rendered yet, so there is nothing to capture. Call Step first.")
-			: new CapturedFrame(renderer.Target);
+			: new CapturedFrame(Renderer.Target);
 	}
 
 	/// <inheritdoc/>
@@ -269,6 +282,10 @@ public sealed class ImGuiAppHarness : IDisposable
 			return;
 		}
 
+		// A deferred frame points into ImGui's draw data, which is about to be destroyed with the
+		// context, and textures are about to be released underneath it.
+		Renderer.DiscardDeferredFrame();
+
 		// Extension teardown reaches into ImGui's context, so it has to happen while that context
 		// is still alive. Destroying the ImPlot context after ImGui's has gone faults in native code.
 		if (ReferenceEquals(live, this))
@@ -277,7 +294,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		}
 
 		context.Dispose();
-		renderer.Dispose();
+		Renderer.Dispose();
 
 		if (ReferenceEquals(live, this))
 		{

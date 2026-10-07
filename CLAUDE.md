@@ -879,7 +879,9 @@ Things that bite when writing these:
   recorded by the probe, but clicking their recorded position lands on whatever is actually there,
   so the click silently does nothing. The tabbed demos use 1600x1200 or larger.
 - **Run in Release.** The software rasterizer is roughly 17x faster there — about 180 ms per frame
-  versus 3 s in Debug — so keep frame counts modest either way.
+  versus 3 s in Debug. Only a frame whose pixels are read (`Capture()`, `Target`) is
+  rasterized, so stepping is cheap and each read pays for one frame; hold no `Bitmap32` from
+  `Target` across a step, since it is drawn on read.
 - **The demos mark their own controls.** `ktsu.ImGui.Widgets` and `ktsu.ImGui.Popups` mark items
   themselves; the plain ImGui buttons, headers, tabs and sliders the demos draw go through a small
   `DemoProbe` helper (or a local `DemoButton`/`DemoHeader`/`DemoTab`) that calls

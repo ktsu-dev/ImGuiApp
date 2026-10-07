@@ -25,15 +25,44 @@ using Hexa.NET.ImGui;
 public sealed partial class SoftwareRenderer(int width, int height) : IRendererBackend
 {
 	private readonly Dictionary<nint, TextureSource> textures = [];
+	private readonly Bitmap32 target = new(width, height);
 	private nint nextId = 1;
 	private bool disposed;
 
+	// A frame the harness has finished but not yet rasterized. Nearly every frame a UI test steps
+	// through is never looked at, and rasterizing on the CPU is almost all of what a frame costs,
+	// so the harness hands the frame over here and it is drawn only when its pixels are read.
+	// ImGui keeps the draw data alive until the next NewFrame, and the harness discards the
+	// deferred frame before calling it, so the pointer is never read after ImGui has reused it.
+	private Rgba32? deferredClear;
+	private ImDrawDataPtr deferredDrawData;
+	private bool drawDataDeferred;
+
 	/// <summary>Gets the render target holding the most recently rendered frame.</summary>
-	public Bitmap32 Target { get; } = new Bitmap32(width, height);
+	/// <remarks>
+	/// Under <see cref="ImGuiAppHarness"/> a frame is rasterized when this is read rather than when
+	/// it ends, so read it again after stepping rather than holding the bitmap across steps: a
+	/// reference kept from before a step still shows the frame it was read on.
+	/// </remarks>
+	public Bitmap32 Target
+	{
+		get
+		{
+			RasterizeDeferredFrame();
+			return target;
+		}
+	}
+
+	/// <summary>Gets how many deferred frames have been rasterized, which tests read to tell a skipped frame from a drawn one.</summary>
+	internal int DeferredFramesRasterized { get; private set; }
 
 	/// <summary>Fills the render target with one color, discarding the previous frame.</summary>
 	/// <param name="color">The clear color.</param>
-	public void Clear(Rgba32 color) => Target.Clear(color);
+	public void Clear(Rgba32 color)
+	{
+		DiscardDeferredFrame();
+		target.Clear(color);
+	}
 
 	/// <summary>Uploads a texture and returns an opaque handle usable as an ImGui texture id.</summary>
 	/// <param name="rgba">Tightly packed RGBA8 pixels.</param>
@@ -55,6 +84,7 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 	/// <returns>Always true. A CPU texture can always be replaced in place.</returns>
 	public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
 	{
+		RasterizeDeferredDrawData();
 		textures[id] = new TextureSource(ToBitmap(rgba, width, height));
 		return true;
 	}
@@ -74,6 +104,7 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 				$"Texture {id} is a render target's colour attachment. Release it with DeleteRenderTarget.", nameof(id));
 		}
 
+		RasterizeDeferredDrawData();
 		textures.Remove(id);
 	}
 
@@ -84,8 +115,90 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 
 	/// <summary>Rasterizes a complete ImGui draw-data tree into the render target.</summary>
 	/// <param name="drawData">Draw data obtained after calling <c>ImGui.Render</c>.</param>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to read a native function pointer during ImGui interop; the pointer is compared and never dereferenced or retained.")]
 	public void RenderDrawData(ImDrawDataPtr drawData)
+	{
+		RasterizeDeferredFrame();
+		Rasterize(drawData);
+	}
+
+	/// <inheritdoc/>
+	public void Dispose()
+	{
+		if (disposed)
+		{
+			return;
+		}
+
+		DiscardDeferredFrame();
+		textures.Clear();
+		disposed = true;
+	}
+
+	/// <summary>
+	/// Starts a frame whose rasterization is deferred until its pixels are read, discarding any
+	/// earlier deferred frame unread. Call it before <c>ImGui.NewFrame</c>, which invalidates the
+	/// draw data of the frame being discarded.
+	/// </summary>
+	/// <param name="clearColor">The color the frame is cleared to.</param>
+	internal void BeginDeferredFrame(Rgba32 clearColor)
+	{
+		DiscardDeferredFrame();
+		deferredClear = clearColor;
+	}
+
+	/// <summary>
+	/// Records the draw data ending a deferred frame, to be rasterized when the target is next read
+	/// or before anything it samples changes.
+	/// </summary>
+	/// <param name="drawData">Draw data obtained after calling <c>ImGui.Render</c>.</param>
+	internal void DeferDrawData(ImDrawDataPtr drawData)
+	{
+		deferredDrawData = drawData;
+		drawDataDeferred = true;
+	}
+
+	/// <summary>Forgets a deferred frame without drawing it.</summary>
+	internal void DiscardDeferredFrame()
+	{
+		deferredClear = null;
+		deferredDrawData = default;
+		drawDataDeferred = false;
+	}
+
+	/// <summary>Draws the deferred frame, if there is one, so the target holds it.</summary>
+	private void RasterizeDeferredFrame()
+	{
+		if (deferredClear is Rgba32 clear)
+		{
+			deferredClear = null;
+			target.Clear(clear);
+		}
+
+		if (drawDataDeferred)
+		{
+			ImDrawDataPtr drawData = deferredDrawData;
+			deferredDrawData = default;
+			drawDataDeferred = false;
+			DeferredFramesRasterized++;
+			Rasterize(drawData);
+		}
+	}
+
+	/// <summary>
+	/// Draws a deferred frame's draw data before a texture it may sample changes, so the frame is
+	/// drawn with the textures it was submitted with. A deferred clear alone samples nothing and is
+	/// left deferred.
+	/// </summary>
+	private void RasterizeDeferredDrawData()
+	{
+		if (drawDataDeferred)
+		{
+			RasterizeDeferredFrame();
+		}
+	}
+
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to read a native function pointer during ImGui interop; the pointer is compared and never dereferenced or retained.")]
+	private void Rasterize(ImDrawDataPtr drawData)
 	{
 		if (drawData.Equals(default) || drawData.CmdListsCount == 0)
 		{
@@ -135,22 +248,10 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 					Vertex b = ToVertex(cmdList.VtxBuffer[(int)(cmd.VtxOffset + i1)], origin);
 					Vertex c = ToVertex(cmdList.VtxBuffer[(int)(cmd.VtxOffset + i2)], origin);
 
-					SoftwareRasterizer.FillTriangle(Target, a, b, c, texture, scissor);
+					SoftwareRasterizer.FillTriangle(target, a, b, c, texture, scissor);
 				}
 			}
 		}
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		if (disposed)
-		{
-			return;
-		}
-
-		textures.Clear();
-		disposed = true;
 	}
 
 	private static Vertex ToVertex(ImDrawVert vertex, Vector2 origin) => new(
