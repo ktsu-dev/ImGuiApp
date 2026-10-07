@@ -1,3 +1,9 @@
+## v3.60.1 (patch)
+
+Changes since v3.60.0:
+
+- [patch] Show the window icon on the Windows taskbar ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v3.60.0 (minor)
 
 Changes since v3.59.0:
