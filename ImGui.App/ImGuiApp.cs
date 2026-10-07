@@ -146,6 +146,23 @@ public static partial class ImGuiApp
 	internal static bool startHiddenPending;
 
 	/// <summary>
+	/// The icons last applied through <see cref="SetWindowIcon"/>, kept so they can be applied again
+	/// once the window is on screen. See <see cref="windowIconReapplyPending"/>.
+	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
+	internal static Silk.NET.Core.RawImage[]? windowIcons;
+
+	/// <summary>
+	/// Set when the icon is applied during Load, before the window is shown; cleared once it has been
+	/// applied again to the visible window. The Windows taskbar takes a button's icon from the window
+	/// class when the button is created on show, and only picks up the window's own icon when that
+	/// icon changes afterwards, so an icon applied before the window is shown never reaches the
+	/// taskbar of an unpinned app.
+	/// </summary>
+	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
+	internal static bool windowIconReapplyPending;
+
+	/// <summary>
 	/// Gets a value indicating whether the ImGui application window is visible.
 	/// </summary>
 	public static bool IsVisible => window is not null && !userHidden && window.WindowState != Silk.NET.Windowing.WindowState.Minimized;
@@ -309,6 +326,7 @@ public static partial class ImGuiApp
 			{
 				DebugLogger.Log("Window.Load: Setting window icon");
 				SetWindowIcon(config.IconPath);
+				windowIconReapplyPending = OperatingSystem.IsWindows();
 			}
 
 			DebugLogger.Log("Window.Load: Creating OpenGL factory");
@@ -403,6 +421,9 @@ public static partial class ImGuiApp
 		{
 			NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
 			NativeMethods.SetForegroundWindow(hwnd);
+
+			// Showing a hidden window creates a new taskbar button, which starts from the class icon.
+			Invoker.Invoke(ReapplyWindowIcon);
 		}
 		else
 		{
@@ -723,6 +744,11 @@ public static partial class ImGuiApp
 						userHidden = true;
 					}
 				}
+			}
+
+			if (windowIconReapplyPending)
+			{
+				ReapplyWindowIconOnceShown(TryGetWindowHandle());
 			}
 
 			EnsureWindowPositionIsValid();
@@ -1657,7 +1683,38 @@ public static partial class ImGuiApp
 		}
 
 		_ = TrySetMacOSApplicationIcon(iconPath);
-		Invoker.Invoke(() => window?.SetWindowIcon([.. icons]));
+		windowIcons = [.. icons];
+		Invoker.Invoke(ReapplyWindowIcon);
+	}
+
+	/// <summary>
+	/// Applies the icons from the last <see cref="SetWindowIcon"/> call to the window again. Each call
+	/// gives the window new native icon handles, and that change is what the Windows taskbar responds
+	/// to. Does nothing before an icon has been set.
+	/// </summary>
+	internal static void ReapplyWindowIcon()
+	{
+		if (windowIcons is { } icons)
+		{
+			window?.SetWindowIcon(icons);
+		}
+	}
+
+	/// <summary>
+	/// Applies the icon again once the window is visible, so its taskbar button exists to pick it up.
+	/// Called each update tick while <see cref="windowIconReapplyPending"/> is set, because the window is
+	/// shown over the first few frames rather than at a fixed point.
+	/// </summary>
+	/// <param name="hwnd">The native window handle, or zero when it is not available yet.</param>
+	internal static void ReapplyWindowIconOnceShown(nint hwnd)
+	{
+		if (hwnd == 0 || !NativeMethods.IsWindowVisible(hwnd))
+		{
+			return;
+		}
+
+		windowIconReapplyPending = false;
+		ReapplyWindowIcon();
 	}
 
 	[ExcludeFromCodeCoverage(Justification = "Native AppKit Objective-C interop is host/platform dependent; unit tests cover the public SetWindowIcon behavior and non-macOS branch.")]
@@ -2584,6 +2641,8 @@ public static partial class ImGuiApp
 		glProvider = null;
 		userHidden = false;
 		startHiddenPending = false;
+		windowIcons = null;
+		windowIconReapplyPending = false;
 		hideOnCloseProc = null;
 		originalWindowProc = 0;
 		LastNormalWindowState = new();
