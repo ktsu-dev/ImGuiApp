@@ -86,6 +86,10 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 ### Image and Colour
 
+- **`TransformBox`**: A rectangle with corner and edge handles in its own frame, drawn through a caller-supplied `Matrix3x2` to the screen, which moves, resizes and scales it. A crop window passes the image's rectangle on screen; a layer passes its own placement composed with that, so the handles sit on the layer's turned corners. It knows nothing about what it frames: a caller with its own rule, such as an aspect preset, supplies `TransformBoxOptions.Resize`. See [Transform Box](#transform-box) below
+
+### Image and Colour
+
 - **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
 
 ### Layout and Containers
@@ -621,6 +625,49 @@ if (sameParent && oldIndex < move.Index)
 A drag starts from a press anywhere on a row once the mouse moves past ImGui's drag threshold, so a
 click that does not move is left to the row's own items. Each row is marked for probes as
 `row{index}` inside the tree's label.
+
+### Transform Box
+
+A rectangle with handles, held in its own frame and drawn through a transform. The frame is whatever
+the caller's edit is measured in: fractions of an image for a crop, a layer's unit square for
+arranging that layer. Pass the transform from that frame to the screen, and the area the box may be
+held in:
+
+```csharp
+ImGui.SetNextItemAllowOverlap();   // let the box take the pointer from the canvas underneath
+ImGuiWidgets.ImageCanvas("canvas", texture, imageSize, canvasState, canvasSize);
+Vector2 canvasMin = ImGui.GetItemRectMin();
+
+Matrix3x2 frameToScreen = layerPlacement * imageToScreen;
+TransformBoxResult result = ImGuiWidgets.TransformBox(
+    "layer", ref rect, frameToScreen, canvasMin, canvasMin + canvasSize,
+    new TransformBoxOptions { UniformCorners = true });
+
+if (result.Released)
+{
+    // Fold rect into the layer's placement as one undoable edit.
+}
+```
+
+Dragging the body moves the rectangle, an edge moves that edge, and a corner moves both of its edges,
+or scales about the opposite corner when `UniformCorners` is on; Shift inverts that. A uniform corner
+scales by how far the pointer has travelled along the diagonal **on screen**, so a stretched frame
+does not count one axis of the pointer's travel for more than the other. No side passes its
+opposite: a box dragged inside out stops at `MinimumScreenSize` pixels.
+
+Three things to know when using it:
+
+- **It takes the pointer only over itself.** The hit area is submitted only while the pointer is over
+  a handle or the body, or while one is held, so a press anywhere else reaches the item underneath —
+  an `ImageCanvas`'s pan, for example. That item must be submitted with `SetNextItemAllowOverlap`, or
+  it keeps the hover and the box can never be pressed.
+- **A drag is measured in the frame as it was at the press.** A caller whose edit moves the frame
+  itself, as moving a layer does when the frame is the layer's placement, gets the same answer
+  whichever frame it passes while the drag goes on. The simplest pattern is to keep passing the frame
+  from the press and the rectangle the drag returns, and fold the rectangle in on release.
+- **Hit-testing is on screen.** The grab radius is screen pixels however the frame is stretched or
+  turned, and inside a box too small on screen for its handles, each handle's reach shrinks to a
+  quarter of its side so there is always a body to move it by.
 
 ### Scoped Id
 

@@ -120,6 +120,7 @@ internal static class LayoutAndContainersTiles
 		yield return ImageCompareEntry(Category);
 
 		yield return CropOverlayTile(Category);
+		yield return TransformBoxTile(Category);
 
 		yield return PixelLoupeTile(Category);
 
@@ -253,6 +254,35 @@ internal static class LayoutAndContainersTiles
 			ImGuiWidgets.CropOverlay("##crop", ref crop, imageSize, canvas, ImGui.GetItemRectMin(), canvasSize);
 
 			// The overlay restores the cursor, so something has to follow it before the window ends.
+			ImGui.Dummy(Vector2.Zero);
+		});
+	}
+
+	/// <summary>
+	/// A transform box on a turned layer, its handles on the layer's turned corners. Its
+	/// own method to keep <see cref="Build"/> under the coupling limit.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The tile.</returns>
+	private static GalleryEntry TransformBoxTile(GalleryCategory category)
+	{
+		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);
+		Vector2 canvasSize = new(260f, 170f);
+		ImGuiWidgets.ImageCanvasState canvas = new();
+		canvas.FitToViewport(imageSize, canvasSize);
+		TransformBoxRect rect = TransformBoxRect.Unit;
+		return new("TransformBox", category, [nameof(ImGuiWidgets.TransformBox)], context =>
+		{
+			ImGui.SetNextItemAllowOverlap();
+			ImGuiWidgets.ImageCanvas("##boxCanvas", context.SampleTextureId, imageSize, canvas, canvasSize);
+			Vector2 canvasMin = ImGui.GetItemRectMin();
+			(Vector2 imageMin, Vector2 imageMax) = canvas.ImageRectInViewport(imageSize, canvasSize);
+			Matrix3x2 frameToScreen = Matrix3x2.CreateScale(new Vector2(0.5f, 0.35f) * (imageMax - imageMin))
+				* Matrix3x2.CreateRotation(-0.2f)
+				* Matrix3x2.CreateTranslation(canvasMin + imageMin + ((imageMax - imageMin) * new Vector2(0.22f, 0.4f)));
+			ImGuiWidgets.TransformBox("##box", ref rect, frameToScreen, canvasMin, canvasMin + canvasSize);
+
+			// The box restores the cursor, so something has to follow it before the window ends.
 			ImGui.Dummy(Vector2.Zero);
 		});
 	}
