@@ -52,7 +52,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Transform Box", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -703,6 +703,23 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.IsTrue(CropDemo.Crop.Center.X > before, "Dragging the crop did not move it.");
+	}
+
+	[TestMethod]
+	public void TransformBoxDemo_DraggingTheLayerMovesIt()
+	{
+		OpenSection(AdvancedDemosTab, "Transform Box");
+
+		Assert.IsTrue(IsVisible("transform_demo/body"), "The transform box did not mark its body.");
+		float before = TransformBoxDemo.Layer.Min.X;
+
+		Rectangle body = harness.Probe.Rect("transform_demo/body")!.Value;
+		float x = body.MinX + (body.Width / 2f);
+		float y = body.MinY + (body.Height / 2f);
+		harness.Mouse.Drag(x, y, x + 30f, y);
+		harness.Step(2);
+
+		Assert.IsTrue(TransformBoxDemo.Layer.Min.X > before, "Dragging the layer did not move it.");
 	}
 
 	[TestMethod]
