@@ -220,7 +220,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 diagonal = Vector2.TransformNormal(held - opposite, drag.FrameToScreen);
 			float length = diagonal.LengthSquared();
-			if (!(length > 0f) || !float.IsFinite(length))
+			if (length <= 0f || !float.IsFinite(length))
 			{
 				return from;
 			}
