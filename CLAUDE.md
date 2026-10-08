@@ -102,6 +102,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/WindowingEnvironment.cs` - Wayland / tiling window manager detection driving `ImGuiAppConfig.WindowGeometry`
 - `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
 - `ImGui.App/IRenderer3D.cs` - The optional 3D extension a backend may implement; see [Backend-agnostic 3D](#backend-agnostic-3d)
+- `ImGui.App/ImGuiController/GLRenderer3D.cs` - The OpenGL implementation: framebuffer targets, a second shader program, and full state restore
 - `ImGui.App.Testing/SoftwareRasterizer.ThreeD.cs` - The 3D fill: near clipping, depth, perspective-correct interpolation
 - `ImGui.App.Testing/DepthBuffer.cs` - The depth attachment, 0 near to 1 far, matching `Matrix4x4.CreatePerspectiveFieldOfView`
 - `ImGui.App/Images/ImageDecoder.cs` - Front door for image loading; sniffs the format from the file's own bytes
@@ -309,9 +310,27 @@ Four things to know before changing any of it:
   `IsRenderTargetTexture` answers the question, so the CPU backend reproduces the contract a GPU
   backend has to keep and a test can pin it. A resize keeps the id, so a caller need not rebind.
 
-**Not yet implemented: the OpenGL and Metal backends** (#413 sub-issues 1 and 3), and
-`ImGuiWidgets.Viewport3D` (sub-issue 4). `TryGetRenderer3D` therefore answers `false` in a real
-desktop application today and `true` under a headless harness.
+**The OpenGL backend implements it** (`ImGui.App/ImGuiController/GLRenderer3D.cs`, reached
+through `ImGuiController`), so `TryGetRenderer3D` answers `true` in a desktop application as well
+as under a headless harness. Three things to know before changing it:
+
+- **A target's handle is its colour texture's name**, and `GetTargetTexture` returns it unchanged.
+  That is the only value guaranteed not to collide with a live `CreateTexture` name, which is what
+  makes both delete guards sound: `ImGuiController.DeleteTexture` refuses a target, and
+  `DeleteRenderTarget` refuses anything that is not one, freeing nothing either way.
+- **The shader adapts OpenGL to the software renderer's conventions, not the reverse.** It maps
+  clip z from `[0, w]` (what `Matrix4x4.CreatePerspectiveFieldOfView` produces) onto OpenGL's
+  `[-w, w]`, and negates clip y so the target's first row is its top, as `ImGui.Image` shows it.
+  Negating y reverses winding, so front-facing is `GL_CW` while it draws. One matrix therefore
+  draws the same picture on both backends.
+- **Every call restores what it touched**, including the bound draw and read framebuffers (to
+  whatever they were, not zero), the depth test, mask and function, face culling with its mode and
+  winding, the viewport, the scissor test and the clear values. The calls go through the internal
+  `IGL3D` seam, and `GLRenderer3DTests` checks the restore against a stateful stand-in left in
+  deliberately unusual state.
+
+**Not yet implemented: the Metal backend** (#413 sub-issue 3) and `ImGuiWidgets.Viewport3D`
+(sub-issue 4).
 
 ### Mouse cursors
 

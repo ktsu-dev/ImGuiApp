@@ -13,7 +13,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-internal sealed class ImGuiController : IRendererBackend
+internal sealed class ImGuiController : IRendererBackend, IRenderer3D
 {
 
 	internal GL? _gl;
@@ -38,6 +38,10 @@ internal sealed class ImGuiController : IRendererBackend
 
 	// Decides what ImGui's texture requests mean; this class supplies the OpenGL calls behind them.
 	private TextureReconciler? _textureReconciler;
+
+	// The 3D path: offscreen framebuffers and a second program. Holds nothing on the GPU until a
+	// target is created or something is drawn.
+	internal GLRenderer3D? _renderer3D;
 
 	internal int _windowWidth;
 	internal int _windowHeight;
@@ -135,6 +139,7 @@ internal sealed class ImGuiController : IRendererBackend
 		// Wrapped rather than used directly so the uploader depends on IGL, which is what lets the
 		// texture calls be exercised without a graphics context.
 		_textureReconciler = new TextureReconciler(new GLTextureUploader(new GLWrapper(gl)));
+		_renderer3D = new GLRenderer3D(new GL3DWrapper(gl));
 		_view = view;
 		_input = input;
 		_windowWidth = view.Size.X;
@@ -365,8 +370,42 @@ internal sealed class ImGuiController : IRendererBackend
 	}
 
 	/// <inheritdoc />
-	// _gl can be null if the context has already been torn down; callers expect a no-op then.
-	public void DeleteTexture(nint id) => _gl?.DeleteTexture((uint)id);
+	/// <exception cref="ArgumentException">
+	/// <paramref name="id"/> is a render target. Its texture name comes from the same namespace as
+	/// <see cref="CreateTexture"/>'s, so deleting it here would free a live target's colour attachment;
+	/// a target is released through <see cref="DeleteRenderTarget"/> only.
+	/// </exception>
+	public void DeleteTexture(nint id)
+	{
+		if (_renderer3D?.IsRenderTarget(id) == true)
+		{
+			throw new ArgumentException($"Texture {id} is a render target's colour attachment. Release it with DeleteRenderTarget.", nameof(id));
+		}
+
+		// _gl can be null if the context has already been torn down; callers expect a no-op then.
+		_gl?.DeleteTexture((uint)id);
+	}
+
+	/// <inheritdoc />
+	public nint CreateRenderTarget(int width, int height, bool depth) => Renderer3D.CreateRenderTarget(width, height, depth);
+
+	/// <inheritdoc />
+	public bool ResizeRenderTarget(nint target, int width, int height) => Renderer3D.ResizeRenderTarget(target, width, height);
+
+	/// <inheritdoc />
+	public void DeleteRenderTarget(nint target) => Renderer3D.DeleteRenderTarget(target);
+
+	/// <inheritdoc />
+	public nint GetTargetTexture(nint target) => Renderer3D.GetTargetTexture(target);
+
+	/// <inheritdoc />
+	public void Clear(nint target, Vector4 color, float depth) => Renderer3D.Clear(target, color, depth);
+
+	/// <inheritdoc />
+	public void Draw(nint target, ReadOnlySpan<Vertex3D> vertices, ReadOnlySpan<uint> indices, in DrawState3D state) =>
+		Renderer3D.Draw(target, vertices, indices, state);
+
+	private GLRenderer3D Renderer3D => _renderer3D ?? throw new InvalidOperationException("OpenGL context is not initialized.");
 
 	/// <summary>
 	/// Updates ImGui input and IO configuration state.
@@ -1004,6 +1043,7 @@ internal sealed class ImGuiController : IRendererBackend
 			_gl.DeleteVertexArray(_vertexArrayObject);
 
 			DestroyAllTextures();
+			_renderer3D?.Dispose();
 			_shader.Dispose();
 
 			ImGuiExtensionManager.Cleanup();
