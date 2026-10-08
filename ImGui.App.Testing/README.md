@@ -40,6 +40,15 @@ holds or a frame budget runs out, returning false rather than throwing so the ca
 timeout is a failure. The budget counts frames rather than milliseconds, so a loaded machine takes
 longer in real time without changing the outcome.
 
+A frame is rasterized only when its pixels are read, through `Capture()` or `Target`, not when it is
+stepped. Rasterizing is nearly all a headless frame costs and most frames a test steps through are
+never looked at, so stepping is cheap and a read pays for one frame. Every frame clears the whole
+target, so what a read sees is the last frame stepped, drawn with the textures it was submitted
+with: a texture or render target changed after the step is drawn as it was, because the renderer
+draws the pending frame before letting the change through. Read `Target` again after stepping
+rather than holding the bitmap across a step, since a held reference still shows the frame it was
+read on.
+
 Input is injected into ImGui's event queue:
 
 ```csharp

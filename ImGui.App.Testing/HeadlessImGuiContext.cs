@@ -82,13 +82,22 @@ internal sealed class HeadlessImGuiContext : IDisposable
 		ImGui.NewFrame();
 	}
 
-	/// <summary>Ends the frame and submits its draw data to the renderer.</summary>
-	public void EndFrame()
+	/// <summary>Ends the frame and rasterizes its draw data.</summary>
+	public void EndFrame() => renderer.RenderDrawData(FinishFrame());
+
+	/// <summary>
+	/// Ends the frame and hands its draw data to the renderer to rasterize only if its pixels are
+	/// read. The renderer's deferred frame must be discarded before the next <see cref="BeginFrame"/>.
+	/// </summary>
+	public void EndFrameDeferred() => renderer.DeferDrawData(FinishFrame());
+
+	/// <summary>Renders the frame and brings the renderer's textures up to date with it.</summary>
+	private ImDrawDataPtr FinishFrame()
 	{
 		ImGui.Render();
 		ImDrawDataPtr drawData = ImGui.GetDrawData();
 		ProcessTextureUpdates(drawData);
-		renderer.RenderDrawData(drawData);
+		return drawData;
 	}
 
 	/// <inheritdoc/>

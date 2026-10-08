@@ -64,6 +64,8 @@ public sealed partial class SoftwareRenderer : IRenderer3D
 			return false;
 		}
 
+		RasterizeDeferredDrawData();
+
 		RenderTarget3D resized = new(width, height, existing.Depth is not null, existing.TextureId);
 
 		targets[target] = resized;
@@ -76,10 +78,13 @@ public sealed partial class SoftwareRenderer : IRenderer3D
 	/// <param name="target">A handle from <see cref="CreateRenderTarget"/>.</param>
 	public void DeleteRenderTarget(nint target)
 	{
-		if (!targets.Remove(target, out RenderTarget3D? existing))
+		if (!targets.TryGetValue(target, out RenderTarget3D? existing))
 		{
 			return;
 		}
+
+		RasterizeDeferredDrawData();
+		targets.Remove(target);
 
 		targetTextureIds.Remove(existing.TextureId);
 		textures.Remove(existing.TextureId);
@@ -103,6 +108,7 @@ public sealed partial class SoftwareRenderer : IRenderer3D
 	{
 		RenderTarget3D resolved = Resolve(target, nameof(target));
 
+		RasterizeDeferredDrawData();
 		resolved.Color.Clear(new Rgba32(Channel(color.X), Channel(color.Y), Channel(color.Z), Channel(color.W)));
 		resolved.Depth?.Clear(depth);
 	}
@@ -116,6 +122,7 @@ public sealed partial class SoftwareRenderer : IRenderer3D
 	public void Draw(nint target, ReadOnlySpan<Vertex3D> vertices, ReadOnlySpan<uint> indices, in DrawState3D state)
 	{
 		RenderTarget3D resolved = Resolve(target, nameof(target));
+		RasterizeDeferredDrawData();
 		TextureSource? texture = state.TextureId != 0 && textures.TryGetValue(state.TextureId, out TextureSource? found)
 			? found
 			: null;
