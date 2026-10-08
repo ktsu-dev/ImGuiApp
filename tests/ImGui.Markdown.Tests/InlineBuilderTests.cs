@@ -58,6 +58,28 @@ public sealed class InlineBuilderTests
 	}
 
 	[TestMethod]
+	public void Build_NamedEntity_ProducesItsCharacter()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("Tom &amp; Jerry"));
+		Assert.AreEqual("Tom & Jerry", string.Concat(runs.Select(r => r.Text)));
+	}
+
+	[TestMethod]
+	public void Build_NumericEntity_ProducesItsCharacter()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("&#169; 2026"));
+		Assert.AreEqual("\u00A9 2026", string.Concat(runs.Select(r => r.Text)));
+	}
+
+	[TestMethod]
+	public void Build_EntityInsideEmphasis_KeepsTheEmphasisRole()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("**a &lt; b**"));
+		Assert.IsTrue(runs.Any(r => r.Role == MarkdownFontRole.Bold && r.Text == "<"));
+		Assert.IsFalse(runs.Any(r => r.Text.Contains("Markdig", System.StringComparison.Ordinal)));
+	}
+
+	[TestMethod]
 	public void Build_Null_ReturnsEmpty()
 	{
 		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(null);
