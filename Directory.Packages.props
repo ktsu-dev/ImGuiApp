@@ -6,10 +6,10 @@
     <PackageVersion Include="ktsu.Extensions" Version="1.9.2" />
     <PackageVersion Include="ktsu.ThemeProvider" Version="3.1.1" />
     <PackageVersion Include="ktsu.ThemeProvider.ImGui" Version="3.1.1" />
-    <PackageVersion Include="ktsu.Semantics.Color" Version="5.11.2" />
-    <PackageVersion Include="ktsu.Semantics.Paths" Version="5.11.2" />
-    <PackageVersion Include="ktsu.Semantics.Strings" Version="5.11.2" />
-    <PackageVersion Include="ktsu.Semantics.Quantities" Version="5.11.2" />
+    <PackageVersion Include="ktsu.Semantics.Color" Version="5.11.3" />
+    <PackageVersion Include="ktsu.Semantics.Paths" Version="5.11.3" />
+    <PackageVersion Include="ktsu.Semantics.Strings" Version="5.11.3" />
+    <PackageVersion Include="ktsu.Semantics.Quantities" Version="5.11.3" />
     <PackageVersion Include="ktsu.CaseConverter" Version="1.8.8" />
     <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImGuizmo" Version="2.2.9" />
@@ -22,7 +22,7 @@
     <PackageVersion Include="ktsu.Invoker" Version="1.4.2" />
     <PackageVersion Include="ktsu.ScopedAction" Version="1.1.46" />
     <PackageVersion Include="ktsu.TextFilter" Version="1.7.13" />
-    <PackageVersion Include="ktsu.UndoRedo" Version="3.0.2" />
+    <PackageVersion Include="ktsu.UndoRedo" Version="3.2.0" />
     <PackageVersion Include="ktsu.Keybinding" Version="2.1.6" />
     <PackageVersion Include="Markdig" Version="1.4.0" />
     <PackageVersion Include="Moq" Version="4.21.0" />
