@@ -1,7 +1,6 @@
-## v3.64.0 (minor)
+## v3.64.1-pre.1 (prerelease)
 
-Changes since v3.63.0:
+Changes since v3.64.0:
 
-- Answer the code-quality notes on the deferred rasterization tests ([@Claude](https://github.com/Claude))
-- Rasterize headless frames only when their pixels are read [minor] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 5 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
