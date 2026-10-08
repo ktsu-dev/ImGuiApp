@@ -375,7 +375,9 @@ manager, and it is only drawn by a per-frame pump. Call one of these once per fr
   so `DrawDeferred()` must not also be called. `DockedWindow` only renders under this pump — under
   `DrawDeferred()` a `DockedWindow` is registered but never drawn, because Hexa's widget manager is
   only driven by that pump. A `DockedWindow` is dockable but **not** auto-docked: it opens floating
-  and stays there until the user drags it into the dockspace.
+  and stays there until the user drags it into the dockspace. Collapsing a `DockedWindow` or
+  tabbing it behind another keeps it registered: Hexa treats any `ImGui.Begin` returning false as a
+  close, so the adapter vetoes every close except the one from the close button (#600).
 
 They are mutually exclusive: calling both in the same frame draws every dialog twice.
 `ImGuiWidgets` detects this (via the ImGui frame counter) and logs a `Trace.TraceWarning`, but does
