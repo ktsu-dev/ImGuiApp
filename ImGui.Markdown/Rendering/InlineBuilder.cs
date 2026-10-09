@@ -67,6 +67,10 @@ internal static class InlineBuilder
 				runs.Add(new InlineRun(" ", MarkdownFontRole.Body, linkUrl, IsImage: false));
 				break;
 
+			case HtmlEntityInline entity:
+				runs.Add(new InlineRun(entity.Transcoded.ToString(), MarkdownSizing.EmphasisRole(bold, italic), linkUrl, IsImage: false));
+				break;
+
 			case HtmlInline html:
 				runs.Add(new InlineRun(html.Tag, MarkdownSizing.EmphasisRole(bold, italic), linkUrl, IsImage: false));
 				break;
@@ -80,8 +84,8 @@ internal static class InlineBuilder
 				break;
 
 			default:
-				// Unknown inline: emit its text form so nothing is silently dropped.
-				runs.Add(new InlineRun(inline.ToString() ?? string.Empty, MarkdownSizing.EmphasisRole(bold, italic), linkUrl, IsImage: false));
+				// Unknown leaf inline: drop it. Markdig inlines don't override ToString(), so
+				// emitting it would draw the CLR type name rather than any of the document's text.
 				break;
 		}
 	}
