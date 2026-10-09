@@ -70,6 +70,12 @@ public partial class NodeEditorRenderer
 	/// <summary>Where each node the user is dragging was when the drag started, in engine space.</summary>
 	private readonly Dictionary<int, Vector2> dragStarts = [];
 
+	/// <summary>
+	/// ImNodes' panning when <see cref="GetNodePositionUpdates"/> last read it, or nothing before the
+	/// first read.
+	/// </summary>
+	private Vector2? lastPanning;
+
 	/// <summary>The drag finished on the last call to <see cref="GetNodePositionUpdates"/>, if one did.</summary>
 	private readonly List<NodeMove> completedNodeMoves = [];
 
@@ -1073,13 +1079,14 @@ public partial class NodeEditorRenderer
 	{
 		Ensure.NotNull(engine);
 
-		if (engine.Nodes.Count == 0)
+		if (engine.Nodes.Count == 0 && engine.CommentBoxes.Count == 0)
 		{
 			return false;
 		}
 
 		// Measured across each node's whole extent rather than its top-left corner, so a wide node on
-		// one edge does not pull the arrangement off centre by half its width.
+		// one edge does not pull the arrangement off centre by half its width. Comment boxes count
+		// too, since a box's title sits above the nodes it holds.
 		Vector2 lowest = new(float.MaxValue, float.MaxValue);
 		Vector2 highest = new(float.MinValue, float.MinValue);
 
@@ -1089,6 +1096,12 @@ public partial class NodeEditorRenderer
 			highest = Vector2.Max(highest, node.Position + node.Dimensions);
 		}
 
+		foreach (CommentBox box in engine.CommentBoxes)
+		{
+			lowest = Vector2.Min(lowest, box.Position);
+			highest = Vector2.Max(highest, box.Max);
+		}
+
 		Vector2 centre = editorSize * 0.5f;
 		Vector2 offset = centre - ((lowest + highest) * 0.5f);
 
@@ -1096,6 +1109,10 @@ public partial class NodeEditorRenderer
 		{
 			engine.UpdateNodePosition(node.Id, node.Position + offset);
 		}
+
+		// The boxes move with the nodes, or the nodes would leave them behind and stop counting as
+		// inside them.
+		engine.OffsetCommentBoxes(offset);
 
 		Zoom = FittingZoom(highest - lowest, editorSize);
 		return true;
@@ -1135,6 +1152,8 @@ public partial class NodeEditorRenderer
 		completedNodeMoves.Clear();
 		bool leftDown = ImGui.IsMouseDown(ImGuiMouseButton.Left);
 
+		FollowPanning(engine);
+
 		foreach (Node node in engine.Nodes)
 		{
 			// Only query positions for nodes that have been rendered at least once
@@ -1172,6 +1191,28 @@ public partial class NodeEditorRenderer
 		}
 
 		return updates;
+	}
+
+	/// <summary>
+	/// Move the comment boxes by however far the view has panned since the last frame.
+	/// </summary>
+	/// <remarks>
+	/// A pan shifts every node's editor-space position, and <see cref="GetNodePositionUpdates"/>
+	/// reports that back as every node moving. Comment boxes are drawn from the engine's space with
+	/// no panning term, so without this they stay put while their nodes slide out of them, and
+	/// <see cref="NodeEditorEngine.GetNodesInCommentBox"/> stops finding the nodes.
+	/// </remarks>
+	private void FollowPanning(NodeEditorEngine engine)
+	{
+		Vector2 panning = ImNodes.EditorContextGetPanning();
+		if (lastPanning is Vector2 previous && panning != previous)
+		{
+			// The view transform is linear with slope Zoom, so a view-space shift is this much in the
+			// engine's space.
+			engine.OffsetCommentBoxes((panning - previous) / Zoom);
+		}
+
+		lastPanning = panning;
 	}
 
 	/// <summary>

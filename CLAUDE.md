@@ -657,7 +657,11 @@ pins this with pixels. Their gestures are ImGui `InvisibleButton`s, which also s
 a box selection (it checks `IsAnyItemHovered`); they are not submitted while ImNodes reports a
 hovered node or link, so a node overlapping a title bar keeps its own drag. Containment is geometric
 and decided when a drag starts. Screen position is `canvasOrigin + ToView(p)`, where `canvasOrigin`
-is the cursor right after `BeginNodeEditor`.
+is the cursor right after `BeginNodeEditor`. That has no panning term, while a pan comes back from
+`GetNodePositionUpdates` as every node moving, so `GetNodePositionUpdates` also shifts every box by
+the panning delta since its last call (over `Zoom`), through the engine's internal
+`OffsetCommentBoxes`, which carries nothing. `FitToView` measures and offsets the boxes along with
+the nodes for the same reason. `CommentBoxViewTests` pins both through real frames.
 
 ### Hover highlighting
 

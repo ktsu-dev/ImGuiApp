@@ -125,6 +125,22 @@ public partial class NodeEditorEngine
 		ReplaceCommentBox(commentBoxId, box => box with { Size = Vector2.Max(size, MinimumCommentBoxSize) });
 
 	/// <summary>
+	/// Move every comment box by the same amount, carrying nothing.
+	/// </summary>
+	/// <param name="delta">How far to move them.</param>
+	/// <remarks>
+	/// For a shift of the whole view, such as a pan or a fit, where the nodes are moved by the same
+	/// amount on their own. <see cref="MoveCommentBox"/> would move them a second time.
+	/// </remarks>
+	internal void OffsetCommentBoxes(Vector2 delta)
+	{
+		for (int i = 0; i < commentBoxes.Count; i++)
+		{
+			commentBoxes[i] = commentBoxes[i] with { Position = commentBoxes[i].Position + delta };
+		}
+	}
+
+	/// <summary>
 	/// The nodes lying wholly inside a comment box.
 	/// </summary>
 	/// <param name="commentBoxId">The comment box.</param>
