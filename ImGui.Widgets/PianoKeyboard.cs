@@ -207,7 +207,7 @@ public static partial class ImGuiWidgets
 				}
 			}
 
-			DrawOctaveLabels(drawList, layout, min, max, whiteWidth, colors);
+			DrawOctaveLabels(drawList, layout, lit, min, max, whiteWidth, colors);
 
 			for (int note = layout.LowestNote; note <= layout.HighestNote; note++)
 			{
@@ -221,7 +221,7 @@ public static partial class ImGuiWidgets
 			drawList.AddRect(min, max, border);
 		}
 
-		private static void DrawOctaveLabels(ImDrawListPtr drawList, PianoKeyboardLayout layout, Vector2 min, Vector2 max, float whiteWidth, ReadOnlySpan<Vector4> colors)
+		private static void DrawOctaveLabels(ImDrawListPtr drawList, PianoKeyboardLayout layout, ReadOnlySpan<bool> lit, Vector2 min, Vector2 max, float whiteWidth, ReadOnlySpan<Vector4> colors)
 		{
 			// Sized against the widest name a C can have, so either every C is labelled or none is.
 			if (whiteWidth < ImGui.CalcTextSize("C-1").X + 4f)
@@ -229,7 +229,10 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
+			// Muted on an ivory key, but the full text colour on a held one: the disabled colour is
+			// a mid grey, which all but disappears against the highlight.
 			uint textColor = ImGui.GetColorU32(colors[(int)ImGuiCol.TextDisabled]);
+			uint litTextColor = ImGui.GetColorU32(colors[(int)ImGuiCol.Text]);
 
 			for (int note = layout.LowestNote; note <= layout.HighestNote; note++)
 			{
@@ -242,7 +245,7 @@ public static partial class ImGuiWidgets
 				Vector2 textSize = ImGui.CalcTextSize(name);
 				(Vector2 keyMin, Vector2 keyMax) = KeyRect(layout, note, min, max, whiteWidth);
 				float centre = (keyMin.X + keyMax.X) / 2f;
-				drawList.AddText(new Vector2(centre - (textSize.X / 2f), keyMax.Y - 2f - textSize.Y), textColor, name);
+				drawList.AddText(new Vector2(centre - (textSize.X / 2f), keyMax.Y - 2f - textSize.Y), lit[note - layout.LowestNote] ? litTextColor : textColor, name);
 			}
 		}
 

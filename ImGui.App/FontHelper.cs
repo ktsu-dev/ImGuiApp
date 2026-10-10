@@ -273,6 +273,7 @@ public static class FontHelper
 		// Define symbol ranges to add (avoiding emoji ranges which are handled separately)
 		(uint start, uint end, string description)[] symbolRanges = [
 			(0x2000, 0x206F, "General Punctuation"),
+			(0x2070, 0x209F, "Superscripts and Subscripts"),
 			(0x20A0, 0x20CF, "Currency Symbols"),
 			(0x2100, 0x214F, "Letterlike Symbols"),
 			(0x2190, 0x21FF, "Arrows"),

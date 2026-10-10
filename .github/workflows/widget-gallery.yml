@@ -48,10 +48,12 @@ permissions:
 env:
   DOTNET_VERSION: "10.0"
   # google/material-design-icons, pinned to a commit and checked against its hash. The date picker,
-  # file tree and file dialogs draw Material Icons glyphs; without the font their tiles show
-  # placeholder boxes. The font is Apache-2.0 and is not committed to this repository.
-  MATERIAL_ICONS_URL: https://raw.githubusercontent.com/google/material-design-icons/bd8cb85bd4bad964fe6918f79665bb40c3a8efef/font/MaterialIcons-Regular.ttf
-  MATERIAL_ICONS_SHA256: ef149f08bdd2ff09a4e2c8573476b7b0f3fbb15b623954ade59899e7175bedda
+  # file tree and file dialogs draw Material glyphs; without the font their tiles show placeholder
+  # boxes. It is Material Symbols rather than the older MaterialIcons-Regular.ttf because Hexa's
+  # icon constants are Material Symbols code points: the dialogs' generic file icon (U+E66D,
+  # Draft) is not in Material Icons at all. The font is Apache-2.0 and is not committed here.
+  MATERIAL_ICONS_URL: https://raw.githubusercontent.com/google/material-design-icons/49d4db35df873165d6bd6ba09b063c7dafbac2f4/variablefont/MaterialSymbolsOutlined%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf
+  MATERIAL_ICONS_SHA256: 77ff1c20896afc6f1abf7d57fc408234dfd021ab050b63e0442e71d6c9f0d6b8
 
 jobs:
   regenerate:
@@ -100,8 +102,8 @@ jobs:
       - name: Download Material Icons
         run: |
           curl --fail --silent --show-error --location --retry 3 \
-            --output "$RUNNER_TEMP/MaterialIcons-Regular.ttf" "$MATERIAL_ICONS_URL"
-          echo "$MATERIAL_ICONS_SHA256  $RUNNER_TEMP/MaterialIcons-Regular.ttf" | sha256sum --check
+            --output "$RUNNER_TEMP/MaterialSymbolsOutlined.ttf" "$MATERIAL_ICONS_URL"
+          echo "$MATERIAL_ICONS_SHA256  $RUNNER_TEMP/MaterialSymbolsOutlined.ttf" | sha256sum --check
 
       - name: Build the widget gallery tool
         run: dotnet build tools/WidgetGallery/WidgetGallery.csproj -c Release
@@ -113,7 +115,7 @@ jobs:
         run: |
           rm -f docs/gallery/widgets/*.png docs/gallery/widgets*.png
           dotnet run -c Release --no-build --project tools/WidgetGallery -- \
-            --material-icons "$RUNNER_TEMP/MaterialIcons-Regular.ttf"
+            --material-icons "$RUNNER_TEMP/MaterialSymbolsOutlined.ttf"
 
       # Only docs/gallery is staged. The build also rewrites some tracked files (ktsu.Sdk syncs
       # .gitignore and friends from its own copy), and none of that belongs in this commit.

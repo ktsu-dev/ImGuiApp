@@ -28,8 +28,27 @@ internal static class DialogsAndWindowsTiles
 
 		AbsoluteDirectoryPath treeFolder = SampleFolder.Root.As<AbsoluteDirectoryPath>();
 		AbsoluteDirectoryPath treeHome = SampleFolder.Root.As<AbsoluteDirectoryPath>();
+		Vector2 treeOrigin = Vector2.Zero;
 		yield return new("FileTreeView", Category, [nameof(ImGuiWidgets.FileTreeView)], _ =>
-			ImGuiWidgets.FileTreeView("##files", new Vector2(240f, 200f), ref treeFolder, treeHome));
+		{
+			treeOrigin = ImGui.GetCursorScreenPos();
+			ImGuiWidgets.FileTreeView("##files", new Vector2(240f, 200f), ref treeFolder, treeHome);
+		})
+		{
+			Interact = context =>
+			{
+				SampleDrives.Use();
+				context.Harness.Step(2);
+
+				// The tree opens a node from its arrow only, so the sample drive and its Projects folder
+				// are opened by clicking there. Hexa marks nothing, and the rows sit at fixed offsets from
+				// the tree's corner. The tree lists folders only, never files.
+				context.ClickAt(treeOrigin + new Vector2(14f, 69f));
+				context.ClickAt(treeOrigin + new Vector2(20f, 141f));
+				context.HoverAt(new Vector2(-100f, -100f));
+			},
+			Cleanup = _ => SampleDrives.Restore(),
+		};
 
 		ImGuiWidgets.DialogMessageBox messageBox = new("Unsaved changes", "Save your changes before closing?", MessageBoxButtons.YesNo);
 		yield return Dialog(
@@ -105,6 +124,9 @@ internal static class DialogsAndWindowsTiles
 				previousDirectory = Environment.CurrentDirectory;
 				Environment.CurrentDirectory = SampleFolder.Root;
 				show();
+
+				// Opening a picker reads the drives afresh, so the sample stands in for them afterwards.
+				SampleDrives.Use();
 				context.Harness.Step(6);
 			},
 			Cleanup = context =>
@@ -115,6 +137,7 @@ internal static class DialogsAndWindowsTiles
 				}
 
 				Environment.CurrentDirectory = previousDirectory;
+				SampleDrives.Restore();
 			},
 		};
 	}

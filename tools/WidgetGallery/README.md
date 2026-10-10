@@ -5,7 +5,7 @@ pictures into captioned gallery images for the README. It runs on the same CPU r
 test suites, so it needs no window, no GPU and no display.
 
 ```bash
-dotnet run -c Release --project tools/WidgetGallery -- --material-icons path/to/MaterialIcons-Regular.ttf
+dotnet run -c Release --project tools/WidgetGallery -- --material-icons path/to/MaterialSymbolsOutlined.ttf
 ```
 
 A full run takes about fifteen seconds and writes to `docs/gallery/`:
@@ -25,7 +25,7 @@ tile and exits 1 if there is one.
 `.github/workflows/widget-gallery.yml` reruns the tool whenever CI passes on a push to `main`, and
 commits `docs/gallery/` back when the pictures changed. A pull request therefore
 does not need to commit regenerated images, though it may to show a change in review. The workflow
-downloads a pinned copy of Material Icons, so the icon-font tiles render real glyphs there.
+downloads a pinned copy of Material Symbols Outlined, so the icon-font tiles render real glyphs there.
 
 ## Adding a widget
 
@@ -54,8 +54,13 @@ popups, tooltips and dialogs drawn outside the layout.
 
 - **Fonts.** The harness renders in Dear ImGui's built-in bitmap font and never calls
   `OnConfigureFonts`. The gallery loads `ImGuiApp`'s own Nerd Font from `OnStart` instead, so the
-  pictures look like an application does. Material Icons is not in the repository; without
-  `--material-icons` the date picker, file tree and file dialogs show placeholder glyphs.
+  pictures look like an application does. The Material icon font is not in the repository; without
+  `--material-icons` the date picker, file tree and file dialogs show placeholder glyphs. Pass
+  Material Symbols Outlined (`google/material-design-icons`, `variablefont/`) rather than the older
+  `MaterialIcons-Regular.ttf`: Hexa's icon constants are Material Symbols code points, and the older
+  font has no glyph for some of them, the file dialogs' file icon (U+E66D) among them. When the font
+  is given, the Nerd Font is kept out of the Private Use Area, because it has glyphs of its own at
+  code points Material uses and the first font to have a glyph wins.
 - **The file tree and pickers list the machine's drives.** They are opened on a generated sample
   folder, but their sidebars show whatever mounts the generating machine has.
 - **Sample image.** Widgets that show an image get a generated sunset, not `ktsu.png`, which arrives

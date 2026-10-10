@@ -153,7 +153,7 @@ internal static class DataAndSignalsTiles
 			new(40f, 70f, 2, "update"),
 			new(70f, 94f, 2, "render"),
 			new(44f, 60f, 3, "physics"),
-			new(72f, 90f, 3, "draw calls"),
+			new(72f, 90f, 3, "draw"),
 		];
 		int selectedSample = -1;
 		FlameGraphOptions flameOptions = new() { GraphSize = new Vector2(380f, 110f) };
@@ -175,7 +175,7 @@ internal static class DataAndSignalsTiles
 			// Editable, so the column draws as checkboxes. The gallery never edits it.
 			new ImGuiWidgets.DataTableColumn<GalleryPart, bool> { Label = "In stock", Value = part => part.InStock, OnEdit = _ => { } },
 		]);
-		ImGuiWidgets.DataTableOptions partsOptions = new() { RowHeight = 20f, OuterSize = new Vector2(270f, 150f) };
+		ImGuiWidgets.DataTableOptions partsOptions = new() { RowHeight = 20f, OuterSize = new Vector2(214f, 139f) };
 		bool isPartsSelectionSet = false;
 		yield return new("DataTable", Category, [nameof(ImGuiWidgets.DataTable), typeof(ImGuiWidgets.DataTableState<>).Name, typeof(ImGuiWidgets.DataTableColumn<>).Name, typeof(ImGuiWidgets.DataTableColumn<,>).Name], _ =>
 		{
@@ -198,12 +198,13 @@ internal static class DataAndSignalsTiles
 	private static FrameTimeHistory BuildFrameTimes(int count)
 	{
 		// Steady frames just under a 60 fps budget, a hitch every fortieth frame and one stall that
-		// runs past the scale, so the tile shows all three bar colours and a clipped cap.
+		// runs past the scale, so the tile shows all three bar colours and a clipped cap. The last
+		// forty frames have no hitch, so none crosses the budget label at the graph's right edge.
 		FrameTimeHistory history = new(count);
 		for (int i = 0; i < count; i++)
 		{
 			float frame = 11f + (2.5f * MathF.Sin(i * 0.37f));
-			if (i % 40 == 39)
+			if (i % 40 == 39 && i < count - 40)
 			{
 				frame = 24f;
 			}

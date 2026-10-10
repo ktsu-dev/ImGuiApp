@@ -176,11 +176,13 @@ internal static class InputAndControlsTiles
 		});
 
 		SearchBoxRankedOptions rankedOptions = new("Fuzzy search");
-		string rankedText = "bery";
+		// Ranking orders every item rather than filtering any out, matches first, so a query several
+		// fruits match shows the ordering doing something; the rest follow below the cut.
+		string rankedText = "ap";
 		yield return new("SearchBoxRanked", Category, [nameof(ImGuiWidgets.SearchBoxRanked)], _ =>
 		{
 			ImGui.PushItemWidth(240f);
-			string[] matches = [.. ImGuiWidgets.SearchBoxRanked(ref rankedOptions, ref rankedText, Fruit, fruit => fruit).Take(3)];
+			string[] matches = [.. ImGuiWidgets.SearchBoxRanked(ref rankedOptions, ref rankedText, Fruit, fruit => fruit).Take(4)];
 			ImGui.PopItemWidth();
 
 			foreach (string match in matches)
@@ -211,7 +213,8 @@ internal static class InputAndControlsTiles
 			ImGuiWidgets.PianoKeyboard("Keys", keyboard, new Vector2(420f, 90f), chord));
 
 		ImGuiWidgets.TimelineView transportView = new();
-		float transportPlayhead = 3.5f;
+		// Clear of the ruler's 0:02.000 label, which runs to about 3.5 seconds at this width.
+		float transportPlayhead = 3.75f;
 		float transportIn = 2f;
 		float transportOut = 6f;
 		yield return new("TransportScrubber", Category, [nameof(ImGuiWidgets.TransportScrubber)], context =>
@@ -237,8 +240,21 @@ internal static class InputAndControlsTiles
 			ImGuiWidgets.Breadcrumb("##breadcrumb", ref breadcrumb));
 
 		DateTime date = new(2026, 9, 29, 0, 0, 0, DateTimeKind.Utc);
+		Vector2 dateOrigin = Vector2.Zero;
 		yield return new("DatePicker", Category, [nameof(ImGuiWidgets.DatePicker)], _ =>
-			ImGuiWidgets.DatePicker("Due", ref date));
+		{
+			dateOrigin = ImGui.GetCursorScreenPos();
+			ImGuiWidgets.DatePicker("Due", ref date);
+		})
+		{
+			// Closed, the picker is a plain date field, so the tile opens its calendar by clicking the
+			// field. Hexa marks nothing; the field is the first thing drawn, 100 pixels wide.
+			Interact = context =>
+			{
+				context.ClickAt(dateOrigin + new Vector2(50f, 8f));
+				context.HoverAt(new Vector2(-100f, -100f));
+			},
+		};
 
 		DateTime year = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 		yield return new("YearPicker", Category, [nameof(ImGuiWidgets.YearPicker)], _ =>

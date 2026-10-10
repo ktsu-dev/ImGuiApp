@@ -88,18 +88,18 @@ internal static class DisplayAndStatusTiles
 			],
 			context =>
 			{
-				Vector2 box = new(120f, 90f);
+				Vector2 box = new(130f, 90f);
 				Vector2 image = new(40f, 40f);
 
-				CatalogHelpers.Framed("##centered", box, () => ImGuiWidgets.ImageCentered(context.SampleTextureId, image));
+				CatalogHelpers.Framed("##centered", "ImageCentered", box, () => ImGuiWidgets.ImageCentered(context.SampleTextureId, image));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##within", box, () => ImGuiWidgets.ImageCenteredWithin(context.SampleTextureId, image, box));
+				CatalogHelpers.Framed("##within", "ImageCenteredWithin", box, () => ImGuiWidgets.ImageCenteredWithin(context.SampleTextureId, image, CatalogHelpers.Inner(box)));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##h", box, () => ImGuiWidgets.ImageCenteredH(context.SampleTextureId, image));
+				CatalogHelpers.Framed("##h", "ImageCenteredH", box, () => ImGuiWidgets.ImageCenteredH(context.SampleTextureId, image));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##v", box, () => ImGuiWidgets.ImageCenteredV(context.SampleTextureId, image));
+				CatalogHelpers.Framed("##v", "ImageCenteredV", box, () => ImGuiWidgets.ImageCenteredV(context.SampleTextureId, image));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##vh", box, () => ImGuiWidgets.ImageCenteredVH(context.SampleTextureId, image));
+				CatalogHelpers.Framed("##vh", "ImageCenteredVH", box, () => ImGuiWidgets.ImageCenteredVH(context.SampleTextureId, image));
 			})
 		{
 			ViewportWidth = 900,
@@ -118,19 +118,19 @@ internal static class DisplayAndStatusTiles
 			],
 			_ =>
 			{
-				Vector2 box = new(120f, 60f);
+				Vector2 box = new(130f, 60f);
 
-				CatalogHelpers.Framed("##text", box, () => ImGuiWidgets.Text("Text"));
+				CatalogHelpers.Framed("##text", "Text", box, () => ImGuiWidgets.Text("Text"));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##centered", box, () => ImGuiWidgets.TextCentered("Centered"));
+				CatalogHelpers.Framed("##centered", "TextCentered", box, () => ImGuiWidgets.TextCentered("Centered"));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##within", box, () => ImGuiWidgets.TextCenteredWithin("Within a box", box));
+				CatalogHelpers.Framed("##within", "TextCenteredWithin", box, () => ImGuiWidgets.TextCenteredWithin("Within a box", CatalogHelpers.Inner(box)));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##h", box, () => ImGuiWidgets.TextCenteredH("H"));
+				CatalogHelpers.Framed("##h", "TextCenteredH", box, () => ImGuiWidgets.TextCenteredH("H"));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##v", box, () => ImGuiWidgets.TextCenteredV("V"));
+				CatalogHelpers.Framed("##v", "TextCenteredV", box, () => ImGuiWidgets.TextCenteredV("V"));
 				ImGui.SameLine();
-				CatalogHelpers.Framed("##vh", box, () => ImGuiWidgets.TextCenteredVH("VH"));
+				CatalogHelpers.Framed("##vh", "TextCenteredVH", box, () => ImGuiWidgets.TextCenteredVH("VH"));
 			})
 		{
 			ViewportWidth = 900,
