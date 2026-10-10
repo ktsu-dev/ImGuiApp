@@ -34,7 +34,28 @@ public static partial class ImGuiWidgets
 	/// show a different gradient.
 	/// </remarks>
 	public static bool GradientEditor(string label, IList<GradientStop> stops, Vector2 size = default) =>
-		GradientEditorImpl.Draw(label, stops, size);
+		GradientEditorImpl.Draw(label, stops, size, null);
+
+	/// <summary>Draws a gradient bar with draggable colour stops, editing the selected stop's colour with a caller's editor.</summary>
+	/// <param name="label">Unique label; pushed as an ID scope and used as the probe prefix.</param>
+	/// <param name="stops">The stops, edited in place: moved, inserted, removed, recoloured. Kept sorted by position.</param>
+	/// <param name="colorEditor">
+	/// Draws the selected stop's colour editor in place of the built-in <c>ColorEdit4</c>, so a host
+	/// can give it the same recent colours and swatches as its other pickers. Called with the id
+	/// <c>"colour"</c> inside the editor's ID scope, only while a stop is selected. Null draws the
+	/// built-in editor.
+	/// </param>
+	/// <param name="size">Bar size. Non-positive X uses CalcItemWidth(); non-positive Y uses GetFrameHeight().</param>
+	/// <returns>True if <paramref name="stops"/> changed this frame (position, colour, insertion, removal, or sorting/seeding on entry).</returns>
+	/// <remarks>Behaves exactly as <see cref="GradientEditor(string, IList{GradientStop}, Vector2)"/> otherwise.</remarks>
+	public static bool GradientEditor(string label, IList<GradientStop> stops, GradientStopColorEditor? colorEditor, Vector2 size = default) =>
+		GradientEditorImpl.Draw(label, stops, size, colorEditor);
+
+	/// <summary>Draws an editor for a gradient stop's colour.</summary>
+	/// <param name="id">The ImGui id to give the editor. Not drawn as a label.</param>
+	/// <param name="color">The stop's colour, updated as the person edits it.</param>
+	/// <returns>True when the colour changed this frame.</returns>
+	public delegate bool GradientStopColorEditor(string id, ref Color color);
 
 	/// <summary>Evaluates a gradient at <paramref name="t"/>, interpolating in linear RGB (alpha interpolated linearly too). The editor draws with this function.</summary>
 	/// <param name="stops">The stops. They need not be sorted.</param>
@@ -53,7 +74,7 @@ public static partial class ImGuiWidgets
 
 		private static readonly Dictionary<uint, GradientEditorState> States = [];
 
-		public static bool Draw(string label, IList<GradientStop> stops, Vector2 size)
+		public static bool Draw(string label, IList<GradientStop> stops, Vector2 size, GradientStopColorEditor? colorEditor)
 		{
 			Ensure.NotNull(label);
 			Ensure.NotNull(stops);
@@ -113,7 +134,7 @@ public static partial class ImGuiWidgets
 			DrawBar(stops, barMin, barSize);
 			DrawMarkers(stops, state, barMin, barSize, hoveredStop);
 
-			changed |= DrawColorEditor(stops, state);
+			changed |= DrawColorEditor(stops, state, colorEditor);
 			return changed;
 		}
 
@@ -204,13 +225,19 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private static bool DrawColorEditor(IList<GradientStop> stops, GradientEditorState state)
+		private static bool DrawColorEditor(IList<GradientStop> stops, GradientEditorState state, GradientStopColorEditor? colorEditor)
 		{
 			int selected = state.SelectedIndex;
 			if (selected < 0 || selected >= stops.Count)
 			{
 				ImGui.TextDisabled("Select a stop to edit its colour");
 				return false;
+			}
+
+			if (colorEditor is not null)
+			{
+				Color colour = stops[selected].Color;
+				return colorEditor("colour", ref colour) && state.SetSelectedColor(stops, colour);
 			}
 
 			Vector4 srgb = stops[selected].Color.ToSrgbVector4();
