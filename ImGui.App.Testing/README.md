@@ -60,6 +60,10 @@ harness.Keyboard.Press(ImGuiKey.Z, ctrl: true);
 harness.Keyboard.Type("export.png");
 ```
 
+`harness.DropFiles(paths, x, y)` drops files onto the window as a file manager would: it moves the
+pointer to the drop point, calls `ImGuiAppConfig.OnFilesDropped` between frames as the desktop backend
+does, and renders one more frame so the application can act on it.
+
 The high-level helpers advance frames where the interaction requires it. ImGui activates a button on
 release and only notices a press that was visible during a completed frame, so a press and release
 inside one frame would do nothing.

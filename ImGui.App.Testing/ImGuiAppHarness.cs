@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.App.Testing;
 
 using System;
+using System.Collections.Generic;
 
 using Hexa.NET.ImGui;
 
@@ -265,6 +266,36 @@ public sealed class ImGuiAppHarness : IDisposable
 		}
 
 		Mouse.Click(rect.MinX + (rect.Width / 2f), rect.MinY + (rect.Height / 2f));
+	}
+
+	/// <summary>
+	/// Drops files onto the window at a position, as a file manager would, advancing the frames the
+	/// application needs to see it.
+	/// </summary>
+	/// <remarks>
+	/// The pointer is moved to the drop point and a frame is rendered first, because a real drop
+	/// leaves the cursor there. The application's <see cref="ImGuiAppConfig.OnFilesDropped"/> is then
+	/// called between frames, where the windowing backend calls it, and one more frame is rendered so
+	/// whatever the application deferred to its next <see cref="ImGuiAppConfig.OnRender"/> has run.
+	/// </remarks>
+	/// <param name="paths">The dropped paths. Must not be empty.</param>
+	/// <param name="x">Column in display pixels.</param>
+	/// <param name="y">Row in display pixels.</param>
+	public void DropFiles(IReadOnlyList<string> paths, float x, float y)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Ensure.NotNull(paths);
+
+		if (paths.Count == 0)
+		{
+			throw new ArgumentException("A drop carries at least one path.", nameof(paths));
+		}
+
+		Mouse.MoveTo(x, y);
+		Step();
+
+		config.OnFilesDropped?.Invoke([.. paths], new System.Numerics.Vector2(x, y));
+		Step();
 	}
 
 	/// <summary>
