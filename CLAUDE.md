@@ -368,8 +368,9 @@ API on Linux or macOS, so there the request is recorded and goes no further, and
 never shown inline on any platform.
 
 ImGui's own text fields fill the request themselves. A widget that edits text without
-`ImGui.InputText` calls `ImeCaret.Set(screenPosition, lineHeight)` each frame its caret shows; that
-also sets `io.WantTextInput` from the next frame, as a focused text field does. `ImeCaret.Requested`
+`ImGui.InputText` calls `ImeCaret.Set(screenPosition, lineHeight)` each frame its caret shows. It
+leaves `io.WantTextInput` alone on purpose: a custom editor that gives way to a focused ImGui text
+field by reading that flag would otherwise give way to itself. `ImeCaret.Requested`
 and `ImGuiAppHarness.ImePlacement` report what a frame asked for, so a UI test asserts a caret there.
 
 ### Deferred Drawing (dialogs and docked windows)

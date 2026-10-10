@@ -67,11 +67,11 @@ public sealed class ImeCaretTests
 	}
 
 	[TestMethod]
-	public void AReportedCaret_SetsWantTextInputFromTheNextFrame()
+	public void AReportedCaret_LeavesWantTextInputAlone()
 	{
-		// A focused ImGui text field does the same, and applications use the flag to hold back
-		// shortcuts while text is being typed.
-		bool wantTextInput = false;
+		// The flag says an ImGui text field has the keyboard; a custom editor that gives way to one
+		// would otherwise give way to itself.
+		bool wantTextInput = true;
 		using ImGuiAppHarness harness = ImGuiAppHarness.Start(
 			new ImGuiAppConfig
 			{
@@ -85,7 +85,7 @@ public sealed class ImeCaretTests
 
 		harness.Step(2);
 
-		Assert.IsTrue(wantTextInput);
+		Assert.IsFalse(wantTextInput);
 	}
 
 	[TestMethod]

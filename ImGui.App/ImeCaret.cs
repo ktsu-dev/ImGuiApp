@@ -19,9 +19,9 @@ using Hexa.NET.ImGui;
 /// shown; the request lapses at the next frame, exactly as ImGui's own does.
 /// </para>
 /// <para>
-/// The request also sets <c>io.WantTextInput</c> from the next frame, as a focused ImGui text field
-/// does, so an application that suppresses shortcuts while text is being typed treats this caret
-/// the same way.
+/// The request leaves <c>io.WantTextInput</c> alone. That flag says an ImGui text field has the
+/// keyboard, and a widget editing text of its own commonly reads it to give way to one, so raising
+/// it here would make such a widget give way to itself on the next frame.
 /// </para>
 /// <para>
 /// Where the request goes depends on the platform. On Windows the desktop backend moves the
@@ -45,7 +45,6 @@ public static class ImeCaret
 	{
 		ref ImGuiPlatformImeData data = ref ImGui.GetCurrentContext().PlatformImeData;
 		data.WantVisible = 1;
-		data.WantTextInput = 1;
 		data.InputPos = position;
 		data.InputLineHeight = lineHeight;
 		data.ViewportId = ImGui.GetMainViewport().ID;
