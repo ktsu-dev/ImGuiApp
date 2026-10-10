@@ -28,6 +28,13 @@ public static partial class ImGuiWidgets
 	/// kept and the side pulled grows along it. A skew drag moves its edge along itself by the pointer's
 	/// travel in the frame and leaves the opposite edge where it was.
 	/// </para>
+	/// <para>
+	/// A distorted box has no rectangle left to resize, so its handles move corners: a corner itself, an
+	/// edge its two corners, the body all four. Every corner move is held to a convex quadrilateral with
+	/// the press's winding and sides no shorter on screen than the minimum. A pointer asking for more is
+	/// followed as far along its travel as stays inside that, rather than refused outright, so the corner
+	/// stops against the limit instead of freezing where the drag began.
+	/// </para>
 	/// </remarks>
 	internal sealed class TransformBoxState
 	{
@@ -55,11 +62,20 @@ public static partial class ImGuiWidgets
 		/// <summary>Gets whether the current press skews rather than resizes.</summary>
 		public bool Skewing { get; private set; }
 
+		/// <summary>Gets whether the current press moves one corner alone.</summary>
+		public bool Distorting { get; private set; }
+
 		/// <summary>Reports whether a handle is one of the four edges, the only handles that skew.</summary>
 		/// <param name="handle">The handle.</param>
 		/// <returns>True for <see cref="TransformBoxHandle.Left"/>, <see cref="TransformBoxHandle.Right"/>, <see cref="TransformBoxHandle.Top"/> and <see cref="TransformBoxHandle.Bottom"/>.</returns>
 		public static bool IsEdge(TransformBoxHandle handle) =>
 			handle is TransformBoxHandle.Left or TransformBoxHandle.Right or TransformBoxHandle.Top or TransformBoxHandle.Bottom;
+
+		/// <summary>Reports whether a handle is one of the four corners, the only handles that distort.</summary>
+		/// <param name="handle">The handle.</param>
+		/// <returns>True for the four corner handles.</returns>
+		public static bool IsCorner(TransformBoxHandle handle) =>
+			handle is TransformBoxHandle.TopLeft or TransformBoxHandle.TopRight or TransformBoxHandle.BottomRight or TransformBoxHandle.BottomLeft;
 
 		/// <summary>Finds the handle under a point on screen.</summary>
 		/// <param name="rect">The box, in its frame.</param>
@@ -152,7 +168,12 @@ public static partial class ImGuiWidgets
 			TransformBoxRect from = drag.PressRect;
 			if (drag.Handle == TransformBoxHandle.Body)
 			{
-				return new TransformBoxRect(from.Min + drag.Delta, from.Max + drag.Delta) { Skew = from.Skew };
+				return new TransformBoxRect(from.Min + drag.Delta, from.Max + drag.Delta) { Skew = from.Skew, Quad = from.Quad?.Offset(drag.Delta) };
+			}
+
+			if (from.IsDistorted || (drag.Distort && IsCorner(drag.Handle)))
+			{
+				return MoveCorners(drag, minimumScreenSize);
 			}
 
 			if (drag.Skew && IsEdge(drag.Handle))
@@ -206,7 +227,8 @@ public static partial class ImGuiWidgets
 		/// <param name="rect">The box at the press.</param>
 		/// <param name="frameToScreen">The transform the box is drawn through at the press.</param>
 		/// <param name="screenPoint">The pointer at the press, in screen pixels.</param>
-		/// <param name="skew">Whether the press skews; only an edge can.</param>
+		/// <param name="skew">Whether the press skews; only an edge of a box that is not distorted can.</param>
+		/// <param name="distort">Whether the press moves a corner alone; only a corner can.</param>
 		/// <returns>False, and nothing held, when the transform cannot be inverted.</returns>
 		/// <remarks>
 		/// The inverse is taken once, at the press, and every frame of the drag is carried back through
@@ -214,17 +236,21 @@ public static partial class ImGuiWidgets
 		/// when the box is the layer's own frame, would otherwise measure each frame against a frame the
 		/// previous one had already moved.
 		/// </remarks>
-		public bool Begin(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint, bool skew = false)
+		public bool Begin(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint, bool skew = false, bool distort = false)
 		{
 			if (handle == TransformBoxHandle.None || !Matrix3x2.Invert(frameToScreen, out Matrix3x2 inverse) || !IsFinite(inverse))
 			{
 				Active = TransformBoxHandle.None;
 				Skewing = false;
+				Distorting = false;
 				return false;
 			}
 
 			Active = handle;
-			Skewing = skew && IsEdge(handle);
+
+			// A distorted box has no rectangle to slant, so its edges move rather than skew.
+			Skewing = skew && IsEdge(handle) && !rect.IsDistorted;
+			Distorting = distort && IsCorner(handle);
 			pressRect = rect;
 			pressInverse = inverse;
 			pressFrameToScreen = frameToScreen;
@@ -237,13 +263,129 @@ public static partial class ImGuiWidgets
 		/// <param name="uniform">Whether a corner keeps the rectangle's proportions.</param>
 		/// <returns>The drag, measured in the frame the press began in.</returns>
 		public TransformBoxDrag Drag(Vector2 screenPoint, bool uniform) =>
-			new(Active, pressRect, pressPoint, Vector2.Transform(screenPoint, pressInverse), uniform, pressFrameToScreen) { Skew = Skewing };
+			new(Active, pressRect, pressPoint, Vector2.Transform(screenPoint, pressInverse), uniform, pressFrameToScreen) { Skew = Skewing, Distort = Distorting };
 
 		/// <summary>Ends the press.</summary>
 		public void End()
 		{
 			Active = TransformBoxHandle.None;
 			Skewing = false;
+			Distorting = false;
+		}
+
+		/// <summary>Moves a distorted box's corners: the held one, the held edge's two, or all four.</summary>
+		private static TransformBoxRect MoveCorners(TransformBoxDrag drag, float minimumScreenSize)
+		{
+			TransformBoxRect from = drag.PressRect;
+			Vector2[] start = from.Corners();
+			bool[] moves = drag.Handle switch
+			{
+				TransformBoxHandle.TopLeft => [true, false, false, false],
+				TransformBoxHandle.TopRight => [false, true, false, false],
+				TransformBoxHandle.BottomRight => [false, false, true, false],
+				TransformBoxHandle.BottomLeft => [false, false, false, true],
+				TransformBoxHandle.Top => [true, true, false, false],
+				TransformBoxHandle.Right => [false, true, true, false],
+				TransformBoxHandle.Bottom => [false, false, true, true],
+				TransformBoxHandle.Left => [true, false, false, true],
+				_ => [false, false, false, false],
+			};
+
+			float winding = SignedArea(start, drag.FrameToScreen);
+			if (!float.IsFinite(winding) || MathF.Abs(winding) <= float.Epsilon || !IsFinite(drag.Delta))
+			{
+				return from;
+			}
+
+			Vector2[] Moved(float fraction)
+			{
+				Vector2[] corners = new Vector2[4];
+				for (int index = 0; index < 4; index++)
+				{
+					corners[index] = moves[index] ? start[index] + (drag.Delta * fraction) : start[index];
+				}
+
+				return corners;
+			}
+
+			bool Acceptable(Vector2[] corners) => IsConvexQuad(corners, drag.FrameToScreen, MathF.Sign(winding), minimumScreenSize);
+
+			// The press's own quadrilateral may already be under the minimum, as a rectangle shrunk to it
+			// on one axis is; then any travel is measured against that rather than refused for good.
+			Vector2[] result = Moved(1f);
+			if (!Acceptable(result))
+			{
+				float low = 0f;
+				float high = 1f;
+				for (int step = 0; step < 16; step++)
+				{
+					float middle = (low + high) / 2f;
+					if (Acceptable(Moved(middle)))
+					{
+						low = middle;
+					}
+					else
+					{
+						high = middle;
+					}
+				}
+
+				result = Moved(low);
+			}
+
+			return new TransformBoxRect(from.Min, from.Max) { Quad = TransformBoxQuad.FromCorners(result) };
+		}
+
+		/// <summary>Twice the signed area of a quadrilateral on screen, positive when it winds clockwise there.</summary>
+		private static float SignedArea(Vector2[] corners, Matrix3x2 frameToScreen)
+		{
+			float sum = 0f;
+			for (int index = 0; index < 4; index++)
+			{
+				Vector2 a = Vector2.Transform(corners[index], frameToScreen);
+				Vector2 b = Vector2.Transform(corners[(index + 1) % 4], frameToScreen);
+				sum += (a.X * b.Y) - (b.X * a.Y);
+			}
+
+			return sum;
+		}
+
+		/// <summary>Reports whether a quadrilateral is strictly convex on screen, winds the given way, and has no side shorter than the minimum.</summary>
+		private static bool IsConvexQuad(Vector2[] corners, Matrix3x2 frameToScreen, float winding, float minimumScreenSize)
+		{
+			Vector2[] screen = new Vector2[4];
+			for (int index = 0; index < 4; index++)
+			{
+				screen[index] = Vector2.Transform(corners[index], frameToScreen);
+				if (!IsFinite(screen[index]))
+				{
+					return false;
+				}
+			}
+
+			float minimum = MathF.Max(minimumScreenSize, 0f);
+			for (int index = 0; index < 4; index++)
+			{
+				Vector2 a = screen[index];
+				Vector2 b = screen[(index + 1) % 4];
+				Vector2 c = screen[(index + 2) % 4];
+				if (Vector2.Distance(a, b) < minimum)
+				{
+					return false;
+				}
+
+				// Each turn has to go the same way as the whole, by more than rounding: a corner turned the
+				// other way is a dent, and one with no turn at all collapses the quadrilateral to a triangle.
+				Vector2 first = b - a;
+				Vector2 second = c - b;
+				float turn = (first.X * second.Y) - (first.Y * second.X);
+				if (turn * winding <= 1e-3f)
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		/// <summary>Slants the box by sliding the held edge along itself, the opposite edge staying put.</summary>
@@ -394,6 +536,11 @@ public static partial class ImGuiWidgets
 
 		private static bool Contains(TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint)
 		{
+			if (rect.IsDistorted)
+			{
+				return ContainsPolygon(ScreenCorners(rect, frameToScreen), screenPoint);
+			}
+
 			if (!Matrix3x2.Invert(rect.Shape() * frameToScreen, out Matrix3x2 inverse))
 			{
 				return false;
@@ -403,6 +550,24 @@ public static partial class ImGuiWidgets
 			Vector2 min = Vector2.Min(rect.Min, rect.Max);
 			Vector2 max = Vector2.Max(rect.Min, rect.Max);
 			return point.X >= min.X && point.X <= max.X && point.Y >= min.Y && point.Y <= max.Y;
+		}
+
+		/// <summary>Even-odd containment, which holds for any simple polygon and so for any quadrilateral a caller sets.</summary>
+		private static bool ContainsPolygon(Vector2[] polygon, Vector2 point)
+		{
+			bool inside = false;
+			for (int index = 0, previous = polygon.Length - 1; index < polygon.Length; previous = index++)
+			{
+				Vector2 a = polygon[index];
+				Vector2 b = polygon[previous];
+				if ((a.Y > point.Y) != (b.Y > point.Y)
+					&& point.X < a.X + ((point.Y - a.Y) * (b.X - a.X) / (b.Y - a.Y)))
+				{
+					inside = !inside;
+				}
+			}
+
+			return inside;
 		}
 
 		private static float DistanceToSegment(Vector2 point, Vector2 start, Vector2 end)

@@ -86,7 +86,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 ### Image and Colour
 
-- **`TransformBox`**: A rectangle with corner and edge handles in its own frame, drawn through a caller-supplied `Matrix3x2` to the screen, which moves, resizes and scales it, and with `TransformBoxOptions.Skew` on, skews it when an edge is Ctrl-dragged. A crop window passes the image's rectangle on screen; a layer passes its own placement composed with that, so the handles sit on the layer's turned corners. It knows nothing about what it frames: a caller with its own rule, such as an aspect preset, supplies `TransformBoxOptions.Resize`. See [Transform Box](#transform-box) below
+- **`TransformBox`**: A rectangle with corner and edge handles in its own frame, drawn through a caller-supplied `Matrix3x2` to the screen, which moves, resizes and scales it, and with `TransformBoxOptions.Skew` on, skews it when an edge is Ctrl-dragged, and with `TransformBoxOptions.Distort` on, moves a Ctrl+Shift-dragged corner alone. A crop window passes the image's rectangle on screen; a layer passes its own placement composed with that, so the handles sit on the layer's turned corners. It knows nothing about what it frames: a caller with its own rule, such as an aspect preset, supplies `TransformBoxOptions.Resize`. See [Transform Box](#transform-box) below
 
 ### Image and Colour
 
@@ -662,6 +662,16 @@ which `TransformBoxRect.Shape()` returns as a matrix to fold into whatever the b
 slant when resized: the drag is carried back into the unskewed rectangle and the handle's opposite
 edge or corner held where it was. The choice between stretch and skew is made at the press, and
 `TransformBoxResult.Skewing` reports it, or on hover what a press would do.
+
+With `Distort` on, pressing a corner with Ctrl and Shift held moves that corner alone, and the
+rectangle comes back with `TransformBoxRect.Quad` set to the four corners of a quadrilateral. The
+mapping from the rectangle onto it is projective, which no `Matrix3x2` holds, so the box hands back
+the corners and the caller builds its own transform from them; `Corners()` answers the
+quadrilateral. From then on every handle moves corners (a corner itself, an edge its two, the body
+all four), and the quadrilateral is held convex, with the press's winding and no side shorter than
+`MinimumScreenSize`, so a projective transform onto it stays defined. A caller can set `Quad` to
+show a box it distorted earlier. `TransformBoxResult.Distorting` reports the choice as `Skewing`
+does.
 
 Three things to know when using it:
 

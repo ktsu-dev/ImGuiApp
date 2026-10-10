@@ -555,7 +555,7 @@ Custom UI components.
 | `ScopedId` | RAII wrapper to push ImGui IDs |
 | `Tree` | Tree view with nested children |
 | `ReorderableTree` | Drag-reorderable tree of caller-drawn rows |
-| `TransformBox` | Move, resize, scale and skew handles on a rectangle in its own frame |
+| `TransformBox` | Move, resize, scale, skew and distort handles on a rectangle in its own frame |
 
 ### `ImGuiPopups` Classes
 

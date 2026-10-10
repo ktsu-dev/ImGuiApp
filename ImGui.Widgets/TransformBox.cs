@@ -42,6 +42,12 @@ public static partial class ImGuiWidgets
 	/// letting go of Ctrl mid-drag does not turn a skew into a stretch.
 	/// </para>
 	/// <para>
+	/// <b>With <see cref="TransformBoxOptions.Distort"/> on, Ctrl+Shift turns a corner into a distort.</b>
+	/// That corner moves on its own and the rectangle comes back with <see cref="TransformBoxRect.Quad"/>
+	/// set, the four corners of a convex quadrilateral. From then on every handle moves corners, and the
+	/// caller maps its content onto the quadrilateral with whatever projective transform it keeps.
+	/// </para>
+	/// <para>
 	/// <b>It takes the pointer only over itself.</b> The box submits its hit area only while the pointer
 	/// is over a handle or the body, or while one is held, so a press anywhere else reaches whatever was
 	/// drawn underneath, such as an <see cref="ImageCanvas"/>'s pan. Submit the item underneath with
@@ -122,7 +128,8 @@ public static partial class ImGuiWidgets
 
 				if (activated)
 				{
-					state.Begin(under, rect, frameToScreen, mouse, options.Skew && ImGui.GetIO().KeyCtrl);
+					ImGuiIOPtr io = ImGui.GetIO();
+					state.Begin(under, rect, frameToScreen, mouse, options.Skew && io.KeyCtrl, options.Distort && io.KeyCtrl && io.KeyShift);
 				}
 
 				if (active && state.Active != TransformBoxHandle.None)
@@ -156,23 +163,53 @@ public static partial class ImGuiWidgets
 
 			bool held = state.Active != TransformBoxHandle.None;
 			TransformBoxHandle hot = held ? state.Active : under;
-			bool skewing = held
-				? state.Skewing
-				: options.Skew && ImGui.GetIO().KeyCtrl && TransformBoxState.IsEdge(hot);
+			(bool skewing, bool distorting) = held ? (state.Skewing, state.Distorting) : WouldPress(hot, rect, options);
 			if (hot != TransformBoxHandle.None)
 			{
-				SetCursor(hot, rect, frameToScreen, skewing);
+				SetCursor(hot, rect, frameToScreen, skewing, distorting);
 			}
 
 			Render(label, rect, frameToScreen, clipMin, clipMax, options.EdgeHandles, hot);
-			return new TransformBoxResult(changed, held, released, hot) { Skewing = skewing };
+			return new TransformBoxResult(changed, held, released, hot) { Skewing = skewing, Distorting = distorting };
 		}
 
-		private static void SetCursor(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, bool skewing)
+		/// <summary>Whether a press on a hovered handle would skew or distort, from the modifiers held now.</summary>
+		private static (bool Skewing, bool Distorting) WouldPress(TransformBoxHandle hot, TransformBoxRect rect, TransformBoxOptions options)
 		{
-			if (handle == TransformBoxHandle.Body)
+			ImGuiIOPtr io = ImGui.GetIO();
+			return (
+				options.Skew && io.KeyCtrl && TransformBoxState.IsEdge(hot) && !rect.IsDistorted,
+				options.Distort && io.KeyCtrl && io.KeyShift && TransformBoxState.IsCorner(hot));
+		}
+
+		private static void SetCursor(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, bool skewing, bool distorting)
+		{
+			// A corner moved alone goes wherever the pointer does, as the body does.
+			if (handle == TransformBoxHandle.Body || distorting)
 			{
 				ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
+				return;
+			}
+
+			if (rect.IsDistorted)
+			{
+				// No rectangle is left to say which way a handle pulls, so it pulls away from the middle of
+				// the quadrilateral on screen, through the handle.
+				Vector2[] screen = TransformBoxState.ScreenCorners(rect, frameToScreen);
+				Vector2 middle = (screen[0] + screen[1] + screen[2] + screen[3]) / 4f;
+				Vector2 at = handle switch
+				{
+					TransformBoxHandle.TopLeft => screen[0],
+					TransformBoxHandle.TopRight => screen[1],
+					TransformBoxHandle.BottomRight => screen[2],
+					TransformBoxHandle.BottomLeft => screen[3],
+					TransformBoxHandle.Top => (screen[0] + screen[1]) / 2f,
+					TransformBoxHandle.Right => (screen[1] + screen[2]) / 2f,
+					TransformBoxHandle.Bottom => (screen[2] + screen[3]) / 2f,
+					_ => (screen[3] + screen[0]) / 2f,
+				};
+
+				ImGui.SetMouseCursor(ResizeCursorAlong(at - middle));
 				return;
 			}
 

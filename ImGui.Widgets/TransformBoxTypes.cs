@@ -39,14 +39,53 @@ public enum TransformBoxHandle
 	BottomRight,
 }
 
-/// <summary>A rectangle in a <see cref="ImGuiWidgets.TransformBox"/>'s own frame, optionally skewed into a parallelogram.</summary>
+/// <summary>Four corners of a distorted <see cref="ImGuiWidgets.TransformBox"/>, in its frame.</summary>
+/// <param name="TopLeft">The corner that was the rectangle's top left.</param>
+/// <param name="TopRight">The corner that was its top right.</param>
+/// <param name="BottomRight">The corner that was its bottom right.</param>
+/// <param name="BottomLeft">The corner that was its bottom left.</param>
+/// <remarks>
+/// Each corner keeps the name it had on the rectangle, however far it has been dragged, so a caller
+/// mapping the rectangle onto the quadrilateral pairs them up by name.
+/// </remarks>
+public readonly record struct TransformBoxQuad(Vector2 TopLeft, Vector2 TopRight, Vector2 BottomRight, Vector2 BottomLeft)
+{
+	/// <summary>Gets the corners as an array, clockwise from the top left.</summary>
+	/// <returns>Top left, top right, bottom right and bottom left.</returns>
+	public Vector2[] ToArray() => [TopLeft, TopRight, BottomRight, BottomLeft];
+
+	/// <summary>Gets the quadrilateral with every corner moved by the same amount.</summary>
+	/// <param name="offset">How far to move it.</param>
+	/// <returns>The moved quadrilateral.</returns>
+	public TransformBoxQuad Offset(Vector2 offset) =>
+		new(TopLeft + offset, TopRight + offset, BottomRight + offset, BottomLeft + offset);
+
+	/// <summary>Builds a quadrilateral from four corners, clockwise from the top left.</summary>
+	/// <param name="corners">Top left, top right, bottom right and bottom left.</param>
+	/// <returns>The quadrilateral.</returns>
+	/// <exception cref="ArgumentException">There are not exactly four corners.</exception>
+	public static TransformBoxQuad FromCorners(ReadOnlySpan<Vector2> corners) => corners.Length == 4
+		? new(corners[0], corners[1], corners[2], corners[3])
+		: throw new ArgumentException("A quadrilateral has four corners.", nameof(corners));
+}
+
+/// <summary>A rectangle in a <see cref="ImGuiWidgets.TransformBox"/>'s own frame, optionally skewed into a parallelogram or distorted into any convex quadrilateral.</summary>
 /// <param name="Min">The corner with the smaller coordinates, which is the top left when the frame is drawn unturned.</param>
 /// <param name="Max">The corner with the larger coordinates.</param>
 /// <remarks>
+/// <para>
 /// <see cref="Min"/> and <see cref="Max"/> describe the rectangle before its <see cref="Skew"/>, which
 /// shears it about its own centre: a box that has never been skewed is exactly the rectangle between
 /// them. <see cref="Shape"/> carries the rectangle onto the parallelogram, and <see cref="Corners"/>
 /// answers the parallelogram's corners.
+/// </para>
+/// <para>
+/// A distorted box has a <see cref="Quad"/>, and its corners are that quadrilateral's however
+/// <see cref="Min"/>, <see cref="Max"/> and <see cref="Skew"/> read: they describe the rectangle the
+/// distortion started from and nothing else. Mapping the rectangle onto the quadrilateral is a
+/// projective transform, which no <see cref="Matrix3x2"/> can hold, so the box hands back the corners
+/// and the caller builds whatever transform it needs from them.
+/// </para>
 /// </remarks>
 public readonly record struct TransformBoxRect(Vector2 Min, Vector2 Max)
 {
@@ -70,6 +109,17 @@ public readonly record struct TransformBoxRect(Vector2 Min, Vector2 Max)
 	/// <summary>Gets whether the box is skewed at all.</summary>
 	public bool IsSkewed => Skew != Vector2.Zero;
 
+	/// <summary>
+	/// Gets the box's corners once a corner has been dragged on its own, or null while it is a
+	/// rectangle or a parallelogram. Set by a distort drag (Ctrl+Shift on a corner, with
+	/// <see cref="TransformBoxOptions.Distort"/> on); a caller may also set it to show a box it
+	/// distorted earlier.
+	/// </summary>
+	public TransformBoxQuad? Quad { get; init; }
+
+	/// <summary>Gets whether the box has been distorted into a free quadrilateral.</summary>
+	public bool IsDistorted => Quad.HasValue;
+
 	/// <summary>Gets the transform that carries the unskewed rectangle onto the box, within the frame.</summary>
 	/// <returns>The identity when the box is not skewed; otherwise the shear about <see cref="Center"/>.</returns>
 	public Matrix3x2 Shape()
@@ -84,10 +134,15 @@ public readonly record struct TransformBoxRect(Vector2 Min, Vector2 Max)
 		return Matrix3x2.CreateTranslation(-center) * shear * Matrix3x2.CreateTranslation(center);
 	}
 
-	/// <summary>Gets the four corners, clockwise from the top left, with the skew applied.</summary>
+	/// <summary>Gets the four corners, clockwise from the top left, with the skew applied, or the distorted corners when there are some.</summary>
 	/// <returns>Top left, top right, bottom right and bottom left, in the frame.</returns>
 	public Vector2[] Corners()
 	{
+		if (Quad is TransformBoxQuad quad)
+		{
+			return quad.ToArray();
+		}
+
 		Vector2[] corners = [Min, new(Max.X, Min.Y), Max, new(Min.X, Max.Y)];
 		if (IsSkewed)
 		{
@@ -133,6 +188,13 @@ public readonly record struct TransformBoxDrag(
 	/// stays where it is.
 	/// </summary>
 	public bool Skew { get; init; }
+
+	/// <summary>
+	/// Gets whether the drag distorts: a corner pressed with Ctrl and Shift held while
+	/// <see cref="TransformBoxOptions.Distort"/> is on. That corner moves on its own and the other three
+	/// stay where they are.
+	/// </summary>
+	public bool Distort { get; init; }
 }
 
 /// <summary>What a <see cref="ImGuiWidgets.TransformBox"/> did this frame.</summary>
@@ -147,6 +209,12 @@ public readonly record struct TransformBoxResult(bool Changed, bool Held, bool R
 	/// on the hovered edge would start one because Ctrl is down.
 	/// </summary>
 	public bool Skewing { get; init; }
+
+	/// <summary>
+	/// Gets whether <see cref="Handle"/> distorts: the held drag moves one corner alone, or, with nothing
+	/// held, a press on the hovered corner would because Ctrl and Shift are down.
+	/// </summary>
+	public bool Distorting { get; init; }
 }
 
 /// <summary>How a <see cref="ImGuiWidgets.TransformBox"/> behaves.</summary>
@@ -166,6 +234,14 @@ public sealed class TransformBoxOptions
 	/// it. Off by default, since a crop window or a paragraph box has no use for a slant.
 	/// </summary>
 	public bool Skew { get; set; }
+
+	/// <summary>
+	/// Gets or sets whether Ctrl+Shift-dragging a corner moves that corner alone, distorting the box into
+	/// a free quadrilateral. Off by default. Once a box is distorted every handle moves corners rather
+	/// than resizing: a corner moves itself, an edge its two corners, and the body all four. The
+	/// quadrilateral is kept convex, so the projective transform onto it stays defined.
+	/// </summary>
+	public bool Distort { get; set; }
 
 	/// <summary>
 	/// Gets or sets a rule that turns a drag into the new rectangle, replacing the built-in one: for an
