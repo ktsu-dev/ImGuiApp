@@ -75,6 +75,63 @@ internal static partial class NativeMethods
 		public int Bottom;
 	}
 
+	/// <summary>Returns the input method context associated with a window.</summary>
+	[LibraryImport("imm32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	internal static partial nint ImmGetContext(nint hWnd);
+
+	/// <summary>Releases an input method context obtained from <see cref="ImmGetContext"/>.</summary>
+	[LibraryImport("imm32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool ImmReleaseContext(nint hWnd, nint hIMC);
+
+	/// <summary>Positions an input method's composition window.</summary>
+	[LibraryImport("imm32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool ImmSetCompositionWindow(nint hIMC, ref COMPOSITIONFORM lpCompForm);
+
+	/// <summary>Positions an input method's candidate list.</summary>
+	[LibraryImport("imm32.dll")]
+	[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	internal static partial bool ImmSetCandidateWindow(nint hIMC, ref CANDIDATEFORM lpCandidate);
+
+	/// <summary>A point, matching the Win32 POINT structure.</summary>
+	[StructLayout(LayoutKind.Sequential)]
+	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 POINT structure for interop clarity.")]
+	internal struct POINT
+	{
+		public int X;
+		public int Y;
+	}
+
+	/// <summary>An input method composition window's position, matching the Win32 COMPOSITIONFORM structure.</summary>
+	[StructLayout(LayoutKind.Sequential)]
+	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 COMPOSITIONFORM structure for interop clarity.")]
+	internal struct COMPOSITIONFORM
+	{
+		public uint dwStyle;
+		public POINT ptCurrentPos;
+		public RECT rcArea;
+	}
+
+	/// <summary>An input method candidate list's position, matching the Win32 CANDIDATEFORM structure.</summary>
+	[StructLayout(LayoutKind.Sequential)]
+	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 CANDIDATEFORM structure for interop clarity.")]
+	internal struct CANDIDATEFORM
+	{
+		public uint dwIndex;
+		public uint dwStyle;
+		public POINT ptCurrentPos;
+		public RECT rcArea;
+	}
+
+	// COMPOSITIONFORM and CANDIDATEFORM styles.
+	internal const uint CFS_FORCE_POSITION = 0x0020;
+	internal const uint CFS_EXCLUDE = 0x0080;
+
 	/// <summary>Monitor geometry returned by <see cref="GetMonitorInfo"/>, matching the Win32 MONITORINFO structure.</summary>
 	[StructLayout(LayoutKind.Sequential)]
 	[SuppressMessage("Major Code Smell", "S101:Types should be named in PascalCase", Justification = "Name matches the native Win32 MONITORINFO structure for interop clarity.")]

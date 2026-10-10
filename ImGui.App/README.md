@@ -26,6 +26,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
 - **Menu System**: Easy-to-use API for creating application menus
 - **Mouse Cursors**: The cursor a frame asks for through `ImGui.SetMouseCursor` (resize, hand, text beam, move) is shown on the system pointer
+- **Input Method Placement**: The candidate list of a Chinese, Japanese or Korean input method opens at the caret of a focused text field, or of a custom text widget that reports its caret through `ImeCaret.Set` (Windows; recorded but not placed on Linux and macOS, where GLFW has no input method API)
 - **Positioning Guards**: Offscreen positioning checks to keep windows visible
 - **Modern .NET**: Supports .NET 8, 9, and 10
 - **Active Development**: Open-source and actively maintained
