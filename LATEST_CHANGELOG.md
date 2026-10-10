@@ -1,6 +1,6 @@
-## v3.68.0 (minor)
+## v3.69.0 (minor)
 
-Changes since v3.67.0:
+Changes since v3.68.0:
 
-- [minor] Let a host draw GradientEditor's stop colour editor ([@Claude](https://github.com/Claude))
+- [minor] Distort the transform box by Ctrl+Shift-dragging a corner ([@Claude](https://github.com/Claude))
 
