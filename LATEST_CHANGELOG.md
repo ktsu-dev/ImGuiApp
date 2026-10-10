@@ -1,6 +1,8 @@
-## v3.64.2-pre.1 (prerelease)
+## v3.65.0 (minor)
 
-Changes since v3.64.1:
+Changes since v3.64.0:
 
-- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Fix the widget gallery tiles and four widget defects they exposed ([@Claude](https://github.com/Claude))
+- [patch] Keep comment boxes with their nodes when the view pans or fits ([@Claude](https://github.com/Claude))
+- [patch] Draw HTML entities in Markdown as their characters, not a type name ([@Claude](https://github.com/Claude))
 
