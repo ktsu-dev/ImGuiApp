@@ -54,6 +54,9 @@
     <!-- Embedded/non-blocking hosting reparents a Silk.NET window via Win32 NativeMethods; the iOS
          stub (ImGuiApp.iOS.cs) provides a throwing StartEmbedded instead, so this partial is excluded. -->
     <Compile Remove="ImGuiApp.Embedded.cs" />
+    <!-- File drops arrive through the Silk.NET window's drop event; an iOS app has no file manager to
+         drop from, so OnFilesDropped is simply never called there. -->
+    <Compile Remove="ImGuiApp.FileDrop.cs" />
     <!-- Per-region blend modes drive the desktop OpenGL renderer (ImGuiController.SetBlendMode);
          the iOS stub has no such backend, so this partial is excluded like ImGuiApp.cs above. -->
     <Compile Remove="ImGuiAppBlend.cs" />
