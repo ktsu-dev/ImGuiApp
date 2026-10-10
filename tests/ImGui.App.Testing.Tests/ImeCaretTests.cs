@@ -109,7 +109,8 @@ public sealed class ImeCaretTests
 
 		harness.Step(3);
 
-		Assert.IsNotNull(harness.ImePlacement, "ImGui's own text field should ask the input method to open at its caret.");
-		Assert.IsTrue(harness.ImePlacement.Value.LineHeight > 0);
+		ImePlacement placement = harness.ImePlacement
+			?? throw new AssertFailedException("ImGui's own text field should ask the input method to open at its caret.");
+		Assert.IsTrue(placement.LineHeight > 0);
 	}
 }
