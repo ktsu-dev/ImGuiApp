@@ -9,6 +9,8 @@ namespace ktsu.examples.ImGuiWidgetsDemo.UITests;
 using System;
 using System.Collections.Generic;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.Widgets;
@@ -720,6 +722,24 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.IsTrue(TransformBoxDemo.Layer.Min.X > before, "Dragging the layer did not move it.");
+	}
+
+	[TestMethod]
+	public void TransformBoxDemo_CtrlDraggingAnEdgeSkewsTheLayer()
+	{
+		OpenSection(AdvancedDemosTab, "Transform Box");
+		Assert.IsFalse(TransformBoxDemo.IsSkewed);
+
+		Rectangle top = harness.Probe.Rect("transform_demo/top")!.Value;
+		float x = top.MinX + (top.Width / 2f);
+		float y = top.MinY + (top.Height / 2f);
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		harness.Step();
+		harness.Mouse.Drag(x, y, x + 30f, y);
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		harness.Step(2);
+
+		Assert.IsTrue(TransformBoxDemo.IsSkewed, "Ctrl-dragging the top edge did not skew the layer.");
 	}
 
 	[TestMethod]

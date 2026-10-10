@@ -86,7 +86,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 ### Image and Colour
 
-- **`TransformBox`**: A rectangle with corner and edge handles in its own frame, drawn through a caller-supplied `Matrix3x2` to the screen, which moves, resizes and scales it. A crop window passes the image's rectangle on screen; a layer passes its own placement composed with that, so the handles sit on the layer's turned corners. It knows nothing about what it frames: a caller with its own rule, such as an aspect preset, supplies `TransformBoxOptions.Resize`. See [Transform Box](#transform-box) below
+- **`TransformBox`**: A rectangle with corner and edge handles in its own frame, drawn through a caller-supplied `Matrix3x2` to the screen, which moves, resizes and scales it, and with `TransformBoxOptions.Skew` on, skews it when an edge is Ctrl-dragged. A crop window passes the image's rectangle on screen; a layer passes its own placement composed with that, so the handles sit on the layer's turned corners. It knows nothing about what it frames: a caller with its own rule, such as an aspect preset, supplies `TransformBoxOptions.Resize`. See [Transform Box](#transform-box) below
 
 ### Image and Colour
 
@@ -654,6 +654,14 @@ or scales about the opposite corner when `UniformCorners` is on; Shift inverts t
 scales by how far the pointer has travelled along the diagonal **on screen**, so a stretched frame
 does not count one axis of the pointer's travel for more than the other. No side passes its
 opposite: a box dragged inside out stops at `MinimumScreenSize` pixels.
+
+With `Skew` on, pressing an edge with Ctrl held slides that edge along itself while the opposite edge
+stays put, and the rectangle comes back with `TransformBoxRect.Skew` set: a shear about its centre,
+which `TransformBoxRect.Shape()` returns as a matrix to fold into whatever the box frames.
+`Min`/`Max` stay the unskewed rectangle and `Corners()` the parallelogram. A skewed box keeps its
+slant when resized: the drag is carried back into the unskewed rectangle and the handle's opposite
+edge or corner held where it was. The choice between stretch and skew is made at the press, and
+`TransformBoxResult.Skewing` reports it, or on hover what a press would do.
 
 Three things to know when using it:
 

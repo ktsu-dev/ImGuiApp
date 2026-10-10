@@ -22,11 +22,27 @@ public static partial class ImGuiWidgets
 	/// corner. Inside the box the reach of each handle is capped at a quarter of the side it sits on, so a
 	/// box too small on screen for its handles to leave any body still has one to move it by.
 	/// </para>
+	/// <para>
+	/// A skewed box is resized in its own unskewed rectangle and then slid so the handle's opposite
+	/// edge or corner stays put, which is what a parallelogram's handles do in any editor: the slant is
+	/// kept and the side pulled grows along it. A skew drag moves its edge along itself by the pointer's
+	/// travel in the frame and leaves the opposite edge where it was.
+	/// </para>
 	/// </remarks>
 	internal sealed class TransformBoxState
 	{
 		/// <summary>How close, in screen pixels, a pointer has to be to hold a handle.</summary>
 		public const float GrabPixels = 8f;
+
+		/// <summary>The steepest a skew may get along either axis: ten units across for one down, about 84 degrees.</summary>
+		public const float MaximumSkew = 10f;
+
+		/// <summary>
+		/// How much area a box skewed along both axes must keep, as a fraction of its unskewed rectangle's.
+		/// Two shears compose to a squash, and at a fraction of zero the box would fold flat and could no
+		/// longer be inverted to be held.
+		/// </summary>
+		public const float MinimumSkewArea = 0.1f;
 
 		private TransformBoxRect pressRect;
 		private Vector2 pressPoint;
@@ -35,6 +51,15 @@ public static partial class ImGuiWidgets
 
 		/// <summary>Gets the handle the current press holds.</summary>
 		public TransformBoxHandle Active { get; private set; }
+
+		/// <summary>Gets whether the current press skews rather than resizes.</summary>
+		public bool Skewing { get; private set; }
+
+		/// <summary>Reports whether a handle is one of the four edges, the only handles that skew.</summary>
+		/// <param name="handle">The handle.</param>
+		/// <returns>True for <see cref="TransformBoxHandle.Left"/>, <see cref="TransformBoxHandle.Right"/>, <see cref="TransformBoxHandle.Top"/> and <see cref="TransformBoxHandle.Bottom"/>.</returns>
+		public static bool IsEdge(TransformBoxHandle handle) =>
+			handle is TransformBoxHandle.Left or TransformBoxHandle.Right or TransformBoxHandle.Top or TransformBoxHandle.Bottom;
 
 		/// <summary>Finds the handle under a point on screen.</summary>
 		/// <param name="rect">The box, in its frame.</param>
@@ -111,7 +136,7 @@ public static partial class ImGuiWidgets
 			return corners;
 		}
 
-		/// <summary>Applies a drag with the built-in rule: move the body, an edge, or a corner.</summary>
+		/// <summary>Applies a drag with the built-in rule: move the body, an edge, or a corner, or skew along an edge.</summary>
 		/// <param name="drag">The drag, from its start.</param>
 		/// <param name="minimumScreenSize">The smallest either side may become on screen, in pixels.</param>
 		/// <returns>The rectangle the drag asks for.</returns>
@@ -125,12 +150,49 @@ public static partial class ImGuiWidgets
 		public static TransformBoxRect Resize(TransformBoxDrag drag, float minimumScreenSize)
 		{
 			TransformBoxRect from = drag.PressRect;
+			if (drag.Handle == TransformBoxHandle.Body)
+			{
+				return new TransformBoxRect(from.Min + drag.Delta, from.Max + drag.Delta) { Skew = from.Skew };
+			}
+
+			if (drag.Skew && IsEdge(drag.Handle))
+			{
+				return SkewAlongEdge(drag);
+			}
+
+			if (!from.IsSkewed)
+			{
+				return ResizeRectangle(drag, minimumScreenSize);
+			}
+
+			// The press's pointer travel, carried back out of the slant, is a drag on the rectangle the
+			// parallelogram was sheared from; that rectangle is drawn through the shear on its way to the
+			// screen, which is what its minimum sizes and a proportional corner have to measure.
+			Matrix3x2 shape = from.Shape();
+			if (!Matrix3x2.Invert(shape, out Matrix3x2 unshear) || !IsFinite(unshear))
+			{
+				return from;
+			}
+
+			TransformBoxDrag straight = drag with
+			{
+				PressRect = new TransformBoxRect(from.Min, from.Max),
+				Point = drag.PressPoint + Vector2.TransformNormal(drag.Delta, unshear),
+				FrameToScreen = shape * drag.FrameToScreen,
+			};
+
+			TransformBoxRect resized = ResizeRectangle(straight, minimumScreenSize) with { Skew = from.Skew };
+			return KeepAnchor(from, resized, OppositeOf(drag.Handle));
+		}
+
+		private static TransformBoxRect ResizeRectangle(TransformBoxDrag drag, float minimumScreenSize)
+		{
+			TransformBoxRect from = drag.PressRect;
 			Vector2 delta = drag.Delta;
 			Vector2 minimum = MinimumFrameSize(drag.FrameToScreen, minimumScreenSize);
 
 			return drag.Handle switch
 			{
-				TransformBoxHandle.Body => new TransformBoxRect(from.Min + delta, from.Max + delta),
 				TransformBoxHandle.Left or TransformBoxHandle.Right or TransformBoxHandle.Top or TransformBoxHandle.Bottom =>
 					MoveEdges(from, drag.Handle, delta, minimum),
 				TransformBoxHandle.TopLeft or TransformBoxHandle.TopRight or TransformBoxHandle.BottomLeft or TransformBoxHandle.BottomRight =>
@@ -144,6 +206,7 @@ public static partial class ImGuiWidgets
 		/// <param name="rect">The box at the press.</param>
 		/// <param name="frameToScreen">The transform the box is drawn through at the press.</param>
 		/// <param name="screenPoint">The pointer at the press, in screen pixels.</param>
+		/// <param name="skew">Whether the press skews; only an edge can.</param>
 		/// <returns>False, and nothing held, when the transform cannot be inverted.</returns>
 		/// <remarks>
 		/// The inverse is taken once, at the press, and every frame of the drag is carried back through
@@ -151,15 +214,17 @@ public static partial class ImGuiWidgets
 		/// when the box is the layer's own frame, would otherwise measure each frame against a frame the
 		/// previous one had already moved.
 		/// </remarks>
-		public bool Begin(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint)
+		public bool Begin(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint, bool skew = false)
 		{
 			if (handle == TransformBoxHandle.None || !Matrix3x2.Invert(frameToScreen, out Matrix3x2 inverse) || !IsFinite(inverse))
 			{
 				Active = TransformBoxHandle.None;
+				Skewing = false;
 				return false;
 			}
 
 			Active = handle;
+			Skewing = skew && IsEdge(handle);
 			pressRect = rect;
 			pressInverse = inverse;
 			pressFrameToScreen = frameToScreen;
@@ -172,10 +237,88 @@ public static partial class ImGuiWidgets
 		/// <param name="uniform">Whether a corner keeps the rectangle's proportions.</param>
 		/// <returns>The drag, measured in the frame the press began in.</returns>
 		public TransformBoxDrag Drag(Vector2 screenPoint, bool uniform) =>
-			new(Active, pressRect, pressPoint, Vector2.Transform(screenPoint, pressInverse), uniform, pressFrameToScreen);
+			new(Active, pressRect, pressPoint, Vector2.Transform(screenPoint, pressInverse), uniform, pressFrameToScreen) { Skew = Skewing };
 
 		/// <summary>Ends the press.</summary>
-		public void End() => Active = TransformBoxHandle.None;
+		public void End()
+		{
+			Active = TransformBoxHandle.None;
+			Skewing = false;
+		}
+
+		/// <summary>Slants the box by sliding the held edge along itself, the opposite edge staying put.</summary>
+		private static TransformBoxRect SkewAlongEdge(TransformBoxDrag drag)
+		{
+			TransformBoxRect from = drag.PressRect;
+			Vector2 size = from.Size;
+			Vector2 delta = drag.Delta;
+			Vector2 skew = from.Skew;
+
+			// Points move along x by Skew.X for each unit below the centre, so the top and bottom edges,
+			// a height apart, part by Skew.X times it: the top edge leads when Skew.X is negative.
+			switch (drag.Handle)
+			{
+				case TransformBoxHandle.Top when MathF.Abs(size.Y) > float.Epsilon:
+					skew.X = LimitSkew(skew.X - (delta.X / size.Y), skew.Y);
+					break;
+				case TransformBoxHandle.Bottom when MathF.Abs(size.Y) > float.Epsilon:
+					skew.X = LimitSkew(skew.X + (delta.X / size.Y), skew.Y);
+					break;
+				case TransformBoxHandle.Left when MathF.Abs(size.X) > float.Epsilon:
+					skew.Y = LimitSkew(skew.Y - (delta.Y / size.X), skew.X);
+					break;
+				case TransformBoxHandle.Right when MathF.Abs(size.X) > float.Epsilon:
+					skew.Y = LimitSkew(skew.Y + (delta.Y / size.X), skew.X);
+					break;
+				default:
+					return from;
+			}
+
+			if (!IsFinite(skew))
+			{
+				return from;
+			}
+
+			return KeepAnchor(from, new TransformBoxRect(from.Min, from.Max) { Skew = skew }, OppositeOf(drag.Handle));
+		}
+
+		/// <summary>Holds one skew factor within <see cref="MaximumSkew"/>, and short of folding the box flat with the other.</summary>
+		private static float LimitSkew(float value, float other)
+		{
+			float limited = Math.Clamp(value, -MaximumSkew, MaximumSkew);
+
+			// The shear's determinant is 1 - x·y; it has to keep MinimumSkewArea of the rectangle.
+			float largestProduct = 1f - MinimumSkewArea;
+			if (limited * other > largestProduct)
+			{
+				limited = largestProduct / other;
+			}
+
+			return limited;
+		}
+
+		/// <summary>Slides a changed box so a point given as a fraction of its rectangle lands where it did before the change.</summary>
+		private static TransformBoxRect KeepAnchor(TransformBoxRect from, TransformBoxRect to, Vector2 fraction)
+		{
+			Vector2 before = Vector2.Transform(from.Min + (from.Size * fraction), from.Shape());
+			Vector2 after = Vector2.Transform(to.Min + (to.Size * fraction), to.Shape());
+			Vector2 shift = before - after;
+			return new TransformBoxRect(to.Min + shift, to.Max + shift) { Skew = to.Skew };
+		}
+
+		/// <summary>The edge midpoint or corner across from a handle, as a fraction of the rectangle.</summary>
+		private static Vector2 OppositeOf(TransformBoxHandle handle) => handle switch
+		{
+			TransformBoxHandle.Left => new Vector2(1f, 0.5f),
+			TransformBoxHandle.Right => new Vector2(0f, 0.5f),
+			TransformBoxHandle.Top => new Vector2(0.5f, 1f),
+			TransformBoxHandle.Bottom => new Vector2(0.5f, 0f),
+			TransformBoxHandle.TopLeft => Vector2.One,
+			TransformBoxHandle.TopRight => new Vector2(0f, 1f),
+			TransformBoxHandle.BottomLeft => new Vector2(1f, 0f),
+			TransformBoxHandle.BottomRight => Vector2.Zero,
+			_ => new Vector2(0.5f),
+		};
 
 		private static TransformBoxRect MoveEdges(TransformBoxRect from, TransformBoxHandle handle, Vector2 delta, Vector2 minimum)
 		{
@@ -251,7 +394,7 @@ public static partial class ImGuiWidgets
 
 		private static bool Contains(TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint)
 		{
-			if (!Matrix3x2.Invert(frameToScreen, out Matrix3x2 inverse))
+			if (!Matrix3x2.Invert(rect.Shape() * frameToScreen, out Matrix3x2 inverse))
 			{
 				return false;
 			}
