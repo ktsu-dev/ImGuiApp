@@ -34,6 +34,7 @@ public sealed class TransformBoxTests : WidgetTest
 	private bool changed;
 	private bool sawHeld;
 	private bool sawReleased;
+	private bool sawSkewing;
 
 	[TestInitialize]
 	public void SetUpCanvas() => canvas.FitToViewport(ImageSize, CanvasSize);
@@ -52,6 +53,7 @@ public sealed class TransformBoxTests : WidgetTest
 		changed |= result.Changed;
 		sawHeld |= result.Held;
 		sawReleased |= result.Released;
+		sawSkewing |= result.Skewing;
 
 		ImGui.TextUnformatted("after");
 	}
@@ -173,6 +175,43 @@ public sealed class TransformBoxTests : WidgetTest
 		DragFrom(new Vector2(150, 125), new Vector2(-80, 0));
 
 		Assert.AreEqual(0f, rect.Min.X, Tolerance, "The caller's rule was not what decided the rectangle.");
+	}
+
+	[TestMethod]
+	public void TransformBox_CtrlDraggingAnEdgeSkewsAlongIt()
+	{
+		options.Skew = true;
+		Start(Draw);
+
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		Step();
+		DragFrom(new Vector2(150, 100), new Vector2(30, 20));
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		Step();
+
+		// Thirty pixels is 0.3 of the frame across; the pointer's travel down is not a skew's business.
+		Vector2[] corners = rect.Corners();
+		AssertVector(new Vector2(0.3f, 0f), corners[0]);
+		AssertVector(new Vector2(1.3f, 0f), corners[1]);
+		AssertVector(Vector2.One, corners[2]);
+		AssertVector(new Vector2(0f, 1f), corners[3]);
+		Assert.IsTrue(sawSkewing, "The box did not report the drag as a skew.");
+	}
+
+	[TestMethod]
+	public void TransformBox_CtrlStretchesWhenSkewIsOff()
+	{
+		Start(Draw);
+
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		Step();
+		DragFrom(new Vector2(150, 100), new Vector2(30, 20));
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		Step();
+
+		Assert.IsFalse(rect.IsSkewed, "A box that does not skew was skewed.");
+		AssertVector(new Vector2(0f, 0.4f), rect.Min);
+		Assert.IsFalse(sawSkewing);
 	}
 
 	[TestMethod]

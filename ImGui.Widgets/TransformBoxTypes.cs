@@ -39,20 +39,67 @@ public enum TransformBoxHandle
 	BottomRight,
 }
 
-/// <summary>An axis-aligned rectangle in a <see cref="ImGuiWidgets.TransformBox"/>'s own frame.</summary>
+/// <summary>A rectangle in a <see cref="ImGuiWidgets.TransformBox"/>'s own frame, optionally skewed into a parallelogram.</summary>
 /// <param name="Min">The corner with the smaller coordinates, which is the top left when the frame is drawn unturned.</param>
 /// <param name="Max">The corner with the larger coordinates.</param>
+/// <remarks>
+/// <see cref="Min"/> and <see cref="Max"/> describe the rectangle before its <see cref="Skew"/>, which
+/// shears it about its own centre: a box that has never been skewed is exactly the rectangle between
+/// them. <see cref="Shape"/> carries the rectangle onto the parallelogram, and <see cref="Corners"/>
+/// answers the parallelogram's corners.
+/// </remarks>
 public readonly record struct TransformBoxRect(Vector2 Min, Vector2 Max)
 {
 	/// <summary>Gets the unit square, from (0, 0) to (1, 1).</summary>
 	public static TransformBoxRect Unit { get; } = new(Vector2.Zero, Vector2.One);
 
-	/// <summary>Gets the rectangle's width and height.</summary>
+	/// <summary>Gets the rectangle's width and height, before its skew.</summary>
 	public Vector2 Size => Max - Min;
 
-	/// <summary>Gets the four corners, clockwise from the top left.</summary>
+	/// <summary>Gets the rectangle's centre, which its skew leaves where it is.</summary>
+	public Vector2 Center => (Min + Max) / 2f;
+
+	/// <summary>
+	/// Gets the shear applied about the centre, in the frame. <c>X</c> is how far the box's points move
+	/// along x for each unit they sit below the centre, which slants the left and right sides and is what
+	/// dragging the top or bottom edge sideways sets; <c>Y</c> is how far they move along y for each unit
+	/// to the right, which slants the top and bottom. Zero, the default, is an unskewed rectangle.
+	/// </summary>
+	public Vector2 Skew { get; init; }
+
+	/// <summary>Gets whether the box is skewed at all.</summary>
+	public bool IsSkewed => Skew != Vector2.Zero;
+
+	/// <summary>Gets the transform that carries the unskewed rectangle onto the box, within the frame.</summary>
+	/// <returns>The identity when the box is not skewed; otherwise the shear about <see cref="Center"/>.</returns>
+	public Matrix3x2 Shape()
+	{
+		if (!IsSkewed)
+		{
+			return Matrix3x2.Identity;
+		}
+
+		Vector2 center = Center;
+		Matrix3x2 shear = new(1f, Skew.Y, Skew.X, 1f, 0f, 0f);
+		return Matrix3x2.CreateTranslation(-center) * shear * Matrix3x2.CreateTranslation(center);
+	}
+
+	/// <summary>Gets the four corners, clockwise from the top left, with the skew applied.</summary>
 	/// <returns>Top left, top right, bottom right and bottom left, in the frame.</returns>
-	public Vector2[] Corners() => [Min, new(Max.X, Min.Y), Max, new(Min.X, Max.Y)];
+	public Vector2[] Corners()
+	{
+		Vector2[] corners = [Min, new(Max.X, Min.Y), Max, new(Min.X, Max.Y)];
+		if (IsSkewed)
+		{
+			Matrix3x2 shape = Shape();
+			for (int index = 0; index < corners.Length; index++)
+			{
+				corners[index] = Vector2.Transform(corners[index], shape);
+			}
+		}
+
+		return corners;
+	}
 }
 
 /// <summary>A drag on a <see cref="ImGuiWidgets.TransformBox"/>, as the frame sees it.</summary>
@@ -79,6 +126,13 @@ public readonly record struct TransformBoxDrag(
 {
 	/// <summary>Gets how far the pointer has moved since the press, in the frame.</summary>
 	public Vector2 Delta => Point - PressPoint;
+
+	/// <summary>
+	/// Gets whether the drag skews rather than resizes: an edge pressed with Ctrl held while
+	/// <see cref="TransformBoxOptions.Skew"/> is on. The edge slides along itself and the opposite edge
+	/// stays where it is.
+	/// </summary>
+	public bool Skew { get; init; }
 }
 
 /// <summary>What a <see cref="ImGuiWidgets.TransformBox"/> did this frame.</summary>
@@ -86,7 +140,14 @@ public readonly record struct TransformBoxDrag(
 /// <param name="Held">Whether a handle is held at the end of the frame.</param>
 /// <param name="Released">Whether a held handle was let go this frame.</param>
 /// <param name="Handle">The handle held, or hovered when nothing is; <see cref="TransformBoxHandle.None"/> otherwise.</param>
-public readonly record struct TransformBoxResult(bool Changed, bool Held, bool Released, TransformBoxHandle Handle);
+public readonly record struct TransformBoxResult(bool Changed, bool Held, bool Released, TransformBoxHandle Handle)
+{
+	/// <summary>
+	/// Gets whether <see cref="Handle"/> skews: the held drag is a skew, or, with nothing held, a press
+	/// on the hovered edge would start one because Ctrl is down.
+	/// </summary>
+	public bool Skewing { get; init; }
+}
 
 /// <summary>How a <see cref="ImGuiWidgets.TransformBox"/> behaves.</summary>
 public sealed class TransformBoxOptions
@@ -99,6 +160,12 @@ public sealed class TransformBoxOptions
 
 	/// <summary>Gets or sets whether the edge handles exist. On by default.</summary>
 	public bool EdgeHandles { get; set; } = true;
+
+	/// <summary>
+	/// Gets or sets whether Ctrl-dragging an edge handle skews the box along that edge instead of moving
+	/// it. Off by default, since a crop window or a paragraph box has no use for a slant.
+	/// </summary>
+	public bool Skew { get; set; }
 
 	/// <summary>
 	/// Gets or sets a rule that turns a drag into the new rectangle, replacing the built-in one: for an

@@ -35,6 +35,13 @@ public static partial class ImGuiWidgets
 	/// and the box draws whatever that returns.
 	/// </para>
 	/// <para>
+	/// <b>With <see cref="TransformBoxOptions.Skew"/> on, Ctrl turns an edge into a skew.</b> Pressing an
+	/// edge with Ctrl held slides it along itself while the opposite edge stays put, and the rectangle
+	/// comes back with <see cref="TransformBoxRect.Skew"/> set; <see cref="TransformBoxRect.Shape"/> is the
+	/// slant for a caller to fold into whatever the box frames. The choice is made at the press, so
+	/// letting go of Ctrl mid-drag does not turn a skew into a stretch.
+	/// </para>
+	/// <para>
 	/// <b>It takes the pointer only over itself.</b> The box submits its hit area only while the pointer
 	/// is over a handle or the body, or while one is held, so a press anywhere else reaches whatever was
 	/// drawn underneath, such as an <see cref="ImageCanvas"/>'s pan. Submit the item underneath with
@@ -115,7 +122,7 @@ public static partial class ImGuiWidgets
 
 				if (activated)
 				{
-					state.Begin(under, rect, frameToScreen, mouse);
+					state.Begin(under, rect, frameToScreen, mouse, options.Skew && ImGui.GetIO().KeyCtrl);
 				}
 
 				if (active && state.Active != TransformBoxHandle.None)
@@ -147,21 +154,36 @@ public static partial class ImGuiWidgets
 				state.End();
 			}
 
-			TransformBoxHandle hot = state.Active != TransformBoxHandle.None ? state.Active : under;
+			bool held = state.Active != TransformBoxHandle.None;
+			TransformBoxHandle hot = held ? state.Active : under;
+			bool skewing = held
+				? state.Skewing
+				: options.Skew && ImGui.GetIO().KeyCtrl && TransformBoxState.IsEdge(hot);
 			if (hot != TransformBoxHandle.None)
 			{
-				SetCursor(hot, frameToScreen);
+				SetCursor(hot, rect, frameToScreen, skewing);
 			}
 
 			Render(label, rect, frameToScreen, clipMin, clipMax, options.EdgeHandles, hot);
-			return new TransformBoxResult(changed, state.Active != TransformBoxHandle.None, released, hot);
+			return new TransformBoxResult(changed, held, released, hot) { Skewing = skewing };
 		}
 
-		private static void SetCursor(TransformBoxHandle handle, Matrix3x2 frameToScreen)
+		private static void SetCursor(TransformBoxHandle handle, TransformBoxRect rect, Matrix3x2 frameToScreen, bool skewing)
 		{
 			if (handle == TransformBoxHandle.Body)
 			{
 				ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
+				return;
+			}
+
+			if (skewing)
+			{
+				// A skew slides the edge along itself, so the cursor points along the edge on screen.
+				Vector2[] corners = TransformBoxState.ScreenCorners(rect, frameToScreen);
+				Vector2 along = handle is TransformBoxHandle.Top or TransformBoxHandle.Bottom
+					? corners[1] - corners[0]
+					: corners[3] - corners[0];
+				ImGui.SetMouseCursor(ResizeCursorAlong(along));
 				return;
 			}
 
@@ -179,21 +201,23 @@ public static partial class ImGuiWidgets
 				_ => new Vector2(1f, 1f),
 			};
 
-			Vector2 onScreen = Vector2.TransformNormal(outward, frameToScreen);
+			ImGui.SetMouseCursor(ResizeCursorAlong(Vector2.TransformNormal(outward, rect.Shape() * frameToScreen)));
+		}
+
+		private static ImGuiMouseCursor ResizeCursorAlong(Vector2 onScreen)
+		{
 			float degrees = MathF.Atan2(onScreen.Y, onScreen.X) * (180f / MathF.PI);
 
 			// Folded onto a half turn, since a resize cursor points both ways, then picked by the nearest
 			// of the four the platform offers.
 			degrees = ((degrees % 180f) + 180f) % 180f;
-			ImGuiMouseCursor cursor = degrees switch
+			return degrees switch
 			{
 				< 22.5f or >= 157.5f => ImGuiMouseCursor.ResizeEw,
 				< 67.5f => ImGuiMouseCursor.ResizeNwse,
 				< 112.5f => ImGuiMouseCursor.ResizeNs,
 				_ => ImGuiMouseCursor.ResizeNesw,
 			};
-
-			ImGui.SetMouseCursor(cursor);
 		}
 
 		private static void Render(string label, TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 clipMin, Vector2 clipMax, bool edgeHandles, TransformBoxHandle hot)

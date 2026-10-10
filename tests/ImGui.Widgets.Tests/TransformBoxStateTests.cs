@@ -196,6 +196,144 @@ public class TransformBoxStateTests
 		Assert.AreEqual(TransformBoxRect.Unit, Resize(TransformBoxHandle.None, new Vector2(1f, 1f)));
 	}
 
+	[TestMethod]
+	public void Skew_TheTopEdgeSlidesAlongItselfAndTheBottomStays()
+	{
+		// The pointer's travel down is ignored: a skew only moves the edge along its own length.
+		TransformBoxRect skewed = Skew(TransformBoxRect.Unit, TransformBoxHandle.Top, new Vector2(0.2f, 0.3f));
+
+		AssertCorners(skewed, new Vector2(0.2f, 0f), new Vector2(1.2f, 0f), Vector2.One, new Vector2(0f, 1f));
+		Assert.AreEqual(-0.2f, skewed.Skew.X, Tolerance);
+		Assert.AreEqual(0f, skewed.Skew.Y, Tolerance);
+	}
+
+	[TestMethod]
+	public void Skew_TheRightEdgeSlidesDownAndTheLeftStays()
+	{
+		TransformBoxRect skewed = Skew(TransformBoxRect.Unit, TransformBoxHandle.Right, new Vector2(3f, 0.25f));
+
+		AssertCorners(skewed, Vector2.Zero, new Vector2(1f, 0.25f), new Vector2(1f, 1.25f), new Vector2(0f, 1f));
+	}
+
+	[TestMethod]
+	public void Skew_TheBottomAndLeftEdgesSlantTheOtherWay()
+	{
+		TransformBoxRect bottom = Skew(TransformBoxRect.Unit, TransformBoxHandle.Bottom, new Vector2(0.5f, 0f));
+		TransformBoxRect left = Skew(TransformBoxRect.Unit, TransformBoxHandle.Left, new Vector2(0f, 0.5f));
+
+		AssertCorners(bottom, Vector2.Zero, new Vector2(1f, 0f), new Vector2(1.5f, 1f), new Vector2(0.5f, 1f));
+		AssertCorners(left, new Vector2(0f, 0.5f), new Vector2(1f, 0f), Vector2.One, new Vector2(0f, 1.5f));
+	}
+
+	[TestMethod]
+	public void Skew_AddsToASkewAlreadyThere()
+	{
+		TransformBoxRect once = Skew(TransformBoxRect.Unit, TransformBoxHandle.Top, new Vector2(0.2f, 0f));
+		TransformBoxRect twice = Skew(once, TransformBoxHandle.Top, new Vector2(0.2f, 0f));
+
+		AssertCorners(twice, new Vector2(0.4f, 0f), new Vector2(1.4f, 0f), Vector2.One, new Vector2(0f, 1f));
+	}
+
+	[TestMethod]
+	public void Skew_IsHeldShortOfFoldingTheBoxFlat()
+	{
+		TransformBoxRect steep = Skew(TransformBoxRect.Unit, TransformBoxHandle.Bottom, new Vector2(1000f, 0f));
+		Assert.AreEqual(TransformBoxState.MaximumSkew, steep.Skew.X, Tolerance);
+
+		// With one axis already slanted, the other stops while the box keeps a tenth of its area.
+		TransformBoxRect slanted = TransformBoxRect.Unit with { Skew = new Vector2(0f, 2f) };
+		TransformBoxRect both = Skew(slanted, TransformBoxHandle.Bottom, new Vector2(5f, 0f));
+		Assert.AreEqual(1f - TransformBoxState.MinimumSkewArea, both.Skew.X * both.Skew.Y, Tolerance);
+	}
+
+	[TestMethod]
+	public void Skew_OnlyAnEdgeSkews()
+	{
+		TransformBoxState state = new();
+
+		Assert.IsTrue(state.Begin(TransformBoxHandle.TopLeft, TransformBoxRect.Unit, Stretched, new Vector2(100, 100), skew: true));
+		Assert.IsFalse(state.Skewing, "A corner scales; it has nothing to slide along.");
+		Assert.IsFalse(state.Drag(new Vector2(120, 100), uniform: false).Skew);
+
+		Assert.IsTrue(state.Begin(TransformBoxHandle.Top, TransformBoxRect.Unit, Stretched, new Vector2(200, 100), skew: true));
+		Assert.IsTrue(state.Drag(new Vector2(240, 100), uniform: false).Skew);
+
+		state.End();
+		Assert.IsFalse(state.Skewing);
+	}
+
+	[TestMethod]
+	public void Resize_TheBodyCarriesTheSkew()
+	{
+		TransformBoxRect skewed = TransformBoxRect.Unit with { Skew = new Vector2(-0.2f, 0f) };
+
+		TransformBoxRect moved = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.Body, skewed, Vector2.Zero, new Vector2(0.5f, 0f), false, Stretched), 4f);
+
+		Assert.AreEqual(skewed.Skew, moved.Skew);
+		AssertVector(new Vector2(0.5f, 0f), moved.Min);
+	}
+
+	[TestMethod]
+	public void Resize_ASkewedEdgeGrowsAlongTheSlantAndTheOppositeEdgeStays()
+	{
+		// Leaning right by a fifth of its height: top at 0.1 to 1.1, bottom at -0.1 to 0.9. Pulling the
+		// bottom down half a unit carries it a further tenth left, along the slant.
+		TransformBoxRect skewed = TransformBoxRect.Unit with { Skew = new Vector2(-0.2f, 0f) };
+
+		TransformBoxRect taller = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.Bottom, skewed, Vector2.Zero, new Vector2(0f, 0.5f), false, Stretched), 4f);
+
+		AssertCorners(taller, new Vector2(0.1f, 0f), new Vector2(1.1f, 0f), new Vector2(0.8f, 1.5f), new Vector2(-0.2f, 1.5f));
+	}
+
+	[TestMethod]
+	public void Resize_ASkewedUniformCornerHoldsTheOppositeCorner()
+	{
+		TransformBoxRect skewed = TransformBoxRect.Unit with { Skew = new Vector2(-0.2f, 0f) };
+		Vector2 topLeft = skewed.Corners()[0];
+
+		TransformBoxRect scaled = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.BottomRight, skewed, Vector2.Zero, new Vector2(0.5f, 0.5f), true, Stretched), 4f);
+
+		AssertVector(topLeft, scaled.Corners()[0]);
+		Assert.AreEqual(scaled.Size.X, scaled.Size.Y, Tolerance, "The proportions changed.");
+		Assert.AreEqual(skewed.Skew, scaled.Skew);
+	}
+
+	[TestMethod]
+	public void HitTest_FollowsASkewedBox()
+	{
+		// Leaning right by half its height, so the right side runs from (1.25, 0) to (0.75, 1).
+		TransformBoxRect skewed = TransformBoxRect.Unit with { Skew = new Vector2(-0.5f, 0f) };
+
+		// The frame's (1.0, 0.2) is on the unskewed right edge, and well inside the slanted one.
+		Assert.AreEqual(TransformBoxHandle.Body, TransformBoxState.HitTest(skewed, Stretched, new Vector2(300, 120), true));
+
+		// The frame's (0.05, 0.1) is inside the rectangle, and outside the slanted left side.
+		Assert.AreEqual(TransformBoxHandle.None, TransformBoxState.HitTest(skewed, Stretched, new Vector2(110, 110), true));
+
+		// The top-left corner has moved with the slant.
+		Assert.AreEqual(TransformBoxHandle.TopLeft, TransformBoxState.HitTest(skewed, Stretched, new Vector2(150, 100), true));
+	}
+
+	[TestMethod]
+	public void Shape_IsTheIdentityUntilTheBoxIsSkewed()
+	{
+		Assert.AreEqual(Matrix3x2.Identity, TransformBoxRect.Unit.Shape());
+		Assert.IsFalse(TransformBoxRect.Unit.IsSkewed);
+		Assert.AreNotEqual(TransformBoxRect.Unit, TransformBoxRect.Unit with { Skew = new Vector2(0.1f, 0f) });
+	}
+
+	private static TransformBoxRect Skew(TransformBoxRect from, TransformBoxHandle handle, Vector2 delta) =>
+		TransformBoxState.Resize(new TransformBoxDrag(handle, from, Vector2.Zero, delta, false, Stretched) { Skew = true }, 4f);
+
+	private static void AssertCorners(TransformBoxRect rect, Vector2 topLeft, Vector2 topRight, Vector2 bottomRight, Vector2 bottomLeft)
+	{
+		Vector2[] corners = rect.Corners();
+		AssertVector(topLeft, corners[0]);
+		AssertVector(topRight, corners[1]);
+		AssertVector(bottomRight, corners[2]);
+		AssertVector(bottomLeft, corners[3]);
+	}
+
 	private static TransformBoxHandle Hit(Vector2 screenPoint) =>
 		TransformBoxState.HitTest(TransformBoxRect.Unit, Stretched, screenPoint, true);
 

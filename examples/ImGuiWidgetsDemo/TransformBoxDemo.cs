@@ -17,18 +17,25 @@ internal static class TransformBoxDemo
 	private static readonly Vector2 CanvasSize = new(480f, 300f);
 
 	private static readonly ImGuiWidgets.ImageCanvasState Canvas = new();
-	private static readonly TransformBoxOptions Options = new() { UniformCorners = true };
+	private static readonly TransformBoxOptions Options = new() { UniformCorners = true, Skew = true };
 	private static bool fitted;
 	private static float angle = 15f;
 	private static bool edgeHandles = true;
 	private static bool uniformCorners = true;
+	private static bool skew = true;
+
+	// The layer's unit square on the image before its turn, which a skew makes a parallelogram.
+	private static Matrix3x2 basis = Matrix3x2.Identity;
 
 	// While a handle is held the box is drawn in the frame the press began in, and the layer's
 	// rectangle in that frame is what the drag changes; on release it is folded into the layer.
 	private static TransformBoxRect held = TransformBoxRect.Unit;
 
-	/// <summary>Gets the layer's rectangle in image pixels, before its turn.</summary>
-	internal static TransformBoxRect Layer { get; private set; }
+	/// <summary>Gets the layer's rectangle in image pixels, before its turn: where its unit square's top-left and bottom-right corners land.</summary>
+	internal static TransformBoxRect Layer => new(Vector2.Transform(Vector2.Zero, basis), Vector2.Transform(Vector2.One, basis));
+
+	/// <summary>Gets whether the layer has been skewed.</summary>
+	internal static bool IsSkewed => MathF.Abs(Vector2.Dot(Vector2.Normalize(new Vector2(basis.M11, basis.M12)), Vector2.Normalize(new Vector2(basis.M21, basis.M22)))) > 1e-4f;
 
 	/// <summary>
 	/// Returns this section's state to its starting values. The demo keeps its state in statics, which
@@ -36,12 +43,13 @@ internal static class TransformBoxDemo
 	/// </summary>
 	internal static void ResetState()
 	{
-		Layer = default;
+		basis = Matrix3x2.Identity;
 		held = TransformBoxRect.Unit;
 		fitted = false;
 		angle = 15f;
 		edgeHandles = true;
 		uniformCorners = true;
+		skew = true;
 	}
 
 	/// <summary>Draws the demo section.</summary>
@@ -52,21 +60,24 @@ internal static class TransformBoxDemo
 			return;
 		}
 
-		ImGui.TextUnformatted("Drag the layer to move it, a corner to scale it (Shift for free), or an edge to stretch it.");
+		ImGui.TextUnformatted("Drag the layer to move it, a corner to scale it (Shift for free), or an edge to stretch it (Ctrl to skew).");
 		ImGui.TextUnformatted("Dragging outside the layer pans the canvas.");
 
 		DemoProbe.SliderFloat("Turn", ref angle, -45f, 45f, "%.0f°");
 		DemoProbe.Checkbox("Edge handles", ref edgeHandles);
 		ImGui.SameLine();
 		DemoProbe.Checkbox("Uniform corners", ref uniformCorners);
+		ImGui.SameLine();
+		DemoProbe.Checkbox("Ctrl skews", ref skew);
 		Options.EdgeHandles = edgeHandles;
 		Options.UniformCorners = uniformCorners;
+		Options.Skew = skew;
 
 		Vector2 imageSize = new(DemoContext.KtsuTexture.Width, DemoContext.KtsuTexture.Height);
 		if (!fitted)
 		{
 			Canvas.FitToViewport(imageSize, CanvasSize);
-			Layer = new TransformBoxRect(imageSize * 0.3f, imageSize * 0.7f);
+			basis = Matrix3x2.CreateScale(imageSize * 0.4f) * Matrix3x2.CreateTranslation(imageSize * 0.3f);
 			fitted = true;
 		}
 
@@ -74,14 +85,9 @@ internal static class TransformBoxDemo
 		ImGuiWidgets.ImageCanvas("transform_demo_canvas", DemoContext.KtsuTexture.TextureId, imageSize, Canvas, CanvasSize);
 		Vector2 canvasMin = ImGui.GetItemRectMin();
 
-		// The layer's placement: its unit square scaled to its size, turned about its centre, then put
-		// on the image, which the canvas puts on screen.
-		Vector2 size = Layer.Size;
-		Vector2 centre = (Layer.Min + Layer.Max) / 2f;
-		Matrix3x2 placement = Matrix3x2.CreateScale(size)
-			* Matrix3x2.CreateTranslation(-size / 2f)
-			* Matrix3x2.CreateRotation(angle * MathF.PI / 180f)
-			* Matrix3x2.CreateTranslation(centre);
+		// The layer's placement: its unit square put on the image, turned about its centre, which the
+		// canvas then puts on screen.
+		Matrix3x2 placement = basis * Turn(basis, angle);
 		(Vector2 imageMin, Vector2 imageMax) = Canvas.ImageRectInViewport(imageSize, CanvasSize);
 		Matrix3x2 imageToScreen = Matrix3x2.CreateScale((imageMax - imageMin) / imageSize) * Matrix3x2.CreateTranslation(canvasMin + imageMin);
 		Matrix3x2 frameToScreen = placement * imageToScreen;
@@ -95,25 +101,29 @@ internal static class TransformBoxDemo
 		TransformBoxResult result = ImGuiWidgets.TransformBox("transform_demo", ref held, frameToScreen, canvasMin, canvasMin + CanvasSize, Options);
 		if (!result.Held && held != TransformBoxRect.Unit)
 		{
-			Layer = Fold(Layer, held, angle);
+			basis = Fold(basis, held, angle);
 			held = TransformBoxRect.Unit;
 		}
 
-		ImGui.TextUnformatted($"Layer: ({Layer.Min.X:0}, {Layer.Min.Y:0}) to ({Layer.Max.X:0}, {Layer.Max.Y:0})");
+		TransformBoxRect layer = Layer;
+		ImGui.TextUnformatted($"Layer: ({layer.Min.X:0}, {layer.Min.Y:0}) to ({layer.Max.X:0}, {layer.Max.Y:0}){(IsSkewed ? ", skewed" : string.Empty)}");
 	}
 
-	/// <summary>The layer once a rectangle in its own frame becomes its new extent.</summary>
+	/// <summary>The turn about the centre of a layer's unit square on the image.</summary>
+	private static Matrix3x2 Turn(Matrix3x2 layerBasis, float degrees) =>
+		Matrix3x2.CreateRotation(degrees * MathF.PI / 180f, Vector2.Transform(new Vector2(0.5f), layerBasis));
+
+	/// <summary>The layer once the box's shape in its own frame is folded into it.</summary>
 	/// <remarks>
-	/// The new rectangle's centre is carried through the old placement to find where it sits on the image,
-	/// and its size is the old size scaled by the rectangle's, so the turn is kept about the new centre.
+	/// The box carries the unit square onto its rectangle and then through its skew. Composed with the
+	/// old placement that is where the layer now lands; the turn is about the new centre, so the old one
+	/// is taken back out about there, which leaves the picture exactly where the drag left it.
 	/// </remarks>
-	private static TransformBoxRect Fold(TransformBoxRect layer, TransformBoxRect rect, float degrees)
+	private static Matrix3x2 Fold(Matrix3x2 layerBasis, TransformBoxRect rect, float degrees)
 	{
-		Vector2 size = layer.Size;
-		Vector2 centre = (layer.Min + layer.Max) / 2f;
-		Vector2 local = (((rect.Min + rect.Max) / 2f) - new Vector2(0.5f)) * size;
-		Vector2 newCentre = centre + Vector2.Transform(local, Matrix3x2.CreateRotation(degrees * MathF.PI / 180f));
-		Vector2 newSize = size * rect.Size;
-		return new TransformBoxRect(newCentre - (newSize / 2f), newCentre + (newSize / 2f));
+		Matrix3x2 box = Matrix3x2.CreateScale(rect.Size) * Matrix3x2.CreateTranslation(rect.Min) * rect.Shape();
+		Matrix3x2 landed = box * layerBasis * Turn(layerBasis, degrees);
+		Matrix3x2 newTurn = Matrix3x2.CreateRotation(degrees * MathF.PI / 180f, Vector2.Transform(new Vector2(0.5f), landed));
+		return Matrix3x2.Invert(newTurn, out Matrix3x2 unturn) ? landed * unturn : layerBasis;
 	}
 }
