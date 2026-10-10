@@ -354,6 +354,24 @@ canvas pan). Plain `ImGui.Button`s, including `ToolbarButton`, keep the arrow, a
 buttons do, and a read-only or click-less instance keeps it too. Text fields get the beam from
 ImGui itself.
 
+### Input method placement
+
+Dear ImGui records where text is being typed (`PlatformImeData` in its context) so an input method
+for Chinese, Japanese or Korean can open its candidate list at the caret, and offers
+`PlatformSetImeDataFn` for a backend to act on it. Setting that callback means handing ImGui a
+native function pointer, which needs `unsafe`, so `PlatformIme` (in `ImGui.App/ImGuiController/`)
+instead reads the recorded request after `ImGui.Render()` in `ImGuiController.Render`, the same data
+at the same moment, and writes to the platform only when it changed. On Windows,
+`Win32ImeTarget` moves the window's composition window to the caret (`CFS_FORCE_POSITION`) and keeps
+the candidate list off the caret's line (`CFS_EXCLUDE`) through `imm32.dll`. GLFW has no input method
+API on Linux or macOS, so there the request is recorded and goes no further, and pre-edit text is
+never shown inline on any platform.
+
+ImGui's own text fields fill the request themselves. A widget that edits text without
+`ImGui.InputText` calls `ImeCaret.Set(screenPosition, lineHeight)` each frame its caret shows; that
+also sets `io.WantTextInput` from the next frame, as a focused text field does. `ImeCaret.Requested`
+and `ImGuiAppHarness.ImePlacement` report what a frame asked for, so a UI test asserts a caret there.
+
 ### Deferred Drawing (dialogs and docked windows)
 
 Hexa's dialogs and `DockedWindow` are stateful: `Show()` registers the instance with a static

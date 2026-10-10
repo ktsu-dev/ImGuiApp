@@ -51,6 +51,13 @@ public sealed class ImGuiAppHarness : IDisposable
 	/// </summary>
 	public ImGuiMouseCursor MouseCursor { get; private set; }
 
+	/// <summary>
+	/// Gets where the most recent frame asked the operating system's input method to open, in
+	/// ImGui's screen coordinates, or null when nothing was being typed into. This is what the
+	/// desktop backend carries to the window, so a test asserts a text widget's caret here.
+	/// </summary>
+	public ImePlacement? ImePlacement { get; private set; }
+
 	/// <summary>Gets the render target holding the most recently rendered frame.</summary>
 	/// <remarks>
 	/// A frame is rasterized when its pixels are first read, here or through <see cref="Capture"/>,
@@ -182,6 +189,7 @@ public sealed class ImGuiAppHarness : IDisposable
 
 				context.EndFrameDeferred();
 				MouseCursor = ImGui.GetMouseCursor();
+				ImePlacement = ImeCaret.Requested;
 			}
 			catch (Exception error) when (error is not HarnessFrameException)
 			{

@@ -24,6 +24,7 @@ internal sealed class ImGuiController : IRendererBackend, IRenderer3D
 	internal IKeyboard? _keyboard;
 	internal IMouse? _mouse;
 	private readonly PlatformCursor _platformCursor = new();
+	private readonly PlatformIme _platformIme = PlatformIme.ForCurrentPlatform();
 
 	internal int _attribLocationTex;
 	internal int _attribLocationProjMtx;
@@ -290,8 +291,19 @@ internal sealed class ImGuiController : IRendererBackend, IRenderer3D
 			_frameBegun = false;
 			ImGui.Render();
 			ApplyMouseCursor();
+			ApplyIme();
 			RenderDrawData(ImGui.GetDrawData());
 		}
+	}
+
+	/// <summary>
+	/// Carries the frame's input method request (a focused text field, or <see cref="ImeCaret.Set"/>)
+	/// to the window, so a candidate list opens at the caret.
+	/// </summary>
+	private void ApplyIme()
+	{
+		nint windowHandle = OperatingSystem.IsWindows() && _view?.Native?.Win32 is { } win32 ? win32.Hwnd : 0;
+		_platformIme.Apply(windowHandle, ImeCaret.Requested, ImGui.GetMainViewport().Pos, ImGuiApp.WindowToFramebufferScale);
 	}
 
 	/// <summary>
