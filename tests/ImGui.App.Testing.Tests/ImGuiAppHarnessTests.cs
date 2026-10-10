@@ -287,4 +287,39 @@ public sealed class ImGuiAppHarnessTests
 
 		Assert.AreEqual("ab.png", typed, "Every character including the period should arrive in order.");
 	}
+
+	[TestMethod]
+	public void DropFiles_DeliversThePathsAndPositionThenRendersAFrame()
+	{
+		string[]? dropped = null;
+		Vector2 droppedAt = default;
+		int framesAfterDrop = 0;
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(
+			new ImGuiAppConfig
+			{
+				OnFilesDropped = (paths, position) =>
+				{
+					dropped = paths;
+					droppedAt = position;
+				},
+				OnRender = _ => framesAfterDrop += dropped is null ? 0 : 1,
+			},
+			Window());
+
+		string[] paths = ["/photos/a.png", "/photos/b.jpg"];
+		harness.DropFiles(paths, 40, 60);
+
+		CollectionAssert.AreEqual(paths, dropped);
+		Assert.AreEqual(new Vector2(40, 60), droppedAt);
+		Assert.AreEqual(1, framesAfterDrop, "A frame runs after the drop so the application can act on it.");
+		Assert.AreEqual(new Vector2(40, 60), ImGui.GetIO().MousePos, "The pointer is left where the drop landed.");
+	}
+
+	[TestMethod]
+	public void DropFiles_RefusesAnEmptyDrop()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(new ImGuiAppConfig(), Window());
+
+		Assert.ThrowsExactly<ArgumentException>(() => harness.DropFiles([], 0, 0));
+	}
 }

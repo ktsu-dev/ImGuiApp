@@ -533,6 +533,7 @@ Configuration for the ImGui application.
 | `OnRender` | `Action<float>` | `(delta) => { }` | Called each frame for rendering (param: delta time) |
 | `OnAppMenu` | `Action` | `() => { }` | Called each frame for rendering the application menu |
 | `OnMoveOrResize` | `Action` | `() => { }` | Called when the application window is moved or resized |
+| `OnFilesDropped` | `Action<string[], Vector2>?` | `null` | Called between frames when files are dropped onto the window from the file manager, with the paths and the pointer position in ImGui screen coordinates |
 
 ### `ImGuiAppPerformanceSettings` Class
 

@@ -1190,6 +1190,7 @@ public static partial class ImGuiApp
 		SetupWindowUpdateHandler(config);
 		SetupWindowRenderHandler(config);
 		SetupWindowClosingHandler();
+		SetupWindowFileDropHandler();
 
 		window!.FocusChanged += (focused) => IsFocused = focused;
 

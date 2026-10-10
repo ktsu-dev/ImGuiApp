@@ -129,6 +129,29 @@ public class ImGuiAppConfig
 	public Func<bool>? OnClosing { get; init; }
 
 	/// <summary>
+	/// Gets or sets a callback invoked when files or folders are dragged from the file manager and
+	/// dropped onto the window.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The first argument holds the dropped paths in the order the operating system reported them;
+	/// it is never empty. The second is where the pointer was when they were dropped, in the same
+	/// screen coordinates ImGui reports <c>io.MousePos</c> in, so it can be compared directly with
+	/// an item's rectangle or a window's position.
+	/// </para>
+	/// <para>
+	/// It runs on the window thread between frames, not inside one, so it must not draw. Record what
+	/// was dropped and act on it from <see cref="OnRender"/>, where a prompt or a popup can be shown.
+	/// </para>
+	/// <para>
+	/// The application does not receive input while something is being dragged over it from another
+	/// application, so modifier keys held during the drag are not reliably reflected in ImGui's
+	/// keyboard state when this fires.
+	/// </para>
+	/// </remarks>
+	public Action<string[], System.Numerics.Vector2>? OnFilesDropped { get; init; }
+
+	/// <summary>
 	/// Gets or sets the action to be performed when the application starts.
 	/// </summary>
 	public Action OnStart { get; init; } = () => { };
