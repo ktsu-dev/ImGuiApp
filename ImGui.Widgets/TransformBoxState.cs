@@ -258,16 +258,16 @@ public static partial class ImGuiWidgets
 			// a height apart, part by Skew.X times it: the top edge leads when Skew.X is negative.
 			switch (drag.Handle)
 			{
-				case TransformBoxHandle.Top when size.Y != 0f:
+				case TransformBoxHandle.Top when MathF.Abs(size.Y) > float.Epsilon:
 					skew.X = LimitSkew(skew.X - (delta.X / size.Y), skew.Y);
 					break;
-				case TransformBoxHandle.Bottom when size.Y != 0f:
+				case TransformBoxHandle.Bottom when MathF.Abs(size.Y) > float.Epsilon:
 					skew.X = LimitSkew(skew.X + (delta.X / size.Y), skew.Y);
 					break;
-				case TransformBoxHandle.Left when size.X != 0f:
+				case TransformBoxHandle.Left when MathF.Abs(size.X) > float.Epsilon:
 					skew.Y = LimitSkew(skew.Y - (delta.Y / size.X), skew.X);
 					break;
-				case TransformBoxHandle.Right when size.X != 0f:
+				case TransformBoxHandle.Right when MathF.Abs(size.X) > float.Epsilon:
 					skew.Y = LimitSkew(skew.Y + (delta.Y / size.X), skew.X);
 					break;
 				default:
@@ -289,7 +289,7 @@ public static partial class ImGuiWidgets
 
 			// The shear's determinant is 1 - x·y; it has to keep MinimumSkewArea of the rectangle.
 			float largestProduct = 1f - MinimumSkewArea;
-			if (other != 0f && limited * other > largestProduct)
+			if (limited * other > largestProduct)
 			{
 				limited = largestProduct / other;
 			}
