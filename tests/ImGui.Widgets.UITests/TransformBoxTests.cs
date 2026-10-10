@@ -35,6 +35,7 @@ public sealed class TransformBoxTests : WidgetTest
 	private bool sawHeld;
 	private bool sawReleased;
 	private bool sawSkewing;
+	private bool sawDistorting;
 
 	[TestInitialize]
 	public void SetUpCanvas() => canvas.FitToViewport(ImageSize, CanvasSize);
@@ -54,6 +55,7 @@ public sealed class TransformBoxTests : WidgetTest
 		sawHeld |= result.Held;
 		sawReleased |= result.Released;
 		sawSkewing |= result.Skewing;
+		sawDistorting |= result.Distorting;
 
 		ImGui.TextUnformatted("after");
 	}
@@ -196,6 +198,47 @@ public sealed class TransformBoxTests : WidgetTest
 		AssertVector(Vector2.One, corners[2]);
 		AssertVector(new Vector2(0f, 1f), corners[3]);
 		Assert.IsTrue(sawSkewing, "The box did not report the drag as a skew.");
+	}
+
+	[TestMethod]
+	public void TransformBox_CtrlShiftDraggingACornerMovesItAlone()
+	{
+		options.Distort = true;
+		Start(Draw);
+
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		HarnessKeyboard.KeyDown(ImGuiKey.ModShift);
+		Step();
+		DragFrom(new Vector2(200, 150), new Vector2(20, 10));
+		HarnessKeyboard.KeyUp(ImGuiKey.ModShift);
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		Step();
+
+		// Twenty pixels is 0.2 of the frame across and ten is 0.2 down; the other three corners stay put.
+		Assert.IsTrue(rect.IsDistorted, "The box was not distorted.");
+		Vector2[] corners = rect.Corners();
+		AssertVector(Vector2.Zero, corners[0]);
+		AssertVector(new Vector2(1f, 0f), corners[1]);
+		AssertVector(new Vector2(1.2f, 1.2f), corners[2]);
+		AssertVector(new Vector2(0f, 1f), corners[3]);
+		Assert.IsTrue(sawDistorting, "The box did not report the drag as a distort.");
+	}
+
+	[TestMethod]
+	public void TransformBox_CtrlShiftScalesWhenDistortIsOff()
+	{
+		Start(Draw);
+
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		HarnessKeyboard.KeyDown(ImGuiKey.ModShift);
+		Step();
+		DragFrom(new Vector2(200, 150), new Vector2(20, 10));
+		HarnessKeyboard.KeyUp(ImGuiKey.ModShift);
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		Step();
+
+		Assert.IsFalse(rect.IsDistorted, "A box that does not distort was distorted.");
+		Assert.IsFalse(sawDistorting);
 	}
 
 	[TestMethod]

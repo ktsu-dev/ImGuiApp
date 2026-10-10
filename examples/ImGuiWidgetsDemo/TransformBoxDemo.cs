@@ -23,6 +23,11 @@ internal static class TransformBoxDemo
 	private static bool edgeHandles = true;
 	private static bool uniformCorners = true;
 	private static bool skew = true;
+	private static bool distort = true;
+
+	// The box the layer rests in between drags: the unit square, or a quadrilateral once a corner has
+	// been moved alone, which no Matrix3x2 basis can hold, so it is kept as the box rather than folded.
+	private static TransformBoxRect resting = TransformBoxRect.Unit;
 
 	// The layer's unit square on the image before its turn, which a skew makes a parallelogram.
 	private static Matrix3x2 basis = Matrix3x2.Identity;
@@ -33,6 +38,9 @@ internal static class TransformBoxDemo
 
 	/// <summary>Gets the layer's rectangle in image pixels, before its turn: where its unit square's top-left and bottom-right corners land.</summary>
 	internal static TransformBoxRect Layer => new(Vector2.Transform(Vector2.Zero, basis), Vector2.Transform(Vector2.One, basis));
+
+	/// <summary>Gets whether a corner of the layer has been moved on its own.</summary>
+	internal static bool IsDistorted => resting.IsDistorted;
 
 	/// <summary>Gets whether the layer has been skewed.</summary>
 	internal static bool IsSkewed => MathF.Abs(Vector2.Dot(Vector2.Normalize(new Vector2(basis.M11, basis.M12)), Vector2.Normalize(new Vector2(basis.M21, basis.M22)))) > 1e-4f;
@@ -50,6 +58,8 @@ internal static class TransformBoxDemo
 		edgeHandles = true;
 		uniformCorners = true;
 		skew = true;
+		distort = true;
+		resting = TransformBoxRect.Unit;
 	}
 
 	/// <summary>Draws the demo section.</summary>
@@ -61,6 +71,7 @@ internal static class TransformBoxDemo
 		}
 
 		ImGui.TextUnformatted("Drag the layer to move it, a corner to scale it (Shift for free), or an edge to stretch it (Ctrl to skew).");
+		ImGui.TextUnformatted("Ctrl+Shift on a corner moves it alone, distorting the layer.");
 		ImGui.TextUnformatted("Dragging outside the layer pans the canvas.");
 
 		DemoProbe.SliderFloat("Turn", ref angle, -45f, 45f, "%.0f°");
@@ -69,9 +80,12 @@ internal static class TransformBoxDemo
 		DemoProbe.Checkbox("Uniform corners", ref uniformCorners);
 		ImGui.SameLine();
 		DemoProbe.Checkbox("Ctrl skews", ref skew);
+		ImGui.SameLine();
+		DemoProbe.Checkbox("Ctrl+Shift distorts", ref distort);
 		Options.EdgeHandles = edgeHandles;
 		Options.UniformCorners = uniformCorners;
 		Options.Skew = skew;
+		Options.Distort = distort;
 
 		Vector2 imageSize = new(DemoContext.KtsuTexture.Width, DemoContext.KtsuTexture.Height);
 		if (!fitted)
@@ -93,20 +107,28 @@ internal static class TransformBoxDemo
 		Matrix3x2 frameToScreen = placement * imageToScreen;
 
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-		Vector2[] corners = [.. TransformBoxRect.Unit.Corners().Select(corner => Vector2.Transform(corner, frameToScreen))];
+		Vector2[] corners = [.. resting.Corners().Select(corner => Vector2.Transform(corner, frameToScreen))];
 		drawList.AddQuadFilled(corners[0], corners[1], corners[2], corners[3], ImGui.GetColorU32(new Vector4(0.3f, 0.6f, 1f, 0.35f)));
 
 		// The layer itself does not move while a handle is held, so the frame stays the one the press
 		// began in; the rectangle in that frame is the live edit, drawn here and folded in on release.
 		TransformBoxResult result = ImGuiWidgets.TransformBox("transform_demo", ref held, frameToScreen, canvasMin, canvasMin + CanvasSize, Options);
-		if (!result.Held && held != TransformBoxRect.Unit)
+		if (!result.Held && held != resting)
 		{
-			basis = Fold(basis, held, angle);
-			held = TransformBoxRect.Unit;
+			if (held.IsDistorted)
+			{
+				resting = held;
+			}
+			else
+			{
+				basis = Fold(basis, held, angle);
+				held = TransformBoxRect.Unit;
+			}
 		}
 
 		TransformBoxRect layer = Layer;
-		ImGui.TextUnformatted($"Layer: ({layer.Min.X:0}, {layer.Min.Y:0}) to ({layer.Max.X:0}, {layer.Max.Y:0}){(IsSkewed ? ", skewed" : string.Empty)}");
+		string shape = IsDistorted ? ", distorted" : IsSkewed ? ", skewed" : string.Empty;
+		ImGui.TextUnformatted($"Layer: ({layer.Min.X:0}, {layer.Min.Y:0}) to ({layer.Max.X:0}, {layer.Max.Y:0}){shape}");
 	}
 
 	/// <summary>The turn about the centre of a layer's unit square on the image.</summary>

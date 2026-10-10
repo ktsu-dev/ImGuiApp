@@ -743,6 +743,26 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void TransformBoxDemo_CtrlShiftDraggingACornerDistortsTheLayer()
+	{
+		OpenSection(AdvancedDemosTab, "Transform Box");
+		Assert.IsFalse(TransformBoxDemo.IsDistorted);
+
+		Rectangle corner = harness.Probe.Rect("transform_demo/bottomRight")!.Value;
+		float x = corner.MinX + (corner.Width / 2f);
+		float y = corner.MinY + (corner.Height / 2f);
+		HarnessKeyboard.KeyDown(ImGuiKey.ModCtrl);
+		HarnessKeyboard.KeyDown(ImGuiKey.ModShift);
+		harness.Step();
+		harness.Mouse.Drag(x, y, x + 20f, y + 15f);
+		HarnessKeyboard.KeyUp(ImGuiKey.ModShift);
+		HarnessKeyboard.KeyUp(ImGuiKey.ModCtrl);
+		harness.Step(2);
+
+		Assert.IsTrue(TransformBoxDemo.IsDistorted, "Ctrl+Shift-dragging a corner did not distort the layer.");
+	}
+
+	[TestMethod]
 	public void PixelLoupe_HoveringTheImageReportsAPixel()
 	{
 		OpenSection(AdvancedDemosTab, "Pixel Loupe");

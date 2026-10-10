@@ -285,8 +285,11 @@ internal static class LayoutAndContainersTiles
 		Vector2 canvasSize = new(260f, 170f);
 		ImGuiWidgets.ImageCanvasState canvas = new();
 		canvas.FitToViewport(imageSize, canvasSize);
-		TransformBoxRect rect = TransformBoxRect.Unit with { Skew = new Vector2(-0.3f, 0f) };
-		TransformBoxOptions options = new() { Skew = true };
+		TransformBoxRect rect = TransformBoxRect.Unit with
+		{
+			Quad = new TransformBoxQuad(new Vector2(0.15f, 0.05f), new Vector2(0.95f, -0.1f), new Vector2(1.1f, 1.05f), new Vector2(-0.1f, 0.9f)),
+		};
+		TransformBoxOptions options = new() { Skew = true, Distort = true };
 		return new("TransformBox", category, [nameof(ImGuiWidgets.TransformBox)], context =>
 		{
 			ImGui.SetNextItemAllowOverlap();

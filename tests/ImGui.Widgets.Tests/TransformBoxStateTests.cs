@@ -322,6 +322,95 @@ public class TransformBoxStateTests
 		Assert.AreNotEqual(TransformBoxRect.Unit, TransformBoxRect.Unit with { Skew = new Vector2(0.1f, 0f) });
 	}
 
+	[TestMethod]
+	public void Distort_MovesTheHeldCornerAloneAndKeepsTheOthers()
+	{
+		TransformBoxRect distorted = Distort(TransformBoxRect.Unit, TransformBoxHandle.TopRight, new Vector2(0.2f, 0.3f));
+
+		Assert.IsTrue(distorted.IsDistorted);
+		AssertCorners(distorted, Vector2.Zero, new Vector2(1.2f, 0.3f), Vector2.One, new Vector2(0f, 1f));
+		Assert.AreEqual(TransformBoxRect.Unit.Min, distorted.Min, "The rectangle the distortion started from was lost.");
+	}
+
+	[TestMethod]
+	public void Distort_StartsFromASkewedBoxsCorners()
+	{
+		TransformBoxRect skewed = TransformBoxRect.Unit with { Skew = new Vector2(-0.2f, 0f) };
+		Vector2[] before = skewed.Corners();
+
+		TransformBoxRect distorted = Distort(skewed, TransformBoxHandle.BottomLeft, new Vector2(-0.1f, 0f));
+
+		AssertCorners(distorted, before[0], before[1], before[2], before[3] + new Vector2(-0.1f, 0f));
+	}
+
+	[TestMethod]
+	public void Distort_StopsShortOfADent()
+	{
+		// Pulling the top right corner past the diagonal from top left to bottom right would dent the
+		// quadrilateral; the corner follows the pointer as far as the box stays convex and stops.
+		TransformBoxRect distorted = Distort(TransformBoxRect.Unit, TransformBoxHandle.TopRight, new Vector2(-1f, 1f));
+		Vector2 corner = distorted.Corners()[1];
+
+		Assert.IsTrue(corner.X is > 0.45f and < 0.55f, $"The corner stopped at {corner}.");
+		Assert.AreEqual(1f - corner.X, corner.Y, 1e-3f, "The corner left the line the pointer travelled.");
+	}
+
+	[TestMethod]
+	public void Distort_OnlyACornerDistorts()
+	{
+		TransformBoxState state = new();
+
+		Assert.IsTrue(state.Begin(TransformBoxHandle.Top, TransformBoxRect.Unit, Stretched, new Vector2(200, 100), distort: true));
+		Assert.IsFalse(state.Distorting, "An edge has no one corner to move.");
+
+		Assert.IsTrue(state.Begin(TransformBoxHandle.BottomLeft, TransformBoxRect.Unit, Stretched, new Vector2(100, 200), distort: true));
+		Assert.IsTrue(state.Drag(new Vector2(90, 210), uniform: false).Distort);
+
+		state.End();
+		Assert.IsFalse(state.Distorting);
+	}
+
+	[TestMethod]
+	public void Resize_ADistortedBoxMovesCornersRatherThanResizing()
+	{
+		TransformBoxRect distorted = Distort(TransformBoxRect.Unit, TransformBoxHandle.TopRight, new Vector2(0.2f, 0f));
+
+		// An edge carries its two corners, a plain corner drag moves the corner alone, and the body all four.
+		TransformBoxRect edge = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.Bottom, distorted, Vector2.Zero, new Vector2(0f, 0.5f), false, Stretched), 4f);
+		AssertCorners(edge, Vector2.Zero, new Vector2(1.2f, 0f), new Vector2(1f, 1.5f), new Vector2(0f, 1.5f));
+
+		TransformBoxRect corner = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.BottomLeft, distorted, Vector2.Zero, new Vector2(0.1f, 0f), true, Stretched), 4f);
+		AssertCorners(corner, Vector2.Zero, new Vector2(1.2f, 0f), Vector2.One, new Vector2(0.1f, 1f));
+
+		TransformBoxRect body = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.Body, distorted, Vector2.Zero, new Vector2(0.5f, 0.5f), false, Stretched), 4f);
+		AssertCorners(body, new Vector2(0.5f), new Vector2(1.7f, 0.5f), new Vector2(1.5f), new Vector2(0.5f, 1.5f));
+	}
+
+	[TestMethod]
+	public void Skew_ADistortedBoxsEdgeMovesInstead()
+	{
+		TransformBoxRect distorted = Distort(TransformBoxRect.Unit, TransformBoxHandle.TopRight, new Vector2(0.2f, 0f));
+		TransformBoxState state = new();
+
+		Assert.IsTrue(state.Begin(TransformBoxHandle.Top, distorted, Stretched, new Vector2(200, 100), skew: true));
+		Assert.IsFalse(state.Skewing);
+	}
+
+	[TestMethod]
+	public void HitTest_FollowsADistortedBox()
+	{
+		// The top right corner pulled in to (0.5, 0.5): the frame's (0.8, 0.2) is inside the unit square
+		// and outside the quadrilateral, and the corner is found where it now is.
+		TransformBoxRect distorted = TransformBoxRect.Unit with { Quad = new TransformBoxQuad(Vector2.Zero, new Vector2(0.6f, 0.4f), Vector2.One, new Vector2(0f, 1f)) };
+
+		Assert.AreEqual(TransformBoxHandle.None, TransformBoxState.HitTest(distorted, Stretched, new Vector2(260, 120), true));
+		Assert.AreEqual(TransformBoxHandle.Body, TransformBoxState.HitTest(distorted, Stretched, new Vector2(200, 170), true));
+		Assert.AreEqual(TransformBoxHandle.TopRight, TransformBoxState.HitTest(distorted, Stretched, new Vector2(221, 141), true));
+	}
+
+	private static TransformBoxRect Distort(TransformBoxRect from, TransformBoxHandle handle, Vector2 delta) =>
+		TransformBoxState.Resize(new TransformBoxDrag(handle, from, Vector2.Zero, delta, false, Stretched) { Distort = true }, 4f);
+
 	private static TransformBoxRect Skew(TransformBoxRect from, TransformBoxHandle handle, Vector2 delta) =>
 		TransformBoxState.Resize(new TransformBoxDrag(handle, from, Vector2.Zero, delta, false, Stretched) { Skew = true }, 4f);
 
