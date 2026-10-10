@@ -179,7 +179,13 @@ public static partial class ImGuiWidgets
 			Vector2 grabSize = grabMax - grabMin;
 			RectangleF handleRect = new(grabMin.X, grabMin.Y, grabSize.X, grabSize.Y);
 			ImGuiProbes.MarkRegion($"{Id}/divider/{z.Id}", grabMin, grabMin + grabSize);
-			bool handleHovered = handleRect.Contains(mousePos.X, mousePos.Y);
+			// The handle is hit-tested by rectangle rather than submitted as an item, so it has to ask
+			// whether anything is drawn over it: a popup or window opened above the divider would
+			// otherwise have its clicks taken by the handle underneath, which starts a resize and moves
+			// whatever the click was meant for. Popups opened from a zone are excluded from the
+			// container's hierarchy for the same reason.
+			bool handleHovered = handleRect.Contains(mousePos.X, mousePos.Y)
+				&& (DragIndex == i || ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows | ImGuiHoveredFlags.NoPopupHierarchy));
 			bool mouseClickedThisFrame = ImGui.IsMouseClicked(ImGuiMouseButton.Left);
 			bool handleClicked = handleHovered && mouseClickedThisFrame;
 			bool handleDoubleClicked = handleHovered && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);
