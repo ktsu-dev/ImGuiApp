@@ -13,7 +13,7 @@ using ktsu.Semantics.Color;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// The interaction behind <see cref="GradientEditor"/>: which stop is selected, what a press on
+	/// The interaction behind <see cref="GradientEditor(string, IList{GradientStop}, System.Numerics.Vector2)"/>: which stop is selected, what a press on
 	/// the bar does, where a drag moves a stop, and when dragging a stop away removes it.
 	/// </summary>
 	/// <remarks>

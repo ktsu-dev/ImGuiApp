@@ -13,7 +13,7 @@ using ktsu.Semantics.Color;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-/// <summary>Drives <see cref="ImGuiWidgets.GradientEditor"/> on its own.</summary>
+/// <summary>Drives <see cref="ImGuiWidgets.GradientEditor(string, IList{GradientStop}, Vector2)"/> on its own.</summary>
 [TestClass]
 public sealed class GradientEditorTests : WidgetTest
 {
@@ -148,5 +148,35 @@ public sealed class GradientEditorTests : WidgetTest
 		Assert.HasCount(2, stops);
 		Assert.AreEqual(0f, stops[0].Position);
 		Assert.AreEqual(1f, stops[1].Position);
+	}
+
+	[TestMethod]
+	public void GradientEditor_ACallerColourEditorRecoloursTheSelectedStop()
+	{
+		string? editorId = null;
+		Start(() => changed |= ImGuiWidgets.GradientEditor("Gradient", stops, (id, ref colour) =>
+		{
+			editorId = id;
+			bool pressed = ImGui.Button("Make white");
+			Mark("Make white");
+			if (pressed)
+			{
+				colour = Color.FromBytes(255, 255, 255, 255);
+			}
+
+			return pressed;
+		}, new Vector2(300f, 24f)));
+
+		Assert.IsNull(editorId, "The caller's editor drew with nothing selected.");
+
+		Click("Gradient/stop1");
+		Assert.AreEqual("colour", editorId, "The caller's editor was not given the colour id.");
+		Assert.IsFalse(IsVisible("Gradient/colour"), "The built-in colour editor drew beside the caller's.");
+
+		changed = false;
+		Click("Make white");
+
+		Assert.AreEqual(Color.FromBytes(255, 255, 255, 255), stops[1].Color, "The caller's colour did not reach the stop.");
+		Assert.IsTrue(changed, "Recolouring a stop reported no change.");
 	}
 }
