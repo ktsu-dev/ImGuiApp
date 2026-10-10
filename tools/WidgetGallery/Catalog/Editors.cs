@@ -35,10 +35,10 @@ internal static class EditorTiles
 
 		BezierControlPoints ease = new(new Vector2(0.25f, 0.1f), new Vector2(0.25f, 1f));
 		yield return new("BezierEditor", Category, [nameof(ImGuiWidgets.BezierEditor)], _ =>
-			ImGuiWidgets.BezierEditor("Ease", ref ease, 150f));
+			ImGuiWidgets.BezierEditor("Ease", ref ease, 200f));
 
 		GallerySequence sequence = new();
-		int currentFrame = 42;
+		int currentFrame = 22;
 		bool expanded = true;
 		int selectedEntry = 1;
 		int firstFrame = 0;
@@ -54,14 +54,14 @@ internal static class EditorTiles
 		yield return new("DiffView", Category, [nameof(ImGuiWidgets.DiffView)], _ =>
 			ImGuiWidgets.DiffView("##diff", hunks, diffSelection))
 		{
-			Bounds = new Vector2(440f, 132f),
+			Bounds = new Vector2(440f, 114f),
 		};
 
 		yield return new("DiffView (side by side)", Category, [nameof(ImGuiWidgets.DiffView)], _ =>
 			ImGuiWidgets.DiffView("##diff-side", hunks, new ImGuiWidgets.DiffViewOptions { Mode = ImGuiWidgets.DiffViewMode.SideBySide }))
 		{
 			ViewportWidth = 820,
-			Bounds = new Vector2(740f, 112f),
+			Bounds = new Vector2(740f, 94f),
 		};
 	}
 
@@ -128,17 +128,19 @@ internal static class EditorTiles
 	{
 		private readonly SequenceItem[] items =
 		[
-			new(0, 30, 0, new Srgb(0.85f, 0.45f, 0.25f)),
-			new(34, 80, 0, new Srgb(0.3f, 0.6f, 0.9f)),
-			new(10, 70, 1, new Srgb(0.45f, 0.75f, 0.4f)),
-			new(60, 95, 2, new Srgb(0.7f, 0.45f, 0.85f)),
+			// The sequencer draws ten pixels a frame, so the whole edit has to fit in the fifty-odd
+			// frames the tile is wide enough to show, or the later clips are scrolled out of sight.
+			new(0, 14, 0, new Srgb(0.85f, 0.45f, 0.25f)),
+			new(16, 40, 0, new Srgb(0.3f, 0.6f, 0.9f)),
+			new(4, 34, 1, new Srgb(0.45f, 0.75f, 0.4f)),
+			new(28, 48, 2, new Srgb(0.7f, 0.45f, 0.85f)),
 		];
 
 		private readonly string[] labels = ["Intro", "Interview", "Music bed", "Titles"];
 
 		public override int FrameMin => 0;
 
-		public override int FrameMax => 100;
+		public override int FrameMax => 50;
 
 		public override int ItemCount => items.Length;
 

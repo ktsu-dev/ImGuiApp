@@ -56,6 +56,40 @@ public class FontAndUITests
 	}
 
 	[TestMethod]
+	public unsafe void FontHelper_ExtendedRanges_IncludeSuperscripts()
+	{
+		// Units such as km³ and s⁻¹ are written with superscript digits and signs. ³ is Latin-1, but
+		// ⁻ (U+207B) and ⁴ (U+2074) live in Superscripts and Subscripts, which the ranges used to skip.
+		Hexa.NET.ImGui.ImGuiContextPtr context = Hexa.NET.ImGui.ImGui.CreateContext();
+		try
+		{
+			FontHelper.CleanupGlyphRanges();
+			uint* ranges = FontHelper.GetExtendedUnicodeRanges(Hexa.NET.ImGui.ImGui.GetIO().Fonts);
+
+			Assert.IsTrue(RangesContain(ranges, 0x207B), "U+207B SUPERSCRIPT MINUS is not in the extended ranges.");
+			Assert.IsTrue(RangesContain(ranges, 0x2074), "U+2074 SUPERSCRIPT FOUR is not in the extended ranges.");
+		}
+		finally
+		{
+			FontHelper.CleanupGlyphRanges();
+			Hexa.NET.ImGui.ImGui.DestroyContext(context);
+		}
+	}
+
+	private static unsafe bool RangesContain(uint* ranges, uint codePoint)
+	{
+		for (uint* pair = ranges; pair[0] != 0; pair += 2)
+		{
+			if (codePoint >= pair[0] && codePoint <= pair[1])
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	[TestMethod]
 	public void FontHelper_CleanupMethods_CanBeCalledMultipleTimes()
 	{
 		try

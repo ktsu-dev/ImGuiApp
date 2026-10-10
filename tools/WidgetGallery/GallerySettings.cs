@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Resources;
+using System.Runtime.CompilerServices;
 
 using Hexa.NET.ImGui;
 
@@ -22,9 +23,11 @@ internal sealed record GallerySettings
 	public int CompositeWidth { get; init; } = 1200;
 
 	/// <summary>
-	/// Gets the path to <c>MaterialIcons-Regular.ttf</c>, which the date picker, the file tree and the
-	/// file dialogs draw their glyphs from. The font is not in the repository; without it those
-	/// tiles show placeholder boxes where their icons belong.
+	/// Gets the path to the Material icon font the date picker, the file tree and the file dialogs
+	/// draw their glyphs from. Use <c>MaterialSymbolsOutlined[...].ttf</c>: Hexa's constants are
+	/// Material Symbols code points, and the older <c>MaterialIcons-Regular.ttf</c> lacks some of
+	/// them, the file icon among them. The font is not in the repository; without it those tiles
+	/// show placeholder boxes where their icons belong.
 	/// </summary>
 	public string? MaterialIconsPath { get; init; }
 
@@ -47,7 +50,7 @@ internal sealed record GallerySettings
 	/// failing.
 	/// </para>
 	/// </remarks>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "FontHelper's glyph range helpers return uint* that ImGui owns for the lifetime of the atlas; they are passed straight through and never dereferenced here.")]
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The pointers handed to the atlas address FontHelper's cached glyph ranges and arrays on the pinned object heap, all of which outlive the atlas; none is dereferenced here.")]
 	public void LoadFonts()
 	{
 		ImGuiIOPtr io = ImGui.GetIO();
@@ -59,32 +62,77 @@ internal sealed record GallerySettings
 
 		unsafe
 		{
-			ImFontPtr? font = FontHelper.AddCustomFont(io, nerdFont, ApplicationFontPixels, FontHelper.GetExtendedUnicodeRanges(io.Fonts));
+			bool withMaterialIcons = MaterialIconsPath is not null && File.Exists(MaterialIconsPath);
 
-			if (font is not ImFontPtr loaded)
+			// Dear ImGui looks a glyph up in a merged font's sources in the order they were added, and
+			// the first source that has it wins. The Nerd Font is added first, because it is the text
+			// font, and it has glyphs of its own at many Private Use Area code points Material Icons
+			// also uses: the file dialogs' generic file icon (Draft, U+E66D) came out as Font Awesome
+			// Extension's "J", and the file tree's Computer icon (U+E31E) as a weather glyph. Every
+			// Private Use Area glyph the gallery draws is a Material one, so when Material Icons is
+			// loaded the Nerd Font is told to stay out of that area altogether.
+			ImFontConfigPtr config = ImGui.ImFontConfig();
+			config.FontDataOwnedByAtlas = false;
+			config.PixelSnapH = true;
+
+			if (withMaterialIcons)
+			{
+				config.GlyphExcludeRanges = (uint*)Unsafe.AsPointer(ref PrivateUseArea[0]);
+			}
+
+			ImFont* font = io.Fonts.AddFontFromMemoryTTF(Unsafe.AsPointer(ref nerdFont[0]), nerdFont.Length, ApplicationFontPixels, config, FontHelper.GetExtendedUnicodeRanges(io.Fonts));
+
+			if (font is null)
 			{
 				return;
 			}
 
-			io.FontDefault = loaded;
+			io.FontDefault = font;
 
-			if (MaterialIconsPath is not null && File.Exists(MaterialIconsPath))
+			if (withMaterialIcons)
 			{
-				_ = FontHelper.AddCustomFont(io, File.ReadAllBytes(MaterialIconsPath), ApplicationFontPixels, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true);
+				_ = FontHelper.AddCustomFont(io, File.ReadAllBytes(MaterialIconsPath!), ApplicationFontPixels, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true);
 			}
 		}
+	}
+
+	/// <summary>
+	/// The Basic Multilingual Plane Private Use Area as a zero-terminated glyph range, on the pinned
+	/// object heap because the atlas keeps the pointer.
+	/// </summary>
+	private static readonly uint[] PrivateUseArea = CreatePrivateUseArea();
+
+	private static uint[] CreatePrivateUseArea()
+	{
+		uint[] range = GC.AllocateUninitializedArray<uint>(3, pinned: true);
+		range[0] = 0xE000;
+		range[1] = 0xF8FF;
+		range[2] = 0;
+		return range;
 	}
 
 	/// <summary>The pixel size <c>ImGuiApp</c> loads its default font at, at a display scale of one.</summary>
 	private const float ApplicationFontPixels = 14f;
 
 	/// <summary>The Nerd Font embedded in <c>ktsu.ImGui.App</c>, or null if it cannot be found.</summary>
+	/// <remarks>
+	/// The bytes are copied into an array on the pinned object heap, because the atlas reads the font
+	/// data again whenever it rasterizes a glyph it has not drawn before, for the life of the process.
+	/// </remarks>
 	private static readonly Lazy<byte[]?> ApplicationFont = new(() =>
 	{
 		try
 		{
 			ResourceManager resources = new("ktsu.ImGui.App.Resources.Resources", typeof(ImGuiApp).Assembly);
-			return resources.GetObject("NerdFont", CultureInfo.InvariantCulture) as byte[];
+
+			if (resources.GetObject("NerdFont", CultureInfo.InvariantCulture) is not byte[] data || data.Length == 0)
+			{
+				return null;
+			}
+
+			byte[] pinned = GC.AllocateUninitializedArray<byte>(data.Length, pinned: true);
+			data.CopyTo(pinned, 0);
+			return pinned;
 		}
 		catch (MissingManifestResourceException)
 		{

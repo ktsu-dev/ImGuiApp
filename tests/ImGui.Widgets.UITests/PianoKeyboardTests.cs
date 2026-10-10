@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -131,6 +132,31 @@ public sealed class PianoKeyboardTests : WidgetTest
 
 		Assert.AreNotEqual(d4, e4, "The held E4 is drawn like the unheld D4.");
 		Assert.IsEmpty(events, "Held notes were reported as events.");
+	}
+
+	[TestMethod]
+	public void PianoKeyboard_TheLabelOnAHeldCIsReadable()
+	{
+		held = [60];
+		Start(Draw);
+		MoveAway();
+
+		// The label sits along the bottom of the key. Its brightest pixel has to be text-coloured:
+		// the disabled grey it is drawn in on an unheld key has no channel above about half, and the
+		// highlight it sits on has a red channel near zero, so neither passes for the label.
+		Rectangle c4 = RectOf($"{Label}/C4");
+		CapturedFrame frame = Harness.Capture();
+		int brightest = 0;
+		for (int y = c4.MaxY - 20; y < c4.MaxY - 1; y++)
+		{
+			for (int x = c4.MinX + 2; x < c4.MaxX - 2; x++)
+			{
+				Rgba32 pixel = frame.GetPixel(x, y);
+				brightest = Math.Max(brightest, Math.Min(pixel.R, Math.Min(pixel.G, pixel.B)));
+			}
+		}
+
+		Assert.IsGreaterThan(200, brightest, "The label on the held C4 is not drawn in the text colour.");
 	}
 
 	[TestMethod]

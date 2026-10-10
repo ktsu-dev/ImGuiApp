@@ -162,7 +162,7 @@ internal static class LayoutAndContainersTiles
 			new("Name", ImGuiTableColumnFlags.WidthStretch),
 			new("Size", ImGuiTableColumnFlags.WidthFixed, 70f),
 		];
-		ImGuiWidgets.VirtualTableOptions tableOptions = new() { RowHeight = 20f, OuterSize = new Vector2(300f, 170f) };
+		ImGuiWidgets.VirtualTableOptions tableOptions = new() { RowHeight = 20f, OuterSize = new Vector2(300f, 158f) };
 		yield return new("VirtualTable", Category, [nameof(ImGuiWidgets.VirtualTable)], _ =>
 			ImGuiWidgets.VirtualTable("##table", 100_000, columns, row =>
 			{
@@ -196,13 +196,15 @@ internal static class LayoutAndContainersTiles
 		ImGuiWidgets.AssetBrowserState assets = new();
 		_ = assets.Click(1, ctrl: false, shift: false);
 		_ = assets.Click(2, ctrl: true, shift: false);
-		ImGuiWidgets.AssetBrowserOptions options = new() { TileSize = 64f, Size = new Vector2(300f, 170f) };
+		// Labels short enough to fit under a tile, and a height that ends on a whole row of tiles.
+		string[] names = ["dusk", "sunset", "dawn", "notes", "horizon", "evening"];
+		ImGuiWidgets.AssetBrowserOptions options = new() { TileSize = 80f, Size = new Vector2(278f, 222f) };
 
 		return new("AssetBrowser", category, [nameof(ImGuiWidgets.AssetBrowser)], context =>
 			ImGuiWidgets.AssetBrowser(
 				"##assets",
-				200,
-				index => string.Create(CultureInfo.InvariantCulture, $"asset_{index:D3}.png"),
+				names.Length,
+				index => names[index],
 				index => index % 3 == 0 ? 0 : context.SampleTextureId,
 				assets,
 				options));
@@ -225,10 +227,7 @@ internal static class LayoutAndContainersTiles
 			ImGuiWidgets.ImageCompare("##compare", context.SampleTextureId, context.InvertedSampleTexture.TextureId, imageSize, state, ref split, canvasSize));
 	}
 
-	/// <summary>
-	/// A crop over its own canvas: rotated a little so the handles, the dimmed surround and the
-	/// rotate handle all show. Its own method to keep <see cref="Build"/> under the coupling limit.
-	/// </summary>
+	/// <summary>Builds the reorderable tree tile, in a box as narrow as its labels.</summary>
 	/// <param name="category">The group the tile belongs to.</param>
 	/// <returns>The tile.</returns>
 	private static GalleryEntry ReorderableTreeTile(GalleryCategory category)
@@ -237,10 +236,25 @@ internal static class LayoutAndContainersTiles
 		// held, which a tile cannot show.
 		string[] names = ["Background", "Photos", "Beach", "Forest", "Notes"];
 		ReorderableTreeRow[] rows = [new(0, false), new(0, true), new(1, false), new(1, false), new(0, false)];
+		// Rows span the region they are drawn in, so a child no wider than the labels keeps the tile
+		// from stretching across the whole capture.
 		return new("ReorderableTree", category, [nameof(ImGuiWidgets.ReorderableTree)], _ =>
-			ImGuiWidgets.ReorderableTree("##reorderable", rows, i => ImGui.Selectable(names[i], i == 2)));
+		{
+			if (ImGui.BeginChild("##reorderableBox", new Vector2(200f, 0f), ImGuiChildFlags.AutoResizeY, ImGuiWindowFlags.NoScrollbar))
+			{
+				ImGuiWidgets.ReorderableTree("##reorderable", rows, i => ImGui.Selectable(names[i], i == 2));
+			}
+
+			ImGui.EndChild();
+		});
 	}
 
+	/// <summary>
+	/// A crop over its own canvas: rotated a little so the handles, the dimmed surround and the
+	/// rotate handle all show. Its own method to keep <see cref="Build"/> under the coupling limit.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The tile.</returns>
 	private static GalleryEntry CropOverlayTile(GalleryCategory category)
 	{
 		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);

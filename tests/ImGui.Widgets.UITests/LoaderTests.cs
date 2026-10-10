@@ -54,6 +54,50 @@ public sealed class LoaderTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void Spinner_DrawsItsWholeStrokeInsideItsItem()
+	{
+		bool show = false;
+
+		Start(() =>
+		{
+			ImGui.SetCursorPosX(40f);
+			if (show)
+			{
+				Vector2 origin = ImGui.GetCursorScreenPos();
+				ImGuiWidgets.Spinner(16f, 6f, new Srgb(0.2f, 0.6f, 1f));
+				MarkSpan(Name, origin);
+			}
+			else
+			{
+				ImGui.Dummy(Vector2.One);
+			}
+		});
+
+		MoveAway();
+		byte[] blank = Snapshot();
+		show = true;
+
+		// The arc turns, so any one frame may leave a side undrawn. Over a run of frames it sweeps
+		// every side, and a stroke drawn past the item shows up on whichever frame reaches it.
+		int minX = int.MaxValue;
+		int maxX = int.MinValue;
+		for (int frame = 0; frame < 30; frame++)
+		{
+			Step(1);
+			MoveAway();
+			Rectangle drawn = BoundsOfDifference(blank) ?? throw new InvalidOperationException("The spinner drew nothing.");
+			minX = Math.Min(minX, drawn.MinX);
+			maxX = Math.Max(maxX, drawn.MaxX);
+		}
+
+		// Anti-aliasing feathers a stroke by about a pixel either side of its geometry.
+		const int Feather = 1;
+		Rectangle item = RectOf(Name);
+		Assert.IsTrue(minX >= item.MinX - Feather, $"The spinner drew at x={minX}, left of its item at x={item.MinX}.");
+		Assert.IsTrue(maxX <= item.MaxX + Feather, $"The spinner drew to x={maxX}, past its item's right edge at x={item.MaxX}.");
+	}
+
+	[TestMethod]
 	public void BufferingBar_FillsToItsValue()
 	{
 		float value = 0.2f;

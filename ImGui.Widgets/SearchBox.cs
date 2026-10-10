@@ -140,7 +140,11 @@ public static partial class ImGuiWidgets
 	/// <param name="filterText">Current filter text.</param>
 	/// <param name="items">Collection of items to rank.</param>
 	/// <param name="selector">Function to extract the string to match against from each item.</param>
-	/// <returns>Ranked collection of items.</returns>
+	/// <returns>
+	/// Every item, ordered by how well it matches: items that match the filter come first, best match
+	/// first, and the items that do not match follow them. Nothing is filtered out, so take as many as
+	/// you want to show, or use <see cref="SearchBox{T}"/> to drop the non-matches.
+	/// </returns>
 	public static IEnumerable<T> SearchBoxRanked<T>(
 		ref SearchBoxRankedOptions options,
 		ref string filterText,

@@ -118,9 +118,13 @@ public static partial class ImGuiWidgets
 			drawList.PushClipRect(min, max, true);
 			DrawBackground(drawList, min, max, timeSpan, colors);
 			DrawCurve(drawList, envelope, timeSpan, min, max, colors);
-			DrawHandles(drawList, reachable, radius, hot, colors);
 			drawList.AddRect(min, max, ImGui.GetColorU32(colors[(int)ImGuiCol.Border]));
 			drawList.PopClipRect();
+
+			// The handles are drawn outside the box's clip. The attack peak is always at full level
+			// and the start and release ends at silence, so those handles sit on the box's top and
+			// bottom edges, and clipped to the box half of each grab target would be hidden.
+			DrawHandles(drawList, reachable, radius, hot, colors);
 
 			MarkHandles(label, reachable, radius, min, max);
 

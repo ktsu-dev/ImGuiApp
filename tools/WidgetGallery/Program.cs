@@ -23,7 +23,9 @@ internal static class Program
 		  --out <dir>             Where to write images. Default: docs/gallery in the repository.
 		  --only <text>           Capture only tiles whose name contains the text.
 		  --width <pixels>        Width of the composite images. Default: 1200.
-		  --material-icons <ttf>  MaterialIcons-Regular.ttf, for the date picker, file tree and file dialogs.
+		  --material-icons <ttf>  A Material icon font for the date picker, file tree and file dialogs.
+		                          Material Symbols covers every glyph they draw; MaterialIcons-Regular.ttf
+		                          lacks the dialogs' generic file icon.
 		                          Default: MaterialIcons-Regular.ttf next to the tool, when present.
 		  --check                 Only report widgets that have no tile; exit 1 if there are any.
 		  --help                  Show this text.

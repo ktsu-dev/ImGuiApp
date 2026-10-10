@@ -208,6 +208,31 @@ public sealed class EnvelopeEditorTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void EnvelopeEditor_HandlesOnTheEdgeAreDrawnWhole()
+	{
+		// The attack peak sits on the top edge whatever the envelope, so a handle clipped to the box
+		// shows only its lower half. Its upper half has to reach above the box.
+		bool shown = false;
+		Start(() =>
+		{
+			if (shown)
+			{
+				Draw();
+			}
+		});
+		byte[] before = Snapshot();
+
+		shown = true;
+		Step();
+
+		Rectangle drawn = BoundsOfDifference(before) ?? throw new AssertFailedException("The editor drew nothing.");
+		Rectangle rect = RectOf(Label);
+
+		Assert.IsTrue(drawn.MinY < rect.MinY - 2, $"Nothing was drawn above the editor {rect}, so the peak handle on its top edge was cut in half; drawn {drawn}.");
+		Assert.IsTrue(drawn.MaxY > rect.MaxY + 2, $"Nothing was drawn below the editor {rect}, so the handles on its bottom edge were cut in half; drawn {drawn}.");
+	}
+
+	[TestMethod]
 	public void EnvelopeEditor_InvalidValuesAreRepairedAndReported()
 	{
 		env = env with { Attack = float.NaN, Sustain = 3f };
