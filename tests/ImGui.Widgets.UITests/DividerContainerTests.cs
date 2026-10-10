@@ -143,4 +143,46 @@ public sealed class DividerContainerTests : WidgetTest
 		Assert.IsFalse(IsVisible("right-content"), "A removed zone was still drawn.");
 		Assert.IsTrue(IsVisible("left-content"), "Removing one zone stopped the other from drawing.");
 	}
+
+	[TestMethod]
+	public void DividerContainer_AClickOnAPopupOverTheHandle_DoesNotResize()
+	{
+		bool coverOpen = false;
+		bool coverClicked = false;
+		container = new ImGuiWidgets.DividerContainer(ContainerId, ImGuiWidgets.DividerLayout.Columns);
+		container.Add(LeftZone, 0.3f, true, _ =>
+		{
+			// A popup opened from inside a zone, as a combo's list is, laid over the divider.
+			if (coverOpen && !ImGui.IsPopupOpen("cover"))
+			{
+				ImGui.OpenPopup("cover");
+			}
+
+			Vector2 at = Harness.Probe.Rect(Handle) is Rectangle handle
+				? new Vector2(handle.MinX - 40f, handle.MinY + 20f)
+				: Vector2.Zero;
+			ImGui.SetNextWindowPos(at);
+			if (ImGui.BeginPopup("cover"))
+			{
+				coverClicked |= ImGui.Button("over the handle", new Vector2(120f, 60f));
+				Mark("cover-button");
+				ImGui.EndPopup();
+			}
+		});
+		container.Add(RightZone, 0.7f, false, _ => ImGui.TextUnformatted("Right content"));
+
+		Start(() => container.Tick(1f / 60f));
+		coverOpen = true;
+		Step(3);
+
+		Rectangle handleRect = RectOf(Handle);
+		Rectangle button = RectOf("cover-button");
+		Assert.IsTrue(button.MinX < handleRect.MinX && button.MaxX > handleRect.MaxX, "The popup does not cover the handle, so this tests nothing.");
+
+		Harness.Mouse.Click(handleRect.MinX + (handleRect.Width / 2f), button.MinY + (button.Height / 2f));
+		Step(2);
+
+		Assert.AreEqual(0.3f, container.GetSizes()[0], "A click on the popup resized the container underneath.");
+		Assert.IsTrue(coverClicked, "The popup's button didn't get the click.");
+	}
 }
