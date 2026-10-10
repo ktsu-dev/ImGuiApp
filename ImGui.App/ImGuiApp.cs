@@ -408,12 +408,19 @@ public static partial class ImGuiApp
 	private static nint TryGetWindowHandle() =>
 		OperatingSystem.IsWindows() && window?.Native?.Win32 is { } win32 ? win32.Hwnd : 0;
 
-	/// <summary>Shows or hides the window via the native handle (Windows). No-op elsewhere.</summary>
+	/// <summary>Shows or hides the window via the native handle on Windows; elsewhere, showing restores and focuses it.</summary>
 	private static void ApplyNativeVisibility(bool visible)
 	{
 		nint hwnd = TryGetWindowHandle();
 		if (hwnd == 0)
 		{
+			// Hiding is Windows-only, so elsewhere there is nothing to hide, but a minimized or
+			// buried window can still be restored and raised through the windowing backend.
+			if (visible && window is not null)
+			{
+				Invoker.Invoke(RestoreAndFocus);
+			}
+
 			return;
 		}
 
@@ -429,6 +436,30 @@ public static partial class ImGuiApp
 		{
 			NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
 		}
+	}
+
+	/// <summary>
+	/// Restores a minimized window and asks the windowing backend to focus it, on the window thread.
+	/// </summary>
+	/// <remarks>
+	/// The fallback <see cref="Show"/> uses where there is no Win32 handle. Whether the window
+	/// actually comes forward is the compositor's call: X11 window managers generally allow it,
+	/// while Wayland compositors may only mark the window as wanting attention. Internal so it can
+	/// be tested against a stand-in window.
+	/// </remarks>
+	internal static void RestoreAndFocus()
+	{
+		if (window is null)
+		{
+			return;
+		}
+
+		if (window.WindowState == Silk.NET.Windowing.WindowState.Minimized)
+		{
+			window.WindowState = Silk.NET.Windowing.WindowState.Normal;
+		}
+
+		window.Focus();
 	}
 
 	/// <summary>

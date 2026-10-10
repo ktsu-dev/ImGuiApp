@@ -210,4 +210,60 @@ public sealed class WindowTitleAndClosingTests
 		allow = true;
 		Assert.IsTrue(ImGuiApp.ShouldClose(), "Once the user confirms, the close goes through.");
 	}
+
+	[TestMethod]
+	public void RestoreAndFocusRestoresAMinimizedWindowAndFocusesIt()
+	{
+		mockWindow.SetupProperty(w => w.WindowState, WindowState.Minimized);
+
+		ImGuiApp.RestoreAndFocus();
+
+		Assert.AreEqual(WindowState.Normal, mockWindow.Object.WindowState, "A minimized window was left minimized.");
+		mockWindow.Verify(w => w.Focus(), Times.Once());
+	}
+
+	[TestMethod]
+	public void RestoreAndFocusLeavesAMaximizedWindowMaximized()
+	{
+		mockWindow.SetupProperty(w => w.WindowState, WindowState.Maximized);
+
+		ImGuiApp.RestoreAndFocus();
+
+		Assert.AreEqual(WindowState.Maximized, mockWindow.Object.WindowState);
+		mockWindow.Verify(w => w.Focus(), Times.Once());
+	}
+
+	[TestMethod]
+	public void RestoreAndFocusWithoutAWindowDoesNothing()
+	{
+		ImGuiApp.window = null;
+
+		ImGuiApp.RestoreAndFocus();
+
+		mockWindow.Verify(w => w.Focus(), Times.Never());
+	}
+
+	[TestMethod]
+	public void ShowWithoutAWin32HandleRestoresAndFocusesThroughTheWindowingBackend()
+	{
+		// The stand-in window has no native handle, which is what Linux and macOS look like.
+		mockWindow.SetupProperty(w => w.WindowState, WindowState.Minimized);
+
+		ImGuiApp.Show();
+		PumpInvoker();
+
+		Assert.AreEqual(WindowState.Normal, mockWindow.Object.WindowState, "Show left the window minimized.");
+		mockWindow.Verify(w => w.Focus(), Times.Once());
+	}
+
+	[TestMethod]
+	public void ShowWithoutAWindowDoesNothing()
+	{
+		ImGuiApp.window = null;
+
+		ImGuiApp.Show();
+		PumpInvoker();
+
+		mockWindow.Verify(w => w.Focus(), Times.Never());
+	}
 }
