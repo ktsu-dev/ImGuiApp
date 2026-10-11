@@ -93,7 +93,8 @@ public static partial class ImGuiWidgets
 			float width = MathF.Max(size.X > 0f ? size.X : ImGui.CalcItemWidth(), 1f);
 			float barHeight = size.Y > 0f ? size.Y : ImGui.GetFrameHeight();
 
-			ImGui.InvisibleButton("bar", new Vector2(width, barHeight + MarkerRowHeight));
+			float scale = InterfaceScale.Current;
+			ImGui.InvisibleButton("bar", new Vector2(width, barHeight + (MarkerRowHeight * scale)));
 			ImGuiProbes.MarkItem("bar");
 
 			Vector2 min = ImGui.GetItemRectMin();
@@ -104,7 +105,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 mouse = ImGui.GetIO().MousePos;
 			float t = (mouse.X - min.X) / width;
-			float grabRadius = GrabPixels / width;
+			float grabRadius = GrabPixels * scale / width;
 
 			if (ImGui.IsItemActivated())
 			{
@@ -113,7 +114,7 @@ public static partial class ImGuiWidgets
 
 			if (active)
 			{
-				changed |= state.Drag(stops, t, DistanceOutside(mouse, min, max));
+				changed |= state.Drag(stops, t, DistanceOutside(mouse, min, max) / scale);
 			}
 
 			if (ImGui.IsItemDeactivated())
@@ -191,7 +192,10 @@ public static partial class ImGuiWidgets
 			uint grab = ImGui.GetColorU32(ImGuiCol.SliderGrab);
 			uint grabActive = ImGui.GetColorU32(ImGuiCol.SliderGrabActive);
 			float bottom = barMin.Y + barSize.Y;
-			float halfSwatch = SwatchSize * 0.5f;
+			float scale = InterfaceScale.Current;
+			float swatchSize = SwatchSize * scale;
+			float triangleHeight = TriangleHeight * scale;
+			float halfSwatch = swatchSize * 0.5f;
 
 			for (int i = 0; i < stops.Count; i++)
 			{
@@ -200,12 +204,12 @@ public static partial class ImGuiWidgets
 
 				drawList.AddTriangleFilled(
 					new Vector2(x, bottom),
-					new Vector2(x + halfSwatch, bottom + TriangleHeight),
-					new Vector2(x - halfSwatch, bottom + TriangleHeight),
+					new Vector2(x + halfSwatch, bottom + triangleHeight),
+					new Vector2(x - halfSwatch, bottom + triangleHeight),
 					border);
 
-				Vector2 swatchMin = new(x - halfSwatch, bottom + TriangleHeight);
-				Vector2 swatchMax = swatchMin + new Vector2(SwatchSize, SwatchSize);
+				Vector2 swatchMin = new(x - halfSwatch, bottom + triangleHeight);
+				Vector2 swatchMax = swatchMin + new Vector2(swatchSize, swatchSize);
 				bool selected = i == state.SelectedIndex;
 				Color fill = selected && state.PendingRemoval ? stop.Color.WithAlpha(stop.Color.A * PendingAlpha) : stop.Color;
 

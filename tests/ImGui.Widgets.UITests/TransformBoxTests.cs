@@ -274,4 +274,27 @@ public sealed class TransformBoxTests : WidgetTest
 		Assert.AreEqual(expected.X, actual.X, Tolerance, $"X of {actual}");
 		Assert.AreEqual(expected.Y, actual.Y, Tolerance, $"Y of {actual}");
 	}
+
+	[TestMethod]
+	public void TransformBox_CornerReachGrowsWithTheInterfaceScale()
+	{
+		// Ten pixels out along both axes is fourteen from the corner: past the eight-pixel reach at
+		// 100%, inside the sixteen it grows to at 200%.
+		Start(Draw);
+		DragFrom(BoxOffset - new Vector2(10f, 10f), new Vector2(-20f, -20f));
+		Assert.IsFalse(changed, "At 100% a press fourteen pixels from the corner shouldn't hold it.");
+
+		ImGuiApp.SetGlobalScale(2f);
+		try
+		{
+			Step(2);
+			DragFrom(BoxOffset - new Vector2(10f, 10f), new Vector2(-20f, -20f));
+			Assert.IsTrue(changed, "At 200% the corner's reach should cover a press fourteen pixels away.");
+			Assert.IsLessThan(0f, rect.Min.X, "The drag should have pulled the top-left corner out.");
+		}
+		finally
+		{
+			ImGuiApp.SetGlobalScale(1f);
+		}
+	}
 }

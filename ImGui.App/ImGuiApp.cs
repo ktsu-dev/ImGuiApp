@@ -937,9 +937,9 @@ public static partial class ImGuiApp
 	internal static void RenderWithScaling(Action renderAction)
 	{
 		FindBestFontForAppearance(FontAppearance.DefaultFontName, FontAppearance.DefaultFontPointSize, out float bestFontSize);
-		float scaleRatio = bestFontSize / FontAppearance.DefaultFontPointSize;
-		// Apply both DPI scale and global accessibility scale
-		float combinedScale = scaleRatio * GlobalScale;
+		// The font's pixel size already carries both the DPI scale and the global accessibility scale
+		// (see CalculateOptimalPixelSize), so the spacing scales by the same ratio and no further.
+		float combinedScale = bestFontSize / FontAppearance.DefaultFontPointSize;
 		using (new UIScaler(combinedScale))
 		{
 			RenderWithDefaultFont(renderAction);
