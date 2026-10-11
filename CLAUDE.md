@@ -216,6 +216,8 @@ OnConfigureFonts = () =>
 
 Do not register custom fonts from `OnStart` — that runs after the atlas has already built, so glyphs silently fail to rasterize. Routing via `ImGuiAppConfig.Fonts` also does not work for fonts with custom glyph ranges, since that path applies the Nerd Font ranges instead. The callback fires on every atlas rebuild — that means startup plus any DPI change greater than 5%, but *not* `SetGlobalScale`, which does not rebuild the atlas — so handlers must be safe to run repeatedly and re-register fonts each time. `InitFonts` releases the previous run's pinned font data before invoking the callback, so re-registering does not accumulate pinned memory.
 
+To draw the interface in a proportional face, set `ImGuiAppConfig.InterfaceFont` to its bytes. It becomes the default font, with the bundled Nerd Font merged beneath it and emoji beneath that; the Nerd Font is also registered alone under `FontAppearance.MonospaceFontName` (`"mono"`). A merged font answers each character from the first source that has a glyph for it, so the face wins wherever it has one, Private Use Area included: strip a face's PUA glyphs (Inter has some) or they hide Nerd Font icons. `FontHelper.AddInterfaceFont(io, face, pixels)` builds the same layered font for a harness or tool that never runs `InitFonts`. For the same first-source-wins reason, the emoji ranges include Miscellaneous Technical, Miscellaneous Symbols, Dingbats and Miscellaneous Symbols and Arrows, so ☃ or ❄ falls through to emoji wherever the text face has nothing.
+
 Note that `FontHelper.GetMaterialIconRanges()` claims the entire Private Use Area (U+E000–U+F8FF), which subsumes every Nerd Font range. Merging Material Icons last therefore replaces Nerd Font glyphs across Powerline, Font Awesome, Devicons, Octicons and the rest — not just one narrow span.
 
 ### Extensions
@@ -247,6 +249,16 @@ per-frame `BeginFrame` has already run, so `Enable` begins ImGuizmo itself when 
 `EnableExtensionsTests`). ImNodes and ImPlot have no `BeginFrame` and need nothing extra. The
 harness shares its context the same way the controller does, so it works there unchanged;
 `tests/ImGui.App.Testing.Tests/EnableExtensionsTests.cs` drives it through real frames.
+
+### Built-in menus
+
+`ImGuiApp.RenderAppMenu` appends an Accessibility menu (UI scale) and a Debug menu (ImGui demo,
+metrics, performance monitor) after `OnAppMenu`. `ImGuiAppConfig.BuiltInMenus` (an `ImGuiAppMenus`
+flags value, default `All`) picks which; an application with its own interface size setting or a
+product menu bar sets `None`, since the Accessibility scale is never saved and would contradict the
+application's own. The menu bar is drawn only when `OnAppMenu` is set, so the flags do nothing
+without it. The iOS build has no Debug menu and honours the Accessibility flag. `BuiltInMenuTests`
+in `ImGui.App.Testing.Tests` reads `MenusIdSubmittedThisFrame` to check which menus a frame drew.
 
 ### Image decoding
 

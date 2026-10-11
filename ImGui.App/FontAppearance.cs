@@ -17,6 +17,12 @@ public class FontAppearance : ScopedAction
 	internal const string DefaultFontName = "default";
 
 	/// <summary>
+	/// The name the bundled Nerd Font is registered under when <see cref="ImGuiAppConfig.InterfaceFont"/>
+	/// draws the interface in another face.
+	/// </summary>
+	public const string MonospaceFontName = "mono";
+
+	/// <summary>
 	/// The default font point size.
 	/// </summary>
 	internal const int DefaultFontPointSize = 14;
