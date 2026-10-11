@@ -236,9 +236,8 @@ public sealed class CropOverlayTests : WidgetTest
 		Step();
 
 		// The crop is image pixels 8..24, so 80..240 on the canvas; the guide may not reach past it.
-		Rectangle? drawn = BoundsOfDifference(none);
-		Assert.IsNotNull(drawn);
-		Assert.IsTrue(drawn.Value.MinX >= canvasMin.X + 79 && drawn.Value.MaxX <= canvasMin.X + 241, $"The grid spilled outside the crop: {drawn}.");
-		Assert.IsTrue(drawn.Value.MinY >= canvasMin.Y + 79 && drawn.Value.MaxY <= canvasMin.Y + 241, $"The grid spilled outside the crop: {drawn}.");
+		Rectangle drawn = BoundsOfDifference(none) ?? throw new AssertFailedException("The grid drew nothing.");
+		Assert.IsTrue(drawn.MinX >= canvasMin.X + 79 && drawn.MaxX <= canvasMin.X + 241, $"The grid spilled outside the crop: {drawn}.");
+		Assert.IsTrue(drawn.MinY >= canvasMin.Y + 79 && drawn.MaxY <= canvasMin.Y + 241, $"The grid spilled outside the crop: {drawn}.");
 	}
 }

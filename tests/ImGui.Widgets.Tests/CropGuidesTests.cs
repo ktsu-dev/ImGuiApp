@@ -32,7 +32,7 @@ public sealed class CropGuidesTests
 		IReadOnlyList<Vector2[]> guides = CropGuides.For(CropGuide.Thirds, 0, Landscape);
 
 		Assert.AreEqual(4, guides.Count);
-		float[] verticals = [.. guides.Where(static line => line[0].X == line[1].X).Select(static line => line[0].X).Order()];
+		float[] verticals = [.. guides.Where(static line => MathF.Abs(line[0].X - line[1].X) <= 0.01f).Select(static line => line[0].X).Order()];
 		Assert.AreEqual(2, verticals.Length);
 		Assert.AreEqual(200f, verticals[0], 0.01f);
 		Assert.AreEqual(400f, verticals[1], 0.01f);
@@ -43,7 +43,7 @@ public sealed class CropGuidesTests
 	{
 		IReadOnlyList<Vector2[]> guides = CropGuides.For(CropGuide.GoldenRatio, 0, Landscape);
 
-		float[] verticals = [.. guides.Where(static line => line[0].X == line[1].X).Select(static line => line[0].X).Order()];
+		float[] verticals = [.. guides.Where(static line => MathF.Abs(line[0].X - line[1].X) <= 0.01f).Select(static line => line[0].X).Order()];
 		Assert.AreEqual(2, verticals.Length);
 
 		// The larger part over the whole is the smaller over the larger, which is what phi is.
@@ -57,9 +57,8 @@ public sealed class CropGuidesTests
 		IReadOnlyList<Vector2[]> guides = CropGuides.For(CropGuide.Diagonals, 0, Landscape);
 
 		Assert.AreEqual(4, guides.Count);
-		foreach (Vector2[] line in guides)
+		foreach (Vector2 run in guides.Select(static line => line[1] - line[0]))
 		{
-			Vector2 run = line[1] - line[0];
 			Assert.AreEqual(MathF.Abs(run.X), MathF.Abs(run.Y), 0.01f, "a diagonal is not at 45 degrees");
 		}
 
@@ -164,8 +163,8 @@ public sealed class CropGuidesTests
 	{
 		IReadOnlyList<Vector2[]> guides = CropGuides.For(CropGuide.Grid, 0, Landscape);
 
-		float[] verticals = [.. guides.Where(static line => line[0].X == line[1].X).Select(static line => line[0].X).Order()];
-		float[] horizontals = [.. guides.Where(static line => line[0].Y == line[1].Y).Select(static line => line[0].Y).Order()];
+		float[] verticals = [.. guides.Where(static line => MathF.Abs(line[0].X - line[1].X) <= 0.01f).Select(static line => line[0].X).Order()];
+		float[] horizontals = [.. guides.Where(static line => MathF.Abs(line[0].Y - line[1].Y) <= 0.01f).Select(static line => line[0].Y).Order()];
 
 		Assert.AreEqual(verticals[1] - verticals[0], horizontals[1] - horizontals[0], 0.01f);
 		Assert.IsTrue(verticals[^1] < 600f && horizontals[^1] < 400f, "a grid line is drawn over the window's edge");

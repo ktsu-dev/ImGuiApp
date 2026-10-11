@@ -29,9 +29,9 @@ public sealed class FilesystemBrowserOverwriteTests
 	[TestInitialize]
 	public void SetUp()
 	{
-		folder = Path.Combine(Path.GetTempPath(), $"overwrite-{Guid.NewGuid():N}");
+		folder = Path.Join(Path.GetTempPath(), $"overwrite-{Guid.NewGuid():N}");
 		Directory.CreateDirectory(folder);
-		File.WriteAllText(Path.Combine(folder, "existing.txt"), "keep me");
+		File.WriteAllText(Path.Join(folder, "existing.txt"), "keep me");
 
 		// The browser starts in the working directory, so point it at the test's folder before making one.
 		previousDirectory = Environment.CurrentDirectory;
@@ -88,7 +88,7 @@ public sealed class FilesystemBrowserOverwriteTests
 		harness.Click("filesystem-browser/overwrite/replace");
 		harness.Step(3);
 
-		Assert.AreEqual(Path.Combine(folder, "existing.txt"), saved);
+		Assert.AreEqual(Path.Join(folder, "existing.txt"), saved);
 		Assert.IsFalse(IsVisible("filesystem-browser/confirm"), "The browser stayed open after Replace.");
 	}
 
@@ -110,7 +110,7 @@ public sealed class FilesystemBrowserOverwriteTests
 	{
 		SaveAs("new.txt");
 
-		Assert.AreEqual(Path.Combine(folder, "new.txt"), saved);
+		Assert.AreEqual(Path.Join(folder, "new.txt"), saved);
 		Assert.IsFalse(IsVisible("filesystem-browser/overwrite/replace"));
 	}
 
@@ -121,6 +121,6 @@ public sealed class FilesystemBrowserOverwriteTests
 
 		SaveAs("existing.txt");
 
-		Assert.AreEqual(Path.Combine(folder, "existing.txt"), saved);
+		Assert.AreEqual(Path.Join(folder, "existing.txt"), saved);
 	}
 }
