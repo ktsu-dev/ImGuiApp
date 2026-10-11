@@ -296,6 +296,11 @@ public class ImGuiAppConfig
 	/// <para>
 	/// <see cref="AutoDiscoverExtensions"/> set to false overrides this and sets up none.
 	/// </para>
+	/// <para>
+	/// An extension left out here can still be turned on after launch with
+	/// <c>ImGuiApp.EnableExtensions</c>, which adds to this set, so an application can launch with
+	/// <see cref="ImGuiAppExtensions.None"/> and enable ImNodes the first time a node editor opens.
+	/// </para>
 	/// </summary>
 	public ImGuiAppExtensions Extensions { get; init; } = ImGuiAppExtensions.All;
 

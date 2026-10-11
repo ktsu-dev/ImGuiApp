@@ -509,6 +509,7 @@ The main entry point for creating and managing ImGui applications.
 | `EmsToPx` | `float ems` | `int` | Converts a value in ems to pixels based on current font size |
 | `PtsToPx` | `int pts` | `int` | Converts a value in points to pixels based on current scale factor |
 | `UseImageBytes` | `ImagePixels image, Action<byte[]> action` | `void` | Executes an action with temporary access to image bytes using pooled memory |
+| `EnableExtensions` | `ImGuiAppExtensions extensions` | `ImGuiAppExtensions` | Turns on ImGuizmo, ImNodes or ImPlot after launch, adding to those `Extensions` set up; returns which of them are ready to draw with. Call on the render thread, between frames or in `OnRender` before drawing with the extension. Idempotent |
 
 ### `ImGuiAppConfig` Class
 
@@ -526,6 +527,7 @@ Configuration for the ImGui application.
 | `Fonts` | `Dictionary<string, byte[]>` | `[]` | Font name to font data mapping |
 | `EnableUnicodeSupport` | `bool` | `true` | Whether to enable Unicode and emoji support |
 | `SaveIniSettings` | `bool` | `true` | Whether ImGui should save window settings to imgui.ini |
+| `Extensions` | `ImGuiAppExtensions` | `All` | Which of ImGuizmo, ImNodes and ImPlot are set up at launch. One left out costs nothing at startup and can be turned on later with `ImGuiApp.EnableExtensions` |
 | `PerformanceSettings` | `ImGuiAppPerformanceSettings` | `new()` | Performance settings for throttled rendering |
 | `OnStart` | `Action` | `() => { }` | Called when the application starts |
 | `FrameWrapperFactory` | `Func<ScopedAction?>` | `() => null` | Factory for creating frame wrappers |

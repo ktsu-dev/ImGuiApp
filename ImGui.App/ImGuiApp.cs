@@ -908,6 +908,48 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
+	/// Turns on ImGui extensions after launch, adding them to those
+	/// <see cref="ImGuiAppConfig.Extensions"/> already set up.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// This is for an application that launches with fewer extensions than it may eventually draw
+	/// with, to keep their start-up cost off the launch path: launch with
+	/// <see cref="ImGuiAppExtensions.None"/>, then enable <see cref="ImGuiAppExtensions.ImNodes"/>
+	/// the first time a node editor opens. Each extension is set up exactly as it would have been at
+	/// launch — probed, handed the ImGui context, and for ImNodes and ImPlot given a context of its
+	/// own with the dark style — and extensions already on are left as they are.
+	/// </para>
+	/// <para>
+	/// Call it on the render thread, between frames or inside <see cref="ImGuiAppConfig.OnRender"/>
+	/// before the extension is drawn with. It is idempotent, so calling it every time a window opens
+	/// is fine. It works the same under <c>ImGuiAppHarness</c>, which shares the ImGui context the
+	/// same way the application does.
+	/// </para>
+	/// </remarks>
+	/// <param name="extensions">The extensions to turn on.</param>
+	/// <returns>
+	/// Which of <paramref name="extensions"/> are ready to draw with. One asked for and missing from
+	/// the result is not referenced by the application, and drawing with it faults in native code.
+	/// <see cref="ImGuiExtensionManager.IsImNodesContextCreated"/> and its siblings answer the same
+	/// question later.
+	/// </returns>
+	/// <exception cref="InvalidOperationException">
+	/// No application or harness has shared its ImGui context yet. Before launch, set
+	/// <see cref="ImGuiAppConfig.Extensions"/> instead, which launch would otherwise replace.
+	/// </exception>
+	public static ImGuiAppExtensions EnableExtensions(ImGuiAppExtensions extensions)
+	{
+		if (!ImGuiExtensionManager.IsImGuiContextShared)
+		{
+			throw new InvalidOperationException(
+				"No ImGui context has been shared with the extensions yet. Call EnableExtensions after launch, or set ImGuiAppConfig.Extensions before it.");
+		}
+
+		return ImGuiExtensionManager.Enable(extensions);
+	}
+
+	/// <summary>
 	/// Releases the state established by <see cref="BeginExternalFrameSession()"/>.
 	/// </summary>
 	/// <remarks>
