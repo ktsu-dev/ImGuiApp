@@ -1,7 +1,6 @@
-## v3.72.0 (minor)
+## v3.72.1 (patch)
 
-Changes since v3.71.0:
+Changes since v3.72.0:
 
-- Add a prefix option to ValueSlider for labels inside the frame ([@Claude](https://github.com/Claude))
-- [minor] Add a logarithmic mode to ValueSlider and keep its number clear near zero ([@Claude](https://github.com/Claude))
+- [patch] Stop ValueSlider reporting a change on held frames that move nothing ([@Claude](https://github.com/Claude))
 
