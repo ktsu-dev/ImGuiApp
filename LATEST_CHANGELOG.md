@@ -1,6 +1,7 @@
-## v3.69.0 (minor)
+## v3.69.1 (patch)
 
-Changes since v3.68.0:
+Changes since v3.69.0:
 
-- [minor] Distort the transform box by Ctrl+Shift-dragging a corner ([@Claude](https://github.com/Claude))
+- Document the interface scale ([@Claude](https://github.com/Claude))
+- [patch] Apply the global scale to spacing once, and scale TransformBox and GradientEditor handles ([@Claude](https://github.com/Claude))
 
