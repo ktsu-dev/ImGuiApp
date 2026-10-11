@@ -646,12 +646,23 @@ The application automatically creates debug logs on the desktop (`ImGuiApp_Debug
 - Font loading progress  
 - Error conditions and exceptions
 
-### Debug Menu
+### Built-in Menus
 
-When using the `OnAppMenu` callback, ImGuiApp automatically adds a Debug menu with options to:
-- Show ImGui Demo Window
-- Show ImGui Metrics Window
-- Show Performance Monitor (real-time FPS graphs and throttling visualization)
+When using the `OnAppMenu` callback, ImGuiApp appends two menus of its own after yours:
+- **Accessibility**: UI scale from 75% to 200%, through `ImGuiApp.SetGlobalScale`. The choice is not saved.
+- **Debug**: Show ImGui Demo Window, Show ImGui Metrics Window, and Show Performance Monitor
+  (real-time FPS graphs and throttling visualization).
+
+An application that ships to users usually wants neither. `ImGuiAppConfig.BuiltInMenus` picks which
+are shown, and defaults to `ImGuiAppMenus.All`:
+
+```csharp
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    OnAppMenu = DrawMyMenus,
+    BuiltInMenus = ImGuiAppMenus.None,
+});
+```
 
 ### Performance Monitoring
 

@@ -233,6 +233,16 @@ what the application does. Detection is cached per extension, so a later `Initia
 that an earlier call left out still finds it. Hexa's ImNodes and ImPlot bindings have no
 `BeginFrame`, so their `Is...Available` is answered by `CreateContext`.
 
+### Built-in menus
+
+`ImGuiApp.RenderAppMenu` appends an Accessibility menu (UI scale) and a Debug menu (ImGui demo,
+metrics, performance monitor) after `OnAppMenu`. `ImGuiAppConfig.BuiltInMenus` (an `ImGuiAppMenus`
+flags value, default `All`) picks which; an application with its own interface size setting or a
+product menu bar sets `None`, since the Accessibility scale is never saved and would contradict the
+application's own. The menu bar is drawn only when `OnAppMenu` is set, so the flags do nothing
+without it. The iOS build has no Debug menu and honours the Accessibility flag. `BuiltInMenuTests`
+in `ImGui.App.Testing.Tests` reads `MenusIdSubmittedThisFrame` to check which menus a frame drew.
+
 ### Image decoding
 
 `ImGui.App/Images/` decodes image files without a third-party imaging library. That is deliberate:

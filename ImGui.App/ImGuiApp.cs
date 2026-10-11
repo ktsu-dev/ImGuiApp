@@ -831,7 +831,7 @@ public static partial class ImGuiApp
 		RenderWithScaling(() =>
 		{
 			using ScopedAction? frameWrapper = config.FrameWrapperFactory.Invoke();
-			RenderAppMenu(config.OnAppMenu);
+			RenderAppMenu(config.OnAppMenu, config.BuiltInMenus);
 			RenderWindowContents(config.OnRender, delta);
 			RenderPerformanceMonitor();
 		});
@@ -1561,17 +1561,25 @@ public static partial class ImGuiApp
 	}
 
 	/// <summary>
-	/// Renders the application menu using the provided delegate.
+	/// Renders the application menu using the provided delegate, followed by the built-in menus asked for.
 	/// </summary>
 	/// <param name="menuDelegate">The delegate to render the menu.</param>
-	internal static void RenderAppMenu(Action? menuDelegate)
+	/// <param name="builtInMenus">The built-in menus to append after the delegate's.</param>
+	internal static void RenderAppMenu(Action? menuDelegate, ImGuiAppMenus builtInMenus)
 	{
 		if (menuDelegate is not null && ImGui.BeginMainMenuBar())
 		{
 			menuDelegate();
 
-			RenderAccessibilityMenu();
-			RenderDebugMenu();
+			if (builtInMenus.HasFlag(ImGuiAppMenus.Accessibility))
+			{
+				RenderAccessibilityMenu();
+			}
+
+			if (builtInMenus.HasFlag(ImGuiAppMenus.Debug))
+			{
+				RenderDebugMenu();
+			}
 
 			ImGui.EndMainMenuBar();
 		}
