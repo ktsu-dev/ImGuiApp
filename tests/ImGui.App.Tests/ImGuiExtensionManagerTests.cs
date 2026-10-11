@@ -192,6 +192,90 @@ public sealed class ImGuiExtensionManagerTests
 	}
 
 	[TestMethod]
+	public void Enable_AddsToTheEnabledSet_RatherThanReplacingIt()
+	{
+		ImGuiExtensionManager.Initialize(ImGuiAppExtensions.ImPlot);
+		try
+		{
+			ImGuiAppExtensions ready = ImGuiExtensionManager.Enable(ImGuiAppExtensions.ImNodes);
+
+			Assert.AreEqual(ImGuiAppExtensions.ImNodes, ready, "ImGui.App references ImNodes, so enabling it must find it.");
+			Assert.AreEqual(ImGuiAppExtensions.ImNodes | ImGuiAppExtensions.ImPlot, ImGuiExtensionManager.Enabled);
+			Assert.IsTrue(ImGuiExtensionManager.IsImPlotAvailable);
+			Assert.IsTrue(ImGuiExtensionManager.IsImNodesAvailable);
+			Assert.IsFalse(ImGuiExtensionManager.IsImGuizmoAvailable);
+		}
+		finally
+		{
+			ImGuiExtensionManager.Initialize();
+		}
+	}
+
+	[TestMethod]
+	public void Enable_Twice_ChangesNothingTheSecondTime()
+	{
+		ImGuiExtensionManager.Initialize(ImGuiAppExtensions.None);
+		try
+		{
+			ImGuiAppExtensions first = ImGuiExtensionManager.Enable(ImGuiAppExtensions.ImGuizmo);
+			ImGuiAppExtensions second = ImGuiExtensionManager.Enable(ImGuiAppExtensions.ImGuizmo);
+
+			Assert.AreEqual(ImGuiAppExtensions.ImGuizmo, first);
+			Assert.AreEqual(first, second);
+			Assert.AreEqual(ImGuiAppExtensions.ImGuizmo, ImGuiExtensionManager.Enabled);
+		}
+		finally
+		{
+			ImGuiExtensionManager.Initialize();
+		}
+	}
+
+	[TestMethod]
+	public void Enable_AfterTheContextIsShared_CreatesTheNewContextAndKeepsTheOld()
+	{
+		Hexa.NET.ImGui.ImGuiContextPtr context = Hexa.NET.ImGui.ImGui.CreateContext();
+		try
+		{
+			ImGuiExtensionManager.Initialize(ImGuiAppExtensions.ImPlot);
+			ImGuiExtensionManager.SetImGuiContext();
+			ImGuiExtensionManager.CreateExtensionContexts();
+			Assert.IsFalse(ImGuiExtensionManager.IsImNodesContextCreated);
+
+			ImGuiAppExtensions ready = ImGuiExtensionManager.Enable(ImGuiAppExtensions.ImNodes);
+
+			Assert.AreEqual(ImGuiAppExtensions.ImNodes, ready);
+			Assert.IsTrue(ImGuiExtensionManager.IsImNodesContextCreated);
+			Assert.IsTrue(ImGuiExtensionManager.IsImPlotContextCreated);
+		}
+		finally
+		{
+			ImGuiExtensionManager.Cleanup();
+			ImGuiExtensionManager.Initialize();
+			Hexa.NET.ImGui.ImGui.DestroyContext(context);
+		}
+
+		Assert.IsFalse(ImGuiExtensionManager.IsImNodesContextCreated);
+		Assert.IsFalse(ImGuiExtensionManager.IsImPlotContextCreated);
+	}
+
+	[TestMethod]
+	public void Enable_IgnoresFlagsOutsideAll()
+	{
+		ImGuiExtensionManager.Initialize(ImGuiAppExtensions.None);
+		try
+		{
+			ImGuiAppExtensions ready = ImGuiExtensionManager.Enable((ImGuiAppExtensions)8);
+
+			Assert.AreEqual(ImGuiAppExtensions.None, ready);
+			Assert.AreEqual(ImGuiAppExtensions.None, ImGuiExtensionManager.Enabled);
+		}
+		finally
+		{
+			ImGuiExtensionManager.Initialize();
+		}
+	}
+
+	[TestMethod]
 	public void Config_Extensions_DefaultsToAll()
 	{
 		ImGuiAppConfig config = new();

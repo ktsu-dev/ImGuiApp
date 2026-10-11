@@ -174,7 +174,8 @@ public static partial class ImGuiApp
 
 		// DefaultFonts (the bundled Nerd Font) first, then any user-supplied Fonts; merge the emoji
 		// glyphs onto each so colored emoji render inline with text.
-		ImFontPtr? defaultFont = null;
+		// An interface face goes first, with the Nerd Font and emoji merged beneath it, so it is the default.
+		ImFontPtr? defaultFont = Config.InterfaceFont.IsEmpty ? null : FontHelper.AddInterfaceFont(io, Config.InterfaceFont.ToArray(), pixelSize);
 		foreach ((_, byte[] fontBytes) in Config.DefaultFonts.Concat(Config.Fonts))
 		{
 			ImFontPtr? font = FontHelper.AddCustomFont(io, fontBytes, pixelSize, unicodeRanges, mergeWithPrevious: false);

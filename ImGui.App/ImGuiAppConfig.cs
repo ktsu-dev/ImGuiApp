@@ -192,6 +192,18 @@ public class ImGuiAppConfig
 	public Action OnAppMenu { get; init; } = () => { };
 
 	/// <summary>
+	/// Gets or sets which of ImGuiApp's own menus are appended to the main menu bar after
+	/// <see cref="OnAppMenu"/>. Default is <see cref="ImGuiAppMenus.All"/>, which shows the
+	/// Accessibility and Debug menus as every application did before this setting existed.
+	/// </summary>
+	/// <remarks>
+	/// Set <see cref="ImGuiAppMenus.None"/> in an application that ships to users: the Accessibility
+	/// menu's UI scale is not saved anywhere, and the Debug menu opens ImGui's own diagnostic windows.
+	/// Hiding a menu does not close a window it already opened.
+	/// </remarks>
+	public ImGuiAppMenus BuiltInMenus { get; init; } = ImGuiAppMenus.All;
+
+	/// <summary>
 	/// Gets or sets the action to be performed when the application window is moved or resized.
 	/// </summary>
 	public Action OnMoveOrResize { get; init; } = () => { };
@@ -202,6 +214,27 @@ public class ImGuiAppConfig
 	/// This can be used to persist the scale preference.
 	/// </summary>
 	public Action<float> OnGlobalScaleChanged { get; init; } = (scale) => { };
+
+	/// <summary>
+	/// Gets the face the interface is drawn in, or empty to draw it in the bundled Nerd Font.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// When set, this face becomes the default font. The Nerd Font is merged beneath it, so icons and
+	/// any character the face has no glyph for still draw, and emoji beneath that. A merged font
+	/// answers each character from the first source that has it, so the face wins wherever it has a
+	/// glyph.
+	/// </para>
+	/// <para>
+	/// That includes the Private Use Area, where the Nerd Font keeps its icons. A face carrying glyphs
+	/// there (Inter does) hides the icons at those code points, so remove them from the face first.
+	/// </para>
+	/// <para>
+	/// The Nerd Font stays available on its own, for code and fixed-width columns, under
+	/// <see cref="FontAppearance.MonospaceFontName"/>.
+	/// </para>
+	/// </remarks>
+	public ReadOnlyMemory<byte> InterfaceFont { get; init; }
 
 	/// <summary>
 	/// Gets or sets the fonts to be used in the application.
@@ -262,6 +295,11 @@ public class ImGuiAppConfig
 	/// </para>
 	/// <para>
 	/// <see cref="AutoDiscoverExtensions"/> set to false overrides this and sets up none.
+	/// </para>
+	/// <para>
+	/// An extension left out here can still be turned on after launch with
+	/// <c>ImGuiApp.EnableExtensions</c>, which adds to this set, so an application can launch with
+	/// <see cref="ImGuiAppExtensions.None"/> and enable ImNodes the first time a node editor opens.
 	/// </para>
 	/// </summary>
 	public ImGuiAppExtensions Extensions { get; init; } = ImGuiAppExtensions.All;
