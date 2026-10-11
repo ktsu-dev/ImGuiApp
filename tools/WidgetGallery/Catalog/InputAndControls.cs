@@ -55,6 +55,8 @@ internal static class InputAndControlsTiles
 			ImGui.PopItemWidth();
 		});
 
+		yield return ValueSliderTile(Category);
+
 		// A small mixer strip: the channel sits below unity, meters a little under it, and holds a peak.
 		float[] faderGains = [-4.5f, 0f];
 		float[] faderLevels = [-14f, -9f];
@@ -311,5 +313,27 @@ internal static class InputAndControlsTiles
 		pattern[48 + 12] = true;
 		yield return new("StepGrid", Category, [nameof(ImGuiWidgets.StepGrid)], _ =>
 			ImGuiWidgets.StepGrid("##steps", pattern, 4, 16, playingStep: 5, rowLabels: voices));
+	}
+
+	/// <summary>Builds the value slider's tile, kept out of <see cref="Build"/> for its class coupling.</summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The entry.</returns>
+	private static GalleryEntry ValueSliderTile(GalleryCategory category)
+	{
+		// One of each: a percentage part filled, a bipolar value filled from zero, and whole pixels.
+		float sliderOpacity = 65f;
+		float sliderTemperature = -35f;
+		int sliderRadius = 12;
+		ValueSliderOptions percent = new() { Format = "0", Unit = "%" };
+		ValueSliderOptions bipolar = new() { Format = "0", Fill = ValueSliderFill.FromZero };
+		ValueSliderOptions pixels = new() { Unit = " px" };
+		return new("ValueSlider", category, [nameof(ImGuiWidgets.ValueSlider)], _ =>
+		{
+			ImGui.PushItemWidth(220f);
+			ImGuiWidgets.ValueSlider("Opacity", ref sliderOpacity, 0f, 100f, percent);
+			ImGuiWidgets.ValueSlider("Temperature", ref sliderTemperature, -100f, 100f, bipolar);
+			ImGuiWidgets.ValueSlider("Radius", ref sliderRadius, 0, 64, pixels);
+			ImGui.PopItemWidth();
+		});
 	}
 }

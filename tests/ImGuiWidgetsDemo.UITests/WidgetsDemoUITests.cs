@@ -43,7 +43,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] WidgetDemoSections =
 	[
-		"Mobile - Form Controls", "Property Grid", "Knobs", "Radial Progress Bar", "Color Indicators",
+		"Mobile - Form Controls", "Property Grid", "Knobs", "Value Sliders", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View", "Reorderable Tree",
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
@@ -316,6 +316,22 @@ public sealed class WidgetsDemoUITests
 		}
 
 		Assert.IsTrue(IsVisible("Reset to 0.5"), "The knobs section should offer its reset button.");
+	}
+
+	[TestMethod]
+	public void ValueSliderDemo_DraggingLeftLowersTheOpacity()
+	{
+		OpenSection(WidgetDemosTab, "Value Sliders");
+
+		Rectangle slider = harness.Probe.Rect("Opacity##demoValueSlider")
+			?? throw new InvalidOperationException("The opacity slider was never recorded by the probe.");
+		float y = slider.MinY + (slider.Height / 2f);
+
+		// The press lands near the left of the frame, clear of the label drawn to its right.
+		harness.Mouse.Drag(slider.MinX + 100f, y, slider.MinX + 40f, y);
+		harness.Step(SettleFrames);
+
+		Assert.IsTrue(ValueSliderDemo.Opacity < 75f, $"Dragging the opacity slider left left it at {ValueSliderDemo.Opacity}.");
 	}
 
 	[TestMethod]

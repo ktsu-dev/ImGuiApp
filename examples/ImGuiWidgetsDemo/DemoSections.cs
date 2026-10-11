@@ -21,6 +21,7 @@ internal static class DemoSections
 		new(MobileFormControlsDemo.Show, MobileFormControlsDemo.ResetState),
 		new(PropertyGridDemo.Show, PropertyGridDemo.ResetState),
 		new(KnobDemo.Show, KnobDemo.ResetState),
+		new(ValueSliderDemo.Show, ValueSliderDemo.ResetState),
 		new(RadialProgressBarDemo.Show, RadialProgressBarDemo.ResetState),
 		new(ColorIndicatorDemo.Show, ColorIndicatorDemo.ResetState),
 		new(ComboDemo.Show, ComboDemo.ResetState),

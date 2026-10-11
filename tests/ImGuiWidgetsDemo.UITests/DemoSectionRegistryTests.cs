@@ -22,7 +22,7 @@ public sealed class DemoSectionRegistryTests
 
 	private static readonly string[] WidgetDemoOrder =
 	[
-		nameof(MobileFormControlsDemo), nameof(PropertyGridDemo), nameof(KnobDemo),
+		nameof(MobileFormControlsDemo), nameof(PropertyGridDemo), nameof(KnobDemo), nameof(ValueSliderDemo),
 		nameof(RadialProgressBarDemo), nameof(ColorIndicatorDemo), nameof(ComboDemo),
 		nameof(TextUtilitiesDemo), nameof(ScopedUtilitiesDemo), nameof(TreeViewDemo), nameof(ReorderableTreeDemo),
 		nameof(MobileDecoratorsDemo), nameof(MobileContainersDemo), nameof(HistogramAndHandleTrackDemo),
