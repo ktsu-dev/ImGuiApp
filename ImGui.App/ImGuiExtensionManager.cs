@@ -33,9 +33,6 @@ public static class ImGuiExtensionManager
 	private static object? nodesContext;
 	private static object? plotContext;
 
-	// Track whether the ImGui context has been shared with extensions
-	private static bool imGuiContextSet;
-
 	// Extensions whose assembly has been probed, so each is loaded and reflected over at most once
 	private static ImGuiAppExtensions probed;
 
@@ -58,8 +55,102 @@ public static class ImGuiExtensionManager
 	public static void Initialize(ImGuiAppExtensions extensions)
 	{
 		Enabled = extensions & ImGuiAppExtensions.All;
+		Probe(Enabled);
+	}
 
-		ImGuiAppExtensions toProbe = Enabled & ~probed;
+	/// <summary>
+	/// Turns on the given extensions in addition to those already enabled, after launch. Unlike
+	/// <see cref="Initialize(ImGuiAppExtensions)"/>, which replaces the enabled set, this only adds
+	/// to it, so an extension that is already on keeps its context and its state.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Each newly enabled extension is set up exactly as it is at launch: its assembly is probed if
+	/// it has not been, it is handed the ImGui context when <see cref="SetImGuiContext(ImGuiContextPtr?)"/>
+	/// has already run, and ImNodes and ImPlot are given a context of their own with the dark
+	/// style. ImGuizmo, which needs a <c>BeginFrame</c> every frame, gets one at once when this is
+	/// called inside a frame, so it can be drawn with in the same frame; <see cref="BeginFrame"/>
+	/// covers it from the next frame on.
+	/// </para>
+	/// <para>
+	/// Call it on the render thread, between frames or inside <c>OnRender</c> before the extension
+	/// is drawn with. Enabling an extension that is already on does nothing.
+	/// </para>
+	/// </remarks>
+	/// <param name="extensions">The extensions to turn on.</param>
+	/// <returns>
+	/// Which of <paramref name="extensions"/> are ready to draw with: ImGuizmo when its assembly was
+	/// found, ImNodes and ImPlot when their context exists. Before the ImGui context has been shared,
+	/// no context can exist yet, so ImNodes and ImPlot are reported when their assembly was found.
+	/// An extension asked for and missing from the result is not referenced, and drawing with it
+	/// faults in native code.
+	/// </returns>
+	public static ImGuiAppExtensions Enable(ImGuiAppExtensions extensions)
+	{
+		ImGuiAppExtensions requested = extensions & ImGuiAppExtensions.All;
+		ImGuiAppExtensions added = requested & ~Enabled;
+
+		if (added != ImGuiAppExtensions.None)
+		{
+			Enabled |= added;
+			Probe(added);
+
+			// Before the context is shared, launch will set these up along with everything else.
+			if (IsImGuiContextShared)
+			{
+				ImGuiContextPtr context = ImGui.GetCurrentContext();
+				SetImGuiContextFor(added, context);
+				CreateExtensionContexts();
+
+				// ImGuizmo draws into a window its BeginFrame opens; inside a frame that has already
+				// begun, BeginFrame has passed it by, so it is begun here instead.
+				if (added.HasFlag(ImGuiAppExtensions.ImGuizmo) && context.WithinFrameScope)
+				{
+					BeginFrameFor(ImGuiAppExtensions.ImGuizmo);
+				}
+			}
+		}
+
+		return Ready(requested);
+	}
+
+	/// <summary>
+	/// Gets which of the given extensions are ready to draw with. See <see cref="Enable(ImGuiAppExtensions)"/>.
+	/// </summary>
+	private static ImGuiAppExtensions Ready(ImGuiAppExtensions extensions)
+	{
+		ImGuiAppExtensions ready = ImGuiAppExtensions.None;
+
+		if (IsImGuizmoAvailable)
+		{
+			ready |= ImGuiAppExtensions.ImGuizmo;
+		}
+
+		if (IsImGuiContextShared ? IsImNodesContextCreated : IsImNodesAvailable)
+		{
+			ready |= ImGuiAppExtensions.ImNodes;
+		}
+
+		if (IsImGuiContextShared ? IsImPlotContextCreated : IsImPlotAvailable)
+		{
+			ready |= ImGuiAppExtensions.ImPlot;
+		}
+
+		return ready & extensions;
+	}
+
+	/// <summary>
+	/// Gets whether <see cref="SetImGuiContext(ImGuiContextPtr?)"/> has run since the last
+	/// <see cref="Cleanup"/>, which is what a launched application or a started harness has done.
+	/// </summary>
+	internal static bool IsImGuiContextShared { get; private set; }
+
+	/// <summary>
+	/// Loads and reflects over each of the given extensions that has not been probed already.
+	/// </summary>
+	private static void Probe(ImGuiAppExtensions extensions)
+	{
+		ImGuiAppExtensions toProbe = extensions & ~probed;
 		probed |= toProbe;
 
 		if (toProbe.HasFlag(ImGuiAppExtensions.ImGuizmo))
@@ -213,15 +304,25 @@ public static class ImGuiExtensionManager
 	public static void BeginFrame()
 	{
 		// Guard: extension BeginFrame calls require a valid ImGui context
-		if (!imGuiContextSet)
+		if (!IsImGuiContextShared)
 		{
 			return;
 		}
 
+		BeginFrameFor(Enabled);
+	}
+
+	/// <summary>
+	/// Calls BeginFrame for each of the given extensions that is enabled and has one.
+	/// </summary>
+	private static void BeginFrameFor(ImGuiAppExtensions extensions)
+	{
+		ImGuiAppExtensions toBegin = extensions & Enabled;
+
 		// Call ImGuizmo.BeginFrame() if available
 		try
 		{
-			if (IsEnabled(ImGuiAppExtensions.ImGuizmo))
+			if (toBegin.HasFlag(ImGuiAppExtensions.ImGuizmo))
 			{
 				imGuizmoBeginFrame?.Invoke(null, null);
 			}
@@ -234,7 +335,7 @@ public static class ImGuiExtensionManager
 		// Call ImNodes.BeginFrame() if available
 		try
 		{
-			if (IsEnabled(ImGuiAppExtensions.ImNodes))
+			if (toBegin.HasFlag(ImGuiAppExtensions.ImNodes))
 			{
 				imNodesBeginFrame?.Invoke(null, null);
 			}
@@ -247,7 +348,7 @@ public static class ImGuiExtensionManager
 		// Call ImPlot.BeginFrame() if available
 		try
 		{
-			if (IsEnabled(ImGuiAppExtensions.ImPlot))
+			if (toBegin.HasFlag(ImGuiAppExtensions.ImPlot))
 			{
 				imPlotBeginFrame?.Invoke(null, null);
 			}
@@ -265,12 +366,21 @@ public static class ImGuiExtensionManager
 	public static void SetImGuiContext(ImGuiContextPtr? context = null)
 	{
 		// Use current context if none provided
-		ImGuiContextPtr contextToSet = context ?? ImGui.GetCurrentContext();
+		SetImGuiContextFor(Enabled, context ?? ImGui.GetCurrentContext());
+		IsImGuiContextShared = true;
+	}
+
+	/// <summary>
+	/// Hands the ImGui context to each of the given extensions that is enabled.
+	/// </summary>
+	private static void SetImGuiContextFor(ImGuiAppExtensions extensions, ImGuiContextPtr contextToSet)
+	{
+		ImGuiAppExtensions toSet = extensions & Enabled;
 
 		// Set context for ImGuizmo if available
 		try
 		{
-			if (IsEnabled(ImGuiAppExtensions.ImGuizmo))
+			if (toSet.HasFlag(ImGuiAppExtensions.ImGuizmo))
 			{
 				imGuizmoSetImGuiContext?.Invoke(null, [contextToSet]);
 			}
@@ -283,7 +393,7 @@ public static class ImGuiExtensionManager
 		// Set context for ImNodes if available
 		try
 		{
-			if (IsEnabled(ImGuiAppExtensions.ImNodes))
+			if (toSet.HasFlag(ImGuiAppExtensions.ImNodes))
 			{
 				imNodesSetImGuiContext?.Invoke(null, [contextToSet]);
 			}
@@ -296,7 +406,7 @@ public static class ImGuiExtensionManager
 		// Set context for ImPlot if available
 		try
 		{
-			if (IsEnabled(ImGuiAppExtensions.ImPlot))
+			if (toSet.HasFlag(ImGuiAppExtensions.ImPlot))
 			{
 				imPlotSetImGuiContext?.Invoke(null, [contextToSet]);
 			}
@@ -305,8 +415,6 @@ public static class ImGuiExtensionManager
 		{
 			DebugLogger.Log($"ImGuiExtensionManager: Error calling ImPlot.SetImGuiContext(): {ex.InnerException?.Message ?? ex.Message}");
 		}
-
-		imGuiContextSet = true;
 	}
 
 	/// <summary>
@@ -424,7 +532,7 @@ public static class ImGuiExtensionManager
 			}
 		}
 
-		imGuiContextSet = false;
+		IsImGuiContextShared = false;
 	}
 
 	/// <summary>

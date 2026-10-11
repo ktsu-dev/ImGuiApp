@@ -233,6 +233,21 @@ what the application does. Detection is cached per extension, so a later `Initia
 that an earlier call left out still finds it. Hexa's ImNodes and ImPlot bindings have no
 `BeginFrame`, so their `Is...Available` is answered by `CreateContext`.
 
+`ImGuiApp.EnableExtensions(ImGuiAppExtensions)` turns extensions on after launch, for an
+application that launches with `None` and wants ImNodes the first time a node editor opens. It goes
+through `ImGuiExtensionManager.Enable`, which **adds** to `Enabled` where `Initialize` replaces it,
+so an extension already on keeps its context; it probes, hands over the ImGui context and creates
+the dark-styled context exactly as launch does, and is idempotent. It returns which of the requested
+extensions are ready (ImGuizmo found; ImNodes and ImPlot with a context). Call it on the render
+thread, between frames or inside `OnRender` before the extension is drawn with; it throws before
+launch, where `ImGuiAppConfig.Extensions` is the setting and launch would replace anything enabled
+earlier. One trap: ImGuizmo draws into the window its `BeginFrame` opens, and inside a frame the
+per-frame `BeginFrame` has already run, so `Enable` begins ImGuizmo itself when the ImGui context is
+`WithinFrameScope`. Without that, `Manipulate` in the same frame segfaults (verified by
+`EnableExtensionsTests`). ImNodes and ImPlot have no `BeginFrame` and need nothing extra. The
+harness shares its context the same way the controller does, so it works there unchanged;
+`tests/ImGui.App.Testing.Tests/EnableExtensionsTests.cs` drives it through real frames.
+
 ### Image decoding
 
 `ImGui.App/Images/` decodes image files without a third-party imaging library. That is deliberate:

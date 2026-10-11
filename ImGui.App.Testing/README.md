@@ -101,6 +101,10 @@ application gets: ImGuizmo, ImNodes and ImPlot are detected, handed the ImGui co
 own contexts, and ticked once per frame. An application that draws with any of them renders under
 the harness rather than faulting inside native code.
 
+`ImGuiAppConfig.Extensions` is honoured, and `ImGuiApp.EnableExtensions` works mid-run exactly as it
+does in the application: a harness started with `ImGuiAppExtensions.None` can enable ImNodes between
+steps, or inside `OnRender` before the first node editor draws, and draw with it in that frame.
+
 `ImGuiAppConfig.EnableDocking` is honored too, and applied before the first frame, which is the only
 point ImGui accepts it. A configuration that sets it can therefore use
 `ImGuiWidgets.DrawDeferredDocked()` in a test exactly as it does in the application.
