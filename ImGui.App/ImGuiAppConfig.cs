@@ -250,6 +250,29 @@ public class ImGuiAppConfig
 	public bool AutoDiscoverExtensions { get; init; } = true;
 
 	/// <summary>
+	/// Gets or sets which extensions (ImGuizmo, ImNodes, ImPlot) are set up at startup. Default is
+	/// <see cref="ImGuiAppExtensions.All"/>, which sets up whichever of them are referenced.
+	/// <para>
+	/// Each extension costs an assembly load, reflection, and for ImNodes and ImPlot a native
+	/// context, before the first frame. An application that draws none of them can set
+	/// <see cref="ImGuiAppExtensions.None"/> and skip all of it; one that draws only plots can ask for
+	/// <see cref="ImGuiAppExtensions.ImPlot"/> alone. Drawing with an extension that was left out
+	/// faults in native code, and <c>ktsu.ImGui.NodeEditor</c> needs
+	/// <see cref="ImGuiAppExtensions.ImNodes"/>.
+	/// </para>
+	/// <para>
+	/// <see cref="AutoDiscoverExtensions"/> set to false overrides this and sets up none.
+	/// </para>
+	/// </summary>
+	public ImGuiAppExtensions Extensions { get; init; } = ImGuiAppExtensions.All;
+
+	/// <summary>
+	/// Gets the extensions that are actually set up: <see cref="Extensions"/>, unless
+	/// <see cref="AutoDiscoverExtensions"/> turns them all off.
+	/// </summary>
+	internal ImGuiAppExtensions EffectiveExtensions => AutoDiscoverExtensions ? Extensions : ImGuiAppExtensions.None;
+
+	/// <summary>
 	/// Gets or sets the performance settings for throttled rendering.
 	/// </summary>
 	public ImGuiAppPerformanceSettings PerformanceSettings { get; init; } = new();

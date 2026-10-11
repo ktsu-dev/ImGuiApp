@@ -36,24 +36,49 @@ public static class ImGuiExtensionManager
 	// Track whether the ImGui context has been shared with extensions
 	private static bool imGuiContextSet;
 
-	private static bool initialized;
+	// Extensions whose assembly has been probed, so each is loaded and reflected over at most once
+	private static ImGuiAppExtensions probed;
 
 	/// <summary>
-	/// Initialize extension detection. Called once during application startup.
+	/// Gets the extensions the last <see cref="Initialize(ImGuiAppExtensions)"/> asked for. Nothing
+	/// outside this set is touched.
 	/// </summary>
-	public static void Initialize()
+	public static ImGuiAppExtensions Enabled { get; private set; }
+
+	/// <summary>
+	/// Initialize detection of every extension. Called once during application startup.
+	/// </summary>
+	public static void Initialize() => Initialize(ImGuiAppExtensions.All);
+
+	/// <summary>
+	/// Initialize detection of the given extensions only. An extension left out is never loaded,
+	/// so it costs nothing at startup, and the calls that follow skip it.
+	/// </summary>
+	/// <param name="extensions">The extensions to detect.</param>
+	public static void Initialize(ImGuiAppExtensions extensions)
 	{
-		if (initialized)
+		Enabled = extensions & ImGuiAppExtensions.All;
+
+		ImGuiAppExtensions toProbe = Enabled & ~probed;
+		probed |= toProbe;
+
+		if (toProbe.HasFlag(ImGuiAppExtensions.ImGuizmo))
 		{
-			return;
+			InitializeImGuizmo();
 		}
 
-		initialized = true;
+		if (toProbe.HasFlag(ImGuiAppExtensions.ImNodes))
+		{
+			InitializeImNodes();
+		}
 
-		InitializeImGuizmo();
-		InitializeImNodes();
-		InitializeImPlot();
+		if (toProbe.HasFlag(ImGuiAppExtensions.ImPlot))
+		{
+			InitializeImPlot();
+		}
 	}
+
+	private static bool IsEnabled(ImGuiAppExtensions extension) => (Enabled & extension) != 0;
 
 	private static void InitializeImGuizmo()
 	{
@@ -196,7 +221,10 @@ public static class ImGuiExtensionManager
 		// Call ImGuizmo.BeginFrame() if available
 		try
 		{
-			imGuizmoBeginFrame?.Invoke(null, null);
+			if (IsEnabled(ImGuiAppExtensions.ImGuizmo))
+			{
+				imGuizmoBeginFrame?.Invoke(null, null);
+			}
 		}
 		catch (TargetInvocationException ex)
 		{
@@ -206,7 +234,10 @@ public static class ImGuiExtensionManager
 		// Call ImNodes.BeginFrame() if available
 		try
 		{
-			imNodesBeginFrame?.Invoke(null, null);
+			if (IsEnabled(ImGuiAppExtensions.ImNodes))
+			{
+				imNodesBeginFrame?.Invoke(null, null);
+			}
 		}
 		catch (TargetInvocationException ex)
 		{
@@ -216,7 +247,10 @@ public static class ImGuiExtensionManager
 		// Call ImPlot.BeginFrame() if available
 		try
 		{
-			imPlotBeginFrame?.Invoke(null, null);
+			if (IsEnabled(ImGuiAppExtensions.ImPlot))
+			{
+				imPlotBeginFrame?.Invoke(null, null);
+			}
 		}
 		catch (TargetInvocationException ex)
 		{
@@ -236,7 +270,10 @@ public static class ImGuiExtensionManager
 		// Set context for ImGuizmo if available
 		try
 		{
-			imGuizmoSetImGuiContext?.Invoke(null, [contextToSet]);
+			if (IsEnabled(ImGuiAppExtensions.ImGuizmo))
+			{
+				imGuizmoSetImGuiContext?.Invoke(null, [contextToSet]);
+			}
 		}
 		catch (TargetInvocationException ex)
 		{
@@ -246,7 +283,10 @@ public static class ImGuiExtensionManager
 		// Set context for ImNodes if available
 		try
 		{
-			imNodesSetImGuiContext?.Invoke(null, [contextToSet]);
+			if (IsEnabled(ImGuiAppExtensions.ImNodes))
+			{
+				imNodesSetImGuiContext?.Invoke(null, [contextToSet]);
+			}
 		}
 		catch (TargetInvocationException ex)
 		{
@@ -256,7 +296,10 @@ public static class ImGuiExtensionManager
 		// Set context for ImPlot if available
 		try
 		{
-			imPlotSetImGuiContext?.Invoke(null, [contextToSet]);
+			if (IsEnabled(ImGuiAppExtensions.ImPlot))
+			{
+				imPlotSetImGuiContext?.Invoke(null, [contextToSet]);
+			}
 		}
 		catch (TargetInvocationException ex)
 		{
@@ -272,7 +315,7 @@ public static class ImGuiExtensionManager
 	public static void CreateExtensionContexts()
 	{
 		// Create and set ImNodes context and set style
-		if (imNodesCreateContext != null && imNodesSetCurrentContext != null)
+		if (IsEnabled(ImGuiAppExtensions.ImNodes) && nodesContext == null && imNodesCreateContext != null && imNodesSetCurrentContext != null)
 		{
 			try
 			{
@@ -293,7 +336,7 @@ public static class ImGuiExtensionManager
 		}
 
 		// Create and set ImPlot context and set style
-		if (imPlotCreateContext != null && imPlotSetCurrentContext != null)
+		if (IsEnabled(ImGuiAppExtensions.ImPlot) && plotContext == null && imPlotCreateContext != null && imPlotSetCurrentContext != null)
 		{
 			try
 			{
@@ -338,7 +381,7 @@ public static class ImGuiExtensionManager
 	public static void Cleanup()
 	{
 		// Clear ImGuizmo context by setting it to null to free any internal state
-		if (imGuizmoSetImGuiContext != null)
+		if (IsEnabled(ImGuiAppExtensions.ImGuizmo) && imGuizmoSetImGuiContext != null)
 		{
 			try
 			{
@@ -385,19 +428,21 @@ public static class ImGuiExtensionManager
 	}
 
 	/// <summary>
-	/// Gets whether ImGuizmo is available and initialized.
+	/// Gets whether ImGuizmo is available and was asked for.
 	/// </summary>
-	public static bool IsImGuizmoAvailable => imGuizmoBeginFrame != null;
+	public static bool IsImGuizmoAvailable => IsEnabled(ImGuiAppExtensions.ImGuizmo) && imGuizmoBeginFrame != null;
 
 	/// <summary>
-	/// Gets whether ImNodes is available and initialized.
+	/// Gets whether ImNodes is available and was asked for. Hexa's binding has no BeginFrame for it,
+	/// so a CreateContext is what shows it is there.
 	/// </summary>
-	public static bool IsImNodesAvailable => imNodesBeginFrame != null;
+	public static bool IsImNodesAvailable => IsEnabled(ImGuiAppExtensions.ImNodes) && (imNodesBeginFrame ?? imNodesCreateContext) != null;
 
 	/// <summary>
-	/// Gets whether ImPlot is available and initialized.
+	/// Gets whether ImPlot is available and was asked for. Hexa's binding has no BeginFrame for it,
+	/// so a CreateContext is what shows it is there.
 	/// </summary>
-	public static bool IsImPlotAvailable => imPlotBeginFrame != null;
+	public static bool IsImPlotAvailable => IsEnabled(ImGuiAppExtensions.ImPlot) && (imPlotBeginFrame ?? imPlotCreateContext) != null;
 
 	/// <summary>
 	/// Gets whether ImNodes context has been created.
