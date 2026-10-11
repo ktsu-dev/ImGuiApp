@@ -100,7 +100,7 @@ public sealed class InterfaceFontTests
 		Assert.IsTrue(font.IsGlyphInFont(Snowman), "The snowman only the emoji font has should draw.");
 	}
 
-	private static unsafe int LoadFonts()
+	private static int LoadFonts()
 	{
 		byte[] emoji = Resources.Resources.NotoEmoji;
 		nint emojiHandle = Marshal.AllocHGlobal(emoji.Length);
