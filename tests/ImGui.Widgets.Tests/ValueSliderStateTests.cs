@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.Widgets.Tests;
 
+using System;
 using System.Globalization;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -133,4 +134,90 @@ public class ValueSliderStateTests
 	[TestMethod]
 	public void Fraction_IsZeroForAnEmptyRange() =>
 		Assert.AreEqual(0f, ImGuiWidgets.ValueSliderState.Fraction(5.0, 3.0, 3.0));
+
+	[TestMethod]
+	public void Logarithmic_EqualDistancesMultiplyByEqualFactors()
+	{
+		// 1..1000 over 300 px: each 100 px is a factor of ten.
+		Assert.AreEqual(10.0, ImGuiWidgets.ValueSliderState.Drag(1.0, 100f, 300f, 1.0, 1000.0, 1f, logarithmic: true), 1e-9);
+		Assert.AreEqual(100.0, ImGuiWidgets.ValueSliderState.Drag(10.0, 100f, 300f, 1.0, 1000.0, 1f, logarithmic: true), 1e-9);
+		Assert.AreEqual(10.0, ImGuiWidgets.ValueSliderState.Drag(100.0, -100f, 300f, 1.0, 1000.0, 1f, logarithmic: true), 1e-9);
+	}
+
+	[TestMethod]
+	public void Logarithmic_ShiftDragsFinelyInTheSameProportion() =>
+		Assert.AreEqual(Math.Pow(10.0, 0.1), ImGuiWidgets.ValueSliderState.Drag(1.0, 100f, 300f, 1.0, 1000.0, 0.1f, logarithmic: true), 1e-6);
+
+	[TestMethod]
+	public void Logarithmic_PositionAndValueAreInverses()
+	{
+		foreach (double v in new[] { 1.0, 2.0, 37.5, 999.0, 1000.0 })
+		{
+			float fraction = ImGuiWidgets.ValueSliderState.Fraction(v, 1.0, 1000.0, logarithmic: true);
+			Assert.AreEqual(v, ImGuiWidgets.ValueSliderState.ValueAt(fraction, 1.0, 1000.0, logarithmic: true), v * 1e-5);
+		}
+
+		Assert.AreEqual(0.5f, ImGuiWidgets.ValueSliderState.Fraction(10.0, 1.0, 100.0, logarithmic: true), 1e-6f);
+	}
+
+	[TestMethod]
+	public void Logarithmic_ARangeFromZeroKeepsZeroAtItsLeftEnd()
+	{
+		// Zero sits at the left edge, and the rest runs from the epsilon to the maximum.
+		Assert.AreEqual(0f, ImGuiWidgets.ValueSliderState.Fraction(0.0, 0.0, 100.0, logarithmic: true, epsilon: 1.0));
+		Assert.AreEqual(0.0, ImGuiWidgets.ValueSliderState.ValueAt(0.0, 0.0, 100.0, logarithmic: true, epsilon: 1.0));
+		Assert.AreEqual(10.0, ImGuiWidgets.ValueSliderState.ValueAt(0.5, 0.0, 100.0, logarithmic: true, epsilon: 1.0), 1e-9);
+
+		// Dragging off zero lands on the epsilon at the least, and dragging back below it returns to zero.
+		double moved = ImGuiWidgets.ValueSliderState.Drag(0.0, 1f, 200f, 0.0, 100.0, 1f, logarithmic: true, epsilon: 1.0);
+		Assert.IsTrue(moved is >= 1.0 and < 1.1, $"A one-pixel drag off zero reached {moved}.");
+		Assert.AreEqual(0.0, ImGuiWidgets.ValueSliderState.Drag(moved, -2f, 200f, 0.0, 100.0, 1f, logarithmic: true, epsilon: 1.0));
+	}
+
+	[TestMethod]
+	public void Logarithmic_ARangeBelowZeroMirrorsOneAboveIt()
+	{
+		Assert.AreEqual(0.5f, ImGuiWidgets.ValueSliderState.Fraction(-10.0, -100.0, -1.0, logarithmic: true), 1e-6f);
+		Assert.AreEqual(-10.0, ImGuiWidgets.ValueSliderState.ValueAt(0.5, -100.0, -1.0, logarithmic: true), 1e-9);
+	}
+
+	[TestMethod]
+	public void Logarithmic_ARangeCrossingZeroIsLinear()
+	{
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.IsLogarithmic(-10.0, 10.0, 0.1));
+		Assert.AreEqual(0.75f, ImGuiWidgets.ValueSliderState.Fraction(5.0, -10.0, 10.0, logarithmic: true, epsilon: 0.1), 1e-6f);
+	}
+
+	[TestMethod]
+	public void Logarithmic_TheFillFollowsTheScale()
+	{
+		(float start, float end) = ImGuiWidgets.ValueSliderState.FillSpan(10.0, 1.0, 100.0, ValueSliderFill.FromMinimum, logarithmic: true);
+
+		Assert.AreEqual(0f, start);
+		Assert.AreEqual(0.5f, end, 1e-6f);
+	}
+
+	[TestMethod]
+	[DataRow("0", false, 1.0)]
+	[DataRow("0.0", false, 0.1)]
+	[DataRow("0.00", false, 0.01)]
+	[DataRow("#,##0.###", false, 0.001)]
+	[DataRow("F2", false, 0.01)]
+	[DataRow("0.0", true, 1.0)]
+	public void LogarithmicEpsilon_IsTheSmallestStepTheFormatShows(string format, bool isInteger, double expected) =>
+		Assert.AreEqual(expected, ImGuiWidgets.ValueSliderState.LogarithmicEpsilon(format, isInteger), expected * 1e-9);
+
+	[TestMethod]
+	public void FillAvoidsText_OnlyWhenTheFillLiesWhollyUnderTheNumber()
+	{
+		// A sliver from zero in the middle of the number.
+		Assert.IsTrue(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 103f, 90f, 110f));
+
+		// A fill reaching past the number keeps it, with the number written over both.
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 120f, 90f, 110f));
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(0f, 105f, 90f, 110f));
+
+		// No fill at all.
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 100f, 90f, 110f));
+	}
 }

@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using System.Numerics;
+
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App.Testing;
@@ -268,6 +270,58 @@ public sealed class ValueSliderTests : WidgetTest
 		Assert.IsTrue(
 			changed.MinX > frame.MinX + (FrameWidth * 0.25f),
 			$"The fill reached x={changed.MinX}, left of zero, so it did not start from zero.");
+	}
+
+	[TestMethod]
+	public void ValueSlider_LogarithmicDragsMultiplyTheValue()
+	{
+		options = new ValueSliderOptions { Logarithmic = true };
+		float size = 10f;
+		Start(() =>
+		{
+			ImGui.PushItemWidth(FrameWidth);
+			ImGuiWidgets.ValueSlider(Label, ref size, 1f, 1000f, options);
+			ImGui.PopItemWidth();
+		});
+
+		// 1..1000 is three factors of ten across the frame, so a third of its width is one of them.
+		DragAcross(Label, 0.3f, 0.3f + (1f / 3f));
+
+		Assert.AreEqual(100f, size, 8f, "A third-width drag on a logarithmic 1..1000 slider did not multiply the value by ten.");
+	}
+
+	[TestMethod]
+	[DataRow(0f)]
+	[DataRow(1f)]
+	[DataRow(-1f)]
+	public void ValueSlider_NothingIsDrawnThroughTheNumberNearZero(float near)
+	{
+		options = new ValueSliderOptions { Format = "0", Fill = ValueSliderFill.FromZero };
+		float bipolar = near;
+		Start(() =>
+		{
+			// The number is drawn invisibly, leaving the frame, the fill and the zero mark to look at.
+			ImGui.PushItemWidth(FrameWidth);
+			ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
+			ImGuiWidgets.ValueSlider(Label, ref bipolar, -100f, 100f, options);
+			ImGui.PopStyleColor();
+			ImGui.PopItemWidth();
+		});
+
+		// Across the middle of the frame, where the number sits, the row through its centre must be the
+		// frame's own colour: neither the zero mark nor a sliver of fill may run through the digits.
+		byte[] pixels = Snapshot();
+		Rectangle frame = RectOf(Label);
+		int width = Harness.Options.Width;
+		int y = frame.MinY + (frame.Height / 2);
+		int centre = frame.MinX + (int)(FrameWidth / 2f);
+		int reference = ((y * width) + frame.MinX + 10) * 4;
+		for (int x = centre - 4; x <= centre + 4; x++)
+		{
+			int i = ((y * width) + x) * 4;
+			bool same = pixels[i] == pixels[reference] && pixels[i + 1] == pixels[reference + 1] && pixels[i + 2] == pixels[reference + 2];
+			Assert.IsTrue(same, $"At {near}, something was drawn through the number at x={x}.");
+		}
 	}
 
 	[TestMethod]

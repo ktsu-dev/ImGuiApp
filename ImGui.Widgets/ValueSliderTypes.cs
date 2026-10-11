@@ -36,6 +36,19 @@ public sealed class ValueSliderOptions
 	public ValueSliderFill Fill { get; set; }
 
 	/// <summary>
+	/// Gets or sets whether the frame covers the range logarithmically, so each stretch of a drag multiplies
+	/// the value by the same factor rather than adding the same amount. Suits a size or radius, where the
+	/// difference between 2 and 4 matters as much as the difference between 200 and 400. Off by default.
+	/// </summary>
+	/// <remarks>
+	/// A range starting at zero keeps zero at its left end and runs logarithmically from the smallest step
+	/// the format shows, so 0..100 shown as <c>"0"</c> goes 0, then 1 to 100; with <c>"0.0"</c> it goes 0,
+	/// then 0.1 to 100. A range wholly below zero mirrors one above it. A range that crosses zero is covered
+	/// linearly, since no logarithm passes through it.
+	/// </remarks>
+	public bool Logarithmic { get; set; }
+
+	/// <summary>
 	/// Gets or sets the value a double-click returns the slider to. Leave null and a double-click opens
 	/// the value for typing instead, as Ctrl+click always does.
 	/// </summary>
