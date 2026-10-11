@@ -123,7 +123,7 @@ public static partial class ImGuiWidgets
 			ImGuiProbes.MarkItem(label);
 
 			// A value the caller passed outside the range is shown as it is until something edits it.
-			return !value.Equals(before);
+			return !IsSameValue(value, before);
 		}
 
 		private static void DrawFrame(string label, uint id, ValueSliderState state, ref double value, Spec spec)
@@ -256,7 +256,7 @@ public static partial class ImGuiWidgets
 		private static bool SetValue(ref double value, double target, double min, double max, bool isInteger)
 		{
 			double next = Math.Clamp(isInteger ? Math.Round(target, MidpointRounding.AwayFromZero) : target, min, max);
-			if (next.Equals(value))
+			if (IsSameValue(next, value))
 			{
 				return false;
 			}
@@ -264,6 +264,13 @@ public static partial class ImGuiWidgets
 			value = next;
 			return true;
 		}
+
+		/// <summary>
+		/// Whether two values are the same number, bit for bit. The question is "did anything write a new
+		/// value", not "are these close", so a tolerance would hide a real change.
+		/// </summary>
+		private static bool IsSameValue(double a, double b) =>
+			BitConverter.DoubleToInt64Bits(a) == BitConverter.DoubleToInt64Bits(b);
 
 		private static void DrawContents(ImRect frame, bool hovered, bool held, double value, Spec spec)
 		{
