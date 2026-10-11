@@ -82,8 +82,9 @@ public static partial class ImGuiWidgets
 		/// <param name="frameToScreen">The transform the box is drawn through.</param>
 		/// <param name="screenPoint">The pointer, in screen pixels.</param>
 		/// <param name="edgeHandles">Whether the edges can be held.</param>
+		/// <param name="grabPixels">How close, in screen pixels, a pointer has to be to hold a handle; <see cref="GrabPixels"/> at the reference size.</param>
 		/// <returns>The first handle within reach: a corner, then an edge, then the body.</returns>
-		public static TransformBoxHandle HitTest(TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint, bool edgeHandles)
+		public static TransformBoxHandle HitTest(TransformBoxRect rect, Matrix3x2 frameToScreen, Vector2 screenPoint, bool edgeHandles, float grabPixels = GrabPixels)
 		{
 			// A frame that cannot be inverted could never be dragged, so none of it is offered.
 			if (!IsFinite(frameToScreen) || !IsFinite(rect.Min) || !IsFinite(rect.Max) || !Matrix3x2.Invert(frameToScreen, out _))
@@ -98,8 +99,8 @@ public static partial class ImGuiWidgets
 
 			// Along the top and bottom edges the side that matters is the width, and along the left and
 			// right ones the height, so each reach is capped by the side it would eat into.
-			float acrossVertical = inside ? MathF.Min(GrabPixels, width / 4f) : GrabPixels;
-			float acrossHorizontal = inside ? MathF.Min(GrabPixels, height / 4f) : GrabPixels;
+			float acrossVertical = inside ? MathF.Min(grabPixels, width / 4f) : grabPixels;
+			float acrossHorizontal = inside ? MathF.Min(grabPixels, height / 4f) : grabPixels;
 			float cornerReach = MathF.Min(acrossVertical, acrossHorizontal);
 
 			TransformBoxHandle[] cornerHandles = [TransformBoxHandle.TopLeft, TransformBoxHandle.TopRight, TransformBoxHandle.BottomRight, TransformBoxHandle.BottomLeft];

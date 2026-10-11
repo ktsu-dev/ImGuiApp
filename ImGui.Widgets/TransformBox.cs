@@ -107,7 +107,7 @@ public static partial class ImGuiWidgets
 					&& ImGui.IsWindowHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
 					&& mouse.X >= clipMin.X && mouse.Y >= clipMin.Y && mouse.X < clipMax.X && mouse.Y < clipMax.Y);
 			TransformBoxHandle under = reachable
-				? TransformBoxState.HitTest(rect, frameToScreen, mouse, options.EdgeHandles)
+				? TransformBoxState.HitTest(rect, frameToScreen, mouse, options.EdgeHandles, TransformBoxState.GrabPixels * InterfaceScale.Current)
 				: TransformBoxHandle.None;
 
 			bool changed = false;
@@ -281,10 +281,13 @@ public static partial class ImGuiWidgets
 			Vector2 along = Normalized(screen[1] - screen[0], Vector2.UnitX);
 			Vector2 down = Normalized(screen[3] - screen[0], Vector2.UnitY);
 
+			float scale = InterfaceScale.Current;
+			float cornerHalf = CornerHalf * scale;
+			Vector2 edgeHalf = EdgeHalf * scale;
 			for (int index = 0; index < 4; index++)
 			{
-				DrawBar(drawList, screen[index], along * CornerHalf, down * CornerHalf, HandleColor(hot, CornerHandles[index]));
-				MarkBox(label, CornerNames[index], screen[index], new Vector2(CornerHalf));
+				DrawBar(drawList, screen[index], along * cornerHalf, down * cornerHalf, HandleColor(hot, CornerHandles[index]));
+				MarkBox(label, CornerNames[index], screen[index], new Vector2(cornerHalf));
 			}
 
 			if (edgeHandles)
@@ -294,14 +297,14 @@ public static partial class ImGuiWidgets
 				Vector2 left = (screen[0] + screen[3]) / 2f;
 				Vector2 right = (screen[1] + screen[2]) / 2f;
 
-				DrawBar(drawList, top, along * EdgeHalf.X, down * EdgeHalf.Y, HandleColor(hot, TransformBoxHandle.Top));
-				DrawBar(drawList, bottom, along * EdgeHalf.X, down * EdgeHalf.Y, HandleColor(hot, TransformBoxHandle.Bottom));
-				DrawBar(drawList, left, down * EdgeHalf.X, along * EdgeHalf.Y, HandleColor(hot, TransformBoxHandle.Left));
-				DrawBar(drawList, right, down * EdgeHalf.X, along * EdgeHalf.Y, HandleColor(hot, TransformBoxHandle.Right));
-				MarkBox(label, "top", top, new Vector2(CornerHalf));
-				MarkBox(label, "bottom", bottom, new Vector2(CornerHalf));
-				MarkBox(label, "left", left, new Vector2(CornerHalf));
-				MarkBox(label, "right", right, new Vector2(CornerHalf));
+				DrawBar(drawList, top, along * edgeHalf.X, down * edgeHalf.Y, HandleColor(hot, TransformBoxHandle.Top));
+				DrawBar(drawList, bottom, along * edgeHalf.X, down * edgeHalf.Y, HandleColor(hot, TransformBoxHandle.Bottom));
+				DrawBar(drawList, left, down * edgeHalf.X, along * edgeHalf.Y, HandleColor(hot, TransformBoxHandle.Left));
+				DrawBar(drawList, right, down * edgeHalf.X, along * edgeHalf.Y, HandleColor(hot, TransformBoxHandle.Right));
+				MarkBox(label, "top", top, new Vector2(cornerHalf));
+				MarkBox(label, "bottom", bottom, new Vector2(cornerHalf));
+				MarkBox(label, "left", left, new Vector2(cornerHalf));
+				MarkBox(label, "right", right, new Vector2(cornerHalf));
 			}
 
 			drawList.PopClipRect();

@@ -354,6 +354,19 @@ canvas pan). Plain `ImGui.Button`s, including `ToolbarButton`, keep the arrow, a
 buttons do, and a read-only or click-less instance keeps it too. Text fields get the beam from
 ImGui itself.
 
+### Interface scale
+
+`ImGuiApp.SetGlobalScale` reaches a frame through the font: `CalculateOptimalPixelSize` multiplies
+the point size by the DPI `ScaleFactor` and `GlobalScale`, and `RenderWithScaling` scales the style's
+spacing by that font's size over 14 px. It must not multiply by `GlobalScale` again; it used to, which
+made every padding four times its size at 200%. `InterfaceScaleTests` pins the font and the spacing to
+the same factor.
+
+A widget that draws or hit-tests in fixed screen pixels multiplies them by `InterfaceScale.Current`
+(the font size over 14), so its handles grow with the text around them. `TransformBox` and
+`GradientEditor` do; prefer lengths derived from `ImGui.GetFrameHeight()` or the line height, as
+`HandleTrack` and `CurveTrack` already are, when writing a new one.
+
 ### Input method placement
 
 Dear ImGui records where text is being typed (`PlatformImeData` in its context) so an input method
