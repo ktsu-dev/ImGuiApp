@@ -93,8 +93,12 @@ public sealed class InterfaceFontTests
 		ImGuiIOPtr io = ImGui.GetIO();
 		ImFontPtr? added = FontHelper.AddInterfaceFont(io, Resources.Resources.NerdFont, 14f);
 
-		Assert.IsNotNull(added);
-		ImFontPtr font = added.Value;
+		if (added is not ImFontPtr font)
+		{
+			Assert.Fail("The interface font was not added.");
+			return;
+		}
+
 		Assert.AreEqual(3, font.Sources.Size);
 		Assert.IsTrue(font.IsGlyphInFont(Diamond), "The diamond the face has should draw.");
 		Assert.IsTrue(font.IsGlyphInFont(Snowman), "The snowman only the emoji font has should draw.");
