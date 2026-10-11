@@ -259,7 +259,10 @@ public static partial class ImGuiWidgets
 
 		private static bool SetValue(ref double value, double target, double min, double max, bool isInteger)
 		{
-			double next = Math.Clamp(isInteger ? Math.Round(target, MidpointRounding.AwayFromZero) : target, min, max);
+			// The value is stored as a float or an int, so it is compared as one: a drag held as a double
+			// that a float cannot hold exactly would otherwise read as a fresh change on every held frame.
+			double stored = isInteger ? Math.Round(target, MidpointRounding.AwayFromZero) : (float)target;
+			double next = Math.Clamp(stored, min, max);
 			if (IsSameValue(next, value))
 			{
 				return false;
