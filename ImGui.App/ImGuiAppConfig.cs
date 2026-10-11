@@ -192,6 +192,18 @@ public class ImGuiAppConfig
 	public Action OnAppMenu { get; init; } = () => { };
 
 	/// <summary>
+	/// Gets or sets which of ImGuiApp's own menus are appended to the main menu bar after
+	/// <see cref="OnAppMenu"/>. Default is <see cref="ImGuiAppMenus.All"/>, which shows the
+	/// Accessibility and Debug menus as every application did before this setting existed.
+	/// </summary>
+	/// <remarks>
+	/// Set <see cref="ImGuiAppMenus.None"/> in an application that ships to users: the Accessibility
+	/// menu's UI scale is not saved anywhere, and the Debug menu opens ImGui's own diagnostic windows.
+	/// Hiding a menu does not close a window it already opened.
+	/// </remarks>
+	public ImGuiAppMenus BuiltInMenus { get; init; } = ImGuiAppMenus.All;
+
+	/// <summary>
 	/// Gets or sets the action to be performed when the application window is moved or resized.
 	/// </summary>
 	public Action OnMoveOrResize { get; init; } = () => { };

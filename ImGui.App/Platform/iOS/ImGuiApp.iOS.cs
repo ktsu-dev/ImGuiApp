@@ -235,7 +235,8 @@ public static partial class ImGuiApp
 
 	/// <summary>
 	/// Renders the application menu bar. On iPad this shows the consumer's
-	/// <see cref="ImGuiAppConfig.OnAppMenu"/> plus an accessibility UI-scale submenu, mirroring the
+	/// <see cref="ImGuiAppConfig.OnAppMenu"/> plus an accessibility UI-scale submenu unless
+	/// <see cref="ImGuiAppConfig.BuiltInMenus"/> leaves it out, mirroring the
 	/// desktop main menu bar. iPhone has no main-menu-bar paradigm and little vertical space, so this is
 	/// a no-op there (§2.3 of the port plan). Must be called inside an active ImGui frame.
 	/// </summary>
@@ -249,7 +250,11 @@ public static partial class ImGuiApp
 		if (ImGui.BeginMainMenuBar())
 		{
 			Config.OnAppMenu?.Invoke();
-			RenderAccessibilityMenu();
+			if (Config.BuiltInMenus.HasFlag(ImGuiAppMenus.Accessibility))
+			{
+				RenderAccessibilityMenu();
+			}
+
 			ImGui.EndMainMenuBar();
 		}
 	}
