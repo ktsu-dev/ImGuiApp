@@ -110,7 +110,7 @@ internal static class ImGuiPopupsDemo
 	private static readonly ImGuiPopups.InputString popupInputString = new();
 	private static readonly ImGuiPopups.InputInt popupInputInt = new();
 	private static readonly ImGuiPopups.InputFloat popupInputFloat = new();
-	private static readonly ImGuiPopups.FilesystemBrowser popupFilesystemBrowser = new();
+	private static readonly ImGuiPopups.FilesystemBrowser popupFilesystemBrowser = new() { ConfirmOverwrite = true };
 	private static readonly ImGuiPopups.MessageOK popupMessageOK = new();
 	private static readonly ImGuiPopups.SearchableList<string> popupSearchableListFriends = new();
 	private static readonly ImGuiPopups.SearchableList<string> popupSearchableListColors = new();
@@ -224,6 +224,21 @@ internal static class ImGuiPopupsDemo
 				};
 				string warning = "⚠️ WARNING: This action cannot be undone!\n\nAre you sure you want to delete all selected files?";
 				popupPrompt.Open("Confirm Deletion", warning, buttons, ImGuiPopups.PromptTextLayoutType.Wrapped, new Vector2(400, 200));
+			}
+
+			// Buttons with their own probe names, a checkbox, and an answer for when the prompt is dismissed.
+			ImGui.SameLine();
+			if (DemoButton("Show Unsaved Changes Prompt"))
+			{
+				popupPrompt.Open(
+					"Unsaved Changes",
+					"Save changes before closing?",
+					[
+						new ImGuiPopups.PromptButton("Save", () => lastPromptResult = $"Saved, remember: {popupPrompt.Checked}", "unsaved/save"),
+						new ImGuiPopups.PromptButton("Don't Save", () => lastPromptResult = $"Discarded, remember: {popupPrompt.Checked}", "unsaved/discard"),
+						new ImGuiPopups.PromptButton(CancelLabel, () => lastPromptResult = "Kept open", "unsaved/cancel", IsCancel: true),
+					],
+					new ImGuiPopups.PromptCheckbox("Don't ask again", "unsaved/remember"));
 			}
 
 			ImGui.Spacing();

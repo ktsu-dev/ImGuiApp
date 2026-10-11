@@ -7,7 +7,7 @@ using System.Numerics;
 public static partial class ImGuiWidgets
 {
 	/// <summary>
-	/// The geometry and drag rules behind <see cref="CropOverlay"/>, with no ImGui dependency. Every point
+	/// The geometry and drag rules behind <see cref="ImGuiWidgets.CropOverlay(string, ref CropRect, Vector2, ImGuiWidgets.ImageCanvasState, Vector2, Vector2, CropOverlayOptions)"/>, with no ImGui dependency. Every point
 	/// and size is in image pixels; the two pixel constants are screen pixels, divided by the zoom
 	/// wherever they are compared with image distances.
 	/// </summary>

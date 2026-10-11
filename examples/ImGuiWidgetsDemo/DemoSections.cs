@@ -45,6 +45,7 @@ internal static class DemoSections
 		new(PianoKeyboardDemo.Show, PianoKeyboardDemo.ResetState),
 		new(StepGridDemo.Show, StepGridDemo.ResetState),
 		new(ColorWheelDemo.Show, ColorWheelDemo.ResetState),
+		new(LinearColorEditDemo.Show, LinearColorEditDemo.ResetState),
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
 		new(ToolbarDemo.Show, ToolbarDemo.ResetState),
 	];

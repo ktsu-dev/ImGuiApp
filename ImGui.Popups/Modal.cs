@@ -80,6 +80,10 @@ public static partial class ImGuiPopups
 			}
 
 			bool result = ImGui.IsPopupOpen(Name);
+
+			// Centred on the window each time it appears, rather than wherever ImGui first put it.
+			ImGuiViewportPtr viewport = ImGui.GetMainViewport();
+			ImGui.SetNextWindowPos(viewport.Pos + (viewport.Size * 0.5f), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 			if (CustomSize != Vector2.Zero)
 			{
 				ImGui.SetNextWindowSize(CustomSize);

@@ -120,6 +120,7 @@ internal static class LayoutAndContainersTiles
 		yield return ImageCompareEntry(Category);
 
 		yield return CropOverlayTile(Category);
+		yield return CropGuidesTile(Category);
 		yield return TransformBoxTile(Category);
 
 		yield return PixelLoupeTile(Category);
@@ -268,6 +269,29 @@ internal static class LayoutAndContainersTiles
 			ImGuiWidgets.CropOverlay("##crop", ref crop, imageSize, canvas, ImGui.GetItemRectMin(), canvasSize);
 
 			// The overlay restores the cursor, so something has to follow it before the window ends.
+			ImGui.Dummy(Vector2.Zero);
+		});
+	}
+
+	/// <summary>
+	/// A crop with the golden spiral drawn over it, flipped to turn the other way, which is the guide the
+	/// options overload adds beyond the rule of thirds. Its own method to keep <see cref="Build"/> under
+	/// the coupling limit.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The tile.</returns>
+	private static GalleryEntry CropGuidesTile(GalleryCategory category)
+	{
+		Vector2 imageSize = new(SampleImage.Size, SampleImage.Size);
+		Vector2 canvasSize = new(260f, 170f);
+		ImGuiWidgets.ImageCanvasState canvas = new();
+		canvas.FitToViewport(imageSize, canvasSize);
+		CropRect crop = new(imageSize / 2f, imageSize * new Vector2(0.8f, 0.5f), 0f);
+		CropOverlayOptions options = new() { Guide = CropGuide.GoldenSpiral, GuideOrientation = 1, AllowRotation = false };
+		return new("CropOverlay guides", category, [nameof(ImGuiWidgets.CropOverlay)], context =>
+		{
+			ImGuiWidgets.ImageCanvas("##guideCanvas", context.SampleTextureId, imageSize, canvas, canvasSize);
+			ImGuiWidgets.CropOverlay("##guides", ref crop, imageSize, canvas, ImGui.GetItemRectMin(), canvasSize, options);
 			ImGui.Dummy(Vector2.Zero);
 		});
 	}

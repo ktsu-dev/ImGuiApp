@@ -19,6 +19,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`RangeSlider`**: Dual-handle slider for a span within a range; the handles cannot cross and stay a minimum distance apart
 - **`ChannelFader`**: Mixing-console gain fader in dB on an audio taper (unity at three quarters of the travel), with a level meter beside the track, a readout underneath, right-click to reset to unity and wheel nudges; `FaderTaper` exposes the position-to-dB mapping
 - **`XYPad`**: Edits two normalized parameters at once from one pad
+- **`ColorEdit`** / **`ColorPicker`** / **`ColorButton`**: Dear ImGui's colour controls over a colour stored in linear light. What is shown, typed and picked is sRGB-encoded, so mid grey reads #808080; what is written back is linear, and only on an edit, so a colour that is merely displayed stays exactly as stored. Alpha passes through untouched. `Vector3` and `Vector4` overloads
 - **`ColorWheel`** / **`LiftGammaGain`**: Colour-grading wheels, singly or as the lift, gamma and gain set a grade is made of. Each is a trackball editing a hue and strength over a master slider for luminance, held in a `ColorWheelValue`. Drags are relative, so a press never jumps the handle; Shift adjusts finely and a double-click resets the ball or the slider. `ColorWheelValue.ToRgbOffset` turns a wheel into a per-channel offset, and applying it is left to you
 - **`Knob`** / **`KnobWithDrag`**: Dial-style knobs in several variants, ported to .NET from [ImGui-works/ImGui-knobs-dial-gauge-meter](https://github.com/imgui-works/imgui-knobs-dial-gauge-meter)
 - **`Rating`**: Interactive star rating that previews the value under the cursor before it is committed
@@ -83,7 +84,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 ### Image and Colour
 
-- **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, rule-of-thirds guides, edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
+- **`CropOverlay`**: A crop rectangle drawn over an `ImageCanvas`, with a dimmed surround, a composition guide (the rule of thirds, or through `CropOverlayOptions` the golden ratio, a golden spiral, diagonals, triangles or a grid, the asymmetric ones flippable four ways; `CropGuides` draws the same lines anywhere else), edge and corner handles, an optional aspect lock and an optional rotate handle. The crop lives in image pixels as a `CropRect` and is kept inside the image; dragging outside it pans the canvas, and the wheel zooms it
 
 ### Image and Colour
 

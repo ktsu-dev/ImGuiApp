@@ -37,6 +37,25 @@ public readonly record struct CropRect(Vector2 Center, Vector2 Size, float Angle
 	}
 }
 
+/// <summary>How a <see cref="ImGuiWidgets.CropOverlay(string, ref CropRect, Vector2, ImGuiWidgets.ImageCanvasState, Vector2, Vector2, CropOverlayOptions)"/> behaves and what it draws.</summary>
+public sealed record CropOverlayOptions
+{
+	/// <summary>Gets the width over height to lock the crop to, or zero (the default) for free.</summary>
+	public float AspectRatio { get; init; }
+
+	/// <summary>Gets the composition guide drawn inside the crop, or null for none. The rule of thirds by default.</summary>
+	public CropGuide? Guide { get; init; } = CropGuide.Thirds;
+
+	/// <summary>
+	/// Gets which way round an asymmetric guide is drawn: bit 0 mirrors it left to right, bit 1 top to
+	/// bottom. <see cref="CropGuides.NextOrientation"/> steps through the four. Ignored by a symmetric guide.
+	/// </summary>
+	public int GuideOrientation { get; init; }
+
+	/// <summary>Gets a value indicating whether the rotate handle is shown. When false, the crop's angle is forced to zero.</summary>
+	public bool AllowRotation { get; init; } = true;
+}
+
 public static partial class ImGuiWidgets
 {
 	/// <summary>Draws an interactive crop rectangle over an <see cref="ImageCanvas"/> drawn immediately before it.</summary>
@@ -59,10 +78,31 @@ public static partial class ImGuiWidgets
 	{
 		Ensure.NotNull(label);
 		Ensure.NotNull(canvasState);
-		return CropOverlayImpl.Draw(label, ref crop, imageSize, canvasState, canvasMin, canvasSize, aspectRatio, showThirds, allowRotation);
+		return CropOverlayImpl.Draw(label, ref crop, imageSize, canvasState, canvasMin, canvasSize, aspectRatio, showThirds ? CropGuide.Thirds : null, 0, allowRotation);
 	}
 
-	/// <summary>The ImGui half of <see cref="CropOverlay"/>: input, drawing and probe regions.</summary>
+	/// <summary>Draws an interactive crop rectangle over an <see cref="ImageCanvas"/> drawn immediately before it, with a choice of composition guide.</summary>
+	/// <param name="label">Unique id; also the probe name.</param>
+	/// <param name="crop">The crop in image pixels. Owned by the caller; normalized on entry.</param>
+	/// <param name="imageSize">Native image size in pixels, as passed to ImageCanvas.</param>
+	/// <param name="canvasState">The same state passed to ImageCanvas. Pan, double-click fit and wheel zoom over the canvas are forwarded to it.</param>
+	/// <param name="canvasMin">Screen position of the canvas's top-left; pass <c>ImGui.GetItemRectMin()</c> right after ImageCanvas.</param>
+	/// <param name="canvasSize">The canvas size passed to ImageCanvas.</param>
+	/// <param name="options">The aspect lock, the guide and which way round it is drawn, and whether the crop can turn.</param>
+	/// <returns>True if <paramref name="crop"/> changed this frame, including by normalization.</returns>
+	/// <remarks>
+	/// The guide turns with the crop, and is laid out over the crop's size on screen, so a grid's cells
+	/// stay square however the crop is turned or zoomed. See <see cref="CropGuides"/> for the guides.
+	/// </remarks>
+	public static bool CropOverlay(string label, ref CropRect crop, Vector2 imageSize, ImageCanvasState canvasState, Vector2 canvasMin, Vector2 canvasSize, CropOverlayOptions options)
+	{
+		Ensure.NotNull(label);
+		Ensure.NotNull(canvasState);
+		Ensure.NotNull(options);
+		return CropOverlayImpl.Draw(label, ref crop, imageSize, canvasState, canvasMin, canvasSize, options.AspectRatio, options.Guide, options.GuideOrientation, options.AllowRotation);
+	}
+
+	/// <summary>The ImGui half of <see cref="ImGuiWidgets.CropOverlay(string, ref CropRect, Vector2, ImGuiWidgets.ImageCanvasState, Vector2, Vector2, CropOverlayOptions)"/>: input, drawing and probe regions.</summary>
 	internal static class CropOverlayImpl
 	{
 		/// <summary>The drag in progress, per overlay id.</summary>
@@ -77,7 +117,7 @@ public static partial class ImGuiWidgets
 		/// <summary>The rotate handle's radius, in screen pixels.</summary>
 		private const float RotateRadius = 5f;
 
-		/// <summary>Draws the overlay; see <see cref="CropOverlay"/>.</summary>
+		/// <summary>Draws the overlay; see <see cref="ImGuiWidgets.CropOverlay(string, ref CropRect, Vector2, ImGuiWidgets.ImageCanvasState, Vector2, Vector2, CropOverlayOptions)"/>.</summary>
 		/// <param name="label">Unique id; also the probe name.</param>
 		/// <param name="crop">The crop in image pixels.</param>
 		/// <param name="imageSize">Native image size in pixels.</param>
@@ -85,10 +125,11 @@ public static partial class ImGuiWidgets
 		/// <param name="canvasMin">Screen position of the canvas's top-left.</param>
 		/// <param name="canvasSize">The canvas size.</param>
 		/// <param name="aspectRatio">Width / height to lock to; 0 means free.</param>
-		/// <param name="showThirds">Draw rule-of-thirds guides.</param>
+		/// <param name="guide">The composition guide, or null for none.</param>
+		/// <param name="guideOrientation">Which way round an asymmetric guide is drawn.</param>
 		/// <param name="allowRotation">Show the rotate handle.</param>
 		/// <returns>True if <paramref name="crop"/> changed.</returns>
-		internal static bool Draw(string label, ref CropRect crop, Vector2 imageSize, ImageCanvasState canvasState, Vector2 canvasMin, Vector2 canvasSize, float aspectRatio, bool showThirds, bool allowRotation)
+		internal static bool Draw(string label, ref CropRect crop, Vector2 imageSize, ImageCanvasState canvasState, Vector2 canvasMin, Vector2 canvasSize, float aspectRatio, CropGuide? guide, int guideOrientation, bool allowRotation)
 		{
 			uint id = ImGui.GetID(label);
 			if (!States.TryGetValue(id, out CropOverlayState? state))
@@ -172,7 +213,7 @@ public static partial class ImGuiWidgets
 				ImGui.SetTooltip(string.Create(CultureInfo.InvariantCulture, $"{MathF.Round(crop.Size.X)} × {MathF.Round(crop.Size.Y)} px, {crop.AngleDegrees:0.0}°"));
 			}
 
-			Render(label, crop, imageSize, canvasState, canvasMin, canvasSize, showThirds, allowRotation, hot);
+			Render(label, crop, imageSize, canvasState, canvasMin, canvasSize, guide, guideOrientation, allowRotation, hot);
 			return changed;
 		}
 
@@ -222,7 +263,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private static void Render(string label, CropRect crop, Vector2 imageSize, ImageCanvasState canvasState, Vector2 canvasMin, Vector2 canvasSize, bool showThirds, bool allowRotation, CropHandle hot)
+		private static void Render(string label, CropRect crop, Vector2 imageSize, ImageCanvasState canvasState, Vector2 canvasMin, Vector2 canvasSize, CropGuide? guide, int guideOrientation, bool allowRotation, CropHandle hot)
 		{
 			Vector2 ToScreen(Vector2 imagePoint) => canvasMin + canvasState.ImageToViewport(imagePoint, imageSize, canvasSize);
 
@@ -247,15 +288,9 @@ public static partial class ImGuiWidgets
 				drawList.AddLine(screen[i], screen[(i + 1) % 4], outline, 1.5f);
 			}
 
-			if (showThirds)
+			if (guide is CropGuide drawn)
 			{
-				uint border = ImGui.GetColorU32(ImGuiCol.Border);
-				for (int third = 1; third <= 2; third++)
-				{
-					float t = third / 3f;
-					drawList.AddLine(Vector2.Lerp(screen[0], screen[1], t), Vector2.Lerp(screen[3], screen[2], t), border, 1f);
-					drawList.AddLine(Vector2.Lerp(screen[0], screen[3], t), Vector2.Lerp(screen[1], screen[2], t), border, 1f);
-				}
+				CropGuides.Draw(drawList, drawn, guideOrientation, screen, ImGui.GetColorU32(ImGuiCol.Border));
 			}
 
 			// The crop's own axes on screen, so the edge bars lie along their edges.

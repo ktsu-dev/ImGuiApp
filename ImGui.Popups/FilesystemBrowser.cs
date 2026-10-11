@@ -139,6 +139,24 @@ public partial class ImGuiPopups
 		/// </summary>
 		private MessageOK PopupMessageOK { get; } = new();
 
+		/// <summary>The question asked before a save replaces a file that already exists.</summary>
+		private Prompt OverwritePrompt { get; } = new();
+
+		/// <summary>Set when the overwrite prompt is answered Replace, so the browser closes behind it.</summary>
+		private bool closeRequested;
+
+		/// <summary>
+		/// Gets or sets a value indicating whether a save asks before choosing a file that already exists.
+		/// </summary>
+		/// <remarks>
+		/// Off by default, so an application that already confirms a replacement itself does not ask
+		/// twice. When on, choosing an existing file in <see cref="FilesystemBrowserMode.Save"/> asks
+		/// "Replace it?": Replace chooses the file and closes the browser, and Cancel, Escape or closing
+		/// the question leave the browser open on the same folder and name. The question's buttons are
+		/// probed as <c>filesystem-browser/overwrite/replace</c> and <c>filesystem-browser/overwrite/cancel</c>.
+		/// </remarks>
+		public bool ConfirmOverwrite { get; set; }
+
 		/// <summary>
 		/// Opens the file open dialog with the specified title and callback.
 		/// </summary>
@@ -266,6 +284,14 @@ public partial class ImGuiPopups
 			DrawConfirmButtons();
 
 			PopupMessageOK.ShowIfOpen();
+			OverwritePrompt.ShowIfOpen();
+
+			// Replace was answered inside the question; the browser is the current popup again here.
+			if (closeRequested)
+			{
+				closeRequested = false;
+				ImGui.CloseCurrentPopup();
+			}
 		}
 
 		/// <summary>
@@ -493,7 +519,14 @@ public partial class ImGuiPopups
 					return;
 				}
 
-				OnChooseFile(Path.GetFullPath(chosenFile).As<AbsoluteFilePath>());
+				AbsoluteFilePath fullPath = Path.GetFullPath(chosenFile).As<AbsoluteFilePath>();
+				if (BrowserMode == FilesystemBrowserMode.Save && ConfirmOverwrite && System.IO.File.Exists(fullPath))
+				{
+					AskToReplace(fullPath);
+					return;
+				}
+
+				OnChooseFile(fullPath);
 			}
 			else if (BrowserTarget == FilesystemBrowserTarget.Directory && ChosenItem is AbsoluteDirectoryPath directory)
 			{
@@ -501,6 +534,24 @@ public partial class ImGuiPopups
 			}
 
 			ImGui.CloseCurrentPopup();
+		}
+
+		/// <summary>Asks whether a save may replace a file that already exists.</summary>
+		/// <param name="file">The file the save would replace.</param>
+		private void AskToReplace(AbsoluteFilePath file)
+		{
+			Action<AbsoluteFilePath> choose = OnChooseFile;
+			OverwritePrompt.Open(
+				"Replace File",
+				$"{file.FileName} already exists.\nDo you want to replace it?",
+				[
+					new PromptButton("Replace", () =>
+					{
+						choose(file);
+						closeRequested = true;
+					}, $"{ProbePrefix}/overwrite/replace"),
+					new PromptButton("Cancel", null, $"{ProbePrefix}/overwrite/cancel", IsCancel: true),
+				]);
 		}
 
 		/// <summary>

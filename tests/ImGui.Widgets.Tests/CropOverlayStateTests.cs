@@ -10,7 +10,7 @@ using CropHandle = ImGuiWidgets.CropOverlayState.CropHandle;
 using CropOverlayState = ImGuiWidgets.CropOverlayState;
 
 /// <summary>
-/// Tests the crop geometry and drag rules behind <see cref="ImGuiWidgets.CropOverlay"/>. All pure, no
+/// Tests the crop geometry and drag rules behind <see cref="ImGuiWidgets.CropOverlay(string, ref CropRect, Vector2, ImGuiWidgets.ImageCanvasState, Vector2, Vector2, CropOverlayOptions)"/>. All pure, no
 /// ImGui context required. The image is 100x100 unless a test says otherwise.
 /// </summary>
 [TestClass]
