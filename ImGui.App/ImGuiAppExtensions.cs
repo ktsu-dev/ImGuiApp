@@ -5,7 +5,8 @@ namespace ktsu.ImGui.App;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// The Dear ImGui extensions an application wants <see cref="ImGuiExtensionManager"/> to set up.
+/// The Dear ImGui extensions an application wants <c>ImGuiExtensionManager</c> to set up. On iOS
+/// the extension manager is not built, so none is ever set up whatever this says.
 /// </summary>
 /// <remarks>
 /// A flag only asks for an extension: one whose assembly is not referenced is still skipped, so
