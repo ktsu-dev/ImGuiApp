@@ -257,14 +257,17 @@ public sealed class ValueSliderTests : WidgetTest
 		Step();
 
 		Rectangle frame = RectOf(Label);
-		Rectangle? changed = BoundsOfDifference(atZero);
-		Assert.IsNotNull(changed, "Moving the value away from zero drew nothing new.");
+		if (BoundsOfDifference(atZero) is not Rectangle changed)
+		{
+			Assert.Fail("Moving the value away from zero drew nothing new.");
+			return;
+		}
 
 		// The fill and the number change; neither reaches the left quarter, which the fill would cover
 		// if it started from the minimum.
 		Assert.IsTrue(
-			changed.Value.MinX > frame.MinX + (FrameWidth * 0.25f),
-			$"The fill reached x={changed.Value.MinX}, left of zero, so it did not start from zero.");
+			changed.MinX > frame.MinX + (FrameWidth * 0.25f),
+			$"The fill reached x={changed.MinX}, left of zero, so it did not start from zero.");
 	}
 
 	[TestMethod]
