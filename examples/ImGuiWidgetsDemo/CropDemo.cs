@@ -21,8 +21,19 @@ internal static class CropDemo
 	private static readonly ImGuiWidgets.ImageCanvasState Canvas = new();
 	private static bool fitted;
 	private static int aspectIndex;
-	private static bool showThirds = true;
+	private static readonly string[] GuideNames = ["None", "Thirds", "Golden ratio", "Golden spiral", "Diagonals", "Triangles", "Grid"];
+	private static int guideIndex = 1;
 	private static bool allowRotation = true;
+
+	/// <summary>Gets the guide the demo draws, or null for none.</summary>
+	internal static CropGuide? Guide => guideIndex == 0 ? null : (CropGuide)(guideIndex - 1);
+
+	/// <summary>Chooses the guide, as the combo does, for a test that cannot open a combo by name.</summary>
+	/// <param name="guide">The guide, or null for none.</param>
+	internal static void ChooseGuide(CropGuide? guide) => guideIndex = guide is CropGuide chosen ? (int)chosen + 1 : 0;
+
+	/// <summary>Gets which way round the demo draws an asymmetric guide.</summary>
+	internal static int GuideOrientation { get; private set; }
 
 	/// <summary>Gets the crop the demo is editing.</summary>
 	internal static CropRect Crop { get; private set; }
@@ -36,7 +47,8 @@ internal static class CropDemo
 		Crop = default;
 		fitted = false;
 		aspectIndex = 0;
-		showThirds = true;
+		guideIndex = 1;
+		GuideOrientation = 0;
 		allowRotation = true;
 	}
 
@@ -55,7 +67,18 @@ internal static class CropDemo
 		ImGui.Combo("Aspect", ref aspectIndex, AspectNames, AspectNames.Length);
 		ImGuiProbes.MarkItem("Aspect");
 		ImGui.SameLine();
-		DemoProbe.Checkbox("Thirds", ref showThirds);
+		ImGui.SetNextItemWidth(140f);
+		ImGui.Combo("Guide", ref guideIndex, GuideNames, GuideNames.Length);
+		ImGuiProbes.MarkItem("Guide");
+		if (Guide is CropGuide guide && CropGuides.IsAsymmetric(guide))
+		{
+			ImGui.SameLine();
+			if (DemoProbe.Button("Flip guide"))
+			{
+				GuideOrientation = CropGuides.NextOrientation(GuideOrientation);
+			}
+		}
+
 		ImGui.SameLine();
 		DemoProbe.Checkbox("Rotation", ref allowRotation);
 
@@ -72,7 +95,14 @@ internal static class CropDemo
 		Vector2 canvasMin = ImGui.GetItemRectMin();
 
 		CropRect crop = Crop;
-		ImGuiWidgets.CropOverlay("crop_demo", ref crop, imageSize, Canvas, canvasMin, CanvasSize, AspectRatios[aspectIndex], showThirds, allowRotation);
+		CropOverlayOptions options = new()
+		{
+			AspectRatio = AspectRatios[aspectIndex],
+			Guide = Guide,
+			GuideOrientation = GuideOrientation,
+			AllowRotation = allowRotation,
+		};
+		ImGuiWidgets.CropOverlay("crop_demo", ref crop, imageSize, Canvas, canvasMin, CanvasSize, options);
 		Crop = crop;
 
 		ImGui.TextUnformatted($"Center: ({crop.Center.X:0.0}, {crop.Center.Y:0.0})  Size: {crop.Size.X:0.0} x {crop.Size.Y:0.0}  Angle: {crop.AngleDegrees:0.0}°");

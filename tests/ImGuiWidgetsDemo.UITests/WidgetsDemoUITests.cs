@@ -14,6 +14,7 @@ using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.Widgets;
+using ktsu.ImGui.Widgets;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -721,6 +722,29 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.IsTrue(CropDemo.Crop.Center.X > before, "Dragging the crop did not move it.");
+	}
+
+	[TestMethod]
+	public void CropDemo_FlipsAnAsymmetricGuide()
+	{
+		OpenSection(AdvancedDemosTab, "Crop Overlay");
+		Assert.IsFalse(IsVisible("Flip guide"), "The rule of thirds is symmetric, so there should be nothing to flip.");
+
+		CropDemo.ChooseGuide(CropGuide.GoldenSpiral);
+		harness.Step(2);
+		harness.Click("Flip guide");
+		harness.Step(2);
+
+		Assert.AreEqual(1, CropDemo.GuideOrientation, "Flip guide did not turn the spiral round.");
+	}
+
+	[TestMethod]
+	public void LinearColorDemo_ShowsSrgbAndStoresLinear()
+	{
+		OpenSection(WidgetDemosTab, "Linear Colour Edit");
+
+		Assert.IsTrue(IsVisible("Fill"), "The linear colour edit did not draw.");
+		Assert.AreEqual(0.21404114f, LinearColorEditDemo.Fill.X, 1e-6f, "The demo's starting colour is not linear mid grey.");
 	}
 
 	[TestMethod]

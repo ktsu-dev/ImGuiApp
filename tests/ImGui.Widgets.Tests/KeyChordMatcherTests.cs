@@ -89,6 +89,67 @@ public class KeyChordMatcherTests
 	public void TryMapKey_MapsSymbolSpellings(string text, ImGuiKey expected) =>
 		Assert.AreEqual(expected, KeyOf(text));
 
+	[TestMethod]
+	public void Compose_AndDisplay_NameKeysTheWayAChordIsWritten()
+	{
+		KeyChordModifiers ctrl = new(Ctrl: true, Alt: false, Shift: false, Meta: false);
+		Assert.AreEqual("Ctrl+=", KeyChordMatcher.Display(KeyChordMatcher.Compose(ctrl, ImGuiKey.Equal)));
+		Assert.AreEqual("Ctrl+Shift+7", KeyChordMatcher.Display(KeyChordMatcher.Compose(ctrl with { Shift = true }, ImGuiKey.Key7)));
+		Assert.AreEqual("Alt+UpArrow", KeyChordMatcher.Display(KeyChordMatcher.Compose(new(Ctrl: false, Alt: true, Shift: false, Meta: false), ImGuiKey.UpArrow)));
+		Assert.AreEqual("Ctrl+Alt+Shift+Super+A", KeyChordMatcher.Display(KeyChordMatcher.Compose(new(Ctrl: true, Alt: true, Shift: true, Meta: true), ImGuiKey.A)));
+		Assert.AreEqual("F2", KeyChordMatcher.Display(KeyChordMatcher.Compose(default, ImGuiKey.F2)));
+		Assert.AreEqual(Chord.Parse("Ctrl+]"), KeyChordMatcher.Compose(ctrl, ImGuiKey.RightBracket));
+	}
+
+	/// <summary>A chord parsed with an alias reads the way a menu writes it.</summary>
+	[TestMethod]
+	[DataRow("Control+S", "Ctrl+S")]
+	[DataRow("Win+E", "Super+E")]
+	[DataRow("Ctrl+Up", "Ctrl+UpArrow")]
+	[DataRow("Ctrl+Shift+/", "Ctrl+Shift+/")]
+	[DataRow("Delete", "Delete")]
+	public void Display_NormalizesModifiersAndKeys(string text, string expected) =>
+		Assert.AreEqual(expected, KeyChordMatcher.Display(Chord.Parse(text)));
+
+	[TestMethod]
+	public void Display_ShowsNothingForNoChord() =>
+		Assert.AreEqual(string.Empty, KeyChordMatcher.Display(null));
+
+	[TestMethod]
+	public void Display_ShowsAKeyImGuiCannotPressAsWritten()
+	{
+		Chord chord = Chord.Parse("Ctrl+NotAKey");
+		Assert.AreEqual(chord.ToString(), KeyChordMatcher.Display(chord));
+	}
+
+	/// <summary>
+	/// What a capture writes into a keymap must read back as the same key, for every key a chord can end on.
+	/// </summary>
+	[TestMethod]
+	public void Compose_RoundTripsEveryBindableKey()
+	{
+		for (ImGuiKey key = ImGuiKey.NamedKeyBegin; key < ImGuiKey.GamepadStart; key++)
+		{
+			if (!KeyChordMatcher.IsBindable(key))
+			{
+				continue;
+			}
+
+			Chord chord = KeyChordMatcher.Compose(new(Ctrl: true, Alt: false, Shift: true, Meta: false), key);
+			Assert.IsTrue(KeyChordMatcher.TrySplit(chord, out KeyChordModifiers modifiers, out System.Collections.Generic.List<ImGuiKey> keys), $"{key} did not read back.");
+			Assert.AreEqual(new KeyChordModifiers(Ctrl: true, Alt: false, Shift: true, Meta: false), modifiers);
+			Assert.AreEqual(key, keys.Single(), $"{key} read back as another key.");
+		}
+	}
+
+	[TestMethod]
+	[DataRow(ImGuiKey.LeftCtrl)]
+	[DataRow(ImGuiKey.RightSuper)]
+	[DataRow(ImGuiKey.MouseLeft)]
+	[DataRow(ImGuiKey.GamepadStart)]
+	public void Compose_RefusesAKeyThatCannotEndAChord(ImGuiKey key) =>
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => KeyChordMatcher.Compose(default, key));
+
 	/// <summary>The one key a parsed chord names besides its modifiers, or None if it doesn't map.</summary>
 	private static ImGuiKey KeyOf(string text)
 	{

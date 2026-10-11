@@ -84,6 +84,8 @@ internal static class InputAndControlsTiles
 		yield return new("ColorWheel", Category, [nameof(ImGuiWidgets.ColorWheel)], _ =>
 			ImGuiWidgets.ColorWheel("Tint", ref wheel, 140f));
 
+		yield return ColorEditTile(Category);
+
 		// A teal-and-orange grade: cool shadows, a touch of warmth in the mids, warm highlights.
 		ColorWheelValue lift = new(Hue: 190f, Strength: 0.35f, Master: -0.1f);
 		ColorWheelValue gamma = new(Hue: 35f, Strength: 0.15f);
@@ -338,6 +340,27 @@ internal static class InputAndControlsTiles
 			ImGuiWidgets.ValueSlider("Radius", ref sliderRadius, 0, 64, pixels);
 			ImGuiWidgets.ValueSlider("Size", ref sliderSize, 1f, 1000f, logarithmic);
 			ImGui.PopItemWidth();
+		});
+	}
+
+	/// <summary>
+	/// The linear colour controls: an edit showing hex, a swatch and a picker, over colours stored
+	/// linear. Its own method to keep <see cref="Build"/> under the coupling limit.
+	/// </summary>
+	/// <param name="category">The group the tile belongs to.</param>
+	/// <returns>The tile.</returns>
+	private static GalleryEntry ColorEditTile(GalleryCategory category)
+	{
+		// Linear mid grey and a linear orange: both read the way a person expects, #808080 and all.
+		Vector4 fill = new(0.21404114f, 0.21404114f, 0.21404114f, 1f);
+		Vector3 accent = new(1f, 0.25f, 0.02f);
+		return new("ColorEdit", category, [nameof(ImGuiWidgets.ColorEdit), nameof(ImGuiWidgets.ColorPicker), nameof(ImGuiWidgets.ColorButton)], _ =>
+		{
+			ImGui.SetNextItemWidth(200f);
+			ImGuiWidgets.ColorEdit("Fill", ref fill, ImGuiColorEditFlags.DisplayHex);
+			ImGuiWidgets.ColorButton("##accent", new Vector4(accent, 1f), ImGuiColorEditFlags.None, new Vector2(40f, 20f));
+			ImGui.SetNextItemWidth(150f);
+			ImGuiWidgets.ColorPicker("##accentPicker", ref accent, ImGuiColorEditFlags.NoSidePreview | ImGuiColorEditFlags.NoInputs);
 		});
 	}
 }

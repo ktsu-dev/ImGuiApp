@@ -90,7 +90,7 @@ public sealed class PopupsDemoUITests
 		foreach (string button in new[]
 		{
 			"Edit String", "Edit String (Custom Size)", "Edit Integer", "Edit Float",
-			"Show Simple Message", "Show Long Message", "Show Custom Prompt", "Show Warning Prompt",
+			"Show Simple Message", "Show Long Message", "Show Custom Prompt", "Show Warning Prompt", "Show Unsaved Changes Prompt",
 			"Choose Friend", "Choose Friend (Custom Size)", "Choose Color",
 			"Open Any File", "Open C# File", "Open Image File", "Save Text File", "Save Any File",
 			"Choose Directory", "Choose Directory (Large)",
@@ -236,6 +236,40 @@ public sealed class PopupsDemoUITests
 		ClickAndSettle("searchable-list/cancel");
 
 		Assert.AreEqual("None", ImGuiPopupsDemo.selectedFriend);
+	}
+
+	[TestMethod]
+	public void UnsavedChangesPrompt_ButtonsAnswerByTheirOwnProbeNames()
+	{
+		ClickAndSettle("Show Unsaved Changes Prompt");
+		Assert.IsTrue(IsVisible("unsaved/save"), "The prompt did not open with its own probe names.");
+
+		ClickAndSettle("unsaved/remember");
+		ClickAndSettle("unsaved/save");
+
+		Assert.AreEqual("Saved, remember: True", ImGuiPopupsDemo.lastPromptResult);
+		Assert.IsFalse(IsVisible("unsaved/save"), "The prompt stayed open after it was answered.");
+	}
+
+	[TestMethod]
+	public void UnsavedChangesPrompt_TheCheckboxStartsUnticked()
+	{
+		ClickAndSettle("Show Unsaved Changes Prompt");
+		ClickAndSettle("unsaved/discard");
+
+		Assert.AreEqual("Discarded, remember: False", ImGuiPopupsDemo.lastPromptResult);
+	}
+
+	[TestMethod]
+	public void UnsavedChangesPrompt_EscapeGivesTheCancelAnswer()
+	{
+		ClickAndSettle("Show Unsaved Changes Prompt");
+
+		harness.Keyboard.Press(Hexa.NET.ImGui.ImGuiKey.Escape);
+		harness.Step(2);
+
+		Assert.AreEqual("Kept open", ImGuiPopupsDemo.lastPromptResult);
+		Assert.IsFalse(IsVisible("unsaved/save"), "Escape did not close the prompt.");
 	}
 
 	[TestMethod]

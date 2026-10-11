@@ -1,0 +1,126 @@
+// Copyright (c) 2023-2026 ktsu-dev contributors
+
+namespace ktsu.examples.ImGuiPopupsDemo.UITests;
+
+using System;
+using System.IO;
+
+using Hexa.NET.ImGui;
+
+using ktsu.ImGui.App;
+using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.Popups;
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+/// <summary>
+/// Drives <see cref="ImGuiPopups.FilesystemBrowser.ConfirmOverwrite"/> in a folder of its own, so the
+/// file a save would replace is one the test made.
+/// </summary>
+[TestClass]
+public sealed class FilesystemBrowserOverwriteTests
+{
+	private string folder = null!;
+	private string previousDirectory = null!;
+	private ImGuiPopups.FilesystemBrowser browser = null!;
+	private ImGuiAppHarness harness = null!;
+	private string? saved;
+
+	[TestInitialize]
+	public void SetUp()
+	{
+		folder = Path.Join(Path.GetTempPath(), $"overwrite-{Guid.NewGuid():N}");
+		Directory.CreateDirectory(folder);
+		File.WriteAllText(Path.Join(folder, "existing.txt"), "keep me");
+
+		// The browser starts in the working directory, so point it at the test's folder before making one.
+		previousDirectory = Environment.CurrentDirectory;
+		Environment.CurrentDirectory = folder;
+		browser = new ImGuiPopups.FilesystemBrowser { ConfirmOverwrite = true };
+
+		harness = ImGuiAppHarness.Start(
+			new ImGuiAppConfig
+			{
+				Title = nameof(FilesystemBrowserOverwriteTests),
+				SaveIniSettings = false,
+				OnRender = _ => browser.ShowIfOpen(),
+			},
+			new HarnessOptions { Width = 1000, Height = 800 });
+		harness.Step(2);
+	}
+
+	[TestCleanup]
+	public void TearDown()
+	{
+		harness?.Dispose();
+		Environment.CurrentDirectory = previousDirectory;
+		Directory.Delete(folder, recursive: true);
+	}
+
+	private bool IsVisible(string name) => harness.Probe.WasSeenInFrame(name, harness.FrameCount - 1);
+
+	private void SaveAs(string name)
+	{
+		browser.FileSave("Save", file => saved = file.ToString(), "*.txt");
+		harness.Step(4);
+		harness.Click("filesystem-browser/filename");
+		harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		harness.Keyboard.Type(name);
+		harness.Step();
+		harness.Click("filesystem-browser/confirm");
+		harness.Step(3);
+	}
+
+	[TestMethod]
+	public void SavingOverAnExistingFile_AsksFirst()
+	{
+		SaveAs("existing.txt");
+
+		Assert.IsNull(saved, "The save chose a file that exists without asking.");
+		Assert.IsTrue(IsVisible("filesystem-browser/overwrite/replace"), "No replace question appeared.");
+	}
+
+	[TestMethod]
+	public void Replace_ChoosesTheFileAndClosesTheBrowser()
+	{
+		SaveAs("existing.txt");
+
+		harness.Click("filesystem-browser/overwrite/replace");
+		harness.Step(3);
+
+		Assert.AreEqual(Path.Join(folder, "existing.txt"), saved);
+		Assert.IsFalse(IsVisible("filesystem-browser/confirm"), "The browser stayed open after Replace.");
+	}
+
+	[TestMethod]
+	public void Cancel_LeavesTheBrowserOpenAndChoosesNothing()
+	{
+		SaveAs("existing.txt");
+
+		harness.Click("filesystem-browser/overwrite/cancel");
+		harness.Step(3);
+
+		Assert.IsNull(saved);
+		Assert.IsFalse(IsVisible("filesystem-browser/overwrite/replace"), "The question stayed open after Cancel.");
+		Assert.IsTrue(IsVisible("filesystem-browser/confirm"), "Cancelling the question closed the browser too.");
+	}
+
+	[TestMethod]
+	public void SavingANewFile_DoesNotAsk()
+	{
+		SaveAs("new.txt");
+
+		Assert.AreEqual(Path.Join(folder, "new.txt"), saved);
+		Assert.IsFalse(IsVisible("filesystem-browser/overwrite/replace"));
+	}
+
+	[TestMethod]
+	public void WithoutConfirmOverwrite_AnExistingFileIsChosenAtOnce()
+	{
+		browser.ConfirmOverwrite = false;
+
+		SaveAs("existing.txt");
+
+		Assert.AreEqual(Path.Join(folder, "existing.txt"), saved);
+	}
+}

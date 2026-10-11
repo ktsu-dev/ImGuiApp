@@ -2,6 +2,7 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
+using System;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -12,7 +13,7 @@ using ktsu.ImGui.App.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
-/// Drives <see cref="ImGuiWidgets.CropOverlay"/> over an <see cref="ImGuiWidgets.ImageCanvas"/>. The
+/// Drives <see cref="ImGuiWidgets.CropOverlay(string, ref CropRect, Vector2, ImGuiWidgets.ImageCanvasState, Vector2, Vector2, CropOverlayOptions)"/> over an <see cref="ImGuiWidgets.ImageCanvas"/>. The
 /// 32 pixel image is fitted to a 320 pixel canvas, so one image pixel is ten screen pixels and the
 /// image fills the canvas exactly.
 /// </summary>
@@ -31,6 +32,7 @@ public sealed class CropOverlayTests : WidgetTest
 	private float aspectRatio;
 	private bool allowRotation = true;
 	private bool changed;
+	private CropOverlayOptions? options;
 
 	[TestInitialize]
 	public void SetUpCanvas() => canvas.FitToViewport(ImageSize, CanvasSize);
@@ -40,7 +42,9 @@ public sealed class CropOverlayTests : WidgetTest
 		texture ??= CreateTestTexture(32);
 		ImGuiWidgets.ImageCanvas("img", texture.TextureId, ImageSize, canvas, CanvasSize);
 		canvasMin = ImGui.GetItemRectMin();
-		changed |= ImGuiWidgets.CropOverlay(Id, ref crop, ImageSize, canvas, canvasMin, CanvasSize, aspectRatio, true, allowRotation);
+		changed |= options is null
+			? ImGuiWidgets.CropOverlay(Id, ref crop, ImageSize, canvas, canvasMin, CanvasSize, aspectRatio, true, allowRotation)
+			: ImGuiWidgets.CropOverlay(Id, ref crop, ImageSize, canvas, canvasMin, CanvasSize, options);
 
 		// The overlay restores the cursor, so something has to follow it before the window ends.
 		ImGui.TextUnformatted("after");
@@ -176,5 +180,64 @@ public sealed class CropOverlayTests : WidgetTest
 
 		Assert.AreEqual(new CropRect(new Vector2(16, 16), new Vector2(32, 32), 0f), crop);
 		Assert.IsTrue(changed, "Normalizing an empty crop did not report a change.");
+	}
+
+	/// <summary>The options overload with the rule of thirds draws exactly what the original overload does.</summary>
+	[TestMethod]
+	public void CropOverlay_ThirdsThroughOptionsMatchTheOriginalOverload()
+	{
+		Start(Draw);
+		byte[] original = Snapshot();
+
+		options = new CropOverlayOptions { Guide = CropGuide.Thirds };
+		Step();
+
+		Assert.AreEqual(0, PixelsChangedSince(original));
+	}
+
+	[TestMethod]
+	public void CropOverlay_EachGuideDrawsSomethingDifferent()
+	{
+		options = new CropOverlayOptions { Guide = null };
+		Start(Draw);
+		byte[] none = Snapshot();
+
+		foreach (CropGuide guide in Enum.GetValues<CropGuide>())
+		{
+			options = new CropOverlayOptions { Guide = guide };
+			Step();
+			Assert.IsGreaterThan(0, PixelsChangedSince(none), $"The {guide} guide drew nothing over the crop.");
+		}
+	}
+
+	[TestMethod]
+	public void CropOverlay_FlippingAnAsymmetricGuideMovesIt()
+	{
+		// The spiral rather than the triangles: on a square crop the triangles' two halves are each
+		// other's mirror image, so flipping them draws the same lines.
+		options = new CropOverlayOptions { Guide = CropGuide.GoldenSpiral };
+		Start(Draw);
+		byte[] plain = Snapshot();
+
+		options = options with { GuideOrientation = CropGuides.NextOrientation(0) };
+		Step();
+
+		Assert.IsGreaterThan(0, PixelsChangedSince(plain), "Flipping the spiral drew the same lines.");
+	}
+
+	[TestMethod]
+	public void CropOverlay_GuidesStayInsideTheCrop()
+	{
+		options = new CropOverlayOptions { Guide = null };
+		Start(Draw);
+		byte[] none = Snapshot();
+
+		options = new CropOverlayOptions { Guide = CropGuide.Grid };
+		Step();
+
+		// The crop is image pixels 8..24, so 80..240 on the canvas; the guide may not reach past it.
+		Rectangle drawn = BoundsOfDifference(none) ?? throw new AssertFailedException("The grid drew nothing.");
+		Assert.IsTrue(drawn.MinX >= canvasMin.X + 79 && drawn.MaxX <= canvasMin.X + 241, $"The grid spilled outside the crop: {drawn}.");
+		Assert.IsTrue(drawn.MinY >= canvasMin.Y + 79 && drawn.MaxY <= canvasMin.Y + 241, $"The grid spilled outside the crop: {drawn}.");
 	}
 }

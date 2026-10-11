@@ -154,6 +154,11 @@ browser.ChooseDirectory("Select Folder", dir => UseDirectory(dir));
 browser.ShowIfOpen();
 ```
 
+Set `ConfirmOverwrite = true` and a save that picks a file that already exists asks "Replace it?"
+first. Replace chooses the file and closes the browser; Cancel, Escape or closing the question leave
+the browser open where it was. It is off by default, so an application that confirms replacements
+itself does not ask twice.
+
 > File callbacks receive an `AbsoluteFilePath` and directory callbacks an `AbsoluteDirectoryPath`
 > (from `ktsu.Semantics.Paths`). Each `FileOpen`/`FileSave`/`ChooseDirectory` overload also
 > accepts a `Vector2 customSize`.
@@ -195,6 +200,25 @@ prompt.Open("Title", "Long message text here...",
     textLayoutType: PromptTextLayoutType.Wrapped, // or Unformatted
     size: new Vector2(400, 200)
 );
+```
+
+### Buttons with their own probe names, a checkbox, and a dismiss answer
+`PromptButton` gives each button its own probe name, and marks at most one as the cancel answer. A
+modal can close without any button being clicked: by Escape, by its close button, or because ImGui
+closed it when another popup opened at the same level. Whoever asked is still waiting then, so the
+cancel button's action runs, once, as if it had been clicked. Every action runs after the popup has
+ended, so an answer can open the next prompt. A `PromptCheckbox` draws a checkbox above the buttons,
+read through `Checked` from inside an action.
+
+```csharp
+var prompt = new ImGuiPopups.Prompt();
+prompt.Open("Unsaved Changes", "Save changes before closing?",
+[
+    new ImGuiPopups.PromptButton("Save", () => Save(rememberChoice: prompt.Checked), "unsaved/save"),
+    new ImGuiPopups.PromptButton("Don't Save", Close, "unsaved/discard"),
+    new ImGuiPopups.PromptButton("Cancel", KeepOpen, "unsaved/cancel", IsCancel: true),
+],
+new ImGuiPopups.PromptCheckbox("Don't ask again", "unsaved/remember"));
 ```
 
 ### Validation and Error Handling
