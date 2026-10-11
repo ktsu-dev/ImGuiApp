@@ -32,8 +32,29 @@ public sealed class ValueSliderOptions
 	/// </summary>
 	public string? Unit { get; set; }
 
+	/// <summary>
+	/// Gets or sets text written straight before the number, such as <c>"Size "</c>, for a slider whose
+	/// label sits inside its frame where a row has no room for one beside it. Nothing is inserted between
+	/// the two, so include a space. The value opens for typing without it, and typing it back is accepted
+	/// and ignored.
+	/// </summary>
+	public string? Prefix { get; set; }
+
 	/// <summary>Gets or sets where the fill starts. <see cref="ValueSliderFill.FromMinimum"/> by default.</summary>
 	public ValueSliderFill Fill { get; set; }
+
+	/// <summary>
+	/// Gets or sets whether the frame covers the range logarithmically, so each stretch of a drag multiplies
+	/// the value by the same factor rather than adding the same amount. Suits a size or radius, where the
+	/// difference between 2 and 4 matters as much as the difference between 200 and 400. Off by default.
+	/// </summary>
+	/// <remarks>
+	/// A range starting at zero keeps zero at its left end and runs logarithmically from the smallest step
+	/// the format shows, so 0..100 shown as <c>"0"</c> goes 0, then 1 to 100; with <c>"0.0"</c> it goes 0,
+	/// then 0.1 to 100. A range wholly below zero mirrors one above it. A range that crosses zero is covered
+	/// linearly, since no logarithm passes through it.
+	/// </remarks>
+	public bool Logarithmic { get; set; }
 
 	/// <summary>
 	/// Gets or sets the value a double-click returns the slider to. Leave null and a double-click opens

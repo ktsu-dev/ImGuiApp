@@ -85,7 +85,11 @@ public static partial class ImGuiWidgets
 		internal static ValueSliderOptions DefaultOptions { get; } = new();
 
 		/// <summary>What one call asked for, carried together through the drawing helpers.</summary>
-		private readonly record struct Spec(double Min, double Max, bool IsInteger, string Format, ValueSliderOptions Options);
+		private readonly record struct Spec(double Min, double Max, bool IsInteger, string Format, ValueSliderOptions Options)
+		{
+			/// <summary>Gets the smallest magnitude a logarithmic range starting at zero reaches before zero.</summary>
+			public double Epsilon { get; } = Options.Logarithmic ? ValueSliderState.LogarithmicEpsilon(Format, IsInteger) : 0.0;
+		}
 
 		internal static ValueSliderState StateFor(uint id)
 		{
@@ -249,7 +253,7 @@ public static partial class ImGuiWidgets
 			}
 
 			float scale = io.KeyShift ? spec.Options.FineScale : 1.0f;
-			state.DragValue = ValueSliderState.Drag(state.DragValue, deltaX, width, spec.Min, spec.Max, scale);
+			state.DragValue = ValueSliderState.Drag(state.DragValue, deltaX, width, spec.Min, spec.Max, scale, spec.Options.Logarithmic, spec.Epsilon);
 			return SetValue(ref value, state.DragValue, spec.Min, spec.Max, spec.IsInteger);
 		}
 
@@ -281,33 +285,55 @@ public static partial class ImGuiWidgets
 			ImGuiCol background = held ? ImGuiCol.FrameBgActive : hovered ? ImGuiCol.FrameBgHovered : ImGuiCol.FrameBg;
 			drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(background), rounding);
 
-			(float start, float end) = ValueSliderState.FillSpan(value, min, max, options.Fill);
+			(float start, float end) = ValueSliderState.FillSpan(value, min, max, options.Fill, options.Logarithmic, spec.Epsilon);
 			float width = frame.Max.X - frame.Min.X;
 			float fillMinX = frame.Min.X + (start * width);
 			float fillMaxX = frame.Min.X + (end * width);
 
-			ImGuiCol fillColor = held ? ImGuiCol.SliderGrabActive : ImGuiCol.SliderGrab;
-			uint fill = ImGui.GetColorU32(fillColor);
-			if (fillMaxX > fillMinX)
-			{
-				// The whole frame shape clipped to the fill keeps the frame's rounded corners at whichever
-				// ends the fill reaches, and square edges everywhere else.
-				drawList.PushClipRect(new Vector2(fillMinX, frame.Min.Y), new Vector2(fillMaxX, frame.Max.Y), true);
-				drawList.AddRectFilled(frame.Min, frame.Max, fill, rounding);
-				drawList.PopClipRect();
-			}
-
-			if (options.Fill == ValueSliderFill.FromZero && min < 0.0 && max > 0.0)
-			{
-				float zeroX = MathF.Round(frame.Min.X + (ValueSliderState.Fraction(0.0, min, max) * width));
-				drawList.AddLine(new Vector2(zeroX, frame.Min.Y + 1.0f), new Vector2(zeroX, frame.Max.Y - 1.0f), ImGui.GetColorU32(ImGuiCol.TextDisabled));
-			}
-
-			string text = ValueSliderState.Format(value, format, options.Unit, CultureInfo.CurrentCulture);
+			string text = options.Prefix + ValueSliderState.Format(value, format, options.Unit, CultureInfo.CurrentCulture);
 			Vector2 textSize = ImGui.CalcTextSize(text);
 			Vector2 textPos = new(
 				MathF.Round(frame.Min.X + ((width - textSize.X) * 0.5f)),
 				MathF.Round(frame.Min.Y + ((frame.Max.Y - frame.Min.Y - textSize.Y) * 0.5f)));
+
+			// The number keeps a little clear space either side, so nothing thin can sit right against it.
+			float textGap = MathF.Max(1.0f, style.ItemInnerSpacing.X * 0.5f);
+			ImRect textBox = new(
+				new Vector2(textPos.X - textGap, textPos.Y),
+				new Vector2(textPos.X + textSize.X + textGap, textPos.Y + textSize.Y));
+
+			ImGuiCol fillColor = held ? ImGuiCol.SliderGrabActive : ImGuiCol.SliderGrab;
+			uint fill = ImGui.GetColorU32(fillColor);
+			bool fillAvoidsText = ValueSliderState.FillAvoidsText(fillMinX, fillMaxX, textBox.Min.X, textBox.Max.X);
+			if (fillMaxX > fillMinX)
+			{
+				// The whole frame shape clipped to the fill keeps the frame's rounded corners at whichever
+				// ends the fill reaches, and square edges everywhere else. A fill lying wholly under the
+				// number is drawn above and below it instead, or it would run through the digits.
+				DrawClipped(drawList, frame, new Vector2(fillMinX, frame.Min.Y), new Vector2(fillMaxX, frame.Max.Y), fillAvoidsText ? textBox : null, fill, rounding);
+			}
+
+			if (options.Fill == ValueSliderFill.FromZero && min < 0.0 && max > 0.0)
+			{
+				float zeroX = MathF.Round(frame.Min.X + (ValueSliderState.Fraction(0.0, min, max, options.Logarithmic, spec.Epsilon) * width));
+				uint zeroColor = ImGui.GetColorU32(ImGuiCol.TextDisabled);
+				if (zeroX >= textBox.Min.X && zeroX <= textBox.Max.X)
+				{
+					// The zero mark is cut where the number sits, leaving a tick above it and one below.
+					drawList.AddLine(new Vector2(zeroX, frame.Min.Y + 1.0f), new Vector2(zeroX, textBox.Min.Y), zeroColor);
+					drawList.AddLine(new Vector2(zeroX, textBox.Max.Y), new Vector2(zeroX, frame.Max.Y - 1.0f), zeroColor);
+				}
+				else
+				{
+					drawList.AddLine(new Vector2(zeroX, frame.Min.Y + 1.0f), new Vector2(zeroX, frame.Max.Y - 1.0f), zeroColor);
+				}
+			}
+
+			if (fillAvoidsText)
+			{
+				// Nothing lies behind the number, so it reads against the frame alone.
+				fillMinX = fillMaxX = frame.Min.X;
+			}
 
 			uint textColor = ImGui.GetColorU32(ImGuiCol.Text);
 			uint fillTextColor = ReadableOver(ComposeOver(style.Colors[(int)fillColor], style.Colors[(int)background]), textColor);
@@ -320,6 +346,28 @@ public static partial class ImGuiWidgets
 			drawList.PopClipRect();
 			DrawTextOutside(drawList, frame, fillMinX, fillMaxX, textPos, textColor, text);
 			drawList.PopClipRect();
+		}
+
+		/// <summary>Fills the frame's shape inside a clip rectangle, leaving out a hole when one is given.</summary>
+		private static void DrawClipped(ImDrawListPtr drawList, ImRect frame, Vector2 clipMin, Vector2 clipMax, ImRect? hole, uint color, float rounding)
+		{
+			if (hole is not ImRect cut)
+			{
+				drawList.PushClipRect(clipMin, clipMax, true);
+				drawList.AddRectFilled(frame.Min, frame.Max, color, rounding);
+				drawList.PopClipRect();
+				return;
+			}
+
+			if (cut.Min.Y > clipMin.Y)
+			{
+				DrawClipped(drawList, frame, clipMin, new Vector2(clipMax.X, cut.Min.Y), null, color, rounding);
+			}
+
+			if (cut.Max.Y < clipMax.Y)
+			{
+				DrawClipped(drawList, frame, new Vector2(clipMin.X, cut.Max.Y), clipMax, null, color, rounding);
+			}
 		}
 
 		private static void DrawTextOutside(ImDrawListPtr drawList, ImRect frame, float fillMinX, float fillMaxX, Vector2 textPos, uint color, string text)
@@ -392,7 +440,7 @@ public static partial class ImGuiWidgets
 			{
 				bool escaped = ImGui.IsKeyPressed(ImGuiKey.Escape, false);
 				if (!escaped && state.EditText != state.EditStartText
-					&& ValueSliderState.TryParse(state.EditText, spec.Options.Unit, CultureInfo.CurrentCulture, out double typed))
+					&& ValueSliderState.TryParse(state.EditText, spec.Options.Unit, CultureInfo.CurrentCulture, out double typed, spec.Options.Prefix))
 				{
 					SetValue(ref value, typed, spec.Min, spec.Max, spec.IsInteger);
 				}

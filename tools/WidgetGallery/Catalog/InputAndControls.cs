@@ -320,19 +320,23 @@ internal static class InputAndControlsTiles
 	/// <returns>The entry.</returns>
 	private static GalleryEntry ValueSliderTile(GalleryCategory category)
 	{
-		// One of each: a percentage part filled, a bipolar value filled from zero, and whole pixels.
+		// One of each: a percentage part filled, a bipolar value filled from zero, whole pixels, and a
+		// logarithmic size, whose fill sits past halfway at a value well under half its range.
 		float sliderOpacity = 65f;
 		float sliderTemperature = -35f;
 		int sliderRadius = 12;
+		float sliderSize = 60f;
 		ValueSliderOptions percent = new() { Format = "0", Unit = "%" };
 		ValueSliderOptions bipolar = new() { Format = "0", Fill = ValueSliderFill.FromZero };
 		ValueSliderOptions pixels = new() { Unit = " px" };
+		ValueSliderOptions logarithmic = new() { Format = "0", Unit = " px", Logarithmic = true };
 		return new("ValueSlider", category, [nameof(ImGuiWidgets.ValueSlider)], _ =>
 		{
 			ImGui.PushItemWidth(220f);
 			ImGuiWidgets.ValueSlider("Opacity", ref sliderOpacity, 0f, 100f, percent);
 			ImGuiWidgets.ValueSlider("Temperature", ref sliderTemperature, -100f, 100f, bipolar);
 			ImGuiWidgets.ValueSlider("Radius", ref sliderRadius, 0, 64, pixels);
+			ImGuiWidgets.ValueSlider("Size", ref sliderSize, 1f, 1000f, logarithmic);
 			ImGui.PopItemWidth();
 		});
 	}
