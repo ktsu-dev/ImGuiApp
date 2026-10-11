@@ -345,6 +345,42 @@ public sealed class ValueSliderTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void ValueSlider_AHeldPointerThatStopsReportsNoChange()
+	{
+		// 0..1 over 200 px, so a 7 px drag lands on 0.035, which a float cannot hold exactly.
+		float fraction = 0.5f;
+		int changes = 0;
+		Start(() =>
+		{
+			ImGui.PushItemWidth(FrameWidth);
+			if (ImGuiWidgets.ValueSlider(Label, ref fraction, 0f, 1f))
+			{
+				changes++;
+			}
+
+			ImGui.PopItemWidth();
+		});
+
+		Rectangle rect = RectOf(Label);
+		float x = rect.MinX + (FrameWidth / 2f);
+		float y = rect.MinY + (rect.Height / 2f);
+		Harness.Mouse.MoveTo(x, y);
+		Step();
+		HarnessMouse.Down(0);
+		Step();
+		Harness.Mouse.MoveTo(x + 7f, y);
+		Step(2);
+
+		Assert.AreNotEqual(0.5f, fraction, "The drag did not move the value.");
+		changes = 0;
+		Step(5);
+		HarnessMouse.Up(0);
+		Step();
+
+		Assert.AreEqual(0, changes, "The slider reported a change on frames the held pointer did not move.");
+	}
+
+	[TestMethod]
 	public void ValueSlider_ReportsTheFrameItChangedOn()
 	{
 		bool reported = false;
