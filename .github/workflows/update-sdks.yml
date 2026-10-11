@@ -26,11 +26,16 @@ env:
 jobs:
   update-sdks:
     name: Update ktsu SDKs
-    runs-on: windows-latest
+    # Linux: nothing in this repository needs Windows to build, and the hosted Linux runner is the
+    # faster of the two. Its default shell is bash, so the PowerShell steps below say so here.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: write # For committing changes
       pull-requests: write # For creating PR if needed
+    defaults:
+      run:
+        shell: pwsh
 
     steps:
       - name: Checkout Repository
