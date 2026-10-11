@@ -2418,17 +2418,38 @@ public static partial class ImGuiApp
 
 		foreach ((string name, byte[] fontBytes) in fontsToLoad)
 		{
-			nint fontHandle = Marshal.AllocHGlobal(fontBytes.Length);
-			currentFontMemoryHandles.Add(fontHandle);
-			Marshal.Copy(fontBytes, 0, fontHandle, fontBytes.Length);
-
+			nint fontHandle = CopyFontToUnmanagedMemory(fontBytes);
 			uint* glyphRanges = GetConstrainedGlyphRanges(fontAtlasPtr, shouldUseReducedUnicode);
-			LoadFontFromMemory(name, fontHandle, fontBytes.Length, fontAtlasPtr, FontAppearance.DefaultFontPointSize, glyphRanges);
+
+			// The interface face replaces the bundled font as the default, with the bundled font merged
+			// beneath it for icons and whatever the face has no glyph for.
+			byte[]? interfaceFont = Config.DefaultFonts.ContainsKey(name) && !Config.InterfaceFont.IsEmpty ? Config.InterfaceFont.ToArray() : null;
+			if (interfaceFont is not null)
+			{
+				nint interfaceHandle = CopyFontToUnmanagedMemory(interfaceFont);
+				LoadFontFromMemory(name, interfaceHandle, interfaceFont.Length, fontAtlasPtr, FontAppearance.DefaultFontPointSize, glyphRanges);
+				MergeFontFromMemory(fontHandle, fontBytes.Length, fontAtlasPtr, FontAppearance.DefaultFontPointSize, glyphRanges);
+			}
+			else
+			{
+				LoadFontFromMemory(name, fontHandle, fontBytes.Length, fontAtlasPtr, FontAppearance.DefaultFontPointSize, glyphRanges);
+			}
 
 			// Merge emoji immediately after the font they attach to, which is what MergeMode requires.
 			if (shouldLoadEmojis && emojiHandle != IntPtr.Zero)
 			{
 				LoadEmojiFontFromMemory(emojiHandle, emojiLength, fontAtlasPtr, FontAppearance.DefaultFontPointSize);
+			}
+
+			// The bundled font stays reachable on its own, for code and fixed-width columns. Two
+			// sources may share one block of font memory, since the atlas owns neither.
+			if (interfaceFont is not null)
+			{
+				LoadFontFromMemory(FontAppearance.MonospaceFontName, fontHandle, fontBytes.Length, fontAtlasPtr, FontAppearance.DefaultFontPointSize, glyphRanges);
+				if (shouldLoadEmojis && emojiHandle != IntPtr.Zero)
+				{
+					LoadEmojiFontFromMemory(emojiHandle, emojiLength, fontAtlasPtr, FontAppearance.DefaultFontPointSize);
+				}
 			}
 
 			// Prefer a font from DefaultFonts as the default; otherwise the first registered wins.
@@ -2557,6 +2578,38 @@ public static partial class ImGuiApp
 
 		// Store the font index for later retrieval
 		FontIndices[name] = fontIndex;
+	}
+
+	/// <summary>
+	/// Copies font data into unmanaged memory released with the rest of the atlas's font memory.
+	/// </summary>
+	/// <param name="fontBytes">The font file.</param>
+	/// <returns>The handle to the copy.</returns>
+	private static nint CopyFontToUnmanagedMemory(byte[] fontBytes)
+	{
+		nint handle = Marshal.AllocHGlobal(fontBytes.Length);
+		currentFontMemoryHandles.Add(handle);
+		Marshal.Copy(fontBytes, 0, handle, fontBytes.Length);
+		return handle;
+	}
+
+	/// <summary>
+	/// Merges a font from pre-allocated memory into the previously added font, as a fallback for
+	/// every character that font has no glyph for.
+	/// </summary>
+	/// <param name="fontHandle">The handle to pre-allocated font data.</param>
+	/// <param name="fontLength">The length of the font data in bytes.</param>
+	/// <param name="fontAtlasPtr">The ImGui font atlas.</param>
+	/// <param name="pointSize">The point size for the font.</param>
+	/// <param name="glyphRanges">The glyph ranges the merged font may answer for.</param>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui font loading from pre-allocated memory; pointers are scoped to the atlas call and not retained.")]
+	internal static unsafe void MergeFontFromMemory(nint fontHandle, int fontLength, ImFontAtlasPtr fontAtlasPtr, int pointSize, uint* glyphRanges)
+	{
+		ImFontConfigPtr fontConfig = ImGui.ImFontConfig();
+		fontConfig.FontDataOwnedByAtlas = false; // We manage the memory ourselves
+		fontConfig.PixelSnapH = true;
+		fontConfig.MergeMode = true;
+		fontAtlasPtr.AddFontFromMemoryTTF((void*)fontHandle, fontLength, CalculateOptimalPixelSize(pointSize), fontConfig, glyphRanges);
 	}
 
 	/// <summary>
