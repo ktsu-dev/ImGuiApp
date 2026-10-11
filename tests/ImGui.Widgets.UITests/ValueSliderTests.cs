@@ -325,6 +325,26 @@ public sealed class ValueSliderTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void ValueSlider_APrefixIsDrawnButNotTyped()
+	{
+		options = new ValueSliderOptions { Format = "0" };
+		Start(Draw);
+		byte[] withoutPrefix = Snapshot();
+
+		options = new ValueSliderOptions { Format = "0", Prefix = "Size " };
+		Step();
+		Assert.IsTrue(PixelsChangedSince(withoutPrefix) > 0, "The prefix drew nothing.");
+
+		// Ctrl+click opens the value for typing; typing a number with the prefix in front still reads it.
+		CtrlClick(Label);
+		Harness.Keyboard.Type("Size 30");
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step(2);
+
+		Assert.AreEqual(30f, value, "A typed value with the prefix in front was not read.");
+	}
+
+	[TestMethod]
 	public void ValueSlider_ReportsTheFrameItChangedOn()
 	{
 		bool reported = false;

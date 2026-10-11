@@ -220,4 +220,14 @@ public class ValueSliderStateTests
 		// No fill at all.
 		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 100f, 90f, 110f));
 	}
+
+	[TestMethod]
+	[DataRow("25", 25.0)]
+	[DataRow("Size 25", 25.0)]
+	[DataRow("size 25 px", 25.0)]
+	public void TryParse_IgnoresThePrefixWhenItIsTypedToo(string text, double expected)
+	{
+		Assert.IsTrue(ImGuiWidgets.ValueSliderState.TryParse(text, " px", Invariant, out double value, "Size "));
+		Assert.AreEqual(expected, value);
+	}
 }

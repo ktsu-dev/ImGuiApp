@@ -32,6 +32,14 @@ public sealed class ValueSliderOptions
 	/// </summary>
 	public string? Unit { get; set; }
 
+	/// <summary>
+	/// Gets or sets text written straight before the number, such as <c>"Size "</c>, for a slider whose
+	/// label sits inside its frame where a row has no room for one beside it. Nothing is inserted between
+	/// the two, so include a space. The value opens for typing without it, and typing it back is accepted
+	/// and ignored.
+	/// </summary>
+	public string? Prefix { get; set; }
+
 	/// <summary>Gets or sets where the fill starts. <see cref="ValueSliderFill.FromMinimum"/> by default.</summary>
 	public ValueSliderFill Fill { get; set; }
 

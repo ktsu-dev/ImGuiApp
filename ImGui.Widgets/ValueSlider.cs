@@ -290,7 +290,7 @@ public static partial class ImGuiWidgets
 			float fillMinX = frame.Min.X + (start * width);
 			float fillMaxX = frame.Min.X + (end * width);
 
-			string text = ValueSliderState.Format(value, format, options.Unit, CultureInfo.CurrentCulture);
+			string text = options.Prefix + ValueSliderState.Format(value, format, options.Unit, CultureInfo.CurrentCulture);
 			Vector2 textSize = ImGui.CalcTextSize(text);
 			Vector2 textPos = new(
 				MathF.Round(frame.Min.X + ((width - textSize.X) * 0.5f)),
@@ -440,7 +440,7 @@ public static partial class ImGuiWidgets
 			{
 				bool escaped = ImGui.IsKeyPressed(ImGuiKey.Escape, false);
 				if (!escaped && state.EditText != state.EditStartText
-					&& ValueSliderState.TryParse(state.EditText, spec.Options.Unit, CultureInfo.CurrentCulture, out double typed))
+					&& ValueSliderState.TryParse(state.EditText, spec.Options.Unit, CultureInfo.CurrentCulture, out double typed, spec.Options.Prefix))
 				{
 					SetValue(ref value, typed, spec.Min, spec.Max, spec.IsInteger);
 				}

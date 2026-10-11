@@ -69,15 +69,22 @@ public static partial class ImGuiWidgets
 			return number + unit;
 		}
 
-		/// <summary>Reads a typed value, ignoring surrounding space and the unit if it was typed too.</summary>
+		/// <summary>Reads a typed value, ignoring surrounding space and the prefix and unit if they were typed too.</summary>
 		/// <param name="text">The typed text.</param>
 		/// <param name="unit">The slider's unit, or null.</param>
 		/// <param name="culture">The culture tried first; the invariant culture is tried after it.</param>
 		/// <param name="value">The value read.</param>
+		/// <param name="prefix">The slider's prefix, or null; ignored if it was typed too.</param>
 		/// <returns>Whether the text held a finite number.</returns>
-		internal static bool TryParse(string text, string? unit, IFormatProvider culture, out double value)
+		internal static bool TryParse(string text, string? unit, IFormatProvider culture, out double value, string? prefix = null)
 		{
 			string trimmed = text.Trim();
+			string prefixText = prefix?.Trim() ?? string.Empty;
+			if (prefixText.Length > 0 && trimmed.StartsWith(prefixText, StringComparison.OrdinalIgnoreCase))
+			{
+				trimmed = trimmed[prefixText.Length..].TrimStart();
+			}
+
 			string unitText = unit?.Trim() ?? string.Empty;
 			if (unitText.Length > 0 && trimmed.EndsWith(unitText, StringComparison.OrdinalIgnoreCase))
 			{
