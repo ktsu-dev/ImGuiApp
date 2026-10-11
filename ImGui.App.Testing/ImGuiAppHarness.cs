@@ -137,8 +137,9 @@ public sealed class ImGuiAppHarness : IDisposable
 		// ImGuiController does this for a windowed application, and the harness replaces the
 		// controller. Without it ImGuizmo, ImNodes and ImPlot never learn the ImGui context and an
 		// application that draws with any of them faults inside native code rather than failing as
-		// a test. This is reflection-based detection, so it costs nothing when none are referenced.
-		ImGuiExtensionManager.Initialize();
+		// a test. This is reflection-based detection, so it costs nothing when none are referenced,
+		// and it honours the configuration's choice of extensions as the controller does.
+		ImGuiExtensionManager.Initialize(config.AutoDiscoverExtensions ? config.Extensions : ImGuiAppExtensions.None);
 		ImGuiExtensionManager.SetImGuiContext();
 		ImGuiExtensionManager.CreateExtensionContexts();
 

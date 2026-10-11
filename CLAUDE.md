@@ -100,7 +100,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/FontHelper.cs` - Unicode, emoji, and Nerd Font character range support
 - `ImGui.App/ForceDpiAware.cs` - Multi-platform DPI detection
 - `ImGui.App/WindowingEnvironment.cs` - Wayland / tiling window manager detection driving `ImGuiAppConfig.WindowGeometry`
-- `ImGui.App/ImGuiExtensionManager.cs` - Auto-detection of ImGuizmo, ImNodes, ImPlot
+- `ImGui.App/ImGuiExtensionManager.cs` - Detection of ImGuizmo, ImNodes, ImPlot, limited to the ones `ImGuiAppConfig.Extensions` asks for; see [Extensions](#extensions)
 - `ImGui.App/IRenderer3D.cs` - The optional 3D extension a backend may implement; see [Backend-agnostic 3D](#backend-agnostic-3d)
 - `ImGui.App/ImGuiController/GLRenderer3D.cs` - The OpenGL implementation: framebuffer targets, a second shader program, and full state restore
 - `ImGui.App.Testing/SoftwareRasterizer.ThreeD.cs` - The 3D fill: near clipping, depth, perspective-correct interpolation
@@ -217,6 +217,21 @@ OnConfigureFonts = () =>
 Do not register custom fonts from `OnStart` — that runs after the atlas has already built, so glyphs silently fail to rasterize. Routing via `ImGuiAppConfig.Fonts` also does not work for fonts with custom glyph ranges, since that path applies the Nerd Font ranges instead. The callback fires on every atlas rebuild — that means startup plus any DPI change greater than 5%, but *not* `SetGlobalScale`, which does not rebuild the atlas — so handlers must be safe to run repeatedly and re-register fonts each time. `InitFonts` releases the previous run's pinned font data before invoking the callback, so re-registering does not accumulate pinned memory.
 
 Note that `FontHelper.GetMaterialIconRanges()` claims the entire Private Use Area (U+E000–U+F8FF), which subsumes every Nerd Font range. Merging Material Icons last therefore replaces Nerd Font glyphs across Powerline, Font Awesome, Devicons, Octicons and the rest — not just one narrow span.
+
+### Extensions
+
+`ImGuiAppConfig.Extensions` (an `ImGuiAppExtensions` flags value) says which of ImGuizmo, ImNodes
+and ImPlot `ImGuiExtensionManager` sets up. The default, `All`, sets up whichever are referenced,
+which is what every application got before the setting existed. An extension left out is never
+loaded, reflected over or given a context: about 40 ms of startup for an application that draws none
+of them (measured in ImageGui, ktsu-dev/ImageGui#253). Drawing with one that was left out faults in
+native code, and `ImGui.NodeEditor` needs `ImNodes`.
+
+`AutoDiscoverExtensions = false` still means none and overrides `Extensions`; `EffectiveExtensions`
+combines the two, and both `ImGuiController` and `ImGuiAppHarness` honour it, so a UI test sets up
+what the application does. Detection is cached per extension, so a later `Initialize` asking for one
+that an earlier call left out still finds it. Hexa's ImNodes and ImPlot bindings have no
+`BeginFrame`, so their `Is...Available` is answered by `CreateContext`.
 
 ### Image decoding
 
