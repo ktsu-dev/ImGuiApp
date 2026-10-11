@@ -204,6 +204,27 @@ public class ImGuiAppConfig
 	public Action<float> OnGlobalScaleChanged { get; init; } = (scale) => { };
 
 	/// <summary>
+	/// Gets the face the interface is drawn in, or empty to draw it in the bundled Nerd Font.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// When set, this face becomes the default font. The Nerd Font is merged beneath it, so icons and
+	/// any character the face has no glyph for still draw, and emoji beneath that. A merged font
+	/// answers each character from the first source that has it, so the face wins wherever it has a
+	/// glyph.
+	/// </para>
+	/// <para>
+	/// That includes the Private Use Area, where the Nerd Font keeps its icons. A face carrying glyphs
+	/// there (Inter does) hides the icons at those code points, so remove them from the face first.
+	/// </para>
+	/// <para>
+	/// The Nerd Font stays available on its own, for code and fixed-width columns, under
+	/// <see cref="FontAppearance.MonospaceFontName"/>.
+	/// </para>
+	/// </remarks>
+	public ReadOnlyMemory<byte> InterfaceFont { get; init; }
+
+	/// <summary>
 	/// Gets or sets the fonts to be used in the application.
 	/// </summary>
 	/// <value>

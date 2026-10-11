@@ -109,7 +109,7 @@ public static class FontHelper
 	/// <summary>
 	/// Gets the extended Unicode glyph ranges that ImGuiApp uses for main fonts.
 	/// Includes ASCII, Latin Extended, symbols, arrows, math, shapes, and Nerd Font icons.
-	/// Note: Emoji ranges (1F*** blocks) are handled separately to avoid conflicts.
+	/// Note: Emoji ranges are handled separately, by the emoji font merged after the main font.
 	/// </summary>
 	/// <param name="fontAtlasPtr">The font atlas to use for building ranges.</param>
 	/// <returns>Pointer to the extended Unicode glyph ranges for main fonts.</returns>
@@ -147,8 +147,13 @@ public static class FontHelper
 
 	/// <summary>
 	/// Adds emoji-specific ranges to the glyph ranges builder.
-	/// Only includes true emoji ranges (1F*** blocks) to avoid conflicts with main font symbol ranges.
 	/// </summary>
+	/// <remarks>
+	/// The emoji font is merged after the font it attaches to, and a merged font answers a character
+	/// from the first of its sources that has a glyph for it. So the symbol blocks listed here, which
+	/// the main font's ranges also claim, take the emoji glyph only where the main font has none:
+	/// ☃ and ❄ draw, and the main font keeps every symbol it does have.
+	/// </remarks>
 	/// <param name="builder">The glyph ranges builder to add emoji ranges to.</param>
 	internal static void AddEmojiRanges(ImFontGlyphRangesBuilderPtr builder)
 	{
@@ -158,8 +163,12 @@ public static class FontHelper
 			builder.AddChar(c);
 		}
 
-		// Emoji-specific Unicode ranges (1F*** blocks only to avoid main font conflicts)
+		// Emoji Unicode ranges. The symbol blocks below 0x1F000 are fallbacks; see the remarks.
 		(uint start, uint end, string description)[] emojiRangeDefinitions = [
+			(0x2300, 0x23FF, "Miscellaneous Technical"),
+			(0x2600, 0x26FF, "Miscellaneous Symbols"),
+			(0x2700, 0x27BF, "Dingbats"),
+			(0x2B00, 0x2BFF, "Miscellaneous Symbols and Arrows"),
 			(0x1F300, 0x1F5FF, "Miscellaneous Symbols and Pictographs"),
 			(0x1F600, 0x1F64F, "Emoticons"),
 			(0x1F650, 0x1F67F, "Ornamental Dingbats"),
@@ -184,7 +193,7 @@ public static class FontHelper
 
 	/// <summary>
 	/// Gets emoji-specific glyph ranges for loading emoji fonts.
-	/// Includes only true emoji ranges (1F*** blocks) plus ASCII and variation selectors.
+	/// Includes the emoji blocks, the symbol blocks emoji fall back for, and variation selectors.
 	/// </summary>
 	/// <returns>Pointer to the emoji glyph ranges.</returns>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; pointers are scoped to the call and not retained.")]
@@ -377,6 +386,42 @@ public static class FontHelper
 	}
 
 	/// <summary>
+	/// Adds the font an application draws its interface in, built the way <c>ImGuiApp</c> builds it:
+	/// the interface face, the bundled Nerd Font merged beneath it, and emoji beneath that.
+	/// </summary>
+	/// <remarks>
+	/// For a harness or tool that draws an application without starting it, and so never runs
+	/// <c>ImGuiApp</c>'s own font setup. The font data is pinned like <see cref="AddCustomFont"/>'s and
+	/// released by <see cref="CleanupCustomFonts"/>.
+	/// </remarks>
+	/// <param name="io">The ImGui IO pointer.</param>
+	/// <param name="interfaceFont">The face set as <see cref="ImGuiAppConfig.InterfaceFont"/>, or null for the Nerd Font alone.</param>
+	/// <param name="fontSize">The font size in pixels.</param>
+	/// <returns>The font, or null if it could not be added.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; the ranges are cached in static fields so the pointers stay valid.")]
+	public static unsafe ImFontPtr? AddInterfaceFont(ImGuiIOPtr io, byte[]? interfaceFont, float fontSize)
+	{
+		uint* ranges = GetExtendedUnicodeRanges(io.Fonts);
+		ImFontPtr? font = AddCustomFont(io, interfaceFont ?? Resources.Resources.NerdFont, fontSize, ranges);
+		if (font is null)
+		{
+			return null;
+		}
+
+		if (interfaceFont is not null)
+		{
+			AddCustomFont(io, Resources.Resources.NerdFont, fontSize, ranges, mergeWithPrevious: true);
+		}
+
+		if (ImGuiAppConfig.EmojiFont is byte[] emoji)
+		{
+			AddPinnedFont(io, emoji, fontSize, GetEmojiRanges(), mergeWithPrevious: true, minAdvanceX: fontSize);
+		}
+
+		return font;
+	}
+
+	/// <summary>
 	/// Adds a custom font with specific glyph ranges to the ImGui font atlas.
 	/// This allows you to load fonts with exactly the character ranges you need.
 	/// The font data is pinned in memory and tracked for proper cleanup.
@@ -389,7 +434,19 @@ public static class FontHelper
 	/// <param name="mergeWithPrevious">Whether to merge this font with the previously added font.</param>
 	/// <returns>The ImFont pointer for the added font, or null if failed.</returns>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; pointers are scoped to the call and not retained.")]
-	public static unsafe ImFontPtr? AddCustomFont(ImGuiIOPtr io, byte[] fontData, float fontSize, uint* glyphRanges = null, bool mergeWithPrevious = false)
+	public static unsafe ImFontPtr? AddCustomFont(ImGuiIOPtr io, byte[] fontData, float fontSize, uint* glyphRanges = null, bool mergeWithPrevious = false) =>
+		AddPinnedFont(io, fontData, fontSize, glyphRanges, mergeWithPrevious, minAdvanceX: 0f);
+
+	/// <summary>Adds pinned font data to the atlas; <see cref="AddCustomFont"/> with a minimum advance.</summary>
+	/// <param name="io">The ImGui IO pointer.</param>
+	/// <param name="fontData">The font data as a byte array.</param>
+	/// <param name="fontSize">The font size in pixels.</param>
+	/// <param name="glyphRanges">The glyph ranges to include, or null for default ASCII.</param>
+	/// <param name="mergeWithPrevious">Whether to merge this font with the previously added font.</param>
+	/// <param name="minAdvanceX">The narrowest a glyph may advance, in pixels; emoji use the font size.</param>
+	/// <returns>The ImFont pointer for the added font, or null if failed.</returns>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui interop; pointers are scoped to the call and not retained.")]
+	private static unsafe ImFontPtr? AddPinnedFont(ImGuiIOPtr io, byte[] fontData, float fontSize, uint* glyphRanges, bool mergeWithPrevious, float minAdvanceX)
 	{
 		Ensure.NotNull(fontData);
 
@@ -405,6 +462,7 @@ public static class FontHelper
 			fontConfig.FontDataOwnedByAtlas = false; // We manage the memory
 			fontConfig.PixelSnapH = true;
 			fontConfig.MergeMode = mergeWithPrevious;
+			fontConfig.GlyphMinAdvanceX = minAdvanceX;
 
 			// Use provided glyph ranges or default to ASCII
 			uint* ranges = glyphRanges != null ? glyphRanges : io.Fonts.GetGlyphRangesDefault();
