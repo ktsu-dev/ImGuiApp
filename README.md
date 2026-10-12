@@ -35,7 +35,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.App?label=ktsu.ImGui.App&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.App)
 
-Complete application scaffolding for Dear ImGui applications with windowing, rendering, font/texture management, and performance tuning. Image decoding for PNG, JPEG, BMP and TGA is built in, so the package carries no imaging dependency.
+Complete application scaffolding for Dear ImGui applications with windowing, rendering, font/texture management, and performance tuning. Image decoding for PNG, JPEG, BMP and TGA is built in, so the package carries no imaging dependency, and `ImageClipboard` copies and pastes pictures through the system clipboard.
 
 ### ImGui.Widgets - Custom UI Components
 

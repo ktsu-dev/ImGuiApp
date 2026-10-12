@@ -75,6 +75,9 @@
          this type live in ImGuiController/, which is also removed below. -->
     <Compile Remove="ImGuiExtensionManager.cs" />
     <Compile Remove="ImGuiController\**\*.cs" />
+    <!-- Starts clipboard tools as processes, which iOS doesn't allow; ImageClipboard.ForThisPlatform
+         answers with the unsupported clipboard there instead. -->
+    <Compile Remove="Clipboard\SystemClipboardProcesses.cs" />
   </ItemGroup>
 
   <!-- The Metal renderer compiles its shader from source at runtime (IMTLDevice.CreateLibrary), so
