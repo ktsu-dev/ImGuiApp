@@ -95,7 +95,7 @@ public class KeyChordMatcherTests
 		KeyChordModifiers ctrl = new(Ctrl: true, Alt: false, Shift: false, Meta: false);
 		Assert.AreEqual("Ctrl+=", KeyChordMatcher.Display(KeyChordMatcher.Compose(ctrl, ImGuiKey.Equal)));
 		Assert.AreEqual("Ctrl+Shift+7", KeyChordMatcher.Display(KeyChordMatcher.Compose(ctrl with { Shift = true }, ImGuiKey.Key7)));
-		Assert.AreEqual("Alt+UpArrow", KeyChordMatcher.Display(KeyChordMatcher.Compose(new(Ctrl: false, Alt: true, Shift: false, Meta: false), ImGuiKey.UpArrow)));
+		Assert.AreEqual("Alt+Up", KeyChordMatcher.Display(KeyChordMatcher.Compose(new(Ctrl: false, Alt: true, Shift: false, Meta: false), ImGuiKey.UpArrow)));
 		Assert.AreEqual("Ctrl+Alt+Shift+Super+A", KeyChordMatcher.Display(KeyChordMatcher.Compose(new(Ctrl: true, Alt: true, Shift: true, Meta: true), ImGuiKey.A)));
 		Assert.AreEqual("F2", KeyChordMatcher.Display(KeyChordMatcher.Compose(default, ImGuiKey.F2)));
 		Assert.AreEqual(Chord.Parse("Ctrl+]"), KeyChordMatcher.Compose(ctrl, ImGuiKey.RightBracket));
@@ -105,7 +105,8 @@ public class KeyChordMatcherTests
 	[TestMethod]
 	[DataRow("Control+S", "Ctrl+S")]
 	[DataRow("Win+E", "Super+E")]
-	[DataRow("Ctrl+Up", "Ctrl+UpArrow")]
+	[DataRow("Ctrl+Up", "Ctrl+Up")]
+	[DataRow("Shift+ArrowLeft", "Shift+Left")]
 	[DataRow("Ctrl+Shift+/", "Ctrl+Shift+/")]
 	[DataRow("Delete", "Delete")]
 	public void Display_NormalizesModifiersAndKeys(string text, string expected) =>

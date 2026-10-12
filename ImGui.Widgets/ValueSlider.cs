@@ -311,8 +311,9 @@ public static partial class ImGuiWidgets
 			if (fillMaxX > fillMinX)
 			{
 				// The whole frame shape clipped to the fill keeps the frame's rounded corners at whichever
-				// ends the fill reaches, and square edges everywhere else. A fill lying wholly under the
-				// number is drawn above and below it instead, or it would run through the digits.
+				// ends the fill reaches, and square edges everywhere else. Where an edge of the fill falls
+				// under the number, the fill steps above and below the number there instead, so the number
+				// keeps one color rather than splitting at the edge.
 				DrawClipped(drawList, frame, new Vector2(fillMinX, frame.Min.Y), new Vector2(fillMaxX, frame.Max.Y), fillAvoidsText ? textBox : null, fill, rounding);
 			}
 
@@ -356,20 +357,25 @@ public static partial class ImGuiWidgets
 		{
 			if (hole is not ImRect cut)
 			{
-				drawList.PushClipRect(clipMin, clipMax, true);
-				drawList.AddRectFilled(frame.Min, frame.Max, color, rounding);
-				drawList.PopClipRect();
+				if (clipMax.X > clipMin.X && clipMax.Y > clipMin.Y)
+				{
+					drawList.PushClipRect(clipMin, clipMax, true);
+					drawList.AddRectFilled(frame.Min, frame.Max, color, rounding);
+					drawList.PopClipRect();
+				}
+
 				return;
 			}
 
-			if (cut.Min.Y > clipMin.Y)
+			// Full height either side of the hole, and only above and below it across its width.
+			float holeMinX = MathF.Max(clipMin.X, cut.Min.X);
+			float holeMaxX = MathF.Min(clipMax.X, cut.Max.X);
+			DrawClipped(drawList, frame, clipMin, new Vector2(MathF.Min(clipMax.X, holeMinX), clipMax.Y), null, color, rounding);
+			DrawClipped(drawList, frame, new Vector2(MathF.Max(clipMin.X, holeMaxX), clipMin.Y), clipMax, null, color, rounding);
+			if (holeMaxX > holeMinX)
 			{
-				DrawClipped(drawList, frame, clipMin, new Vector2(clipMax.X, cut.Min.Y), null, color, rounding);
-			}
-
-			if (cut.Max.Y < clipMax.Y)
-			{
-				DrawClipped(drawList, frame, new Vector2(clipMin.X, cut.Max.Y), clipMax, null, color, rounding);
+				DrawClipped(drawList, frame, new Vector2(holeMinX, clipMin.Y), new Vector2(holeMaxX, cut.Min.Y), null, color, rounding);
+				DrawClipped(drawList, frame, new Vector2(holeMinX, cut.Max.Y), new Vector2(holeMaxX, clipMax.Y), null, color, rounding);
 			}
 		}
 
