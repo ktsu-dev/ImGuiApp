@@ -82,5 +82,5 @@ internal sealed class MacImageClipboard(IClipboardProcesses processes) : IImageC
 	// the quote and the backslash mean something.
 	private static string Escape(string path) => path.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
-	private static string TemporaryPath() => Path.Combine(Path.GetTempPath(), $"imgui-clipboard-{Guid.NewGuid():N}.png");
+	private static string TemporaryPath() => Path.Join(Path.GetTempPath(), $"imgui-clipboard-{Guid.NewGuid():N}.png");
 }

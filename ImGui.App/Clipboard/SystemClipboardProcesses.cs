@@ -26,7 +26,7 @@ internal sealed class SystemClipboardProcesses : IClipboardProcesses
 	public ClipboardProcessResult? Run(string program, IReadOnlyList<string> arguments, byte[]? input, bool captureOutput)
 	{
 		// Real disk: looks for an operating system tool to run.
-		string? path = ToolDirectories.Select(directory => Path.Combine(directory, program)).FirstOrDefault(File.Exists);
+		string? path = ToolDirectories.Select(directory => Path.Join(directory, program)).FirstOrDefault(File.Exists);
 		if (path is null)
 		{
 			return null;
