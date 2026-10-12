@@ -273,6 +273,35 @@ public sealed class ValueSliderTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void ValueSlider_AFillEndingUnderTheNumberStepsAroundIt()
+	{
+		// At 50 the fill's edge falls in the middle of the number, which would split it into two colors.
+		value = 50f;
+		Start(Draw);
+
+		Rectangle frame = RectOf(Label);
+		Vector4 grab = ImGui.GetStyle().Colors[(int)ImGuiCol.SliderGrab];
+		CapturedFrame picture = Harness.Capture();
+		int middleY = frame.MinY + (frame.Height / 2);
+		int middleX = frame.MinX + (frame.Width / 2);
+
+		Assert.IsTrue(IsFill(picture.GetPixel(frame.MinX + 4, middleY), grab), "The fill should still cover the frame's left half.");
+		for (int x = middleX - 4; x < middleX; x++)
+		{
+			Assert.IsFalse(
+				IsFill(picture.GetPixel(x, middleY), grab),
+				$"The fill runs behind the number at x={x}, so the number is drawn in two colors.");
+		}
+
+		Assert.IsTrue(IsFill(picture.GetPixel(middleX - 2, frame.MinY + 1), grab), "The fill should continue above the number.");
+	}
+
+	private static bool IsFill(Rgba32 pixel, Vector4 grab) =>
+		Math.Abs(pixel.R - (grab.X * 255f)) < 12f
+		&& Math.Abs(pixel.G - (grab.Y * 255f)) < 12f
+		&& Math.Abs(pixel.B - (grab.Z * 255f)) < 12f;
+
+	[TestMethod]
 	public void ValueSlider_LogarithmicDragsMultiplyTheValue()
 	{
 		options = new ValueSliderOptions { Logarithmic = true };

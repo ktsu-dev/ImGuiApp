@@ -207,12 +207,17 @@ public static class KeyChordMatcher
 
 	/// <summary>Names a key the way a menu shows it: a letter, a digit, the symbol a symbol key types, or ImGui's own name.</summary>
 	/// <param name="key">The key.</param>
-	/// <returns>The name, such as A, 7, ], Delete or F6.</returns>
+	/// <returns>The name, such as A, 7, ], Up, Delete or F6.</returns>
+	/// <remarks>The arrows are named for their direction alone, as menus write them, rather than ImGui's UpArrow.</remarks>
 	public static string DisplayName(ImGuiKey key) => key switch
 	{
 		>= ImGuiKey.A and <= ImGuiKey.Z => ((char)('A' + (key - ImGuiKey.A))).ToString(),
 		>= ImGuiKey.Key0 and <= ImGuiKey.Key9 => ((char)('0' + (key - ImGuiKey.Key0))).ToString(),
 		_ when SymbolNames.TryGetValue(key, out string? symbol) => symbol,
+		ImGuiKey.UpArrow => "Up",
+		ImGuiKey.DownArrow => "Down",
+		ImGuiKey.LeftArrow => "Left",
+		ImGuiKey.RightArrow => "Right",
 		_ => key.ToString(),
 	};
 

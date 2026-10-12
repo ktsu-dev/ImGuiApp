@@ -241,8 +241,10 @@ public static partial class ImGuiWidgets
 		}
 
 		/// <summary>
-		/// Whether the fill should stay out from behind the number: a fill lying wholly under it, such as a
-		/// value near zero filled from zero, would otherwise run through the digits as a thin bar.
+		/// Whether the fill should stay out from behind the number: wherever an edge of the fill falls inside
+		/// the number, the number would be split between two colors at that edge, half dark on the fill and
+		/// half light on the frame, and a fill lying wholly under it would run through the digits as a thin
+		/// bar. A fill covering the whole number, or none of it, leaves it in one color and needs nothing.
 		/// </summary>
 		/// <param name="fillStart">The fill's left edge, in pixels.</param>
 		/// <param name="fillEnd">The fill's right edge, in pixels.</param>
@@ -250,7 +252,9 @@ public static partial class ImGuiWidgets
 		/// <param name="textEnd">The number's right edge, padded, in pixels.</param>
 		/// <returns>Whether to draw the fill only above and below the number.</returns>
 		internal static bool FillAvoidsText(float fillStart, float fillEnd, float textStart, float textEnd) =>
-			fillEnd > fillStart && fillStart >= textStart && fillEnd <= textEnd;
+			fillEnd > fillStart && (IsInside(fillStart, textStart, textEnd) || IsInside(fillEnd, textStart, textEnd));
+
+		private static bool IsInside(float edge, float start, float end) => edge > start && edge < end;
 
 		/// <summary>Finds the part of the frame the fill covers, as fractions of its width.</summary>
 		/// <param name="value">The value.</param>

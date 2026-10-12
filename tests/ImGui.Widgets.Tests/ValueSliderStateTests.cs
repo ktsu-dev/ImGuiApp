@@ -208,14 +208,20 @@ public class ValueSliderStateTests
 		Assert.AreEqual(expected, ImGuiWidgets.ValueSliderState.LogarithmicEpsilon(format, isInteger), expected * 1e-9);
 
 	[TestMethod]
-	public void FillAvoidsText_OnlyWhenTheFillLiesWhollyUnderTheNumber()
+	public void FillAvoidsText_WheneverAnEdgeOfTheFillFallsInsideTheNumber()
 	{
 		// A sliver from zero in the middle of the number.
 		Assert.IsTrue(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 103f, 90f, 110f));
 
-		// A fill reaching past the number keeps it, with the number written over both.
-		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 120f, 90f, 110f));
-		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(0f, 105f, 90f, 110f));
+		// A fill from zero ending inside the number, or one from the left ending there: either would split it.
+		Assert.IsTrue(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 120f, 90f, 110f));
+		Assert.IsTrue(ImGuiWidgets.ValueSliderState.FillAvoidsText(0f, 105f, 90f, 110f));
+
+		// A fill covering the whole number, or ending clear of it, leaves the number in one color.
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(0f, 120f, 90f, 110f));
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(90f, 110f, 90f, 110f));
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(0f, 80f, 90f, 110f));
+		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(115f, 200f, 90f, 110f));
 
 		// No fill at all.
 		Assert.IsFalse(ImGuiWidgets.ValueSliderState.FillAvoidsText(100f, 100f, 90f, 110f));
