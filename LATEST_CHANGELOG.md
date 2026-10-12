@@ -1,6 +1,6 @@
-## v3.74.0 (minor)
+## v3.75.0 (minor)
 
-Changes since v3.73.0:
+Changes since v3.74.0:
 
-- [minor] Keep a value slider's number in one color, and name arrows and color plainly (#629) ([@matt-edmondson](https://github.com/matt-edmondson))
+- [minor] Copy and paste images through the system clipboard (#631) ([@matt-edmondson](https://github.com/matt-edmondson))
 
