@@ -21,6 +21,7 @@ ImGuiApp is a .NET library that provides application scaffolding for [Dear ImGui
 - **Unicode & Emoji Support**: Built-in support for Unicode characters and emojis (enabled by default)
 - **Texture Support**: Built-in texture management with caching and automatic cleanup for ImGui
 - **Dependency-Free Image Loading**: PNG, JPEG, BMP and TGA decoding built into the package, so nothing here constrains your licensing
+- **Image Clipboard**: Copy and paste pictures through the system clipboard on Windows, Linux (Wayland and X11) and macOS, beside GLFW's text-only clipboard
 - **Debug Logging**: Comprehensive debug logging system for troubleshooting crashes and performance issues
 - **Context Handling**: Automatic OpenGL context change detection and texture reloading
 - **Lifecycle Callbacks**: Customizable delegate callbacks for application events
@@ -311,6 +312,37 @@ Console.WriteLine($"{image.Width}x{image.Height}, {image.ByteLength} bytes");
 // Cropping and scaling, as SetWindowIcon does to build its icon sizes.
 ImagePixels icon = image.CropToSquare().Resize(32, 32);
 ```
+
+### Copying and Pasting Images
+
+GLFW's clipboard carries text only, so `ImageClipboard.ForThisPlatform()` reaches each platform's own:
+the Win32 clipboard (the registered `PNG` format, then `CF_DIBV5` and `CF_DIB`), `wl-paste`/`wl-copy`
+under Wayland and `xclip` under X11, and the macOS pasteboard through `osascript`. Linux needs
+wl-clipboard or xclip installed; when neither is, a read or write fails with a message saying so.
+
+```csharp
+using ktsu.ImGui.App.Clipboard;
+using ktsu.ImGui.App.Images;
+
+IImageClipboard clipboard = ImageClipboard.ForThisPlatform();
+
+if (clipboard.TryReadPixels(out ImagePixels? pasted, out string? why))
+{
+	// Straight-alpha RGBA8, ready for ImGuiApp.CreateTexture.
+}
+else
+{
+	Console.WriteLine(why); // "The clipboard doesn't hold an image.", or what to install
+}
+
+// Written as a PNG, which keeps transparency, and as a bitmap for older Windows applications.
+clipboard.TryWritePixels(pasted!, out _);
+```
+
+`TryRead` and `TryWrite` work with encoded files instead, for an application with its own codec: build
+a `ClipboardImage` from your own PNG and BGRA rows. `IImageClipboard` is an interface so tests can stand
+in a clipboard of their own. Reading starts a short-lived process everywhere but Windows, bounded by a
+timeout of a few seconds.
 
 ### PID Frame Limiting
 

@@ -112,6 +112,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/Images/BmpDecoder.cs` - BMP: core and info headers, 1/4/8/16/24/32 bit, `BI_RGB` and `BI_BITFIELDS`
 - `ImGui.App/Images/TgaDecoder.cs` - TGA: colour-mapped, true-colour and greyscale, raw and run-length encoded
 - `ImGui.App/Images/PixelConverter.cs` - Converts caller buffers in any `PixelLayout` (RGBA/BGRA/RGB/BGR/grey, optional row stride) to the RGBA8 behind the layout overloads of `ImGuiApp.CreateTexture`/`UpdateTexture`
+- `ImGui.App/Clipboard/ImageClipboard.cs` - Image copy and paste through the system clipboard; see [Image clipboard](#image-clipboard)
 - `ImGui.App/Images/ImageResampler.cs` - Separable Lanczos-3 scaling on premultiplied alpha, behind `SetWindowIcon`
 - `ImGui.Widgets/PropertyGrid.cs` - Two-column property grid: options, the path-browse request, and the table/row plumbing (`PropertyGridRows.cs` holds the typed rows, `PropertyGridLists.cs` the list rows). See [Property grid](#property-grid) below
 - `ImGui.Widgets/Waveform.cs` - Waveform overview: draws a caller-supplied min/max peak overview reduced to the box's pixel width (every peak kept, so sub-pixel transients show), a playhead, and a loop region. `TimelineGestureState.cs` holds the gestures (scrub, loop edge, Shift-drag loop, pan, scrollbar thumb) with no ImGui dependency, shared with any widget over a `TimelineView`, and delegates the loop edges to `HandleTrackState`, so they stay ordered and `minLoopLength` apart by the same rules as a `HandleTrack`. A loop whose ends are equal is "no loop": not drawn, not grabbable, and a press there seeks
@@ -305,6 +306,25 @@ within about three units per channel — the range such decoders differ by among
 Lanczos-3 filter whose support widens by the reduction factor when downscaling, so shrinking averages
 rather than point-samples. It resamples premultiplied alpha and unpremultiplies afterwards, so the
 colour of fully transparent pixels does not bleed into their visible neighbours.
+
+### Image clipboard
+
+`ImGui.App/Clipboard/` puts pictures on the system clipboard and reads them back, since GLFW's and SDL's
+clipboards carry text only. It came from ImageGui (#630), where it was built for Paste as New Layer.
+`ImageClipboard.ForThisPlatform()` picks the implementation; everything behind it is internal and
+covered by `tests/ImGui.App.Tests/Clipboard/`.
+
+- **Windows** goes through `user32`/`kernel32` with `LibraryImport` and `Marshal.Copy`, no `unsafe`
+  (Sonar fails new pointer code). It reads `PNG`, then `CF_DIBV5`, then `CF_DIB`, putting a BMP file
+  header back on a DIB so `ImageDecoder` reads it, and writes both PNG and a bottom-up `CF_DIB`.
+- **Linux and macOS** run `wl-paste`/`wl-copy`, `xclip` or `osascript` through `IClipboardProcesses`,
+  found in fixed system folders rather than on the path (Sonar S4036), with a five-second timeout. A
+  writer's standard output is never read: `xclip` and `wl-copy` leave a child serving the clipboard,
+  which holds it open until something else is copied.
+- **iOS** gets the unsupported clipboard, and `SystemClipboardProcesses.cs` isn't compiled there.
+
+`PngEncoder` exists only so `ClipboardImage.FromPixels` can build the PNG form: eight-bit RGBA, the Sub
+filter on every row, no ancillary chunks.
 
 ### Backend-agnostic 3D
 
