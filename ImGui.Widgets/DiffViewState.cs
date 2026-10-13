@@ -21,20 +21,19 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <remarks>
 	/// Deliberately free of ImGui, like <see cref="CurveTrackState"/>, which is what lets every rule
-	/// here be tested without a graphics context. The collapse set and the per hunk layouts are per
-	/// widget. Everything else is static, because it depends on nothing but its arguments.
+	/// here be tested without a graphics context. The per hunk layouts, which carry each hunk's
+	/// collapse flag, are per widget. Everything else is static, because it depends on nothing but its arguments.
 	/// </remarks>
 	internal sealed class DiffViewState
 	{
 		/// <summary>The longest a change summary bar is allowed to be, in characters.</summary>
 		internal const int SummaryWidth = 10;
 
-		private readonly HashSet<int> collapsed = [];
 		private readonly Dictionary<int, HunkLayout> layouts = [];
 
 		/// <summary>
-		/// What one hunk lays out to: its two change counts, and its paired rows once something has
-		/// asked for them.
+		/// What one hunk lays out to: its two change counts, whether it is collapsed, and its paired
+		/// rows once something has asked for them.
 		/// </summary>
 		/// <remarks>
 		/// The rows are built on first use rather than in the constructor, so a diff drawn unified
@@ -64,6 +63,12 @@ public static partial class ImGuiWidgets
 			internal int RemovedCount { get; }
 
 			internal int AddedCount { get; }
+
+			/// <summary>
+			/// Whether the user collapsed this hunk. Kept with the layout, so a different hunk
+			/// arriving at the same position starts expanded instead of inheriting the flag.
+			/// </summary>
+			internal bool Collapsed { get; set; }
 
 			internal IReadOnlyList<DiffRowPair> Rows => field ??= Pair(Hunk);
 		}
@@ -115,18 +120,32 @@ public static partial class ImGuiWidgets
 		}
 
 		/// <summary>Whether a hunk is collapsed.</summary>
-		/// <param name="index">The hunk's index.</param>
+		/// <remarks>
+		/// The flag belongs to the hunk instance at this position, not to the position alone. A
+		/// different diff drawn under the same label, or the same diff re-read after a hunk was
+		/// staged, puts new hunks at old positions, and those start expanded.
+		/// </remarks>
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
 		/// <returns><see langword="true"/> when it is collapsed.</returns>
-		internal bool IsCollapsed(int index) => collapsed.Contains(index);
+		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> is <see langword="null"/>.</exception>
+		internal bool IsCollapsed(int index, DiffHunk hunk)
+		{
+			Ensure.NotNull(hunk);
+
+			return LayoutFor(index, hunk).Collapsed;
+		}
 
 		/// <summary>Collapses an expanded hunk, or expands a collapsed one.</summary>
-		/// <param name="index">The hunk's index.</param>
-		internal void ToggleCollapsed(int index)
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
+		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> is <see langword="null"/>.</exception>
+		internal void ToggleCollapsed(int index, DiffHunk hunk)
 		{
-			if (!collapsed.Add(index))
-			{
-				_ = collapsed.Remove(index);
-			}
+			Ensure.NotNull(hunk);
+
+			HunkLayout layout = LayoutFor(index, hunk);
+			layout.Collapsed = !layout.Collapsed;
 		}
 
 		/// <summary>

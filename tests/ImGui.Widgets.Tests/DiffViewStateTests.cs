@@ -233,12 +233,51 @@ public class DiffViewStateTests
 	public void Collapse_ToggledTwice_ReturnsToExpanded()
 	{
 		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk hunk = Hunk(Added("X"));
 
-		state.ToggleCollapsed(1);
-		Assert.IsTrue(state.IsCollapsed(1));
+		state.ToggleCollapsed(1, hunk);
+		Assert.IsTrue(state.IsCollapsed(1, hunk));
 
-		state.ToggleCollapsed(1);
-		Assert.IsFalse(state.IsCollapsed(1));
+		state.ToggleCollapsed(1, hunk);
+		Assert.IsFalse(state.IsCollapsed(1, hunk));
+	}
+
+	[TestMethod]
+	public void Collapse_TheSameHunkAgain_StaysCollapsed()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk hunk = Hunk(Added("X"));
+
+		state.ToggleCollapsed(1, hunk);
+
+		Assert.IsTrue(state.IsCollapsed(1, hunk), "Redrawing the same diff must keep what the user collapsed.");
+	}
+
+	[TestMethod]
+	public void Collapse_ADifferentHunkAtTheSamePosition_StartsExpanded()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk collapsedHunk = Hunk(Added("X"));
+		ImGuiWidgets.DiffHunk replacement = Hunk(Added("Y"));
+
+		state.ToggleCollapsed(1, collapsedHunk);
+
+		Assert.IsFalse(
+			state.IsCollapsed(1, replacement),
+			"A new diff under the same label, or a re-read one whose hunks shifted, must not inherit another hunk's collapse.");
+	}
+
+	[TestMethod]
+	public void Collapse_OtherPositions_AreUnaffected()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk first = Hunk(Added("X"));
+		ImGuiWidgets.DiffHunk second = Hunk(Added("Y"));
+
+		state.ToggleCollapsed(0, first);
+
+		Assert.IsTrue(state.IsCollapsed(0, first));
+		Assert.IsFalse(state.IsCollapsed(1, second));
 	}
 
 	[TestMethod]
