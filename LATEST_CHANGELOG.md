@@ -1,6 +1,6 @@
-## v3.75.0 (minor)
+## v3.75.1 (patch)
 
-Changes since v3.74.0:
+Changes since v3.75.0:
 
-- [minor] Copy and paste images through the system clipboard (#631) ([@matt-edmondson](https://github.com/matt-edmondson))
+- Keep a DiffView hunk's collapse with that hunk, not its position [patch] ([@Claude](https://github.com/Claude))
 
