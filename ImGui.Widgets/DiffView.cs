@@ -327,12 +327,12 @@ public static partial class ImGuiWidgets
 
 				if (DrawHeading(label, index, hunk, options, state))
 				{
-					state.ToggleCollapsed(index);
+					state.ToggleCollapsed(index, hunk);
 				}
 
-				// A hunk that cannot be collapsed is always drawn. Consulting the collapse set anyway
+				// A hunk that cannot be collapsed is always drawn. Consulting the collapse flag anyway
 				// would hide a hunk for good once a caller collapsed it and then turned the option off.
-				if (!options.CanCollapseHunks || !state.IsCollapsed(index))
+				if (!options.CanCollapseHunks || !state.IsCollapsed(index, hunk))
 				{
 					DrawLines(state, index, hunk, options, tints);
 				}
@@ -368,7 +368,7 @@ public static partial class ImGuiWidgets
 
 			// ASCII rather than the geometric triangles a tree usually draws with. A caller on the
 			// stock font has no glyph for those and would get a missing-glyph box in their place.
-			string marker = state.IsCollapsed(index) ? ">" : "v";
+			string marker = state.IsCollapsed(index, hunk) ? ">" : "v";
 
 			// Selectable rather than a tree node, because the checkbox above has already been
 			// submitted on this line and a tree node would take the whole row's width from it. The id
