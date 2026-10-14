@@ -31,7 +31,10 @@ public partial class NodeEditorRenderer
 
 	/// <summary>Pin rows collected while drawing one node, reused across nodes and frames.</summary>
 	private readonly List<(int PinId, float MiddleY, bool IsInput)> pinRows = [];
-	private readonly Dictionary<int, Vector2> lastKnownNodeDimensions = [];
+	private readonly Dictionary<int, NodeMeasurement> lastKnownNodeDimensions = [];
+
+	/// <summary>The zoom the last <see cref="Render"/> drew at, which is what ImNodes measured nodes at.</summary>
+	private float renderedZoom = 1.0f;
 	private readonly HashSet<int> currentlyDraggedNodes = [];
 
 	/// <summary>The nodes ImNodes had selected as of the last frame drawn.</summary>
@@ -293,6 +296,7 @@ public partial class NodeEditorRenderer
 		// read-backs have to undo exactly the transform this render applied, and they are not told
 		// how big the editor is.
 		zoomAnchor = editorSize * 0.5f;
+		renderedZoom = Zoom;
 
 		// Hover is only answerable once the editor has been drawn, so what is highlighted this frame
 		// comes from the hover the last frame ended on. A frame's lag on a pointer that has to rest
@@ -1249,16 +1253,21 @@ public partial class NodeEditorRenderer
 	/// that depends on how far the user happened to be zoomed out, and handing that to a layout that
 	/// keeps node boxes apart would re-space the graph every time the view changed.
 	/// <para>
-	/// So a node that has already been measured keeps the size it was measured at, and only a node
-	/// that has never been measured takes a zoomed measurement — an approximate size being better
-	/// than none for a node created while zoomed out. It is corrected the next time the view is at
-	/// its own scale.
+	/// So a change of zoom is never read as a resize: a node measured at one zoom and then at another
+	/// only has its new measurement remembered. A node whose measurement changes while the zoom holds
+	/// still has had its content change — a preview added, a row of text grown — and reports the
+	/// zoomed measurement divided by the zoom, as does a node measured for the first time. Those
+	/// sizes are approximate, and each is corrected the next time the view is at its own scale.
 	/// </para>
 	/// </remarks>
 	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions.", Justification = "Explicit loop is clearer; the loop contains a continue and dictionary mutation that would not simplify cleanly.")]
 	public Dictionary<int, Vector2> GetNodeDimensionUpdates(NodeEditorEngine engine)
 	{
+		Ensure.NotNull(engine);
+
 		Dictionary<int, Vector2> updates = [];
+		float zoom = renderedZoom;
+		bool unzoomed = Math.Abs(zoom - 1.0f) < 0.0001f;
 
 		foreach (Node node in engine.Nodes)
 		{
@@ -1268,24 +1277,43 @@ public partial class NodeEditorRenderer
 				continue; // Skip nodes that haven't been rendered yet
 			}
 
-			Vector2 currentImNodesDims = ImNodes.GetNodeDimensions(node.Id);
+			Vector2 measured = ImNodes.GetNodeDimensions(node.Id);
+			Vector2? reported = null;
 
-			// Check if this is a new node or if dimensions changed
-			if (!lastKnownNodeDimensions.TryGetValue(node.Id, out Vector2 lastDims))
+			if (!lastKnownNodeDimensions.TryGetValue(node.Id, out NodeMeasurement last))
 			{
-				// Initialize with current dimensions for new nodes
-				lastKnownNodeDimensions[node.Id] = currentImNodesDims;
-				updates[node.Id] = currentImNodesDims / Zoom;
+				reported = measured / zoom;
 			}
-			else if (Vector2.Distance(lastDims, currentImNodesDims) > 0.1f && IsUnzoomed)
+			else if (Math.Abs(last.Zoom - zoom) > 0.0001f)
 			{
-				updates[node.Id] = currentImNodesDims;
-				lastKnownNodeDimensions[node.Id] = currentImNodesDims;
+				// Only the view changed. At the engine's own scale the measurement is exact, so it
+				// replaces whatever approximation was reported while zoomed.
+				if (unzoomed && Vector2.Distance(last.Reported, measured) > 0.1f)
+				{
+					reported = measured;
+				}
 			}
+			else if (Vector2.Distance(last.Measured, measured) > 0.1f)
+			{
+				reported = measured / zoom;
+			}
+
+			if (reported is Vector2 size)
+			{
+				updates[node.Id] = size;
+			}
+
+			lastKnownNodeDimensions[node.Id] = new NodeMeasurement(measured, zoom, reported ?? last.Reported);
 		}
 
 		return updates;
 	}
+
+	/// <summary>A node's size as ImNodes last measured it, the zoom it was drawn at, and the size last reported for it.</summary>
+	/// <param name="Measured">The size ImNodes measured, at <paramref name="Zoom"/>.</param>
+	/// <param name="Zoom">The zoom the node was drawn at when measured.</param>
+	/// <param name="Reported">The size last handed to the engine, in the engine's own scale.</param>
+	private readonly record struct NodeMeasurement(Vector2 Measured, float Zoom, Vector2 Reported);
 
 	/// <summary>
 	/// Cache the editor-to-screen transform by deriving it from a reference node's
