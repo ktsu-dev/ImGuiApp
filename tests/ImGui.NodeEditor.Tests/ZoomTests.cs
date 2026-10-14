@@ -7,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
+using Hexa.NET.ImNodes;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
@@ -119,8 +120,8 @@ public sealed class ZoomTests
 	/// <para>
 	/// A measurement taken while zoomed is not the node's size either, however it is scaled back:
 	/// the font size is rounded to whole pixels and ImGui's own spacing inside the node does not
-	/// scale, so what comes back depends on how far out the user was. A node already measured
-	/// therefore keeps its size, and this asserts it exactly rather than within a tolerance.
+	/// scale, so what comes back depends on how far out the user was. A change of zoom alone therefore
+	/// never resizes a node, and this asserts it exactly rather than within a tolerance.
 	/// </para>
 	/// </remarks>
 	[TestMethod]
@@ -241,6 +242,67 @@ public sealed class ZoomTests
 
 		Assert.IsFalse(renderer.FitToView(engine, new Vector2(600, 400)));
 		Assert.AreEqual(1f, renderer.Zoom, 0.0001f);
+	}
+
+	/// <summary>
+	/// Tests that a node whose content grows while the view is zoomed reports its new size, so a fit
+	/// made afterwards measures the node as it now is rather than as it was (#636).
+	/// </summary>
+	[TestMethod]
+	public void ANodeThatGrowsWhileZoomed_ReportsItsNewSize()
+	{
+		float bodyHeight = 40f;
+		renderer.DrawNodeBody = _ => ImGui.Dummy(new Vector2(80f, bodyHeight) * renderer.Zoom);
+		BuildGraph();
+		Start();
+
+		renderer.Zoom = 0.5f;
+		harness.Step(10);
+		Vector2[] before = Dimensions();
+
+		bodyHeight = 240f;
+		harness.Step(10);
+		Vector2[] after = Dimensions();
+
+		for (int i = 0; i < before.Length; i++)
+		{
+			// Within a tenth, because a zoomed measurement scaled back is approximate: ImGui's own spacing
+			// inside the node does not scale with the zoom, so dividing by it overstates that part.
+			Assert.AreEqual(200f, after[i].Y - before[i].Y, 20f, $"node {i} grew by 200 while zoomed, and the engine should have seen it");
+		}
+	}
+
+	/// <summary>
+	/// Tests that a size reported while zoomed, which is only approximate, is replaced by the exact
+	/// measurement once the view is back at its own scale, so the approximation never lasts.
+	/// </summary>
+	[TestMethod]
+	public void ASizeReportedWhileZoomed_IsCorrectedAtTheEnginesOwnScale()
+	{
+		float bodyHeight = 40f;
+		renderer.DrawNodeBody = _ => ImGui.Dummy(new Vector2(80f, bodyHeight) * renderer.Zoom);
+		BuildGraph();
+		Start();
+
+		renderer.Zoom = 0.45f;
+		harness.Step(5);
+		bodyHeight = 240f;
+		harness.Step(5);
+
+		renderer.Zoom = 1f;
+		harness.Step(5);
+		Vector2[] corrected = Dimensions();
+
+		renderer.Zoom = 0.45f;
+		harness.Step(5);
+		renderer.Zoom = 1f;
+		harness.Step(5);
+
+		CollectionAssert.AreEqual(corrected, Dimensions(), "zooming out and back should leave the corrected sizes exactly as they were");
+		for (int i = 0; i < corrected.Length; i++)
+		{
+			Assert.AreEqual(ImNodes.GetNodeDimensions(engine.Nodes[i].Id), corrected[i], $"node {i} should hold the size measured at the engine's own scale");
+		}
 	}
 
 	/// <summary>
