@@ -1600,7 +1600,7 @@ Changes since v2.0.0:
 - [minor] Refactor SearchBox to options-record API (matt-edmondson)
 - feat(color)!: migrate ImGui.Styler to ktsu.Semantics.Color via ThemeProvider 2.0 (matt-edmondson)
 - test(app): de-flake high-precision sleep timing assertions (matt-edmondson)
-- feat(imgui-color): add ktsu.ImGui.Color adapter (Color <-> ImColor/Vector4) (matt-edmondson)
+- feat(imgui-color): add ktsu.ImGui.Color adapter (Color \<-\> ImColor/Vector4) (matt-edmondson)
 - chore: remove unused SourceLink package versions (matt-edmondson)
 - chore: remove redundant SourceLink package references (matt-edmondson)
 - Add compatibility suppressions for new APIs in ImGui libraries (matt-edmondson)
@@ -1624,7 +1624,7 @@ Changes since v2.0.0:
 - Fix analyzer errors in embedded hosting and audio widgets (Claude)
 - Add embedded-window hosting and audio widgets (Claude)
 - feat(ios): curated ImGuiAppDemo.iOS showcase + simulator CI (Task 8, part 3) (#213) (matt-edmondson)
-- fix(ios): import ktsu.Semantics.Strings for string.As<AbsoluteFilePath> (Claude)
+- fix(ios): import ktsu.Semantics.Strings for string.As\<AbsoluteFilePath\> (Claude)
 - feat(ios): public texture loading via the Metal backend (Task 8, part 2) (Claude)
 - feat(ios): AutoDiscoverExtensions flag (Task 8, part 1) (#211) (matt-edmondson)
 - feat(ios): app menu (iPad) + Stop() semantics + no-op surface (Task 7) (#210) (matt-edmondson)
@@ -1688,7 +1688,7 @@ Changes since v2.0.0:
 - style: drop unused System using from InertialScrollTests (Claude)
 - style: split inline if-statements in InertialScrollTests for IDE2001 (Claude)
 - feat: add InertialScroll helper for ImGui.Widgets (Claude)
-- docs: degrade ImGuiController cref to <c> for iOS-tfm doc-build (Claude)
+- docs: degrade ImGuiController cref to \<c\> for iOS-tfm doc-build (Claude)
 - ci: make the iOS stub actually compile on macos-14 (Claude)
 - fix: collapse Spring construction into object initializers (IDE0017) (Claude)
 - ci: also clear ktsu.Sdk's forced RuntimeIdentifiers on the macOS iOS build (Claude)
@@ -1982,7 +1982,7 @@ Changes since v2.16.0:
 Changes since v2.15.0:
 
 - test(app): de-flake high-precision sleep timing assertions (matt-edmondson)
-- feat(imgui-color): add ktsu.ImGui.Color adapter (Color <-> ImColor/Vector4) (matt-edmondson)
+- feat(imgui-color): add ktsu.ImGui.Color adapter (Color \<-\> ImColor/Vector4) (matt-edmondson)
 - chore: remove unused SourceLink package versions (matt-edmondson)
 - chore: remove redundant SourceLink package references (matt-edmondson)
 - Add compatibility suppressions for new APIs in ImGui libraries (matt-edmondson)
@@ -2058,7 +2058,7 @@ Changes since v2.14.0:
 - Fix analyzer errors in embedded hosting and audio widgets (Claude)
 - Add embedded-window hosting and audio widgets (Claude)
 - feat(ios): curated ImGuiAppDemo.iOS showcase + simulator CI (Task 8, part 3) (#213) (matt-edmondson)
-- fix(ios): import ktsu.Semantics.Strings for string.As<AbsoluteFilePath> (Claude)
+- fix(ios): import ktsu.Semantics.Strings for string.As\<AbsoluteFilePath\> (Claude)
 - feat(ios): public texture loading via the Metal backend (Task 8, part 2) (Claude)
 
 ## v2.14.3 (patch)
@@ -2078,7 +2078,7 @@ Changes since v2.14.1:
 
 Changes since v2.14.0:
 
-- fix(ios): import ktsu.Semantics.Strings for string.As<AbsoluteFilePath> (Claude)
+- fix(ios): import ktsu.Semantics.Strings for string.As\<AbsoluteFilePath\> (Claude)
 - feat(ios): public texture loading via the Metal backend (Task 8, part 2) (Claude)
 
 ## v2.14.0 (minor)
@@ -2216,7 +2216,7 @@ Changes since v2.4.0:
 - style: drop unused System using from InertialScrollTests (Claude)
 - style: split inline if-statements in InertialScrollTests for IDE2001 (Claude)
 - feat: add InertialScroll helper for ImGui.Widgets (Claude)
-- docs: degrade ImGuiController cref to <c> for iOS-tfm doc-build (Claude)
+- docs: degrade ImGuiController cref to \<c\> for iOS-tfm doc-build (Claude)
 - ci: make the iOS stub actually compile on macos-14 (Claude)
 - fix: collapse Spring construction into object initializers (IDE0017) (Claude)
 - ci: also clear ktsu.Sdk's forced RuntimeIdentifiers on the macOS iOS build (Claude)
