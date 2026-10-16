@@ -24,7 +24,7 @@
     <PackageVersion Include="ktsu.TextFilter" Version="1.7.13" />
     <PackageVersion Include="ktsu.UndoRedo" Version="3.4.0" />
     <PackageVersion Include="ktsu.Keybinding" Version="2.1.7" />
-    <PackageVersion Include="Markdig" Version="1.4.0" />
+    <PackageVersion Include="Markdig" Version="1.4.1" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Silk.NET" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Core" Version="2.23.0" />
