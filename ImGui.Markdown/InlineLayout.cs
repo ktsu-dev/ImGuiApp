@@ -119,49 +119,58 @@ internal static class InlineLayout
 	private static IEnumerable<List<(string Text, InlineRun Run)>> SplitGluedWords(IReadOnlyList<InlineRun> runs)
 	{
 		List<(string Text, InlineRun Run)> word = [];
+
+		foreach ((string text, InlineRun run, bool spaceBefore) in Tokenize(runs))
+		{
+			if (spaceBefore && word.Count > 0)
+			{
+				yield return word;
+				word = [];
+			}
+
+			word.Add((text, run));
+		}
+
+		if (word.Count > 0)
+		{
+			yield return word;
+		}
+	}
+
+	/// <summary>
+	/// Splits the runs into tokens, flagging each one the source had whitespace before.
+	/// </summary>
+	private static IEnumerable<(string Text, InlineRun Run, bool SpaceBefore)> Tokenize(IReadOnlyList<InlineRun> runs)
+	{
 		bool spaceBefore = false;
 
 		foreach (InlineRun run in runs)
 		{
 			if (run.IsImage)
 			{
-				if (spaceBefore && word.Count > 0)
-				{
-					yield return word;
-					word = [];
-				}
-
-				word.Add((run.Text, run));
+				yield return (run.Text, run, spaceBefore);
 				spaceBefore = false;
+				continue;
+			}
+
+			if (run.Text.Length == 0)
+			{
 				continue;
 			}
 
 			foreach (string part in run.Text.Split(' '))
 			{
-				if (part.Length == 0)
+				// An empty part is a space at the start or end of the run, or one of several in a row.
+				if (part.Length > 0)
 				{
-					// An empty part is a space at the start or end of the run, or one of several in a row.
-					spaceBefore = true;
-					continue;
+					yield return (part, run, spaceBefore);
 				}
 
-				if (spaceBefore && word.Count > 0)
-				{
-					yield return word;
-					word = [];
-				}
-
-				word.Add((part, run));
 				spaceBefore = true;
 			}
 
 			// The next run's first token follows whitespace only if this run ended in some.
-			spaceBefore = run.Text.Length == 0 ? spaceBefore : run.Text[^1] == ' ';
-		}
-
-		if (word.Count > 0)
-		{
-			yield return word;
+			spaceBefore = run.Text[^1] == ' ';
 		}
 	}
 }

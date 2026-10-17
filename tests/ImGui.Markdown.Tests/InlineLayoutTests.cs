@@ -175,6 +175,19 @@ public sealed class InlineLayoutTests
 		Assert.AreEqual("0 4", TokenXs(lines[1]));
 	}
 
+	[TestMethod]
+	public void Wrap_EmptyRunBetweenTouchingRuns_KeepsThemGlued()
+	{
+		List<InlineRun> runs =
+		[
+			new("a", MarkdownFontRole.Body, null, false),
+			new(string.Empty, MarkdownFontRole.Bold, null, false),
+			new("b", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 1", TokenXs(lines[0]));
+	}
+
 	private static string TokenTexts(LaidOutLine line) => string.Join('|', line.Tokens.Select(t => t.Text));
 
 	private static string TokenXs(LaidOutLine line) =>
