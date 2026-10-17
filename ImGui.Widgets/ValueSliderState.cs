@@ -16,6 +16,9 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal sealed class ValueSliderState
 	{
+		/// <summary>The minus sign, U+2212, which the slider's face writes in place of a hyphen.</summary>
+		internal const char MinusSign = '\u2212';
+
 		/// <summary>Gets or sets the unrounded value a drag has reached, so an integer slider moved a pixel at a time still steps.</summary>
 		internal double DragValue { get; set; }
 
@@ -69,6 +72,23 @@ public static partial class ImGuiWidgets
 			return number + unit;
 		}
 
+		/// <summary>Writes a value as the slider's face shows it: as <see cref="Format"/> does, with a true minus sign.</summary>
+		/// <param name="value">The value.</param>
+		/// <param name="format">The .NET numeric format.</param>
+		/// <param name="unit">The unit written after the number, or null.</param>
+		/// <param name="culture">The culture to format in.</param>
+		/// <returns>The text.</returns>
+		/// <remarks>
+		/// A hyphen is narrower and sits lower than the digits beside it. The text box a slider opens for
+		/// typing keeps the hyphen instead, since that's the key people press, and <see cref="TryParse"/>
+		/// reads either.
+		/// </remarks>
+		internal static string Display(double value, string format, string? unit, IFormatProvider culture)
+		{
+			string text = Format(value, format, unit, culture);
+			return text.Length > 1 && text[0] == '-' ? MinusSign + text[1..] : text;
+		}
+
 		/// <summary>Reads a typed value, ignoring surrounding space and the prefix and unit if they were typed too.</summary>
 		/// <param name="text">The typed text.</param>
 		/// <param name="unit">The slider's unit, or null.</param>
@@ -78,7 +98,7 @@ public static partial class ImGuiWidgets
 		/// <returns>Whether the text held a finite number.</returns>
 		internal static bool TryParse(string text, string? unit, IFormatProvider culture, out double value, string? prefix = null)
 		{
-			string trimmed = text.Trim();
+			string trimmed = text.Trim().Replace(MinusSign, '-');
 			string prefixText = prefix?.Trim() ?? string.Empty;
 			if (prefixText.Length > 0 && trimmed.StartsWith(prefixText, StringComparison.OrdinalIgnoreCase))
 			{

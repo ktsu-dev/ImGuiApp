@@ -47,6 +47,16 @@ public class ValueSliderStateTests
 	}
 
 	[TestMethod]
+	public void Display_WritesATrueMinusSign_AndTryParseReadsIt()
+	{
+		Assert.AreEqual("\u22121.51", ImGuiWidgets.ValueSliderState.Display(-1.51, "0.00", null, Invariant));
+		Assert.AreEqual("0.0", ImGuiWidgets.ValueSliderState.Display(-0.01, "0.0", null, Invariant));
+		Assert.AreEqual("1.5 px", ImGuiWidgets.ValueSliderState.Display(1.5, "0.0", " px", Invariant));
+		Assert.IsTrue(ImGuiWidgets.ValueSliderState.TryParse("\u22121.5", null, Invariant, out double value));
+		Assert.AreEqual(-1.5, value);
+	}
+
+	[TestMethod]
 	public void Format_UsesTheCultureGiven() =>
 		Assert.AreEqual("2,5", ImGuiWidgets.ValueSliderState.Format(2.5, "0.0", null, DecimalComma));
 
