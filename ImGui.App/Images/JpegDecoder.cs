@@ -503,13 +503,7 @@ internal static class JpegDecoder
 				component.BlocksPerColumn = mcusPerColumn * component.VerticalSampling;
 				component.SampleWidth = CeilDiv(width * component.HorizontalSampling, maxHorizontalSampling);
 				component.SampleHeight = CeilDiv(height * component.VerticalSampling, maxVerticalSampling);
-				long coefficientCount = (long)component.BlocksPerLine * component.BlocksPerColumn * 64;
-				if (coefficientCount > Array.MaxLength)
-				{
-					throw new InvalidImageDataException($"JPEG dimensions {width}x{height} are too large to decode.");
-				}
-
-				component.Coefficients = new short[coefficientCount];
+				component.Coefficients = AllocateCoefficients(component, width, height);
 			}
 
 			progressive = progressiveFrame;
@@ -1047,6 +1041,14 @@ internal static class JpegDecoder
 		}
 
 		private static int CeilDiv(int value, int divisor) => (value + divisor - 1) / divisor;
+
+		private static short[] AllocateCoefficients(Component component, int width, int height)
+		{
+			long count = (long)component.BlocksPerLine * component.BlocksPerColumn * 64;
+			return count > Array.MaxLength
+				? throw new InvalidImageDataException($"JPEG dimensions {width}x{height} are too large to decode.")
+				: new short[count];
+		}
 	}
 
 	/// <summary>
