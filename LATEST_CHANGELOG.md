@@ -1,6 +1,6 @@
-## v3.75.2-pre.1 (prerelease)
+## v3.75.2 (patch)
 
 Changes since v3.75.1:
 
-- Bump Markdig from 1.4.0 to 1.4.1 (dependabot[bot])
+- Write a true minus sign on a value slider's face (#645) [patch] (matt-edmondson)
 
