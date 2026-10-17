@@ -460,6 +460,8 @@ internal static class JpegDecoder
 				throw new InvalidImageDataException($"JPEG has unusable dimensions {width}x{height}.");
 			}
 
+			ImageDecoder.EnsurePixelBufferFits(width, height, "JPEG");
+
 			if (componentCount is not (1 or 3))
 			{
 				throw new InvalidImageDataException($"JPEG has {componentCount} components; only greyscale and three-component colour are supported.");
@@ -501,7 +503,13 @@ internal static class JpegDecoder
 				component.BlocksPerColumn = mcusPerColumn * component.VerticalSampling;
 				component.SampleWidth = CeilDiv(width * component.HorizontalSampling, maxHorizontalSampling);
 				component.SampleHeight = CeilDiv(height * component.VerticalSampling, maxVerticalSampling);
-				component.Coefficients = new short[component.BlocksPerLine * component.BlocksPerColumn * 64];
+				long coefficientCount = (long)component.BlocksPerLine * component.BlocksPerColumn * 64;
+				if (coefficientCount > Array.MaxLength)
+				{
+					throw new InvalidImageDataException($"JPEG dimensions {width}x{height} are too large to decode.");
+				}
+
+				component.Coefficients = new short[coefficientCount];
 			}
 
 			progressive = progressiveFrame;
