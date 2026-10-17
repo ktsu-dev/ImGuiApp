@@ -49,14 +49,42 @@ public static class ImageDecoder
 			throw new InvalidImageDataException("Cannot decode an empty buffer.");
 		}
 
-		return Identify(data) switch
+		ImageFormat format = Identify(data);
+		try
 		{
-			ImageFormat.Png => PngDecoder.Decode(data),
-			ImageFormat.Jpeg => JpegDecoder.Decode(data),
-			ImageFormat.Bmp => BmpDecoder.Decode(data),
-			ImageFormat.Tga => TgaDecoder.Decode(data),
-			_ => throw new InvalidImageDataException($"Unrecognised image format; the file starts with {Describe(data)}. Supported formats are PNG, JPEG, BMP and TGA."),
-		};
+			return format switch
+			{
+				ImageFormat.Png => PngDecoder.Decode(data),
+				ImageFormat.Jpeg => JpegDecoder.Decode(data),
+				ImageFormat.Bmp => BmpDecoder.Decode(data),
+				ImageFormat.Tga => TgaDecoder.Decode(data),
+				_ => throw new InvalidImageDataException($"Unrecognised image format; the file starts with {Describe(data)}. Supported formats are PNG, JPEG, BMP and TGA."),
+			};
+		}
+		catch (Exception ex) when (ex is OverflowException or ArgumentOutOfRangeException or IndexOutOfRangeException)
+		{
+			// A backstop, not the plan: the decoders validate sizes before using them, but an arithmetic
+			// or bounds failure that slips past them is still malformed input, and callers rely on the
+			// documented exception to skip one bad file rather than abort.
+			throw new InvalidImageDataException($"{format} data is malformed: {ex.Message}", ex);
+		}
+	}
+
+	/// <summary>
+	/// Throws unless a <paramref name="width"/> by <paramref name="height"/> RGBA8 image fits in one array.
+	/// Decoders call this with header dimensions before allocating anything sized from them, so a corrupt
+	/// or crafted header fails here rather than as an overflow partway through a huge allocation.
+	/// </summary>
+	/// <param name="width">The declared width. Must be positive.</param>
+	/// <param name="height">The declared height. Must be positive.</param>
+	/// <param name="format">The format name for the message.</param>
+	/// <exception cref="InvalidImageDataException">The decoded image would not fit in memory.</exception>
+	internal static void EnsurePixelBufferFits(long width, long height, string format)
+	{
+		if (width > Array.MaxLength / 4 / height)
+		{
+			throw new InvalidImageDataException($"{format} dimensions {width}x{height} are too large to decode.");
+		}
 	}
 
 	/// <summary>Reads and decodes an image file.</summary>

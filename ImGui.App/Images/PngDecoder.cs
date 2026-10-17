@@ -62,7 +62,7 @@ internal static class PngDecoder
 
 			ReadOnlySpan<byte> type = data.Slice(position + 4, 4);
 			int dataStart = position + 8;
-			if (dataStart + (int)length + 4 > data.Length)
+			if (dataStart + length + 4 > data.Length)
 			{
 				throw new InvalidImageDataException("PNG chunk runs past the end of the file.");
 			}
@@ -114,7 +114,7 @@ internal static class PngDecoder
 			throw new InvalidImageDataException("Palette-indexed PNG is missing its PLTE chunk.");
 		}
 
-		byte[] raw = Inflate(compressed, ExpectedRawLength(header));
+		byte[] raw = Inflate(compressed, ExpectedRawLength(header, compressed.Length));
 		ImagePixels image = new(header.Width, header.Height);
 
 		if (header.Interlace == 0)
@@ -154,6 +154,8 @@ internal static class PngDecoder
 		{
 			throw new InvalidImageDataException($"PNG has unusable dimensions {width}x{height}.");
 		}
+
+		ImageDecoder.EnsurePixelBufferFits(width, height, "PNG");
 
 		Header header = new()
 		{
@@ -228,29 +230,51 @@ internal static class PngDecoder
 		_ => 4,
 	};
 
-	private static int BytesPerRow(Header header, int width) =>
-		((width * Channels(header.ColorType) * header.BitDepth) + 7) / 8;
+	// Only called once ExpectedRawLength has shown every row of the image fits in an array.
+	private static int BytesPerRow(Header header, int width) => (int)RowBytes(header, width);
 
-	private static int ExpectedRawLength(Header header)
+	private static long RowBytes(Header header, int width) =>
+		(((long)width * Channels(header.ColorType) * header.BitDepth) + 7) / 8;
+
+	/// <summary>
+	/// Sizes the inflated scanline buffer, refusing a size that cannot be allocated, or that the
+	/// compressed data could not possibly inflate to, before anything is allocated.
+	/// </summary>
+	private static int ExpectedRawLength(Header header, long compressedLength)
 	{
+		long total = 0;
 		if (header.Interlace == 0)
 		{
-			return header.Height * (1 + BytesPerRow(header, header.Width));
+			total = header.Height * (1 + RowBytes(header, header.Width));
 		}
-
-		int total = 0;
-		for (int pass = 0; pass < 7; pass++)
+		else
 		{
-			int passWidth = CeilDiv(header.Width - PassOriginX[pass], PassStepX[pass]);
-			int passHeight = CeilDiv(header.Height - PassOriginY[pass], PassStepY[pass]);
-			if (passWidth > 0 && passHeight > 0)
+			for (int pass = 0; pass < 7; pass++)
 			{
-				total += passHeight * (1 + BytesPerRow(header, passWidth));
+				int passWidth = CeilDiv(header.Width - PassOriginX[pass], PassStepX[pass]);
+				int passHeight = CeilDiv(header.Height - PassOriginY[pass], PassStepY[pass]);
+				if (passWidth > 0 && passHeight > 0)
+				{
+					total += passHeight * (1 + RowBytes(header, passWidth));
+				}
 			}
 		}
 
-		return total;
+		if (total > Array.MaxLength)
+		{
+			throw new InvalidImageDataException($"PNG dimensions {header.Width}x{header.Height} at {header.BitDepth}-bit are too large to decode.");
+		}
+
+		if (total > compressedLength * MaxDeflateRatio)
+		{
+			throw new InvalidImageDataException($"PNG image data is {compressedLength} bytes, too short to inflate to the {total} bytes its header requires.");
+		}
+
+		return (int)total;
 	}
+
+	/// <summary>The most deflate can expand its input: a 258-byte match costs at least two bits.</summary>
+	private const long MaxDeflateRatio = 1032;
 
 	private static int CeilDiv(int value, int divisor) => value <= 0 ? 0 : (value + divisor - 1) / divisor;
 
