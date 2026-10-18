@@ -63,6 +63,10 @@ internal static class InlineBuilder
 				runs.Add(new InlineRun(autolink.Url, MarkdownSizing.EmphasisRole(bold, italic), autolink.Url, IsImage: false));
 				break;
 
+			case LineBreakInline { IsHard: true }:
+				runs.Add(new InlineRun(string.Empty, MarkdownFontRole.Body, linkUrl, IsImage: false, IsHardBreak: true));
+				break;
+
 			case LineBreakInline:
 				runs.Add(new InlineRun(" ", MarkdownFontRole.Body, linkUrl, IsImage: false));
 				break;

@@ -81,4 +81,46 @@ public sealed class InlineLayoutTests
 		Assert.AreEqual(1, lines.Count);
 		Assert.AreEqual(10f, lines[0].Height);
 	}
+
+	[TestMethod]
+	public void Wrap_HardBreak_EndsLineEvenWhenNextTokenFits()
+	{
+		List<InlineRun> runs =
+		[
+			new("line one", MarkdownFontRole.Body, null, false),
+			new(string.Empty, MarkdownFontRole.Body, null, false, IsHardBreak: true),
+			new("line two", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual(2, lines.Count);
+		Assert.AreEqual("one", lines[0].Tokens[^1].Text);
+		Assert.AreEqual("line", lines[1].Tokens[0].Text);
+		Assert.AreEqual(0f, lines[1].Tokens[0].X);
+	}
+
+	[TestMethod]
+	public void Wrap_SoftBreak_StaysOnOneLineWhenItFits()
+	{
+		List<InlineRun> runs =
+		[
+			new("line one", MarkdownFontRole.Body, null, false),
+			new(" ", MarkdownFontRole.Body, null, false),
+			new("line two", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual(1, lines.Count);
+		Assert.AreEqual(4, lines[0].Tokens.Count);
+	}
+
+	[TestMethod]
+	public void Wrap_HardBreakAsLastRun_AddsNoEmptyLine()
+	{
+		List<InlineRun> runs =
+		[
+			new("line one", MarkdownFontRole.Body, null, false),
+			new(string.Empty, MarkdownFontRole.Body, null, false, IsHardBreak: true),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual(1, lines.Count);
+	}
 }
