@@ -58,6 +58,7 @@ internal static class TgaDecoder
 		int idLength = data[0];
 		int colorMapType = data[1];
 		int imageType = data[2];
+		int colorMapFirstEntry = BinaryPrimitives.ReadUInt16LittleEndian(data[3..]);
 		int colorMapLength = BinaryPrimitives.ReadUInt16LittleEndian(data[5..]);
 		int colorMapEntryBits = data[7];
 		int width = BinaryPrimitives.ReadUInt16LittleEndian(data[12..]);
@@ -98,16 +99,13 @@ internal static class TgaDecoder
 			colorMap = new byte[colorMapLength * 4];
 			for (int i = 0; i < colorMapLength; i++)
 			{
-				ReadPixel(data.Slice(position + (i * entryBytes), entryBytes), colorMapEntryBits, null, colorMap.AsSpan(i * 4), attributeAlpha: true);
+				ReadPixel(data.Slice(position + (i * entryBytes), entryBytes), colorMapEntryBits, colorMap.AsSpan(i * 4), attributeAlpha: true);
 			}
 
 			position += mapBytes;
 		}
 
-		if (baseType == 1 && colorMap is null)
-		{
-			throw new InvalidImageDataException("Colour-mapped TGA is missing its colour map.");
-		}
+		ValidateColorMappedImage(baseType, colorMap, pixelBits);
 
 		int bytesPerPixel = (pixelBits + 7) / 8;
 		ImagePixels image = new(width, height);
@@ -160,7 +158,15 @@ internal static class TgaDecoder
 						throw new InvalidImageDataException("TGA pixel data ended before the image was complete.");
 					}
 
-					ReadPixel(data.Slice(position, bytesPerPixel), pixelBits, baseType == 1 ? colorMap : null, rgba, attributeAlpha);
+					if (baseType == 1)
+					{
+						LookUpColorMap(data.Slice(position, bytesPerPixel), colorMap!, colorMapFirstEntry, rgba);
+					}
+					else
+					{
+						ReadPixel(data.Slice(position, bytesPerPixel), pixelBits, rgba, attributeAlpha);
+					}
+
 					position += bytesPerPixel;
 				}
 
@@ -202,22 +208,29 @@ internal static class TgaDecoder
 		return false;
 	}
 
-	private static void ReadPixel(ReadOnlySpan<byte> source, int bits, byte[]? colorMap, Span<byte> rgba, bool attributeAlpha)
+	/// <summary>Resolves a colour-mapped pixel through the colour map.</summary>
+	/// <param name="source">The pixel's index bytes: one for an 8-bit index, two little-endian for a 16-bit one.</param>
+	/// <param name="colorMap">The decoded colour map, four RGBA bytes per entry.</param>
+	/// <param name="firstEntry">The index the map's first entry answers to, from header bytes 3-4.</param>
+	/// <param name="rgba">Receives the entry's colour.</param>
+	/// <exception cref="InvalidImageDataException">The index names no entry in the map.</exception>
+	private static void LookUpColorMap(ReadOnlySpan<byte> source, byte[] colorMap, int firstEntry, Span<byte> rgba)
+	{
+		int index = source.Length == 1 ? source[0] : BinaryPrimitives.ReadUInt16LittleEndian(source);
+		int entryCount = colorMap.Length / 4;
+		int entry = index - firstEntry;
+		if (entry < 0 || entry >= entryCount)
+		{
+			throw new InvalidImageDataException($"TGA references colour map index {index}, outside the {entryCount} entry map starting at index {firstEntry}.");
+		}
+
+		colorMap.AsSpan(entry * 4, 4).CopyTo(rgba);
+	}
+
+	private static void ReadPixel(ReadOnlySpan<byte> source, int bits, Span<byte> rgba, bool attributeAlpha)
 	{
 		switch (bits)
 		{
-			case 8 when colorMap is not null:
-			{
-				int index = source[0];
-				if ((index * 4) + 3 >= colorMap.Length)
-				{
-					throw new InvalidImageDataException($"TGA references colour map entry {index}, which is past the end of a {colorMap.Length / 4} entry map.");
-				}
-
-				colorMap.AsSpan(index * 4, 4).CopyTo(rgba);
-				break;
-			}
-
 			case 8:
 				rgba[0] = source[0];
 				rgba[1] = source[0];
@@ -254,6 +267,26 @@ internal static class TgaDecoder
 	}
 
 	private static byte Expand5(int value) => (byte)(value * 255 / 31);
+
+	private static void ValidateColorMappedImage(int baseType, byte[]? colorMap, int pixelBits)
+	{
+		if (baseType != 1)
+		{
+			return;
+		}
+
+		if (colorMap is null)
+		{
+			throw new InvalidImageDataException("Colour-mapped TGA is missing its colour map.");
+		}
+
+		// A colour-mapped pixel is an index into the map, one or two bytes wide. Any other depth would be
+		// read as colour, which no writer intends for a colour-mapped image.
+		if (pixelBits is not (8 or 16))
+		{
+			throw new InvalidImageDataException($"Colour-mapped TGA uses unsupported index depth {pixelBits}.");
+		}
+	}
 
 	private static void ValidateColorMapEntryBits(int colorMapType, int colorMapEntryBits)
 	{
