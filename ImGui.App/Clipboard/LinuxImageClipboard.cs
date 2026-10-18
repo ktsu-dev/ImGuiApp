@@ -17,6 +17,10 @@ internal sealed class LinuxImageClipboard(IClipboardProcesses processes, bool wa
 {
 	private const string Png = "image/png";
 
+	/// <summary>The image types <see cref="Images.ImageDecoder"/> can read, best first: lossless before lossy.</summary>
+	/// <remarks>WebP, GIF and the rest are left out, since picking one would fail to decode even when a readable type was on offer.</remarks>
+	private static readonly string[] DecodableTypes = [Png, "image/bmp", "image/x-bmp", "image/jpeg"];
+
 	/// <summary>Gets the clipboard for this session, Wayland or not as its environment says.</summary>
 	/// <param name="processes">Runs the tools.</param>
 	/// <returns>The clipboard.</returns>
@@ -81,14 +85,15 @@ internal sealed class LinuxImageClipboard(IClipboardProcesses processes, bool wa
 		return false;
 	}
 
-	/// <summary>Picks the image type to read from a tool's list of what the clipboard offers: PNG first, then any image.</summary>
+	/// <summary>Picks the image type to read from a tool's list of what the clipboard offers: PNG, then BMP, then JPEG.</summary>
 	/// <param name="types">The list, one type per line.</param>
-	/// <returns>The type, or null when nothing on offer is an image.</returns>
+	/// <returns>The type as the list spells it, or null when nothing on offer is an image the decoder can read.</returns>
 	internal static string? PickType(string types)
 	{
 		string[] offered = [.. types.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
-		return offered.FirstOrDefault(static type => type.Equals(Png, StringComparison.OrdinalIgnoreCase))
-			?? offered.FirstOrDefault(static type => type is "image/jpeg" or "image/bmp" or "image/webp");
+		return DecodableTypes
+			.Select(wanted => offered.FirstOrDefault(type => type.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+			.FirstOrDefault(static type => type is not null);
 	}
 
 	private IEnumerable<Tool> Tools()
