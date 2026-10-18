@@ -136,6 +136,23 @@ public sealed class ImageClipboardTests
 	}
 
 	[TestMethod]
+	public void PickType_SkipsTypesTheDecoderCannotRead()
+	{
+		Assert.AreEqual("image/bmp", LinuxImageClipboard.PickType("image/webp\nimage/bmp\n"));
+		Assert.AreEqual("image/x-bmp", LinuxImageClipboard.PickType("image/gif\nimage/x-bmp\n"));
+
+		// Nothing readable on offer is no image at all, not one that fails to decode.
+		Assert.IsNull(LinuxImageClipboard.PickType("image/webp\n"));
+	}
+
+	[TestMethod]
+	public void PickType_PrefersLosslessBmpOverJpeg_WhateverTheOrder()
+	{
+		Assert.AreEqual("image/bmp", LinuxImageClipboard.PickType("image/jpeg\nimage/bmp\n"));
+		Assert.AreEqual("image/png", LinuxImageClipboard.PickType("image/jpeg\nimage/bmp\nimage/png\n"));
+	}
+
+	[TestMethod]
 	public void OnWayland_ReadsThroughWlPaste()
 	{
 		FakeProcesses processes = new() { Types = "image/png\ntext/plain", Image = Png };
