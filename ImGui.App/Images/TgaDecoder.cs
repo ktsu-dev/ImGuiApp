@@ -70,6 +70,8 @@ internal static class TgaDecoder
 			throw new InvalidImageDataException($"TGA has unusable dimensions {width}x{height}.");
 		}
 
+		ImageDecoder.EnsurePixelBufferFits(width, height, "TGA");
+
 		bool runLengthEncoded = imageType >= 9;
 		int baseType = imageType & 0x07;
 		ValidateImageType(imageType, baseType, pixelBits);
