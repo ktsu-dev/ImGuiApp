@@ -238,6 +238,7 @@ internal static class JpegDecoder
 		private int restartInterval;
 		private bool progressive;
 		private bool frameStarted;
+		private bool scanStarted;
 		private int adobeTransform = -1;
 		private int eobRun;
 
@@ -503,7 +504,7 @@ internal static class JpegDecoder
 				component.BlocksPerColumn = mcusPerColumn * component.VerticalSampling;
 				component.SampleWidth = CeilDiv(width * component.HorizontalSampling, maxHorizontalSampling);
 				component.SampleHeight = CeilDiv(height * component.VerticalSampling, maxVerticalSampling);
-				component.Coefficients = AllocateCoefficients(component, width, height);
+				EnsureCoefficientsFit(component, width, height);
 			}
 
 			progressive = progressiveFrame;
@@ -563,15 +564,46 @@ internal static class JpegDecoder
 				successiveLow = 0;
 			}
 
+			// A DC or sequential scan spends at least one bit on every block it covers, so a header
+			// claiming more blocks than the rest of the file has bits is malformed. Checking before the
+			// coefficients are allocated keeps a few bytes from forcing gigabytes of allocation.
+			if (spectralStart == 0 && BlocksInScan(scanComponents) > (long)(data.Length - position) * 8)
+			{
+				throw new InvalidImageDataException($"JPEG scan data is too short for a {width}x{height} image.");
+			}
+
 			eobRun = 0;
 			foreach (Component component in scanComponents)
 			{
 				component.DcPredictor = 0;
+				if (component.Coefficients.Length == 0)
+				{
+					component.Coefficients = NewCoefficients(component);
+				}
 			}
 
+			scanStarted = true;
 			BitReader bits = new(data, position);
 			DecodeScan(ref bits, scanComponents, spectralStart, spectralEnd, successiveHigh, successiveLow);
 			position = Math.Max(position, bits.Position);
+		}
+
+		/// <summary>Counts the blocks a scan walks, the same way <see cref="DecodeScan"/> does.</summary>
+		private readonly long BlocksInScan(List<Component> scanComponents)
+		{
+			if (scanComponents.Count > 1)
+			{
+				long blocksPerMcu = 0;
+				foreach (Component component in scanComponents)
+				{
+					blocksPerMcu += component.HorizontalSampling * component.VerticalSampling;
+				}
+
+				return (long)mcusPerLine * mcusPerColumn * blocksPerMcu;
+			}
+
+			Component only = scanComponents[0];
+			return (long)CeilDiv(only.SampleWidth, 8) * CeilDiv(only.SampleHeight, 8);
 		}
 
 		private void DecodeScan(ref BitReader bits, List<Component> scanComponents, int spectralStart, int spectralEnd, int successiveHigh, int successiveLow)
@@ -887,8 +919,21 @@ internal static class JpegDecoder
 				throw new InvalidImageDataException("JPEG contains no frame header.");
 			}
 
+			// Without a single scan there is nothing to decode, and sizing planes from the frame header
+			// alone is what let a few bytes demand gigabytes. A component no scan reached, in a file that
+			// was cut short, still decodes as flat grey as it always has.
+			if (!scanStarted)
+			{
+				throw new InvalidImageDataException("JPEG ended before any scan data.");
+			}
+
 			foreach (Component component in components)
 			{
+				if (component.Coefficients.Length == 0)
+				{
+					component.Coefficients = NewCoefficients(component);
+				}
+
 				ushort[]? quantization = component.QuantizationTable < 4 ? quantizationTables[component.QuantizationTable] : null;
 				BuildPlane(component, quantization ?? throw new InvalidImageDataException(
 					$"JPEG component {component.Id} references quantization table {component.QuantizationTable}, which the file never defined."));
@@ -1042,12 +1087,20 @@ internal static class JpegDecoder
 
 		private static int CeilDiv(int value, int divisor) => (value + divisor - 1) / divisor;
 
-		private static short[] AllocateCoefficients(Component component, int width, int height)
+		private static short[] NewCoefficients(Component component) =>
+			new short[(long)component.BlocksPerLine * component.BlocksPerColumn * 64];
+
+		/// <summary>
+		/// Refuses a component whose coefficients cannot fit in one array. The array itself is only
+		/// allocated by the first scan that covers the component, once the scan data has been bounded.
+		/// </summary>
+		private static void EnsureCoefficientsFit(Component component, int width, int height)
 		{
 			long count = (long)component.BlocksPerLine * component.BlocksPerColumn * 64;
-			return count > Array.MaxLength
-				? throw new InvalidImageDataException($"JPEG dimensions {width}x{height} are too large to decode.")
-				: new short[count];
+			if (count > Array.MaxLength)
+			{
+				throw new InvalidImageDataException($"JPEG dimensions {width}x{height} are too large to decode.");
+			}
 		}
 	}
 
