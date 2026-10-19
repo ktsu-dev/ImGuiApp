@@ -90,6 +90,61 @@ public sealed class KnobTests : WidgetTest
 		Assert.IsTrue(value <= 1f, $"The knob ran past its maximum to {value}.");
 	}
 
+	[TestMethod]
+	public void Knob_IntegerOverload_Steps()
+	{
+		intValue = 5;
+		Start(DrawIntKnob);
+
+		DragVertically(-80f);
+
+		Assert.IsTrue(intValue > 5, $"The integer knob stayed at {intValue}.");
+		Assert.IsTrue(intValue <= 10, $"The integer knob ran past its maximum to {intValue}.");
+	}
+
+	[TestMethod]
+	public void Knob_EveryVariantDrawsSomething()
+	{
+		foreach (ImGuiKnobVariant candidate in Enum.GetValues<ImGuiKnobVariant>())
+		{
+			variant = candidate;
+			value = 0.4f;
+
+			Start(DrawFloatKnob);
+			MoveAway();
+
+			Assert.IsTrue(IsVisible(Label), $"Knob variant {candidate} drew no item.");
+			AssertSomethingWasDrawn($"knob variant {candidate}");
+
+			DisposeHarness();
+		}
+	}
+
+	[TestMethod]
+	public void Knob_RedrawsAsTheValueChanges()
+	{
+		value = 0f;
+		Start(DrawFloatKnob);
+		MoveAway();
+		byte[] atZero = Snapshot();
+
+		value = 1f;
+		Step(2);
+		MoveAway();
+
+		Assert.IsTrue(PixelsChangedSince(atZero) > 0, "The knob drew identically at both ends of its range.");
+	}
+
+	[TestMethod]
+	public void Knob_ShowsAVerticalResizeCursor()
+	{
+		Start(DrawFloatKnob);
+
+		Hover(Label);
+
+		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering a knob driven by vertical drags did not show a vertical resize cursor.");
+	}
+
 	// The tooltip has to show the value the way the knob's own input shows it. A frame that draws the
 	// expected text in a tooltip by hand, with the pointer in the same place, must match it pixel for pixel.
 	[TestMethod]
@@ -144,60 +199,5 @@ public sealed class KnobTests : WidgetTest
 		byte[] pixels = Snapshot();
 		DisposeHarness();
 		return pixels;
-	}
-
-	[TestMethod]
-	public void Knob_IntegerOverload_Steps()
-	{
-		intValue = 5;
-		Start(DrawIntKnob);
-
-		DragVertically(-80f);
-
-		Assert.IsTrue(intValue > 5, $"The integer knob stayed at {intValue}.");
-		Assert.IsTrue(intValue <= 10, $"The integer knob ran past its maximum to {intValue}.");
-	}
-
-	[TestMethod]
-	public void Knob_EveryVariantDrawsSomething()
-	{
-		foreach (ImGuiKnobVariant candidate in Enum.GetValues<ImGuiKnobVariant>())
-		{
-			variant = candidate;
-			value = 0.4f;
-
-			Start(DrawFloatKnob);
-			MoveAway();
-
-			Assert.IsTrue(IsVisible(Label), $"Knob variant {candidate} drew no item.");
-			AssertSomethingWasDrawn($"knob variant {candidate}");
-
-			DisposeHarness();
-		}
-	}
-
-	[TestMethod]
-	public void Knob_RedrawsAsTheValueChanges()
-	{
-		value = 0f;
-		Start(DrawFloatKnob);
-		MoveAway();
-		byte[] atZero = Snapshot();
-
-		value = 1f;
-		Step(2);
-		MoveAway();
-
-		Assert.IsTrue(PixelsChangedSince(atZero) > 0, "The knob drew identically at both ends of its range.");
-	}
-
-	[TestMethod]
-	public void Knob_ShowsAVerticalResizeCursor()
-	{
-		Start(DrawFloatKnob);
-
-		Hover(Label);
-
-		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering a knob driven by vertical drags did not show a vertical resize cursor.");
 	}
 }
