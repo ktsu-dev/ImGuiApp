@@ -138,6 +138,7 @@ public static partial class ImGuiWidgets
 		/// matches the knob's input. <paramref name="format"/> is a printf format, which <see cref="string.Format(IFormatProvider, string, object)"/>
 		/// cannot read.
 		/// </summary>
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui DataTypeFormatString interop; the value and buffer are stack locals scoped to the call and the length is bounded by the buffer size.")]
 		internal static unsafe string FormatValue<TDataType>(ImGuiDataType dataType, TDataType value, string format) where TDataType : unmanaged
 		{
 			// The same buffer size DragScalar formats into.
