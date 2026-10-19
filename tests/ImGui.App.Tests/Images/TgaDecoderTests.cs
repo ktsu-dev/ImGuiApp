@@ -141,6 +141,73 @@ public class TgaDecoderTests
 	}
 
 	[TestMethod]
+	public void Decode_ColourMapWithNonZeroFirstEntry_ReadsTheOnlyEntry()
+	{
+		// A one-entry map answering to index 1, and a pixel naming index 1. Indexed directly, index 1 is
+		// past the end of the map.
+		byte[] body = [3, 2, 1, 1];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 1, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 1));
+
+		Assert.AreEqual((1, 2, 3, (byte)255), image.GetPixel(0, 0));
+	}
+
+	[TestMethod]
+	public void Decode_ColourMapWithNonZeroFirstEntry_DoesNotShiftColours()
+	{
+		// Two entries answering to indices 5 and 6. Indexed directly, index 5 is past the end of the map.
+		byte[] body = [3, 2, 1, 30, 20, 10, 6, 5];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(2, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 2, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 5));
+
+		Assert.AreEqual((10, 20, 30, (byte)255), image.GetPixel(0, 0));
+		Assert.AreEqual((1, 2, 3, (byte)255), image.GetPixel(1, 0));
+	}
+
+	[TestMethod]
+	public void Decode_ColourMapWithNonZeroFirstEntry_ShiftsTheNextEntryIntoPlace()
+	{
+		// Entries answering to indices 1 and 2, and a pixel naming index 1. Indexed directly, it would
+		// take the colour of the second entry.
+		byte[] body = [3, 2, 1, 30, 20, 10, 1];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 2, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 1));
+
+		Assert.AreEqual((1, 2, 3, (byte)255), image.GetPixel(0, 0));
+	}
+
+	[TestMethod]
+	public void Decode_ColourMapIndexBelowFirstEntry_Throws() =>
+		Assert.ThrowsExactly<InvalidImageDataException>(
+			() => ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 1, pixelBits: 8, [3, 2, 1, 0], colorMapLength: 1, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 1)));
+
+	[TestMethod]
+	public void Decode_ColourMapIndexPastLastEntry_Throws() =>
+		Assert.ThrowsExactly<InvalidImageDataException>(
+			() => ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 1, pixelBits: 8, [3, 2, 1, 2], colorMapLength: 1, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 1)));
+
+	[TestMethod]
+	public void Decode_SixteenBitColourMapIndices_ResolveThroughTheMap()
+	{
+		// Two entries answering to indices 300 and 301, then two little-endian 16-bit indices. Read as
+		// RGB555 the pixels would come out as unrelated colours.
+		byte[] body = [3, 2, 1, 30, 20, 10, 0x2D, 0x01, 0x2C, 0x01];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(2, 1, imageType: 1, pixelBits: 16, body, colorMapLength: 2, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 300));
+
+		Assert.AreEqual((10, 20, 30, (byte)255), image.GetPixel(0, 0));
+		Assert.AreEqual((1, 2, 3, (byte)255), image.GetPixel(1, 0));
+	}
+
+	[TestMethod]
+	[DataRow(15)]
+	[DataRow(24)]
+	[DataRow(32)]
+	public void Decode_ColourMappedWithColourDepth_Throws(int pixelBits) =>
+		Assert.ThrowsExactly<InvalidImageDataException>(
+			() => ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 1, pixelBits: pixelBits, [3, 2, 1, 0, 0, 0, 0], colorMapLength: 1, colorMapEntryBits: 24, descriptor: TopLeftOrigin)));
+
+	[TestMethod]
 	public void Decode_TruncatedPixelData_Throws() =>
 		Assert.ThrowsExactly<InvalidImageDataException>(
 			() => ImageDecoder.Decode(TestImageBuilder.Tga(4, 4, imageType: 2, pixelBits: 24, [1, 2, 3], descriptor: TopLeftOrigin)));

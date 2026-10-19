@@ -125,12 +125,14 @@ internal static class TestImageBuilder
 	/// <param name="colorMapLength">The number of colour map entries.</param>
 	/// <param name="colorMapEntryBits">Bits per colour map entry.</param>
 	/// <param name="descriptor">The descriptor byte: attribute bit count in the low nibble, origin flags in bits four and five.</param>
+	/// <param name="colorMapFirstEntry">The index the colour map's first entry answers to.</param>
 	/// <returns>The complete TGA file.</returns>
-	public static byte[] Tga(int width, int height, int imageType, int pixelBits, byte[] body, int colorMapLength = 0, int colorMapEntryBits = 0, byte descriptor = 0)
+	public static byte[] Tga(int width, int height, int imageType, int pixelBits, byte[] body, int colorMapLength = 0, int colorMapEntryBits = 0, byte descriptor = 0, int colorMapFirstEntry = 0)
 	{
 		byte[] file = new byte[18 + body.Length];
 		file[1] = (byte)(colorMapLength > 0 ? 1 : 0);
 		file[2] = (byte)imageType;
+		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(3), (ushort)colorMapFirstEntry);
 		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(5), (ushort)colorMapLength);
 		file[7] = (byte)colorMapEntryBits;
 		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(12), (ushort)width);
