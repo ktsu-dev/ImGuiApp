@@ -218,6 +218,8 @@ public static class KeyChordMatcher
 		ImGuiKey.DownArrow => "Down",
 		ImGuiKey.LeftArrow => "Left",
 		ImGuiKey.RightArrow => "Right",
+		// Tab shares its value with the NamedKeyBegin range marker, whose name ToString() returns instead.
+		ImGuiKey.Tab => "Tab",
 		_ => key.ToString(),
 	};
 
@@ -315,6 +317,7 @@ public static class KeyChordMatcher
 		>= ImGuiKey.A and <= ImGuiKey.Z => ((char)('A' + (key - ImGuiKey.A))).ToString(),
 		>= ImGuiKey.Key0 and <= ImGuiKey.Key9 => ((char)('0' + (key - ImGuiKey.Key0))).ToString(),
 		_ when SymbolNames.TryGetValue(key, out string? symbol) => symbol,
+		ImGuiKey.Tab => "TAB",
 		_ => key.ToString().ToUpperInvariant(),
 	};
 }

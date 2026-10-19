@@ -71,18 +71,11 @@ internal static class TgaDecoder
 			throw new InvalidImageDataException($"TGA has unusable dimensions {width}x{height}.");
 		}
 
+		ImageDecoder.EnsurePixelBufferFits(width, height, "TGA");
+
 		bool runLengthEncoded = imageType >= 9;
 		int baseType = imageType & 0x07;
-		if (baseType is not (1 or 2 or 3))
-		{
-			throw new InvalidImageDataException($"TGA uses unsupported image type {imageType}.");
-		}
-
-		if (pixelBits is not (8 or 15 or 16 or 24 or 32))
-		{
-			throw new InvalidImageDataException($"TGA uses unsupported pixel depth {pixelBits}.");
-		}
-
+		ValidateImageType(imageType, baseType, pixelBits);
 		ValidateColorMapEntryBits(colorMapType, colorMapEntryBits);
 
 		int position = HeaderSize + idLength;
@@ -99,7 +92,7 @@ internal static class TgaDecoder
 			colorMap = new byte[colorMapLength * 4];
 			for (int i = 0; i < colorMapLength; i++)
 			{
-				ReadPixel(data.Slice(position + (i * entryBytes), entryBytes), colorMapEntryBits, colorMap.AsSpan(i * 4), attributeAlpha: true);
+				ReadPixel(data.Slice(position + (i * entryBytes), entryBytes), colorMapEntryBits, colorMap.AsSpan(i * 4), attributeAlpha: true, greyscale: false);
 			}
 
 			position += mapBytes;
@@ -164,7 +157,7 @@ internal static class TgaDecoder
 					}
 					else
 					{
-						ReadPixel(data.Slice(position, bytesPerPixel), pixelBits, rgba, attributeAlpha);
+						ReadPixel(data.Slice(position, bytesPerPixel), pixelBits, rgba, attributeAlpha, greyscale: baseType == 3);
 					}
 
 					position += bytesPerPixel;
@@ -227,7 +220,7 @@ internal static class TgaDecoder
 		colorMap.AsSpan(entry * 4, 4).CopyTo(rgba);
 	}
 
-	private static void ReadPixel(ReadOnlySpan<byte> source, int bits, Span<byte> rgba, bool attributeAlpha)
+	private static void ReadPixel(ReadOnlySpan<byte> source, int bits, Span<byte> rgba, bool attributeAlpha, bool greyscale)
 	{
 		switch (bits)
 		{
@@ -236,6 +229,15 @@ internal static class TgaDecoder
 				rgba[1] = source[0];
 				rgba[2] = source[0];
 				rgba[3] = 255;
+				break;
+
+			// A 16-bit greyscale pixel is grey then alpha, as Pillow writes for LA images and GIMP for
+			// grey with alpha, not RGB555. The depth alone cannot tell the two apart.
+			case 16 when greyscale:
+				rgba[0] = source[0];
+				rgba[1] = source[0];
+				rgba[2] = source[0];
+				rgba[3] = attributeAlpha ? source[1] : (byte)255;
 				break;
 
 			case 15:
@@ -267,6 +269,26 @@ internal static class TgaDecoder
 	}
 
 	private static byte Expand5(int value) => (byte)(value * 255 / 31);
+
+	private static void ValidateImageType(int imageType, int baseType, int pixelBits)
+	{
+		if (baseType is not (1 or 2 or 3))
+		{
+			throw new InvalidImageDataException($"TGA uses unsupported image type {imageType}.");
+		}
+
+		if (pixelBits is not (8 or 15 or 16 or 24 or 32))
+		{
+			throw new InvalidImageDataException($"TGA uses unsupported pixel depth {pixelBits}.");
+		}
+
+		// Greyscale is 8-bit grey, or 8-bit grey followed by 8-bit alpha. Any other depth would be read
+		// as colour, which no writer intends for a greyscale image.
+		if (baseType == 3 && pixelBits is not (8 or 16))
+		{
+			throw new InvalidImageDataException($"Greyscale TGA uses unsupported pixel depth {pixelBits}.");
+		}
+	}
 
 	private static void ValidateColorMappedImage(int baseType, byte[]? colorMap, int pixelBits)
 	{

@@ -90,6 +90,44 @@ public class TgaDecoderTests
 	}
 
 	[TestMethod]
+	public void Decode_SixteenBitGreyscale_ReadsGreyThenAlpha()
+	{
+		// Grey 200 with alpha 128, then grey 10 fully opaque. Read as RGB555 the first pixel would come
+		// out as an opaque (0, 49, 65).
+		byte[] body = [0xC8, 0x80, 0x0A, 0xFF];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(2, 1, imageType: 3, pixelBits: 16, body, descriptor: TopLeftWithAlpha));
+
+		Assert.AreEqual((200, 200, 200, (byte)128), image.GetPixel(0, 0));
+		Assert.AreEqual((10, 10, 10, (byte)255), image.GetPixel(1, 0));
+	}
+
+	[TestMethod]
+	public void Decode_RunLengthEncodedSixteenBitGreyscale_ReadsGreyThenAlpha()
+	{
+		// A repeat packet of two grey-200/alpha-128 pixels, then a literal packet of one grey-10 pixel.
+		byte[] body =
+		[
+			0x81, 0xC8, 0x80,
+			0x00, 0x0A, 0x40,
+		];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(3, 1, imageType: 11, pixelBits: 16, body, descriptor: TopLeftWithAlpha));
+
+		Assert.AreEqual((200, 200, 200, (byte)128), image.GetPixel(0, 0));
+		Assert.AreEqual((200, 200, 200, (byte)128), image.GetPixel(1, 0));
+		Assert.AreEqual((10, 10, 10, (byte)64), image.GetPixel(2, 0));
+	}
+
+	[TestMethod]
+	[DataRow(15)]
+	[DataRow(24)]
+	[DataRow(32)]
+	public void Decode_GreyscaleWithColourDepth_Throws(int pixelBits) =>
+		Assert.ThrowsExactly<InvalidImageDataException>(
+			() => ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 3, pixelBits: pixelBits, [1, 2, 3, 4], descriptor: TopLeftOrigin)));
+
+	[TestMethod]
 	public void Decode_ColourMapped_ResolvesEntries()
 	{
 		// Two 24-bit colour map entries followed by three indices.

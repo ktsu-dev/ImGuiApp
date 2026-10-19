@@ -76,28 +76,36 @@ internal static class InlineLayout
 			lineHeight = 0.0f;
 		}
 
-		foreach (InlineRun run in runs)
+		// A token only gets a space before it, and a line may only break before it, where the source
+		// had whitespace. Runs split at every emphasis, code and link boundary, so a token that does not
+		// follow whitespace is glued to the one before it even across runs, and a glued group wraps as
+		// one word.
+		foreach (List<(string Text, InlineRun Run)> word in SplitGluedWords(runs))
 		{
-			IEnumerable<string> tokens = run.IsImage
-				? [run.Text]
-				: SplitWords(run.Text);
-
-			foreach (string token in tokens)
+			float wordWidth = 0.0f;
+			Vector2[] sizes = new Vector2[word.Count];
+			for (int i = 0; i < word.Count; i++)
 			{
-				Vector2 tokenSize = measure(token, run.Role, run.IsImage);
-				float tokenWidth = tokenSize.X;
-				float advance = current.Count == 0 ? 0.0f : spaceWidth;
+				sizes[i] = measure(word[i].Text, word[i].Run.Role, word[i].Run.IsImage);
+				wordWidth += sizes[i].X;
+			}
 
-				if (current.Count > 0 && cursorX + advance + tokenWidth > maxWidth)
-				{
-					FlushLine();
-					advance = 0.0f;
-				}
+			float advance = current.Count == 0 ? 0.0f : spaceWidth;
 
-				float x = cursorX + advance;
-				current.Add(new LaidOutToken(token, run.Role, run.LinkUrl, run.IsImage, x, tokenWidth));
-				cursorX = x + tokenWidth;
-				lineHeight = Math.Max(lineHeight, tokenSize.Y);
+			if (current.Count > 0 && cursorX + advance + wordWidth > maxWidth)
+			{
+				FlushLine();
+				advance = 0.0f;
+			}
+
+			cursorX += advance;
+
+			for (int i = 0; i < word.Count; i++)
+			{
+				(string text, InlineRun run) = word[i];
+				current.Add(new LaidOutToken(text, run.Role, run.LinkUrl, run.IsImage, cursorX, sizes[i].X));
+				cursorX += sizes[i].X;
+				lineHeight = Math.Max(lineHeight, sizes[i].Y);
 			}
 		}
 
@@ -105,14 +113,64 @@ internal static class InlineLayout
 		return lines;
 	}
 
-	private static IEnumerable<string> SplitWords(string text)
+	/// <summary>
+	/// Splits the runs into words: groups of tokens with no whitespace between them in the source.
+	/// </summary>
+	private static IEnumerable<List<(string Text, InlineRun Run)>> SplitGluedWords(IReadOnlyList<InlineRun> runs)
 	{
-		foreach (string part in text.Split(' '))
+		List<(string Text, InlineRun Run)> word = [];
+
+		foreach ((string text, InlineRun run, bool spaceBefore) in Tokenize(runs))
 		{
-			if (part.Length > 0)
+			if (spaceBefore && word.Count > 0)
 			{
-				yield return part;
+				yield return word;
+				word = [];
 			}
+
+			word.Add((text, run));
+		}
+
+		if (word.Count > 0)
+		{
+			yield return word;
+		}
+	}
+
+	/// <summary>
+	/// Splits the runs into tokens, flagging each one the source had whitespace before.
+	/// </summary>
+	private static IEnumerable<(string Text, InlineRun Run, bool SpaceBefore)> Tokenize(IReadOnlyList<InlineRun> runs)
+	{
+		bool spaceBefore = false;
+
+		foreach (InlineRun run in runs)
+		{
+			if (run.IsImage)
+			{
+				yield return (run.Text, run, spaceBefore);
+				spaceBefore = false;
+				continue;
+			}
+
+			if (run.Text.Length == 0)
+			{
+				continue;
+			}
+
+			foreach (string part in run.Text.Split(' '))
+			{
+				// An empty part is a space at the start or end of the run, or one of several in a row.
+				if (part.Length > 0)
+				{
+					yield return (part, run, spaceBefore);
+				}
+
+				spaceBefore = true;
+			}
+
+			// The next run's first token follows whitespace only if this run ended in some.
+			spaceBefore = run.Text[^1] == ' ';
 		}
 	}
 }
