@@ -157,7 +157,7 @@ public static partial class ImGuiWidgets
 			{
 				string visible = VisibleLabel(label);
 				string readout = Readout(float.IsNaN(gainDb) ? 0f : gainDb);
-				ImGui.SetTooltip(visible.Length > 0 ? $"{visible}\n{readout}" : readout);
+				UnformattedText.Tooltip(visible.Length > 0 ? $"{visible}\n{readout}" : readout);
 			}
 
 			return changed;

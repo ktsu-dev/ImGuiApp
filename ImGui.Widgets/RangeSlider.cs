@@ -119,7 +119,7 @@ public static partial class ImGuiWidgets
 
 			if (ImGui.IsItemHovered() || ImGui.IsItemActive())
 			{
-				ImGui.SetTooltip(string.Format(CultureInfo.CurrentCulture, "{0:0.###} – {1:0.###}", lower, upper));
+				UnformattedText.Tooltip(string.Format(CultureInfo.CurrentCulture, "{0:0.###} – {1:0.###}", lower, upper));
 			}
 
 			string visible = VisibleLabel(label);

@@ -85,7 +85,7 @@ public static partial class ImGuiWidgets
 
 		if (options.ShowTooltip && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
 		{
-			ImGui.SetTooltip(hint);
+			UnformattedText.Tooltip(hint);
 		}
 
 		if (options.ShowContextMenu && isHovered && isRightMouseClicked)

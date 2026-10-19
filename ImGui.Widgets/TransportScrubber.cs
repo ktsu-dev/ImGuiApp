@@ -261,7 +261,7 @@ public static partial class ImGuiWidgets
 
 			if (hovered && state.Gesture == TimelineGesture.None && !pointer.InStrip)
 			{
-				ImGui.SetTooltip(format(pointer.Snapped));
+				UnformattedText.Tooltip(format(pointer.Snapped));
 			}
 		}
 

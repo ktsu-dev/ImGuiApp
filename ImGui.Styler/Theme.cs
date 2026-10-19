@@ -535,7 +535,7 @@ public static class Theme
 			// Add tooltip with theme description if hovered
 			if (ImGui.IsItemHovered())
 			{
-				ImGui.SetTooltip($"{theme.Description}\n\nDialog style: Primary title bar, surface background");
+				UnformattedText.Tooltip($"{theme.Description}\n\nDialog style: Primary title bar, surface background");
 			}
 		}
 		catch (ArgumentException)
@@ -544,7 +544,7 @@ public static class Theme
 			clicked = ImGui.MenuItem(displayName, "", isSelected);
 			if (ImGui.IsItemHovered())
 			{
-				ImGui.SetTooltip(theme.Description);
+				UnformattedText.Tooltip(theme.Description);
 			}
 		}
 		catch (InvalidOperationException)
@@ -553,7 +553,7 @@ public static class Theme
 			clicked = ImGui.MenuItem(displayName, "", isSelected);
 			if (ImGui.IsItemHovered())
 			{
-				ImGui.SetTooltip(theme.Description);
+				UnformattedText.Tooltip(theme.Description);
 			}
 		}
 		finally
@@ -1197,11 +1197,11 @@ public static class Theme
 		}
 
 		ImGui.Separator();
-		ImGui.TextDisabled($"Current: {currentThemeName}");
+		UnformattedText.Disabled($"Current: {currentThemeName}");
 		ThemeRegistry.ThemeInfo? currentTheme = FindTheme(currentThemeName);
 		if (currentTheme is not null)
 		{
-			ImGui.TextDisabled($"({(currentTheme.IsDark ? "Dark" : "Light")})");
+			UnformattedText.Disabled($"({(currentTheme.IsDark ? "Dark" : "Light")})");
 		}
 	}
 
