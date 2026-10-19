@@ -308,6 +308,9 @@ public static partial class ImGuiWidgets
 			public float AngleCos { get; set; }
 			public float AngleSin { get; set; }
 
+			// The most fractional digits Math.Round accepts.
+			private const int MaxRoundingDigits = 15;
+
 			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic accumulator state is intentional; each TDataType has its own accumulator.")]
 			private static float AccumulatedDiff { get; set; }
 			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic accumulator state is intentional; each TDataType has its own accumulator.")]
@@ -390,10 +393,12 @@ public static partial class ImGuiWidgets
 
 				// Round to user desired precision based on format string.
 				// decimalPrecision is 0 for integer types and negative for scientific
-				// notation formats (which must not be rounded).
+				// notation formats (which must not be rounded). The format may ask for up to 99
+				// decimals, but MathF.Round accepts only 6 and Math.Round 15, so round in double
+				// and cap there: a float has no significant digits that far out anyway.
 				if (decimalPrecision >= 0)
 				{
-					newValue = MathF.Round(newValue, decimalPrecision);
+					newValue = (float)Math.Round(newValue, Math.Min(decimalPrecision, MaxRoundingDigits));
 				}
 
 				if (newValue == -0.0f)
