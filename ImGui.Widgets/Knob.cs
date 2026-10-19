@@ -202,6 +202,98 @@ public static partial class ImGuiWidgets
 			DrawArc1(center, radius, mid_angle - overlap, endAngle, thickness, color, numSegments);
 		}
 
+		/// <summary>
+		/// Reads the decimal precision from a printf-style format, as Dear ImGui's <c>ImParseFormatPrecision</c> does.
+		/// </summary>
+		/// <remarks>
+		/// Called on every draw, so a format it cannot read gives <paramref name="defaultPrecision"/> rather than
+		/// throwing. An empty digit run after <c>.</c>, as in <c>"%.f"</c>, is precision 0, as it is in printf.
+		/// A format with no conversion, or one that ends after the <c>%</c> or its width, gives the default.
+		/// </remarks>
+		/// <param name="fmt">The format string.</param>
+		/// <param name="defaultPrecision">The precision to use when the format does not state one.</param>
+		/// <returns>The number of decimals, -1 for scientific or general notation, or <paramref name="defaultPrecision"/>.</returns>
+		internal static int ParseFormatPrecision(string fmt, int defaultPrecision)
+		{
+			ReadOnlySpan<char> fmtSpan = ParseFormatFindStart(fmt);
+			if (fmtSpan.IsEmpty || fmtSpan[0] != '%')
+			{
+				return defaultPrecision;
+			}
+
+			fmtSpan = fmtSpan[1..];
+			while (!fmtSpan.IsEmpty && fmtSpan[0] is >= '0' and <= '9')
+			{
+				fmtSpan = fmtSpan[1..];
+			}
+
+			int precision = int.MaxValue;
+			if (!fmtSpan.IsEmpty && fmtSpan[0] == '.')
+			{
+				precision = ParseFormatPrecisionDigits(ref fmtSpan, defaultPrecision);
+			}
+
+			if (!fmtSpan.IsEmpty && fmtSpan[0] is 'e' or 'E') // Maximum precision with scientific notation
+			{
+				precision = -1;
+			}
+
+			if (!fmtSpan.IsEmpty && fmtSpan[0] is 'g' or 'G' && precision == int.MaxValue)
+			{
+				precision = -1;
+			}
+
+			return (precision == int.MaxValue) ? defaultPrecision : precision;
+		}
+
+		private static int ParseFormatPrecisionDigits(ref ReadOnlySpan<char> fmtSpan, int defaultPrecision)
+		{
+			// The caller has matched the leading '.'; consume it and read the digit run.
+			fmtSpan = fmtSpan[1..];
+			int precisionLength = 0;
+			while (precisionLength < fmtSpan.Length && fmtSpan[precisionLength] is >= '0' and <= '9')
+			{
+				precisionLength++;
+			}
+
+			// An empty run means zero decimals, as in printf. A run too long for an int is out of range anyway.
+			int precision = 0;
+			if (precisionLength > 0 && !int.TryParse(fmtSpan[..precisionLength], NumberStyles.None, CultureInfo.InvariantCulture, out precision))
+			{
+				precision = defaultPrecision;
+			}
+
+			fmtSpan = fmtSpan[precisionLength..];
+
+			if (precision is < 0 or > 99)
+			{
+				precision = defaultPrecision;
+			}
+
+			return precision;
+		}
+
+		private static ReadOnlySpan<char> ParseFormatFindStart(string fmt)
+		{
+			ReadOnlySpan<char> fmtSpan = fmt.AsSpan();
+			while (fmtSpan.Length > 2)
+			{
+				char c = fmtSpan[0];
+				if (c == '%' && fmtSpan[1] != '%')
+				{
+					return fmtSpan;
+				}
+				else if (c == '%')
+				{
+					fmtSpan = fmtSpan[1..];
+				}
+
+				fmtSpan = fmtSpan[1..];
+			}
+
+			return fmtSpan;
+		}
+
 		private sealed class KnobInternal<TDataType> where TDataType : unmanaged, INumber<TDataType>
 		{
 			public float Radius { get; set; }
@@ -355,82 +447,6 @@ public static partial class ImGuiWidgets
 				}
 
 				return newValue;
-			}
-
-			private static int ParseFormatPrecision(string fmt, int defaultPrecision)
-			{
-
-				ReadOnlySpan<char> fmtSpan = ParseFormatFindStart(fmt);
-				if (fmtSpan[0] != '%')
-				{
-					return defaultPrecision;
-				}
-
-				fmtSpan = fmtSpan[1..];
-				while (fmtSpan[0] is >= '0' and <= '9')
-				{
-					fmtSpan = fmtSpan[1..];
-				}
-
-				int precision = int.MaxValue;
-				if (fmtSpan[0] == '.')
-				{
-					precision = ParseFormatPrecisionDigits(ref fmtSpan, defaultPrecision);
-				}
-
-				if (fmtSpan[0] is 'e' or 'E') // Maximum precision with scientific notation
-				{
-					precision = -1;
-				}
-
-				if ((fmtSpan[0] == 'g' || fmtSpan[0] == 'G') && precision == int.MaxValue)
-				{
-					precision = -1;
-				}
-
-				return (precision == int.MaxValue) ? defaultPrecision : precision;
-			}
-
-			private static int ParseFormatPrecisionDigits(ref ReadOnlySpan<char> fmtSpan, int defaultPrecision)
-			{
-				// The caller has matched the leading '.'; consume it and read the digit run.
-				fmtSpan = fmtSpan[1..];
-				int precisionLength = 0;
-				while (fmtSpan[precisionLength] is >= '0' and <= '9')
-				{
-					precisionLength++;
-				}
-
-				int precision = int.Parse(fmtSpan[..precisionLength], CultureInfo.CurrentCulture);
-				fmtSpan = fmtSpan[precisionLength..];
-
-				if (precision is < 0 or > 99)
-				{
-					precision = defaultPrecision;
-				}
-
-				return precision;
-			}
-
-			private static ReadOnlySpan<char> ParseFormatFindStart(string fmt)
-			{
-				ReadOnlySpan<char> fmtSpan = fmt.AsSpan();
-				while (fmtSpan.Length > 2)
-				{
-					char c = fmtSpan[0];
-					if (c == '%' && fmtSpan[1] != '%')
-					{
-						return fmtSpan;
-					}
-					else if (c == '%')
-					{
-						fmtSpan = fmtSpan[1..];
-					}
-
-					fmtSpan = fmtSpan[1..];
-				}
-
-				return fmtSpan;
 			}
 
 			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic constant step table is intentional; identical across closed types but separation is harmless.")]
