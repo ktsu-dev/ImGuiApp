@@ -610,11 +610,14 @@ public static partial class ImGuiWidgets
 					width = lineBasedHeight;
 				}
 
-				List<string> titleLines = WrapStringToWidth(label, width);
+				// The title shows only the visible part of the label; the ## suffix stays in the ID. A label
+				// that is all ID gets no title lines, so no empty row pushes the dial down.
+				string title = VisibleLabel(label);
+				List<string> titleLines = title.Length == 0 ? [] : WrapStringToWidth(title, width);
 
 				float maxTitleLineWidth = 0.0f;
 
-				if (!flags.HasFlag(ImGuiKnobOptions.NoTitle))
+				if (!flags.HasFlag(ImGuiKnobOptions.NoTitle) && (titleLines.Count > 0))
 				{
 					maxTitleLineWidth = titleLines.Max(line => ImGui.CalcTextSize(line).X);
 				}

@@ -144,4 +144,67 @@ public sealed class KnobTests : WidgetTest
 
 		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering a knob driven by vertical drags did not show a vertical resize cursor.");
 	}
+
+	// A long ID suffix would wrap into several title rows if it were drawn, pushing that knob's dial
+	// below its neighbour's. Shown as just "Gain", both titles take one row and the dials line up.
+	// The first knob only starts the row: the two compared both follow a SameLine, so ImGui places
+	// them alike.
+	[TestMethod]
+	public void Knob_TitleLeavesOutTheIdSuffix()
+	{
+		const string Plain = "Trim";
+		const string Suffixed = "Gain##a suffix that is far wider than the dial";
+		float first = 0.5f;
+		float left = 0.5f;
+		float right = 0.5f;
+		Start(() =>
+		{
+			ImGuiWidgets.Knob("Pan", ref first, 0f, 1f, size: 64f);
+			ImGui.SameLine();
+			ImGuiWidgets.Knob(Plain, ref left, 0f, 1f, size: 64f);
+			ImGui.SameLine();
+			ImGuiWidgets.Knob(Suffixed, ref right, 0f, 1f, size: 64f);
+		});
+
+		Assert.AreEqual(RectOf(Plain).MinY, RectOf(Suffixed).MinY, "The ID suffix took title rows of its own.");
+	}
+
+	[TestMethod]
+	public void Knob_WithOnlyAnIdHasNoTitleRow()
+	{
+		const string Untitled = "Gain";
+		const string Hidden = "##hidden";
+		float left = 0.5f;
+		float right = 0.5f;
+		Start(() =>
+		{
+			ImGuiWidgets.Knob(Untitled, ref left, 0f, 1f, size: 64f, flags: ImGuiKnobOptions.NoTitle);
+			ImGui.SameLine();
+			ImGuiWidgets.Knob(Hidden, ref right, 0f, 1f, size: 64f);
+		});
+
+		Assert.AreEqual(RectOf(Untitled).MinY, RectOf(Hidden).MinY, "A knob labelled only by an ID reserved a title row.");
+	}
+
+	[TestMethod]
+	public void Knob_SameCaptionDifferentIdsDragIndependently()
+	{
+		const string Left = "Gain##left";
+		const string Right = "Gain##right";
+		float left = 0.5f;
+		float right = 0.5f;
+		Start(() =>
+		{
+			ImGuiWidgets.Knob(Left, ref left, 0f, 1f, size: 64f);
+			ImGui.SameLine();
+			ImGuiWidgets.Knob(Right, ref right, 0f, 1f, size: 64f);
+		});
+
+		Vector2 center = CenterOf(Left);
+		Harness.Mouse.Drag(center.X, center.Y, center.X, center.Y - 60f);
+		Step();
+
+		Assert.IsTrue(left > 0.5f, $"Dragging the left knob left it at {left}.");
+		Assert.AreEqual(0.5f, right, "Dragging the left knob moved the right one.");
+	}
 }
