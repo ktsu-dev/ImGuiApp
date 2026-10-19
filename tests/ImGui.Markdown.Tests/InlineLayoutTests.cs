@@ -3,6 +3,8 @@
 namespace ktsu.ImGui.Markdown.Tests;
 
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Numerics;
 using ktsu.ImGui.Markdown;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -113,6 +115,23 @@ public sealed class InlineLayoutTests
 	}
 
 	[TestMethod]
+	public void Wrap_HardBreakBetweenTouchingRuns_StillEndsTheLine()
+	{
+		// Nothing but the break separates "a" from "b", so without it they would glue into one word.
+		List<InlineRun> runs =
+		[
+			new("a", MarkdownFontRole.Body, null, false),
+			new(string.Empty, MarkdownFontRole.Body, null, false, IsHardBreak: true),
+			new("b", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual(2, lines.Count);
+		Assert.AreEqual("a", TokenTexts(lines[0]));
+		Assert.AreEqual("b", TokenTexts(lines[1]));
+		Assert.AreEqual("0", TokenXs(lines[1]));
+	}
+
+	[TestMethod]
 	public void Wrap_HardBreakAsLastRun_AddsNoEmptyLine()
 	{
 		List<InlineRun> runs =
@@ -123,4 +142,113 @@ public sealed class InlineLayoutTests
 		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
 		Assert.AreEqual(1, lines.Count);
 	}
+
+	[TestMethod]
+	public void Wrap_BoldFollowedByPunctuation_IsNotSeparatedBySpace()
+	{
+		// "**Note**: text" — the colon touches the bold run in the source.
+		List<InlineRun> runs =
+		[
+			new("Note", MarkdownFontRole.Bold, null, false),
+			new(": text", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual(1, lines.Count);
+		Assert.AreEqual("Note|:|text", TokenTexts(lines[0]));
+		Assert.AreEqual("0 4 6", TokenXs(lines[0]));
+		Assert.AreEqual(10f, lines[0].Width);
+	}
+
+	[TestMethod]
+	public void Wrap_CodeFollowedByLetter_IsNotSeparatedBySpace()
+	{
+		// "`a`b"
+		List<InlineRun> runs =
+		[
+			new("a", MarkdownFontRole.Code, null, false),
+			new("b", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 1", TokenXs(lines[0]));
+	}
+
+	[TestMethod]
+	public void Wrap_LinkFollowedByPeriod_IsNotSeparatedBySpace()
+	{
+		// "[l](u)."
+		List<InlineRun> runs =
+		[
+			new("l", MarkdownFontRole.Body, "u", false),
+			new(".", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 1", TokenXs(lines[0]));
+		Assert.AreEqual("u", lines[0].Tokens[0].LinkUrl);
+		Assert.IsNull(lines[0].Tokens[1].LinkUrl);
+	}
+
+	[TestMethod]
+	public void Wrap_BoldInsideAWord_IsNotSeparatedBySpace()
+	{
+		// "a**b**c"
+		List<InlineRun> runs =
+		[
+			new("a", MarkdownFontRole.Body, null, false),
+			new("b", MarkdownFontRole.Bold, null, false),
+			new("c", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 1 2", TokenXs(lines[0]));
+		Assert.AreEqual(3f, lines[0].Width);
+	}
+
+	[TestMethod]
+	public void Wrap_WhitespaceAtRunBoundary_StillSeparatesTokens()
+	{
+		// "plain **bold** plain": the spaces live at the ends of the plain runs.
+		List<InlineRun> runs =
+		[
+			new("ab ", MarkdownFontRole.Body, null, false),
+			new("cd", MarkdownFontRole.Bold, null, false),
+			new(" ef", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 3 6", TokenXs(lines[0]));
+	}
+
+	[TestMethod]
+	public void Wrap_NeverBreaksInsideAGluedSequence()
+	{
+		// "aaa [docs](u)." at a width that fits "aaa docs" but not "aaa docs.": the period must
+		// not be stranded on its own line, so "docs." moves down together.
+		List<InlineRun> runs =
+		[
+			new("aaa ", MarkdownFontRole.Body, null, false),
+			new("docs", MarkdownFontRole.Body, "u", false),
+			new(".", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 8f, Measure);
+		Assert.AreEqual(2, lines.Count);
+		Assert.AreEqual("aaa", TokenTexts(lines[0]));
+		Assert.AreEqual("docs|.", TokenTexts(lines[1]));
+		Assert.AreEqual("0 4", TokenXs(lines[1]));
+	}
+
+	[TestMethod]
+	public void Wrap_EmptyRunBetweenTouchingRuns_KeepsThemGlued()
+	{
+		List<InlineRun> runs =
+		[
+			new("a", MarkdownFontRole.Body, null, false),
+			new(string.Empty, MarkdownFontRole.Bold, null, false),
+			new("b", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 1", TokenXs(lines[0]));
+	}
+
+	private static string TokenTexts(LaidOutLine line) => string.Join('|', line.Tokens.Select(t => t.Text));
+
+	private static string TokenXs(LaidOutLine line) =>
+		string.Join(' ', line.Tokens.Select(t => t.X.ToString(CultureInfo.InvariantCulture)));
 }

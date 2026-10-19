@@ -52,11 +52,15 @@ internal static class BmpDecoder
 		ChannelMasks masks = ReadMasks(data, headerSize, info);
 		byte[]? palette = info.BitCount <= 8 ? ReadPalette(data, headerSize, info) : null;
 
-		int stride = ((info.Width * info.BitCount) + 31) / 32 * 4;
-		if (pixelOffset < 0 || pixelOffset + (stride * info.Height) > data.Length)
+		ImageDecoder.EnsurePixelBufferFits(info.Width, info.Height, "BMP");
+
+		long strideBytes = (((long)info.Width * info.BitCount) + 31) / 32 * 4;
+		if (pixelOffset < 0 || pixelOffset + (strideBytes * info.Height) > data.Length)
 		{
 			throw new InvalidImageDataException("BMP pixel data runs past the end of the file.");
 		}
+
+		int stride = (int)strideBytes;
 
 		ImagePixels image = new(info.Width, info.Height);
 		Span<byte> pixels = image.Pixels;
@@ -108,7 +112,7 @@ internal static class BmpDecoder
 			paletteColors = (int)BinaryPrimitives.ReadUInt32LittleEndian(header[32..]);
 		}
 
-		if (width <= 0 || rawHeight == 0)
+		if (width <= 0 || rawHeight is 0 or int.MinValue)
 		{
 			throw new InvalidImageDataException($"BMP has unusable dimensions {width}x{rawHeight}.");
 		}
