@@ -85,4 +85,26 @@ public sealed class InlineBuilderTests
 		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(null);
 		Assert.AreEqual(0, runs.Count);
 	}
+
+	[TestMethod]
+	public void Build_TrailingSpacesLineBreak_ProducesHardBreakRun()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("line one  \nline two"));
+		Assert.AreEqual(1, runs.Count(r => r.IsHardBreak));
+	}
+
+	[TestMethod]
+	public void Build_BackslashLineBreak_ProducesHardBreakRun()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("line one\\\nline two"));
+		Assert.AreEqual(1, runs.Count(r => r.IsHardBreak));
+	}
+
+	[TestMethod]
+	public void Build_SoftLineBreak_ProducesSpaceRun()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("line one\nline two"));
+		Assert.IsFalse(runs.Any(r => r.IsHardBreak));
+		Assert.IsTrue(runs.Any(r => r.Text == " "));
+	}
 }

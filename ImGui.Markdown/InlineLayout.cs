@@ -11,7 +11,8 @@ using System.Numerics;
 /// <param name="Role">The typographic role controlling font selection.</param>
 /// <param name="LinkUrl">The enclosing link URL, or <see langword="null"/> when not a link.</param>
 /// <param name="IsImage">Whether this run is an inline image rather than text.</param>
-internal readonly record struct InlineRun(string Text, MarkdownFontRole Role, string? LinkUrl, bool IsImage);
+/// <param name="IsHardBreak">Whether this run is a hard line break, which ends the current line and carries no text.</param>
+internal readonly record struct InlineRun(string Text, MarkdownFontRole Role, string? LinkUrl, bool IsImage, bool IsHardBreak = false);
 
 /// <summary>A single positioned token within a laid-out line.</summary>
 /// <param name="Text">The token text.</param>
@@ -82,6 +83,14 @@ internal static class InlineLayout
 		// one word.
 		foreach (List<(string Text, InlineRun Run)> word in SplitGluedWords(runs))
 		{
+			// A hard break ends the line even when the next word would fit. Flushing an empty line is
+			// a no-op, so a hard break at the end of a paragraph adds no blank line.
+			if (word[0].Run.IsHardBreak)
+			{
+				FlushLine();
+				continue;
+			}
+
 			float wordWidth = 0.0f;
 			Vector2[] sizes = new Vector2[word.Count];
 			for (int i = 0; i < word.Count; i++)
@@ -146,6 +155,14 @@ internal static class InlineLayout
 
 		foreach (InlineRun run in runs)
 		{
+			// A hard break is a word of its own: whitespace on both sides keeps it from gluing to either neighbour.
+			if (run.IsHardBreak)
+			{
+				yield return (string.Empty, run, true);
+				spaceBefore = true;
+				continue;
+			}
+
 			if (run.IsImage)
 			{
 				yield return (run.Text, run, spaceBefore);
