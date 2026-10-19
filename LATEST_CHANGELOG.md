@@ -1,12 +1,10 @@
-## v3.75.3 (patch)
+## v3.75.4 (patch)
 
-Changes since v3.75.2:
+Changes since v3.75.3:
 
-- Pick only clipboard image types the decoder can read on Linux [patch] (Claude)
-- Name Tab as Tab in KeyChordMatcher, not its NamedKeyBegin alias [patch] (Claude)
-- Move the JPEG coefficient bound into a helper (Claude)
-- Reject oversized image headers as InvalidImageDataException [patch] (Claude)
-- Decode 16-bit greyscale TGA as grey plus alpha instead of RGB555 [patch] (Claude)
-- Split the glued-word grouping into tokenizing and grouping (matt-edmondson)
-- Stop Markdown inserting a space where inline runs touch [patch] (matt-edmondson)
+- Read the Knob's format precision without throwing on "%.f" or a truncated format [patch] (Claude)
+- Merge main into the TGA first-entry branch (Claude)
+- Merge main into the hard line break branch (Claude)
+- End the line at a Markdown hard line break [patch] (Claude)
+- Honour the TGA colour map's first entry index [patch] (Claude)
 
