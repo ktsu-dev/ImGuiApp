@@ -87,7 +87,7 @@ public sealed class TouchScrollGestureTests
 		gesture.Moved(second, new Vector2(150, 200), Step);
 
 		Assert.AreEqual(new Vector2(-1f, 2f), sink.Scrolled, "Fingers moving down reveal what is above: the wheel's positive direction.");
-		CollectionAssert.DoesNotContain(sink.Events, "down");
+		Assert.DoesNotContain("down", sink.Events);
 		Assert.IsFalse(sink.Events.Exists(e => e.StartsWith("move", System.StringComparison.Ordinal)), "The mouse stays where the pan began.");
 	}
 
@@ -138,7 +138,7 @@ public sealed class TouchScrollGestureTests
 		gesture.Began(second, new Vector2(300, 100));
 
 		Assert.IsTrue(gesture.IsPanning);
-		CollectionAssert.DoesNotContain(sink.Events.GetRange(5, sink.Events.Count - 5), "down");
+		Assert.DoesNotContain("down", sink.Events.GetRange(5, sink.Events.Count - 5));
 	}
 
 	[TestMethod]
