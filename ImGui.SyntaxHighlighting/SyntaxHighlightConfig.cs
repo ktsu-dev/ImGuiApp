@@ -57,9 +57,9 @@ public sealed record SyntaxHighlightConfig
 	public float? FontSizePixels { get; init; }
 
 	/// <summary>
-	/// The block's width in pixels; when <see langword="null"/>, the available content width is used.
-	/// Code is never wrapped — lines longer than the block are clipped by the surrounding window, so
-	/// wrap the call in a horizontally scrolling child window when long lines must stay reachable.
+	/// The narrowest the block is drawn, in pixels; when <see langword="null"/>, the available content
+	/// width. Code is never wrapped, so a block whose longest line is wider than this is as wide as
+	/// that line, and a horizontally scrolling child window around it can reach the line's end.
 	/// </summary>
 	public float? Width { get; init; }
 }

@@ -4,6 +4,7 @@ namespace ktsu.ImGui.Widgets;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -55,10 +56,25 @@ public static partial class ImGuiWidgets
 					{
 						AddedCount++;
 					}
+
+					WidestNumber = Math.Max(WidestNumber, Math.Max(line.OldNumber ?? 0, line.NewNumber ?? 0));
 				}
 			}
 
-			internal DiffHunk Hunk { get; }
+			/// <summary>
+			/// The hunk this layout was built for, or the latest instance found equal to it, so the
+			/// next frame's comparison is by reference again.
+			/// </summary>
+			internal DiffHunk Hunk { get; set; }
+
+			/// <summary>The largest line number on either side, which sizes the number columns.</summary>
+			internal int WidestNumber { get; }
+
+			/// <summary>The font the widest line was measured in, or <see langword="null"/> before it was.</summary>
+			internal float? MeasuredFontKey { get; set; }
+
+			/// <summary>The width of the hunk's widest line, in the font <see cref="MeasuredFontKey"/> names.</summary>
+			internal float WidestText { get; set; }
 
 			internal int RemovedCount { get; }
 
@@ -75,22 +91,97 @@ public static partial class ImGuiWidgets
 
 		/// <summary>
 		/// The layout for the hunk at this position, built once and kept until the position holds a
-		/// different hunk instance.
+		/// hunk with different content.
 		/// </summary>
 		/// <remarks>
 		/// Held against the position rather than against the hunk, so the cache is bounded by how many
 		/// hunks the widget draws. Keying it by the hunk itself would grow without bound under a
 		/// caller that rebuilds its diff, which is the same caller the cache exists for.
+		/// <para>
+		/// The same instance is the cheap answer and the usual one. A different instance is compared
+		/// by content before the layout is thrown away, because a caller mapping its own diff onto
+		/// <see cref="DiffHunk"/> inside its render callback hands over new instances every frame, and
+		/// treating each as a new hunk would expand a collapsed hunk on the frame after its heading
+		/// was clicked. Once found equal, the new instance is kept, so the following frame compares
+		/// by reference again whichever instance the caller passes.
+		/// </para>
 		/// </remarks>
 		private HunkLayout LayoutFor(int index, DiffHunk hunk)
 		{
-			if (!layouts.TryGetValue(index, out HunkLayout? layout) || !ReferenceEquals(layout.Hunk, hunk))
+			if (layouts.TryGetValue(index, out HunkLayout? layout))
 			{
-				layout = new HunkLayout(hunk);
-				layouts[index] = layout;
+				if (ReferenceEquals(layout.Hunk, hunk))
+				{
+					return layout;
+				}
+
+				if (HaveEqualContent(layout.Hunk, hunk))
+				{
+					layout.Hunk = hunk;
+					return layout;
+				}
 			}
 
+			layout = new HunkLayout(hunk);
+			layouts[index] = layout;
+
 			return layout;
+		}
+
+		/// <summary>Whether two hunks would draw the same, heading and lines alike.</summary>
+		/// <param name="cached">The hunk a layout was built for.</param>
+		/// <param name="incoming">The hunk now at the same position.</param>
+		/// <returns><see langword="true"/> when they are interchangeable.</returns>
+		internal static bool HaveEqualContent(DiffHunk cached, DiffHunk incoming) =>
+			cached.Heading == incoming.Heading
+			&& cached.Lines.Count == incoming.Lines.Count
+			&& cached.Lines.SequenceEqual(incoming.Lines);
+
+		/// <summary>The largest line number in the hunk, on either side.</summary>
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
+		/// <returns>The number, or zero when the hunk carries none.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> is <see langword="null"/>.</exception>
+		internal int WidestNumber(int index, DiffHunk hunk)
+		{
+			Ensure.NotNull(hunk);
+
+			return LayoutFor(index, hunk).WidestNumber;
+		}
+
+		/// <summary>The width of the hunk's widest line, measured once per hunk and font.</summary>
+		/// <remarks>
+		/// Every line is measured, which is the one pass over a hunk the clipper cannot spare, so it is
+		/// kept with the layout and only repeated when <paramref name="fontKey"/> changes. A text column
+		/// that auto-fits would measure only the rows on screen, and the width would change as the
+		/// hunk scrolled vertically.
+		/// </remarks>
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
+		/// <param name="fontKey">Anything that changes when the font does; its size will do.</param>
+		/// <param name="measure">Measures a line's text, in pixels.</param>
+		/// <returns>The widest line's width.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="hunk"/> or <paramref name="measure"/> is <see langword="null"/>.</exception>
+		internal float WidestText(int index, DiffHunk hunk, float fontKey, Func<string, float> measure)
+		{
+			Ensure.NotNull(hunk);
+			Ensure.NotNull(measure);
+
+			HunkLayout layout = LayoutFor(index, hunk);
+
+			if (layout.MeasuredFontKey != fontKey)
+			{
+				float widest = 0.0f;
+				foreach (DiffLine line in layout.Hunk.Lines)
+				{
+					widest = Math.Max(widest, measure(line.Text));
+				}
+
+				layout.WidestText = widest;
+				layout.MeasuredFontKey = fontKey;
+			}
+
+			return layout.WidestText;
 		}
 
 		/// <summary>The hunk's side-by-side rows, laid out once per hunk instance.</summary>
@@ -121,9 +212,10 @@ public static partial class ImGuiWidgets
 
 		/// <summary>Whether a hunk is collapsed.</summary>
 		/// <remarks>
-		/// The flag belongs to the hunk instance at this position, not to the position alone. A
-		/// different diff drawn under the same label, or the same diff re-read after a hunk was
-		/// staged, puts new hunks at old positions, and those start expanded.
+		/// The flag belongs to the hunk at this position, not to the position alone. A different diff
+		/// drawn under the same label, or the same diff re-read after a hunk was staged, puts hunks
+		/// with different content at old positions, and those start expanded. A new instance with the
+		/// same content is the same hunk and keeps the flag.
 		/// </remarks>
 		/// <param name="index">The hunk's position in the diff.</param>
 		/// <param name="hunk">The hunk itself.</param>
