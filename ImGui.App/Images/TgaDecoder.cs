@@ -78,6 +78,10 @@ internal static class TgaDecoder
 		ValidateImageType(imageType, baseType, pixelBits);
 		ValidateColorMapEntryBits(colorMapType, colorMapEntryBits);
 
+		// The low nibble counts attribute bits. Without any, the top bit of a 16-bit pixel or colour map
+		// entry is padding rather than alpha, and reading it as alpha would make the whole image transparent.
+		bool attributeAlpha = (descriptor & 0x0F) != 0;
+
 		int position = HeaderSize + idLength;
 		byte[]? colorMap = null;
 		if (colorMapType == 1)
@@ -92,7 +96,14 @@ internal static class TgaDecoder
 			colorMap = new byte[colorMapLength * 4];
 			for (int i = 0; i < colorMapLength; i++)
 			{
-				ReadPixel(data.Slice(position + (i * entryBytes), entryBytes), colorMapEntryBits, colorMap.AsSpan(i * 4), attributeAlpha: true, greyscale: false);
+				ReadPixel(data.Slice(position + (i * entryBytes), entryBytes), colorMapEntryBits, colorMap.AsSpan(i * 4), attributeAlpha, greyscale: false);
+			}
+
+			// Writers that copy a BMP-style palette leave every entry's fourth byte at zero, which taken
+			// literally is an invisible image, so a 32-bit map with no alpha at all is treated as opaque.
+			if (colorMapEntryBits == 32)
+			{
+				MakeOpaqueIfAlphaIsEmpty(colorMap);
 			}
 
 			position += mapBytes;
@@ -108,10 +119,6 @@ internal static class TgaDecoder
 
 		bool rightToLeft = (descriptor & 0x10) != 0;
 		bool topToBottom = (descriptor & 0x20) != 0;
-
-		// The low nibble counts attribute bits. Without any, the top bit of a 16-bit pixel is padding
-		// rather than alpha, and reading it as alpha would make the whole image transparent.
-		bool attributeAlpha = (descriptor & 0x0F) != 0;
 
 		int pixelCount = width * height;
 		int written = 0;
@@ -179,15 +186,25 @@ internal static class TgaDecoder
 
 		// Some writers store a 32-bit image with every alpha byte left at zero. Taken literally that
 		// is an invisible image, so an entirely empty alpha channel is treated as opaque.
-		if (pixelBits == 32 && !AnyAlpha(pixels))
+		if (pixelBits == 32)
 		{
-			for (int i = 3; i < pixels.Length; i += 4)
-			{
-				pixels[i] = 255;
-			}
+			MakeOpaqueIfAlphaIsEmpty(pixels);
 		}
 
 		return image;
+	}
+
+	private static void MakeOpaqueIfAlphaIsEmpty(Span<byte> rgba)
+	{
+		if (AnyAlpha(rgba))
+		{
+			return;
+		}
+
+		for (int i = 3; i < rgba.Length; i += 4)
+		{
+			rgba[i] = 255;
+		}
 	}
 
 	/// <summary>
