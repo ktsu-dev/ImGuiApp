@@ -6,6 +6,10 @@
 
 namespace ktsu.examples.ImGuiMarkdownDemo.UITests;
 
+using System.Runtime.InteropServices;
+
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Examples.Markdown;
@@ -72,6 +76,49 @@ public sealed class MarkdownDemoUITests
 		Assert.Contains("> The best way", sample, "block quote");
 		Assert.Contains("| Feature | Status |", sample, "table");
 		Assert.Contains("---", sample, "thematic break");
+		Assert.Contains("|:------:|", sample, "centered table column");
+		Assert.Contains("|------:|", sample, "right-aligned table column");
+	}
+
+	[TestMethod]
+	public void CodeBlock_WithALongLine_ScrollsInsideThePanel()
+	{
+		using ImGuiAppHarness harness = StartDemo(new HarnessOptions { Width = 1600, Height = 1200 });
+		harness.Step(3);
+
+		ImGuiWindowPtr markdown = ImGuiP.FindWindowByName(ImGuiMarkdownDemo.WindowTitle);
+		List<ImGuiWindowPtr> blocks = CodeBlockWindows();
+		Assert.HasCount(2, blocks, "The demo has two code blocks, each scrolling in its own child window.");
+
+		// The second block holds the long command line.
+		ImGuiWindowPtr shortBlock = blocks.MinBy(w => w.Pos.Y)!;
+		ImGuiWindowPtr longBlock = blocks.MaxBy(w => w.Pos.Y)!;
+		float available = markdown.ContentRegionRect.Max.X - longBlock.Pos.X;
+
+		Assert.IsLessThanOrEqualTo(available + 0.5f, longBlock.Size.X, "The long block reserved more than the available width.");
+		Assert.IsGreaterThan(0.0f, longBlock.ScrollMax.X, "The long line cannot be scrolled to.");
+		Assert.AreEqual(0.0f, longBlock.ScrollMax.Y, "The long block should only scroll sideways.");
+
+		Assert.AreEqual(0.0f, shortBlock.ScrollMax.X, "A block whose lines fit should not scroll.");
+		Assert.IsFalse(shortBlock.ScrollbarX, "A block whose lines fit should show no scrollbar.");
+		Assert.IsTrue(longBlock.ScrollbarX, "The long block should show its horizontal scrollbar.");
+	}
+
+	private static unsafe List<ImGuiWindowPtr> CodeBlockWindows()
+	{
+		List<ImGuiWindowPtr> found = [];
+		ImGuiContextPtr context = ImGui.GetCurrentContext();
+		for (int i = 0; i < context.Windows.Size; i++)
+		{
+			ImGuiWindowPtr window = context.Windows.Data[i];
+			string name = Marshal.PtrToStringUTF8((nint)window.Name) ?? string.Empty;
+			if (name.Contains("##mdcode", StringComparison.Ordinal) && window.Active)
+			{
+				found.Add(window);
+			}
+		}
+
+		return found;
 	}
 
 	[TestMethod]

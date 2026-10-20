@@ -36,6 +36,19 @@ internal sealed class LaidOutLine
 	public required float Height { get; init; }
 }
 
+/// <summary>How the lines of a block of inline content sit within the width they were wrapped to.</summary>
+internal enum InlineAlignment
+{
+	/// <summary>Lines start at the left edge. The default, and what a table column with no marker gets.</summary>
+	Left,
+
+	/// <summary>Lines are centered, as a <c>|:-:|</c> table column asks.</summary>
+	Center,
+
+	/// <summary>Lines end at the right edge, as a <c>|--:|</c> table column asks.</summary>
+	Right,
+}
+
 /// <summary>
 /// Pure word-wrap engine. Splits styled runs into word tokens and greedily packs them into
 /// lines that fit within a maximum width, using an injected measurement function.
@@ -120,6 +133,26 @@ internal static class InlineLayout
 
 		FlushLine();
 		return lines;
+	}
+
+	/// <summary>
+	/// The horizontal offset that places a line of <paramref name="lineWidth"/> pixels within
+	/// <paramref name="availableWidth"/> under <paramref name="alignment"/>. A line wider than the space
+	/// it was wrapped to (one word too long to break) starts at the left edge rather than before it.
+	/// </summary>
+	/// <param name="lineWidth">The laid-out width of the line, in pixels.</param>
+	/// <param name="availableWidth">The width the line was wrapped to, in pixels.</param>
+	/// <param name="alignment">The alignment to apply.</param>
+	/// <returns>The offset from the left edge, in pixels, never negative.</returns>
+	public static float AlignmentOffset(float lineWidth, float availableWidth, InlineAlignment alignment)
+	{
+		float slack = Math.Max(0.0f, availableWidth - lineWidth);
+		return alignment switch
+		{
+			InlineAlignment.Right => slack,
+			InlineAlignment.Center => slack * 0.5f,
+			_ => 0.0f,
+		};
 	}
 
 	/// <summary>
