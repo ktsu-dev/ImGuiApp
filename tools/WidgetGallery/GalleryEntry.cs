@@ -29,6 +29,9 @@ internal enum GalleryCategory
 
 	/// <summary>Dialogs and windows drawn by the deferred-drawing pump.</summary>
 	DialogsAndWindows,
+
+	/// <summary>Touch-style rows, pagers, pickers, sheets and bars built on the gesture and animation primitives.</summary>
+	MobileAndNavigation,
 }
 
 /// <summary>

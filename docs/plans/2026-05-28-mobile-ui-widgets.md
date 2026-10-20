@@ -10,8 +10,8 @@ Expand `ImGui.Widgets` with common mobile UI patterns that Dear ImGui does not s
 
 - **Phase 0 — Foundational Infrastructure**: ✅ complete (`GestureDetector`, `Tween`/`Spring`/`Easing`, `InertialScroll`, `OverlayHost`).
 - **Phase 1 — High-value, low-risk widgets**: ✅ complete (`Switch`, `SegmentedControl`, `Chip`/`ChipGroup`, `Stepper`, `Avatar`, `Badge`, `Rating`, `RangeSlider`, `PageIndicator`, `Card`, `SkeletonLoader`, `PinInput`).
-- **Phase 2 — Gesture-dependent widgets**: ⬜ not started. Next up — start with `SwipeableListItem` (already have `GestureDetector`).
-- **Phase 3 — Overlays & navigation**: ⬜ not started (`OverlayHost` is ready; begin with `Toast`).
+- **Phase 2 — Gesture-dependent widgets**: ✅ complete (`SwipeableListItem`, `Carousel`, `PickerWheel`, `TimePicker`, `PullToRefresh`, `LongPressMenu`). A wheel-style `DatePicker` was not built: the calendar `DatePicker` already covers dates (decision recorded on #490).
+- **Phase 3 — Overlays & navigation**: ⬜ not started (`OverlayHost` is ready; begin with `Toast`). Next up.
 - **Phase 4 — Polish**: ⬜ not started.
 
 ## Phase 0 — Foundational Infrastructure

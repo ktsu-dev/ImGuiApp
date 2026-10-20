@@ -47,7 +47,8 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Value Sliders", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View", "Reorderable Tree",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Mobile - Swipeable List", "Mobile - Carousel",
+		"Mobile - Picker Wheel", "Mobile - Pull to Refresh", "Mobile - Long Press Menu", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
 		"Parametric EQ",
 		"Step Grid",
@@ -470,6 +471,73 @@ public sealed class WidgetsDemoUITests
 
 		Assert.IsTrue(IsVisible("Action##cardAction"), "card action");
 		Assert.IsTrue(IsVisible("Loading##skeletonToggle"), "skeleton toggle");
+	}
+
+	[TestMethod]
+	public void SwipeableList_FullSwipeDeletesTheRow()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Swipeable List");
+		string row = "swipe-Lunch on Friday?";
+		Rectangle rect = harness.Probe.Rect(row)
+			?? throw new InvalidOperationException("The first row was never recorded by the probe.");
+		float y = rect.MinY + (rect.Height * 0.5f);
+
+		// Most of the way across, slowly, which commits the outermost action without a second click.
+		harness.Mouse.Drag(rect.MaxX - 10f, y, rect.MinX + 10f, y, 60);
+		harness.Step(40);
+
+		CollectionAssert.DoesNotContain(SwipeableListItemDemo.Subjects.ToList(), "Lunch on Friday?");
+		Assert.AreEqual("Delete: Lunch on Friday?", SwipeableListItemDemo.LastAction);
+	}
+
+	[TestMethod]
+	public void Carousel_NextPageButtonTurnsThePage()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Carousel");
+		Assert.IsTrue(IsVisible("demoCarousel"), "The carousel section drew no carousel.");
+
+		harness.Click("Next page##carouselNext");
+		harness.Step(30);
+
+		Assert.AreEqual(1, CarouselDemo.Page);
+	}
+
+	[TestMethod]
+	public void PickerWheel_MouseWheelPicksTheNextSize()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Picker Wheel");
+		Rectangle rect = harness.Probe.Rect("demoSize")
+			?? throw new InvalidOperationException("The size wheel was never recorded by the probe.");
+
+		harness.Mouse.Wheel(rect.MinX + (rect.Width * 0.5f), rect.MinY + (rect.Height * 0.5f), -1);
+		harness.Step();
+
+		Assert.AreEqual("Large", PickerWheelDemo.Size);
+		Assert.IsTrue(IsVisible("demoAlarm/hour"), "The time picker was not drawn.");
+	}
+
+	[TestMethod]
+	public void PullToRefresh_ShowsTheFeed()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Pull to Refresh");
+
+		Assert.IsTrue(IsVisible("demoFeed"), "The pull-to-refresh section drew no feed.");
+		Assert.AreEqual(5, PullToRefreshDemo.Posts.Count);
+	}
+
+	[TestMethod]
+	public void LongPressMenu_RightClickThenChooseShare()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Long Press Menu");
+		Rectangle rect = harness.Probe.Rect("demoCard0")
+			?? throw new InvalidOperationException("The first card was never recorded by the probe.");
+
+		harness.Mouse.Click(rect.MinX + (rect.Width * 0.5f), rect.MinY + (rect.Height * 0.5f), button: 1);
+		harness.Step(2);
+		harness.Click("demoCard0/Share");
+		harness.Step(2);
+
+		Assert.AreEqual("Share Beach", LongPressMenuDemo.LastAction);
 	}
 
 	[TestMethod]
