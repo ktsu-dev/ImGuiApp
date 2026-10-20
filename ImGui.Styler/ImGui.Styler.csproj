@@ -5,6 +5,10 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <!-- Trim- and AOT-clean, so an iOS app (always trimmed and AOT compiled) can take it (#671).
+         Warnings are errors here, so new reflection the trimmer can't follow fails the build. -->
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />

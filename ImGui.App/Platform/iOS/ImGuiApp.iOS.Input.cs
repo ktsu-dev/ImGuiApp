@@ -10,8 +10,10 @@ using Hexa.NET.ImGui;
 
 /// <summary>
 /// iOS input bridge for <see cref="ImGuiApp"/>: forwards touch, hardware-keyboard, and soft-keyboard
-/// events (raised by <c>ImGuiAppViewController</c>) into Dear ImGui's IO. Touch maps to the single
-/// ImGui mouse (§2.3 of the port plan); a multi-touch sidecar is deferred. Each event also refreshes
+/// events (raised by <c>ImGuiAppViewController</c>) into Dear ImGui's IO. One finger is the single
+/// ImGui mouse (§2.3 of the port plan) and a two-finger pan is the wheel, as
+/// <see cref="TouchScrollGesture"/> decides; a multi-touch sidecar is deferred. Pointer events are
+/// tagged as coming from a touch screen, so ImGui applies its touch rules. Each event also refreshes
 /// the idle timer so input wakes the app from its idle frame-rate.
 /// </summary>
 public static partial class ImGuiApp
@@ -21,7 +23,9 @@ public static partial class ImGuiApp
 	internal static void OnPointerMoved(Vector2 position)
 	{
 		OnUserInput();
-		ImGui.GetIO().AddMousePosEvent(position.X, position.Y);
+		ImGuiIOPtr io = ImGui.GetIO();
+		io.AddMouseSourceEvent(ImGuiMouseSource.TouchScreen);
+		io.AddMousePosEvent(position.X, position.Y);
 	}
 
 	/// <summary>Reports a primary-pointer press or release as the left ImGui mouse button.</summary>
@@ -29,8 +33,24 @@ public static partial class ImGuiApp
 	internal static void OnPointerButton(bool down)
 	{
 		OnUserInput();
-		ImGui.GetIO().AddMouseButtonEvent(0, down);
+		ImGuiIOPtr io = ImGui.GetIO();
+		io.AddMouseSourceEvent(ImGuiMouseSource.TouchScreen);
+		io.AddMouseButtonEvent(0, down);
 	}
+
+	/// <summary>Reports a two-finger pan as ImGui wheel input.</summary>
+	/// <param name="horizontal">Wheel steps across; positive scrolls left.</param>
+	/// <param name="vertical">Wheel steps down the page; positive scrolls up.</param>
+	internal static void OnPointerScroll(float horizontal, float vertical)
+	{
+		OnUserInput();
+		ImGuiIOPtr io = ImGui.GetIO();
+		io.AddMouseSourceEvent(ImGuiMouseSource.TouchScreen);
+		io.AddMouseWheelEvent(horizontal, vertical);
+	}
+
+	/// <summary>Gets how many points of two-finger pan make one wheel step for the window under the mouse.</summary>
+	internal static Vector2 PointsPerWheelStep => TouchScrollWheel.PointsPerWheelStep();
 
 	/// <summary>Reports a key press or release, translated to an <see cref="ImGuiKey"/>.</summary>
 	/// <param name="key">The mapped ImGui key; <see cref="ImGuiKey.None"/> is ignored.</param>

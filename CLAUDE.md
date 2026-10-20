@@ -257,6 +257,22 @@ per-frame `BeginFrame` has already run, so `Enable` begins ImGuizmo itself when 
 harness shares its context the same way the controller does, so it works there unchanged;
 `tests/ImGui.App.Testing.Tests/EnableExtensionsTests.cs` drives it through real frames.
 
+On iOS the extension manager isn't compiled, so no extension can be used there yet; a trim-safe
+registration path is #583. `AutoDiscoverExtensions = false` plus `EnableExtensions` is the desktop
+pattern, documented under "Extensions" in `ImGui.App/README.md`.
+
+### Touch scrolling
+
+Dear ImGui scrolls only through the wheel, so on a touch screen `TouchScrollGesture`
+(`ImGui.App/Platform/`) keeps one finger as the mouse and turns two or more moving together into wheel
+steps, scaled by `TouchScrollWheel` from the hovered window's `FontRefSize` and inner size (two lines
+across, five down, at most two thirds of the window) so the content follows the fingers. The second
+finger releases the first's press with the mouse at `Offscreen`, which is what stops a tap-turned-pan
+clicking the button under it, and the mouse stays where the pan began. The gesture knows nothing of
+ImGui or UIKit; `ImGuiAppViewController` feeds it every touch. `TouchScrollGestureTests` in
+`ImGui.App.Tests` covers the rules and drives a harness window, which is why that project references
+`ImGui.App.Testing`.
+
 ### Built-in menus
 
 `ImGuiApp.RenderAppMenu` appends an Accessibility menu (UI scale) and a Debug menu (ImGui demo,

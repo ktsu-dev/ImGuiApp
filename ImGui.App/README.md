@@ -344,6 +344,46 @@ a `ClipboardImage` from your own PNG and BGRA rows. `IImageClipboard` is an inte
 in a clipboard of their own. Reading starts a short-lived process everywhere but Windows, bounded by a
 timeout of a few seconds.
 
+### Extensions: ImGuizmo, ImNodes and ImPlot
+
+By default `ImGuiApp` finds whichever of the three extensions your application references and sets
+each one up before the first frame. Finding them is reflection, and ImNodes and ImPlot each get a
+native context, which costs startup time whether or not you draw with them. Two settings narrow it:
+
+- `Extensions` names the ones to set up at launch. `ImGuiAppExtensions.None` sets up none.
+- `AutoDiscoverExtensions = false` also sets up none, and overrides `Extensions`.
+
+Turn auto-discovery off, or set `Extensions` to `None`, when the application draws with none of them
+at startup. Then name an extension the first time it is needed:
+
+```csharp
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    AutoDiscoverExtensions = false,
+    OnRender = delta =>
+    {
+        if (nodeEditorOpen)
+        {
+            // Idempotent; call it on the render thread, before the first ImNodes call.
+            ImGuiApp.EnableExtensions(ImGuiAppExtensions.ImNodes);
+            DrawNodeEditor();
+        }
+    },
+});
+```
+
+`EnableExtensions` returns which of the extensions asked for are ready. One missing from the result
+isn't referenced, and drawing with it faults in native code. It throws before launch, where the
+config is the setting.
+
+**iOS.** The iOS build leaves the extension manager out entirely, so it never auto-discovers and
+`EnableExtensions` doesn't exist there. There is no way to use ImGuizmo, ImNodes or ImPlot on iOS yet.
+Three things stand in the way: the manager finds the extensions by reflection, which the trimmer
+can't follow; their native libraries aren't built for iOS, the way `scripts/build-cimgui-ios.sh`
+builds cimgui; and any of their entry points that are C variadics may crash on the Apple ARM64 ABI
+as `igText` does. A trim-safe registration path that calls each extension's entry points directly is
+tracked in #583.
+
 ### PID Frame Limiting
 
 ImGuiApp features a sophisticated **PID (Proportional-Integral-Derivative) controller** for precise frame rate limiting. This system provides highly accurate target FPS control that learns and adapts to your system's characteristics.
