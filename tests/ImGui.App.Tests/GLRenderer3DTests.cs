@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 
 using ktsu.ImGui.App.ImGuiController;
 
+using ktsu.ImGui.Rendering;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Silk.NET.OpenGL;

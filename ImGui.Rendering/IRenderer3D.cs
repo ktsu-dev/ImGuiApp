@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App;
+namespace ktsu.ImGui.Rendering;
 
 using System.Numerics;
 
@@ -115,7 +115,7 @@ public readonly record struct DrawState3D
 /// <see cref="Vector2"/>. Making those three things parameters is the whole of it.
 /// </para>
 /// <para>
-/// Separate from <see cref="IRendererBackend"/> rather than part of it, so that no existing backend
+/// Separate from <c>IRendererBackend</c> rather than part of it, so that no existing backend
 /// breaks and none is forced to implement it. A caller checks once with
 /// <c>ImGuiApp.TryGetRenderer3D</c> and falls back to its own CPU path otherwise, which the
 /// existing <c>CreateTexture</c>/<c>UpdateTexture</c> route already supports.
