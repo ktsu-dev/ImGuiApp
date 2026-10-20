@@ -33,7 +33,7 @@ internal static class DataAndSignalsTiles
 
 		for (int i = 0; i < lines.Length; i++)
 		{
-			entries.Add(new LogEntry(lines[i].Level, lines[i].Message, origin.AddMilliseconds(i * 437), lines[i].Category));
+			entries.Add(new LogEntry(lines[i].Level, lines[i].Message, origin.AddMilliseconds(i * 437d), lines[i].Category));
 		}
 
 		ImGuiWidgets.LogViewState state = new() { CollapseRepeats = true };

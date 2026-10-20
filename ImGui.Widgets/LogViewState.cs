@@ -412,7 +412,7 @@ public static partial class ImGuiWidgets
 				LogEntry entry = entries[source];
 				text.Append(entry.Timestamp.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture))
 					.Append(" [")
-					.Append(entry.Level.ToString())
+					.Append(entry.Level)
 					.Append("] ");
 
 				if (!string.IsNullOrEmpty(entry.Category))
