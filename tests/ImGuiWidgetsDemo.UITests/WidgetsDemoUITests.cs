@@ -48,7 +48,9 @@ public sealed class WidgetsDemoUITests
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Value Sliders", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View", "Reorderable Tree",
 		"Mobile - Decorators", "Mobile - Containers & Loaders", "Mobile - Swipeable List", "Mobile - Carousel",
-		"Mobile - Picker Wheel", "Mobile - Pull to Refresh", "Mobile - Long Press Menu", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
+		"Mobile - Picker Wheel", "Mobile - Pull to Refresh", "Mobile - Long Press Menu",
+		"Mobile - Toasts", "Mobile - Action Sheet", "Mobile - Bottom Sheet", "Mobile - Navigation Drawer", "Mobile - Search Overlay",
+		"Mobile - Floating Action Button", "Mobile - Bottom Navigation", "Mobile - App Bar", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
 		"Parametric EQ",
 		"Step Grid",
@@ -538,6 +540,108 @@ public sealed class WidgetsDemoUITests
 		harness.Step(2);
 
 		Assert.AreEqual("Share Beach", LongPressMenuDemo.LastAction);
+	}
+
+	[TestMethod]
+	public void Toasts_SnackbarUndoRuns()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Toasts");
+
+		harness.Click("Show a snackbar##toastSnackbar");
+		harness.Step(20);
+		harness.Click("demoToasts/action");
+		harness.Step(20);
+
+		Assert.AreEqual(1, ToastDemo.Undone);
+	}
+
+	[TestMethod]
+	public void ActionSheet_AnswersWithTheButtonChosen()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Action Sheet");
+
+		harness.Click("Photo options##actionSheetOpen");
+		harness.Step(30);
+		harness.Click("demoActionSheet/Duplicate");
+		harness.Step(30);
+
+		Assert.AreEqual("Duplicate", ActionSheetDemo.LastAnswer);
+	}
+
+	[TestMethod]
+	public void BottomSheet_OpensAtHalf()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Bottom Sheet");
+
+		harness.Click("Half##bottomSheetHalf");
+		harness.Step(60);
+
+		Assert.AreEqual(BottomSheetDetent.Half, BottomSheetDemo.Sheet.Detent);
+		Assert.IsTrue(IsVisible("demoBottomSheet/handle"));
+		BottomSheetDemo.Sheet.Close();
+		harness.Step(60);
+	}
+
+	[TestMethod]
+	public void NavigationDrawer_PickingADestinationClosesIt()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Navigation Drawer");
+
+		harness.Click("Open drawer##drawerOpen");
+		harness.Step(60);
+		harness.Click("demoDrawer/Sent");
+		harness.Step(60);
+
+		Assert.AreEqual("Sent", NavigationDrawerDemo.Destination);
+		Assert.IsFalse(NavigationDrawerDemo.Drawer.IsOpen);
+	}
+
+	[TestMethod]
+	public void SearchOverlay_EnterChoosesTheBestMatch()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Search Overlay");
+
+		harness.Click("Search fruit##searchOpen");
+		harness.Step(30);
+		harness.Keyboard.Type("mango");
+		harness.Step(2);
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(30);
+
+		Assert.AreEqual("Mango", SearchOverlayDemo.Chosen);
+	}
+
+	[TestMethod]
+	public void FloatingActionButton_AddsANote()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Floating Action Button");
+
+		harness.Click("demoFab");
+		harness.Step();
+
+		Assert.AreEqual(4, FloatingActionButtonDemo.Notes);
+	}
+
+	[TestMethod]
+	public void BottomNavigation_SwitchesThePanel()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Bottom Navigation");
+
+		harness.Click("demoBottomNav/Library");
+		harness.Step(2);
+
+		Assert.AreEqual(2, BottomNavigationBarDemo.Panel.ActiveTabIndex);
+	}
+
+	[TestMethod]
+	public void AppBar_ReportsItsButtons()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - App Bar");
+
+		harness.Click("demoAppBar/Search");
+		harness.Step();
+
+		Assert.AreEqual("Search", AppBarDemo.LastAction);
 	}
 
 	[TestMethod]

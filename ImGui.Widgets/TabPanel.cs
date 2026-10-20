@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
@@ -30,10 +31,29 @@ public static partial class ImGuiWidgets
 		/// </summary>
 		public Collection<Tab> Tabs { get; private set; } = [];
 
+		private int activeTabIndex;
+		private int requestedTabIndex = -1;
+
 		/// <summary>
-		/// The index of the currently active tab.
+		/// The index of the currently active tab. Setting it selects that tab on the next
+		/// <see cref="Draw"/>, as if its header had been clicked.
 		/// </summary>
-		public int ActiveTabIndex { get; set; }
+		public int ActiveTabIndex
+		{
+			get => activeTabIndex;
+			set
+			{
+				activeTabIndex = value;
+				requestedTabIndex = value;
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets a value indicating whether the panel draws its own row of tab headers. Turn it off
+		/// when something else picks the tab, such as a <see cref="BottomNavigationBar(string, TabPanel, IReadOnlyList{string})"/>;
+		/// the panel then draws only the active tab's content.
+		/// </summary>
+		public bool ShowTabStrip { get; set; } = true;
 
 		/// <summary>
 		/// The ID of the currently active tab.
@@ -355,9 +375,9 @@ public static partial class ImGuiWidgets
 			if (index >= 0 && index < Tabs.Count)
 			{
 				Tabs.RemoveAt(index);
-				if (ActiveTabIndex >= Tabs.Count)
+				if (activeTabIndex >= Tabs.Count)
 				{
-					ActiveTabIndex = Math.Max(0, Tabs.Count - 1);
+					activeTabIndex = Math.Max(0, Tabs.Count - 1);
 					TabChangedDelegate?.Invoke(ActiveTabIndex);
 					TabChangedByIdDelegate?.Invoke(ActiveTabId ?? string.Empty);
 				}
@@ -386,6 +406,18 @@ public static partial class ImGuiWidgets
 		{
 			if (Tabs.Count == 0)
 			{
+				return;
+			}
+
+			if (requestedTabIndex >= Tabs.Count || (requestedTabIndex >= 0 && !Tabs[requestedTabIndex].IsVisible))
+			{
+				requestedTabIndex = -1;
+			}
+
+			if (!ShowTabStrip)
+			{
+				requestedTabIndex = -1;
+				ActiveTab?.Content?.Invoke();
 				return;
 			}
 
@@ -427,6 +459,11 @@ public static partial class ImGuiWidgets
 				}
 
 				ImGuiTabItemFlags tabFlags = ResolveTabItemFlags(tab);
+				if (i == requestedTabIndex)
+				{
+					tabFlags |= ImGuiTabItemFlags.SetSelected;
+				}
+
 				bool tabOpen = true;
 
 				bool selected = ImGui.BeginTabItem($"{tab.Label}##{tab.Id}", ref tabOpen, tabFlags);
@@ -470,9 +507,19 @@ public static partial class ImGuiWidgets
 
 		private void DrawActiveTab(Tab tab, int i)
 		{
-			if (ActiveTabIndex != i)
+			// Dear ImGui honours a selection made from outside a frame late, so the tab it had selected
+			// draws once more first; that frame must not undo the request.
+			if (requestedTabIndex >= 0 && requestedTabIndex != i)
 			{
-				ActiveTabIndex = i;
+				tab.Content?.Invoke();
+				ImGui.EndTabItem();
+				return;
+			}
+
+			requestedTabIndex = -1;
+			if (activeTabIndex != i)
+			{
+				activeTabIndex = i;
 				TabChangedDelegate?.Invoke(i);
 				TabChangedByIdDelegate?.Invoke(tab.Id);
 			}

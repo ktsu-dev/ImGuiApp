@@ -15,8 +15,8 @@ internal readonly record struct DemoSection(Action Show, Action ResetState, Acti
 /// </summary>
 internal static class DemoSections
 {
-	/// <summary>Gets the sections of the Widget Demos tab, in demo order.</summary>
-	internal static IReadOnlyList<DemoSection> WidgetDemos { get; } =
+	/// <summary>The Widget Demos sections before the mobile ones.</summary>
+	private static IReadOnlyList<DemoSection> EarlyWidgetDemos { get; } =
 	[
 		new(MobileFormControlsDemo.Show, MobileFormControlsDemo.ResetState),
 		new(PropertyGridDemo.Show, PropertyGridDemo.ResetState),
@@ -31,11 +31,29 @@ internal static class DemoSections
 		new(ReorderableTreeDemo.Show, ReorderableTreeDemo.ResetState),
 		new(MobileDecoratorsDemo.Show, MobileDecoratorsDemo.ResetState),
 		new(MobileContainersDemo.Show, MobileContainersDemo.ResetState),
+	];
+
+	/// <summary>The mobile and navigation sections of the Widget Demos tab.</summary>
+	private static IReadOnlyList<DemoSection> MobileDemos { get; } =
+	[
 		new(SwipeableListItemDemo.Show, SwipeableListItemDemo.ResetState),
 		new(CarouselDemo.Show, CarouselDemo.ResetState),
 		new(PickerWheelDemo.Show, PickerWheelDemo.ResetState),
 		new(PullToRefreshDemo.Show, PullToRefreshDemo.ResetState),
 		new(LongPressMenuDemo.Show, LongPressMenuDemo.ResetState),
+		new(ToastDemo.Show, ToastDemo.ResetState),
+		new(ActionSheetDemo.Show, ActionSheetDemo.ResetState),
+		new(BottomSheetDemo.Show, BottomSheetDemo.ResetState),
+		new(NavigationDrawerDemo.Show, NavigationDrawerDemo.ResetState),
+		new(SearchOverlayDemo.Show, SearchOverlayDemo.ResetState),
+		new(FloatingActionButtonDemo.Show, FloatingActionButtonDemo.ResetState),
+		new(BottomNavigationBarDemo.Show, BottomNavigationBarDemo.ResetState),
+		new(AppBarDemo.Show, AppBarDemo.ResetState),
+	];
+
+	/// <summary>The Widget Demos sections after the mobile ones.</summary>
+	private static IReadOnlyList<DemoSection> LateWidgetDemos { get; } =
+	[
 		new(HistogramAndHandleTrackDemo.Show, HistogramAndHandleTrackDemo.ResetState),
 		new(CurveTrackDemo.Show, CurveTrackDemo.ResetState),
 		new(TimecodeFieldDemo.Show, TimecodeFieldDemo.ResetState),
@@ -54,6 +72,10 @@ internal static class DemoSections
 		new(DiffViewDemo.Show, DiffViewDemo.ResetState),
 		new(ToolbarDemo.Show, ToolbarDemo.ResetState),
 	];
+
+	/// <summary>Gets the sections of the Widget Demos tab, in demo order.</summary>
+	/// <remarks>Built from three lists so no one initializer is coupled to every section class.</remarks>
+	internal static IReadOnlyList<DemoSection> WidgetDemos { get; } = [.. EarlyWidgetDemos, .. MobileDemos, .. LateWidgetDemos];
 
 	/// <summary>Gets the sections of the Advanced Demos tab, in demo order.</summary>
 	internal static IReadOnlyList<DemoSection> AdvancedDemos { get; } =
