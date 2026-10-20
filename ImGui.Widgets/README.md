@@ -65,6 +65,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
 - **`EnvelopeEditor`**: A DAHDSR envelope drawn from the same `Envelope.LevelAt` a synth would call; drag breakpoints to retime segments and set the sustain level, drag tension handles to bend a segment, right-click one to straighten it
 - **`ParametricEq`**: An EQ response curve with a draggable node per band: drag for frequency and gain, wheel for Q. You plot your own response, or `EqResponse`'s RBJ cookbook biquads; `LogFrequencyAxis` is shared with `SpectrumAnalyzer`, so the two line up when stacked
+- **`LogView`**: The console panel of an engine or tool: a virtualized log of `LogEntry` rows with a text filter, a toggle per level, collapsing of repeated lines, auto-follow that stops when you scroll up and resumes at the bottom, multi-row selection and copy. The log is yours to append to; a caller-owned `LogViewState` indexes it incrementally, so new lines cost only their own filtering
 
 ### Image and Colour
 
@@ -1058,6 +1059,36 @@ if (ImGuiWidgets.ParametricEq("EQ", bands, f => ImGuiWidgets.EqResponse.TotalDb(
 Pass a `SpectrumAnalyzerState`'s own `Axis` to put the EQ on exactly the analyzer's frequency scale:
 a frequency then lands at the same fraction of the width in both. Each node is probe-visible as
 `{label}/band{i}`.
+
+### Log View
+
+The log is a list you own and append to, oldest first; the widget never copies it. A
+`LogViewState` per view holds the filter, the shown levels, collapsing, following and the
+selection, and indexes the log incrementally: appending lines filters only those lines. Adapt your
+own logger to `LogEntry`; nothing here references a logging framework.
+
+```csharp
+List<LogEntry> log = [];
+ImGuiWidgets.LogViewState logState = new();
+ImGuiWidgets.LogViewOptions logOptions = new() { Size = new Vector2(0, 300) };
+
+log.Add(new LogEntry(LogViewLevel.Warning, "frame hitch: 41 ms", DateTime.Now, "render"));
+
+// Each frame.
+ImGuiWidgets.LogView("Console", log, logState, logOptions);
+```
+
+Rows are virtualized through `VirtualTable`, so a log of a hundred thousand lines costs only the
+rows on screen. The filter is the same `SearchBox` used elsewhere, matched against each message.
+While the list is hovered or focused, Ctrl+C copies the selection, Ctrl+A selects every row and
+Escape clears it; a right click offers Copy, Copy all visible and Clear selection. `OnCopy` takes
+the copied text instead of the clipboard.
+
+The index sees appends and a log that shrinks. A ring buffer that drops old lines as it adds new
+ones keeps its length, so tell the state with `EntriesRemovedFromStart(count)`; after editing
+entries in place, call `Invalidate()`. The widget is probe-visible as `{label}`, its filter as
+`{label}/filter`, its toggles by their captions (`{label}/Warn`, `{label}/Follow`) and its rows as
+`{label}/rows/[i]`.
 
 ### Step Grid
 
