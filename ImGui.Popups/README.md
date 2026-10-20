@@ -23,7 +23,10 @@ A comprehensive library for custom popup windows and modal dialogs for Dear ImGu
   - Open and Save modes
   - File and Directory targeting
   - Pattern filtering support
-  - Navigation breadcrumbs
+  - Back, forward and up, and a breadcrumb path you can click to type a path
+  - A sidebar of your own places, the user's folders, recent folders and drives
+  - Search, hidden files, and a new folder button
+  - A sortable table (name, size, modified) or a grid of thumbnails you supply
 
 ### ✨ Key Features
 - **Responsive Design**: All popups adapt to content and custom sizing
@@ -158,6 +161,37 @@ Set `ConfirmOverwrite = true` and a save that picks a file that already exists a
 first. Replace chooses the file and closes the browser; Cancel, Escape or closing the question leave
 the browser open where it was. It is off by default, so an application that confirms replacements
 itself does not ask twice.
+
+The browser has a toolbar (back, forward, up, refresh, a breadcrumb path and a search box), a
+sidebar of places, recent folders and drives, and a footer with New Folder, Hidden files, the view
+choice and the confirm buttons. Clicking the empty part of the path, or Ctrl+L, turns it into a text
+box: a folder typed there is opened, and a file is chosen. Alt+Left, Alt+Right, Alt+Up (or
+Backspace), F5 and Enter do what they do in a file manager.
+
+Thumbnails come from you, since this package uploads no textures. Set `ThumbnailResolver` and the
+grid view, and a preview of the selected file in the sidebar, draw what it returns:
+
+```csharp
+browser.ThumbnailResolver = file =>
+    thumbnailCache.TryGet(file, out Texture texture)
+        ? new ImGuiPopups.FilesystemBrowserThumbnail(texture.Id, new Vector2(texture.Width, texture.Height))
+        : null; // still being made, or not a picture: the tile shows the extension
+```
+
+It is called for each file tile on screen, every frame, so look the picture up rather than decoding
+the file there. Other settings:
+
+| Member | What it does |
+|---|---|
+| `View` | `FilesystemBrowserView.List` (the default) or `Thumbnails`; the browser keeps whichever the user picked |
+| `ThumbnailSize` | The thumbnail edge in pixels at 100% scale, 96 by default; the user changes it with a slider |
+| `ShowHiddenFiles` | Lists hidden files and folders; off by default |
+| `Places` | Your own folders, listed above the user's home, desktop, documents, pictures and downloads |
+| `RecentFolders` | Folders something was chosen in, most recent first; fill it on start and save it on exit to keep it |
+| `NavigateTo(folder)` | Shows a folder, now or when the browser next opens |
+| `Directory` | The folder being shown |
+
+A folder chooser with no folder selected chooses the folder being shown.
 
 > File callbacks receive an `AbsoluteFilePath` and directory callbacks an `AbsoluteDirectoryPath`
 > (from `ktsu.Semantics.Paths`). Each `FileOpen`/`FileSave`/`ChooseDirectory` overload also
