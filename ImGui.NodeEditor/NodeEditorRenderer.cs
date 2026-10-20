@@ -187,6 +187,18 @@ public partial class NodeEditorRenderer
 	public Vector4? HighlightColor { get; set; }
 
 	/// <summary>
+	/// The colour a pinned node's outline is drawn in, or null to take ImNodes' own pin colour so it
+	/// follows the theme.
+	/// </summary>
+	/// <remarks>
+	/// A pinned node (<see cref="Node.IsPinned"/>) is held still by the layout while every other node
+	/// still moves around it, so without a mark of its own a user cannot tell why one node refuses
+	/// to settle with the rest. It is outlined as thickly as a highlighted node, which takes over
+	/// while the node is highlighted.
+	/// </remarks>
+	public Vector4? PinnedNodeColor { get; set; }
+
+	/// <summary>
 	/// Called inside each node, after its pins and before the node ends, so a host can draw its own
 	/// content in the node body. Null draws nothing extra, which is the shape of a node this renderer
 	/// has always drawn.
@@ -591,10 +603,13 @@ public partial class NodeEditorRenderer
 		// ImNodes copies the outline colour and border thickness into the node as it begins it, so a
 		// highlighted node is styled around its own submission rather than by the style in force when
 		// the editor ends.
+		// A pinned node is outlined the same way, in its own colour, so it reads as held in place. A
+		// hover highlight is the more immediate answer and wins while it lasts.
 		bool highlighted = highlightedNodes.Contains(node.Id);
-		if (highlighted)
+		bool outlined = highlighted || node.IsPinned;
+		if (outlined)
 		{
-			ImNodes.PushColorStyle(ImNodesCol.NodeOutline, highlightColor);
+			ImNodes.PushColorStyle(ImNodesCol.NodeOutline, highlighted ? highlightColor : PinnedColorU32());
 			ImNodes.PushStyleVar(ImNodesStyleVar.NodeBorderThickness, HighlightedNodeBorderThickness * Zoom);
 		}
 
@@ -666,7 +681,7 @@ public partial class NodeEditorRenderer
 
 		ImNodes.EndNode();
 
-		if (highlighted)
+		if (outlined)
 		{
 			ImNodes.PopStyleVar();
 			ImNodes.PopColorStyle();
@@ -708,6 +723,7 @@ public partial class NodeEditorRenderer
 		{
 			PinValueKind.Boolean => EditBoolean(id, current),
 			PinValueKind.Int32 => EditInt32(id, current),
+			PinValueKind.Int64 => EditInt64(id, current),
 			PinValueKind.Single => EditSingle(id, current),
 			PinValueKind.Double => EditDouble(id, current),
 			PinValueKind.String => EditString(id, current),
@@ -741,6 +757,20 @@ public partial class NodeEditorRenderer
 	{
 		int value = current as int? ?? 0;
 		return (ImGui.DragInt(id, ref value), value);
+	}
+
+	/// <summary>Edit a <see cref="long"/> pin as a drag box.</summary>
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here.", Justification = "Dear ImGui has no 64-bit DragInt, so the value goes through DragScalar's pointer; it is pinned for the call and not retained.")]
+	private static (bool Changed, object? Value) EditInt64(string id, object? current)
+	{
+		long value = current as long? ?? 0L;
+		bool changed;
+		unsafe
+		{
+			changed = ImGui.DragScalar(id, ImGuiDataType.S64, &value);
+		}
+
+		return (changed, value);
 	}
 
 	/// <summary>Edit a <see cref="float"/> pin as a drag box.</summary>
@@ -892,6 +922,11 @@ public partial class NodeEditorRenderer
 	/// <summary>
 	/// The colour a highlight is drawn in: whatever was asked for, or ImNodes' hovered-link colour.
 	/// </summary>
+	private uint PinnedColorU32() =>
+		PinnedNodeColor is Vector4 color
+			? ImGui.ColorConvertFloat4ToU32(color)
+			: ImNodes.GetStyle().Colors[(int)ImNodesCol.Pin];
+
 	private uint HighlightColorU32() =>
 		HighlightColor is Vector4 color
 			? ImGui.ColorConvertFloat4ToU32(color)
@@ -1259,6 +1294,11 @@ public partial class NodeEditorRenderer
 	/// zoomed measurement divided by the zoom, as does a node measured for the first time. Those
 	/// sizes are approximate, and each is corrected the next time the view is at its own scale.
 	/// </para>
+	/// <para>
+	/// The engine is the record of what has been reported: a node whose size in the engine differs
+	/// from the last one reported for its id is reported again, so a graph cleared and rebuilt under
+	/// the same ids within one frame is measured like a new one rather than left at zero size.
+	/// </para>
 	/// </remarks>
 	[SuppressMessage("Major Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions.", Justification = "Explicit loop is clearer; the loop contains a continue and dictionary mutation that would not simplify cleanly.")]
 	public Dictionary<int, Vector2> GetNodeDimensionUpdates(NodeEditorEngine engine)
@@ -1282,6 +1322,13 @@ public partial class NodeEditorRenderer
 
 			if (!lastKnownNodeDimensions.TryGetValue(node.Id, out NodeMeasurement last))
 			{
+				reported = measured / zoom;
+			}
+			else if (Vector2.Distance(node.Dimensions, last.Reported) > 0.1f)
+			{
+				// The engine no longer holds what was last reported for this id: the graph was cleared
+				// and rebuilt under the same ids, or a node's size was reset some other way. Its
+				// measurement may be unchanged, so it is reported as if measured for the first time.
 				reported = measured / zoom;
 			}
 			else if (Math.Abs(last.Zoom - zoom) > 0.0001f)

@@ -169,6 +169,24 @@ public sealed class InlinePinEditorKindTests
 		Assert.IsGreaterThan(5, (int)engine.GetPinValue(pinId)!, "Dragging right should have raised the value.");
 	}
 
+	/// <summary>
+	/// A <c>long</c> pin draws a <c>DragScalar</c> over a 64-bit integer, which scrubs like
+	/// <c>DragInt</c>. The value starts past what an <c>int</c> holds, so a drag that went through 32
+	/// bits anywhere could not come back above it.
+	/// </summary>
+	[TestMethod]
+	public void Int64_ScrubsOnDrag()
+	{
+		const long Start = 5_000_000_000L;
+		int pinId = StartWith("Ticks", typeof(long), Start);
+
+		Vector2 start = EditorPoint(0.25f);
+		harness.Mouse.Drag(start.X, start.Y, start.X + 40f, start.Y);
+		harness.Step(3);
+
+		Assert.IsGreaterThan(Start, (long)engine.GetPinValue(pinId)!, "Dragging right should have raised the value.");
+	}
+
 	[TestMethod]
 	public void Single_ScrubsOnDrag()
 	{
@@ -316,19 +334,19 @@ public sealed class InlinePinEditorKindTests
 	}
 
 	/// <summary>
-	/// The ninth kind. Nothing here can edit a <c>long</c> — Dear ImGui has no <c>InputLong</c> — so
-	/// no editor is drawn at all, which shows up as the node being no wider than its label alone.
+	/// The unsupported kind. Nothing here can edit a <c>decimal</c>, so no editor is drawn at all,
+	/// which shows up as the node being no wider than its label alone.
 	/// </summary>
 	[TestMethod]
 	public void Unsupported_GetsNoEditor()
 	{
 		renderer.DrawInlinePinEditors = false;
-		StartWith("BigCount", typeof(long), 5L);
+		StartWith("Price", typeof(decimal), 5m);
 		float withoutEditors = engine.Nodes[0].Dimensions.X;
 
 		renderer.DrawInlinePinEditors = true;
 		harness.Step(5);
 
-		Assert.AreEqual(withoutEditors, engine.Nodes[0].Dimensions.X, "Nothing here can edit a long, so nothing should have been drawn.");
+		Assert.AreEqual(withoutEditors, engine.Nodes[0].Dimensions.X, "Nothing here can edit a decimal, so nothing should have been drawn.");
 	}
 }
