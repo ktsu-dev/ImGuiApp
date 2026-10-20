@@ -110,6 +110,15 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
 
+### Mobile and Navigation
+
+- **`SwipeableListItem`**: A row that slides aside to reveal actions on either edge, snapping open or shut on release; a long swipe commits the outermost action without a second tap
+- **`Carousel`**: Pages dragged or flicked sideways one at a time, with clickable page dots. A quick flick turns the page even when the drag was short, and never skips a page
+- **`PickerWheel`**: A column of items on a turning cylinder, over strings or a stepped range of whole numbers, optionally wrapping. Flicks coast and settle on the nearest item; a click turns a neighbouring row to the middle
+- **`TimePicker`**: Hour and minute wheels, plus an AM/PM wheel on a twelve-hour clock, with an optional minute step
+- **`PullToRefresh`**: A scrolling region that refreshes when pulled down from its top, holding open with a spinner until the caller reports the refresh finished. Opened in a `using` block
+- **`LongPressMenu`**: A menu opened by holding something down, or right-clicking it; the target shrinks while held and bumps as the menu opens
+
 ### Motion and Gestures
 
 - **`Tween`** / **`Spring`** / **`Easing`**: Frame-rate independent time-based interpolation, a damped harmonic oscillator that chases a target, and the easing curves to shape them

@@ -99,4 +99,11 @@ public sealed class Spring(float initial = 0.0f, float stiffness = 170.0f, float
 
 	/// <summary>Set a new target without disturbing position or velocity. Equivalent to assigning <see cref="Target"/>.</summary>
 	public void SetTarget(float target) => Target = target;
+
+	/// <summary>
+	/// Replace the current velocity, keeping the position. Use it to hand a released drag's speed to the
+	/// spring, so the settle continues the motion rather than starting from rest.
+	/// </summary>
+	/// <param name="velocity">The new velocity, in units per second.</param>
+	public void SetVelocity(float velocity) => Velocity = velocity;
 }
