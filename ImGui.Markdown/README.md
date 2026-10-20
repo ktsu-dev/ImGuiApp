@@ -77,7 +77,7 @@ ImGuiMarkdown.Render(markdown, config);
 
 | Option | Type | Description |
 | ------ | ---- | ----------- |
-| `FontResolver` | `Func<MarkdownFontRole, float, ImFontPtr?>?` | Resolves a font for a typographic role (`Body`, `Bold`, `Italic`, `BoldItalic`, `Code`, `H1`-`H6`) at a target pixel size. Return `null` for a role to fall back to the current font at that size, with faux bold/italic styling applied for emphasis roles. |
+| `FontResolver` | `Func<MarkdownFontRole, float, ImFontPtr?>?` | Resolves a font for a typographic role (`Body`, `Bold`, `Italic`, `BoldItalic`, `Code`, `H1`-`H6`) at a target pixel size. Return `null` for a role to fall back to the current font at that size, with faux bold/italic styling applied for emphasis roles. Text in a table's header row resolves `Bold` (or `BoldItalic` where it is emphasised), and heading text resolves its `H1`-`H6` role, emphasis included. |
 | `OnLinkClicked` | `Action<string>?` | Invoked when a link is clicked. When `null`, http, https, and mailto links open with the OS default handler; other schemes are ignored. |
 | `CodeBlockRenderer` | `Action<string?, string>?` | Draws fenced and indented code blocks, receiving the fence's info string (the language, or `null`) and the block's text, and taking over both drawing and reserving the block's layout space. When `null`, code blocks render as monospace text on a shaded panel. |
 | `ImageResolver` | `Func<string, MarkdownImageResult?>?` | Resolves an image source string to a `MarkdownImageResult` (an ImGui texture ID and a draw size). Return `null`, or omit the resolver, to draw a placeholder box with the alt text instead. |
@@ -147,7 +147,8 @@ private static MarkdownImageResult? ResolveImage(string source)
 ## Limitations
 
 - No built-in syntax highlighting; code blocks render in a plain monospace style unless a `CodeBlockRenderer` is supplied (for example `ktsu.ImGui.SyntaxHighlighting`)
-- No asynchronous remote image download; remote or unresolved image sources always show a placeholder box with the alt text
+- No asynchronous remote image download; remote or unresolved image sources always show a placeholder box with the alt text, 120 pixels wide, with a longer description clipped to it. A placeholder inside a link is clickable, like a resolved image
+- An inline code span keeps its spaces and never wraps; one wider than the line gets a line of its own
 - Raw HTML blocks and inline HTML are rendered as escaped, literal text, not interpreted
 - Faux italic renders upright when no italic font is supplied through `FontResolver`, since no glyph shear is applied
 

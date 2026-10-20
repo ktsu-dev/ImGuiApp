@@ -247,6 +247,59 @@ public sealed class InlineLayoutTests
 		Assert.AreEqual("0 1", TokenXs(lines[0]));
 	}
 
+	[TestMethod]
+	public void Wrap_CodeRun_IsOneTokenWithItsSpacesKept()
+	{
+		List<InlineRun> runs = [new("x   = 1", MarkdownFontRole.Code, null, false)];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual(1, lines[0].Tokens.Count);
+		Assert.AreEqual("x   = 1", lines[0].Tokens[0].Text);
+		Assert.AreEqual(7f, lines[0].Tokens[0].Width);
+	}
+
+	[TestMethod]
+	public void Wrap_CodeRunBetweenWords_KeepsTheSpacesAroundIt()
+	{
+		// "Run `dotnet build` now"
+		List<InlineRun> runs =
+		[
+			new("Run ", MarkdownFontRole.Body, null, false),
+			new("dotnet build", MarkdownFontRole.Code, null, false),
+			new(" now", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("Run|dotnet build|now", TokenTexts(lines[0]));
+		Assert.AreEqual("0 4 17", TokenXs(lines[0]));
+	}
+
+	[TestMethod]
+	public void Wrap_CodeRunGluedToPunctuation_StaysGlued()
+	{
+		// "`a b`."
+		List<InlineRun> runs =
+		[
+			new("a b", MarkdownFontRole.Code, null, false),
+			new(".", MarkdownFontRole.Body, null, false),
+		];
+		IReadOnlyList<LaidOutLine> lines = InlineLayout.Wrap(runs, 100f, Measure);
+		Assert.AreEqual("0 3", TokenXs(lines[0]));
+	}
+
+	[TestMethod]
+	public void Wrap_MeasuresTheSpaceInTheGivenRole()
+	{
+		List<MarkdownFontRole> measured = [];
+		Vector2 Recording(string text, MarkdownFontRole role, bool isImage)
+		{
+			measured.Add(role);
+			return new(text.Length, 1f);
+		}
+
+		List<InlineRun> runs = [new("a b", MarkdownFontRole.H2, null, false)];
+		InlineLayout.Wrap(runs, 100f, Recording, MarkdownFontRole.H2);
+		Assert.IsTrue(measured.All(r => r == MarkdownFontRole.H2));
+	}
+
 	private static string TokenTexts(LaidOutLine line) => string.Join('|', line.Tokens.Select(t => t.Text));
 
 	private static string TokenXs(LaidOutLine line) =>
