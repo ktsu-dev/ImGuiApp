@@ -35,7 +35,7 @@ internal static class BlockRenderer
 				break;
 
 			case ParagraphBlock paragraph:
-				InlineRenderer.Render(paragraph.Inline, config);
+				InlineRenderer.Render(paragraph, config);
 				if (BlockSpacing.ShouldSpaceAfter(paragraph))
 				{
 					ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
@@ -80,9 +80,10 @@ internal static class BlockRenderer
 	{
 		float body = ImGui.GetFontSize();
 		float size = MarkdownSizing.HeadingPixelSize(body, heading.Level, config.HeadingScales);
-		using (new ScopedMarkdownFont(MarkdownSizing.HeadingRole(heading.Level), size, config))
+		MarkdownFontRole role = MarkdownSizing.HeadingRole(heading.Level);
+		using (new ScopedMarkdownFont(role, size, config))
 		{
-			InlineRenderer.Render(heading.Inline, config);
+			InlineRenderer.Render(heading, config, role);
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
@@ -293,9 +294,10 @@ internal static class BlockRenderer
 					if (rowBlock is Markdig.Extensions.Tables.TableRow row)
 					{
 						ImGui.TableNextRow();
-						using ScopedMarkdownFont? headerFont = row.IsHeader
-							? new ScopedMarkdownFont(MarkdownFontRole.Bold, ImGui.GetFontSize(), config)
-							: null;
+
+						// Each token pushes its own font, so the header's weight is passed down as the
+						// cells' base role rather than pushed around them, where every token would replace it.
+						MarkdownFontRole cellRole = row.IsHeader ? MarkdownFontRole.Bold : MarkdownFontRole.Body;
 
 						int column = 0;
 						foreach (Block cellBlock in row)
@@ -310,7 +312,7 @@ internal static class BlockRenderer
 								{
 									if (content is ParagraphBlock paragraph)
 									{
-										InlineRenderer.Render(paragraph.Inline, config, alignment);
+										InlineRenderer.Render(paragraph, config, cellRole, alignment);
 									}
 								}
 
