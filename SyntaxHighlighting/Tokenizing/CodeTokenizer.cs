@@ -146,6 +146,12 @@ internal static class CodeTokenizer
 	{
 		kind = TokenKind.Comment;
 		body = TokenBody.None;
+
+		// In /**/ the second star belongs both to the doc opener /** and to the close */, so the doc
+		// rule would scan past its own close and run on to the next */ in the file. A rule whose close
+		// overlaps its opener at this position gives way to a shorter one (/* here, which sees the */);
+		// only when nothing else matches does it apply after all, as /* does to /*/, which C opens.
+		BlockCommentRule? overlapping = null;
 		foreach (BlockCommentRule rule in lookup.BlockComments)
 		{
 			if (!Matches(source, index, rule.Open))
@@ -153,37 +159,68 @@ internal static class CodeTokenizer
 				continue;
 			}
 
-			int scan = index + rule.Open.Length;
-			int depth = 1;
-			while (scan < source.Length && depth > 0)
+			if (CloseOverlapsOpener(source, index, rule))
 			{
-				if (rule.Nested && Matches(source, scan, rule.Open))
-				{
-					depth++;
-					scan += rule.Open.Length;
-				}
-				else if (Matches(source, scan, rule.Close))
-				{
-					depth--;
-					scan += rule.Close.Length;
-				}
-				else
-				{
-					scan++;
-				}
+				overlapping ??= rule;
+				continue;
 			}
 
-			index = scan;
-			kind = rule.Kind;
+			ReadBlockComment(source, rule, ref index, out kind, out body);
+			return true;
+		}
 
-			// An unterminated block comment ran to the end of the source, so it has no closing
-			// delimiter to hold back from the body.
-			bool closed = depth == 0;
-			body = new TokenBody(rule.Open.Length, closed ? rule.Close.Length : 0, null);
+		if (overlapping is not null)
+		{
+			ReadBlockComment(source, overlapping, ref index, out kind, out body);
 			return true;
 		}
 
 		return false;
+	}
+
+	private static bool CloseOverlapsOpener(string source, int index, BlockCommentRule rule)
+	{
+		int limit = Math.Min(rule.Open.Length - 1, rule.Close.Length);
+		for (int shared = 1; shared <= limit; shared++)
+		{
+			if (Matches(source, index + rule.Open.Length - shared, rule.Close))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static void ReadBlockComment(string source, BlockCommentRule rule, ref int index, out TokenKind kind, out TokenBody body)
+	{
+		int scan = index + rule.Open.Length;
+		int depth = 1;
+		while (scan < source.Length && depth > 0)
+		{
+			if (rule.Nested && Matches(source, scan, rule.Open))
+			{
+				depth++;
+				scan += rule.Open.Length;
+			}
+			else if (Matches(source, scan, rule.Close))
+			{
+				depth--;
+				scan += rule.Close.Length;
+			}
+			else
+			{
+				scan++;
+			}
+		}
+
+		index = scan;
+		kind = rule.Kind;
+
+		// An unterminated block comment ran to the end of the source, so it has no closing
+		// delimiter to hold back from the body.
+		bool closed = depth == 0;
+		body = new TokenBody(rule.Open.Length, closed ? rule.Close.Length : 0, null);
 	}
 
 	private static bool TryReadLineComment(string source, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
@@ -192,7 +229,8 @@ internal static class CodeTokenizer
 		body = TokenBody.None;
 		foreach (LineCommentRule rule in lookup.LineComments)
 		{
-			if (!Matches(source, index, rule.Prefix))
+			if (!Matches(source, index, rule.Prefix)
+				|| (rule.RequiresWhitespaceBefore && index > 0 && !char.IsWhiteSpace(source[index - 1])))
 			{
 				continue;
 			}
@@ -216,24 +254,39 @@ internal static class CodeTokenizer
 	{
 		kind = TokenKind.StringLiteral;
 		body = TokenBody.None;
-		foreach (StringRule rule in lookup.Strings)
+		foreach (StringRule rule in lookup.StringsStartingWith(source[index]))
 		{
 			if (!Matches(source, index, rule.Open))
 			{
 				continue;
 			}
 
-			int start = index + rule.Open.Length;
-			index = ScanStringBody(source, start, rule, out bool closed);
+			int openLength = rule.Open.Length;
+			string close = rule.Close;
+			if (rule.CloseMatchesOpeningRun)
+			{
+				// A raw string opened with more quotes than the rule names closes only on as many.
+				char repeated = rule.Open[^1];
+				int extra = 0;
+				while (index + openLength + extra < source.Length && source[index + openLength + extra] == repeated)
+				{
+					extra++;
+				}
+
+				openLength += extra;
+				close = string.Concat(rule.Close, new string(repeated, extra));
+			}
+
+			index = ScanStringBody(source, index + openLength, rule, close, out bool closed);
 			kind = rule.Kind;
-			body = new TokenBody(rule.Open.Length, closed ? rule.Close.Length : 0, rule);
+			body = new TokenBody(openLength, closed ? close.Length : 0, rule);
 			return true;
 		}
 
 		return false;
 	}
 
-	private static int ScanStringBody(string source, int start, StringRule rule, out bool closed)
+	private static int ScanStringBody(string source, int start, StringRule rule, string close, out bool closed)
 	{
 		closed = false;
 		int scan = start;
@@ -254,12 +307,12 @@ internal static class CodeTokenizer
 				continue;
 			}
 
-			if (Matches(source, scan, rule.Close))
+			if (Matches(source, scan, close))
 			{
-				int afterClose = scan + rule.Close.Length;
-				if (rule.DoubledCloseEscapes && Matches(source, afterClose, rule.Close))
+				int afterClose = scan + close.Length;
+				if (rule.DoubledCloseEscapes && Matches(source, afterClose, close))
 				{
-					scan = afterClose + rule.Close.Length;
+					scan = afterClose + close.Length;
 					continue;
 				}
 
@@ -411,6 +464,7 @@ internal static class CodeTokenizer
 		private readonly HashSet<string> controlKeywords;
 		private readonly HashSet<string> types;
 		private readonly HashSet<string> constants;
+		private readonly Dictionary<char, StringRule[]> stringsByFirstCharacter;
 
 		public IReadOnlyList<LineCommentRule> LineComments { get; }
 
@@ -429,7 +483,17 @@ internal static class CodeTokenizer
 			LineComments = [.. language.LineComments.OrderByDescending(rule => rule.Prefix.Length)];
 			BlockComments = [.. language.BlockComments.OrderByDescending(rule => rule.Open.Length)];
 			Strings = [.. language.Strings.OrderByDescending(rule => rule.Open.Length)];
+
+			// Python spells a literal with any of two dozen prefixes in any case, which is a hundred
+			// rules; grouping them by their first character keeps every position from trying them all.
+			stringsByFirstCharacter = Strings
+				.Where(rule => rule.Open.Length > 0)
+				.GroupBy(rule => rule.Open[0])
+				.ToDictionary(group => group.Key, group => group.ToArray());
 		}
+
+		public StringRule[] StringsStartingWith(char first) =>
+			stringsByFirstCharacter.TryGetValue(first, out StringRule[]? rules) ? rules : [];
 
 		public static KeywordLookup Create(LanguageDefinition language) => new(language);
 
