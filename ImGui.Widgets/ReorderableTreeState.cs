@@ -172,7 +172,8 @@ public static partial class ImGuiWidgets
 		/// </para>
 		/// <para>
 		/// The pointer over the dragged row or anywhere in its subtree drops nowhere, since a row cannot
-		/// become its own descendant. A drop that would leave the row exactly where it is drops nowhere
+		/// become its own descendant, except below the subtree's last row with the pointer out at a
+		/// shallower depth than the dragged row's, which takes it out to that level. A drop that would leave the row exactly where it is drops nowhere
 		/// either, so the widget never draws a line that means nothing.
 		/// </para>
 		/// </remarks>
@@ -197,7 +198,7 @@ public static partial class ImGuiWidgets
 
 			if (row >= dragged && row < tree.SubtreeEnds[dragged])
 			{
-				return null;
+				return OutOfOwnSubtree(rows, spans, tree, left, indent, dragged, row, zone, pointer.X);
 			}
 
 			ReorderableTreeDrop drop = zone switch
@@ -217,6 +218,37 @@ public static partial class ImGuiWidgets
 				&& (drop.Index == tree.SiblingIndices[dragged] || drop.Index == tree.SiblingIndices[dragged] + 1);
 
 			return intoOwnSubtree || inPlace ? null : drop;
+		}
+
+		/// <summary>
+		/// Resolves a pointer below the last row of the dragged row's own subtree, which is the one place
+		/// inside that subtree a drop can still mean something: out to an ancestor's level.
+		/// </summary>
+		/// <remarks>
+		/// Higher up the list the same move is reachable through the next row's top half, but where the
+		/// subtree is the last thing in its parent, and above all at the end of the list, there is no
+		/// next row at a shallower depth to aim at. Only a depth shallower than the dragged row's own
+		/// is accepted; anything else would be the row dropping beside or into itself.
+		/// </remarks>
+		private static ReorderableTreeDrop? OutOfOwnSubtree(
+			IReadOnlyList<ReorderableTreeRow> rows,
+			IReadOnlyList<ReorderableTreeRowSpan> spans,
+			Structure tree,
+			float left,
+			float indent,
+			int dragged,
+			int row,
+			Zone zone,
+			float x)
+		{
+			int last = tree.SubtreeEnds[dragged] - 1;
+			if (row != last || zone != Zone.After)
+			{
+				return null;
+			}
+
+			ReorderableTreeDrop drop = After(rows, spans, tree, last, left, indent, x);
+			return drop.LineDepth < rows[dragged].Depth ? drop : null;
 		}
 
 		/// <summary>Which part of a row the pointer is over.</summary>

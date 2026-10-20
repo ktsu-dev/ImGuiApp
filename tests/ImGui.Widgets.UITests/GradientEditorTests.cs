@@ -140,6 +140,39 @@ public sealed class GradientEditorTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void GradientEditor_BarAndSwatchesDimInsideADisabledScope()
+	{
+		// Transparent stops show exactly what the bar and swatches are painted over, so the opaque
+		// stops must come out as that blended with their colour at the scope's alpha.
+		float disabledAlpha = 1f;
+		stops = [new(0f, Red.WithAlpha(0f)), new(1f, Red.WithAlpha(0f))];
+		Start(() =>
+		{
+			using (new ScopedDisable(true))
+			{
+				disabledAlpha = ImGui.GetStyle().Alpha;
+				Draw();
+			}
+		});
+
+		Rectangle bar = RectOf("Gradient/bar");
+		Rectangle swatch = RectOf("Gradient/stop0");
+		Vector2 inBar = new(bar.MinX + (bar.Width / 2), bar.MinY + (bar.Height / 4));
+		Vector2 inSwatch = new(swatch.MinX + (swatch.Width / 2), swatch.MaxY - 4);
+		CapturedFrame transparent = Harness.Capture();
+		Rgba32 underBar = transparent.GetPixel((int)inBar.X, (int)inBar.Y);
+		Rgba32 underSwatch = transparent.GetPixel((int)inSwatch.X, (int)inSwatch.Y);
+
+		stops = [new(0f, Red), new(1f, Red)];
+		Step();
+		CapturedFrame opaque = Harness.Capture();
+
+		Assert.IsLessThan(1f, disabledAlpha, "The disabled scope did not lower the style alpha.");
+		SwatchPaletteTests.AssertBlended(underBar, (255, 0, 0), disabledAlpha, opaque.GetPixel((int)inBar.X, (int)inBar.Y));
+		SwatchPaletteTests.AssertBlended(underSwatch, (255, 0, 0), disabledAlpha, opaque.GetPixel((int)inSwatch.X, (int)inSwatch.Y));
+	}
+
+	[TestMethod]
 	public void GradientEditor_SeedsAnEmptyList()
 	{
 		stops = [];

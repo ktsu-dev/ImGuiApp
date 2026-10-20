@@ -2,6 +2,8 @@
 
 namespace ktsu.ImGui.Widgets.Tests;
 
+using System;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using static ktsu.ImGui.Widgets.ImGuiWidgets;
@@ -114,6 +116,94 @@ public class TransportScrubberStateTests
 
 		Assert.AreEqual(2.5f, inPoint, 1e-6f);
 		Assert.AreEqual(3f, outPoint, 1e-6f);
+	}
+
+	private const float Frame = 1f / 24f;
+
+	private static void AssertOnFrameGrid(float position, string what)
+	{
+		float frames = position / Frame;
+		Assert.AreEqual(MathF.Round(frames), frames, 1e-3f, $"The {what} ({position}) is not on a frame boundary.");
+	}
+
+	[TestMethod]
+	public void MarkIn_WithAMidFramePlayhead_LandsOnTheNearestFrame()
+	{
+		float inPoint = 0f;
+		float outPoint = 0f;
+
+		TransportScrubberState.MarkIn(12.3456f, ref inPoint, ref outPoint, 30f, Frame, Frame);
+
+		Assert.AreEqual(296f * Frame, inPoint, 1e-5f);
+		Assert.AreEqual(30f, outPoint, 1e-6f);
+		AssertOnFrameGrid(inPoint, "in point");
+	}
+
+	[TestMethod]
+	public void MarkOut_WithAMidFramePlayhead_PushesTheInPointOnTheGrid()
+	{
+		float inPoint = 20f;
+		float outPoint = 25f;
+
+		TransportScrubberState.MarkOut(20.01f, ref inPoint, ref outPoint, 30f, Frame, Frame);
+
+		Assert.AreEqual(480f * Frame, outPoint, 1e-5f);
+		Assert.AreEqual(479f * Frame, inPoint, 1e-5f);
+		AssertOnFrameGrid(inPoint, "in point");
+		AssertOnFrameGrid(outPoint, "out point");
+	}
+
+	[TestMethod]
+	public void MarkIn_RoundsAMinimumLengthUpToWholeFrames()
+	{
+		float inPoint = 2f;
+		float outPoint = 4f;
+
+		// 0.05 s is 1.2 frames at 24 fps, so the range keeps two.
+		TransportScrubberState.MarkIn(6.01f, ref inPoint, ref outPoint, 10f, 0.05f, Frame);
+
+		Assert.AreEqual(6f, inPoint, 1e-5f);
+		Assert.AreEqual(6f + (2f * Frame), outPoint, 1e-5f);
+		AssertOnFrameGrid(inPoint, "in point");
+		AssertOnFrameGrid(outPoint, "out point");
+	}
+
+	[TestMethod]
+	public void MarkOut_RoundsAMinimumLengthUpToWholeFrames()
+	{
+		float inPoint = 5f;
+		float outPoint = 8f;
+
+		TransportScrubberState.MarkOut(3.01f, ref inPoint, ref outPoint, 10f, 0.05f, Frame);
+
+		Assert.AreEqual(3f, outPoint, 1e-5f);
+		Assert.AreEqual(3f - (2f * Frame), inPoint, 1e-5f);
+		AssertOnFrameGrid(inPoint, "in point");
+		AssertOnFrameGrid(outPoint, "out point");
+	}
+
+	[TestMethod]
+	public void MarkIn_AtTheEndOfAClipThatIsNotWholeFrames_PushesTheInPointBackOntoTheGrid()
+	{
+		float inPoint = 2f;
+		float outPoint = 4f;
+
+		TransportScrubberState.MarkIn(10.01f, ref inPoint, ref outPoint, 10.01f, Frame, Frame);
+
+		Assert.AreEqual(10.01f, outPoint, 1e-6f, "The end of the clip is the one point written off the grid.");
+		AssertOnFrameGrid(inPoint, "in point");
+		Assert.IsTrue(outPoint - inPoint >= Frame - 1e-6f, "The range is narrower than the minimum.");
+	}
+
+	[TestMethod]
+	public void MarkInAndOut_OneFrameMinimum_IsNotRoundedUpToTwo()
+	{
+		float inPoint = 2f;
+		float outPoint = 4f;
+
+		TransportScrubberState.MarkIn(5f, ref inPoint, ref outPoint, 10f, Frame, Frame);
+
+		Assert.AreEqual(5f + Frame, outPoint, 1e-5f);
 	}
 
 	[TestMethod]

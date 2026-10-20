@@ -45,7 +45,7 @@ internal static class SyntaxColors
 		foreach (TokenKind kind in kinds)
 		{
 			Color? color = theme.ColorFor(kind);
-			palette[(int)kind] = color.HasValue ? color.Value.ToImGuiU32() : plain;
+			palette[(int)kind] = color.HasValue ? color.Value.ToImGuiU32Styled() : plain;
 		}
 
 		return palette;
@@ -55,17 +55,17 @@ internal static class SyntaxColors
 	/// <param name="theme">The resolved palette.</param>
 	/// <returns>A packed color.</returns>
 	public static uint Plain(SyntaxTheme theme) =>
-		theme.Plain?.ToImGuiU32() ?? ImGui.GetColorU32(ImGuiCol.Text);
+		theme.Plain?.ToImGuiU32Styled() ?? ImGui.GetColorU32(ImGuiCol.Text);
 
 	/// <summary>The line-number color: the theme's, else ImGui's disabled text color.</summary>
 	/// <param name="theme">The resolved palette.</param>
 	/// <returns>A packed color.</returns>
 	public static uint LineNumber(SyntaxTheme theme) =>
-		theme.LineNumber?.ToImGuiU32() ?? ImGui.GetColorU32(ImGuiCol.TextDisabled);
+		theme.LineNumber?.ToImGuiU32Styled() ?? ImGui.GetColorU32(ImGuiCol.TextDisabled);
 
 	/// <summary>The background color: the theme's, else ImGui's frame background.</summary>
 	/// <param name="theme">The resolved palette.</param>
 	/// <returns>A packed color.</returns>
 	public static uint Background(SyntaxTheme theme) =>
-		theme.Background?.ToImGuiU32() ?? ImGui.GetColorU32(ImGuiCol.FrameBg);
+		theme.Background?.ToImGuiU32Styled() ?? ImGui.GetColorU32(ImGuiCol.FrameBg);
 }

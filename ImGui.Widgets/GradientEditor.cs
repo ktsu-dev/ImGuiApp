@@ -177,7 +177,7 @@ public static partial class ImGuiWidgets
 			{
 				float left = barMin.X + i;
 				float right = MathF.Min(left + 1f, barMin.X + barSize.X);
-				uint color = SampleGradient(readOnly, (i + 0.5f) / barSize.X).ToImGuiU32();
+				uint color = SampleGradient(readOnly, (i + 0.5f) / barSize.X).ToImGuiU32Styled();
 				drawList.AddRectFilled(new Vector2(left, barMin.Y), new Vector2(right, barMin.Y + barSize.Y), color);
 			}
 
@@ -214,7 +214,7 @@ public static partial class ImGuiWidgets
 				Color fill = selected && state.PendingRemoval ? stop.Color.WithAlpha(stop.Color.A * PendingAlpha) : stop.Color;
 
 				drawList.AddRectFilled(swatchMin, swatchMax, frame);
-				drawList.AddRectFilled(swatchMin, swatchMax, fill.ToImGuiU32());
+				drawList.AddRectFilled(swatchMin, swatchMax, fill.ToImGuiU32Styled());
 
 				if (selected)
 				{

@@ -9,6 +9,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Popups;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -24,6 +25,9 @@ public sealed class FilesystemBrowserOverwriteTests
 	private string previousDirectory = null!;
 	private ImGuiPopups.FilesystemBrowser browser = null!;
 	private ImGuiAppHarness harness = null!;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
 	private string? saved;
 
 	[TestInitialize]
@@ -52,6 +56,7 @@ public sealed class FilesystemBrowserOverwriteTests
 	[TestCleanup]
 	public void TearDown()
 	{
+		TestContext.KeepFailureFrame(harness);
 		harness?.Dispose();
 		Environment.CurrentDirectory = previousDirectory;
 		Directory.Delete(folder, recursive: true);
