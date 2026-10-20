@@ -8,6 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Color;
 
 /// <summary>
@@ -32,6 +33,8 @@ public static partial class ImGuiWidgets
 	/// </code>
 	/// Nested child windows / scrolling regions are not supported inside a card because they render to
 	/// their own draw lists and will not participate in the channel split.
+	/// The whole card is marked for UI probes as <c>card</c> when it closes; separate two in one window
+	/// with <see cref="ScopedId"/>.
 	/// </remarks>
 	public sealed class Card : IDisposable
 	{
@@ -125,6 +128,7 @@ public static partial class ImGuiWidgets
 			// Reserve the full card footprint in the layout so following widgets flow below it.
 			ImGui.SetCursorScreenPos(origin);
 			ImGui.Dummy(cardMax - cardMin);
+			ImGuiProbes.MarkItem("card");
 		}
 
 		// Resolve an "elevated surface" color: prefer an opaque child/popup background, else fall back to the window background.

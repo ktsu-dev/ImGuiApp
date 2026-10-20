@@ -2,10 +2,6 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
-using System.Numerics;
-
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class PinInputTests : WidgetTest
 {
 	private const string Id = "otp";
-	private const string Span = "pin-span";
+	private const string Span = Id;
 	private const int Length = 4;
 
 	private string value = string.Empty;
@@ -26,9 +22,7 @@ public sealed class PinInputTests : WidgetTest
 	// span they occupy together and aims at a fraction across it to reach one box.
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		ImGuiWidgets.PinInput(Id, ref value, Length, masked, digitsOnly);
-		MarkSpan(Span, origin);
 	}
 
 	private void ClickBox(int index) => ClickFraction(Span, (index + 0.5f) / Length);
@@ -136,5 +130,19 @@ public sealed class PinInputTests : WidgetTest
 		Start(Draw);
 
 		Assert.AreEqual("9876", value, "An overlong starting value was not trimmed to the PIN's length.");
+	}
+
+	[TestMethod]
+	public void PinInput_MarksItselfAndEverySlot()
+	{
+		Rectangle whole = AssertMarksItself(Id, Draw);
+
+		for (int i = 0; i < Length; i++)
+		{
+			Rectangle slot = RectOf($"{Id}/slot{i}");
+			Assert.IsTrue(slot.MinX >= whole.MinX && slot.MaxX <= whole.MaxX, $"Slot {i} at {slot} is outside the whole widget at {whole}.");
+		}
+
+		Assert.IsTrue(RectOf($"{Id}/slot1").MinX > RectOf($"{Id}/slot0").MaxX, "The slots were not marked in order.");
 	}
 }

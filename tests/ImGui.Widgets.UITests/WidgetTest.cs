@@ -99,30 +99,75 @@ public abstract class WidgetTest
 	protected void Step(int frames = 1) => Harness.Step(frames);
 
 	/// <summary>
-	/// Records the item just submitted, for a widget that does not mark itself.
+	/// Records the item just submitted, for caller content drawn inside or beside a widget.
 	/// </summary>
 	/// <remarks>
-	/// Most of <c>ktsu.ImGui.Widgets</c> marks its own items, but the purely decorative ones — a
-	/// badge, a skeleton line, a spinner — do not, because nothing interactive lives inside them.
-	/// A test that needs to locate one marks it from the draw callback, the same way the demos mark
-	/// the plain ImGui controls they draw.
+	/// Every widget in <c>ktsu.ImGui.Widgets</c> marks itself, so this is for what the test draws
+	/// itself: a tree's leaf content, a card's body, the item a badge or tooltip is attached to.
 	/// </remarks>
 	/// <param name="name">A stable name for the item.</param>
 	protected static void Mark(string name) => ImGuiProbes.MarkItem(name);
 
 	/// <summary>
-	/// Records everything a widget drew between a remembered cursor position and the item it
-	/// submitted last, for a widget that submits several items and marks none of them.
+	/// Records everything drawn between a remembered cursor position and the item submitted last,
+	/// for caller content made of several items.
 	/// </summary>
-	/// <remarks>
-	/// A PIN input is a row of separate text boxes; a stepper is two buttons around a value. Their
-	/// parts are real ImGui items with identifiers of their own, so a test can only aim at one by
-	/// measuring the span they occupy together and clicking a fraction across it.
-	/// </remarks>
 	/// <param name="name">A stable name for the span.</param>
-	/// <param name="origin">The cursor position captured before the widget was drawn.</param>
+	/// <param name="origin">The cursor position captured before the content was drawn.</param>
 	protected static void MarkSpan(string name, Vector2 origin) =>
 		ImGuiProbes.MarkRegion(name, origin, ImGui.GetItemRectMax());
+
+	/// <summary>
+	/// Draws a widget alone with no test-side mark and checks that it marked itself around what it
+	/// painted.
+	/// </summary>
+	/// <remarks>
+	/// The frame is compared against one drawn without the widget, and every changed pixel has to
+	/// lie inside the widget's own mark, give or take <paramref name="tolerance"/> for
+	/// anti-aliasing that bleeds past an item's edge.
+	/// </remarks>
+	/// <param name="name">The name the widget marks itself under.</param>
+	/// <param name="draw">Draws the widget.</param>
+	/// <param name="tolerance">How far, in pixels, painting may run past the mark.</param>
+	/// <param name="options">The viewport to draw in, or null for the default.</param>
+	/// <returns>The widget's own mark.</returns>
+	protected Rectangle AssertMarksItself(string name, Action draw, int tolerance = 1, HarnessOptions? options = null)
+	{
+		ArgumentNullException.ThrowIfNull(draw);
+
+		bool show = false;
+		Start(() =>
+		{
+			if (show)
+			{
+				draw();
+			}
+			else
+			{
+				ImGui.Dummy(Vector2.Zero);
+			}
+		}, options);
+
+		MoveAway();
+		byte[] blank = Snapshot();
+		show = true;
+		Step(2);
+		MoveAway();
+
+		Assert.IsTrue(IsVisible(name), $"The widget did not mark itself as '{name}'.");
+		Rectangle mark = RectOf(name);
+		Assert.IsTrue(mark.Width > 0 && mark.Height > 0, $"'{name}' marked an empty rectangle {mark}.");
+
+		if (BoundsOfDifference(blank) is Rectangle drawn)
+		{
+			Assert.IsTrue(
+				drawn.MinX >= mark.MinX - tolerance && drawn.MinY >= mark.MinY - tolerance
+					&& drawn.MaxX <= mark.MaxX + tolerance && drawn.MaxY <= mark.MaxY + tolerance,
+				$"'{name}' painted {drawn}, outside its own mark {mark}.");
+		}
+
+		return mark;
+	}
 
 	/// <summary>
 	/// Reports whether an item was drawn in the frame just rendered.

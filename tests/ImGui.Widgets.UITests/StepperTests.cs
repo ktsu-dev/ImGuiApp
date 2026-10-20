@@ -12,10 +12,8 @@ public sealed class StepperTests : WidgetTest
 {
 	private const string Label = "Quantity";
 
-	// The stepper marks only its value box. The buttons either side are ordinary ImGui buttons one
-	// frame height wide, laid out with the style's inner spacing between them and the box, so
-	// aiming half a frame height outside the box lands inside the button whatever that spacing is.
-	private const string ValueBox = "##value";
+	// The stepper marks its three parts under its label, and the whole widget under the label itself.
+	private const string ValueBox = Label + "/value";
 
 	private int value;
 	private int step = 1;
@@ -24,19 +22,9 @@ public sealed class StepperTests : WidgetTest
 
 	private void Draw() => ImGuiWidgets.Stepper(Label, ref value, step, min, max);
 
-	private void ClickDecrement()
-	{
-		Rectangle rect = RectOf(ValueBox);
-		Harness.Mouse.Click(rect.MinX - (rect.Height / 2f), rect.MinY + (rect.Height / 2f));
-		Step();
-	}
+	private void ClickDecrement() => Click(Label + "/decrement");
 
-	private void ClickIncrement()
-	{
-		Rectangle rect = RectOf(ValueBox);
-		Harness.Mouse.Click(rect.MaxX + (rect.Height / 2f), rect.MinY + (rect.Height / 2f));
-		Step();
-	}
+	private void ClickIncrement() => Click(Label + "/increment");
 
 	[TestMethod]
 	public void Stepper_IsDrawnAndMarksItsValueBox()
@@ -106,5 +94,39 @@ public sealed class StepperTests : WidgetTest
 		MoveAway();
 
 		Assert.IsTrue(PixelsChangedSince(before) > 0, "The value box drew identically after stepping.");
+	}
+
+	[TestMethod]
+	public void Stepper_MarksItself()
+	{
+		Rectangle whole = AssertMarksItself(Label, Draw);
+
+		foreach (string part in new[] { "decrement", "value", "increment" })
+		{
+			Rectangle rect = RectOf($"{Label}/{part}");
+			Assert.IsTrue(
+				rect.MinX >= whole.MinX && rect.MaxX <= whole.MaxX && rect.MinY >= whole.MinY && rect.MaxY <= whole.MaxY,
+				$"The stepper's {part} at {rect} is outside the whole widget at {whole}.");
+		}
+
+		Assert.IsTrue(RectOf(Label + "/decrement").MaxX <= RectOf(ValueBox).MinX, "The decrement button is not left of the value.");
+		Assert.IsTrue(RectOf(Label + "/increment").MinX >= RectOf(ValueBox).MaxX, "The increment button is not right of the value.");
+	}
+
+	[TestMethod]
+	public void Stepper_TwoInOneWindowResolveSeparately()
+	{
+		int other = 0;
+		Start(() =>
+		{
+			ImGuiWidgets.Stepper("Adults", ref value);
+			ImGuiWidgets.Stepper("Children", ref other);
+		});
+
+		Click("Children/increment");
+
+		Assert.AreEqual(1, other, "Clicking the second stepper's increment did not reach it.");
+		Assert.AreEqual(0, value, "Clicking the second stepper's increment changed the first.");
+		Assert.IsTrue(RectOf("Adults/value").MaxY <= RectOf("Children/value").MinY, "The two steppers' value boxes were not told apart.");
 	}
 }

@@ -4,8 +4,6 @@ namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -22,9 +20,7 @@ public sealed class BezierEditorTests : WidgetTest
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.BezierEditor(Label, ref points, Size);
-		MarkSpan(Label, origin);
 	}
 
 	[TestMethod]
@@ -60,7 +56,7 @@ public sealed class BezierEditorTests : WidgetTest
 		Start(Draw);
 
 		BezierControlPoints before = points;
-		Rectangle rect = RectOf(Label);
+		Rectangle rect = RectOf(Label + "/plot");
 
 		// The first control point sits a quarter of the way across and, with Y growing upward, a
 		// quarter of the way up from the bottom of the plot.
@@ -84,4 +80,7 @@ public sealed class BezierEditorTests : WidgetTest
 		Assert.AreEqual(original, points, "The control points moved on their own.");
 		Assert.IsFalse(changed, "The editor reported a change nobody made.");
 	}
+
+	[TestMethod]
+	public void BezierEditor_MarksItself() => _ = AssertMarksItself(Label, Draw);
 }

@@ -116,4 +116,34 @@ public sealed class BadgeTests : WidgetTest
 
 		Assert.IsTrue(PixelsChangedSince(bare) > 0, "The badge dot drew nothing.");
 	}
+
+	[TestMethod]
+	public void Badge_MarksItself()
+	{
+		Start(() => DrawWithBadge(() => ImGuiWidgets.Badge(3)));
+
+		Assert.IsTrue(IsVisible("badge"), "The badge did not mark itself.");
+		Rectangle badge = RectOf("badge");
+		Rectangle host = RectOf(Host);
+		Assert.IsTrue(badge.MinX < host.MaxX && badge.MaxX > host.MaxX, $"The badge at {badge} is not on the host's right edge at {host.MaxX}.");
+		Assert.IsTrue(badge.MinY < host.MinY, $"The badge at {badge} does not overhang the host's top at {host.MinY}.");
+	}
+
+	[TestMethod]
+	public void BadgeDot_MarksItself()
+	{
+		Start(() => DrawWithBadge(ImGuiWidgets.BadgeDot));
+
+		Assert.IsTrue(IsVisible("badge-dot"), "The badge dot did not mark itself.");
+		Rectangle dot = RectOf("badge-dot");
+		Assert.AreEqual(dot.Width, dot.Height, 1, $"The dot's mark {dot} is not square.");
+	}
+
+	[TestMethod]
+	public void Badge_WithNothingToShow_MarksNothing()
+	{
+		Start(() => DrawWithBadge(() => ImGuiWidgets.Badge(0)));
+
+		Assert.IsFalse(IsVisible("badge"), "A badge with nothing to show was marked.");
+	}
 }

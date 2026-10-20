@@ -26,13 +26,9 @@ public sealed class HexaButtonTests : WidgetTest
 	{
 		toggled = false;
 
-		Start(() =>
-		{
-			ImGuiWidgets.ToggleSwitch("Notifications", ref toggled);
-			Mark("switch");
-		});
+		Start(() => ImGuiWidgets.ToggleSwitch("Notifications", ref toggled));
 
-		Click("switch");
+		Click("Notifications");
 
 		Assert.IsTrue(toggled, "Clicking the toggle switch did not turn it on.");
 	}
@@ -49,11 +45,10 @@ public sealed class HexaButtonTests : WidgetTest
 		Start(() =>
 		{
 			ImGuiWidgets.ToggleSwitch("Notifications", ref toggled);
-			Mark("switch");
 			ImGuiWidgets.DrawDeferred();
 		});
 
-		Click("switch");
+		Click("Notifications");
 		MoveAway();
 		byte[] midAnimation = Snapshot();
 
@@ -68,13 +63,9 @@ public sealed class HexaButtonTests : WidgetTest
 	{
 		toggled = false;
 
-		Start(() =>
-		{
-			ImGuiWidgets.ToggleButton("Bold", ref toggled);
-			Mark("toggle");
-		});
+		Start(() => ImGuiWidgets.ToggleButton("Bold", ref toggled));
 
-		Click("toggle");
+		Click("Bold");
 
 		Assert.IsTrue(toggled, "Clicking the toggle button did not select it.");
 	}
@@ -84,11 +75,7 @@ public sealed class HexaButtonTests : WidgetTest
 	{
 		toggled = false;
 
-		Start(() =>
-		{
-			ImGuiWidgets.ToggleButton("Bold", ref toggled, new Vector2(100f, 30f));
-			Mark("toggle");
-		});
+		Start(() => ImGuiWidgets.ToggleButton("Bold", ref toggled, new Vector2(100f, 30f)));
 
 		MoveAway();
 		byte[] unselected = Snapshot();
@@ -105,13 +92,9 @@ public sealed class HexaButtonTests : WidgetTest
 	{
 		clicked = false;
 
-		Start(() =>
-		{
-			clicked |= ImGuiWidgets.TransparentButton("Dismiss");
-			Mark("transparent");
-		});
+		Start(() => clicked |= ImGuiWidgets.TransparentButton("Dismiss"));
 
-		Click("transparent");
+		Click("Dismiss");
 
 		Assert.IsTrue(clicked, "The transparent button did not report a click.");
 	}
@@ -119,16 +102,12 @@ public sealed class HexaButtonTests : WidgetTest
 	[TestMethod]
 	public void TransparentButton_DrawsNoBackgroundUntilHovered()
 	{
-		Start(() =>
-		{
-			ImGuiWidgets.TransparentButton("Dismiss", new Vector2(120f, 30f));
-			Mark("transparent");
-		});
+		Start(() => ImGuiWidgets.TransparentButton("Dismiss", new Vector2(120f, 30f)));
 
 		MoveAway();
 		byte[] idle = Snapshot();
 
-		Hover("transparent");
+		Hover("Dismiss");
 
 		Assert.IsTrue(PixelsChangedSince(idle) > 0, "The transparent button looked the same hovered as idle.");
 	}
@@ -146,10 +125,9 @@ public sealed class HexaButtonTests : WidgetTest
 			max = min + new Vector2(240f, 40f);
 			ImGui.Dummy(new Vector2(240f, 40f));
 			clicked |= ImGuiWidgets.InlineButton("Edit", min, max, new Vector2(1f, 0.5f));
-			Mark("inline");
 		});
 
-		Rectangle rect = RectOf("inline");
+		Rectangle rect = RectOf("Edit");
 
 		Assert.IsTrue(rect.MinX >= min.X - 1f, "The inline button was placed left of its bounds.");
 		Assert.IsTrue(rect.MaxX <= max.X + 1f, $"The inline button ran past the right edge of its bounds ({rect.MaxX} > {max.X}).");
@@ -166,11 +144,34 @@ public sealed class HexaButtonTests : WidgetTest
 			Vector2 max = min + new Vector2(240f, 40f);
 			ImGui.Dummy(new Vector2(240f, 40f));
 			clicked |= ImGuiWidgets.InlineButton("Edit", min, max, new Vector2(0.5f, 0.5f));
-			Mark("inline");
 		});
 
-		Click("inline");
+		Click("Edit");
 
 		Assert.IsTrue(clicked, "The inline button did not report a click.");
+	}
+
+	[TestMethod]
+	public void ToggleSwitch_MarksItself() => _ = AssertMarksItself("Notifications", () => ImGuiWidgets.ToggleSwitch("Notifications", ref toggled));
+
+	[TestMethod]
+	public void ToggleButton_MarksItself() => _ = AssertMarksItself("Bold", () => ImGuiWidgets.ToggleButton("Bold", ref toggled));
+
+	[TestMethod]
+	public void TransparentButton_MarksItself() => _ = AssertMarksItself("Dismiss", () => ImGuiWidgets.TransparentButton("Dismiss", new Vector2(120f, 30f)));
+
+	[TestMethod]
+	public void InlineButton_MarksItself()
+	{
+		Start(() =>
+		{
+			Vector2 min = ImGui.GetCursorScreenPos();
+			Vector2 max = min + new Vector2(240f, 40f);
+			ImGui.Dummy(new Vector2(240f, 40f));
+			ImGuiWidgets.InlineButton("Edit", min, max, new Vector2(1f, 0.5f));
+		});
+
+		Assert.IsTrue(IsVisible("Edit"), "The inline button did not mark itself.");
+		Assert.IsTrue(RectOf("Edit").Width < 240, "The inline button marked its whole bounds rather than itself.");
 	}
 }

@@ -118,4 +118,10 @@ public sealed class GridTests : WidgetTest
 			Assert.IsTrue(IsVisible(item), $"A fit-to-contents grid never drew '{item}'.");
 		}
 	}
+
+	[TestMethod]
+	public void RowMajorGrid_MarksItself() => _ = AssertMarksItself("grid", DrawRowMajor);
+
+	[TestMethod]
+	public void ColumnMajorGrid_MarksItself() => _ = AssertMarksItself("grid", DrawColumnMajor);
 }

@@ -12,7 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class ColorIndicatorTests : WidgetTest
 {
-	private const string Name = "indicator";
+	private const string Name = "color-indicator";
 
 	private bool enabled = true;
 	private Color color = Color.FromHex("#ff0000");
@@ -20,7 +20,6 @@ public sealed class ColorIndicatorTests : WidgetTest
 	private void Draw()
 	{
 		ImGuiWidgets.ColorIndicator(color.ToImColor(), enabled);
-		Mark(Name);
 	}
 
 	[TestMethod]
@@ -72,4 +71,7 @@ public sealed class ColorIndicatorTests : WidgetTest
 
 		Assert.IsTrue(PixelsChangedSince(red) > 0, "Changing the color changed nothing on screen.");
 	}
+
+	[TestMethod]
+	public void ColorIndicator_MarksItself() => _ = AssertMarksItself(Name, Draw);
 }

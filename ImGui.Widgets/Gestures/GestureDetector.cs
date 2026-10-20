@@ -7,6 +7,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Widgets.Gestures;
 
 public static partial class ImGuiWidgets
@@ -36,6 +37,7 @@ public static partial class ImGuiWidgets
 		}
 
 		ImGui.InvisibleButton(label, size);
+		ImGuiProbes.MarkItem(label);
 
 		bool isActive = ImGui.IsItemActive();
 		Vector2 pos = ImGui.GetMousePos();

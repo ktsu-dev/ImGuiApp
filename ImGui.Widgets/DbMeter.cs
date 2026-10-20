@@ -6,6 +6,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -34,6 +36,7 @@ public static partial class ImGuiWidgets
 
 		Vector2 cursorPos = ImGui.GetCursorScreenPos();
 		ImGui.Dummy(meterSize);
+		ImGuiProbes.MarkItem(label);
 
 		Vector2 max = new(cursorPos.X + meterSize.X, cursorPos.Y + meterSize.Y);
 		MeterScale.DrawVerticalMeter(ImGui.GetWindowDrawList(), cursorPos, max, db, minDb, maxDb, peakDb);

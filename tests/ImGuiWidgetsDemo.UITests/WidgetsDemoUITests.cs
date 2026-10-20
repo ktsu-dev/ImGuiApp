@@ -287,7 +287,7 @@ public sealed class WidgetsDemoUITests
 		foreach (string widget in new[]
 		{
 			"Wi-Fi##switchWifi", "Bluetooth##switchBluetooth", "##viewMode",
-			"All##chip0", "Unread##chip1", "##value", "Price##rangePrice",
+			"All##chip0", "Unread##chip1", "Quantity##stepperQuantity/value", "Price##rangePrice",
 		})
 		{
 			Assert.IsTrue(IsVisible(widget), $"The form controls section is missing '{widget}'.");

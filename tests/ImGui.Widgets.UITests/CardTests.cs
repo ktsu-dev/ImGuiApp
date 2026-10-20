@@ -135,4 +135,13 @@ public sealed class CardTests : WidgetTest
 
 		Assert.IsTrue(PixelsChangedSince(bordered) > 0, "A borderless card drew the same as a bordered one.");
 	}
+
+	[TestMethod]
+	public void Card_MarksItself()
+	{
+		Rectangle card = AssertMarksItself("card", DrawCard, tolerance: 8);
+		Rectangle body = RectOf(Body);
+
+		Assert.IsTrue(body.MinX > card.MinX && body.MaxY < card.MaxY, $"The card's mark {card} does not contain its body at {body}.");
+	}
 }

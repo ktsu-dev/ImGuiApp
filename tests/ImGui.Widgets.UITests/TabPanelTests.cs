@@ -3,9 +3,8 @@
 namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Collections.Generic;
-using System.Numerics;
 
-using Hexa.NET.ImGui;
+using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,51 +12,21 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class TabPanelTests : WidgetTest
 {
+	private const string PanelId = "demo-tabs";
+
 	private static readonly string[] Labels = ["First", "Second", "Third"];
 
 	private ImGuiWidgets.TabPanel panel = null!;
 	private readonly List<int> changedToIndex = [];
 
-	// Tab items are ImGui's own, so they carry no probe mark. The test records where the tab bar
-	// begins and how wide each tab is, using the same rules ImGui lays them out by: a tab is its
-	// label plus the frame padding on both sides, and consecutive tabs are separated by the inner
-	// item spacing.
-	private Vector2 tabBarOrigin;
-	private readonly List<float> tabWidths = [];
-	private float tabHeight;
-	private float tabSpacing;
+	private void Draw() => panel.Draw();
 
-	private void Draw()
-	{
-		tabBarOrigin = ImGui.GetCursorScreenPos();
-		tabHeight = ImGui.GetFrameHeight();
-		tabSpacing = ImGui.GetStyle().ItemInnerSpacing.X;
-
-		tabWidths.Clear();
-		foreach (ImGuiWidgets.Tab tab in panel.Tabs)
-		{
-			tabWidths.Add(ImGui.CalcTextSize(tab.Label).X + (ImGui.GetStyle().FramePadding.X * 2f));
-		}
-
-		panel.Draw();
-	}
-
-	private void ClickTab(int index)
-	{
-		float x = tabBarOrigin.X;
-
-		for (int i = 0; i < index; i++)
-		{
-			x += tabWidths[i] + tabSpacing;
-		}
-
-		Harness.Mouse.Click(x + (tabWidths[index] / 2f), tabBarOrigin.Y + (tabHeight / 2f));
-		Step();
-	}
+	// Every tab header is marked under the panel's id, whether or not it is selected.
+	private void ClickTab(int index) => Click($"{PanelId}/{Labels[index]}");
 
 	private ImGuiWidgets.TabPanel BuildPanel(bool closable = false, bool reorderable = false)
 	{
-		ImGuiWidgets.TabPanel built = new("demo-tabs", closable, reorderable, changedToIndex.Add);
+		ImGuiWidgets.TabPanel built = new(PanelId, closable, reorderable, changedToIndex.Add);
 
 		foreach (string label in Labels)
 		{
@@ -171,5 +140,22 @@ public sealed class TabPanelTests : WidgetTest
 
 		Assert.AreSame(first, panel.GetTabById(first.Id), "A tab could not be found by its own id.");
 		Assert.AreEqual(0, panel.GetTabIndex(first.Id), "A tab reported the wrong index.");
+	}
+
+	[TestMethod]
+	public void TabPanel_MarksItsStripAndEveryTab()
+	{
+		panel = BuildPanel();
+		Start(Draw);
+
+		Assert.IsTrue(IsVisible(PanelId), "The tab strip did not mark itself.");
+		Rectangle strip = RectOf(PanelId);
+
+		foreach (string label in Labels)
+		{
+			Assert.IsTrue(IsVisible($"{PanelId}/{label}"), $"The '{label}' tab header was not marked, selected or not.");
+			Rectangle tab = RectOf($"{PanelId}/{label}");
+			Assert.IsTrue(tab.MinY >= strip.MinY - 1 && tab.MaxY <= strip.MaxY + 1, $"The '{label}' tab at {tab} is outside the strip {strip}.");
+		}
 	}
 }
