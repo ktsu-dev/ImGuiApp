@@ -2,6 +2,7 @@
 
 Changes since v3.75.0:
 
+- [minor] FilesystemBrowser: breadcrumbs, back/forward, places, search, sortable columns and thumbnails (#715) (matt-edmondson)
 - [minor] Two-finger touch scrolling, extension docs, and trim analysis for Widgets/Popups/Styler (#703) (matt-edmondson)
 - Merge main into claude/project-thread-m8gl9z (matt-edmondson)
 - [minor] Add the phase 4 mobile polish widgets (#710) (matt-edmondson)
