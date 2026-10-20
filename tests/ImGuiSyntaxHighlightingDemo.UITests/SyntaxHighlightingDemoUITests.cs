@@ -11,6 +11,7 @@ using System.Linq;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Examples.SyntaxHighlighting;
 using ktsu.ImGui.Markdown;
 using ktsu.ImGui.SyntaxHighlighting;
@@ -29,6 +30,9 @@ public sealed class SyntaxHighlightingDemoUITests
 
 	private ImGuiAppHarness harness = null!;
 
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
 	[TestInitialize]
 	public void SetUp()
 	{
@@ -38,7 +42,11 @@ public sealed class SyntaxHighlightingDemoUITests
 	}
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	private bool IsVisible(string name) => harness.Probe.WasSeenInFrame(name, harness.FrameCount - 1);
 

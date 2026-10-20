@@ -990,6 +990,13 @@ Assert.AreEqual("User clicked Maybe", ImGuiPopupsDemo.lastPromptResult);
 
 Things that bite when writing these:
 
+- **A failing test leaves its last frame behind.** Every harness suite's `[TestCleanup]` calls
+  `TestContext.KeepFailureFrame(harness)` before disposing the harness. That is
+  `tests/Shared/FailureFrameCleanup.cs`, linked into each harness project, over
+  `ImGui.App.Testing`'s framework-free `FailureFrames`: the PNG goes to
+  `bin/Release/net10.0/test-artifacts/<class>/<test>.png` (or under `IMGUI_TEST_ARTIFACTS`) and is
+  attached to the result. A new harness suite links the file and makes the same call, and a cleanup
+  that steps frames (dismissing a dialog) calls it first; `WidgetTest` does both for its subclasses.
 - **Each demo exposes `BuildConfig()`** (internal, with `InternalsVisibleTo` for its UITests
   assembly) so a test drives the real configuration rather than a copy, plus `ResetState()` because
   demo state is static and outlives the harness.
