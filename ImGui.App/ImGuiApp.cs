@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
 using ktsu.ImGui.App.Images;
+using ktsu.ImGui.Rendering;
 using ktsu.Invoker;
 using ktsu.ScopedAction;
 using ktsu.Semantics.Paths;

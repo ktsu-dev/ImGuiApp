@@ -4,6 +4,7 @@ namespace ktsu.ImGui.App.Testing;
 
 using System;
 using System.Numerics;
+using ktsu.ImGui.Rendering;
 
 /// <summary>
 /// The 3D half of the CPU rasterizer: the same textured-triangle fill with a matrix, a depth
