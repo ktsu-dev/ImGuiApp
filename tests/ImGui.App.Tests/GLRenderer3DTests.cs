@@ -132,10 +132,10 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
-	public void DeleteTexture_OnTheController_RejectsARenderTarget()
+	public void DeleteTexture_OnTheOpenGLRenderer_RejectsARenderTarget()
 	{
 		FakeGL3D gl = new();
-		ImGuiController controller = ControllerOver(gl);
+		OpenGLRenderer controller = ControllerOver(gl);
 		nint target = controller.CreateRenderTarget(16, 16, depth: true);
 		gl.Calls.Clear();
 
@@ -146,9 +146,9 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
-	public void DeleteTexture_OnTheController_StillAcceptsAPlainTexture()
+	public void DeleteTexture_OnTheOpenGLRenderer_StillAcceptsAPlainTexture()
 	{
-		ImGuiController controller = ControllerOver(new FakeGL3D());
+		OpenGLRenderer controller = ControllerOver(new FakeGL3D());
 		controller.CreateRenderTarget(16, 16, depth: false);
 
 		// With no GL context the plain path is the documented no-op; what matters is that the
@@ -157,7 +157,7 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
-	public void Controller_ForwardsEveryRenderer3DCallToTheOpenGLRenderer()
+	public void OpenGLRenderer_ForwardsEveryRenderer3DCallToGLRenderer3D()
 	{
 		FakeGL3D gl = new();
 		IRenderer3D controller = ControllerOver(gl);
@@ -175,9 +175,9 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
-	public void Controller_WithoutAContext_RefusesRenderer3DCallsByName()
+	public void OpenGLRenderer_WithoutAContext_RefusesRenderer3DCallsByName()
 	{
-		IRenderer3D controller = (ImGuiController)RuntimeHelpers.GetUninitializedObject(typeof(ImGuiController));
+		IRenderer3D controller = (OpenGLRenderer)RuntimeHelpers.GetUninitializedObject(typeof(OpenGLRenderer));
 
 		Assert.ThrowsExactly<InvalidOperationException>(() => controller.CreateRenderTarget(16, 16, depth: false));
 		Assert.ThrowsExactly<InvalidOperationException>(() => controller.ResizeRenderTarget(1, 16, 16));
@@ -440,7 +440,7 @@ public sealed class GLRenderer3DTests
 			ImGuiApp.renderer = ControllerOver(new FakeGL3D());
 
 			Assert.IsTrue(ImGuiApp.TryGetRenderer3D(out IRenderer3D? renderer3D));
-			Assert.IsInstanceOfType<ImGuiController>(renderer3D);
+			Assert.IsInstanceOfType<OpenGLRenderer>(renderer3D);
 		}
 		finally
 		{
@@ -448,10 +448,10 @@ public sealed class GLRenderer3DTests
 		}
 	}
 
-	/// <summary>A controller with no window or context, carrying a 3D renderer over the stand-in.</summary>
-	private static ImGuiController ControllerOver(FakeGL3D gl)
+	/// <summary>An OpenGL renderer with no context, carrying a 3D renderer over the stand-in.</summary>
+	private static OpenGLRenderer ControllerOver(FakeGL3D gl)
 	{
-		ImGuiController controller = (ImGuiController)RuntimeHelpers.GetUninitializedObject(typeof(ImGuiController));
+		OpenGLRenderer controller = (OpenGLRenderer)RuntimeHelpers.GetUninitializedObject(typeof(OpenGLRenderer));
 		controller._renderer3D = new GLRenderer3D(gl);
 		return controller;
 	}

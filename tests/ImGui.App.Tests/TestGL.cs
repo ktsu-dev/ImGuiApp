@@ -122,7 +122,11 @@ public sealed unsafe class TestGL : IGL
 	{
 		ThrowIfDisposed();
 		Calls.Add($"TexSubImage2D({width}x{height}@{xoffset},{yoffset})");
+		LastSubImagePixels = (nint)pixels;
 	}
+
+	/// <summary>Gets the pixel pointer the most recent <see cref="TexSubImage2D"/> was given.</summary>
+	public nint LastSubImagePixels { get; private set; }
 
 	public void Dispose()
 	{
