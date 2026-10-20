@@ -19,7 +19,6 @@
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="Hexa.NET.ImGui.Widgets" />
-    <PackageReference Include="Hexa.NET.ImGui.Widgets.Extras" />
     <PackageReference Include="Hexa.NET.Math" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.Keybinding" />

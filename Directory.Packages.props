@@ -16,7 +16,6 @@
     <PackageVersion Include="Hexa.NET.ImNodes" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImPlot" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImGui.Widgets" Version="1.2.18" />
-    <PackageVersion Include="Hexa.NET.ImGui.Widgets.Extras" Version="1.0.9" />
     <PackageVersion Include="Hexa.NET.Math" Version="2.0.8" />
     <PackageVersion Include="HexaGen.Runtime" Version="1.1.24" />
     <PackageVersion Include="ktsu.Invoker" Version="1.4.4" />

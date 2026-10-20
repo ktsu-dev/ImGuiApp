@@ -742,7 +742,7 @@ dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 The suite renders through the [Hexa.NET](https://github.com/HexaEngine/Hexa.NET.ImGui) bindings:
 
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui, and for the `Hexa.NET.ImGuizmo`, `Hexa.NET.ImNodes` and `Hexa.NET.ImPlot` extensions that `ktsu.ImGui.App` auto-detects
-- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection, with `Hexa.NET.ImGui.Widgets.Extras`, behind the Hexa-backed widgets, dialogs and editors in `ktsu.ImGui.Widgets`
+- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors in `ktsu.ImGui.Widgets`
 - [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
 - [HexaGen](https://github.com/JunaMeinhold/HexaGen) - The binding generator and the `HexaGen.Runtime` the wrappers are built on
 

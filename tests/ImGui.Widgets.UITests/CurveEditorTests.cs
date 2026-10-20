@@ -150,10 +150,100 @@ public sealed class CurveEditorTests : WidgetTest
 
 		Rectangle rect = RectOf(Label);
 
-		// An empty curve is never handed to the vendor, whose add-a-point path would throw on it,
-		// but the layout slot is still reserved so nothing below shifts.
+		// An empty curve still reserves its layout slot, so nothing below shifts.
 		Assert.IsTrue(Math.Abs(rect.Height - Size.Y) <= 6, $"An empty curve reserved {rect.Height}px of height rather than {Size.Y}.");
 		Assert.IsFalse(changed, "An empty curve reported a change.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_SingleCurve_DoubleClickingEmptySpace_AddsAPoint_EvenToAnEmptyCurve()
+	{
+		curve = new CurveData();
+		Start(DrawSingleCurve);
+
+		Rectangle rect = RectOf(Label);
+		float x = rect.MinX + (rect.Width * 0.5f);
+		float y = rect.MaxY - (rect.Height * 0.25f);
+		Harness.Mouse.Click(x, y);
+		Harness.Mouse.Click(x, y);
+		Step(2);
+
+		Assert.AreEqual(1, curve.PointCount, "Double-clicking an empty curve added no point.");
+		Assert.AreEqual(0.5f, curve.GetPoint(0).Position.X, 0.02f);
+		Assert.AreEqual(0.25f, curve.GetPoint(0).Position.Y, 0.02f);
+		Assert.AreEqual(0, selection, "The new point was not selected.");
+		Assert.IsTrue(changed, "Adding a point reported no change.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_SingleCurve_DoubleClickingAPoint_RemovesIt()
+	{
+		curve = BuildCurve();
+		Start(DrawSingleCurve);
+
+		Rectangle rect = RectOf(Label);
+		float x = rect.MinX + (rect.Width * 0.5f);
+		float y = rect.MaxY - (rect.Height * 0.8f);
+		Harness.Mouse.Click(x, y);
+		Harness.Mouse.Click(x, y);
+		Step(2);
+
+		Assert.AreEqual(2, curve.PointCount, "Double-clicking the middle point did not remove it.");
+		Assert.AreEqual(new Vector2(1f, 0.2f), curve.GetPoint(1).Position, "A different point was removed.");
+		Assert.AreEqual(-1, selection, "The selection still addresses a point after its point was removed.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_SingleCurve_WideRange_DrawsTheLineInTheSameRangeAsThePoints()
+	{
+		// #609: the line used to run across 0..1 in X whatever the range, so with a wider range it
+		// no longer met its own points. Here X runs -1..2 and Y -1..2, so value 0 sits a third of the
+		// way in from the left and two thirds of the way down, and left of the first point the line
+		// is held flat at its value there.
+		curve = new CurveData(
+		[
+			new CurveKnot(new Vector2(0f, 0f), CurvePointKind.Smooth),
+			new CurveKnot(new Vector2(1f, 1f), CurvePointKind.Smooth),
+		]);
+		Start(() =>
+		{
+			Vector2 origin = ImGui.GetCursorScreenPos();
+			changed |= ImGuiWidgets.CurveEditor(curve, Size, new Vector2(-1f), new Vector2(2f), ref selection, Label);
+			MarkSpan(Label, origin);
+		});
+		MoveAway();
+		Step();
+
+		Rectangle rect = RectOf(Label);
+		int x = (int)(rect.MinX + (rect.Width / 6f));
+		int lineY = (int)(rect.MinY + (rect.Height * 2f / 3f));
+		Bitmap32 target = Harness.Target;
+
+		Assert.AreNotEqual(target.GetPixel(x, lineY - 12), target.GetPixel(x, lineY), "No line was drawn at value 0 left of the first point.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_SingleCurve_DraggingAPointOnAWiderRange_LandsWhereItWasDropped()
+	{
+		curve = BuildCurve();
+		Start(() =>
+		{
+			Vector2 origin = ImGui.GetCursorScreenPos();
+			changed |= ImGuiWidgets.CurveEditor(curve, Size, new Vector2(-0.5f, 0f), new Vector2(1.5f, 1f), ref selection, Label);
+			MarkSpan(Label, origin);
+		});
+
+		// The middle point (0.5, 0.8) sits halfway across X -0.5..1.5; a fifth of the width left is X 0.1.
+		Rectangle rect = RectOf(Label);
+		float x = rect.MinX + (rect.Width * 0.5f);
+		float y = rect.MaxY - (rect.Height * 0.8f);
+		Harness.Mouse.Drag(x, y, x - (rect.Width * 0.2f), y);
+		Step(2);
+
+		Assert.IsTrue(changed, "The editor reported no change while a point was being dragged.");
+		Assert.AreEqual(0.1f, curve.GetPoint(1).Position.X, 0.03f, $"The point should have landed at X 0.1, but is at {curve.GetPoint(1).Position}.");
+		Assert.AreEqual(new Vector2(0f, 0f), curve.GetPoint(0).Position, "Dragging the middle point moved the first.");
+		Assert.AreEqual(new Vector2(1f, 0.2f), curve.GetPoint(2).Position, "Dragging the middle point moved the last.");
 	}
 
 	[TestMethod]

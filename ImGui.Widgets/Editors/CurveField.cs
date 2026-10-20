@@ -2,16 +2,20 @@
 
 namespace ktsu.ImGui.Widgets;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
-using HexaCurve = Hexa.NET.Mathematics.Curve;
-using HexaCurveEditor = Hexa.NET.ImGui.Widgets.Extras.ImGuiCurveEditor;
+using ktsu.ImGui.Probes;
 
 public static partial class ImGuiWidgets
 {
+	/// <summary>Number of segments the drawn curve is divided into across the editor's width.</summary>
+	private const int CurveLineSegments = 128;
+
+	/// <summary>Radius of a point marker in pixels at the reference interface scale.</summary>
+	private const float CurvePointRadius = 4f;
+
 	/// <summary>
 	/// Draws an editable single curve.
 	/// </summary>
@@ -25,94 +29,73 @@ public static partial class ImGuiWidgets
 	/// <returns><see langword="true"/> if the curve changed this frame.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="curve"/> or <paramref name="label"/> is <see langword="null"/>.</exception>
 	/// <remarks>
-	/// Two upstream defects are absorbed here rather than passed through to callers.
+	/// Press a point to select it and drag to move it; a point stays within the range and between its
+	/// neighbours' X, so the curve's points stay in order. Double-click empty space to add a point
+	/// there, which also works on an empty curve, and double-click a point to remove it.
 	/// <para>
-	/// An empty curve is never handed to the vendor: the call is skipped, a layout slot of
-	/// <paramref name="size"/> is reserved so nothing below shifts, and <see langword="false"/> is
-	/// returned. Upstream's add-a-point path (<c>ImGuiCurveEditor.cs:192</c>) evaluates
-	/// <c>Points[key]</c> before testing <c>key != Points.Count</c>, so a double-click — the
-	/// documented gesture for adding a point — throws immediately on a curve with no points, which
-	/// is exactly the state the parameterless <see cref="CurveData"/> constructor produces. Because
-	/// that gesture is also the only way to create a point, an empty curve cannot be populated
-	/// through this editor: seed at least one point with <see cref="CurveData.AddPoint"/> first.
-	/// </para>
-	/// <para>
-	/// <paramref name="selection"/> is normalized before and after the vendor call, so it never
-	/// addresses a point that is not there. Upstream removes <c>Points[currentSelection]</c> on a
-	/// double-click (<c>ImGuiCurveEditor.cs:208-212</c>) but writes the now-stale index straight back
-	/// out (<c>:233</c>). Clamping alone would only cover deletion of the <em>last</em> point, since
-	/// deleting any earlier one leaves the index addressing whichever point shifted down into that
-	/// slot — so a shrink in point count clears the selection outright.
-	/// </para>
-	/// <para>
-	/// One upstream defect is deliberately <em>not</em> absorbed: double-clicking to the right of the
-	/// last point, when that point sits left of <paramref name="rangeMax"/>'s X, still walks
-	/// <c>key</c> up to <c>Points.Count</c> and throws at <c>ImGuiCurveEditor.cs:192</c>. It could be
-	/// prevented from out here, but only by rescaling the horizontal axis away from the range the
-	/// caller asked for, or by duplicating the vendor's hit-test maths and suppressing its gesture
-	/// through global IO state — both worse than the defect. Keep the last point at or beyond
-	/// <paramref name="rangeMax"/>'s X to stay clear of it. Note the throw escapes between the
-	/// vendor's <c>PushID</c> and <c>PopID</c>, so catching it and continuing to render leaves the
-	/// ImGui ID stack unbalanced; it is not a recoverable exception.
+	/// The line is <see cref="CurveData.Sample"/> plotted in the same value range as the points, so a
+	/// range wider than 0..1 shows the curve held flat beyond its ends rather than stretched across
+	/// the frame.
 	/// </para>
 	/// </remarks>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The only pointer is taken by fixed over the caller's selection, is pinned for exactly the duration of the vendor call, and is neither retained nor published beyond it.")]
-	public static unsafe bool CurveEditor(CurveData curve, Vector2 size, Vector2 rangeMin, Vector2 rangeMax, ref int selection, string label)
+	public static bool CurveEditor(CurveData curve, Vector2 size, Vector2 rangeMin, Vector2 rangeMax, ref int selection, string label)
 	{
 		Ensure.NotNull(curve);
 		Ensure.NotNull(label);
 
 		selection = ClampSelection(selection, curve.PointCount);
 
-		if (curve.PointCount == 0)
+		Vector2 frameSize = Vector2.Max(size, Vector2.One);
+		Vector2 origin = ImGui.GetCursorScreenPos();
+		CurveFieldGeometry geometry = new(origin, frameSize, rangeMin, rangeMax);
+		float radius = InterfaceScale.Pixels(CurvePointRadius);
+
+		ImGui.InvisibleButton(label, frameSize);
+		ImGuiProbes.MarkItem(label);
+
+		Vector2 mouse = ImGui.GetIO().MousePos;
+		int hovered = ImGui.IsItemHovered() || ImGui.IsItemActive()
+			? geometry.HitTest(curve, mouse, radius + 2f)
+			: -1;
+		if (hovered >= 0 || (ImGui.IsItemActive() && selection >= 0))
 		{
-			// See the remarks: upstream's add-a-point path indexes Points[0] on an empty list.
-			// Reserve the layout slot anyway, so an empty curve leaves a gap the caller sized rather
-			// than silently collapsing to nothing and shifting everything below it.
-			ImGui.Dummy(size);
-			return false;
+			WidgetCursor.OnLastItem(ImGuiMouseCursor.ResizeAll);
 		}
 
-		int pointCountBefore = curve.PointCount;
-		ref HexaCurve vendorCurve = ref curve.AsVendorCurve();
-		bool changed;
-
-		// Hexa's ref-parameter overload (ImGuiCurveEditor's `ref int selection` convenience wrapper)
-		// forwards Unsafe.AsPointer(ref selection) to the pointer overload with no pinned local at
-		// all, and AsPointer does not pin. The resulting int* is then held across the entire draw
-		// body, which reads it (ImGuiCurveEditor.cs:59), allocates along the way (ImGui.PushID,
-		// Points.Add/Insert, an interpolated string) and finally writes through it
-		// (ImGuiCurveEditor.cs:233). A caller holding selection as a field on a class — the natural
-		// place for it — can have that object relocated by a gen0 compaction mid-call, and the write
-		// then lands in memory belonging to something else. Call the pointer overload directly with
-		// a real fixed so nobody "simplifies" this back to the broken convenience overload. Same
-		// deliberate refusal of a vendor ref overload, for the same defect class, as Sequencer.cs:64-72.
-		// Upstream spaces its horizontal grid lines by the editor's width and its vertical ones by
-		// its height, so on any editor that is not square the lines run past the frame (a 300x170
-		// editor drew grid 110px below itself). It pushes no clip rect of its own; this one keeps
-		// its drawing within the frame, with room for a point marker sitting on an edge.
-		Vector2 origin = ImGui.GetCursorScreenPos();
-		ImGui.PushClipRect(origin - new Vector2(PointMarkerMargin), origin + size + new Vector2(PointMarkerMargin), true);
-		try
+		bool changed = false;
+		if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
 		{
-			fixed (int* pSelection = &selection)
+			if (hovered >= 0)
 			{
-				changed = HexaCurveEditor.Curve(label, size, ref vendorCurve, rangeMin, rangeMax, pSelection);
+				curve.RemovePoint(hovered);
+				selection = -1;
+			}
+			else
+			{
+				Vector2 value = geometry.ToValue(mouse);
+				int index = CurveFieldGeometry.InsertionIndex(curve, value.X);
+				curve.InsertPoint(index, new CurveKnot(value, CurvePointKind.Smooth));
+				selection = index;
+			}
+
+			changed = true;
+		}
+		else if (ImGui.IsItemActivated())
+		{
+			selection = hovered;
+		}
+		else if (ImGui.IsItemActive() && selection >= 0 && ImGui.IsMouseDragging(ImGuiMouseButton.Left, 0f))
+		{
+			CurveKnot knot = curve.GetPoint(selection);
+			Vector2 moved = geometry.ConstrainDrag(curve, selection, geometry.ToValue(mouse));
+			if (moved != knot.Position)
+			{
+				curve.SetPoint(selection, knot with { Position = moved });
+				changed = true;
 			}
 		}
-		finally
-		{
-			ImGui.PopClipRect();
-		}
 
-		selection = ResolveSelectionAfterEdit(selection, pointCountBefore, curve.PointCount);
-
-		if (changed)
-		{
-			// The editor moved points directly in the wrapped curve, so the sample cache is stale.
-			curve.MarkDirty();
-		}
-
+		DrawCurveField(curve, geometry, selection, hovered, radius);
 		return changed;
 	}
 
@@ -124,34 +107,67 @@ public static partial class ImGuiWidgets
 	/// <returns><paramref name="selection"/> when it addresses an existing point, otherwise -1.</returns>
 	/// <remarks>
 	/// The result always lies within <c>[-1, pointCount - 1]</c>. An index past the end resolves to
-	/// -1 (no selection) rather than to the last point: it is reached by upstream deleting the point
-	/// that was selected, and silently retargeting the drag at whichever point happens to be adjacent
-	/// would move data the user never grabbed.
-	/// <para>
-	/// This handles an index that is out of range. It cannot detect a stale index that still happens
-	/// to be in range — the case where an earlier point was deleted and a later one shifted down into
-	/// its slot. Callers relying on that must compare the point count across the call, as
-	/// <see cref="CurveEditor(CurveData, Vector2, Vector2, Vector2, ref int, string)"/> does.
-	/// </para>
+	/// -1 (no selection) rather than to the last point: a caller's curve can shrink between frames,
+	/// and silently retargeting the drag at whichever point happens to be adjacent would move data
+	/// the user never grabbed.
 	/// </remarks>
 	internal static int ClampSelection(int selection, int pointCount) =>
 		selection >= 0 && selection < pointCount ? selection : -1;
 
-	/// <summary>
-	/// Resolves a point selection after the editor has run, clearing it when the editor deleted a point.
-	/// </summary>
-	/// <param name="selection">The selection index the editor wrote back.</param>
-	/// <param name="pointCountBefore">How many points the curve held before the call.</param>
-	/// <param name="pointCountAfter">How many it holds now.</param>
-	/// <returns>The selection to hand back to the caller.</returns>
-	/// <remarks>
-	/// A drop in point count means the editor deleted the selected point — <c>RemoveAt</c> at
-	/// <c>ImGuiCurveEditor.cs:210</c> is its only removal path, and it removes the selected index.
-	/// The editor then writes that index straight back out, so clamping alone would only catch the
-	/// deletion of the <em>last</em> point: deleting any earlier one leaves the index addressing a
-	/// real slot, the point that shifted down into it, and the next drag would move a point the user
-	/// never grabbed. Any shrink therefore clears the selection outright.
-	/// </remarks>
-	internal static int ResolveSelectionAfterEdit(int selection, int pointCountBefore, int pointCountAfter) =>
-		pointCountAfter < pointCountBefore ? -1 : ClampSelection(selection, pointCountAfter);
+	/// <summary>Draws the frame, grid, curve and point markers of a single-curve editor.</summary>
+	/// <param name="curve">The curve being edited.</param>
+	/// <param name="geometry">The mapping between the curve's values and the frame.</param>
+	/// <param name="selection">The selected point, or -1.</param>
+	/// <param name="hovered">The point under the pointer, or -1.</param>
+	/// <param name="radius">Point marker radius in pixels.</param>
+	private static void DrawCurveField(CurveData curve, CurveFieldGeometry geometry, int selection, int hovered, float radius)
+	{
+		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+		Vector2 min = geometry.Origin;
+		Vector2 max = geometry.Origin + geometry.Size;
+		ImGuiStylePtr style = ImGui.GetStyle();
+
+		drawList.AddRectFilled(min, max, ImGui.GetColorU32(ImGuiCol.FrameBg), style.FrameRounding);
+
+		uint gridColor = ImGui.GetColorU32(ImGuiCol.Border);
+		for (int i = 1; i < 4; i++)
+		{
+			float x = min.X + (geometry.Size.X * i / 4f);
+			float y = min.Y + (geometry.Size.Y * i / 4f);
+			drawList.AddLine(new Vector2(x, min.Y), new Vector2(x, max.Y), gridColor);
+			drawList.AddLine(new Vector2(min.X, y), new Vector2(max.X, y), gridColor);
+		}
+
+		// Markers sit on the frame's edges when a point is at the end of the range, so the clip
+		// leaves room for half of one outside it.
+		Vector2 margin = new(radius + 2f);
+		drawList.PushClipRect(min - margin, max + margin, true);
+
+		if (curve.PointCount > 0)
+		{
+			uint lineColor = ImGui.GetColorU32(ImGuiCol.PlotLines);
+			Vector2 previous = default;
+			for (int i = 0; i <= CurveLineSegments; i++)
+			{
+				float x = geometry.RangeMin.X + ((geometry.RangeMax.X - geometry.RangeMin.X) * i / CurveLineSegments);
+				Vector2 point = geometry.ToScreen(new Vector2(x, curve.Sample(x)));
+				if (i > 0)
+				{
+					drawList.AddLine(previous, point, lineColor, 2f);
+				}
+
+				previous = point;
+			}
+		}
+
+		for (int i = 0; i < curve.PointCount; i++)
+		{
+			Vector2 center = geometry.ToScreen(curve.GetPoint(i).Position);
+			ImGuiCol fill = i == selection ? ImGuiCol.SliderGrabActive : i == hovered ? ImGuiCol.ButtonHovered : ImGuiCol.SliderGrab;
+			drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 16);
+			drawList.AddCircle(center, radius, ImGui.GetColorU32(ImGuiCol.Text), 16);
+		}
+
+		drawList.PopClipRect();
+	}
 }

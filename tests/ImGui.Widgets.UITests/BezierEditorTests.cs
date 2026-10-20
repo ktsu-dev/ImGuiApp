@@ -4,8 +4,6 @@ namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,12 +18,8 @@ public sealed class BezierEditorTests : WidgetTest
 	private BezierControlPoints points = new(new Vector2(0.25f, 0.1f), new Vector2(0.25f, 1f));
 	private bool changed;
 
-	private void Draw()
-	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
-		changed |= ImGuiWidgets.BezierEditor(Label, ref points, Size);
-		MarkSpan(Label, origin);
-	}
+	// The editor marks its own plot under its label, so no span is marked here.
+	private void Draw() => changed |= ImGuiWidgets.BezierEditor(Label, ref points, Size);
 
 	[TestMethod]
 	public void BezierEditor_DrawsAtTheSizeItIsGiven()
@@ -71,6 +65,15 @@ public sealed class BezierEditorTests : WidgetTest
 
 		Assert.AreNotEqual(before, points, "Dragging the first handle did not move a control point.");
 		Assert.IsTrue(changed, "The editor reported no change while a handle was being dragged.");
+	}
+
+	[TestMethod]
+	public void BezierEditor_ShowsTheNumbersAboveThePlot()
+	{
+		Start(Draw);
+
+		Assert.IsTrue(IsVisible($"{Label}/values"), "The row of control point values was not drawn.");
+		Assert.IsLessThanOrEqualTo(RectOf(Label).MinY, RectOf($"{Label}/values").MaxY, "The values row is not above the plot.");
 	}
 
 	[TestMethod]
