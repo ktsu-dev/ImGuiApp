@@ -12,7 +12,8 @@ using System.Numerics;
 /// <param name="LinkUrl">The enclosing link URL, or <see langword="null"/> when not a link.</param>
 /// <param name="IsImage">Whether this run is an inline image rather than text.</param>
 /// <param name="IsHardBreak">Whether this run is a hard line break, which ends the current line and carries no text.</param>
-internal readonly record struct InlineRun(string Text, MarkdownFontRole Role, string? LinkUrl, bool IsImage, bool IsHardBreak = false);
+/// <param name="AltText">For an image, its description, which a placeholder shows when nothing resolves the image.</param>
+internal readonly record struct InlineRun(string Text, MarkdownFontRole Role, string? LinkUrl, bool IsImage, bool IsHardBreak = false, string? AltText = null);
 
 /// <summary>A single positioned token within a laid-out line.</summary>
 /// <param name="Text">The token text.</param>
@@ -21,7 +22,8 @@ internal readonly record struct InlineRun(string Text, MarkdownFontRole Role, st
 /// <param name="IsImage">Whether this token is an inline image (its <paramref name="Text"/> is the image key).</param>
 /// <param name="X">The token's horizontal offset from the line start, in pixels.</param>
 /// <param name="Width">The measured token width, in pixels.</param>
-internal readonly record struct LaidOutToken(string Text, MarkdownFontRole Role, string? LinkUrl, bool IsImage, float X, float Width);
+/// <param name="AltText">For an image, its description.</param>
+internal readonly record struct LaidOutToken(string Text, MarkdownFontRole Role, string? LinkUrl, bool IsImage, float X, float Width, string? AltText = null);
 
 /// <summary>A wrapped line of tokens.</summary>
 internal sealed class LaidOutLine
@@ -36,6 +38,19 @@ internal sealed class LaidOutLine
 	public required float Height { get; init; }
 }
 
+/// <summary>How the lines of a block of inline content sit within the width they were wrapped to.</summary>
+internal enum InlineAlignment
+{
+	/// <summary>Lines start at the left edge. The default, and what a table column with no marker gets.</summary>
+	Left,
+
+	/// <summary>Lines are centered, as a <c>|:-:|</c> table column asks.</summary>
+	Center,
+
+	/// <summary>Lines end at the right edge, as a <c>|--:|</c> table column asks.</summary>
+	Right,
+}
+
 /// <summary>
 /// Pure word-wrap engine. Splits styled runs into word tokens and greedily packs them into
 /// lines that fit within a maximum width, using an injected measurement function.
@@ -48,16 +63,18 @@ internal static class InlineLayout
 	/// <param name="runs">The styled runs to lay out.</param>
 	/// <param name="maxWidth">The maximum line width in pixels.</param>
 	/// <param name="measure">Measures the pixel size (width in X, height in Y) of text for a given role.</param>
+	/// <param name="spaceRole">The role the space between words is measured in: the block's own role.</param>
 	/// <returns>The wrapped lines.</returns>
 	public static IReadOnlyList<LaidOutLine> Wrap(
 		IReadOnlyList<InlineRun> runs,
 		float maxWidth,
-		Func<string, MarkdownFontRole, bool, Vector2> measure)
+		Func<string, MarkdownFontRole, bool, Vector2> measure,
+		MarkdownFontRole spaceRole = MarkdownFontRole.Body)
 	{
 		Ensure.NotNull(runs);
 		Ensure.NotNull(measure);
 
-		float spaceWidth = measure(" ", MarkdownFontRole.Body, false).X;
+		float spaceWidth = measure(" ", spaceRole, false).X;
 
 		List<LaidOutLine> lines = [];
 		List<LaidOutToken> current = [];
@@ -112,7 +129,7 @@ internal static class InlineLayout
 			for (int i = 0; i < word.Count; i++)
 			{
 				(string text, InlineRun run) = word[i];
-				current.Add(new LaidOutToken(text, run.Role, run.LinkUrl, run.IsImage, cursorX, sizes[i].X));
+				current.Add(new LaidOutToken(text, run.Role, run.LinkUrl, run.IsImage, cursorX, sizes[i].X, run.AltText));
 				cursorX += sizes[i].X;
 				lineHeight = Math.Max(lineHeight, sizes[i].Y);
 			}
@@ -120,6 +137,26 @@ internal static class InlineLayout
 
 		FlushLine();
 		return lines;
+	}
+
+	/// <summary>
+	/// The horizontal offset that places a line of <paramref name="lineWidth"/> pixels within
+	/// <paramref name="availableWidth"/> under <paramref name="alignment"/>. A line wider than the space
+	/// it was wrapped to (one word too long to break) starts at the left edge rather than before it.
+	/// </summary>
+	/// <param name="lineWidth">The laid-out width of the line, in pixels.</param>
+	/// <param name="availableWidth">The width the line was wrapped to, in pixels.</param>
+	/// <param name="alignment">The alignment to apply.</param>
+	/// <returns>The offset from the left edge, in pixels, never negative.</returns>
+	public static float AlignmentOffset(float lineWidth, float availableWidth, InlineAlignment alignment)
+	{
+		float slack = Math.Max(0.0f, availableWidth - lineWidth);
+		return alignment switch
+		{
+			InlineAlignment.Right => slack,
+			InlineAlignment.Center => slack * 0.5f,
+			_ => 0.0f,
+		};
 	}
 
 	/// <summary>
@@ -172,6 +209,16 @@ internal static class InlineLayout
 
 			if (run.Text.Length == 0)
 			{
+				continue;
+			}
+
+			// A code span is one token with its spaces kept: CommonMark keeps interior spaces in code,
+			// and splitting it would draw each word as a chip of its own with body-font gaps between.
+			// Markdig has already stripped the one space a span may be padded with at either end.
+			if (run.Role == MarkdownFontRole.Code)
+			{
+				yield return (run.Text, run, spaceBefore);
+				spaceBefore = false;
 				continue;
 			}
 

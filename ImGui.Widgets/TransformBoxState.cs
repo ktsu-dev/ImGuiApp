@@ -470,6 +470,10 @@ public static partial class ImGuiWidgets
 			float top = from.Min.Y;
 			float bottom = from.Max.Y;
 
+			// A side already shorter than the minimum at the press may stay that short, but is never pushed
+			// out to the minimum by a press that has not moved (#595).
+			minimum = Vector2.Min(minimum, Vector2.Max(new Vector2(right - left, bottom - top), Vector2.Zero));
+
 			if (handle is TransformBoxHandle.Left or TransformBoxHandle.TopLeft or TransformBoxHandle.BottomLeft)
 			{
 				left = MathF.Min(left + delta.X, right - minimum.X);
@@ -518,7 +522,10 @@ public static partial class ImGuiWidgets
 			float smallest = MathF.Max(
 				size.X > 0f ? minimum.X / size.X : 0f,
 				size.Y > 0f ? minimum.Y / size.Y : 0f);
-			scale = MathF.Max(scale, smallest);
+
+			// Capped at the press's own size, so a box already under the minimum is not scaled up by a
+			// press that has not moved (#595).
+			scale = MathF.Max(scale, MathF.Min(smallest, 1f));
 
 			Vector2 corner = opposite + ((held - opposite) * scale);
 			return new TransformBoxRect(Vector2.Min(opposite, corner), Vector2.Max(opposite, corner));

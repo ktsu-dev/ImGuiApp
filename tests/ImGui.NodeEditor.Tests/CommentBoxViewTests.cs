@@ -10,6 +10,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.NodeEditor;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -33,8 +34,15 @@ public sealed class CommentBoxViewTests
 
 	private ImGuiAppHarness harness = null!;
 
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	private void Start()
 	{

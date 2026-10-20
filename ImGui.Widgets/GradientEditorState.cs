@@ -134,6 +134,8 @@ public static partial class ImGuiWidgets
 			for (int i = 1; i < stops.Count; i++)
 			{
 				GradientStop moving = stops[i];
+				// Read before the shift, which can move a selected neighbour onto index i (#582).
+				bool movingWasSelected = SelectedIndex == i;
 				int j = i - 1;
 				while (j >= 0 && stops[j].Position > moving.Position)
 				{
@@ -149,7 +151,7 @@ public static partial class ImGuiWidgets
 				if (j + 1 != i)
 				{
 					stops[j + 1] = moving;
-					if (SelectedIndex == i)
+					if (movingWasSelected)
 					{
 						SelectedIndex = j + 1;
 					}

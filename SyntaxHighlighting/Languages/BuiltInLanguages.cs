@@ -2,7 +2,9 @@
 
 namespace ktsu.SyntaxHighlighting;
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// The language definitions registered by default. Each is exposed individually so an application
@@ -13,6 +15,10 @@ public static class BuiltInLanguages
 	private static readonly LineCommentRule SlashComment = new() { Prefix = "//" };
 	private static readonly LineCommentRule SlashDocComment = new() { Prefix = "///", Kind = TokenKind.DocComment };
 	private static readonly LineCommentRule HashComment = new() { Prefix = "#" };
+
+	// Shell and YAML open a comment with # only where a word starts, so $#, ${#name} and
+	// http://host/#frag stay code.
+	private static readonly LineCommentRule WordStartHashComment = new() { Prefix = "#", RequiresWhitespaceBefore = true };
 	private static readonly LineCommentRule DashComment = new() { Prefix = "--" };
 	private static readonly BlockCommentRule SlashStarComment = new() { Open = "/*", Close = "*/" };
 	private static readonly BlockCommentRule SlashStarDocComment = new() { Open = "/**", Close = "*/", Kind = TokenKind.DocComment };
@@ -40,9 +46,13 @@ public static class BuiltInLanguages
 		BlockComments = [SlashStarComment],
 		Strings =
 		[
-			new StringRule { Open = "\"\"\"", Close = "\"\"\"", Escape = null, AllowMultiline = true },
+			CSharpRawString(string.Empty),
+			CSharpRawString("$"),
+			CSharpRawString("$$"),
+			CSharpRawString("$$$"),
 			new StringRule { Open = "@\"", Close = "\"", Escape = null, DoubledCloseEscapes = true, AllowMultiline = true },
 			new StringRule { Open = "$@\"", Close = "\"", Escape = null, DoubledCloseEscapes = true, AllowMultiline = true },
+			new StringRule { Open = "@$\"", Close = "\"", Escape = null, DoubledCloseEscapes = true, AllowMultiline = true },
 			new StringRule { Open = "$\"", Close = "\"" },
 			DoubleQuoted,
 			SingleQuoted,
@@ -160,15 +170,7 @@ public static class BuiltInLanguages
 		Name = "python",
 		Aliases = ["py"],
 		LineComments = [HashComment],
-		Strings =
-		[
-			new StringRule { Open = "\"\"\"", Close = "\"\"\"", AllowMultiline = true },
-			new StringRule { Open = "'''", Close = "'''", AllowMultiline = true },
-			new StringRule { Open = "f\"", Close = "\"" },
-			new StringRule { Open = "r\"", Close = "\"", Escape = null },
-			DoubleQuoted,
-			SingleQuoted,
-		],
+		Strings = PythonStrings(),
 		Keywords =
 		[
 			"and", "as", "assert", "async", "await", "class", "def", "del", "from", "global", "import",
@@ -201,7 +203,7 @@ public static class BuiltInLanguages
 	{
 		Name = "yaml",
 		Aliases = ["yml"],
-		LineComments = [HashComment],
+		LineComments = [WordStartHashComment],
 		Strings = [DoubleQuoted, SingleQuoted],
 		Constants = ["true", "false", "null", "yes", "no", "on", "off", "~"],
 		CaseSensitive = false,
@@ -276,7 +278,7 @@ public static class BuiltInLanguages
 	{
 		Name = "shell",
 		Aliases = ["bash", "sh", "zsh", "console"],
-		LineComments = [HashComment],
+		LineComments = [WordStartHashComment],
 		Strings = [DoubleQuoted, new StringRule { Open = "'", Close = "'", Escape = null }, BackTicked],
 		Keywords = ["declare", "export", "function", "local", "readonly", "source", "unset"],
 		ControlKeywords = ["case", "do", "done", "elif", "else", "esac", "fi", "for", "if", "in", "return", "then", "until", "while"],
@@ -306,4 +308,54 @@ public static class BuiltInLanguages
 	[
 		PlainText, CSharp, C, Cpp, JavaScript, TypeScript, Python, Json, Yaml, Xml, Html, Css, Sql, Shell, Lua,
 	];
+
+	// A C# raw string, interpolated or not: three or more quotes, closed only by as many, with no
+	// escapes. The $ prefixes count interpolation braces, which changes nothing about where it ends.
+	private static StringRule CSharpRawString(string prefix) => new()
+	{
+		Open = prefix + "\"\"\"",
+		Close = "\"\"\"",
+		Escape = null,
+		AllowMultiline = true,
+		CloseMatchesOpeningRun = true,
+	};
+
+	// Every Python string prefix, in every case Python accepts, before each of the four quotes. A
+	// prefix with r in it is raw, and only the triple-quoted forms may span lines.
+	private static List<StringRule> PythonStrings()
+	{
+		string[] prefixes = ["", "f", "r", "b", "u", "t", "rf", "fr", "rb", "br", "rt", "tr"];
+		string[] quotes = ["\"\"\"", "'''", "\"", "'"];
+		List<StringRule> rules = [];
+		foreach (string prefix in prefixes)
+		{
+			foreach (string spelling in CaseVariants(prefix))
+			{
+				foreach (string quote in quotes)
+				{
+					rules.Add(new StringRule
+					{
+						Open = spelling + quote,
+						Close = quote,
+						Escape = prefix.Contains('r', StringComparison.Ordinal) ? null : '\\',
+						AllowMultiline = quote.Length == 3,
+					});
+				}
+			}
+		}
+
+		return rules;
+	}
+
+	private static IEnumerable<string> CaseVariants(string prefix)
+	{
+		IEnumerable<string> spellings = [string.Empty];
+		foreach (char letter in prefix)
+		{
+			char upper = char.ToUpperInvariant(letter);
+			spellings = [.. spellings.SelectMany(start => new[] { start + letter, start + upper })];
+		}
+
+		return spellings;
+	}
 }

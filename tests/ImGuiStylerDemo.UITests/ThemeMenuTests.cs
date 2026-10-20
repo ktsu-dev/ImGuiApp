@@ -8,6 +8,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 
@@ -25,6 +26,9 @@ public sealed class ThemeMenuTests
 	private const string MenuProbe = "theme-menu";
 
 	private ImGuiAppHarness harness = null!;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
 
 	[TestInitialize]
 	public void SetUp()
@@ -52,6 +56,7 @@ public sealed class ThemeMenuTests
 	[TestCleanup]
 	public void TearDown()
 	{
+		TestContext.KeepFailureFrame(harness);
 		Theme.ResetToDefault();
 		harness?.Dispose();
 	}

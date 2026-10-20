@@ -33,6 +33,8 @@ public sealed class ReorderableTreeTests : WidgetTest
 	private List<TreeNode> roots = [];
 	private string editing = string.Empty;
 	private bool editNotes;
+	private RowControl notesControl;
+	private float opacity;
 	private readonly List<ReorderableTreeMove> moves = [];
 	private readonly List<string> clicked = [];
 
@@ -49,6 +51,17 @@ public sealed class ReorderableTreeTests : WidgetTest
 		clicked.Clear();
 		editing = "Notes";
 		editNotes = false;
+		notesControl = RowControl.None;
+		opacity = 50f;
+	}
+
+	/// <summary>A control the Notes row draws in place of its name.</summary>
+	public enum RowControl
+	{
+		None,
+		Slider,
+		Drag,
+		ValueSlider,
 	}
 
 	private void Draw()
@@ -64,6 +77,19 @@ public sealed class ReorderableTreeTests : WidgetTest
 				ImGui.SetNextItemWidth(200f);
 				ImGui.InputText("##edit", ref editing, 64u);
 				ImGuiProbes.MarkItem("edit");
+				return;
+			}
+
+			if (notesControl != RowControl.None && flat[i].Node.Name == "Notes")
+			{
+				ImGui.SetNextItemWidth(200f);
+				_ = notesControl switch
+				{
+					RowControl.Slider => ImGui.SliderFloat("##opacity", ref opacity, 0f, 100f),
+					RowControl.Drag => ImGui.DragFloat("##opacity", ref opacity, 0.5f, 0f, 100f),
+					_ => ImGuiWidgets.ValueSlider("##opacity", ref opacity, 0f, 100f),
+				};
+				ImGuiProbes.MarkItem("opacity");
 				return;
 			}
 
@@ -299,6 +325,110 @@ public sealed class ReorderableTreeTests : WidgetTest
 
 		Assert.IsEmpty(moves);
 		Assert.AreEqual("Photos .Beach .Forest Notes Archive", Shape());
+	}
+
+	[TestMethod]
+	[DataRow(RowControl.Slider)]
+	[DataRow(RowControl.Drag)]
+	[DataRow(RowControl.ValueSlider)]
+	public void ReorderableTree_DraggingAControlInARowChangesItRatherThanMovingTheRow(RowControl control)
+	{
+		notesControl = control;
+		Start(Draw);
+
+		// From the slider's left, ending over the middle of Archive and well to the right: the slider
+		// is dragged both along itself and down into a drop zone.
+		Rectangle field = RectOf($"{Label}/opacity");
+		Rectangle archive = RectOf($"{Label}/row4");
+		Harness.Mouse.Drag(
+			field.MinX + 20f,
+			field.MinY + (field.Height / 2f),
+			field.MaxX - 20f,
+			archive.MinY + (archive.Height / 2f),
+			steps: 8,
+			button: 0);
+		Step(2);
+
+		Assert.AreNotEqual(50f, opacity, "the control did not take the drag");
+		Assert.IsEmpty(moves);
+		Assert.AreEqual("Photos .Beach .Forest Notes Archive", Shape());
+	}
+
+	[TestMethod]
+	[DataRow(RowControl.Slider)]
+	[DataRow(RowControl.ValueSlider)]
+	public void ReorderableTree_DraggingStraightDownFromASliderStillDoesNotMoveTheRow(RowControl control)
+	{
+		notesControl = control;
+		Start(Draw);
+
+		// Straight down: a relative slider such as ValueSlider edits nothing on this path, so only the
+		// slider's claim on the press keeps the row where it is.
+		Rectangle field = RectOf($"{Label}/opacity");
+		Rectangle archive = RectOf($"{Label}/row4");
+		float x = field.MinX + (field.Width * 0.5f);
+		Harness.Mouse.Drag(
+			x,
+			field.MinY + (field.Height / 2f),
+			x,
+			archive.MinY + (archive.Height / 2f),
+			steps: 8,
+			button: 0);
+		Step(2);
+
+		Assert.IsEmpty(moves);
+		Assert.AreEqual("Photos .Beach .Forest Notes Archive", Shape());
+	}
+
+	[TestMethod]
+	public void ReorderableTree_ARowWithAControlStillDragsByItsBackground()
+	{
+		notesControl = RowControl.Slider;
+		Start(Draw);
+
+		// The row runs the full width; past the 200-pixel slider is its background.
+		Rectangle notes = RectOf($"{Label}/row3");
+		Assert.IsGreaterThan(RectOf($"{Label}/opacity").MaxX + 20, notes.MaxX, "the row has no background beside the slider");
+		Rectangle archive = RectOf($"{Label}/row4");
+		Harness.Mouse.Drag(
+			notes.MaxX - 10f,
+			notes.MinY + (notes.Height / 2f),
+			archive.MinX + 30f,
+			archive.MinY + (archive.Height / 2f),
+			steps: 8,
+			button: 0);
+		Step(2);
+
+		Assert.AreEqual(50f, opacity);
+		Assert.AreEqual("Photos .Beach .Forest Archive .Notes", Shape());
+	}
+
+	[TestMethod]
+	public void ReorderableTree_TheLastChildOfTheLastGroupCanLeaveIt()
+	{
+		Start(Draw);
+
+		// Notes into Archive first, so the last row of the list is a child.
+		DragRow(fromRow: 3, toRow: 4, toFraction: 0.5f);
+		Assert.AreEqual("Photos .Beach .Forest Archive .Notes", Shape());
+
+		// Then from Notes to just below itself, at depth 0: out to the end of the top level.
+		DragRow(fromRow: 4, toRow: 4, toFraction: 0.95f, toX: 2f);
+
+		Assert.AreEqual("Photos .Beach .Forest Archive Notes", Shape());
+		Assert.AreEqual(new ReorderableTreeMove(4, -1, 2), moves[^1]);
+	}
+
+	[TestMethod]
+	public void ReorderableTree_TheLastChildStaysWhenThePointerStaysAtItsDepth()
+	{
+		Start(Draw);
+
+		DragRow(fromRow: 3, toRow: 4, toFraction: 0.5f);
+		DragRow(fromRow: 4, toRow: 4, toFraction: 0.95f, toX: ImGui.GetStyle().IndentSpacing + 10f);
+
+		Assert.HasCount(1, moves);
+		Assert.AreEqual("Photos .Beach .Forest Archive .Notes", Shape());
 	}
 
 	[TestMethod]

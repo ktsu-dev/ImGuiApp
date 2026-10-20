@@ -215,6 +215,25 @@ public static partial class ImGuiWidgets
 			OnViewRebuilt();
 		}
 
+		/// <summary>
+		/// Drops an edit open in a column the person just hid, without reporting it, and moves the active
+		/// cell to the nearest column still shown, so keys typed next never reach a cell nobody can see.
+		/// </summary>
+		private void OnColumnHidden(int column)
+		{
+			if (EditSession is DataTableEditSession session && session.Column == column)
+			{
+				CancelEdit();
+			}
+
+			if (ActiveCell is DataTableCell cell && cell.Column == column)
+			{
+				ActiveCell = (VisibleColumnAfter(column) ?? VisibleColumnBefore(column)) is int nearest
+					? cell with { Column = nearest }
+					: null;
+			}
+		}
+
 		private bool IsShown(DataTableCell cell) =>
 			ViewPositionOf(cell.SourceIndex) >= 0 && cell.Column >= 0 && cell.Column < Columns.Count;
 

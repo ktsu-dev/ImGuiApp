@@ -88,14 +88,18 @@ public static partial class ImGuiWidgets
 		/// <param name="outPoint">The out point.</param>
 		/// <param name="duration">The length of the clip. Not finite or not positive marks nothing.</param>
 		/// <param name="minLength">The narrowest the range may be.</param>
+		/// <param name="frameDuration">One frame, which every point written lands on; 0 for no snapping.</param>
 		/// <returns><see langword="true"/> when either point changed.</returns>
 		/// <remarks>
 		/// With no range yet the out point goes to the end of the clip, so a single key press makes a
 		/// range. An in point at or past the out point takes the out point with it, keeping the
 		/// minimum length, and a mark at the very end pushes the range back instead. At the very end
 		/// with a minimum of 0 and no range, both points land on the end, which reads as "no range".
+		/// The playhead is snapped to the nearest frame first, and the minimum is rounded up to whole
+		/// frames, so both points stay on the frame grid. The end of the clip is the one exception:
+		/// it is written as given even when the clip is not a whole number of frames.
 		/// </remarks>
-		public static bool MarkIn(float playhead, ref float inPoint, ref float outPoint, float duration, float minLength)
+		public static bool MarkIn(float playhead, ref float inPoint, ref float outPoint, float duration, float minLength, float frameDuration = 0f)
 		{
 			if (!float.IsFinite(playhead) || !float.IsFinite(duration) || duration <= 0f)
 			{
@@ -104,9 +108,9 @@ public static partial class ImGuiWidgets
 
 			float oldIn = inPoint;
 			float oldOut = outPoint;
-			float position = Math.Clamp(playhead, 0f, duration);
+			float position = SnapInto(playhead, frameDuration, duration);
 			bool hadRange = HasRange(inPoint, outPoint);
-			float minimum = float.IsFinite(minLength) ? MathF.Max(minLength, 0f) : 0f;
+			float minimum = WholeFrames(minLength, frameDuration);
 
 			inPoint = position;
 			if (!hadRange)
@@ -116,8 +120,8 @@ public static partial class ImGuiWidgets
 
 			if (outPoint - inPoint < minimum)
 			{
-				outPoint = MathF.Min(duration, inPoint + minimum);
-				inPoint = MathF.Max(0f, outPoint - minimum);
+				outPoint = MathF.Min(duration, Snap(inPoint + minimum, frameDuration));
+				inPoint = MathF.Max(0f, FloorToFrame(outPoint - minimum, frameDuration));
 			}
 
 			return Changed(oldIn, inPoint) || Changed(oldOut, outPoint);
@@ -129,9 +133,13 @@ public static partial class ImGuiWidgets
 		/// <param name="outPoint">The out point.</param>
 		/// <param name="duration">The length of the clip. Not finite or not positive marks nothing.</param>
 		/// <param name="minLength">The narrowest the range may be.</param>
+		/// <param name="frameDuration">One frame, which every point written lands on; 0 for no snapping.</param>
 		/// <returns><see langword="true"/> when either point changed.</returns>
-		/// <remarks>The mirror of <see cref="MarkIn"/>: with no range yet the in point goes to the start of the clip.</remarks>
-		public static bool MarkOut(float playhead, ref float inPoint, ref float outPoint, float duration, float minLength)
+		/// <remarks>
+		/// The mirror of <see cref="MarkIn"/>: with no range yet the in point goes to the start of the
+		/// clip. Snapped to the frame grid the same way.
+		/// </remarks>
+		public static bool MarkOut(float playhead, ref float inPoint, ref float outPoint, float duration, float minLength, float frameDuration = 0f)
 		{
 			if (!float.IsFinite(playhead) || !float.IsFinite(duration) || duration <= 0f)
 			{
@@ -140,9 +148,9 @@ public static partial class ImGuiWidgets
 
 			float oldIn = inPoint;
 			float oldOut = outPoint;
-			float position = Math.Clamp(playhead, 0f, duration);
+			float position = SnapInto(playhead, frameDuration, duration);
 			bool hadRange = HasRange(inPoint, outPoint);
-			float minimum = float.IsFinite(minLength) ? MathF.Max(minLength, 0f) : 0f;
+			float minimum = WholeFrames(minLength, frameDuration);
 
 			outPoint = position;
 			if (!hadRange)
@@ -152,11 +160,42 @@ public static partial class ImGuiWidgets
 
 			if (outPoint - inPoint < minimum)
 			{
-				inPoint = MathF.Max(0f, outPoint - minimum);
-				outPoint = MathF.Min(duration, inPoint + minimum);
+				inPoint = MathF.Max(0f, FloorToFrame(outPoint - minimum, frameDuration));
+				outPoint = MathF.Min(duration, Snap(inPoint + minimum, frameDuration));
 			}
 
 			return Changed(oldIn, inPoint) || Changed(oldOut, outPoint);
+		}
+
+		// The playhead on the nearest frame inside the clip. Snapping before clamping keeps a playhead
+		// in the last part-frame of a clip that is not whole frames long on the end rather than past it.
+		private static float SnapInto(float playhead, float frameDuration, float duration) =>
+			Math.Clamp(Snap(playhead, frameDuration), 0f, duration);
+
+		// A minimum length rounded up to whole frames, so in + minimum stays on the grid when in does.
+		// The small allowance keeps a minimum that is already one frame (1/24 divided by 1/24 can come
+		// out a hair over 1) from being rounded up to two.
+		private static float WholeFrames(float minLength, float frameDuration)
+		{
+			float minimum = float.IsFinite(minLength) ? MathF.Max(minLength, 0f) : 0f;
+			if (!float.IsFinite(frameDuration) || frameDuration <= 0f || minimum <= 0f)
+			{
+				return minimum;
+			}
+
+			return MathF.Max(1f, MathF.Ceiling((minimum / frameDuration) - 1e-3f)) * frameDuration;
+		}
+
+		// The frame boundary at or before a position, with the same allowance for a position that is
+		// already on a boundary but came out a hair under it.
+		private static float FloorToFrame(float position, float frameDuration)
+		{
+			if (!float.IsFinite(frameDuration) || frameDuration <= 0f || !float.IsFinite(position))
+			{
+				return position;
+			}
+
+			return MathF.Floor((position / frameDuration) + 1e-3f) * frameDuration;
 		}
 
 		/// <summary>Removes the range, setting both points to 0.</summary>

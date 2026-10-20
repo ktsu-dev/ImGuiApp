@@ -46,10 +46,12 @@ public static partial class ImGuiWidgets
 	/// <summary>A run of lines forming one change, with the context around it.</summary>
 	/// <remarks>
 	/// The widget treats a hunk instance as immutable. It lays a hunk out once and keeps that layout,
-	/// its side-by-side rows and its change counts, until it is handed a different instance at the
-	/// same position, so a caller whose diff has changed builds new hunks rather than editing the
-	/// lines of one it already handed over. <see cref="IReadOnlyList{T}"/> does not stop a caller
-	/// mutating the list behind it, and a change made that way is not seen.
+	/// its side-by-side rows, its change counts and whether it is collapsed, until it is handed a hunk
+	/// with different content at the same position. A new instance with equal content keeps all of
+	/// it, so a caller may build its hunks afresh every frame. A caller whose diff has changed builds
+	/// new hunks rather than editing the lines of one it already handed over:
+	/// <see cref="IReadOnlyList{T}"/> does not stop a caller mutating the list behind it, and a change
+	/// made that way is not seen.
 	/// </remarks>
 	public sealed record DiffHunk
 	{

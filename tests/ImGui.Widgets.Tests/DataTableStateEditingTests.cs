@@ -98,6 +98,67 @@ public class DataTableStateEditingTests
 		Assert.AreEqual("Robert", fixture.NameEdits.Single().NewValue);
 	}
 
+	/// <summary>Hiding the active cell's column moves it to the next column shown (#555).</summary>
+	[TestMethod]
+	public void HidingTheActiveColumn_MovesTheActiveCellToTheNextColumnShown()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, Name);
+
+		state.SetColumnVisible(Name, isVisible: false);
+
+		Assert.AreEqual(Cell(1, Age), state.ActiveCell);
+	}
+
+	[TestMethod]
+	public void HidingTheLastColumnShown_MovesTheActiveCellLeft()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, DataTableFixture.LengthColumn);
+
+		state.SetColumnVisible(DataTableFixture.LengthColumn, isVisible: false);
+
+		Assert.AreEqual(Cell(1, DataTableFixture.MoodColumn), state.ActiveCell);
+	}
+
+	/// <summary>An edit nobody can see any more is dropped, not reported (#555).</summary>
+	[TestMethod]
+	public void HidingTheColumnBeingEdited_DropsTheEditWithoutReportingIt()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, Name);
+		state.BeginEdit('x');
+
+		state.SetColumnVisible(Name, isVisible: false);
+		state.CommitEdit();
+
+		Assert.IsFalse(state.IsEditing);
+		Assert.IsEmpty(fixture.NameEdits);
+	}
+
+	[TestMethod]
+	public void HidingAnotherColumn_LeavesTheEditOpen()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, Name);
+		state.BeginEdit();
+
+		state.SetColumnVisible(Age, isVisible: false);
+
+		Assert.IsTrue(state.IsEditing);
+	}
+
+	/// <summary>
+	/// The active cell moved off a hidden bool column, so Space toggles what's now active rather than
+	/// the hidden value (#555).
+	/// </summary>
+	[TestMethod]
+	public void Toggle_AfterHidingTheActiveBoolColumn_LeavesTheHiddenValueAlone()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = StateWithActive(1, DataTableFixture.ActiveColumn);
+
+		state.SetColumnVisible(DataTableFixture.ActiveColumn, isVisible: false);
+		state.Toggle();
+
+		Assert.IsEmpty(fixture.ActiveEdits);
+	}
+
 	[TestMethod]
 	public void CommitEdit_WithAnUnchangedValue_RaisesNothing()
 	{
