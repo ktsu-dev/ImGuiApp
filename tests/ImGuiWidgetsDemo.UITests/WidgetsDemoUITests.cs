@@ -57,7 +57,7 @@ public sealed class WidgetsDemoUITests
 	private static readonly string[] AdvancedDemoSections =
 	[
 		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Transform Box", "Pixel Loupe", "Viewport3D", "TabPanel", "SearchBox", "Grid Layout",
-		"Virtual Table", "Data Table", "Divider Container",
+		"Virtual Table", "Log View", "Data Table", "Divider Container",
 	];
 
 	private static readonly string[] NetNewSections =
@@ -901,6 +901,22 @@ public sealed class WidgetsDemoUITests
 
 		Assert.IsFalse(beforeTyping.AsSpan().SequenceEqual(harness.Target.Pixels),
 			"Typing a filter should change what the search box shows.");
+	}
+
+	[TestMethod]
+	public void LogViewDemo_FilterReducesRows()
+	{
+		OpenSection(AdvancedDemosTab, "Log View");
+		Assert.AreEqual(LogViewDemo.Log.Count, LogViewDemo.State.VisibleCount, "The log should start unfiltered.");
+
+		harness.Click("logDemo/filter");
+		harness.Keyboard.Type("*hitch*");
+		harness.Step(3);
+
+		Assert.IsTrue(LogViewDemo.State.VisibleCount > 0, "The filter hid every hitch warning.");
+		Assert.IsTrue(
+			LogViewDemo.State.VisibleCount < LogViewDemo.Log.Count,
+			$"Filtering showed {LogViewDemo.State.VisibleCount} of {LogViewDemo.Log.Count} rows.");
 	}
 
 	[TestMethod]

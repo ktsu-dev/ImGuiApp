@@ -120,6 +120,26 @@ public static partial class ImGuiWidgets
 		/// </para>
 		/// </remarks>
 		public int SelectedRow { get; set; } = -1;
+
+		/// <summary>
+		/// Gets the scroll position of the table's inner window, recorded while it was last drawn.
+		/// </summary>
+		public float ScrollY { get; internal set; }
+
+		/// <summary>
+		/// Gets the maximum scroll of the table's inner window, recorded while it was last drawn.
+		/// </summary>
+		public float ScrollMaxY { get; internal set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether the next draw scrolls to the last row.
+		/// </summary>
+		/// <remarks>
+		/// A one-shot request like <see cref="ScrollToRow"/>: the widget resets it to
+		/// <see langword="false"/> once the scroll has been issued. ImGui applies a scroll on the
+		/// frame after it is asked for, so the last row is in view from the next frame.
+		/// </remarks>
+		public bool ScrollToBottom { get; set; }
 	}
 
 	/// <summary>
@@ -288,6 +308,19 @@ public static partial class ImGuiWidgets
 			}
 
 			clipper.End();
+
+			// After the clipper has advanced the cursor past every row, so "here" is the bottom of the
+			// whole list rather than of the rows that happened to be drawn.
+			if (options.ScrollToBottom)
+			{
+				ImGui.SetScrollHereY(1f);
+				options.ScrollToBottom = false;
+			}
+
+			// Read inside the table, where the current window is the table's scrolling child rather than
+			// the window the table sits in.
+			options.ScrollY = ImGui.GetScrollY();
+			options.ScrollMaxY = ImGui.GetScrollMaxY();
 		}
 
 		private static void DrawRow(
