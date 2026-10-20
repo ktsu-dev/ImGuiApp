@@ -109,6 +109,47 @@ steps, or inside `OnRender` before the first node editor draws, and draw with it
 point ImGui accepts it. A configuration that sets it can therefore use
 `ImGuiWidgets.DrawDeferredDocked()` in a test exactly as it does in the application.
 
+## Frames from Failing Tests
+
+When a test fails, the frame it was looking at is usually the quickest way to see why.
+`FailureFrames.Save(harness, failed, suite, test)` writes the harness's most recent frame to
+
+```text
+<test assembly folder>/test-artifacts/<suite>/<test>.png
+```
+
+and returns the path, or null when the test passed or there was no frame to save: no harness, no
+frame stepped yet, or a harness already disposed. Set `IMGUI_TEST_ARTIFACTS` to put the
+`test-artifacts` folder's contents somewhere else, such as a folder a CI job uploads. The folder sits
+beside the test assembly rather than in the working directory because a test may change the working
+directory. A frame left by an earlier failing run is deleted whenever the same test runs again, so a
+picture on disk always belongs to the latest run.
+
+The class knows nothing about test frameworks, so the cleanup that decides whether the test failed
+calls it before disposing the harness. With MSTest:
+
+```csharp
+public TestContext TestContext { get; set; } = null!;
+
+[TestCleanup]
+public void TearDown()
+{
+	bool failed = TestContext.CurrentTestOutcome is UnitTestOutcome.Failed or UnitTestOutcome.Error
+		or UnitTestOutcome.Timeout or UnitTestOutcome.Aborted;
+
+	if (FailureFrames.Save(harness, failed, TestContext.FullyQualifiedTestClassName!, TestContext.TestName!) is string path)
+	{
+		TestContext.AddResultFile(path);
+	}
+
+	harness?.Dispose();
+}
+```
+
+`AddResultFile` attaches the picture to the test result, so the runner's report lists it beside the
+failure. A cleanup that steps more frames, for example to dismiss a dialog the test left open, saves
+first; otherwise the picture shows the screen after the cleanup rather than the one that failed.
+
 ## Known Limitations
 
 Rendering is a CPU rasterizer, not the OpenGL backend the application ships with. That is what makes
