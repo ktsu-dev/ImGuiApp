@@ -4,6 +4,8 @@ namespace ktsu.ImGui.Widgets.Animation;
 
 using System;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Damped harmonic oscillator: a value chases a target with mass-spring physics.
 /// Frame-rate independent via fixed-substep semi-implicit Euler.
@@ -12,6 +14,9 @@ using System;
 /// The motion is governed by <c>ẍ = -k(x - target) - c·v</c> where <c>k</c> is <see cref="Stiffness"/>
 /// and <c>c</c> is <see cref="Damping"/>. Critical damping at <c>c = 2·&#x221A;k</c>; under-damped values
 /// oscillate, over-damped values approach the target without overshoot but more slowly.
+/// An <see cref="Update"/> that leaves the spring still settling calls
+/// <see cref="AnimationActivity.RequestActiveFrame"/>, so the host keeps its active frame rate
+/// until the spring comes to rest.
 /// </remarks>
 /// <param name="initial">Starting position; also the initial <see cref="Target"/>.</param>
 /// <param name="stiffness">Spring constant <c>k</c>. Higher = snappier.</param>
@@ -68,7 +73,11 @@ public sealed class Spring(float initial = 0.0f, float stiffness = 170.0f, float
 			Value += Velocity * step;
 		}
 
-		if (!IsActive)
+		if (IsActive)
+		{
+			AnimationActivity.RequestActiveFrame();
+		}
+		else
 		{
 			Value = Target;
 			Velocity = 0.0f;

@@ -292,7 +292,8 @@ public static partial class ImGuiApp
 		}
 
 		double secondsSinceInput = (DateTime.UtcNow - lastInputTime).TotalSeconds;
-		IsIdle = secondsSinceInput >= settings.IdleTimeoutSeconds;
+		// An animation still in flight counts as activity, as on desktop (see UpdateWindowPerformance).
+		IsIdle = !ktsu.ImGui.Probes.AnimationActivity.TakeRequest() && secondsSinceInput >= settings.IdleTimeoutSeconds;
 	}
 
 	/// <summary>

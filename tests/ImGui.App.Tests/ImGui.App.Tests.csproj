@@ -18,5 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ImGui.App\ImGui.App.csproj" />
+    <!-- AnimationThrottlingTests drives the throttler with a real Tween. -->
+    <ProjectReference Include="..\..\ImGui.Widgets\ImGui.Widgets.csproj" />
   </ItemGroup>
 </Project>

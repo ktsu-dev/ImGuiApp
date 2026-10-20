@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
 using ktsu.ImGui.App.Images;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Rendering;
 using ktsu.Invoker;
 using ktsu.ScopedAction;
@@ -705,7 +706,12 @@ public static partial class ImGuiApp
 		if (settings.EnableIdleDetection)
 		{
 			double timeSinceLastInput = (DateTime.UtcNow - lastInputTime).TotalSeconds;
-			IsIdle = timeSinceLastInput >= settings.IdleTimeoutSeconds;
+
+			// An animation still in flight counts as activity, the way recent input does, so a
+			// fling or a sliding panel that outlasts the idle timeout does not drop to IdleFps
+			// partway through. The request is taken every time so a stale one cannot linger.
+			bool animating = AnimationActivity.TakeRequest();
+			IsIdle = !animating && timeSinceLastInput >= settings.IdleTimeoutSeconds;
 		}
 		else
 		{
