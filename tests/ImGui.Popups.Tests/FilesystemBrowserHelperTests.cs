@@ -17,12 +17,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class FilesystemBrowserHelperTests
 {
-	private static readonly string Root = Path.Combine(Path.GetTempPath(), "FilesystemBrowserHelperTests");
+	private static readonly string Root = Path.Join(Path.GetTempPath(), "FilesystemBrowserHelperTests");
 
-	private static AbsoluteDirectoryPath Folder(string name) => Path.Combine(Root, name).As<AbsoluteDirectoryPath>();
+	private static AbsoluteDirectoryPath Folder(string name) => Path.Join(Root, name).As<AbsoluteDirectoryPath>();
 
 	private static FilesystemEntry File(string name, long size, int day) =>
-		new(Path.Combine(Root, name).As<AbsoluteFilePath>(), name, size, new DateTime(2026, 10, day, 0, 0, 0, DateTimeKind.Local), false);
+		new(Path.Join(Root, name).As<AbsoluteFilePath>(), name, size, new DateTime(2026, 10, day, 0, 0, 0, DateTimeKind.Local), false);
 
 	private static FilesystemEntry Directory(string name, int day) =>
 		new(Folder(name), name, null, new DateTime(2026, 10, day, 0, 0, 0, DateTimeKind.Local), false);
@@ -69,7 +69,7 @@ public sealed class FilesystemBrowserHelperTests
 	[TestMethod]
 	public void Crumbs_RunFromTheRootDownToTheFolder()
 	{
-		AbsoluteDirectoryPath folder = Path.Combine(Root, "one", "two").As<AbsoluteDirectoryPath>();
+		AbsoluteDirectoryPath folder = Path.Join(Root, "one", "two").As<AbsoluteDirectoryPath>();
 
 		Collection<PathCrumb> crumbs = PathCrumbs.For(folder);
 
@@ -77,7 +77,7 @@ public sealed class FilesystemBrowserHelperTests
 		Assert.AreEqual("two", crumbs[^1].Label);
 		Assert.AreEqual("one", crumbs[^2].Label);
 		Assert.AreEqual(folder.WeakString, crumbs[^1].Directory.WeakString);
-		Assert.AreEqual(Path.Combine(Root, "one"), crumbs[^2].Directory.WeakString);
+		Assert.AreEqual(Path.Join(Root, "one"), crumbs[^2].Directory.WeakString);
 	}
 
 	[TestMethod]
@@ -155,11 +155,11 @@ public sealed class FilesystemBrowserHelperTests
 	[TestMethod]
 	public void Read_ListsFoldersAndMatchingFiles_AndHidesHiddenOnesUnlessAsked()
 	{
-		string folder = Path.Combine(Path.GetTempPath(), $"listing-{Guid.NewGuid():N}");
-		System.IO.Directory.CreateDirectory(Path.Combine(folder, "sub"));
-		System.IO.File.WriteAllText(Path.Combine(folder, "keep.png"), "x");
-		System.IO.File.WriteAllText(Path.Combine(folder, "skip.txt"), "x");
-		string hidden = Path.Combine(folder, ".hidden.png");
+		string folder = Path.Join(Path.GetTempPath(), $"listing-{Guid.NewGuid():N}");
+		System.IO.Directory.CreateDirectory(Path.Join(folder, "sub"));
+		System.IO.File.WriteAllText(Path.Join(folder, "keep.png"), "x");
+		System.IO.File.WriteAllText(Path.Join(folder, "skip.txt"), "x");
+		string hidden = Path.Join(folder, ".hidden.png");
 		System.IO.File.WriteAllText(hidden, "x");
 		System.IO.File.SetAttributes(hidden, FileAttributes.Hidden);
 
@@ -185,7 +185,7 @@ public sealed class FilesystemBrowserHelperTests
 	[TestMethod]
 	public void Read_AFolderThatIsNotThere_ReportsWhyRatherThanThrowing()
 	{
-		AbsoluteDirectoryPath missing = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}").As<AbsoluteDirectoryPath>();
+		AbsoluteDirectoryPath missing = Path.Join(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}").As<AbsoluteDirectoryPath>();
 
 		Collection<FilesystemEntry> entries = FilesystemListing.Read(missing, includeFiles: true, "*", showHidden: false, out string? error);
 
