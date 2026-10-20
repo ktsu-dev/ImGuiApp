@@ -3,9 +3,6 @@
 namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Collections.Generic;
-using System.Numerics;
-
-using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App.Testing;
 using ktsu.Semantics.Color;
@@ -76,9 +73,7 @@ public sealed class SequencerTests : WidgetTest
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.Sequencer(source, ref currentFrame, ref expanded, ref selectedEntry, ref firstFrame);
-		MarkSpan(Name, origin);
 	}
 
 	[TestMethod]
@@ -179,12 +174,7 @@ public sealed class SequencerTests : WidgetTest
 		source = new TestSource();
 
 		Start(
-			() =>
-			{
-				Vector2 origin = ImGui.GetCursorScreenPos();
-				changed |= ImGuiWidgets.Sequencer(source, ref currentFrame, ref expanded, ref selectedEntry, ref firstFrame, SequencerFeatures.None);
-				MarkSpan(Name, origin);
-			},
+			() => changed |= ImGuiWidgets.Sequencer(source, ref currentFrame, ref expanded, ref selectedEntry, ref firstFrame, SequencerFeatures.None),
 			WideViewport);
 
 		DragAcross(Name, 0.3f, 0.5f, 0.1f);
@@ -202,5 +192,12 @@ public sealed class SequencerTests : WidgetTest
 
 		Assert.IsTrue(IsVisible(Name), "An empty sequencer drew nothing.");
 		Assert.AreEqual(0, source.ItemCount, "The test source was not emptied.");
+	}
+
+	[TestMethod]
+	public void Sequencer_MarksItself()
+	{
+		source = new TestSource();
+		_ = AssertMarksItself(Name, Draw, options: WideViewport);
 	}
 }

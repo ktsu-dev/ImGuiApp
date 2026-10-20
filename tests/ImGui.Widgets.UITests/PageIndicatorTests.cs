@@ -2,8 +2,6 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
-using System.Numerics;
-
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App.Testing;
@@ -15,7 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class PageIndicatorTests : WidgetTest
 {
 	private const string Id = "carousel";
-	private const string Span = "pages";
+	private const string Span = Id;
 	private const int PageCount = 4;
 
 	private int currentPage;
@@ -23,9 +21,7 @@ public sealed class PageIndicatorTests : WidgetTest
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		currentPage = ImGuiWidgets.PageIndicator(Id, currentPage, PageCount, interactive);
-		MarkSpan(Span, origin);
 	}
 
 	[TestMethod]
@@ -123,5 +119,19 @@ public sealed class PageIndicatorTests : WidgetTest
 		HoverFraction(Span, 0.02f);
 
 		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "A dot that ignores clicks offered a hand.");
+	}
+
+	[TestMethod]
+	public void PageIndicator_MarksItself() => _ = AssertMarksItself(Id, Draw);
+
+	[TestMethod]
+	public void PageIndicator_MarksEachDotWhenInteractive()
+	{
+		interactive = true;
+		Start(Draw);
+
+		Click($"{Id}/dot2");
+
+		Assert.AreEqual(2, currentPage, "Clicking the third dot by name did not select its page.");
 	}
 }

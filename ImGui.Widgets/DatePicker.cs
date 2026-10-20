@@ -2,7 +2,12 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System.Numerics;
 using System.Text;
+
+using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 
 using HexaDatePicker = Hexa.NET.ImGui.Widgets.DatePicker;
 using HexaYearPicker = Hexa.NET.ImGui.Widgets.YearPicker;
@@ -40,7 +45,9 @@ public static partial class ImGuiWidgets
 		Ensure.NotNull(label);
 
 		DateTime before = date;
+		Vector2 origin = ImGui.GetCursorScreenPos();
 		HexaDatePicker.Draw(EncodeLabel(label), ref date);
+		ImGuiProbes.MarkRegion(label, origin, ImGui.GetItemRectMax());
 		return date != before;
 	}
 
@@ -54,6 +61,9 @@ public static partial class ImGuiWidgets
 	public static bool YearPicker(string label, ref DateTime date)
 	{
 		Ensure.NotNull(label);
-		return HexaYearPicker.Draw(EncodeLabel(label), ref date);
+		Vector2 origin = ImGui.GetCursorScreenPos();
+		bool changed = HexaYearPicker.Draw(EncodeLabel(label), ref date);
+		ImGuiProbes.MarkRegion(label, origin, ImGui.GetItemRectMax());
+		return changed;
 	}
 }

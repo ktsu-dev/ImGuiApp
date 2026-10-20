@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 using ktsu.Semantics.Color;
 
@@ -84,16 +82,12 @@ public sealed class CurveEditorTests : WidgetTest
 
 	private void DrawSingleCurve()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.CurveEditor(curve, Size, Vector2.Zero, Vector2.One, ref selection, Label);
-		MarkSpan(Label, origin);
 	}
 
 	private void DrawMultiCurve()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.CurveEditor(source, Size, "curves");
-		MarkSpan("curves", origin);
 	}
 
 	[TestMethod]
@@ -294,5 +288,19 @@ public sealed class CurveEditorTests : WidgetTest
 
 		Assert.AreEqual(0, source.Edits.Count, "The editor edited the source with no input.");
 		Assert.IsFalse(changed, "The editor reported a change with no input.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_MarksItself()
+	{
+		curve = BuildCurve();
+		_ = AssertMarksItself(Label, DrawSingleCurve, tolerance: 7);
+	}
+
+	[TestMethod]
+	public void CurveEditor_FromASource_MarksItself()
+	{
+		source = new TwoLineSource();
+		_ = AssertMarksItself("curves", DrawMultiCurve, tolerance: 7);
 	}
 }

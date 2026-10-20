@@ -89,8 +89,6 @@ public sealed class TreeTests : WidgetTest
 				Mark("Lemon");
 			});
 		});
-
-		Mark("Fruit");
 	}
 
 	[TestMethod]
@@ -220,8 +218,6 @@ public sealed class TreeTests : WidgetTest
 					Mark("Lemon");
 				});
 			});
-
-			Mark("Fruit");
 		});
 
 		Click("Fruit");
@@ -268,8 +264,6 @@ public sealed class TreeTests : WidgetTest
 				Mark("child");
 				ImGui.TreePop();
 			}
-
-			Mark("Assets");
 		});
 
 		Assert.IsFalse(IsVisible("child"), "A closed icon tree node drew its children.");
@@ -286,8 +280,6 @@ public sealed class TreeTests : WidgetTest
 				Mark("child");
 				ImGui.TreePop();
 			}
-
-			Mark("Assets");
 		});
 
 		Click("Assets");
@@ -306,8 +298,6 @@ public sealed class TreeTests : WidgetTest
 			{
 				// Nothing to draw; the flag suppresses the identifier push, so no pop is needed.
 			}
-
-			Mark("Assets");
 		});
 
 		byte[] withIcon = Snapshot();
@@ -315,5 +305,32 @@ public sealed class TreeTests : WidgetTest
 		Step(2);
 
 		Assert.IsTrue(PixelsChangedSince(withIcon) > 0, "Changing the icon glyph changed nothing on screen.");
+	}
+
+	[TestMethod]
+	public void Branch_MarksItsRowNotItsSubtree()
+	{
+		Start(() => DrawFruitBranch());
+		Click("Fruit");
+
+		Assert.IsTrue(IsVisible("Lemon"), "The branch did not open.");
+		Rectangle branch = RectOf("Fruit");
+		Rectangle leaf = RectOf("Lemon");
+		Assert.IsTrue(branch.MaxY <= leaf.MinY, $"The branch's mark {branch} reaches down over its child at {leaf}.");
+		Assert.IsTrue(branch.Height < ImGui.GetFrameHeightWithSpacing() * 1.5f, $"The branch's mark {branch} is taller than one row.");
+	}
+
+	[TestMethod]
+	public void IconTreeNode_MarksItself()
+	{
+		Start(() =>
+		{
+			if (ImGuiWidgets.IconTreeNode("Assets", "#", ktsu.Semantics.Color.Color.FromHex("#3080ff")))
+			{
+				ImGui.TreePop();
+			}
+		});
+
+		Assert.IsTrue(IsVisible("Assets"), "The icon tree node did not mark itself.");
 	}
 }

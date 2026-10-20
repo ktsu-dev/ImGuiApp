@@ -10,9 +10,8 @@ using Extensions;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGui.Probes;
-
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Color;
 
 /// <summary>
@@ -137,11 +136,13 @@ public static partial class ImGuiWidgets
 				ImGui.BeginChild(z.Id, zoneSize, ImGuiChildFlags.Borders, ImGuiWindowFlags.NoSavedSettings);
 				z.Tick(dt);
 				ImGui.EndChild();
+				ImGuiProbes.MarkItem(Id, $"zone/{z.Id}");
 
 				advance += CalculateAdvance(z, windowPadding, containerSize, layoutMask);
 			}
 
 			ImGui.EndChild();
+			ImGuiProbes.MarkItem(Id);
 
 			//render the handles last otherwise they'll be covered by the other zones windows and wont receive hover events
 

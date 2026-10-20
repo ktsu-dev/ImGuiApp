@@ -9,6 +9,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -23,6 +24,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="count">The count to display.</param>
 	/// <param name="maxCount">The largest exact value shown before switching to the "N+" form.</param>
+	/// <remarks>Marked for UI probes as <c>badge</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static void Badge(int count, int maxCount = 99)
 	{
 		string text = FormatBadgeCount(count, maxCount);
@@ -37,6 +39,7 @@ public static partial class ImGuiWidgets
 	/// immediately after the item it decorates.
 	/// </summary>
 	/// <param name="text">The badge text.</param>
+	/// <remarks>Marked for UI probes as <c>badge</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static void Badge(string text)
 	{
 		if (!string.IsNullOrEmpty(text))
@@ -49,6 +52,7 @@ public static partial class ImGuiWidgets
 	/// Overlays a small solid dot on the top-right corner of the most recently submitted item (a presence /
 	/// unread indicator with no count). Call this immediately after the item it decorates.
 	/// </summary>
+	/// <remarks>Marked for UI probes as <c>badge-dot</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static void BadgeDot() => BadgeImpl.DrawDot(Palette.Semantic.Error);
 
 	/// <summary>
@@ -90,6 +94,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 textPos = new(min.X + ((width - textSize.X) * 0.5f), min.Y + ((height - textSize.Y) * 0.5f));
 			drawList.AddText(textPos, ImGui.GetColorU32(ImGuiVector4.One), text);
+			ImGuiProbes.MarkRegion("badge", min, max);
 		}
 
 		internal static void DrawDot(ImColor background)
@@ -99,6 +104,7 @@ public static partial class ImGuiWidgets
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			drawList.AddCircleFilled(anchor, radius, background.ToImGuiU32(), 0);
+			ImGuiProbes.MarkRegion("badge-dot", anchor - new Vector2(radius), anchor + new Vector2(radius));
 		}
 	}
 }

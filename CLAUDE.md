@@ -596,14 +596,15 @@ third implementation of any of these, and prefer the survivor column when writin
 | `RadialProgressBar`/`SkeletonLoader` vs `BufferingBar`/`Spinner` | **Keep all four** | Four different widgets, not two pairs: determinate radial (with text modes plus `RadialCountdown`/`RadialCountUp`), determinate linear, indeterminate spinner, and a shimmering placeholder block. The only overlap is "determinate progress", where radial versus linear is a visual choice. |
 | `TextCentered` vs `TextCenteredV`/`H`/`VH` | **Keep all** | Only one true pair. `Alignment.Center` builds a container of `(ContentRegionAvail.X, contentSize.Y)`, so its vertical extent is the content's own height and vertical centring is a no-op — `TextCentered` is horizontal-only, making it equivalent to `TextCenteredH`. `TextCenteredV` and `TextCenteredVH` have no ktsu equivalent, and `TextCenteredWithin(text, size, clip)` with its ellipsis clipping has no Hexa equivalent. Splitting either family to retire one member costs more than the overlap does. |
 | `ImageCentered` vs `ImageCenteredV`/`H`/`VH` | **Keep all** | Same shape as the text pair, plus one hard difference: `ImageCentered` returns `bool` for a click, the Hexa three return `void`. `ImageCenteredWithin` has no Hexa equivalent and `ImageScaleTo` has no ktsu one. |
-| `Switch` vs `ToggleSwitch` | **Genuine duplicate — prefer `Switch`** | Identical signature, `(string label, ref bool value) -> bool`. Three differences, all favouring `Switch`: it calls `ImGuiProbes.MarkItem`, so a UI test addresses it by name (`SwitchTests` needs no `Mark` call at all, while every Hexa-backed suite does); it animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, so it needs none of the `TickAnimationClockIfUnpumped` machinery `ToggleSwitch` requires to avoid rendering inverted after its first click in a pumpless app; and it draws the visible portion of the label itself. |
-| `Combo` vs `EnumCombo` | **Overlap on one overload — prefer `Combo` unless you need Hexa's display names** | Only `Combo<TEnum>` overlaps; the `ISemanticString` and `string` collection overloads are unique. The enum overloads differ in three ways: `Combo` shows raw `Enum.GetNames` while `EnumCombo` routes through Hexa's `ComboEnumHelper<T>.GetName` (where a display-name override would come from); `Combo` marks itself for probes and `EnumCombo` does not; and the constraints differ (`where TEnum : Enum` vs `where T : struct, Enum`). If nothing depends on Hexa's naming, `EnumCombo` is the one to retire. |
+| `Switch` vs `ToggleSwitch` | **Genuine duplicate — prefer `Switch`** | Identical signature, `(string label, ref bool value) -> bool`. Two differences, both favouring `Switch`: it animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, so it needs none of the `TickAnimationClockIfUnpumped` machinery `ToggleSwitch` requires to avoid rendering inverted after its first click in a pumpless app; and it draws the visible portion of the label itself. |
+| `Combo` vs `EnumCombo` | **Overlap on one overload — prefer `Combo` unless you need Hexa's display names** | Only `Combo<TEnum>` overlaps; the `ISemanticString` and `string` collection overloads are unique. The enum overloads differ in two ways: `Combo` shows raw `Enum.GetNames` while `EnumCombo` routes through Hexa's `ComboEnumHelper<T>.GetName` (where a display-name override would come from), and the constraints differ (`where TEnum : Enum` vs `where T : struct, Enum`). If nothing depends on Hexa's naming, `EnumCombo` is the one to retire. |
 
-The through-line: **the ktsu originals are probe-visible and the Hexa adapters are not.** Only
-`Switch` and `Combo` call `ImGuiProbes.MarkItem`; every Hexa-backed widget has to be marked by the
-test itself, or reached by geometry. That is the single most consequential difference between the
-two families, and it is a reason to reach for a ktsu original in an application you intend to
-UI-test.
+Every widget in both families marks itself for probes (maintainer decision, 2026-09-29), so probe
+visibility no longer separates them. A widget with a label or id is addressed by that string; an
+id-less one by a fixed kind name (`badge`, `image`, `spinner`, …), separated with `ScopedId` when
+there are two in a window. Hexa's dialogs are marked from the deferred-drawing pump, because nothing
+inside a sealed Hexa dialog can be hooked. What still separates `Switch` from `ToggleSwitch` is the
+animation clock, not the probe.
 
 ### CurveTrack, and why it is not one of the curve editors
 
@@ -1078,19 +1079,25 @@ public sealed class SwitchTests : WidgetTest
 ```
 
 `WidgetTest` offers `Start`/`Step`, `Click`/`ClickFraction`/`DragAcross`/`Hover`, `IsVisible`,
-`RectOf`/`CenterOf`, `Mark`/`MarkSpan`, `Snapshot`/`PixelsChangedSince`/`BoundsOfDifference`,
+`RectOf`/`CenterOf`, `AssertMarksItself`, `Mark`/`MarkSpan`, `Snapshot`/`PixelsChangedSince`/`BoundsOfDifference`,
 `CreateTestTexture`, and the dialog helpers `FindDialogButtons`/`ClickDialogButton`/
 `DismissOpenDialogs`.
 
 Things that bite here, beyond the demo-suite list above:
 
-- **A widget's probe mark is not always the thing it drew.** The alignment helpers (`TextCentered`,
-  `ImageCenteredWithin`, `TextCenteredH`, …) position the cursor and leave a zero-width spacer as
-  the last submitted item, so a mark taken after the call measures the spacer. Measure those from
-  the pixels with `BoundsOfDifference` against a frame drawn without the widget.
-- **Widgets that submit several items, or none, need `MarkSpan`.** `PinInput` is a row of separate
-  text boxes; `BufferingBar` paints straight into the draw list. `MarkSpan(name, cursorBefore)`
-  records from the cursor position to the last item's rectangle so a test can aim inside it.
+- **Alignment helpers mark inside their scope.** `TextCentered`, `ImageCenteredWithin` and the rest
+  leave a zero-width spacer as the last submitted item, so each marks its inner item before the
+  scope closes, and a test measures them with `RectOf` like anything else. Hexa's
+  `TextCenteredV/H/VH` submit no clean item, so their mark is the bounding box of the vertices they
+  added. Keep `BoundsOfDifference` for asserting what was painted, not for finding a widget.
+- **Every widget marks itself; `Mark` and `MarkSpan` are for caller content.** A test addresses a
+  widget by its own name (its label or id, `{label}/{part}` for parts such as `Quantity/increment`,
+  or a kind name such as `spinner` for an id-less one) and marks only what it draws itself: a
+  card's body, a tree's leaves, a badge's host. Widgets that paint outside their last item go
+  through the internal `DrawListProbe`: `BufferingBar` submits no item at all, and the Hexa
+  breadcrumb, bezier editor and sequencer paint past the item they end on, so their mark takes in
+  every vertex they added. `AssertMarksItself` is the check a new widget's suite starts with: every
+  pixel the widget painted lies inside its own mark.
 - **Latch return values.** A widget reports a click for the single frame it happens on, and `Click`
   renders a further frame after the release, so capture with `clicked |= ImGuiWidgets.Chip(...)`
   rather than a plain assignment.
@@ -1107,8 +1114,9 @@ Things that bite here, beyond the demo-suite list above:
   without the first a translucent rectangle shows its diagonal, and without the second a thick
   line comes out as a staircase with hard edges. The widget gallery is the quickest way to see a
   regression in either.
-- **Vendor widgets are reached by geometry, not by name.** Hexa's dialogs mark nothing:
-  `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
+- **Dialog buttons are reached by geometry, not by name.** The dialog windows are marked (under
+  `OpenFileDialog`, `RenameDialog` or a message box's title), but the buttons inside Hexa's sealed
+  dialogs are not: `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
   pixels, and the file pickers — whose action row is not blue enough to find that way — are
   cancelled at a fixed offset from the picker window's corner, which is stable because the harness
   pins the viewport.

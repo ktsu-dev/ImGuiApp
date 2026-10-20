@@ -5,8 +5,6 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,7 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class FlameGraphTests : WidgetTest
 {
 	private const string Label = "profile";
-	private const string Name = "flame";
+	private const string Name = Label;
 
 	private static readonly FlameGraphSample[] Samples =
 	[
@@ -31,9 +29,7 @@ public sealed class FlameGraphTests : WidgetTest
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		ImGuiWidgets.FlameGraph(Label, samples, ref selected, options);
-		MarkSpan(Name, origin);
 	}
 
 	[TestMethod]
@@ -142,4 +138,7 @@ public sealed class FlameGraphTests : WidgetTest
 		Assert.IsTrue(IsVisible(Name), "An empty flame graph reserved no layout.");
 		Assert.AreEqual(-1, selected, "An empty flame graph reported a selection.");
 	}
+
+	[TestMethod]
+	public void FlameGraph_MarksItself() => _ = AssertMarksItself(Label, Draw);
 }

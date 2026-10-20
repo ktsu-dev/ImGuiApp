@@ -185,4 +185,22 @@ public sealed class DividerContainerTests : WidgetTest
 		Assert.AreEqual(0.3f, container.GetSizes()[0], "A click on the popup resized the container underneath.");
 		Assert.IsTrue(coverClicked, "The popup's button didn't get the click.");
 	}
+
+	[TestMethod]
+	public void DividerContainer_MarksItselfAndEveryZone()
+	{
+		container = BuildContainer();
+		Start(() => container.Tick(1f / 60f));
+
+		Assert.IsTrue(IsVisible(ContainerId), "The container did not mark itself.");
+		Rectangle whole = RectOf(ContainerId);
+
+		foreach (string zone in new[] { LeftZone, RightZone })
+		{
+			Rectangle rect = RectOf($"{ContainerId}/zone/{zone}");
+			Assert.IsTrue(rect.MinX >= whole.MinX && rect.MaxX <= whole.MaxX + 1, $"Zone '{zone}' at {rect} is outside the container at {whole}.");
+		}
+
+		Assert.IsTrue(RectOf($"{ContainerId}/zone/{RightZone}").MinX > RectOf($"{ContainerId}/zone/{LeftZone}").MinX, "The zones were not marked in order.");
+	}
 }

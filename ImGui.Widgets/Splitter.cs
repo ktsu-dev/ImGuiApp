@@ -2,7 +2,11 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System.Numerics;
+
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 
 using HexaSplitter = Hexa.NET.ImGui.Widgets.ImGuiSplitter;
 
@@ -47,7 +51,10 @@ public static partial class ImGuiWidgets
 		}
 
 		(float resolvedThickness, float resolvedTolerance) = ResolveSplitterMetrics(thickness, tolerance, ImGui.GetStyle().GrabMinSize);
-		return HexaSplitter.VerticalSplitter(id, ref width, minWidth, maxWidth, height, resolvedThickness, resolvedTolerance);
+		Vector2 origin = ImGui.GetCursorScreenPos();
+		bool dragging = HexaSplitter.VerticalSplitter(id, ref width, minWidth, maxWidth, height, resolvedThickness, resolvedTolerance);
+		ImGuiProbes.MarkRegion(id, origin, ImGui.GetItemRectMax());
+		return dragging;
 	}
 
 	/// <summary>
@@ -75,6 +82,9 @@ public static partial class ImGuiWidgets
 		}
 
 		(float resolvedThickness, float resolvedTolerance) = ResolveSplitterMetrics(thickness, tolerance, ImGui.GetStyle().GrabMinSize);
-		return HexaSplitter.HorizontalSplitter(id, ref height, minHeight, maxHeight, width, resolvedThickness, resolvedTolerance);
+		Vector2 origin = ImGui.GetCursorScreenPos();
+		bool dragging = HexaSplitter.HorizontalSplitter(id, ref height, minHeight, maxHeight, width, resolvedThickness, resolvedTolerance);
+		ImGuiProbes.MarkRegion(id, origin, ImGui.GetItemRectMax());
+		return dragging;
 	}
 }

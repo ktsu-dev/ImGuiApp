@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -33,6 +35,7 @@ public static partial class ImGuiWidgets
 
 		Vector2 cursorPos = ImGui.GetCursorScreenPos();
 		ImGui.Dummy(scopeSize);
+		ImGuiProbes.MarkItem(label);
 
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 		Span<Vector4> colors = ImGui.GetStyle().Colors;

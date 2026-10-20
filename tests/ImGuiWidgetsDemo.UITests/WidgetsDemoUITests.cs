@@ -295,7 +295,7 @@ public sealed class WidgetsDemoUITests
 		foreach (string widget in new[]
 		{
 			"Wi-Fi##switchWifi", "Bluetooth##switchBluetooth", "##viewMode",
-			"All##chip0", "Unread##chip1", "##value", "Price##rangePrice",
+			"All##chip0", "Unread##chip1", "Quantity##stepperQuantity/value", "Price##rangePrice",
 		})
 		{
 			Assert.IsTrue(IsVisible(widget), $"The form controls section is missing '{widget}'.");
@@ -923,8 +923,8 @@ public sealed class WidgetsDemoUITests
 	{
 		OpenSection(AdvancedDemosTab, "Divider Container");
 
-		Assert.IsTrue(IsVisible("DividerDemoLeft"), "left zone");
-		Assert.IsTrue(IsVisible("DividerDemoRight"), "right zone");
+		Assert.IsTrue(IsVisible("zone/DividerDemoLeft"), "left zone");
+		Assert.IsTrue(IsVisible("zone/DividerDemoRight"), "right zone");
 	}
 
 	[TestMethod]

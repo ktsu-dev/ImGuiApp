@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -68,6 +70,7 @@ public static partial class ImGuiWidgets
 				{
 					ImGui.SetCursorScreenPos(new Vector2(center.X - activeRadius, origin.Y));
 					bool dotClicked = ImGui.InvisibleButton(string.Create(CultureInfo.InvariantCulture, $"{id}_dot{i}"), new Vector2(activeRadius * 2.0f, height));
+					ImGuiProbes.MarkItem(id, string.Create(CultureInfo.InvariantCulture, $"dot{i}"));
 					WidgetCursor.OnLastItem(ImGuiMouseCursor.Hand);
 					if (dotClicked)
 					{
@@ -78,6 +81,7 @@ public static partial class ImGuiWidgets
 
 			ImGui.SetCursorScreenPos(origin);
 			ImGui.Dummy(new Vector2(width, height));
+			ImGuiProbes.MarkItem(id);
 			return selected;
 		}
 	}
