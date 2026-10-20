@@ -29,6 +29,7 @@ public sealed class DataTableTests : WidgetTest
 
 	private ImGuiWidgets.DataTableState<DataTablePerson> state = null!;
 	private ImGuiWidgets.DataTableOptions options = null!;
+	private int hideRequest = -1;
 
 	[TestInitialize]
 	public void CreateTable()
@@ -45,7 +46,7 @@ public sealed class DataTableTests : WidgetTest
 		state = new(
 		[
 			new ImGuiWidgets.DataTableColumn<DataTablePerson, string> { Label = "Name", Value = person => person.Name, OnEdit = nameEdits.Add },
-			new ImGuiWidgets.DataTableColumn<DataTablePerson, int> { Label = "Age", Value = person => person.Age },
+			new ImGuiWidgets.DataTableColumn<DataTablePerson, int> { Label = "Age", Value = AgeHidingOnRequest },
 			new ImGuiWidgets.DataTableColumn<DataTablePerson, bool> { Label = "Active", Value = person => person.IsActive, OnEdit = activeEdits.Add },
 		]);
 
@@ -201,6 +202,99 @@ public sealed class DataTableTests : WidgetTest
 
 		Assert.IsTrue(IsVisible(Cell(1, "Name")), "Bob was filtered out by 'ob'.");
 		Assert.IsFalse(IsVisible(Cell(0, "Name")), "Alice survived a filter of 'ob'.");
+	}
+
+	/// <summary>
+	/// Hides a column the way the header's right-click menu does, through <c>TableSetColumnEnabled</c>,
+	/// which acts from the table's next frame. ImGui doesn't mark its own menu items, so the menu can't be
+	/// clicked by name, and the call needs the table to be current, so it's made from inside the Age
+	/// column's value while the table draws that column's cells.
+	/// </summary>
+	private int AgeHidingOnRequest(DataTablePerson person)
+	{
+		if (hideRequest >= 0 && !ImGuiP.GetCurrentTable().IsNull)
+		{
+			ImGui.TableSetColumnEnabled(hideRequest, false);
+			hideRequest = -1;
+		}
+
+		return person.Age;
+	}
+
+	/// <summary>Hides a column while the table draws, then steps until the table has noticed.</summary>
+	private void HideColumnNow(int column)
+	{
+		hideRequest = column;
+		Step(3);
+		Assert.AreEqual(-1, hideRequest, "The table never drew a cell to hide the column from.");
+	}
+
+	/// <summary>
+	/// A filter typed into a column stops applying once the column is hidden, since its box is gone
+	/// (#562).
+	/// </summary>
+	[TestMethod]
+	public void HidingAFilteredColumn_ShowsTheRowsItsFilterHeldBack()
+	{
+		Start(Draw);
+		Click(Filter("Name"));
+		Harness.Keyboard.Type("ob");
+		Step();
+		Assert.IsFalse(IsVisible(Cell(0, "Age")), "Alice survived a filter of 'ob'.");
+
+		HideColumnNow(0);
+
+		Assert.IsFalse(IsVisible(Filter("Name")), "The hidden column's filter box is still drawn.");
+		Assert.IsTrue(IsVisible(Cell(0, "Age")), "Alice is still filtered out by a column nobody can see.");
+	}
+
+	/// <summary>
+	/// Typing and Enter after the active cell's column is hidden don't edit that hidden cell (#555).
+	/// </summary>
+	[TestMethod]
+	public void HidingTheActiveColumn_KeepsTypingOutOfIt()
+	{
+		Start(Draw);
+		Click(Cell(1, "Name"));
+
+		HideColumnNow(0);
+		Harness.Keyboard.Type("x");
+		Step();
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.IsEmpty(nameEdits, "Typing reached the hidden Name cell.");
+		Assert.AreNotEqual(0, state.ActiveCell?.Column, "The active cell stayed on the hidden column.");
+	}
+
+	/// <summary>An edit open when its column is hidden is dropped rather than reported (#555).</summary>
+	[TestMethod]
+	public void HidingTheColumnBeingEdited_DropsTheEdit()
+	{
+		Start(Draw);
+		BeginEditing(1, "Name");
+		Harness.Keyboard.Type("Robert");
+		Step();
+
+		HideColumnNow(0);
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.IsEmpty(nameEdits, "The hidden column's edit was reported.");
+	}
+
+	/// <summary>Space doesn't flip a bool in a column that has been hidden (#555).</summary>
+	[TestMethod]
+	public void HidingTheActiveBoolColumn_KeepsSpaceFromFlippingIt()
+	{
+		Start(Draw);
+		Click(Cell(1, "Active"));
+
+		HideColumnNow(2);
+		Harness.Keyboard.Press(ImGuiKey.Space);
+		Step();
+
+		Assert.IsEmpty(activeEdits, "Space flipped a hidden bool.");
 	}
 
 	[TestMethod]

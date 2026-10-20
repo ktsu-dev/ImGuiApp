@@ -107,4 +107,38 @@ public sealed class InlineBuilderTests
 		Assert.IsFalse(runs.Any(r => r.IsHardBreak));
 		Assert.IsTrue(runs.Any(r => r.Text == " "));
 	}
+
+	[TestMethod]
+	public void Build_WithABoldBase_GivesPlainTextBoldAndItalicBoldItalic()
+	{
+		// A table header row's cells: the header's weight reaches the text instead of being replaced by Body.
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("plain *slanted* `code`"), MarkdownFontRole.Bold);
+		Assert.AreEqual(MarkdownFontRole.Bold, runs.First(r => r.Text.Contains("plain")).Role);
+		Assert.AreEqual(MarkdownFontRole.BoldItalic, runs.First(r => r.Text == "slanted").Role);
+		Assert.AreEqual(MarkdownFontRole.Code, runs.First(r => r.Text == "code").Role);
+	}
+
+	[TestMethod]
+	public void Build_WithAHeadingBase_KeepsTheHeadingRole()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("plain **strong**"), MarkdownFontRole.H1);
+		Assert.IsTrue(runs.Where(r => r.Text.Trim().Length > 0).All(r => r.Role == MarkdownFontRole.H1));
+	}
+
+	[TestMethod]
+	public void Build_Image_CarriesItsAltTextAndKeepsItsSrc()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("[![Build *status*](https://img.example/b.svg)](https://example.com)"));
+		InlineRun image = runs.Single(r => r.IsImage);
+		Assert.AreEqual("https://img.example/b.svg", image.Text);
+		Assert.AreEqual("Build status", image.AltText);
+		Assert.AreEqual("https://example.com", image.LinkUrl);
+	}
+
+	[TestMethod]
+	public void Build_ImageWithNoDescription_HasEmptyAltText()
+	{
+		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(FirstParagraphInline("![](logo.png)"));
+		Assert.AreEqual(string.Empty, runs.Single(r => r.IsImage).AltText);
+	}
 }

@@ -98,18 +98,20 @@ public static partial class ImGuiWidgets
 			return changed;
 		}
 
-		// A button that fires once on press, then repeatedly while held past the initial delay.
+		// A button that fires once on click, then repeatedly while held past the initial delay. Once a
+		// repeat has fired, the release that ends the hold is not another click: the value the user
+		// saw when they let go is the value they keep, as with Dear ImGui's own repeat buttons.
 		internal static bool RepeatButton(string label, Vector2 size)
 		{
 			uint id = ImGui.GetID(label);
-			bool fired = ImGui.Button(label, size);
+			bool repeatedBeforeThisFrame = HoldTime.TryGetValue(id, out float held) && held >= RepeatDelay;
+			bool fired = ImGui.Button(label, size) && !repeatedBeforeThisFrame;
 
 			if (ImGui.IsItemActive())
 			{
-				float prev = HoldTime.GetValueOrDefault(id, 0.0f);
-				float now = prev + ImGui.GetIO().DeltaTime;
+				float now = held + ImGui.GetIO().DeltaTime;
 				HoldTime[id] = now;
-				fired |= ShouldRepeat(prev, now, RepeatDelay, RepeatInterval);
+				fired |= ShouldRepeat(held, now, RepeatDelay, RepeatInterval);
 			}
 			else
 			{

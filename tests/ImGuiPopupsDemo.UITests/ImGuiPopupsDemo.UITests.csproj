@@ -17,4 +17,9 @@
     <ProjectReference Include="..\..\ImGui.App.Testing\ImGui.App.Testing.csproj" />
     <ProjectReference Include="..\..\examples\ImGuiPopupsDemo\ImGuiPopupsDemo.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Saves and attaches the last frame of a failing test; see ImGui.App.Testing's FailureFrames. -->
+    <Compile Include="..\Shared\FailureFrameCleanup.cs" Link="Shared\FailureFrameCleanup.cs" />
+  </ItemGroup>
 </Project>

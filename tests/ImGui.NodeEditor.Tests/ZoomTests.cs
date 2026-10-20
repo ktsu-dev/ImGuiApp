@@ -11,6 +11,7 @@ using Hexa.NET.ImNodes;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.NodeEditor;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -37,8 +38,15 @@ public sealed class ZoomTests
 
 	private ImGuiAppHarness harness = null!;
 
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>Starts a harness whose whole content is the graph the engine holds.</summary>
 	private void Start()

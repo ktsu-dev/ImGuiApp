@@ -60,6 +60,17 @@ public static class ColorImGuiExtensions
 	}
 
 	/// <summary>
+	/// Converts a color to ImGui's packed 32-bit <c>ImU32</c> for drawing, applying the current global
+	/// <see cref="ImGuiStyle.Alpha"/> exactly as <c>ImGui.GetColorU32</c> does, so a fill drawn from it dims inside
+	/// <c>ImGui.BeginDisabled</c>, <c>ScopedDisable</c> or a pushed <see cref="ImGuiStyleVar.Alpha"/> like the
+	/// widgets around it. Use it wherever a semantic color feeds a draw list; <see cref="ToImGuiU32(Color)"/> is
+	/// the pure pack and ignores the style. Requires an active ImGui context, so call it during rendering.
+	/// </summary>
+	/// <param name="color">The color to convert.</param>
+	/// <returns>The packed <c>ImU32</c>, equivalent to <c>ImGui.GetColorU32(color.ToImGuiVector4())</c>.</returns>
+	public static uint ToImGuiU32Styled(this Color color) => ImGui.GetColorU32((Vector4)color.ToImGuiVector4());
+
+	/// <summary>
 	/// Converts an <see cref="ImColor"/> to ImGui's packed 32-bit <c>ImU32</c> for drawing, applying the current
 	/// global <see cref="ImGuiStyle.Alpha"/> exactly as <c>ImGui.GetColorU32</c> does — so custom-drawn widgets
 	/// still dim inside disabled or alpha-faded scopes. The channels are already sRGB and are packed directly,

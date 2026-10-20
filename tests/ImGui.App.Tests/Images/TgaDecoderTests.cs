@@ -200,6 +200,67 @@ public class TgaDecoderTests
 	}
 
 	[TestMethod]
+	public void Decode_RunLengthEncodedSixteenBitColourMapIndices_ResolveThroughTheMap()
+	{
+		// Two entries answering to indices 300 and 301, then a repeat packet of index 301 for two pixels
+		// and a literal packet of index 300.
+		byte[] body = [3, 2, 1, 30, 20, 10, 0x81, 0x2D, 0x01, 0x00, 0x2C, 0x01];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(3, 1, imageType: 9, pixelBits: 16, body, colorMapLength: 2, colorMapEntryBits: 24, descriptor: TopLeftOrigin, colorMapFirstEntry: 300));
+
+		Assert.AreEqual((10, 20, 30, (byte)255), image.GetPixel(0, 0));
+		Assert.AreEqual((10, 20, 30, (byte)255), image.GetPixel(1, 0));
+		Assert.AreEqual((1, 2, 3, (byte)255), image.GetPixel(2, 0));
+	}
+
+	[TestMethod]
+	public void Decode_ThirtyTwoBitColourMapWithNoAlpha_IsOpaque()
+	{
+		// A BMP-style palette: every entry's fourth byte is zero.
+		byte[] body = [3, 2, 1, 0, 30, 20, 10, 0, 0, 1];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(2, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 2, colorMapEntryBits: 32, descriptor: TopLeftOrigin));
+
+		Assert.AreEqual((1, 2, 3, (byte)255), image.GetPixel(0, 0));
+		Assert.AreEqual((10, 20, 30, (byte)255), image.GetPixel(1, 0));
+	}
+
+	[TestMethod]
+	public void Decode_ThirtyTwoBitColourMapWithMixedAlpha_KeepsItsAlpha()
+	{
+		byte[] body = [3, 2, 1, 0, 30, 20, 10, 128, 0, 1];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(2, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 2, colorMapEntryBits: 32, descriptor: TopLeftOrigin));
+
+		Assert.AreEqual((1, 2, 3, (byte)0), image.GetPixel(0, 0));
+		Assert.AreEqual((10, 20, 30, (byte)128), image.GetPixel(1, 0));
+	}
+
+	[TestMethod]
+	public void Decode_SixteenBitColourMapWithoutAttributeBits_IsOpaque()
+	{
+		// RGB555 red with bit 15 clear, and a descriptor declaring no attribute bits.
+		byte[] body = [0x00, 0x7C, 0];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(1, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 1, colorMapEntryBits: 16, descriptor: TopLeftOrigin));
+
+		Assert.AreEqual((255, 0, 0, (byte)255), image.GetPixel(0, 0));
+	}
+
+	[TestMethod]
+	public void Decode_SixteenBitColourMapWithAttributeBit_HonoursIt()
+	{
+		// Entry 0 is red with bit 15 clear, entry 1 is red with it set, and the descriptor declares one
+		// attribute bit.
+		byte[] body = [0x00, 0x7C, 0x00, 0xFC, 0, 1];
+
+		ImagePixels image = ImageDecoder.Decode(TestImageBuilder.Tga(2, 1, imageType: 1, pixelBits: 8, body, colorMapLength: 2, colorMapEntryBits: 16, descriptor: TopLeftOrigin | 0x01));
+
+		Assert.AreEqual((255, 0, 0, (byte)0), image.GetPixel(0, 0));
+		Assert.AreEqual((255, 0, 0, (byte)255), image.GetPixel(1, 0));
+	}
+
+	[TestMethod]
 	[DataRow(15)]
 	[DataRow(24)]
 	[DataRow(32)]
