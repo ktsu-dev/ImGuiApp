@@ -5,6 +5,7 @@ namespace ktsu.ImGui.App.ImGuiController;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Rendering;
@@ -17,41 +18,51 @@ using Silk.NET.OpenGL;
 /// <remarks>
 /// It knows nothing about ImGui's context or the window. <see cref="ImGuiContextHost"/> owns the
 /// context and hands this the finished draw data, and <see cref="ImGuiController"/> carries the
-/// window's input in (#313).
+/// window's input in (#313). Every OpenGL call goes through <see cref="IGLRenderer"/>, so what this
+/// decides is tested without a graphics context.
 /// </remarks>
 internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 {
-	internal readonly GL? _gl;
+	private static readonly int VertexStride = Unsafe.SizeOf<ImDrawVert>();
 
-	internal int _attribLocationTex;
-	internal int _attribLocationProjMtx;
-	internal int _attribLocationVtxPos;
-	internal int _attribLocationVtxUV;
-	internal int _attribLocationVtxColor;
-	internal uint _vboHandle;
-	internal uint _elementsHandle;
-	internal uint _vertexArrayObject;
-
-	internal Shader? _shader;
+	private readonly IGLRenderer _gl;
 
 	// The 3D path: offscreen framebuffers and a second program. Holds nothing on the GPU until a
 	// target is created or something is drawn.
-	internal GLRenderer3D? _renderer3D;
+	private readonly GLRenderer3D _renderer3D;
 
-	internal bool _disposed;
+	private uint _program;
+	private int _attribLocationTex;
+	private int _attribLocationProjMtx;
+	private int _attribLocationVtxPos;
+	private int _attribLocationVtxUV;
+	private int _attribLocationVtxColor;
+	private uint _vboHandle;
+	private uint _elementsHandle;
+	private uint _vertexArrayObject;
+	private bool _disposed;
 
 	/// <summary>Builds the shader program and buffers ImGui's frames are drawn with.</summary>
 	/// <param name="gl">The OpenGL context to draw into. It belongs to the caller and is not disposed here.</param>
-	[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The GLWrapper adapts a context this class does not own -- ImGuiApp creates and disposes it, and _gl is likewise never disposed here. Disposing the wrapper would tear down the caller's GL context, so it deliberately lives as long as this renderer.")]
+	[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The wrappers adapt a context this class does not own -- ImGuiApp creates and disposes it. Disposing a wrapper would tear down the caller's GL context, so they deliberately live as long as this renderer.")]
+	[ExcludeFromCodeCoverage(Justification = "Wraps a live OpenGL context, which unit tests do not have; the constructor it chains to is covered against stand-ins.")]
 	public OpenGLRenderer(GL gl)
+		: this(new GLRendererWrapper(gl), new GLTextureUploader(new GLWrapper(gl)), new GLRenderer3D(new GL3DWrapper(gl)))
+	{
+	}
+
+	/// <summary>Builds the renderer over the given OpenGL seams.</summary>
+	/// <param name="gl">The calls the renderer itself issues.</param>
+	/// <param name="textureUploader">Carries ImGui's own textures to the same context.</param>
+	/// <param name="renderer3D">The 3D path over the same context.</param>
+	internal OpenGLRenderer(IGLRenderer gl, ITextureUploader textureUploader, GLRenderer3D renderer3D)
 	{
 		Ensure.NotNull(gl);
+		Ensure.NotNull(textureUploader);
+		Ensure.NotNull(renderer3D);
 		_gl = gl;
-
-		// Wrapped rather than used directly so the uploader depends on IGL, which is what lets the
-		// texture calls be exercised without a graphics context.
-		TextureUploader = new GLTextureUploader(new GLWrapper(gl));
-		_renderer3D = new GLRenderer3D(new GL3DWrapper(gl));
+		TextureUploader = textureUploader;
+		_renderer3D = renderer3D;
 		CreateDeviceResources();
 	}
 
@@ -59,58 +70,22 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	internal ITextureUploader TextureUploader { get; }
 
 	/// <inheritdoc />
-	[SuppressMessage(
-		"Reliability",
-		"CA2000:Dispose objects before losing scope",
-		Justification = "The Texture wrapper's resource is the GL texture; we hand its name back to ImGui, " +
-			"so disposing here would delete the very texture we're returning. Lifetime is owned by the caller.")]
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; pointer is pinned within a fixed block and not retained.")]
-	public unsafe nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
+	public nint CreateTexture(ReadOnlySpan<byte> rgba, int width, int height)
 	{
-		if (_gl is null)
-		{
-			throw new InvalidOperationException("OpenGL context is not initialized.");
-		}
-
 		// Preserve whatever was bound — the caller may be mid-frame.
-		_gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
-
-		uint glTexture;
-		fixed (byte* pixelPtr = rgba)
-		{
-			Texture texture = new(_gl, width, height, (IntPtr)pixelPtr, pxFormat: PixelFormat.Rgba);
-			texture.Bind();
-			texture.SetMagFilter(TextureMagFilter.Linear);
-			texture.SetMinFilter(TextureMinFilter.Linear);
-			glTexture = texture.GlTexture;
-		}
-
+		int previousTextureId = _gl.GetInteger(GLEnum.TextureBinding2D);
+		uint glTexture = _gl.CreateTexture(width, height, rgba);
 		_gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
 		return (nint)glTexture;
 	}
 
 	/// <inheritdoc />
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL interop; pointer is pinned within a fixed block and not retained.")]
-	public unsafe bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
+	public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
 	{
-		// Matches CreateTexture rather than DeleteTexture's null-conditional no-op: a torn-down context
-		// is a fault here, not a declined capability. Returning false would send the caller into the
-		// recreate path, where CreateTexture would throw this same exception one step further from the
-		// cause.
-		if (_gl is null)
-		{
-			throw new InvalidOperationException("OpenGL context is not initialized.");
-		}
-
 		// Preserve whatever was bound — the caller may be mid-frame.
-		_gl.GetInteger(GLEnum.TextureBinding2D, out int previousTextureId);
+		int previousTextureId = _gl.GetInteger(GLEnum.TextureBinding2D);
 		_gl.BindTexture(GLEnum.Texture2D, (uint)id);
-
-		fixed (byte* pixelPtr = rgba)
-		{
-			_gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, (uint)width, (uint)height, GLEnum.Rgba, GLEnum.UnsignedByte, pixelPtr);
-		}
-
+		_gl.ReplaceBoundTexture(width, height, rgba);
 		_gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
 		return true;
 	}
@@ -123,49 +98,40 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	/// </exception>
 	public void DeleteTexture(nint id)
 	{
-		if (_renderer3D?.IsRenderTarget(id) == true)
+		if (_renderer3D.IsRenderTarget(id))
 		{
 			throw new ArgumentException($"Texture {id} is a render target's colour attachment. Release it with DeleteRenderTarget.", nameof(id));
 		}
 
-		// _gl can be null if the context has already been torn down; callers expect a no-op then.
-		_gl?.DeleteTexture((uint)id);
+		_gl.DeleteTexture((uint)id);
 	}
 
 	/// <inheritdoc />
-	public nint CreateRenderTarget(int width, int height, bool depth) => Renderer3D.CreateRenderTarget(width, height, depth);
+	public nint CreateRenderTarget(int width, int height, bool depth) => _renderer3D.CreateRenderTarget(width, height, depth);
 
 	/// <inheritdoc />
-	public bool ResizeRenderTarget(nint target, int width, int height) => Renderer3D.ResizeRenderTarget(target, width, height);
+	public bool ResizeRenderTarget(nint target, int width, int height) => _renderer3D.ResizeRenderTarget(target, width, height);
 
 	/// <inheritdoc />
-	public void DeleteRenderTarget(nint target) => Renderer3D.DeleteRenderTarget(target);
+	public void DeleteRenderTarget(nint target) => _renderer3D.DeleteRenderTarget(target);
 
 	/// <inheritdoc />
-	public nint GetTargetTexture(nint target) => Renderer3D.GetTargetTexture(target);
+	public nint GetTargetTexture(nint target) => _renderer3D.GetTargetTexture(target);
 
 	/// <inheritdoc />
-	public void Clear(nint target, Vector4 color, float depth) => Renderer3D.Clear(target, color, depth);
+	public void Clear(nint target, Vector4 color, float depth) => _renderer3D.Clear(target, color, depth);
 
 	/// <inheritdoc />
 	public void Draw(nint target, ReadOnlySpan<Vertex3D> vertices, ReadOnlySpan<uint> indices, in DrawState3D state) =>
-		Renderer3D.Draw(target, vertices, indices, state);
+		_renderer3D.Draw(target, vertices, indices, state);
 
-	private GLRenderer3D Renderer3D => _renderer3D ?? throw new InvalidOperationException("OpenGL context is not initialized.");
-
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for OpenGL vertex attribute pointer setup using ImGui draw vertex layout; pointers are local and not retained.")]
-	internal unsafe void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
+	internal void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
 	{
-		if (_gl is null || _shader is null)
-		{
-			return;
-		}
-
 		// Set the viewport from the draw data every frame rather than relying on a resize event to
 		// have set it. Some backends never raise one — a Wayland surface can be sized by the
 		// compositor before the handler is attached — which would leave the viewport at whatever
 		// size the drawable had when the context was created, and the UI drawn into a corner.
-		_gl.Viewport(0, 0, (uint)framebufferWidth, (uint)framebufferHeight);
+		_gl.Viewport(0, 0, framebufferWidth, framebufferHeight);
 
 		// Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
 		_gl.Enable(GLEnum.Blend);
@@ -177,39 +143,23 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		_gl.Enable(GLEnum.ScissorTest);
 #if !GLES && !LEGACY
 		_gl.Disable(GLEnum.PrimitiveRestart);
-		_gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
+		_gl.PolygonMode(GLEnum.Fill);
 		// Disable multisampling for pixel-perfect rendering
 		_gl.Disable(GLEnum.Multisample);
 #endif
 
-		float L = drawDataPtr.DisplayPos.X;
-		float R = drawDataPtr.DisplayPos.X + drawDataPtr.DisplaySize.X;
-		float T = drawDataPtr.DisplayPos.Y;
-		float B = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
-
-		// Use double precision for more accurate orthographic projection
-		double dL = L, dR = R, dT = T, dB = B;
-
-		Span<float> orthoProjection = [
-				(float)(2.0 / (dR - dL)), 0.0f, 0.0f, 0.0f,
-				0.0f, (float)(2.0 / (dT - dB)), 0.0f, 0.0f,
-				0.0f, 0.0f, -1.0f, 0.0f,
-				(float)((dR + dL) / (dL - dR)), (float)((dT + dB) / (dB - dT)), 0.0f, 1.0f,
-			];
-
-		_shader.UseShader();
+		_gl.UseProgram(_program);
 		_gl.Uniform1(_attribLocationTex, 0);
-		_gl.UniformMatrix4(_attribLocationProjMtx, 1, false, orthoProjection);
-		_gl.CheckGlError("Projection");
+		_gl.UniformMatrix4(_attribLocationProjMtx, OrthographicProjection(drawDataPtr.DisplayPos, drawDataPtr.DisplaySize));
+		_gl.CheckError("Projection");
 
 		_gl.BindSampler(0, 0);
 
-		// Setup desired GL state
 		// Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
 		// The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
 		_vertexArrayObject = _gl.GenVertexArray();
 		_gl.BindVertexArray(_vertexArrayObject);
-		_gl.CheckGlError("VAO");
+		_gl.CheckError("VAO");
 
 		// Bind vertex/index buffers and setup attributes for ImDrawVert
 		_gl.BindBuffer(GLEnum.ArrayBuffer, _vboHandle);
@@ -217,9 +167,29 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		_gl.EnableVertexAttribArray((uint)_attribLocationVtxPos);
 		_gl.EnableVertexAttribArray((uint)_attribLocationVtxUV);
 		_gl.EnableVertexAttribArray((uint)_attribLocationVtxColor);
-		_gl.VertexAttribPointer((uint)_attribLocationVtxPos, 2, GLEnum.Float, false, (uint)sizeof(ImDrawVert), (void*)0);
-		_gl.VertexAttribPointer((uint)_attribLocationVtxUV, 2, GLEnum.Float, false, (uint)sizeof(ImDrawVert), (void*)8);
-		_gl.VertexAttribPointer((uint)_attribLocationVtxColor, 4, GLEnum.UnsignedByte, true, (uint)sizeof(ImDrawVert), (void*)16);
+		_gl.VertexAttribPointer((uint)_attribLocationVtxPos, 2, GLEnum.Float, false, (uint)VertexStride, 0);
+		_gl.VertexAttribPointer((uint)_attribLocationVtxUV, 2, GLEnum.Float, false, (uint)VertexStride, 8);
+		_gl.VertexAttribPointer((uint)_attribLocationVtxColor, 4, GLEnum.UnsignedByte, true, (uint)VertexStride, 16);
+	}
+
+	/// <summary>
+	/// The column-major orthographic projection mapping ImGui's display rectangle onto clip space,
+	/// with the first row of the display at the top.
+	/// </summary>
+	internal static float[] OrthographicProjection(Vector2 displayPos, Vector2 displaySize)
+	{
+		// Double precision for the divisions, so the projection is exact at large display sizes.
+		double left = displayPos.X;
+		double right = displayPos.X + displaySize.X;
+		double top = displayPos.Y;
+		double bottom = displayPos.Y + displaySize.Y;
+
+		return [
+			(float)(2.0 / (right - left)), 0.0f, 0.0f, 0.0f,
+			0.0f, (float)(2.0 / (top - bottom)), 0.0f, 0.0f,
+			0.0f, 0.0f, -1.0f, 0.0f,
+			(float)((right + left) / (left - right)), (float)((top + bottom) / (bottom - top)), 0.0f, 1.0f,
+		];
 	}
 
 	/// <summary>
@@ -231,11 +201,6 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	/// <param name="mode">The blend mode to activate.</param>
 	internal void SetBlendMode(ImGuiAppBlendMode mode)
 	{
-		if (_gl is null)
-		{
-			return;
-		}
-
 		_gl.BlendEquation(GLEnum.FuncAdd);
 		switch (mode)
 		{
@@ -256,11 +221,6 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	[SuppressMessage("Major Code Smell", "S927:Parameter names should match base declaration and other partial definitions", Justification = "Parameter name 'drawDataPtr' is used consistently in this implementation; renaming could break existing callers using named arguments.")]
 	public void RenderDrawData(ImDrawDataPtr drawDataPtr)
 	{
-		if (_gl is null)
-		{
-			return;
-		}
-
 		int framebufferWidth = (int)(drawDataPtr.DisplaySize.X * drawDataPtr.FramebufferScale.X);
 		int framebufferHeight = (int)(drawDataPtr.DisplaySize.Y * drawDataPtr.FramebufferScale.Y);
 		if (framebufferWidth <= 0 || framebufferHeight <= 0)
@@ -269,16 +229,14 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		}
 
 		// Backup GL state
-		_gl.GetInteger(GLEnum.ActiveTexture, out int lastActiveTexture);
+		int lastActiveTexture = _gl.GetInteger(GLEnum.ActiveTexture);
 		_gl.ActiveTexture(GLEnum.Texture0);
 
-		_gl.GetInteger(GLEnum.CurrentProgram, out int lastProgram);
-		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
-
-		_gl.GetInteger(GLEnum.SamplerBinding, out int lastSampler);
-
-		_gl.GetInteger(GLEnum.ArrayBufferBinding, out int lastArrayBuffer);
-		_gl.GetInteger(GLEnum.VertexArrayBinding, out int lastVertexArrayObject);
+		int lastProgram = _gl.GetInteger(GLEnum.CurrentProgram);
+		int lastTexture = _gl.GetInteger(GLEnum.TextureBinding2D);
+		int lastSampler = _gl.GetInteger(GLEnum.SamplerBinding);
+		int lastArrayBuffer = _gl.GetInteger(GLEnum.ArrayBufferBinding);
+		int lastVertexArrayObject = _gl.GetInteger(GLEnum.VertexArrayBinding);
 
 #if !GLES
 		Span<int> lastPolygonMode = stackalloc int[2];
@@ -288,14 +246,12 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		Span<int> lastScissorBox = stackalloc int[4];
 		_gl.GetInteger(GLEnum.ScissorBox, lastScissorBox);
 
-		_gl.GetInteger(GLEnum.BlendSrcRgb, out int lastBlendSrcRgb);
-		_gl.GetInteger(GLEnum.BlendDstRgb, out int lastBlendDstRgb);
-
-		_gl.GetInteger(GLEnum.BlendSrcAlpha, out int lastBlendSrcAlpha);
-		_gl.GetInteger(GLEnum.BlendDstAlpha, out int lastBlendDstAlpha);
-
-		_gl.GetInteger(GLEnum.BlendEquationRgb, out int lastBlendEquationRgb);
-		_gl.GetInteger(GLEnum.BlendEquationAlpha, out int lastBlendEquationAlpha);
+		int lastBlendSrcRgb = _gl.GetInteger(GLEnum.BlendSrcRgb);
+		int lastBlendDstRgb = _gl.GetInteger(GLEnum.BlendDstRgb);
+		int lastBlendSrcAlpha = _gl.GetInteger(GLEnum.BlendSrcAlpha);
+		int lastBlendDstAlpha = _gl.GetInteger(GLEnum.BlendDstAlpha);
+		int lastBlendEquationRgb = _gl.GetInteger(GLEnum.BlendEquationRgb);
+		int lastBlendEquationAlpha = _gl.GetInteger(GLEnum.BlendEquationAlpha);
 
 		bool lastEnableBlend = _gl.IsEnabled(GLEnum.Blend);
 		bool lastEnableCullFace = _gl.IsEnabled(GLEnum.CullFace);
@@ -313,7 +269,6 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		Vector2 clipOff = drawDataPtr.DisplayPos;         // (0,0) unless using multi-viewports
 		Vector2 clipScale = drawDataPtr.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
-		// Render command lists
 		RenderCommandLists(drawDataPtr, framebufferWidth, framebufferHeight, clipOff, clipScale);
 
 		// Destroy the temporary VAO
@@ -323,13 +278,9 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		// Restore modified GL state
 		_gl.UseProgram((uint)lastProgram);
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
-
 		_gl.BindSampler(0, (uint)lastSampler);
-
 		_gl.ActiveTexture((GLEnum)lastActiveTexture);
-
 		_gl.BindVertexArray((uint)lastVertexArrayObject);
-
 		_gl.BindBuffer(GLEnum.ArrayBuffer, (uint)lastArrayBuffer);
 		_gl.BlendEquationSeparate((GLEnum)lastBlendEquationRgb, (GLEnum)lastBlendEquationAlpha);
 		_gl.BlendFuncSeparate((GLEnum)lastBlendSrcRgb, (GLEnum)lastBlendDstRgb, (GLEnum)lastBlendSrcAlpha, (GLEnum)lastBlendDstAlpha);
@@ -342,8 +293,7 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 
 #if !GLES && !LEGACY
 		SetGlCapability(GLEnum.PrimitiveRestart, lastEnablePrimitiveRestart);
-
-		_gl.PolygonMode(GLEnum.FrontAndBack, (GLEnum)lastPolygonMode[0]);
+		_gl.PolygonMode((GLEnum)lastPolygonMode[0]);
 #endif
 
 		_gl.Scissor(lastScissorBox[0], lastScissorBox[1], (uint)lastScissorBox[2], (uint)lastScissorBox[3]);
@@ -352,7 +302,7 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	/// <summary>
 	/// Renders all ImGui draw command lists to the current framebuffer.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui exposes its vertex and index buffers as raw pointers; they are passed to OpenGL for the upload only.")]
 	private unsafe void RenderCommandLists(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight, Vector2 clipOff, Vector2 clipScale)
 	{
 		for (int n = 0; n < drawDataPtr.CmdListsCount; n++)
@@ -360,11 +310,10 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 			ImDrawListPtr cmdListPtr = drawDataPtr.CmdLists[n];
 
 			// Upload vertex/index buffers
-
-			_gl!.BufferData(GLEnum.ArrayBuffer, (nuint)(cmdListPtr.VtxBuffer.Size * sizeof(ImDrawVert)), cmdListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
-			_gl.CheckGlError($"Data Vert {n}");
-			_gl.BufferData(GLEnum.ElementArrayBuffer, (nuint)(cmdListPtr.IdxBuffer.Size * sizeof(ushort)), cmdListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
-			_gl.CheckGlError($"Data Idx {n}");
+			_gl.BufferData(GLEnum.ArrayBuffer, cmdListPtr.VtxBuffer.Size * VertexStride, (nint)cmdListPtr.VtxBuffer.Data);
+			_gl.CheckError($"Data Vert {n}");
+			_gl.BufferData(GLEnum.ElementArrayBuffer, cmdListPtr.IdxBuffer.Size * sizeof(ushort), (nint)cmdListPtr.IdxBuffer.Data);
+			_gl.CheckError($"Data Idx {n}");
 
 			for (int cmd_i = 0; cmd_i < cmdListPtr.CmdBuffer.Size; cmd_i++)
 			{
@@ -377,7 +326,7 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	/// <summary>
 	/// Executes a single ImGui draw command, honoring user callbacks or issuing the scissored draw call.
 	/// </summary>
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui/OpenGL render loop; unsafe pointers are used only for GPU buffer uploads and draw calls, scoped to the call.")]
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "A draw-command callback is an unmanaged function pointer ImGui hands over; it is called with this command's own draw list and command, and nothing is retained.")]
 	private unsafe void RenderDrawCommand(ImDrawDataPtr drawDataPtr, ImDrawListPtr cmdListPtr, ImDrawCmd cmdPtr, int framebufferWidth, int framebufferHeight, Vector2 clipOff, Vector2 clipScale)
 	{
 		if (cmdPtr.UserCallback != null)
@@ -414,19 +363,16 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 			uint scissorWidth = (uint)Math.Max(0, Math.Ceiling(clipRect.Z - clipRect.X));
 			uint scissorHeight = (uint)Math.Max(0, Math.Ceiling(clipRect.W - clipRect.Y));
 
-			// Apply scissor/clipping rectangle
-			_gl!.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
-			_gl.CheckGlError("Scissor");
+			_gl.Scissor(scissorX, scissorY, scissorWidth, scissorHeight);
+			_gl.CheckError("Scissor");
 
-			// Bind texture, Draw
-			// In ImGui 1.92.0+, use GetTexID() method to get texture ID
-			// This method returns the texture ID compatible with OpenGL
+			// GetTexID returns the texture name ImGui was given for this command's texture.
 			uint textureId = (uint)(nuint)cmdPtr.GetTexID();
 			_gl.BindTexture(GLEnum.Texture2D, textureId);
-			_gl.CheckGlError("Texture");
+			_gl.CheckError("Texture");
 
-			_gl.DrawElementsBaseVertex(GLEnum.Triangles, cmdPtr.ElemCount, GLEnum.UnsignedShort, (void*)(cmdPtr.IdxOffset * sizeof(ushort)), (int)cmdPtr.VtxOffset);
-			_gl.CheckGlError("Draw");
+			_gl.DrawElementsBaseVertex(cmdPtr.ElemCount, (nint)(cmdPtr.IdxOffset * sizeof(ushort)), (int)cmdPtr.VtxOffset);
+			_gl.CheckError("Draw");
 		}
 	}
 
@@ -437,28 +383,22 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	{
 		if (enabled)
 		{
-			_gl!.Enable(capability);
+			_gl.Enable(capability);
 		}
 		else
 		{
-			_gl!.Disable(capability);
+			_gl.Disable(capability);
 		}
 	}
 
-	internal void CreateDeviceResources()
+	private void CreateDeviceResources()
 	{
-		if (_gl is null)
-		{
-			return;
-		}
-
 		// Backup GL state
+		int lastTexture = _gl.GetInteger(GLEnum.TextureBinding2D);
+		int lastArrayBuffer = _gl.GetInteger(GLEnum.ArrayBufferBinding);
+		int lastVertexArray = _gl.GetInteger(GLEnum.VertexArrayBinding);
 
-		_gl.GetInteger(GLEnum.TextureBinding2D, out int lastTexture);
-		_gl.GetInteger(GLEnum.ArrayBufferBinding, out int lastArrayBuffer);
-		_gl.GetInteger(GLEnum.VertexArrayBinding, out int lastVertexArray);
-
-		string vertexSource =
+		const string VertexSource =
 			@"#version 330
 			layout (location = 0) in vec2 Position;
 			layout (location = 1) in vec2 UV;
@@ -475,7 +415,7 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 				gl_Position = ProjMtx * vec4(roundedPos, 0, 1);
 			}";
 
-		string fragmentSource =
+		const string FragmentSource =
 			@"#version 330
 			in vec2 Frag_UV;
 			in vec4 Frag_Color;
@@ -489,13 +429,13 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 				Out_Color = Frag_Color * texture(Texture, adjustedUV);
 			}";
 
-		_shader = new Shader(_gl, vertexSource, fragmentSource);
+		_program = _gl.CreateProgram(VertexSource, FragmentSource);
 
-		_attribLocationTex = _shader.GetUniformLocation("Texture");
-		_attribLocationProjMtx = _shader.GetUniformLocation("ProjMtx");
-		_attribLocationVtxPos = _shader.GetAttribLocation("Position");
-		_attribLocationVtxUV = _shader.GetAttribLocation("UV");
-		_attribLocationVtxColor = _shader.GetAttribLocation("Color");
+		_attribLocationTex = _gl.GetUniformLocation(_program, "Texture");
+		_attribLocationProjMtx = _gl.GetUniformLocation(_program, "ProjMtx");
+		_attribLocationVtxPos = _gl.GetAttribLocation(_program, "Position");
+		_attribLocationVtxUV = _gl.GetAttribLocation(_program, "UV");
+		_attribLocationVtxColor = _gl.GetAttribLocation(_program, "Color");
 
 		_vboHandle = _gl.GenBuffer();
 		_elementsHandle = _gl.GenBuffer();
@@ -503,10 +443,9 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 		// Restore modified GL state
 		_gl.BindTexture(GLEnum.Texture2D, (uint)lastTexture);
 		_gl.BindBuffer(GLEnum.ArrayBuffer, (uint)lastArrayBuffer);
-
 		_gl.BindVertexArray((uint)lastVertexArray);
 
-		_gl.CheckGlError("End of ImGui setup");
+		_gl.CheckError("End of ImGui setup");
 	}
 
 	/// <summary>
@@ -520,15 +459,11 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 			return;
 		}
 
-		if (_gl is not null && _shader is not null)
-		{
-			_gl.DeleteBuffer(_vboHandle);
-			_gl.DeleteBuffer(_elementsHandle);
-			_gl.DeleteVertexArray(_vertexArrayObject);
-
-			_renderer3D?.Dispose();
-			_shader.Dispose();
-		}
+		_gl.DeleteBuffer(_vboHandle);
+		_gl.DeleteBuffer(_elementsHandle);
+		_gl.DeleteVertexArray(_vertexArrayObject);
+		_renderer3D.Dispose();
+		_gl.DeleteProgram(_program);
 
 		_disposed = true;
 	}

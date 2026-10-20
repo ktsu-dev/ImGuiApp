@@ -457,7 +457,11 @@ Running ImGui on the desktop is three pieces in `ImGui.App/ImGuiController/` (#3
   reconciliation. It knows the renderer only through an `ITextureUploader`, because since
   `RendererHasTextures` ImGui owns the atlas pixels and a renderer owns only texture handles.
 - **`OpenGLRenderer`** draws: it is the `IRendererBackend` and `IRenderer3D` that `ImGuiApp.renderer`
-  holds, and its `TextureUploader` writes ImGui's dirty rectangles straight into GL textures.
+  holds, and its `TextureUploader` writes ImGui's dirty rectangles straight into GL textures. Its
+  OpenGL calls go through the internal `IGLRenderer` seam, as `GLRenderer3D`'s go through `IGL3D`:
+  `GLRendererWrapper` forwards to a live context and is excluded from coverage, and
+  `OpenGLRendererTests` drive the renderer with real frames from an `ImGuiContextHost` over
+  `FakeGLRenderer`, which models the state it saves and restores.
 - **`ImGuiController`** is what is left: the Silk.NET window's input, size, cursor and input method,
   wired around the other two.
 
