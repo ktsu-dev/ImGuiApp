@@ -1245,13 +1245,24 @@ public partial class ImGuiPopups
 		private void DrawSummary()
 		{
 			string summary = listingError is null ? FilesystemListing.Summarize(visibleEntries) : "Unreadable folder";
-			if (BrowserTarget == FilesystemBrowserTarget.File && Glob != "*")
-			{
-				summary += $"   Showing {Glob.Replace(";", ", ", StringComparison.Ordinal)}";
-			}
+			string shown = BrowserTarget == FilesystemBrowserTarget.File && Glob != "*"
+				? $"Showing {Glob.Replace(";", ", ", StringComparison.Ordinal)}"
+				: string.Empty;
+			string line = shown.Length == 0 ? summary : $"{summary}   {shown}";
 
-			ImGui.TextDisabled(summary);
+			// A host offering many formats can list more than fits, so the line is cut to the window
+			// and the whole list is a tooltip away.
+			string fitted = Ellipsize(line, ImGui.GetContentRegionAvail().X);
+			ImGui.TextDisabled(fitted);
 			ImGuiProbes.MarkItem(ProbePrefix, "summary");
+			if (!ReferenceEquals(fitted, line) && ImGui.IsItemHovered())
+			{
+				ImGui.BeginTooltip();
+				ImGui.PushTextWrapPos(ImGui.GetFontSize() * 30f);
+				ImGui.TextUnformatted(shown);
+				ImGui.PopTextWrapPos();
+				ImGui.EndTooltip();
+			}
 		}
 
 		/// <summary>Draws the name a save is given, filling the width of the browser.</summary>
