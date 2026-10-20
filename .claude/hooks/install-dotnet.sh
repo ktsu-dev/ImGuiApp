@@ -81,10 +81,21 @@ install_from_container_image() {
 	# Only the files under usr/share/dotnet are taken: the runtime, ASP.NET Core
 	# and SDK layers. The rest of the image is its operating system. Layers are
 	# extracted over what is there, so an SDK and older runtimes share one root.
-	for layer in $(jq -r '.layers[].digest' <<<"$manifest"); do
+	# Each layer is checked against the sha256 digest its manifest names before
+	# anything in it is unpacked, since what it contains is run as dotnet.
+	while IFS= read -r layer; do
+		case "$layer" in
+			sha256:*) ;;
+			*) echo "install-dotnet: unsupported layer digest $layer" >&2; rm -rf "$work"; return 1 ;;
+		esac
 		curl -fsSL -o "$work/layer.tgz" "$registry/blobs/$layer"
+		if [ "sha256:$(sha256sum "$work/layer.tgz" | awk '{print $1}')" != "$layer" ]; then
+			echo "install-dotnet: layer $layer does not match its digest" >&2
+			rm -rf "$work"
+			return 1
+		fi
 		tar -xzf "$work/layer.tgz" -C "$root" --strip-components=3 --wildcards "$wanted" 2>/dev/null || true
-	done
+	done < <(jq -r '.layers[].digest' <<<"$manifest")
 	rm -rf "$work"
 }
 
