@@ -14,7 +14,7 @@ public static partial class ImGuiWidgets
 	public static void TextCenteredV(string text)
 	{
 		Ensure.NotNull(text);
-		HexaTextHelper.TextCenteredV(text);
+		DrawListProbe.MarkDrawn(text, HexaTextHelper.TextCenteredV, text);
 	}
 
 	/// <summary>
@@ -25,7 +25,7 @@ public static partial class ImGuiWidgets
 	public static void TextCenteredH(string text)
 	{
 		Ensure.NotNull(text);
-		HexaTextHelper.TextCenteredH(text);
+		DrawListProbe.MarkDrawn(text, HexaTextHelper.TextCenteredH, text);
 	}
 
 	/// <summary>
@@ -36,6 +36,6 @@ public static partial class ImGuiWidgets
 	public static void TextCenteredVH(string text)
 	{
 		Ensure.NotNull(text);
-		HexaTextHelper.TextCenteredVH(text);
+		DrawListProbe.MarkDrawn(text, HexaTextHelper.TextCenteredVH, text);
 	}
 }

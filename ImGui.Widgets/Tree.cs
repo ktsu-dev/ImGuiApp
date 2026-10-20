@@ -7,6 +7,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 using ktsu.ScopedAction;
 
@@ -111,7 +112,9 @@ public static partial class ImGuiWidgets
 				// NoTreePushOnOpen always: the nested tree indents its own contents, and ImGui's tree
 				// push would indent them a second time, marching every level further right than the
 				// connector lines are drawn. It also means there is no TreePop to pair.
-				if (ImGui.TreeNodeEx(label, flags | ImGuiTreeNodeFlags.NoTreePushOnOpen))
+				bool open = ImGui.TreeNodeEx(label, flags | ImGuiTreeNodeFlags.NoTreePushOnOpen);
+				ImGuiProbes.MarkItem(label);
+				if (open)
 				{
 					using (Tree subtree = new())
 					{
@@ -151,7 +154,9 @@ public static partial class ImGuiWidgets
 
 			using (Current?.Child)
 			{
-				if (ImGui.TreeNodeEx(label, flags | ImGuiTreeNodeFlags.NoTreePushOnOpen))
+				bool open = ImGui.TreeNodeEx(label, flags | ImGuiTreeNodeFlags.NoTreePushOnOpen);
+				ImGuiProbes.MarkItem(label);
+				if (open)
 				{
 					using (Tree subtree = new())
 					{

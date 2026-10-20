@@ -28,7 +28,8 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 ### Libraries
 
 - **ImGui.App** (`ktsu.ImGui.App`) - Application foundation with windowing, rendering, font/texture management, PID frame limiting, DPI awareness. Image decoding is self-contained (`ImGui.App/Images/`), so the package carries no imaging dependency; see [Image decoding](#image-decoding) below.
-- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `TimecodeField` over the ImGui-free `Timecode`/`TimecodeRate`, `ValueSlider` (a fill-to-value slider with the number readable in the middle, `ValueSliderOptions` for format, prefix, unit, bipolar fill, logarithmic scale and reset value, the arithmetic in the ImGui-free `ValueSliderState`), `RangeSlider`, `ChannelFader`/`FaderTaper`, `XYPad`, `ColorEdit`/`ColorPicker`/`ColorButton` (linear storage, sRGB display), `ColorWheel`/`LiftGammaGain`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`, `StepGrid`, `PianoKeyboard` over a caller-owned `PianoKeyboardLayout`, `TransportScrubber`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `FrameTimeGraph` over a caller-owned `FrameTimeHistory`, `HandleTrack`, `CurveTrack`, `DbMeter`, `GainReductionMeter`, `CorrelationMeter`/`StereoMetersState`, `Goniometer`, `Scope`, `Waveform` (zoomable over a caller-owned `TimelineView` and a `WaveformPeakSource`/`WaveformPeakCache`), `SpectrumAnalyzer` over a caller-owned `SpectrumAnalyzerState`, `EnvelopeEditor` over an `Envelope`, `ParametricEq` over `EqBand`s with `EqResponse` for the RBJ biquad response, `LogView` (a virtualized console of `LogEntry` rows with a filter, level toggles, repeat collapsing, auto-follow, selection and copy, indexed incrementally by a caller-owned `LogViewState`, which also holds the widget's per-view bookkeeping so nothing is keyed by ImGui id), and image and colour (`LevelsControl` over a caller-owned `LevelsAdjustment`, `AssetBrowser` over a caller-owned `AssetBrowserState`, whose `Apply` is the transfer function the widget draws, `GradientEditor` over a caller-owned list of `GradientStop`, with `SampleGradient` as the evaluator the bar `Toolbar`/`ToolbarSeparator` with `ToolbarButton`/`ToolbarToggleButton` (glyph and label in one frame, `ToolbarButtonLayout` picking leading, above-and-centred, glyph-only or label-only, the arithmetic in the ImGui-free `ToolbarGeometry`; `GlyphSize` on the toolbar or a button draws icons at their own pixel size beside normal-size labels), is drawn with, `SwatchPalette`, `ImageCompare`, `CropOverlay` over an `ImageCanvas` (guides from `CropGuide`, chosen through `CropOverlayOptions`), `TransformBox` (a rectangle with handles in its own frame drawn through a caller's `Matrix3x2`, which moves, resizes and scales it, and skews it on a Ctrl-dragged edge when `TransformBoxOptions.Skew` is on, and moves a Ctrl+Shift-dragged corner alone into a `TransformBoxQuad` when `TransformBoxOptions.Distort` is on, with the hit-testing and drag rules in the ImGui-free `TransformBoxState`), `PixelLoupe` beside an `ImageCanvas`); the `LogFrequencyAxis` both share); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ReorderableTree` (rows the caller draws, dragged to reorder and re-parent; reports a `ReorderableTreeMove` whose index counts the parent's children before the move, resolved by the ImGui-free `ReorderableTreeState`), `ImageCanvas`, `PropertyGrid`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
+- **ImGui.Widgets** (`ktsu.ImGui.Widgets`) - Custom UI components, grouped as the README's feature list groups them: input and controls (`Switch`, `SegmentedControl`, `Stepper`, `TimecodeField` over the ImGui-free `Timecode`/`TimecodeRate`, `ValueSlider` (a fill-to-value slider with the number readable in the middle, `ValueSliderOptions` for format, prefix, unit, bipolar fill, logarithmic scale and reset value, the arithmetic in the ImGui-free `ValueSliderState`), `RangeSlider`, `ChannelFader`/`FaderTaper`, `XYPad`, `ColorEdit`/`ColorPicker`/`ColorButton` (linear storage, sRGB display), `ColorWheel`/`LiftGammaGain`, `Knob`/`KnobWithDrag`, `Rating`, `Chip`/`ChipGroup`, `PinInput`, `SearchBox`/`SearchBoxRanked`, `Combo`, `StepGrid`, `PianoKeyboard` over a caller-owned `PianoKeyboardLayout`, `TransportScrubber`); display and status (`Avatar`, `Badge`/`BadgeDot`, `ColorIndicator`, `Icon`, `Text`, `Image`, `PageIndicator`); progress and loading (`RadialProgressBar` with `RadialCountdown`/`RadialCountUp`, `SkeletonLine`/`SkeletonRect`/`SkeletonCircle`); data and signals (`Histogram`, `FrameTimeGraph` over a caller-owned `FrameTimeHistory`, `HandleTrack`, `CurveTrack`, `DbMeter`, `GainReductionMeter`, `CorrelationMeter`/`StereoMetersState`, `Goniometer`, `Scope`, `Waveform` (zoomable over a caller-owned `TimelineView` and a `WaveformPeakSource`/`WaveformPeakCache`), `SpectrumAnalyzer` over a caller-owned `SpectrumAnalyzerState`, `EnvelopeEditor` over an `Envelope`, `ParametricEq` over `EqBand`s with `EqResponse` for the RBJ biquad response, `LogView` (a virtualized console of `LogEntry` rows with a filter, level toggles, repeat collapsing, auto-follow, selection and copy, indexed incrementally by a caller-owned `LogViewState`, which also holds the widget's per-view bookkeeping so nothing is keyed by ImGui id), and image and colour (`LevelsControl` over a caller-owned `LevelsAdjustment`, `AssetBrowser` over a caller-owned `AssetBrowserState`, whose `Apply` is the transfer function the widget draws, `GradientEditor` over a caller-owned list of `GradientStop`, with `SampleGradient` as the evaluator the bar `Toolbar`/`ToolbarSeparator` with `ToolbarButton`/`ToolbarToggleButton` (glyph and label in one frame, `ToolbarButtonLayout` picking leading, above-and-centred, glyph-only or label-only, the arithmetic in the ImGui-free `ToolbarGeometry`; `GlyphSize` on the toolbar or a button draws icons at their own pixel size beside normal-size labels), is drawn with, `SwatchPalette`, `ImageCompare`, `CropOverlay` over an `ImageCanvas` (guides from `CropGuide`, chosen through `CropOverlayOptions`), `TransformBox` (a rectangle with handles in its own frame drawn through a caller's `Matrix3x2`, which moves, resizes and scales it, and skews it on a Ctrl-dragged edge when `TransformBoxOptions.Skew` is on, and moves a Ctrl+Shift-dragged corner alone into a `TransformBoxQuad` when `TransformBoxOptions.Distort` is on, with the hit-testing and drag rules in the ImGui-free `TransformBoxState`), `PixelLoupe` beside an `ImageCanvas`, `Viewport3D` (a 3D view through the host's `IRenderer3D` under a caller-owned `Viewport3DState` orbit camera; see [Viewport3D](#viewport3d))); the `LogFrequencyAxis` both share); layout and containers (`DividerContainer`/`DividerZone`, `Grid`, `TabPanel`, `Card`, `Tree`, `ReorderableTree` (rows the caller draws, dragged to reorder and re-parent; reports a `ReorderableTreeMove` whose index counts the parent's children before the move, resolved by the ImGui-free `ReorderableTreeState`), `ImageCanvas`, `PropertyGrid`, `OverlayHost`/`OverlayLayer`, `ScopedDisable`, `ScopedId`); and motion and gestures (`Tween`, `Spring`, `Easing`, `InertialScroll`, `GestureDetector`/`GestureMachine`). Also thin adapters delegating to `Hexa.NET.ImGui.Widgets`: `Spinner`, `BufferingBar`, `HorizontalSplitter`/`VerticalSplitter`, `ToggleSwitch`/`ToggleButton`/`TransparentButton`/`InlineButton`, `IconTreeNode`, `EnumCombo`, `TextCenteredV`/`TextCenteredH`/`TextCenteredVH`, `ImageCenteredV`/`ImageCenteredH`/`ImageCenteredVH`/`ImageScaleTo`, `Tooltip`, `Breadcrumb`, `DatePicker`/`YearPicker`, `FlameGraph`, `FileTreeView`, `OpenFileDialog`/`SaveFileDialog`/`OpenFolderDialog`, `RenameDialog`, `DialogMessageBox`/`ShowMessageBox`, `DockedWindow`. Seven of these look like duplicates of an existing ktsu widget; most are not, and the two that are have a recommended survivor — see [Hexa-backed vs ktsu widgets](#hexa-backed-vs-ktsu-widgets) below for the pair-by-pair verdict. `DatePicker` and `FileTreeView` need a Material Icons font registered via `FontHelper.AddCustomFont(io, data, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` (not `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping); see `examples/ImGuiAppDemo`. `YearPicker` needs no icon font. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same Material Icons font, for their toolbar, breadcrumb and file-tree glyphs; `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` need none. `DockedWindow` composes Hexa's `ImWindow` internally rather than inheriting it — subclass it, override `Title` and `DrawContent()`, then call `Show()`/`Close()`. All of the dialogs and `DockedWindow` require a per-frame deferred-drawing pump; see [Deferred Drawing](#deferred-drawing-dialogs-and-docked-windows) below. Also includes callback-driven editors: `Sequencer`, `SequenceSource`, `CurveEditor`, `CurveSource`, `CurveData`, `BezierEditor`. Unlike the dialogs above, none of these need a deferred-drawing pump; see [Callback-driven editors](#callback-driven-editors) below.
+- **ImGui.Rendering** (`ktsu.ImGui.Rendering`) - The backend-agnostic 3D contract (`IRenderer3D`, `Vertex3D`, `DrawState3D`, `DepthMode`/`CullMode`/`BlendMode`/`PrimitiveTopology`) and `Renderer3DHost`, where a library that cannot reference `ImGui.App` finds the host's renderer. No dependencies. Referenced by `ImGui.App` (which implements it and installs the resolver) and `ImGui.Widgets` (whose `Viewport3D` draws through it). See [Backend-agnostic 3D](#backend-agnostic-3d)
 - **ImGui.Popups** (`ktsu.ImGui.Popups`) - Modal dialogs: MessageOK, Prompt, InputString/Int/Float, FilesystemBrowser, SearchableList. `Prompt.Open` takes `PromptButton`s (per-button probe name, at most one `IsCancel`) and an optional `PromptCheckbox` read through `Checked`; actions run after the popup ends, and a prompt closed without an answer (Escape, its close button, or ImGui closing it because another popup opened at the same level) runs the cancel button's action once. `FilesystemBrowser.ConfirmOverwrite` (off by default) asks before a save picks an existing file, probed as `filesystem-browser/overwrite/replace` and `/cancel`. Every `Modal` centres itself each time it appears
 - **ImGui.Color** (`ktsu.ImGui.Color`) - Bridge between `ktsu.Semantics.Color` and ImGui. Colors are held as the semantic `Color` (linear) and `Srgb` types and converted only at the ImGui seam: `ColorImGuiExtensions` (`ToImColor`/`FromImColor`, `ToImGuiVector4`, `ToImGuiU32`, `ToImGuiU32Styled`) and `SrgbImGuiExtensions` (`Srgb` → `ImColor`/`ImGuiVector4`/`ImU32`, packed directly with no linear round-trip). The `ImColor` and `Srgb` `ToImGuiU32` apply the global style alpha like `ImGui.GetColorU32`; the linear `Color.ToImGuiU32` is a pure pack matching `ColorConvertFloat4ToU32`. Anything drawing a `Color` into a draw list uses `Color.ToImGuiU32Styled` instead, which applies the style alpha, so the fill dims inside `BeginDisabled`/`ScopedDisable` (#672). `ImColor` extension operations: adjustments (lighten/darken, saturate/desaturate, hue offset, grayscale, invert, alpha), analysis (relative luminance, contrast ratio, perceptual distance), and contrast heuristics (`MostReadableTextColor`, `AdjustForSufficientContrast`). All color math delegates to `ktsu.Semantics.Color`. (There is no `ImColor` factory class — construct via `Color`/`Srgb` and convert.)
 - **ImGui.Styler** (`ktsu.ImGui.Styler`) - Theming system with 50+ built-in themes, scoped styling, Button.Alignment, Text.Color semantic colors, Indent utilities, Alignment helpers, theme-aware color palette (`Palette`, e.g. `Palette.Basic.Red`, `Palette.Semantic.Error`), and interactive theme browser. Color construction and manipulation live in `ImGui.Color`.
@@ -101,7 +102,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.App/ForceDpiAware.cs` - Multi-platform DPI detection
 - `ImGui.App/WindowingEnvironment.cs` - Wayland / tiling window manager detection driving `ImGuiAppConfig.WindowGeometry`
 - `ImGui.App/ImGuiExtensionManager.cs` - Detection of ImGuizmo, ImNodes, ImPlot, limited to the ones `ImGuiAppConfig.Extensions` asks for; see [Extensions](#extensions)
-- `ImGui.App/IRenderer3D.cs` - The optional 3D extension a backend may implement; see [Backend-agnostic 3D](#backend-agnostic-3d)
+- `ImGui.Rendering/IRenderer3D.cs` - The optional 3D extension a backend may implement, in its own package so `ImGui.Widgets` can use it; see [Backend-agnostic 3D](#backend-agnostic-3d)
+- `ImGui.Rendering/Renderer3DHost.cs` - Where a library finds the host's 3D renderer; `ImGui.App/Renderer3DRegistration.cs` installs the host's resolver from a module initializer
+- `ImGui.Widgets/Viewport3D.cs` - `ImGuiWidgets.Viewport3D`, the widget that owns a render target and drives a `Viewport3DState` camera; see [Viewport3D](#viewport3d)
 - `ImGui.App/ImGuiController/GLRenderer3D.cs` - The OpenGL implementation: framebuffer targets, a second shader program, and full state restore
 - `ImGui.App.Testing/SoftwareRasterizer.ThreeD.cs` - The 3D fill: near clipping, depth, perspective-correct interpolation
 - `ImGui.App.Testing/DepthBuffer.cs` - The depth attachment, 0 near to 1 far, matching `Matrix4x4.CreatePerspectiveFieldOfView`
@@ -329,7 +332,10 @@ filter on every row, no ancillary chunks.
 ### Backend-agnostic 3D
 
 `IRenderer3D` is an **optional extension** a renderer backend may also implement, discovered with
-`ImGuiApp.TryGetRenderer3D(out IRenderer3D?)`. A caller that gets `false` falls back to rasterizing
+`ImGuiApp.TryGetRenderer3D(out IRenderer3D?)`, or `Renderer3DHost.TryGet` from a library that does
+not reference `ImGui.App`. It and its types (`Vertex3D`, `DrawState3D`, the mode enums) live in
+`ktsu.ImGui.Rendering`, namespace `ktsu.ImGui.Rendering`, which `ImGui.App` and `ImGui.Widgets` both
+reference (#417, option A). A caller that gets `false` falls back to rasterizing
 on the CPU and uploading pixels through `CreateTexture`, which is what it had to do before.
 
 **It is not a rendering engine.** `IRendererBackend.RenderDrawData` already takes vertex and index
@@ -394,8 +400,34 @@ as under a headless harness. Three things to know before changing it:
   `IGL3D` seam, and `GLRenderer3DTests` checks the restore against a stateful stand-in left in
   deliberately unusual state.
 
-**Not yet implemented: the Metal backend** (#413 sub-issue 3) and `ImGuiWidgets.Viewport3D`
-(sub-issue 4).
+**Not yet implemented: the Metal backend** (#413 sub-issue 3, #416), which needs a Mac.
+
+### Viewport3D
+
+`ImGuiWidgets.Viewport3D(label, size, state, draw)` owns a render target per viewport, clears it,
+calls `draw` with a `Viewport3DFrame` (renderer, target, view-projection, pixel size), shows the
+result, and turns the mouse into `Viewport3DState` camera moves: left-drag orbits, middle-drag or
+Shift+left-drag pans so the scene follows the pointer, the wheel dollies. It returns `false` and draws
+an empty frame of the clear colour when the host has no 3D renderer. `Viewport3DTests` covers it
+through the software renderer. Four things to know:
+
+- **Why `ImGui.Widgets` does not reference `ImGui.App`, and must not.** Adding that reference (option
+  C on #417) was explicitly ruled out: it would put Silk.NET, windowing and the image decoders under
+  every consumer of `ktsu.ImGui.Widgets`. `PropertyGrid`'s `ThumbnailResolver` is the same rule for a
+  single texture id; for `IRenderer3D` the contract moved into `ktsu.ImGui.Rendering` instead, and
+  `Renderer3DHost` carries the host's renderer across.
+- **Targets are rounded up to 64 pixels** and reallocated only when that bucket changes, so dragging
+  a splitter does not reallocate per pixel. `Viewport3DFrame.ViewProjection` therefore includes a
+  clip-space squeeze (`Viewport3DTargets.ShownPart`) onto the shown top-left part of the target;
+  draw with it, not with `Viewport3DState.ViewProjection` directly, or the scene is drawn too large
+  and off centre. `TheCubeIsCentredWhenTheTargetIsRoundedUpPastTheViewport` fails without it.
+- **Targets are released by a sweep**, since immediate mode never says a widget stopped being drawn:
+  a target not drawn for `ReleaseAfterFrames` (60) frames is deleted on a later `Viewport3D` call, and
+  one made by a different renderer (a previous harness) is forgotten, not deleted through the wrong
+  renderer.
+- **Size is in ImGui units times `DisplayFramebufferScale`.** ImGui units are already pixels here,
+  because the DPI scale reaches a frame through the font, so this only matters on a backend that
+  reports a framebuffer scale. A scale change changes the pixel size, which the bucket check picks up.
 
 ### Mouse cursors
 
@@ -564,14 +596,15 @@ third implementation of any of these, and prefer the survivor column when writin
 | `RadialProgressBar`/`SkeletonLoader` vs `BufferingBar`/`Spinner` | **Keep all four** | Four different widgets, not two pairs: determinate radial (with text modes plus `RadialCountdown`/`RadialCountUp`), determinate linear, indeterminate spinner, and a shimmering placeholder block. The only overlap is "determinate progress", where radial versus linear is a visual choice. |
 | `TextCentered` vs `TextCenteredV`/`H`/`VH` | **Keep all** | Only one true pair. `Alignment.Center` builds a container of `(ContentRegionAvail.X, contentSize.Y)`, so its vertical extent is the content's own height and vertical centring is a no-op — `TextCentered` is horizontal-only, making it equivalent to `TextCenteredH`. `TextCenteredV` and `TextCenteredVH` have no ktsu equivalent, and `TextCenteredWithin(text, size, clip)` with its ellipsis clipping has no Hexa equivalent. Splitting either family to retire one member costs more than the overlap does. |
 | `ImageCentered` vs `ImageCenteredV`/`H`/`VH` | **Keep all** | Same shape as the text pair, plus one hard difference: `ImageCentered` returns `bool` for a click, the Hexa three return `void`. `ImageCenteredWithin` has no Hexa equivalent and `ImageScaleTo` has no ktsu one. |
-| `Switch` vs `ToggleSwitch` | **Genuine duplicate — prefer `Switch`** | Identical signature, `(string label, ref bool value) -> bool`. Three differences, all favouring `Switch`: it calls `ImGuiProbes.MarkItem`, so a UI test addresses it by name (`SwitchTests` needs no `Mark` call at all, while every Hexa-backed suite does); it animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, so it needs none of the `TickAnimationClockIfUnpumped` machinery `ToggleSwitch` requires to avoid rendering inverted after its first click in a pumpless app; and it draws the visible portion of the label itself. |
-| `Combo` vs `EnumCombo` | **Overlap on one overload — prefer `Combo` unless you need Hexa's display names** | Only `Combo<TEnum>` overlaps; the `ISemanticString` and `string` collection overloads are unique. The enum overloads differ in three ways: `Combo` shows raw `Enum.GetNames` while `EnumCombo` routes through Hexa's `ComboEnumHelper<T>.GetName` (where a display-name override would come from); `Combo` marks itself for probes and `EnumCombo` does not; and the constraints differ (`where TEnum : Enum` vs `where T : struct, Enum`). If nothing depends on Hexa's naming, `EnumCombo` is the one to retire. |
+| `Switch` vs `ToggleSwitch` | **Genuine duplicate — prefer `Switch`** | Identical signature, `(string label, ref bool value) -> bool`. Two differences, both favouring `Switch`: it animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, so it needs none of the `TickAnimationClockIfUnpumped` machinery `ToggleSwitch` requires to avoid rendering inverted after its first click in a pumpless app; and it draws the visible portion of the label itself. |
+| `Combo` vs `EnumCombo` | **Overlap on one overload — prefer `Combo` unless you need Hexa's display names** | Only `Combo<TEnum>` overlaps; the `ISemanticString` and `string` collection overloads are unique. The enum overloads differ in two ways: `Combo` shows raw `Enum.GetNames` while `EnumCombo` routes through Hexa's `ComboEnumHelper<T>.GetName` (where a display-name override would come from), and the constraints differ (`where TEnum : Enum` vs `where T : struct, Enum`). If nothing depends on Hexa's naming, `EnumCombo` is the one to retire. |
 
-The through-line: **the ktsu originals are probe-visible and the Hexa adapters are not.** Only
-`Switch` and `Combo` call `ImGuiProbes.MarkItem`; every Hexa-backed widget has to be marked by the
-test itself, or reached by geometry. That is the single most consequential difference between the
-two families, and it is a reason to reach for a ktsu original in an application you intend to
-UI-test.
+Every widget in both families marks itself for probes (maintainer decision, 2026-09-29), so probe
+visibility no longer separates them. A widget with a label or id is addressed by that string; an
+id-less one by a fixed kind name (`badge`, `image`, `spinner`, …), separated with `ScopedId` when
+there are two in a window. Hexa's dialogs are marked from the deferred-drawing pump, because nothing
+inside a sealed Hexa dialog can be hooked. What still separates `Switch` from `ToggleSwitch` is the
+animation clock, not the probe.
 
 ### CurveTrack, and why it is not one of the curve editors
 
@@ -1046,19 +1079,25 @@ public sealed class SwitchTests : WidgetTest
 ```
 
 `WidgetTest` offers `Start`/`Step`, `Click`/`ClickFraction`/`DragAcross`/`Hover`, `IsVisible`,
-`RectOf`/`CenterOf`, `Mark`/`MarkSpan`, `Snapshot`/`PixelsChangedSince`/`BoundsOfDifference`,
+`RectOf`/`CenterOf`, `AssertMarksItself`, `Mark`/`MarkSpan`, `Snapshot`/`PixelsChangedSince`/`BoundsOfDifference`,
 `CreateTestTexture`, and the dialog helpers `FindDialogButtons`/`ClickDialogButton`/
 `DismissOpenDialogs`.
 
 Things that bite here, beyond the demo-suite list above:
 
-- **A widget's probe mark is not always the thing it drew.** The alignment helpers (`TextCentered`,
-  `ImageCenteredWithin`, `TextCenteredH`, …) position the cursor and leave a zero-width spacer as
-  the last submitted item, so a mark taken after the call measures the spacer. Measure those from
-  the pixels with `BoundsOfDifference` against a frame drawn without the widget.
-- **Widgets that submit several items, or none, need `MarkSpan`.** `PinInput` is a row of separate
-  text boxes; `BufferingBar` paints straight into the draw list. `MarkSpan(name, cursorBefore)`
-  records from the cursor position to the last item's rectangle so a test can aim inside it.
+- **Alignment helpers mark inside their scope.** `TextCentered`, `ImageCenteredWithin` and the rest
+  leave a zero-width spacer as the last submitted item, so each marks its inner item before the
+  scope closes, and a test measures them with `RectOf` like anything else. Hexa's
+  `TextCenteredV/H/VH` submit no clean item, so their mark is the bounding box of the vertices they
+  added. Keep `BoundsOfDifference` for asserting what was painted, not for finding a widget.
+- **Every widget marks itself; `Mark` and `MarkSpan` are for caller content.** A test addresses a
+  widget by its own name (its label or id, `{label}/{part}` for parts such as `Quantity/increment`,
+  or a kind name such as `spinner` for an id-less one) and marks only what it draws itself: a
+  card's body, a tree's leaves, a badge's host. Widgets that paint outside their last item go
+  through the internal `DrawListProbe`: `BufferingBar` submits no item at all, and the Hexa
+  breadcrumb, bezier editor and sequencer paint past the item they end on, so their mark takes in
+  every vertex they added. `AssertMarksItself` is the check a new widget's suite starts with: every
+  pixel the widget painted lies inside its own mark.
 - **Latch return values.** A widget reports a click for the single frame it happens on, and `Click`
   renders a further frame after the release, so capture with `clicked |= ImGuiWidgets.Chip(...)`
   rather than a plain assignment.
@@ -1075,8 +1114,9 @@ Things that bite here, beyond the demo-suite list above:
   without the first a translucent rectangle shows its diagonal, and without the second a thick
   line comes out as a staircase with hard edges. The widget gallery is the quickest way to see a
   regression in either.
-- **Vendor widgets are reached by geometry, not by name.** Hexa's dialogs mark nothing:
-  `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
+- **Dialog buttons are reached by geometry, not by name.** The dialog windows are marked (under
+  `OpenFileDialog`, `RenameDialog` or a message box's title), but the buttons inside Hexa's sealed
+  dialogs are not: `FindDialogButtons()` locates a message box's buttons by finding the lowest run of theme-blue
   pixels, and the file pickers — whose action row is not blue enough to find that way — are
   cancelled at a fixed offset from the picker window's corner, which is stable because the harness
   pins the viewport.

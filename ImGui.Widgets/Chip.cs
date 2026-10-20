@@ -125,9 +125,17 @@ public static partial class ImGuiWidgets
 			ImGuiStylePtr style = ImGui.GetStyle();
 			float rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
 
+			// The union of every chip's rectangle, because a span from the first to the last chip is
+			// wrong once the rows wrap.
+			Vector2 groupMin = new(float.MaxValue);
+			Vector2 groupMax = new(float.MinValue);
+
 			for (int i = 0; i < options.Count; i++)
 			{
-				if (Draw($"{options[i]}##chip{i}", i == selectedIndex, false, out _))
+				bool clicked = Draw($"{options[i]}##chip{i}", i == selectedIndex, false, out _);
+				groupMin = Vector2.Min(groupMin, ImGui.GetItemRectMin());
+				groupMax = Vector2.Max(groupMax, ImGui.GetItemRectMax());
+				if (clicked)
 				{
 					int next = allowDeselect && i == selectedIndex ? -1 : i;
 					if (next != selectedIndex)
@@ -147,6 +155,11 @@ public static partial class ImGuiWidgets
 						ImGui.SameLine();
 					}
 				}
+			}
+
+			if (options.Count > 0)
+			{
+				ImGuiProbes.MarkRegion(label, groupMin, groupMax);
 			}
 
 			ImGui.PopID();

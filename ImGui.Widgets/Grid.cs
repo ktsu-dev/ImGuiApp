@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Provides custom ImGui widgets.
 /// </summary>
@@ -260,6 +262,7 @@ public static partial class ImGuiWidgets
 				if (!gridOptions.FitToContents)
 				{
 					ImGui.Dummy(gridOptions.GridSize);
+					ImGuiProbes.MarkItem(id);
 				}
 
 				return;
@@ -282,6 +285,7 @@ public static partial class ImGuiWidgets
 			}
 
 			ImGui.EndChild();
+			ImGuiProbes.MarkItem(id);
 		}
 
 		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted to reduce cognitive complexity; the parameters thread the grid layout state computed once by the caller and bundling them would not improve readability.")]
@@ -411,6 +415,7 @@ public static partial class ImGuiWidgets
 				if (!gridOptions.FitToContents)
 				{
 					ImGui.Dummy(gridOptions.GridSize);
+					ImGuiProbes.MarkItem(id);
 				}
 
 				return;
@@ -433,6 +438,7 @@ public static partial class ImGuiWidgets
 			}
 
 			ImGui.EndChild();
+			ImGuiProbes.MarkItem(id);
 		}
 
 		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted to reduce cognitive complexity; the parameters thread the grid layout state computed once by the caller and bundling them would not improve readability.")]

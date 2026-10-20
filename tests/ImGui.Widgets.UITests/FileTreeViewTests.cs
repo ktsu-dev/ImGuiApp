@@ -6,8 +6,6 @@ using System;
 using System.IO;
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
@@ -56,9 +54,7 @@ public sealed class FileTreeViewTests : WidgetTest
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.FileTreeView(Id, Size, ref current, home);
-		MarkSpan(Id, origin);
 	}
 
 	[TestMethod]
@@ -117,4 +113,7 @@ public sealed class FileTreeViewTests : WidgetTest
 
 		Assert.IsTrue(IsVisible(Id), "The tree stopped drawing after being clicked.");
 	}
+
+	[TestMethod]
+	public void FileTreeView_MarksItself() => _ = AssertMarksItself(Id, Draw);
 }

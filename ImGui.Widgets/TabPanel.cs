@@ -5,7 +5,10 @@ namespace ktsu.ImGui.Widgets;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -394,9 +397,21 @@ public static partial class ImGuiWidgets
 
 			if (ImGui.BeginTabBar(Id, flags))
 			{
+				MarkTabStrip();
 				DrawTabItems();
 				ImGui.EndTabBar();
 			}
+		}
+
+		private void MarkTabStrip()
+		{
+			if (!ImGuiProbes.IsRecording)
+			{
+				return;
+			}
+
+			ImRect bar = ImGuiP.GetCurrentTabBar().BarRect;
+			ImGuiProbes.MarkRegion(Id, bar.Min, bar.Max);
 		}
 
 		private void DrawTabItems()
@@ -414,7 +429,12 @@ public static partial class ImGuiWidgets
 				ImGuiTabItemFlags tabFlags = ResolveTabItemFlags(tab);
 				bool tabOpen = true;
 
-				if (ImGui.BeginTabItem($"{tab.Label}##{tab.Id}", ref tabOpen, tabFlags))
+				bool selected = ImGui.BeginTabItem($"{tab.Label}##{tab.Id}", ref tabOpen, tabFlags);
+
+				// Marked before the content draws, and whether or not the tab is selected, so every
+				// tab header can be addressed by name.
+				ImGuiProbes.MarkItem(Id, tab.Label);
+				if (selected)
 				{
 					DrawActiveTab(tab, i);
 				}

@@ -96,6 +96,7 @@ public static partial class ImGuiWidgets
 
 		float side = diameter > 0.0f ? diameter : ImGui.GetTextLineHeight() * 7.0f;
 		bool changed = false;
+		Vector2 origin = ImGui.GetCursorScreenPos();
 
 		using (new ScopedId(label))
 		{
@@ -106,6 +107,8 @@ public static partial class ImGuiWidgets
 			changed |= ColorWheelImpl.Captioned("Gain", ref gain, side);
 		}
 
+		// Each wheel is a group of the same height on one line, so the last one's corner is the set's.
+		ImGuiProbes.MarkRegion(label, origin, ImGui.GetItemRectMax());
 		return changed;
 	}
 

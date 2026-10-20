@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using HexaCurve = Hexa.NET.Mathematics.Curve;
 using HexaCurveEditor = Hexa.NET.ImGui.Widgets.Extras.ImGuiCurveEditor;
 
@@ -70,6 +72,7 @@ public static partial class ImGuiWidgets
 			// Reserve the layout slot anyway, so an empty curve leaves a gap the caller sized rather
 			// than silently collapsing to nothing and shifting everything below it.
 			ImGui.Dummy(size);
+			ImGuiProbes.MarkItem(label);
 			return false;
 		}
 
@@ -105,6 +108,7 @@ public static partial class ImGuiWidgets
 			ImGui.PopClipRect();
 		}
 
+		ImGuiProbes.MarkRegion(label, origin, ImGui.GetItemRectMax());
 		selection = ResolveSelectionAfterEdit(selection, pointCountBefore, curve.PointCount);
 
 		if (changed)

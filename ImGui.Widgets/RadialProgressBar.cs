@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Options for customizing the appearance of the radial progress bar.
 /// </summary>
@@ -67,6 +69,7 @@ public static partial class ImGuiWidgets
 	/// <param name="textMode">The text display mode (percentage, time, or custom).</param>
 	/// <param name="timeValue">The time value in seconds (used when textMode is Time).</param>
 	/// <param name="customText">Custom text to display (used when textMode is Custom).</param>
+	/// <remarks>Marked for UI probes as <c>radial-progress</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Widget mirrors Dear ImGui's parameter-rich immediate-mode API; the parameter list matches the established widget convention and cannot be reduced without a breaking API change.")]
 	public static void RadialProgressBar(float progress, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None, ImGuiRadialProgressBarTextMode textMode = ImGuiRadialProgressBarTextMode.Percentage, float timeValue = 0, string? customText = null) =>
 		RadialProgressBarImpl.Draw(progress, radius, thickness, segments, options, textMode, timeValue, customText);
@@ -80,6 +83,7 @@ public static partial class ImGuiWidgets
 	/// <param name="thickness">The thickness of the progress bar in pixels. If 0, uses radius * 0.2.</param>
 	/// <param name="segments">The number of segments to use for drawing the arc. More segments = smoother arc.</param>
 	/// <param name="options">Options for customizing the appearance.</param>
+	/// <remarks>Marked for UI probes as <c>radial-progress</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static void RadialCountdown(float currentTime, float totalTime, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None)
 	{
 		float progress = totalTime > 0 ? Math.Clamp(currentTime / totalTime, 0.0f, 1.0f) : 0.0f;
@@ -95,6 +99,7 @@ public static partial class ImGuiWidgets
 	/// <param name="thickness">The thickness of the progress bar in pixels. If 0, uses radius * 0.2.</param>
 	/// <param name="segments">The number of segments to use for drawing the arc. More segments = smoother arc.</param>
 	/// <param name="options">Options for customizing the appearance.</param>
+	/// <remarks>Marked for UI probes as <c>radial-progress</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static void RadialCountUp(float elapsedTime, float totalTime, float radius = 0, float thickness = 0, int segments = 32, ImGuiRadialProgressBarOptions options = ImGuiRadialProgressBarOptions.None)
 	{
 		float progress = totalTime > 0 ? Math.Clamp(elapsedTime / totalTime, 0.0f, 1.0f) : 0.0f;
@@ -120,6 +125,7 @@ public static partial class ImGuiWidgets
 			// Reserve space for the widget
 			Vector2 cursorPos = ImGui.GetCursorScreenPos();
 			ImGui.Dummy(new Vector2(diameter, diameter));
+			ImGuiProbes.MarkItem("radial-progress");
 
 			// Get draw list and colors
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();

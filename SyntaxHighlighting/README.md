@@ -102,6 +102,10 @@ LanguageRegistry.Register(new LanguageDefinition
 });
 ```
 
+Two rule options cover delimiters that a plain prefix cannot describe. `LineCommentRule.RequiresWhitespaceBefore` opens a comment only at the start of a line or after whitespace, which is how shell and YAML read `#` (so `$#`, `${#name}` and `http://host/#frag` are not comments). `StringRule.CloseMatchesOpeningRun` lets the opener's last character repeat and closes only on a run as long as the one that opened it, which is how C# raw strings work (`""""` is closed only by `""""`).
+
+A block comment whose close overlaps its own opener at the match position, as `*/` does inside the doc opener `/**` in `/**/`, gives way to a shorter rule that matches there, so `/**/` is one empty comment rather than a doc comment running to the next `*/`.
+
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
