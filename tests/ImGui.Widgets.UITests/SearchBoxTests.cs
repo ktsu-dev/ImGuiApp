@@ -4,6 +4,9 @@ namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+
+using Hexa.NET.ImGui;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -113,5 +116,34 @@ public sealed class SearchBoxTests : WidgetTest
 		Assert.IsTrue(
 			fullWidth > naturalWidth,
 			$"A full-width search box was {fullWidth}px, no wider than the default {naturalWidth}px.");
+	}
+
+	// The tooltip draws the hint as it is: "%%" is not collapsed to "%" and "%s" reads no vararg. A frame that
+	// draws the hint in a tooltip by hand, with the pointer in the same place, must match it pixel for pixel.
+	[TestMethod]
+	[DataRow("100%% of rows")]
+	[DataRow("Name: %s")]
+	public void SearchBox_TooltipShowsTheHintAsItIs(string hint)
+	{
+		options = new SearchBoxOptions(Label, hint, ShowHint: false, ShowTooltip: false);
+		Start(() =>
+		{
+			ImGuiWidgets.SearchBox(ref options, ref filterText);
+			ImGui.BeginTooltip();
+			ImGui.TextUnformatted(hint);
+			ImGui.EndTooltip();
+		});
+		Vector2 pointer = CenterOf(Label);
+		Harness.Mouse.MoveTo(pointer.X, pointer.Y);
+		Step(4);
+		byte[] expected = Snapshot();
+		DisposeHarness();
+
+		options = new SearchBoxOptions(Label, hint, ShowHint: false);
+		Start(DrawPlain);
+		Harness.Mouse.MoveTo(pointer.X, pointer.Y);
+		Step(4);
+
+		Assert.AreEqual(0, PixelsChangedSince(expected), "The tooltip did not show the hint exactly as given.");
 	}
 }

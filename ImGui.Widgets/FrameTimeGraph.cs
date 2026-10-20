@@ -147,7 +147,7 @@ public static partial class ImGuiWidgets
 			{
 				using (new ScopedId(label))
 				{
-					ImGui.TextDisabled(FrameTimeGraphMath.FormatStatistics(visible, budget));
+					UnformattedText.Disabled(FrameTimeGraphMath.FormatStatistics(visible, budget));
 					ImGuiProbes.MarkItem("stats");
 				}
 			}
@@ -189,7 +189,7 @@ public static partial class ImGuiWidgets
 
 			drawList.AddRectFilled(new Vector2(x, top), new Vector2(x + barWidth, max.Y), ImGui.GetColorU32(ImGuiCol.PlotHistogramHovered));
 
-			ImGui.SetTooltip(FrameTimeGraphMath.FormatBarTooltip(value, values.Length - 1 - index));
+			UnformattedText.Tooltip(FrameTimeGraphMath.FormatBarTooltip(value, values.Length - 1 - index));
 		}
 	}
 }

@@ -210,7 +210,7 @@ public static partial class ImGuiWidgets
 
 			if (state.Active is not (CropHandle.None or CropHandle.Pan))
 			{
-				ImGui.SetTooltip(string.Create(CultureInfo.InvariantCulture, $"{MathF.Round(crop.Size.X)} × {MathF.Round(crop.Size.Y)} px, {crop.AngleDegrees:0.0}°"));
+				UnformattedText.Tooltip(string.Create(CultureInfo.InvariantCulture, $"{MathF.Round(crop.Size.X)} × {MathF.Round(crop.Size.Y)} px, {crop.AngleDegrees:0.0}°"));
 			}
 
 			Render(label, crop, imageSize, canvasState, canvasMin, canvasSize, guide, guideOrientation, allowRotation, hot);

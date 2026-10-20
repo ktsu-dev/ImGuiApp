@@ -127,6 +127,29 @@ public sealed class PromptTests
 		Assert.IsTrue(IsVisible("prompt/Fine"));
 	}
 
+	/// <summary>
+	/// A wrapped label is drawn as it is, not read as a printf format, so "%%" stays two characters. The
+	/// unformatted layout, given the same label and size, is the reference: the two must match pixel for pixel.
+	/// </summary>
+	[TestMethod]
+	[DataRow("Done: 100%%")]
+	[DataRow("Saved to %s")]
+	public void AWrappedLabelIsNotReadAsAFormat(string label)
+	{
+		System.Numerics.Vector2 size = new(400, 200);
+
+		first.Open("First", label, [new ImGuiPopups.PromptButton("OK")], textLayoutType: ImGuiPopups.PromptTextLayoutType.Unformatted, size: size);
+		harness.Step(3);
+		byte[] unformatted = harness.Target.Pixels.ToArray();
+		harness.Keyboard.Press(ImGuiKey.Escape);
+		harness.Step(2);
+
+		first.Open("First", label, [new ImGuiPopups.PromptButton("OK")], textLayoutType: ImGuiPopups.PromptTextLayoutType.Wrapped, size: size);
+		harness.Step(3);
+
+		CollectionAssert.AreEqual(unformatted, harness.Target.Pixels.ToArray(), "The wrapped label was drawn differently from the same label unformatted.");
+	}
+
 	[TestMethod]
 	public void TwoCancelButtonsAreRefused() =>
 		Assert.ThrowsExactly<ArgumentException>(() => first.Open(

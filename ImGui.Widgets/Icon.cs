@@ -266,7 +266,7 @@ public static partial class ImGuiWidgets
 
 			if (!string.IsNullOrEmpty(options.Tooltip))
 			{
-				ImGui.SetItemTooltip(options.Tooltip);
+				UnformattedText.ItemTooltip(options.Tooltip);
 			}
 
 			if (isHovered || EnableIconDebugDraw)

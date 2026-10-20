@@ -185,7 +185,10 @@ public static partial class ImGuiPopups
 					break;
 
 				case PromptTextLayoutType.Wrapped:
-					ImGui.TextWrapped(Label);
+					// TextWrapped would read the label as a printf format.
+					ImGui.PushTextWrapPos(0f);
+					ImGui.TextUnformatted(Label);
+					ImGui.PopTextWrapPos();
 					break;
 
 				default:
