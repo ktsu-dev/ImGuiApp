@@ -264,7 +264,7 @@ public static partial class ImGuiWidgets
 			ImGuiProbes.MarkItem($"{label}/tooltip");
 			if (!string.IsNullOrEmpty(options.Shortcut))
 			{
-				ImGui.TextDisabled(options.Shortcut);
+				UnformattedText.Disabled(options.Shortcut);
 			}
 
 			ImGui.EndTooltip();

@@ -247,7 +247,7 @@ public static class ThemeCard
 			// Add tooltip with theme description if hovered
 			if (isHovered)
 			{
-				ImGui.SetTooltip($"{theme.Description}\n\nFamily: {theme.Family}\nType: {(theme.IsDark ? "Dark" : "Light")}\n\nColor swatches show: Primary, Alternate, Success, Warning, Error\n\nClick to select this theme");
+				UnformattedText.Tooltip($"{theme.Description}\n\nFamily: {theme.Family}\nType: {(theme.IsDark ? "Dark" : "Light")}\n\nColor swatches show: Primary, Alternate, Success, Warning, Error\n\nClick to select this theme");
 			}
 		}
 		finally

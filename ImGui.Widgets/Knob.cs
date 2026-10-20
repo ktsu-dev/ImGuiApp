@@ -127,6 +127,27 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	internal static class KnobImpl
 	{
+		/// <summary>The format a float knob uses when none is given.</summary>
+		internal const string DefaultFloatFormat = "%.3f";
+
+		/// <summary>The format an int knob uses when none is given.</summary>
+		internal const string DefaultIntFormat = "%d";
+
+		/// <summary>
+		/// Formats <paramref name="value"/> the way Dear ImGui formats it for <c>DragScalar</c>, so the tooltip
+		/// matches the knob's input. <paramref name="format"/> is a printf format, which <see cref="string.Format(IFormatProvider, string, object)"/>
+		/// cannot read.
+		/// </summary>
+		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native ImGui DataTypeFormatString interop; the value and buffer are stack locals scoped to the call and the length is bounded by the buffer size.")]
+		internal static unsafe string FormatValue<TDataType>(ImGuiDataType dataType, TDataType value, string format) where TDataType : unmanaged
+		{
+			// The same buffer size DragScalar formats into.
+			const int BufferSize = 64;
+			byte* buffer = stackalloc byte[BufferSize];
+			int length = ImGui.DataTypeFormatString(buffer, BufferSize, dataType, &value, format);
+			return System.Text.Encoding.UTF8.GetString(buffer, length);
+		}
+
 		public sealed class KnobColors
 		{
 			public ImColor Base { get; set; }
@@ -146,14 +167,14 @@ public static partial class ImGuiWidgets
 		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich public Knob widget API; a pass-through of the same values.")]
 		public static bool Draw(string label, ref float value, float vMin, float vMax, float speed = 0, string? format = null, ImGuiKnobVariant variant = ImGuiKnobVariant.Tick, float? size = null, ImGuiKnobOptions flags = ImGuiKnobOptions.None, int steps = 10)
 		{
-			format ??= "%.3f";
+			format ??= DefaultFloatFormat;
 			return KnobInternal<float>.BaseKnob(label, ImGuiDataType.Float, ref value, vMin, vMax, speed, format, variant, size, flags, steps);
 		}
 
 		[SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Mirrors the parameter-rich public Knob widget API; a pass-through of the same values.")]
 		public static bool Draw(string label, ref int value, int vMin, int vMax, float speed = 0, string? format = null, ImGuiKnobVariant variant = ImGuiKnobVariant.Tick, float? size = null, ImGuiKnobOptions flags = ImGuiKnobOptions.None, int steps = 10)
 		{
-			format ??= "%if";
+			format ??= DefaultIntFormat;
 			return KnobInternal<int>.BaseKnob(label, ImGuiDataType.S32, ref value, vMin, vMax, speed, format, variant, size, flags, steps);
 		}
 
@@ -308,6 +329,9 @@ public static partial class ImGuiWidgets
 			public float AngleCos { get; set; }
 			public float AngleSin { get; set; }
 
+			// The most fractional digits Math.Round accepts.
+			private const int MaxRoundingDigits = 15;
+
 			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic accumulator state is intentional; each TDataType has its own accumulator.")]
 			private static float AccumulatedDiff { get; set; }
 			[SuppressMessage("Major Code Smell", "S2743:A static field in a generic type is not shared among instances of different close constructed types", Justification = "Per-closed-generic accumulator state is intentional; each TDataType has its own accumulator.")]
@@ -390,10 +414,12 @@ public static partial class ImGuiWidgets
 
 				// Round to user desired precision based on format string.
 				// decimalPrecision is 0 for integer types and negative for scientific
-				// notation formats (which must not be rounded).
+				// notation formats (which must not be rounded). The format may ask for up to 99
+				// decimals, but MathF.Round accepts only 6 and Math.Round 15, so round in double
+				// and cap there: a float has no significant digits that far out anyway.
 				if (decimalPrecision >= 0)
 				{
-					newValue = MathF.Round(newValue, decimalPrecision);
+					newValue = (float)Math.Round(newValue, Math.Min(decimalPrecision, MaxRoundingDigits));
 				}
 
 				if (newValue == -0.0f)
@@ -645,7 +671,8 @@ public static partial class ImGuiWidgets
 				if (flags.HasFlag(ImGuiKnobOptions.ValueTooltip) && (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) || ImGui.IsItemActive()))
 				{
 					ImGui.BeginTooltip();
-					ImGui.Text(string.Format(CultureInfo.CurrentCulture, format, value));
+					ImGui.TextUnformatted(FormatValue(dataType, value, format));
+					ImGuiProbes.MarkItem($"{label}/tooltip");
 					ImGui.EndTooltip();
 				}
 

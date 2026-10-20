@@ -87,7 +87,7 @@ public class ThemeBrowser
 			ImGui.SameLine();
 			using (Text.Color.Success())
 			{
-				ImGui.Text($"Current: {Theme.CurrentThemeName}");
+				ImGui.TextUnformatted($"Current: {Theme.CurrentThemeName}");
 			}
 		}
 		else
@@ -123,7 +123,7 @@ public class ThemeBrowser
 		List<ThemeRegistry.ThemeInfo> themesToShow = [.. filteredThemes.OrderBy(t => t.Family).ThenBy(t => t.Name)];
 
 		// Theme count info
-		ImGui.Text($"Themes ({themesToShow.Count}):");
+		ImGui.TextUnformatted($"Themes ({themesToShow.Count}):");
 
 		// Theme grid in a scrollable area
 		Vector2 childSize = new(0, ImGui.GetContentRegionAvail().Y - 60); // Leave space for buttons

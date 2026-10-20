@@ -90,6 +90,21 @@ public sealed class KnobTests : WidgetTest
 		Assert.IsTrue(value <= 1f, $"The knob ran past its maximum to {value}.");
 	}
 
+	// MathF.Round accepts at most 6 digits, but a format may ask for up to 99 decimals, as Dear
+	// ImGui's own drag controls allow. The drag must round without throwing.
+	[TestMethod]
+	[DataRow("%.7f")]
+	[DataRow("%.10f")]
+	public void Knob_DragsWithAFormatOfMoreThanSixDecimals(string format)
+	{
+		value = 0.5f;
+		Start(() => ImGuiWidgets.Knob(Label, ref value, 0f, 1f, format: format, variant: variant, size: 64f));
+
+		DragVertically(-60f);
+
+		Assert.IsTrue(value > 0.5f, $"Dragging up with format {format} left the value at {value}.");
+	}
+
 	[TestMethod]
 	public void Knob_IntegerOverload_Steps()
 	{
@@ -206,5 +221,61 @@ public sealed class KnobTests : WidgetTest
 
 		Assert.IsTrue(left > 0.5f, $"Dragging the left knob left it at {left}.");
 		Assert.AreEqual(0.5f, right, "Dragging the left knob moved the right one.");
+	}
+
+	// The tooltip has to show the value the way the knob's own input shows it. A frame that draws the
+	// expected text in a tooltip by hand, with the pointer in the same place, must match it pixel for pixel.
+	[TestMethod]
+	public void Knob_ValueTooltipShowsTheValue()
+	{
+		value = 0.5f;
+		Start(() => ImGuiWidgets.Knob(Label, ref value, 0f, 1f, variant: variant, size: 64f));
+		Hover(Label);
+		Step(2);
+		byte[] expected = TakeWithTooltip("0.500");
+
+		Start(() => ImGuiWidgets.Knob(Label, ref value, 0f, 1f, variant: variant, size: 64f, flags: ImGuiKnobOptions.ValueTooltip));
+		Hover(Label);
+		Step(2);
+
+		Assert.IsTrue(IsVisible($"{Label}/tooltip"), "Hovering a ValueTooltip knob showed no tooltip.");
+		Assert.AreEqual(0, PixelsChangedSince(expected), "The value tooltip did not read \"0.500\".");
+	}
+
+	// Before #667 the int default format was "%if", which prints the value followed by a literal "f".
+	[TestMethod]
+	public void Knob_IntegerDefaultFormatHasNoTrailingF()
+	{
+		intValue = 5;
+		Start(() => ImGuiWidgets.Knob(Label, ref intValue, 0, 10, format: "%d", variant: variant, size: 64f));
+		MoveAway();
+		byte[] plain = Snapshot();
+		DisposeHarness();
+
+		Start(DrawIntKnob);
+		MoveAway();
+
+		Assert.AreEqual(0, PixelsChangedSince(plain), "An int knob with the default format did not display its value as \"5\".");
+	}
+
+	// Draws the same frame again with a hand-made tooltip of the given text on top, then disposes the harness.
+	private byte[] TakeWithTooltip(string text)
+	{
+		Vector2 pointer = CenterOf(Label);
+		DisposeHarness();
+
+		Start(() =>
+		{
+			ImGuiWidgets.Knob(Label, ref value, 0f, 1f, variant: variant, size: 64f);
+			ImGui.BeginTooltip();
+			ImGui.TextUnformatted(text);
+			ImGui.EndTooltip();
+		});
+		Harness.Mouse.MoveTo(pointer.X, pointer.Y);
+		Step(4);
+
+		byte[] pixels = Snapshot();
+		DisposeHarness();
+		return pixels;
 	}
 }

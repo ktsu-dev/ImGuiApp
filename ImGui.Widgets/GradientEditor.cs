@@ -234,7 +234,7 @@ public static partial class ImGuiWidgets
 			int selected = state.SelectedIndex;
 			if (selected < 0 || selected >= stops.Count)
 			{
-				ImGui.TextDisabled("Select a stop to edit its color");
+				UnformattedText.Disabled("Select a stop to edit its color");
 				return false;
 			}
 

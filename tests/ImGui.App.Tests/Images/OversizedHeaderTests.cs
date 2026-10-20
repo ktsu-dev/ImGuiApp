@@ -84,6 +84,31 @@ public class OversizedHeaderTests
 	}
 
 	[TestMethod]
+	public void Jpeg_FrameWithNoScan_ThrowsBeforeAllocating()
+	{
+		// SOI, SOF0 for an 8000 high by 65535 wide three-component image, EOI: 23 bytes that used to
+		// allocate about 3 GB of coefficients before failing.
+		byte[] file = [0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 8, 0x1F, 0x40, 0xFF, 0xFF, 3, 1, 0x11, 0, 2, 0x11, 0, 3, 0x11, 0, 0xFF, 0xD9];
+
+		AssertRejectedWithoutLargeAllocation(file);
+	}
+
+	[TestMethod]
+	public void Jpeg_ScanTooShortForItsBlocks_ThrowsBeforeAllocating()
+	{
+		using MemoryStream file = new();
+		file.Write([0xFF, 0xD8]);
+		file.Write([0xFF, 0xC0, 0x00, 0x11, 8, 0x1F, 0x40, 0xFF, 0xFF, 3, 1, 0x11, 0, 2, 0x11, 0, 3, 0x11, 0]);
+		file.Write([0xFF, 0xDA, 0x00, 0x0C, 3, 1, 0x00, 2, 0x11, 3, 0x11, 0, 63, 0]);
+		file.Write(new byte[16]);
+		file.Write([0xFF, 0xD9]);
+
+		InvalidImageDataException exception = AssertRejectedWithoutLargeAllocation(file.ToArray());
+
+		Assert.IsTrue(exception.Message.Contains("too short", StringComparison.Ordinal), exception.Message);
+	}
+
+	[TestMethod]
 	public void Bmp_HeightOfIntMinValue_Throws()
 	{
 		byte[] file = TestImageBuilder.Bmp(1, 1, 24, [[0, 0, 0]]);
@@ -102,6 +127,26 @@ public class OversizedHeaderTests
 		Assert.IsTrue(exception.Message.Contains("too large", StringComparison.Ordinal), exception.Message);
 	}
 
+	[TestMethod]
+	[DataRow((byte)2, DisplayName = "Raw")]
+	[DataRow((byte)10, DisplayName = "Run-length encoded")]
+	public void Tga_HeaderWithNoPixelData_ThrowsBeforeAllocating(byte imageType)
+	{
+		// 16384x16384 at 32 bits passes the dimension check but would need a 1 GiB buffer.
+		byte[] file = new byte[18];
+		file[2] = imageType;
+		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(12), 16384);
+		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(14), 16384);
+		file[16] = 32;
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		InvalidImageDataException exception = Assert.ThrowsExactly<InvalidImageDataException>(() => ImageDecoder.Decode(file));
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.IsTrue(exception.Message.Contains("ended before", StringComparison.Ordinal), exception.Message);
+		Assert.IsLessThan(1024L * 1024, allocated, $"Allocated {allocated} bytes before rejecting the header.");
+	}
+
 	private static byte[] Png(int width, int height, byte colorType, byte bitDepth, byte[] imageData)
 	{
 		using MemoryStream file = new();
@@ -110,6 +155,16 @@ public class OversizedHeaderTests
 		WriteChunk(file, "IDAT"u8, imageData);
 		WriteChunk(file, "IEND"u8, []);
 		return file.ToArray();
+	}
+
+	private static InvalidImageDataException AssertRejectedWithoutLargeAllocation(byte[] file)
+	{
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		InvalidImageDataException exception = Assert.ThrowsExactly<InvalidImageDataException>(() => ImageDecoder.Decode(file));
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.IsLessThan(4L * 1024 * 1024, allocated, $"Allocated {allocated} bytes before rejecting the file.");
+		return exception;
 	}
 
 	private static byte[] Header(int width, int height, byte colorType, byte bitDepth)
