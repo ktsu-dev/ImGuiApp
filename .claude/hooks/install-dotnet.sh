@@ -1,13 +1,13 @@
 #!/bin/bash
 # Installs the .NET SDK into ~/.dotnet for Claude Code cloud sessions.
 #
-# The official route is dotnet-install.sh, which downloads from
-# builds.dotnet.microsoft.com. The default cloud network policy does not allow
-# that host, but it does allow mcr.microsoft.com, so when the script cannot be
-# fetched the SDK is unpacked from the layers of the official
-# mcr.microsoft.com/dotnet/sdk container image instead. Both give the same
-# Microsoft-built SDK; Ubuntu's own dotnet-sdk-10.0 package is the 1xx feature
-# band, whose compiler is too old for ktsu.Sdk.Analyzers (CS9057).
+# The SDK is unpacked from the layers of the official
+# mcr.microsoft.com/dotnet/sdk container image, each checked against the
+# sha256 digest its manifest names. dotnet-install.sh is not used: it comes from
+# builds.dotnet.microsoft.com, which the default cloud network policy does not
+# allow, and it is a script fetched and run with nothing to check it against.
+# Ubuntu's own dotnet-sdk-10.0 package is the 1xx feature band, whose compiler
+# is too old for ktsu.Sdk.Analyzers (CS9057).
 #
 # Usage: install-dotnet.sh <channel> <minimum sdk version> [runtime channel...]
 #   e.g. install-dotnet.sh 10.0 10.0.400 8.0 9.0
@@ -38,18 +38,6 @@ has_sdk() {
 		esac
 	done
 	return 1
-}
-
-# install_with_script <channel> [dotnet-install.sh options...]
-install_with_script() {
-	local script
-	script="$(mktemp)"
-	curl -fsSL --max-time 30 -o "$script" https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh 2>/dev/null || {
-		rm -f "$script"
-		return 1
-	}
-	bash "$script" --channel "$1" --install-dir "$root" --no-path "${@:2}"
-	rm -f "$script"
 }
 
 # install_from_container_image <image> <tag>, e.g. sdk 10.0 or runtime 8.0
@@ -101,10 +89,7 @@ install_from_container_image() {
 
 if ! has_sdk; then
 	echo "install-dotnet: installing the .NET $channel SDK (at least $minimum) into $root" >&2
-	install_with_script "$channel" || {
-		echo "install-dotnet: builds.dotnet.microsoft.com is not reachable; using the mcr.microsoft.com/dotnet/sdk image" >&2
-		install_from_container_image sdk "$channel"
-	}
+	install_from_container_image sdk "$channel"
 	if ! has_sdk; then
 		echo "install-dotnet: no .NET $channel SDK at or above $minimum after installing" >&2
 		exit 1
@@ -114,7 +99,7 @@ fi
 for runtime in "${runtimes[@]}"; do
 	has_runtime "$runtime" && continue
 	echo "install-dotnet: installing the .NET $runtime runtime into $root" >&2
-	install_with_script "$runtime" --runtime dotnet || install_from_container_image runtime "$runtime"
+	install_from_container_image runtime "$runtime"
 	if ! has_runtime "$runtime"; then
 		echo "install-dotnet: no .NET $runtime runtime after installing" >&2
 		exit 1
