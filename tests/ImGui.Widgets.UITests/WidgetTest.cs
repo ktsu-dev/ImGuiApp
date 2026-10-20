@@ -14,6 +14,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Probes;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -49,6 +50,10 @@ public abstract class WidgetTest
 	protected static HarnessOptions DefaultViewport { get; } = new() { Width = 640, Height = 480 };
 
 	private ImGuiAppHarness? harness;
+	private bool failureFrameKept;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
 
 	/// <summary>Gets a value indicating whether a harness is running.</summary>
 	protected bool IsRunning => harness is not null;
@@ -90,8 +95,29 @@ public abstract class WidgetTest
 	[TestCleanup]
 	public void DisposeHarness()
 	{
+		KeepFailureFrame();
 		harness?.Dispose();
 		harness = null;
+	}
+
+	/// <summary>
+	/// Saves the frame a failing test was looking at and attaches it to the result. Runs once per
+	/// test; later calls do nothing.
+	/// </summary>
+	/// <remarks>
+	/// MSTest runs a derived class's cleanup before this one's, so a suite whose cleanup steps more
+	/// frames — dismissing a dialog the test left open — calls this first, or the picture would show
+	/// the screen after the dismissal rather than the one that failed.
+	/// </remarks>
+	protected void KeepFailureFrame()
+	{
+		if (failureFrameKept)
+		{
+			return;
+		}
+
+		failureFrameKept = true;
+		TestContext.KeepFailureFrame(harness);
 	}
 
 	/// <summary>Advances frames.</summary>
@@ -501,6 +527,9 @@ public abstract class WidgetTest
 		{
 			return;
 		}
+
+		// Dismissing steps frames, which would replace the one a failing test was looking at.
+		KeepFailureFrame();
 
 		for (int attempt = 0; attempt < 8 && FindDialogButtons().Count > 0; attempt++)
 		{

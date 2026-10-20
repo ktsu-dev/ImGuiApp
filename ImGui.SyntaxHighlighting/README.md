@@ -90,11 +90,13 @@ SyntaxHighlightConfig config = new()
     LineSpacingPixels = 2.0f,
     GutterSpacingPixels = 10.0f,
     FontSizePixels = null,         // null keeps the current size, so DPI scaling is followed
-    Width = null,                  // null uses the available content width
+    Width = null,                  // null uses the available content width; the block widens to its longest line
 };
 ```
 
-Code is never wrapped: a line longer than the block is clipped by the surrounding window, so wrap the call in a horizontally scrolling child window when long lines must stay reachable.
+Code is never wrapped. A block is as wide as its longest line, or as `Width` if that is wider, so inside a child window opened with `ImGuiWindowFlags.HorizontalScrollbar` the end of a long line can be scrolled to; outside one, the window clips it.
+
+Only the lines inside the window's clip rectangle are measured and drawn each frame, so a long file in a scrolling child costs what is on screen. The width of the widest line is measured once per block and font and kept.
 
 ### Themes
 

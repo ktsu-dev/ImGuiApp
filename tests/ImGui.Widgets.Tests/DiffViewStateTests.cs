@@ -268,6 +268,61 @@ public class DiffViewStateTests
 	}
 
 	[TestMethod]
+	public void Collapse_ANewInstanceWithEqualContent_StaysCollapsed()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+
+		state.ToggleCollapsed(1, Hunk(Context("a"), Added("X")));
+
+		Assert.IsTrue(
+			state.IsCollapsed(1, Hunk(Context("a"), Added("X"))),
+			"A caller that builds its hunks afresh every frame must keep what the user collapsed.");
+	}
+
+	[TestMethod]
+	public void RowsFor_ANewInstanceWithEqualContent_KeepsTheLayout()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+
+		Assert.AreSame(
+			state.RowsFor(0, Hunk(Removed("x"), Added("X"))),
+			state.RowsFor(0, Hunk(Removed("x"), Added("X"))),
+			"An equal hunk handed over as a new instance must not be laid out again.");
+	}
+
+	[TestMethod]
+	public void Collapse_ANewInstanceWithADifferentHeading_StartsExpanded()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk first = new() { Heading = "f()", Lines = [Added("X")] };
+		ImGuiWidgets.DiffHunk second = new() { Heading = "g()", Lines = [Added("X")] };
+
+		state.ToggleCollapsed(0, first);
+
+		Assert.IsFalse(state.IsCollapsed(0, second));
+	}
+
+	[TestMethod]
+	public void WidestText_IsMeasuredOncePerFont()
+	{
+		ImGuiWidgets.DiffViewState state = new();
+		ImGuiWidgets.DiffHunk hunk = Hunk(Context("ab"), Added("abcd"));
+		int measured = 0;
+		float Measure(string text)
+		{
+			measured++;
+			return text.Length * 7.0f;
+		}
+
+		Assert.AreEqual(28.0f, state.WidestText(0, hunk, 13.0f, Measure));
+		Assert.AreEqual(28.0f, state.WidestText(0, hunk, 13.0f, Measure));
+		Assert.AreEqual(2, measured, "The same hunk in the same font was measured again.");
+
+		_ = state.WidestText(0, hunk, 20.0f, Measure);
+		Assert.AreEqual(4, measured, "A change of font did not measure the hunk again.");
+	}
+
+	[TestMethod]
 	public void Collapse_OtherPositions_AreUnaffected()
 	{
 		ImGuiWidgets.DiffViewState state = new();

@@ -14,6 +14,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -48,6 +49,9 @@ public sealed class SearchableListTests
 	private static readonly HarnessOptions Viewport = new() { Width = 900, Height = 700 };
 
 	private ImGuiAppHarness harness = null!;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
 	private ImGuiPopups.SearchableList<Choice> list = null!;
 	private Choice? confirmed;
 
@@ -55,7 +59,11 @@ public sealed class SearchableListTests
 	private static List<Choice> Choices() => [new("Apple"), new("Banana"), new("Cherry")];
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>
 	/// Starts a harness whose whole content is the list, opened on the supplied current choice.

@@ -101,7 +101,9 @@ public static partial class ImGuiWidgets
 	/// </para>
 	/// <para>
 	/// Every position the widget writes lands on a <see cref="TransportScrubberOptions.FrameDuration"/>
-	/// boundary. In/out points outside the clip or reversed are drawn as given until the first drag
+	/// boundary, marks made with I and O or the menu included, whatever the playhead was. The one
+	/// exception is the end of the clip, written as given when it is not a whole number of frames.
+	/// In/out points outside the clip or reversed are drawn as given until the first drag
 	/// or mark normalises them. A <paramref name="duration"/> that is not positive and finite draws
 	/// the ruler and track backgrounds only, ignores the pointer and the keys, and never calls the
 	/// thumbnail resolver. A NaN playhead is neither drawn nor followed.
@@ -175,7 +177,7 @@ public static partial class ImGuiWidgets
 			if (!usable)
 			{
 				state.Release();
-				DrawContextMenu(label, view, ref playhead, region, usable: false, 0f);
+				DrawContextMenu(label, view, ref playhead, region, usable: false, 0f, 0f);
 				return (TransportScrubberChange)change;
 			}
 
@@ -245,7 +247,7 @@ public static partial class ImGuiWidgets
 				change |= HandleKeys(view, ref playhead, region, frame, minLength);
 			}
 
-			return change | DrawContextMenu(label, view, ref playhead, region, usable: true, minLength);
+			return change | DrawContextMenu(label, view, ref playhead, region, usable: true, minLength, frame);
 		}
 
 		private static void ShowPointerFeedback(TimelineGestureState state, int hoveredHandle, bool hovered, Pointer pointer, Func<float, string> format)
@@ -353,12 +355,12 @@ public static partial class ImGuiWidgets
 				change |= TimelineChange.Playhead;
 			}
 
-			if (ImGui.IsKeyPressed(ImGuiKey.I, false) && TransportScrubberState.MarkIn(playhead, ref region[0], ref region[1], duration, minLength))
+			if (ImGui.IsKeyPressed(ImGuiKey.I, false) && TransportScrubberState.MarkIn(playhead, ref region[0], ref region[1], duration, minLength, frame))
 			{
 				change |= TimelineChange.Region;
 			}
 
-			if (ImGui.IsKeyPressed(ImGuiKey.O, false) && TransportScrubberState.MarkOut(playhead, ref region[0], ref region[1], duration, minLength))
+			if (ImGui.IsKeyPressed(ImGuiKey.O, false) && TransportScrubberState.MarkOut(playhead, ref region[0], ref region[1], duration, minLength, frame))
 			{
 				change |= TimelineChange.Region;
 			}
@@ -369,7 +371,7 @@ public static partial class ImGuiWidgets
 		// Drawn every frame whether or not the timeline is usable, so an open menu closes itself
 		// rather than being left open and undrawn. Pushed under the label so two scrubbers in one
 		// window do not share a menu.
-		private static TimelineChange DrawContextMenu(string label, TimelineView view, ref float playhead, Span<float> region, bool usable, float minLength)
+		private static TimelineChange DrawContextMenu(string label, TimelineView view, ref float playhead, Span<float> region, bool usable, float minLength, float frame)
 		{
 			TimelineChange change = TimelineChange.None;
 
@@ -378,14 +380,14 @@ public static partial class ImGuiWidgets
 			{
 				float duration = view.Duration;
 
-				if (ImGui.MenuItem("Mark in", "I", false, usable) && TransportScrubberState.MarkIn(playhead, ref region[0], ref region[1], duration, minLength))
+				if (ImGui.MenuItem("Mark in", "I", false, usable) && TransportScrubberState.MarkIn(playhead, ref region[0], ref region[1], duration, minLength, frame))
 				{
 					change |= TimelineChange.Region;
 				}
 
 				ImGuiProbes.MarkItem("Mark in");
 
-				if (ImGui.MenuItem("Mark out", "O", false, usable) && TransportScrubberState.MarkOut(playhead, ref region[0], ref region[1], duration, minLength))
+				if (ImGui.MenuItem("Mark out", "O", false, usable) && TransportScrubberState.MarkOut(playhead, ref region[0], ref region[1], duration, minLength, frame))
 				{
 					change |= TimelineChange.Region;
 				}
