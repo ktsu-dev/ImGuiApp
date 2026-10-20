@@ -307,4 +307,33 @@ public sealed class FilesystemBrowserNavigationTests
 		Assert.IsTrue(IsVisible("filesystem-browser/thumbnail-size"));
 		Assert.IsFalse(IsVisible(Row("..")), "The tiles kept the table's parent row.");
 	}
+
+	[TestMethod]
+	public void InAWindowTooSmallForItsDefaultSize_TheBrowserKeepsItsButtonsOnScreen()
+	{
+		// Fifty-six by twenty-eight lines of text is the browser's size when nothing else is asked for, which does not fit here.
+		harness.Dispose();
+		harness = ImGuiAppHarness.Start(
+			new ImGuiAppConfig
+			{
+				Title = nameof(FilesystemBrowserNavigationTests),
+				SaveIniSettings = false,
+				OnRender = _ => browser.ShowIfOpen(),
+			},
+			new HarnessOptions { Width = 640, Height = 360 });
+		harness.Step(2);
+
+		OpenAll();
+
+		foreach (string button in new[] { "filesystem-browser/confirm", "filesystem-browser/cancel" })
+		{
+			Rectangle rect = harness.Probe.Rect(button) ?? throw new AssertFailedException($"{button} was never drawn.");
+			Assert.IsLessThanOrEqualTo(640, rect.MaxX, $"{button} runs off the right of the window.");
+			Assert.IsLessThanOrEqualTo(360, rect.MaxY, $"{button} runs off the bottom of the window.");
+		}
+
+		harness.Click("filesystem-browser/cancel");
+		harness.Step(2);
+		Assert.IsFalse(IsVisible("filesystem-browser/confirm"), "Cancel did not close the browser.");
+	}
 }

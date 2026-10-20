@@ -411,20 +411,26 @@ public partial class ImGuiPopups
 		}
 
 		/// <summary>Works out the size of the sidebar and contents together, from the size asked for or a default in lines of text.</summary>
+		/// <remarks>
+		/// Never larger than the window the browser opens in leaves room for, so its buttons stay on
+		/// screen at a large interface scale or in a small window.
+		/// </remarks>
 		/// <returns>The width and height of the area below the toolbar.</returns>
 		private Vector2 BodySize()
 		{
 			float em = ImGui.GetFontSize();
 			Vector2 minimum = new(36f * em, 14f * em);
-			if (requestedSize == Vector2.Zero)
-			{
-				return new(56f * em, 28f * em);
-			}
 
 			// Whatever is not toolbar, summary, name box or buttons belongs to the listing.
 			Vector2 padding = ImGui.GetStyle().WindowPadding * 2;
 			float chrome = ImGui.GetFrameHeightWithSpacing() * (BrowserMode == FilesystemBrowserMode.Save ? 5 : 4);
-			return Vector2.Max(minimum, new(requestedSize.X - padding.X, requestedSize.Y - padding.Y - chrome));
+			Vector2 wanted = requestedSize == Vector2.Zero
+				? new(56f * em, 28f * em)
+				: new(requestedSize.X - padding.X, requestedSize.Y - padding.Y - chrome);
+
+			Vector2 window = ImGui.GetMainViewport().WorkSize;
+			Vector2 room = new(window.X - padding.X, window.Y - padding.Y - chrome - ImGui.GetFrameHeight());
+			return Vector2.Max(Vector2.Min(minimum, room), Vector2.Min(wanted, room));
 		}
 
 		/// <summary>Reacts to the browser's keys, unless a text box has the keyboard.</summary>
