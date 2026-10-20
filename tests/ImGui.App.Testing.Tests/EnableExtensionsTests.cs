@@ -72,6 +72,39 @@ public sealed class EnableExtensionsTests
 	}
 
 	[TestMethod]
+	public void EnableExtensions_WithAutoDiscoveryOff_StillTurnsAnExtensionOnByName()
+	{
+		// AutoDiscoverExtensions = false sets up none of them, whatever Extensions says; naming one
+		// afterwards is how such an application uses it.
+		bool editorOpen = false;
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(
+			new ImGuiAppConfig
+			{
+				AutoDiscoverExtensions = false,
+				OnRender = _ =>
+				{
+					if (editorOpen)
+					{
+						DrawNodeEditor();
+					}
+				},
+			},
+			Window());
+
+		harness.Step();
+		Assert.AreEqual(ImGuiAppExtensions.None, ImGuiExtensionManager.Enabled, "Auto-discovery off sets up nothing.");
+
+		ImGuiAppExtensions ready = ImGuiApp.EnableExtensions(ImGuiAppExtensions.ImNodes);
+		editorOpen = true;
+		harness.Step(2);
+
+		Assert.AreEqual(ImGuiAppExtensions.ImNodes, ready);
+		Assert.AreEqual(ImGuiAppExtensions.ImNodes, ImGuiExtensionManager.Enabled);
+		Assert.IsTrue(ImGuiExtensionManager.IsImNodesContextCreated);
+		AssertNoImGuiErrors("the node editor");
+	}
+
+	[TestMethod]
 	public void EnableExtensions_InsideOnRender_BeforeTheFirstNodeEditorDraws()
 	{
 		// The case the API exists for: a node editor window opening for the first time turns ImNodes

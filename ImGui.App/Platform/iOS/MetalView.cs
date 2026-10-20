@@ -48,6 +48,9 @@ internal sealed class MetalView : UIView
 		metalLayer.PixelFormat = MTLPixelFormat.BGRA8Unorm;
 		metalLayer.FramebufferOnly = true;
 		metalLayer.ContentsScale = UIScreen.MainScreen.Scale;
+
+		// UIKit delivers only the first finger unless asked; a two-finger pan is how a touch scrolls.
+		MultipleTouchEnabled = true;
 	}
 
 	/// <summary>Keeps the drawable size matched to the view's pixel dimensions across layout/rotation.</summary>

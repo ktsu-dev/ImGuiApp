@@ -28,9 +28,9 @@ public class ImGuiAppViewController : UIViewController
 	private CADisplayLink? displayLink;
 	private double lastTimestamp;
 
-	// Input state. The primary touch drives the single ImGui mouse (additional fingers are ignored
-	// for v1); the soft keyboard is an invisible first-responder presented while ImGui wants text.
-	private UITouch? primaryTouch;
+	// Input state. One finger drives the single ImGui mouse and two or more scroll, as the gesture
+	// decides; the soft keyboard is an invisible first-responder presented while ImGui wants text.
+	private readonly TouchScrollGesture touchGesture = new(new ImGuiAppTouchSink());
 	private SoftKeyboardView? softKeyboard;
 
 	/// <summary>The controller becomes first responder so hardware key presses reach <c>PressesBegan</c>.</summary>
@@ -158,52 +158,51 @@ public class ImGuiAppViewController : UIViewController
 		}
 	}
 
-	/// <summary>Begins tracking the first finger as the ImGui mouse and presses the left button.</summary>
+	/// <summary>Hands each finger that landed to the touch gesture.</summary>
 	/// <param name="touches">The touches that began.</param>
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesBegan(NSSet touches, UIEvent? evt)
 	{
 		Ensure.NotNull(touches);
 		base.TouchesBegan(touches, evt);
-		if (primaryTouch is null && touches.AnyObject is UITouch touch)
+		foreach (UITouch touch in touches.ToArray<UITouch>())
 		{
-			primaryTouch = touch;
-			ImGuiApp.OnPointerMoved(LocationOf(touch));
-			ImGuiApp.OnPointerButton(down: true);
+			touchGesture.Began(touch, LocationOf(touch));
 		}
 	}
 
-	/// <summary>Tracks the primary finger's movement as ImGui mouse motion.</summary>
+	/// <summary>Hands each finger that moved to the touch gesture.</summary>
 	/// <param name="touches">The touches that moved.</param>
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesMoved(NSSet touches, UIEvent? evt)
 	{
 		Ensure.NotNull(touches);
 		base.TouchesMoved(touches, evt);
-		if (primaryTouch is not null && touches.Contains(primaryTouch))
+		Vector2 pointsPerStep = ImGuiApp.PointsPerWheelStep;
+		foreach (UITouch touch in touches.ToArray<UITouch>())
 		{
-			ImGuiApp.OnPointerMoved(LocationOf(primaryTouch));
+			touchGesture.Moved(touch, LocationOf(touch), pointsPerStep);
 		}
 	}
 
-	/// <summary>Releases the ImGui mouse button when the primary finger lifts.</summary>
+	/// <summary>Hands each finger that lifted to the touch gesture.</summary>
 	/// <param name="touches">The touches that ended.</param>
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesEnded(NSSet touches, UIEvent? evt)
 	{
 		Ensure.NotNull(touches);
 		base.TouchesEnded(touches, evt);
-		EndPrimaryTouch(touches);
+		EndTouches(touches);
 	}
 
-	/// <summary>Releases the ImGui mouse button when the primary touch is canceled.</summary>
+	/// <summary>Hands each canceled touch to the touch gesture, which treats it as lifted.</summary>
 	/// <param name="touches">The touches that were canceled.</param>
 	/// <param name="evt">The owning UIKit event.</param>
 	public override void TouchesCancelled(NSSet touches, UIEvent? evt)
 	{
 		Ensure.NotNull(touches);
 		base.TouchesCancelled(touches, evt);
-		EndPrimaryTouch(touches);
+		EndTouches(touches);
 	}
 
 	/// <summary>Forwards hardware key-down events (key, modifiers, typed characters) to ImGui.</summary>
@@ -230,13 +229,11 @@ public class ImGuiAppViewController : UIViewController
 		}
 	}
 
-	private void EndPrimaryTouch(NSSet touches)
+	private void EndTouches(NSSet touches)
 	{
-		if (primaryTouch is not null && touches.Contains(primaryTouch))
+		foreach (UITouch touch in touches.ToArray<UITouch>())
 		{
-			ImGuiApp.OnPointerMoved(LocationOf(primaryTouch));
-			ImGuiApp.OnPointerButton(down: false);
-			primaryTouch = null;
+			touchGesture.Ended(touch, LocationOf(touch));
 		}
 	}
 

@@ -45,6 +45,16 @@
 >   `IUIKeyInput` first-responder (`SoftKeyboardView`) toggled by `io.WantTextInput` feeds the soft
 >   keyboard. `ImGuiApp.iOS.Input` bridges into ImGui IO. The smoke run exercises the input IO calls so
 >   their Apple-ARM64-ABI safety is CI-checked; touch/key *behavior* still needs on-device verification.
+>   Two-finger scrolling (#682) came later: `MetalView` turns on `MultipleTouchEnabled` and every touch
+>   goes through `TouchScrollGesture`, which keeps one finger as the mouse and turns two or more moving
+>   together into `AddMouseWheelEvent`, scaled by `TouchScrollWheel` so the content follows the fingers.
+>   The second finger releases the first's press with the mouse off screen, so nothing under it is
+>   clicked. Pointer events are tagged `ImGuiMouseSource.TouchScreen`. **Verified:** the gesture's rules
+>   (`TouchScrollGestureTests`, on Linux) and a harness window scrolling by exactly the distance panned,
+>   both axes, with no click from the second finger. The smoke run calls the touch-source and two-axis
+>   wheel IO. **Not verified:** UIKit delivering the touches as the gesture expects, on a simulator or a
+>   device; no cloud session can build `net10.0-ios`, and a device needs #491. Pinch, Pencil pressure
+>   and iPad trackpad scrolling stay deferred.
 > - ✅ **Task 6 — DPI, fonts, ini redirect** (§2.4–2.6) — `ScaleFactor` from `UIScreen.Scale` (Task 4);
 >   the iOS font atlas now loads the bundled Nerd Font + merged NotoEmoji + extended Unicode ranges
 >   (shared `FontHelper`) rasterized at `pointSize × ScaleFactor` with `FontGlobalScale = 1/ScaleFactor`
@@ -143,6 +153,11 @@ Honour `config.SaveIniSettings = false` by setting `IniFilename = null` (ImGui n
 ### 2.7 Extension manager: opt-out on iOS
 
 `ImGuiExtensionManager` scans loaded assemblies via reflection. Under AOT this is brittle. For v1, iOS `Start` skips extension auto-detection entirely; ImGuizmo/ImNodes/ImPlot users on iOS must call `ImGuiExtensionManager.Register<T>()` manually. Add a `config.AutoDiscoverExtensions` flag (default true on desktop, false on iOS) so the choice is explicit.
+
+> **As built (#211, #583):** there is no `Register<T>()`. On desktop, `AutoDiscoverExtensions = false` sets up
+> none, and `ImGuiApp.EnableExtensions(ImGuiAppExtensions)` names one afterwards; that path still loads
+> the extension by reflection, so it is not trim-safe. On iOS the extension manager is not compiled at
+> all and no extension can be used yet. See "Extensions" in `ImGui.App/README.md` for what is left.
 
 ---
 

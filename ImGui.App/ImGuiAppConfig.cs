@@ -277,7 +277,11 @@ public class ImGuiAppConfig
 	/// <para>
 	/// On iOS this is effectively always off: reflective assembly scanning is unfriendly to the AOT
 	/// trimmer, so the iOS build excludes the extension manager entirely and never auto-discovers,
-	/// regardless of this value. iOS consumers that want an extension must wire it up manually.
+	/// regardless of this value. There is no way to use ImGuizmo, ImNodes or ImPlot on iOS yet.
+	/// </para>
+	/// <para>
+	/// On desktop, false sets up none of them whatever <see cref="Extensions"/> says; name one after
+	/// launch with <c>ImGuiApp.EnableExtensions</c> to use it. That still loads it by reflection.
 	/// </para>
 	/// </summary>
 	public bool AutoDiscoverExtensions { get; init; } = true;

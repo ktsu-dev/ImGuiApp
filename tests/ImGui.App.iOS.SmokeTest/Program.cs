@@ -45,13 +45,16 @@ ImGuiApp.Start(new ImGuiAppConfig
 		}
 
 		// CI can't inject real touches/keys into the headless simulator, so exercise the ImGui input
-		// IO calls the iOS input bridge makes (pointer, button, key, modifier, text, wheel). This
-		// verifies they don't crash on the Apple ARM64 ABI the way the variadic igText did.
+		// IO calls the iOS input bridge makes (mouse source, pointer, button, key, modifier, text, and
+		// the wheel in both axes, which a two-finger pan sends). This verifies they don't crash on
+		// the Apple ARM64 ABI the way the variadic igText did.
 		ImGuiIOPtr io = ImGui.GetIO();
+		io.AddMouseSourceEvent(ImGuiMouseSource.TouchScreen);
 		io.AddMousePosEvent(8f, 8f);
 		io.AddMouseButtonEvent(0, true);
 		io.AddMouseButtonEvent(0, false);
 		io.AddMouseWheelEvent(0f, 1f);
+		io.AddMouseWheelEvent(0.5f, -0.25f);
 		io.AddKeyEvent(ImGuiKey.ModShift, true);
 		io.AddKeyEvent(ImGuiKey.A, true);
 		io.AddKeyEvent(ImGuiKey.A, false);
