@@ -408,6 +408,56 @@ public class TransformBoxStateTests
 		Assert.AreEqual(TransformBoxHandle.TopRight, TransformBoxState.HitTest(distorted, Stretched, new Vector2(221, 141), true));
 	}
 
+	[TestMethod]
+	public void Resize_APressThatHasNotMovedLeavesABoxUnderTheMinimumAlone()
+	{
+		// A crop in fractions of a 200 pixel image, 2 pixels square on screen against a 4 pixel minimum (#595).
+		Matrix3x2 frame = Matrix3x2.CreateScale(200f, 200f);
+		TransformBoxRect tiny = new(new Vector2(0.5f, 0.5f), new Vector2(0.51f, 0.51f));
+		TransformBoxHandle[] handles =
+		[
+			TransformBoxHandle.Left, TransformBoxHandle.Right, TransformBoxHandle.Top, TransformBoxHandle.Bottom,
+			TransformBoxHandle.TopLeft, TransformBoxHandle.TopRight, TransformBoxHandle.BottomRight, TransformBoxHandle.BottomLeft,
+		];
+
+		foreach (TransformBoxHandle handle in handles)
+		{
+			foreach (bool uniform in new[] { false, true })
+			{
+				TransformBoxRect after = TransformBoxState.Resize(new TransformBoxDrag(handle, tiny, new Vector2(101f, 101f), new Vector2(101f, 101f), uniform, frame), 4f);
+				Assert.AreEqual(tiny, after, $"An unmoved press on {handle} (uniform {uniform}) resized the box.");
+			}
+		}
+	}
+
+	[TestMethod]
+	public void Resize_ABoxUnderTheMinimumCanStillShrinkNoFurther()
+	{
+		Matrix3x2 frame = Matrix3x2.CreateScale(200f, 200f);
+		TransformBoxRect tiny = new(new Vector2(0.5f, 0.5f), new Vector2(0.51f, 0.51f));
+
+		TransformBoxRect edge = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.Right, tiny, Vector2.Zero, new Vector2(-0.2f, 0f), false, frame), 4f);
+		TransformBoxRect corner = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.BottomRight, tiny, Vector2.Zero, new Vector2(-0.2f, -0.2f), false, frame), 4f);
+		TransformBoxRect uniform = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.BottomRight, tiny, Vector2.Zero, new Vector2(-0.2f, -0.2f), true, frame), 4f);
+
+		AssertVector(tiny.Max, edge.Max);
+		AssertVector(tiny.Max, corner.Max);
+		AssertVector(tiny.Max, uniform.Max);
+	}
+
+	[TestMethod]
+	public void Resize_ABoxUnderTheMinimumGrowsWhenDraggedOut()
+	{
+		Matrix3x2 frame = Matrix3x2.CreateScale(200f, 200f);
+		TransformBoxRect tiny = new(new Vector2(0.5f, 0.5f), new Vector2(0.51f, 0.51f));
+
+		TransformBoxRect edge = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.Right, tiny, Vector2.Zero, new Vector2(0.1f, 0f), false, frame), 4f);
+		TransformBoxRect uniform = TransformBoxState.Resize(new TransformBoxDrag(TransformBoxHandle.BottomRight, tiny, Vector2.Zero, new Vector2(0.1f, 0.1f), true, frame), 4f);
+
+		Assert.AreEqual(0.61f, edge.Max.X, Tolerance);
+		Assert.IsGreaterThan(0.51f, uniform.Max.X, "Dragging a uniform corner out did not grow a box under the minimum.");
+	}
+
 	private static TransformBoxRect Distort(TransformBoxRect from, TransformBoxHandle handle, Vector2 delta) =>
 		TransformBoxState.Resize(new TransformBoxDrag(handle, from, Vector2.Zero, delta, false, Stretched) { Distort = true }, 4f);
 
