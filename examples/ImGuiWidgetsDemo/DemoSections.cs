@@ -51,6 +51,15 @@ internal static class DemoSections
 		new(AppBarDemo.Show, AppBarDemo.ResetState),
 	];
 
+	/// <summary>The mobile polish sections, after the overlays and navigation.</summary>
+	private static IReadOnlyList<DemoSection> MobilePolishDemos { get; } =
+	[
+		new(AccordionDemo.Show, AccordionDemo.ResetState),
+		new(InfiniteListDemo.Show, InfiniteListDemo.ResetState),
+		new(StickyHeaderDemo.Show, StickyHeaderDemo.ResetState),
+		new(CoachMarkDemo.Show, CoachMarkDemo.ResetState),
+	];
+
 	/// <summary>The Widget Demos sections after the mobile ones.</summary>
 	private static IReadOnlyList<DemoSection> LateWidgetDemos { get; } =
 	[
@@ -74,8 +83,8 @@ internal static class DemoSections
 	];
 
 	/// <summary>Gets the sections of the Widget Demos tab, in demo order.</summary>
-	/// <remarks>Built from three lists so no one initializer is coupled to every section class.</remarks>
-	internal static IReadOnlyList<DemoSection> WidgetDemos { get; } = [.. EarlyWidgetDemos, .. MobileDemos, .. LateWidgetDemos];
+	/// <remarks>Built from four lists so no one initializer is coupled to every section class.</remarks>
+	internal static IReadOnlyList<DemoSection> WidgetDemos { get; } = [.. EarlyWidgetDemos, .. MobileDemos, .. MobilePolishDemos, .. LateWidgetDemos];
 
 	/// <summary>Gets the sections of the Advanced Demos tab, in demo order.</summary>
 	internal static IReadOnlyList<DemoSection> AdvancedDemos { get; } =

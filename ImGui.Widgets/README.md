@@ -127,8 +127,12 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`FloatingActionButton`** / **`SpeedDial`**: A round button pinned to a corner of the window, and one that fans out labelled actions above it
 - **`BottomNavigationBar`**: A row of destinations at the foot of the window, with a sliding indicator under the chosen one. It can drive a `TabPanel` directly; set the panel's `ShowTabStrip` to false so the bar is its only tab strip
 - **`AppBar`**: A title bar with a leading button and trailing actions, which hides as the content scrolls down and returns as soon as it scrolls back up
+- **`ExpandableListItem`** / **`Accordion`**: A row that opens to show more beneath it, its height animating as it opens and closes. An `Accordion` keeps one open at a time unless `AllowMultiple` is set
+- **`InfiniteList`**: A virtualized list that asks the caller for the next page once scrolled within `Threshold` of its end, shows a loading row while the page arrives, and asks only once per page
+- **`StickyHeaderList`**: A scrolling list of sections whose current header stays pinned to the top, pushed up by the next one as it arrives. Opened in a `using` block, with `Section(title)` before each section's rows
+- **`Tutorial`**: A coach mark tour of `CoachMarkStep`s, each dimming the window around a widget the caller named with `Target` after drawing it and explaining it in a callout with Next and Skip
 
-The overlays (`Toaster`, `ActionSheet`, `BottomSheet`, `NavigationDrawer` and `SearchOverlay`) are objects created over an `OverlayHost`, which the caller renders once per frame after the rest of the window. Each keeps its arithmetic in an ImGui-free state class, as the widgets above do.
+The overlays (`Toaster`, `ActionSheet`, `BottomSheet`, `NavigationDrawer`, `SearchOverlay` and `Tutorial`) are objects created over an `OverlayHost`, which the caller renders once per frame after the rest of the window. Each keeps its arithmetic in an ImGui-free state class, as the widgets above do.
 
 ### Motion and Gestures
 

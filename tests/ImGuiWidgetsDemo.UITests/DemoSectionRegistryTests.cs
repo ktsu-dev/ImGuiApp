@@ -20,7 +20,7 @@ public sealed class DemoSectionRegistryTests
 {
 	private const BindingFlags AnyStatic = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
-	// Split in three, as the registry is, so no one initializer is coupled to every section class.
+	// Split in four, as the registry is, so no one initializer is coupled to every section class.
 	private static readonly string[] EarlyWidgetDemoOrder =
 	[
 		nameof(MobileFormControlsDemo), nameof(PropertyGridDemo), nameof(KnobDemo), nameof(ValueSliderDemo),
@@ -38,6 +38,12 @@ public sealed class DemoSectionRegistryTests
 		nameof(BottomNavigationBarDemo), nameof(AppBarDemo),
 	];
 
+	// The mobile polish sections.
+	private static readonly string[] MobilePolishDemoOrder =
+	[
+		nameof(AccordionDemo), nameof(InfiniteListDemo), nameof(StickyHeaderDemo), nameof(CoachMarkDemo),
+	];
+
 	// The sections after the mobile ones.
 	private static readonly string[] LateWidgetDemoOrder =
 	[
@@ -48,7 +54,7 @@ public sealed class DemoSectionRegistryTests
 		nameof(DiffViewDemo), nameof(ToolbarDemo),
 	];
 
-	private static readonly string[] WidgetDemoOrder = [.. EarlyWidgetDemoOrder, .. MobileDemoOrder, .. LateWidgetDemoOrder];
+	private static readonly string[] WidgetDemoOrder = [.. EarlyWidgetDemoOrder, .. MobileDemoOrder, .. MobilePolishDemoOrder, .. LateWidgetDemoOrder];
 
 	private static readonly string[] AdvancedDemoOrder =
 	[
