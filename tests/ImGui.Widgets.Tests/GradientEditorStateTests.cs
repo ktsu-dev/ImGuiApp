@@ -117,6 +117,47 @@ public class GradientEditorStateTests
 	}
 
 	[TestMethod]
+	public void EnsureValid_SelectionFollowsAStopMovedRightPastItsNeighbour()
+	{
+		// #582: the selected stop moved past its neighbour stays selected, not the neighbour.
+		Assert.AreEqual(Red, SelectedAfterMoving([new(0.1f, Red), new(0.6f, Blue)], 0, 0.9f));
+	}
+
+	[TestMethod]
+	public void EnsureValid_SelectionFollowsAStopMovedLeftPastItsNeighbour()
+	{
+		Assert.AreEqual(Blue, SelectedAfterMoving([new(0.1f, Red), new(0.6f, Blue)], 1, 0.05f));
+	}
+
+	[TestMethod]
+	public void EnsureValid_SelectionFollowsAStopMovedPastSeveralNeighbours()
+	{
+		Assert.AreEqual(Red, SelectedAfterMoving([new(0.1f, Red), new(0.3f, Black), new(0.5f, White), new(0.8f, Blue)], 0, 0.95f));
+		Assert.AreEqual(Blue, SelectedAfterMoving([new(0.1f, Red), new(0.3f, Black), new(0.5f, White), new(0.8f, Blue)], 3, 0.05f));
+	}
+
+	[TestMethod]
+	public void EnsureValid_SelectionStaysOnAStopOthersMovePast()
+	{
+		Assert.AreEqual(White, SelectedAfterMoving([new(0.1f, Red), new(0.3f, Black), new(0.5f, White), new(0.8f, Blue)], 2, 0.95f, moved: 0));
+	}
+
+	/// <summary>Selects one stop, moves a stop (the selected one unless named) to a new position in the caller's list, and sorts.</summary>
+	private static Color SelectedAfterMoving(List<GradientStop> stops, int selected, float to, int? moved = null)
+	{
+		ImGuiWidgets.GradientEditorState state = new();
+		state.Press(stops, stops[selected].Position, Grab);
+		state.Release(stops);
+		Assert.AreEqual(selected, state.SelectedIndex);
+
+		int index = moved ?? selected;
+		stops[index] = stops[index] with { Position = to };
+		state.EnsureValid(stops);
+
+		return stops[state.SelectedIndex].Color;
+	}
+
+	[TestMethod]
 	public void EnsureValid_IsStableForEqualPositions()
 	{
 		List<GradientStop> stops = [new(0.5f, Red), new(0.5f, Blue), new(0f, Green)];

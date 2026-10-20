@@ -96,6 +96,47 @@ public sealed class StepperTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void Stepper_ReleasingAfterAHoldKeepsTheLastRepeatedValue()
+	{
+		value = 0;
+		Start(Draw);
+
+		// Half a second at the harness's 60 frames a second: past the 0.4 s delay, so the hold has
+		// repeated at least once before the button is let go.
+		Rectangle rect = RectOf(ValueBox);
+		Harness.Mouse.MoveTo(rect.MaxX + (rect.Height / 2f), rect.MinY + (rect.Height / 2f));
+		Step();
+		HarnessMouse.Down(0);
+		Step(30);
+		int whileHeld = value;
+		HarnessMouse.Up(0);
+		Step(2);
+
+		Assert.IsTrue(whileHeld >= 2, $"Holding the button for half a second repeated to {whileHeld}.");
+		Assert.AreEqual(whileHeld, value, "Releasing the button after a hold took one more step.");
+	}
+
+	[TestMethod]
+	public void Stepper_AClickAfterAHoldStillStepsOnce()
+	{
+		value = 0;
+		Start(Draw);
+
+		Rectangle rect = RectOf(ValueBox);
+		Harness.Mouse.MoveTo(rect.MaxX + (rect.Height / 2f), rect.MinY + (rect.Height / 2f));
+		Step();
+		HarnessMouse.Down(0);
+		Step(30);
+		HarnessMouse.Up(0);
+		Step(2);
+		int afterHold = value;
+
+		ClickIncrement();
+
+		Assert.AreEqual(afterHold + 1, value, "A click following a hold did not step exactly once.");
+	}
+
+	[TestMethod]
 	public void Stepper_RedrawsTheNewValue()
 	{
 		value = 0;

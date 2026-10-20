@@ -188,6 +188,10 @@ public static partial class ImGuiWidgets
 
 			if (ImGui.IsItemActivated())
 			{
+				// Claim the horizontal arrows while held, as ImGui's own sliders do. Besides keeping
+				// keyboard navigation from moving off a slider being dragged, it is how a container
+				// that also drags, such as ReorderableTree, tells a press here from one on a button.
+				ImGui.GetCurrentContext().ActiveIdUsingNavDirMask |= (1u << (int)ImGuiDir.Left) | (1u << (int)ImGuiDir.Right);
 				changed = Activate(state, ref value, spec);
 			}
 

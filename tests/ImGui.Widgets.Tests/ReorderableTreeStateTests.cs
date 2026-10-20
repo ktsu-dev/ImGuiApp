@@ -213,6 +213,58 @@ public class ReorderableTreeStateTests
 		Assert.IsNull(Drop(Rows.Length, At(B, 0.5f)));
 	}
 
+	/// <summary>Resolves a drag over rows other than the class fixture, laid out the same way.</summary>
+	private static ImGuiWidgets.ReorderableTreeDrop? DropIn(ReorderableTreeRow[] rows, int dragged, Vector2 pointer) =>
+		ImGuiWidgets.ReorderableTreeState.Resolve(rows, SpansFor(rows.Length), 0f, Indent, dragged, pointer);
+
+	[TestMethod]
+	public void LastChildAtTheEnd_PointerAtTheLeftTakesItOutOfItsGroup()
+	{
+		// P > A, and nothing after A: below A is the only place left to aim at.
+		ReorderableTreeRow[] rows = [new(0, true), new(1, false)];
+
+		ImGuiWidgets.ReorderableTreeDrop drop = AssertDrop(DropIn(rows, 1, At(1, 0.9f, depth: 0)), -1, 1);
+		Assert.AreEqual(0, drop.LineDepth);
+		AssertDrop(DropIn(rows, 1, new Vector2(5f, 500f)), -1, 1);
+	}
+
+	[TestMethod]
+	public void LastChildAtTheEnd_PointerAtItsOwnDepthIsRefused()
+	{
+		ReorderableTreeRow[] rows = [new(0, true), new(1, false)];
+
+		Assert.IsNull(DropIn(rows, 1, At(1, 0.9f, depth: 1)));
+		Assert.IsNull(DropIn(rows, 1, At(1, 0.4f, depth: 0)), "the top half of the dragged row is still the row itself");
+	}
+
+	[TestMethod]
+	public void LastGroupAtTheEnd_ItsLastDescendantCarriesTheDropOut()
+	{
+		// P > A > a1, dragging A: below a1 at the left is the top level, after P.
+		ReorderableTreeRow[] rows = [new(0, true), new(1, true), new(2, false)];
+
+		AssertDrop(DropIn(rows, 1, At(2, 0.9f, depth: 0)), -1, 1);
+		Assert.IsNull(DropIn(rows, 1, At(2, 0.9f, depth: 1)));
+		Assert.IsNull(DropIn(rows, 1, At(2, 0.9f, depth: 2)));
+	}
+
+	[TestMethod]
+	public void LastChildOfANestedGroup_CanLandAtEitherOuterLevel()
+	{
+		// R > P > A, dragging A: depth 1 is after P inside R, depth 0 is after R.
+		ReorderableTreeRow[] rows = [new(0, true), new(1, true), new(2, false)];
+
+		AssertDrop(DropIn(rows, 2, At(2, 0.9f, depth: 1)), 0, 1);
+		AssertDrop(DropIn(rows, 2, At(2, 0.9f, depth: 0)), -1, 1);
+	}
+
+	[TestMethod]
+	public void LastChildBeforeAShallowerRow_PointerAtTheLeftLeavesTheGroup()
+	{
+		// In the class fixture a2 is A's last child and B follows at the top level.
+		AssertDrop(Drop(A2, At(A2, 0.9f, depth: 0)), -1, 1);
+	}
+
 	[TestMethod]
 	public void State_APressBecomesADragOnlyWhenAsked()
 	{

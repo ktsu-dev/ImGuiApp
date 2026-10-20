@@ -45,4 +45,23 @@ internal static class MarkdownSizing
 		(false, true) => MarkdownFontRole.Italic,
 		_ => MarkdownFontRole.Body,
 	};
+
+	/// <summary>
+	/// Combines a block's base role with a run's emphasis. Body text takes the emphasis as it is, a
+	/// bold block (a table header row) adds its weight to any italic, and a heading keeps its own
+	/// role, since a heading's typeface and size come from the heading and there is no emphasised
+	/// heading role to resolve.
+	/// </summary>
+	/// <param name="baseRole">The role of the block the run sits in.</param>
+	/// <param name="bold">Whether the run is bold.</param>
+	/// <param name="italic">Whether the run is italic.</param>
+	/// <returns>The role to measure and draw the run in.</returns>
+	public static MarkdownFontRole CombineRole(MarkdownFontRole baseRole, bool bold, bool italic) => baseRole switch
+	{
+		MarkdownFontRole.Bold => EmphasisRole(true, italic),
+		MarkdownFontRole.Italic => EmphasisRole(bold, true),
+		MarkdownFontRole.BoldItalic => MarkdownFontRole.BoldItalic,
+		MarkdownFontRole.Body => EmphasisRole(bold, italic),
+		_ => baseRole,
+	};
 }
