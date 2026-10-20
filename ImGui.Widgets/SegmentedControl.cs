@@ -43,6 +43,9 @@ public static partial class ImGuiWidgets
 
 		private const float AnimationDuration = 0.15f;
 
+		/// <summary>How close the animation must be to its target to count as finished.</summary>
+		private const float AnimationTolerance = 1e-4f;
+
 		public static bool Draw(string label, ref int selectedIndex, IReadOnlyList<string> segments)
 		{
 			Ensure.NotNull(segments);
@@ -95,7 +98,7 @@ public static partial class ImGuiWidgets
 			float step = ImGui.GetIO().DeltaTime / AnimationDuration * MathF.Max(1.0f, MathF.Abs(selectedIndex - pos));
 			pos = selectedIndex > pos ? MathF.Min(selectedIndex, pos + step) : MathF.Max(selectedIndex, pos - step);
 			Highlight[id] = pos;
-			if (pos != selectedIndex)
+			if (MathF.Abs(pos - selectedIndex) > AnimationTolerance)
 			{
 				AnimationActivity.RequestActiveFrame();
 			}
