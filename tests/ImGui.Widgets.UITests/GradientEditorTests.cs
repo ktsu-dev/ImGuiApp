@@ -126,6 +126,23 @@ public sealed class GradientEditorTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void GradientEditor_SelectionFollowsAStopTheCallerMovesPastItsNeighbour()
+	{
+		Start(Draw);
+
+		// Select red, then move it past green from outside the widget, as a position field or undo would (#582).
+		Click("Gradient/stop0");
+		stops[0] = stops[0] with { Position = 0.75f };
+		Step();
+		Harness.Keyboard.Press(ImGuiKey.Delete);
+		Step();
+
+		Assert.HasCount(2, stops);
+		Assert.IsFalse(stops.Any(stop => stop.Color == Red), "Delete removed a stop other than the selected one.");
+		Assert.IsTrue(stops.Any(stop => stop.Color == Green), "Delete removed green, the neighbour, instead of red.");
+	}
+
+	[TestMethod]
 	public void GradientEditor_DrawsTheSampledGradient()
 	{
 		Start(Draw);
