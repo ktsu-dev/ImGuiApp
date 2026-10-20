@@ -2,9 +2,7 @@
 
 namespace ktsu.ImGui.Widgets.UITests;
 
-using System.Numerics;
-
-using Hexa.NET.ImGui;
+using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,16 +11,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class BreadcrumbTests : WidgetTest
 {
 	private const string Id = "trail";
-	private const string Span = "trail-span";
+	private const string Span = Id;
 
 	private string path = "home/projects/imgui/widgets";
 	private bool changed;
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.Breadcrumb(Id, ref path);
-		MarkSpan(Span, origin);
 	}
 
 	[TestMethod]
@@ -66,13 +62,18 @@ public sealed class BreadcrumbTests : WidgetTest
 	{
 		path = "home";
 		Start(Draw);
-		int shortWidth = RectOf(Span).Width;
+		MoveAway();
+		byte[] oneSegment = Snapshot();
 
 		path = "home/projects/imgui/widgets";
 		Step(2);
-		int longWidth = RectOf(Span).Width;
+		MoveAway();
 
-		Assert.IsTrue(longWidth > shortWidth, $"A four-segment path ({longWidth}px) was no wider than a one-segment path ({shortWidth}px).");
+		// The trail draws a frame of its own width whatever the path, so it is the segments drawn
+		// inside it that have to reach further along. "home" alone is about forty pixels wide.
+		Rectangle trail = RectOf(Span);
+		Rectangle grew = BoundsOfDifference(oneSegment) ?? throw new AssertFailedException("A four-segment path drew the same as a one-segment path.");
+		Assert.IsTrue(grew.MaxX - trail.MinX > 100, $"A four-segment path changed the trail only up to x={grew.MaxX}, from its left edge at x={trail.MinX}.");
 	}
 
 	[TestMethod]
@@ -84,4 +85,7 @@ public sealed class BreadcrumbTests : WidgetTest
 		Assert.IsTrue(IsVisible(Span), "A backslash-separated path drew nothing.");
 		AssertSomethingWasDrawn("a backslash-separated breadcrumb");
 	}
+
+	[TestMethod]
+	public void Breadcrumb_MarksItself() => _ = AssertMarksItself(Id, Draw);
 }

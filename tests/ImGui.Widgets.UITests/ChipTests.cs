@@ -4,6 +4,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.App.Testing;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <c>ImGuiWidgets.Chip</c> and <see cref="ImGuiWidgets.ChipGroup"/> on their own.</summary>
@@ -146,5 +148,37 @@ public sealed class ChipTests : WidgetTest
 		Hover(Label);
 
 		Assert.AreEqual(ImGuiMouseCursor.Hand, Harness.MouseCursor, "Hovering the chip did not show a hand.");
+	}
+
+	[TestMethod]
+	public void ChipGroup_MarksItself()
+	{
+		int choice = 0;
+		_ = AssertMarksItself("Roast", () => ImGuiWidgets.ChipGroup("Roast", ["Light", "Medium", "Dark"], ref choice));
+	}
+
+	[TestMethod]
+	public void ChipGroup_MarkCoversEveryRowWhenItWraps()
+	{
+		int choice = 0;
+		string[] options = ["Ethiopia", "Colombia", "Guatemala", "Kenya", "Sumatra", "Brazil", "Rwanda", "Panama"];
+		Rectangle group = AssertMarksItself("Origin", () =>
+		{
+			ImGui.PushItemWidth(200f);
+			ImGui.BeginChild("narrow", new System.Numerics.Vector2(220f, 300f));
+			_ = ImGuiWidgets.ChipGroup("Origin", options, ref choice);
+			ImGui.EndChild();
+			ImGui.PopItemWidth();
+		});
+
+		for (int i = 0; i < options.Length; i++)
+		{
+			Rectangle chip = RectOf($"{options[i]}##chip{i}");
+			Assert.IsTrue(
+				chip.MinX >= group.MinX && chip.MaxX <= group.MaxX && chip.MinY >= group.MinY && chip.MaxY <= group.MaxY,
+				$"Chip '{options[i]}' at {chip} lies outside the group's mark {group}.");
+		}
+
+		Assert.IsTrue(RectOf("Panama##chip7").MinY > RectOf("Ethiopia##chip0").MinY, "The chips never wrapped onto a second row.");
 	}
 }

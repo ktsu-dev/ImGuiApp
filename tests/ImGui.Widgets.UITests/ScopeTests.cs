@@ -14,7 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class ScopeTests : WidgetTest
 {
 	private const string Label = "waveform";
-	private const string Name = "scope";
+	private const string Name = Label;
 	private static readonly Vector2 Size = new(300f, 120f);
 
 	private float[] samples = BuildSine(128, 1f);
@@ -35,7 +35,6 @@ public sealed class ScopeTests : WidgetTest
 	private void Draw()
 	{
 		ImGuiWidgets.Scope(Label, samples, Size, amplitude);
-		Mark(Name);
 	}
 
 	[TestMethod]
@@ -101,4 +100,7 @@ public sealed class ScopeTests : WidgetTest
 		Assert.IsTrue(IsVisible(Name), "A one-sample scope reserved no layout.");
 		AssertSomethingWasDrawn("a one-sample scope");
 	}
+
+	[TestMethod]
+	public void Scope_MarksItself() => _ = AssertMarksItself(Label, Draw);
 }

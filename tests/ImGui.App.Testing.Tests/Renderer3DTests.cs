@@ -6,6 +6,7 @@ using System;
 using System.Numerics;
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.Rendering;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

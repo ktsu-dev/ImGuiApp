@@ -8,6 +8,8 @@ using System.Text;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using HexaButton = Hexa.NET.ImGui.Widgets.ImGuiButton;
 using HexaInlineButtonFlags = Hexa.NET.ImGui.Widgets.InlineButtonFlags;
 
@@ -106,13 +108,27 @@ public static partial class ImGuiWidgets
 			// doesn't render inverted after its first click; see
 			// DeferredDrawing.TickAnimationClockIfUnpumped.
 			TickAnimationClockIfUnpumped();
-			return HexaButton.ToggleSwitch(label, ref selected);
+			bool changed = HexaButton.ToggleSwitch(label, ref selected);
+			ImGuiProbes.MarkItem(label);
+			return changed;
 		}
 
-		internal static bool ToggleButton(string label, ref bool selected, Vector2 size) => HexaButton.ToggleButton(label, ref selected, size, ImGuiButtonFlags.None);
+		internal static bool ToggleButton(string label, ref bool selected, Vector2 size)
+		{
+			bool changed = HexaButton.ToggleButton(label, ref selected, size, ImGuiButtonFlags.None);
+			ImGuiProbes.MarkItem(label);
+			return changed;
+		}
+
+		internal static bool TransparentButton(string label, Vector2 size)
+		{
+			bool clicked = TransparentButtonUnmarked(label, size);
+			ImGuiProbes.MarkItem(label);
+			return clicked;
+		}
 
 		[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required to reach Hexa's sized TransparentButton overload; the buffer is stack-scoped to the call and not retained.")]
-		internal static unsafe bool TransparentButton(string label, Vector2 size)
+		private static unsafe bool TransparentButtonUnmarked(string label, Vector2 size)
 		{
 			if (size == default)
 			{
@@ -137,7 +153,9 @@ public static partial class ImGuiWidgets
 			buffer[byteCount] = 0;
 
 			ImRect bounds = new(min, max);
-			return HexaButton.InlineButton(buffer, bounds, anchor, (HexaInlineButtonFlags)placement);
+			bool clicked = HexaButton.InlineButton(buffer, bounds, anchor, (HexaInlineButtonFlags)placement);
+			ImGuiProbes.MarkItem(label);
+			return clicked;
 		}
 	}
 }

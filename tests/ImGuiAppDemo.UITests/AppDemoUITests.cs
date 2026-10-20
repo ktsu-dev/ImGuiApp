@@ -10,6 +10,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Examples.App;
 using ktsu.ImGui.Examples.App.Demos;
 
@@ -40,6 +41,9 @@ public sealed class AppDemoUITests
 
 	private ImGuiAppHarness harness = null!;
 
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
 	[TestInitialize]
 	public void SetUp()
 	{
@@ -50,7 +54,11 @@ public sealed class AppDemoUITests
 	}
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>
 	/// Reports whether an item was drawn in the frame just rendered. Probe.Rect remembers the last

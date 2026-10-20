@@ -14,6 +14,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -48,6 +49,9 @@ public sealed class SearchableListTests
 	private static readonly HarnessOptions Viewport = new() { Width = 900, Height = 700 };
 
 	private ImGuiAppHarness harness = null!;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
 	private ImGuiPopups.SearchableList<Choice> list = null!;
 	private Choice? confirmed;
 
@@ -55,7 +59,11 @@ public sealed class SearchableListTests
 	private static List<Choice> Choices() => [new("Apple"), new("Banana"), new("Cherry")];
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>
 	/// Starts a harness whose whole content is the list, opened on the supplied current choice.
@@ -233,6 +241,73 @@ public sealed class SearchableListTests
 
 		Assert.IsNotNull(confirmed, "Enter should confirm the best match.");
 		Assert.AreEqual("Cherry", confirmed.Label);
+	}
+
+	/// <summary>
+	/// The ranking orders rather than filters, so its first entry is a non-match when nothing
+	/// matches. Enter used to confirm it, replacing the choice the caller held (#581).
+	/// </summary>
+	[TestMethod]
+	public void EnterWithNoMatchConfirmsNothing()
+	{
+		Open(current: new Choice("Banana"));
+
+		harness.Keyboard.Type("xyz");
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(2);
+
+		Assert.IsNull(confirmed, "Enter confirmed an item that does not match what was typed.");
+		Assert.IsTrue(IsVisible("searchable-list/search"), "The list closed on a search that matched nothing.");
+	}
+
+	[TestMethod]
+	public void OkWithATermTypedConfirmsTheHighlightedBestMatch()
+	{
+		Open(current: new Choice("Apple"));
+
+		harness.Keyboard.Type("che");
+		harness.Step(2);
+		harness.Click("searchable-list/ok");
+		harness.Step(2);
+
+		Assert.IsNotNull(confirmed);
+		Assert.AreEqual("Cherry", confirmed.Label, "OK and Enter should agree on the best match.");
+	}
+
+	[TestMethod]
+	public void OkWithNoMatchKeepsTheCurrentChoice()
+	{
+		Open(current: new Choice("Banana"));
+
+		harness.Keyboard.Type("xyz");
+		harness.Step(2);
+		harness.Click("searchable-list/ok");
+		harness.Step(2);
+
+		Assert.IsNotNull(confirmed);
+		Assert.AreEqual("Banana", confirmed.Label);
+	}
+
+	/// <summary>With a term typed, the row drawn as chosen is the best match, the one Enter and OK take.</summary>
+	[TestMethod]
+	public void TheBestMatchIsTheRowDrawnAsChosen()
+	{
+		Open(current: new Choice("Apple"));
+
+		harness.Keyboard.Type("che");
+		harness.Step(2);
+
+		Vector2 match = CentreOf("searchable-list/Cherry");
+		Vector2 current = CentreOf("searchable-list/Apple");
+		Vector2 other = CentreOf("searchable-list/Banana");
+
+		CapturedFrame frame = harness.Capture();
+		Rgba32 onMatch = frame.GetPixel((int)match.X, (int)match.Y + 8);
+		Rgba32 onCurrent = frame.GetPixel((int)current.X, (int)current.Y + 8);
+		Rgba32 onOther = frame.GetPixel((int)other.X, (int)other.Y + 8);
+
+		Assert.AreNotEqual(onOther, onMatch, "The best match was not drawn as chosen.");
+		Assert.AreEqual(onOther, onCurrent, "The current choice was still drawn as chosen while another row matched.");
 	}
 
 	[TestMethod]

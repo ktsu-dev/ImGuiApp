@@ -54,6 +54,8 @@ public sealed class FileDialogTests : WidgetTest
 		// open and one that already closed its own.
 		if (IsRunning)
 		{
+			// Cancelling steps frames, which would replace the one a failing test was looking at.
+			KeepFailureFrame();
 			CancelPicker();
 			CancelPicker();
 		}
@@ -195,5 +197,44 @@ public sealed class FileDialogTests : WidgetTest
 		Assert.IsNotNull(BoundsOfDifference(empty), "The folder dialog drew nothing after the pump ran.");
 
 		CancelPicker();
+	}
+
+	[TestMethod]
+	public void OpenFileDialog_IsVisibleWhileShown() => AssertPickerMarksItself(new ImGuiWidgets.OpenFileDialog().Show, nameof(ImGuiWidgets.OpenFileDialog));
+
+	[TestMethod]
+	public void SaveFileDialog_IsVisibleWhileShown() => AssertPickerMarksItself(new ImGuiWidgets.SaveFileDialog().Show, nameof(ImGuiWidgets.SaveFileDialog));
+
+	[TestMethod]
+	public void OpenFolderDialog_IsVisibleWhileShown()
+	{
+		ImGuiWidgets.OpenFolderDialog dialog = new();
+
+		Start(ImGuiWidgets.DrawDeferred, PickerViewport);
+		dialog.Show(folderOutcomes.Add);
+		Step(3);
+
+		AssertPickerWindowMarked(nameof(ImGuiWidgets.OpenFolderDialog));
+		CancelPicker();
+		Assert.IsFalse(IsVisible(nameof(ImGuiWidgets.OpenFolderDialog)), "The folder picker was still marked after it closed.");
+	}
+
+	private void AssertPickerMarksItself(Action<Action<FileDialogOutcome>> show, string name)
+	{
+		Start(ImGuiWidgets.DrawDeferred, PickerViewport);
+		show(fileOutcomes.Add);
+		Step(3);
+
+		AssertPickerWindowMarked(name);
+		CancelPicker();
+		Assert.IsFalse(IsVisible(name), $"{name} was still marked after it closed.");
+	}
+
+	private void AssertPickerWindowMarked(string name)
+	{
+		Assert.IsTrue(IsVisible(name), $"{name} was not marked while it was shown.");
+		Rectangle window = RectOf(name);
+		Assert.AreEqual(PickerWindowRight, window.MaxX, 1f, $"{name} marked {window}, not the picker window.");
+		Assert.AreEqual(PickerWindowBottom, window.MaxY, 1f, $"{name} marked {window}, not the picker window.");
 	}
 }

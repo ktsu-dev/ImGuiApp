@@ -8,6 +8,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 
+using ktsu.ImGui.Rendering;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

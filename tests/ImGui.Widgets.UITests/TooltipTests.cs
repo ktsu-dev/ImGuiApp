@@ -6,6 +6,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.App.Testing;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <see cref="ImGuiWidgets.Tooltip"/> on its own.</summary>
@@ -92,5 +94,20 @@ public sealed class TooltipTests : WidgetTest
 		Step(HoverDelayFrames);
 
 		Assert.IsTrue(PixelsChangedSince(shortTooltip) > 0, "A long tooltip drew the same as a short one.");
+	}
+
+	[TestMethod]
+	public void Tooltip_MarksItselfOnlyWhileShown()
+	{
+		Start(Draw);
+		MoveAway();
+
+		Assert.IsFalse(IsVisible("tooltip"), "The tooltip was marked before its item was hovered.");
+
+		HoverAndWait();
+
+		Assert.IsTrue(IsVisible("tooltip"), "The tooltip was not marked while it was shown.");
+		Rectangle tooltip = RectOf("tooltip");
+		Assert.IsTrue(tooltip.Width > 0 && tooltip.Height > 0, $"The tooltip marked an empty rectangle {tooltip}.");
 	}
 }

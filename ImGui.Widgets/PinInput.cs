@@ -3,9 +3,13 @@
 namespace ktsu.ImGui.Widgets;
 
 using System.Collections.Generic;
+using System.Globalization;
+using System.Numerics;
 using System.Text;
 
 using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -123,6 +127,7 @@ public static partial class ImGuiWidgets
 			int focusReq = FocusRequest.GetValueOrDefault(groupId, -1);
 
 			ImGui.PushID(id);
+			Vector2 origin = ImGui.GetCursorScreenPos();
 
 			float box = ImGui.GetFrameHeight() * 1.2f;
 			ImGuiInputTextFlags flags = ImGuiInputTextFlags.AutoSelectAll;
@@ -140,7 +145,7 @@ public static partial class ImGuiWidgets
 
 			for (int i = 0; i < length; i++)
 			{
-				changed |= DrawPinBox(groupId, ref value, i, length, focusReq, box, digitsOnly, flags);
+				changed |= DrawPinBox(id, groupId, ref value, i, length, focusReq, box, digitsOnly, flags);
 			}
 
 			// Drop the focus request only if it was consumed (not replaced by a new one this frame).
@@ -149,12 +154,13 @@ public static partial class ImGuiWidgets
 				FocusRequest.Remove(groupId);
 			}
 
+			ImGuiProbes.MarkRegion(id, origin, ImGui.GetItemRectMax());
 			ImGui.PopID();
 			return changed;
 		}
 
 		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted from Draw to reduce cognitive complexity; the parameters thread the per-frame PIN box state from the caller and bundling them would not improve readability.")]
-		private static bool DrawPinBox(uint groupId, ref string value, int i, int length, int focusReq, float box, bool digitsOnly, ImGuiInputTextFlags flags)
+		private static bool DrawPinBox(string id, uint groupId, ref string value, int i, int length, int focusReq, float box, bool digitsOnly, ImGuiInputTextFlags flags)
 		{
 			if (i > 0)
 			{
@@ -174,7 +180,9 @@ public static partial class ImGuiWidgets
 			string edited = slot;
 
 			bool changed = false;
-			if (ImGui.InputText("##slot", ref edited, 8u, flags))
+			bool slotEdited = ImGui.InputText("##slot", ref edited, 8u, flags);
+			ImGuiProbes.MarkItem(id, string.Create(CultureInfo.InvariantCulture, $"slot{i}"));
+			if (slotEdited)
 			{
 				string cleaned = NormalizePin(edited, 2, digitsOnly);
 				char? typed = cleaned.Length > 0 ? cleaned[^1] : null;

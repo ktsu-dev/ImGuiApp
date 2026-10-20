@@ -105,20 +105,33 @@ public sealed class TextAlignTests : WidgetTest
 			texture ??= CreateTestTexture();
 			ImGui.Button("Tall", new Vector2(80f, 60f));
 			ImGui.SameLine();
-			ImGuiWidgets.ImageCenteredV(texture.TextureId, new Vector2(32f, 32f));
-			Mark("centered-v");
-			ImGuiWidgets.ImageCenteredH(texture.TextureId, new Vector2(32f, 32f));
-			Mark("centered-h");
-			ImGuiWidgets.ImageCenteredVH(texture.TextureId, new Vector2(32f, 32f));
-			Mark("centered-vh");
-			ImGuiWidgets.ImageScaleTo(texture.TextureId, new Vector2(64f, 32f), new Vector2(32f, 32f));
-			Mark("scaled");
+
+			// Every image marks itself as "image", so each is kept apart by its own scope.
+			using (new ImGuiWidgets.ScopedId("centered-v"))
+			{
+				ImGuiWidgets.ImageCenteredV(texture.TextureId, new Vector2(32f, 32f));
+			}
+
+			using (new ImGuiWidgets.ScopedId("centered-h"))
+			{
+				ImGuiWidgets.ImageCenteredH(texture.TextureId, new Vector2(32f, 32f));
+			}
+
+			using (new ImGuiWidgets.ScopedId("centered-vh"))
+			{
+				ImGuiWidgets.ImageCenteredVH(texture.TextureId, new Vector2(32f, 32f));
+			}
+
+			using (new ImGuiWidgets.ScopedId("scaled"))
+			{
+				ImGuiWidgets.ImageScaleTo(texture.TextureId, new Vector2(64f, 32f), new Vector2(32f, 32f));
+			}
 		});
 
-		Assert.IsTrue(IsVisible("centered-v"), "A vertically centered image drew no item.");
-		Assert.IsTrue(IsVisible("centered-h"), "A horizontally centered image drew no item.");
-		Assert.IsTrue(IsVisible("centered-vh"), "A doubly centered image drew no item.");
-		Assert.IsTrue(IsVisible("scaled"), "A scaled image drew no item.");
+		Assert.IsTrue(IsVisible("centered-v/image"), "A vertically centered image drew no item.");
+		Assert.IsTrue(IsVisible("centered-h/image"), "A horizontally centered image drew no item.");
+		Assert.IsTrue(IsVisible("centered-vh/image"), "A doubly centered image drew no item.");
+		Assert.IsTrue(IsVisible("scaled/image"), "A scaled image drew no item.");
 	}
 
 	[TestMethod]
@@ -130,14 +143,50 @@ public sealed class TextAlignTests : WidgetTest
 		{
 			texture ??= CreateTestTexture();
 			ImGuiWidgets.ImageScaleTo(texture.TextureId, new Vector2(64f, 32f), new Vector2(64f, 64f));
-			Mark("scaled");
 		});
 
-		Rectangle rect = RectOf("scaled");
+		Rectangle rect = RectOf("image");
 
 		// A 2:1 image fitted into a square box is drawn half as tall as it is wide.
 		Assert.IsTrue(
 			rect.Width >= rect.Height,
 			$"A 2:1 image was drawn {rect.Width}x{rect.Height}, taller than it is wide.");
+	}
+
+	[TestMethod]
+	public void TextCenteredV_MarksWhatItDrew() => _ = AssertMarksItself(Sample, () => ImGuiWidgets.TextCenteredV(Sample));
+
+	[TestMethod]
+	public void TextCenteredH_MarksWhatItDrew() => _ = AssertMarksItself(Sample, () => ImGuiWidgets.TextCenteredH(Sample));
+
+	[TestMethod]
+	public void TextCenteredVH_MarksWhatItDrew() => _ = AssertMarksItself(Sample, () => ImGuiWidgets.TextCenteredVH(Sample));
+
+	[TestMethod]
+	public void ImageCenteredV_MarksItself()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		_ = AssertMarksItself("image", () => ImGuiWidgets.ImageCenteredV((texture ??= CreateTestTexture()).TextureId, new Vector2(32f, 32f)));
+	}
+
+	[TestMethod]
+	public void ImageCenteredH_MarksItself()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		_ = AssertMarksItself("image", () => ImGuiWidgets.ImageCenteredH((texture ??= CreateTestTexture()).TextureId, new Vector2(32f, 32f)));
+	}
+
+	[TestMethod]
+	public void ImageCenteredVH_MarksItself()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		_ = AssertMarksItself("image", () => ImGuiWidgets.ImageCenteredVH((texture ??= CreateTestTexture()).TextureId, new Vector2(32f, 32f)));
+	}
+
+	[TestMethod]
+	public void ImageScaleTo_MarksItself()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		_ = AssertMarksItself("image", () => ImGuiWidgets.ImageScaleTo((texture ??= CreateTestTexture()).TextureId, new Vector2(64f, 32f), new Vector2(32f, 32f)));
 	}
 }

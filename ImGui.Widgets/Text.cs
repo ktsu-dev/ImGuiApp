@@ -6,6 +6,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -38,7 +39,11 @@ public static partial class ImGuiWidgets
 		/// Displays the specified text.
 		/// </summary>
 		/// <param name="text">The text to display.</param>
-		public static void Show(string text) => ImGui.TextUnformatted(text);
+		public static void Show(string text)
+		{
+			ImGui.TextUnformatted(text);
+			ImGuiProbes.MarkItem(text);
+		}
 
 		/// <summary>
 		/// Displays the specified text centered within the available space.
@@ -50,6 +55,7 @@ public static partial class ImGuiWidgets
 			using (new Alignment.Center(textSize))
 			{
 				ImGui.TextUnformatted(text);
+				ImGuiProbes.MarkItem(text);
 			}
 		}
 
@@ -77,6 +83,7 @@ public static partial class ImGuiWidgets
 			using (new Alignment.CenterWithin(textSize, containerSize))
 			{
 				ImGui.TextUnformatted(text);
+				ImGuiProbes.MarkItem(text);
 			}
 		}
 

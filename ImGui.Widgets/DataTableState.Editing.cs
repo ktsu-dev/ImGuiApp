@@ -33,7 +33,7 @@ public static partial class ImGuiWidgets
 		/// <returns>True when an editor opened. False for a read-only cell, a toggle, or no active cell.</returns>
 		internal bool BeginEdit(char? firstCharacter = null)
 		{
-			if (EditSession is not null || ActiveCell is not DataTableCell cell || ViewPositionOf(cell.SourceIndex) < 0)
+			if (EditSession is not null || ActiveCell is not DataTableCell cell || ViewPositionOf(cell.SourceIndex) < 0 || !IsColumnVisible(cell.Column))
 			{
 				return false;
 			}
@@ -60,7 +60,7 @@ public static partial class ImGuiWidgets
 		/// <summary>Flips the active cell if it's an editable <see cref="bool"/>. Does nothing otherwise.</summary>
 		internal void Toggle()
 		{
-			if (EditSession is null && ActiveCell is DataTableCell cell && ViewPositionOf(cell.SourceIndex) >= 0)
+			if (EditSession is null && ActiveCell is DataTableCell cell && ViewPositionOf(cell.SourceIndex) >= 0 && IsColumnVisible(cell.Column))
 			{
 				Columns[cell.Column].Toggle(cell.SourceIndex, rows[cell.SourceIndex]);
 			}

@@ -1,0 +1,1 @@
+The backend-agnostic 3D rendering contract for the ktsu ImGui suite: IRenderer3D, Vertex3D and DrawState3D, which an application host's renderers implement, and Renderer3DHost, where a widget library finds the host's renderer without depending on the host. Deliberately tiny and dependency free.

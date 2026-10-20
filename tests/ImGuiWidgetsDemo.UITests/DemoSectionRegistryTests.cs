@@ -20,21 +20,46 @@ public sealed class DemoSectionRegistryTests
 {
 	private const BindingFlags AnyStatic = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
-	private static readonly string[] WidgetDemoOrder =
+	// Split in four, as the registry is, so no one initializer is coupled to every section class.
+	private static readonly string[] EarlyWidgetDemoOrder =
 	[
 		nameof(MobileFormControlsDemo), nameof(PropertyGridDemo), nameof(KnobDemo), nameof(ValueSliderDemo),
-		nameof(RadialProgressBarDemo), nameof(ColorIndicatorDemo), nameof(ComboDemo),
-		nameof(TextUtilitiesDemo), nameof(ScopedUtilitiesDemo), nameof(TreeViewDemo), nameof(ReorderableTreeDemo),
-		nameof(MobileDecoratorsDemo), nameof(MobileContainersDemo), nameof(HistogramAndHandleTrackDemo),
-		nameof(CurveTrackDemo), nameof(TimecodeFieldDemo), nameof(WaveformDemo), nameof(TransportScrubberDemo),
-		nameof(SpectrumAnalyzerDemo), nameof(FrameTimeGraphDemo), nameof(EnvelopeEditorDemo), nameof(ParametricEqDemo), nameof(StereoMetersDemo), nameof(ChannelFaderDemo), nameof(PianoKeyboardDemo), nameof(StepGridDemo), nameof(ColorWheelDemo), nameof(LinearColorEditDemo),
+		nameof(RadialProgressBarDemo), nameof(ColorIndicatorDemo), nameof(ComboDemo), nameof(TextUtilitiesDemo),
+		nameof(ScopedUtilitiesDemo), nameof(TreeViewDemo), nameof(ReorderableTreeDemo), nameof(MobileDecoratorsDemo),
+		nameof(MobileContainersDemo),
+	];
+
+	// The mobile and navigation sections.
+	private static readonly string[] MobileDemoOrder =
+	[
+		nameof(SwipeableListItemDemo), nameof(CarouselDemo), nameof(PickerWheelDemo), nameof(PullToRefreshDemo),
+		nameof(LongPressMenuDemo), nameof(ToastDemo), nameof(ActionSheetDemo), nameof(BottomSheetDemo),
+		nameof(NavigationDrawerDemo), nameof(SearchOverlayDemo), nameof(FloatingActionButtonDemo),
+		nameof(BottomNavigationBarDemo), nameof(AppBarDemo),
+	];
+
+	// The mobile polish sections.
+	private static readonly string[] MobilePolishDemoOrder =
+	[
+		nameof(AccordionDemo), nameof(InfiniteListDemo), nameof(StickyHeaderDemo), nameof(CoachMarkDemo),
+	];
+
+	// The sections after the mobile ones.
+	private static readonly string[] LateWidgetDemoOrder =
+	[
+		nameof(HistogramAndHandleTrackDemo), nameof(CurveTrackDemo), nameof(TimecodeFieldDemo), nameof(WaveformDemo),
+		nameof(TransportScrubberDemo), nameof(SpectrumAnalyzerDemo), nameof(FrameTimeGraphDemo),
+		nameof(EnvelopeEditorDemo), nameof(ParametricEqDemo), nameof(StereoMetersDemo), nameof(ChannelFaderDemo),
+		nameof(PianoKeyboardDemo), nameof(StepGridDemo), nameof(ColorWheelDemo), nameof(LinearColorEditDemo),
 		nameof(DiffViewDemo), nameof(ToolbarDemo),
 	];
 
+	private static readonly string[] WidgetDemoOrder = [.. EarlyWidgetDemoOrder, .. MobileDemoOrder, .. MobilePolishDemoOrder, .. LateWidgetDemoOrder];
+
 	private static readonly string[] AdvancedDemoOrder =
 	[
-		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(LevelsDemo), nameof(AssetBrowserDemo), nameof(GradientDemo), nameof(SwatchPaletteDemo), nameof(ImageCompareDemo), nameof(CropDemo), nameof(TransformBoxDemo), nameof(PixelLoupeDemo),
-		nameof(TabPanelDemo), nameof(SearchBoxDemo), nameof(GridDemo), nameof(VirtualTableDemo), nameof(DataTableDemo),
+		nameof(ImagesAndIconsDemo), nameof(ImageCanvasDemo), nameof(LevelsDemo), nameof(AssetBrowserDemo), nameof(GradientDemo), nameof(SwatchPaletteDemo), nameof(ImageCompareDemo), nameof(CropDemo), nameof(TransformBoxDemo), nameof(PixelLoupeDemo), nameof(Viewport3DDemo),
+		nameof(TabPanelDemo), nameof(SearchBoxDemo), nameof(GridDemo), nameof(VirtualTableDemo), nameof(LogViewDemo), nameof(DataTableDemo),
 		nameof(DividerDemo),
 	];
 

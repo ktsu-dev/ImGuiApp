@@ -152,6 +152,7 @@ internal sealed record GallerySettings
 		GalleryCategory.LayoutAndContainers => "Layout and containers",
 		GalleryCategory.Editors => "Editors",
 		GalleryCategory.DialogsAndWindows => "Dialogs and windows",
+		GalleryCategory.MobileAndNavigation => "Mobile and navigation",
 		_ => throw new ArgumentOutOfRangeException(nameof(category), category, null),
 	};
 }

@@ -65,6 +65,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`SpectrumAnalyzer`**: Log-frequency bars or a line over FFT magnitudes you supply, with peak hold, coloured in `DbMeter`'s zones; the bands and ballistics live in a caller-owned `SpectrumAnalyzerState`
 - **`EnvelopeEditor`**: A DAHDSR envelope drawn from the same `Envelope.LevelAt` a synth would call; drag breakpoints to retime segments and set the sustain level, drag tension handles to bend a segment, right-click one to straighten it
 - **`ParametricEq`**: An EQ response curve with a draggable node per band: drag for frequency and gain, wheel for Q. You plot your own response, or `EqResponse`'s RBJ cookbook biquads; `LogFrequencyAxis` is shared with `SpectrumAnalyzer`, so the two line up when stacked
+- **`LogView`**: The console panel of an engine or tool: a virtualized log of `LogEntry` rows with a text filter, a toggle per level, collapsing of repeated lines, auto-follow that stops when you scroll up and resumes at the bottom, multi-row selection and copy. The log is yours to append to; a caller-owned `LogViewState` indexes it incrementally, so new lines cost only their own filtering
 
 ### Image and Colour
 
@@ -92,6 +93,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 ### Image and Colour
 
+- **`Viewport3D`**: A 3D view drawn through the host's `IRenderer3D` into a render target the widget owns, under an orbit camera held in a caller-owned `Viewport3DState`. Drag to orbit, middle-drag or Shift+drag to pan, scroll to dolly. Your callback gets a `Viewport3DFrame` with the renderer, the target and the view-projection to draw with. On a backend without 3D it draws an empty frame of the same size and returns `false`
 - **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
 
 ### Layout and Containers
@@ -108,6 +110,29 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`OverlayHost`** / **`OverlayLayer`**: A z-ordered registry for retained overlays — toasts, sheets, drawers — that must paint above the rest of the frame in a predictable order
 - **`PropertyGrid`**: A two-column grid of labelled editors — name on the left, editor on the right — covering every scalar, vector, color, path and list type, with collapsible sections. See [Property Grid](#property-grid) below
 - **`ScopedId`** / **`ScopedDisable`**: RAII scopes for the ID stack and for disabling a block of UI
+
+### Mobile and Navigation
+
+- **`SwipeableListItem`**: A row that slides aside to reveal actions on either edge, snapping open or shut on release; a long swipe commits the outermost action without a second tap
+- **`Carousel`**: Pages dragged or flicked sideways one at a time, with clickable page dots. A quick flick turns the page even when the drag was short, and never skips a page
+- **`PickerWheel`**: A column of items on a turning cylinder, over strings or a stepped range of whole numbers, optionally wrapping. Flicks coast and settle on the nearest item; a click turns a neighbouring row to the middle
+- **`TimePicker`**: Hour and minute wheels, plus an AM/PM wheel on a twelve-hour clock, with an optional minute step
+- **`PullToRefresh`**: A scrolling region that refreshes when pulled down from its top, holding open with a spinner until the caller reports the refresh finished. Opened in a `using` block
+- **`LongPressMenu`**: A menu opened by holding something down, or right-clicking it; the target shrinks while held and bumps as the menu opens
+- **`Toaster`**: Snackbar messages queued one at a time at the bottom of the window, each with an optional action such as Undo. A message stays while hovered, and one with no duration stays until dismissed
+- **`ActionSheet`**: A stack of choices that slides up from the bottom with a separate Cancel button; destructive choices are drawn in the error colour, and a tap on the dimming or Escape cancels
+- **`BottomSheet`**: A panel dragged up from the bottom between peek, half and full heights. A flick carries it to the height it is heading for, and a drag below half the peek height closes it
+- **`NavigationDrawer`**: A panel that slides in from the left over a dimmed page, opened by a button or by swiping in from the window's edge, and closed by a tap or drag on the dimming
+- **`SearchOverlay`**: A full-window search page over a list of items, ranked by fuzzy match as you type, with arrow keys to move the highlight, Enter to choose and Escape or the back button to leave
+- **`FloatingActionButton`** / **`SpeedDial`**: A round button pinned to a corner of the window, and one that fans out labelled actions above it
+- **`BottomNavigationBar`**: A row of destinations at the foot of the window, with a sliding indicator under the chosen one. It can drive a `TabPanel` directly; set the panel's `ShowTabStrip` to false so the bar is its only tab strip
+- **`AppBar`**: A title bar with a leading button and trailing actions, which hides as the content scrolls down and returns as soon as it scrolls back up
+- **`ExpandableListItem`** / **`Accordion`**: A row that opens to show more beneath it, its height animating as it opens and closes. An `Accordion` keeps one open at a time unless `AllowMultiple` is set
+- **`InfiniteList`**: A virtualized list that asks the caller for the next page once scrolled within `Threshold` of its end, shows a loading row while the page arrives, and asks only once per page
+- **`StickyHeaderList`**: A scrolling list of sections whose current header stays pinned to the top, pushed up by the next one as it arrives. Opened in a `using` block, with `Section(title)` before each section's rows
+- **`Tutorial`**: A coach mark tour of `CoachMarkStep`s, each dimming the window around a widget the caller named with `Target` after drawing it and explaining it in a callout with Next and Skip
+
+The overlays (`Toaster`, `ActionSheet`, `BottomSheet`, `NavigationDrawer`, `SearchOverlay` and `Tutorial`) are objects created over an `OverlayHost`, which the caller renders once per frame after the rest of the window. Each keeps its arithmetic in an ImGui-free state class, as the widgets above do.
 
 ### Motion and Gestures
 
@@ -1049,6 +1074,36 @@ Pass a `SpectrumAnalyzerState`'s own `Axis` to put the EQ on exactly the analyze
 a frequency then lands at the same fraction of the width in both. Each node is probe-visible as
 `{label}/band{i}`.
 
+### Log View
+
+The log is a list you own and append to, oldest first; the widget never copies it. A
+`LogViewState` per view holds the filter, the shown levels, collapsing, following and the
+selection, and indexes the log incrementally: appending lines filters only those lines. Adapt your
+own logger to `LogEntry`; nothing here references a logging framework.
+
+```csharp
+List<LogEntry> log = [];
+ImGuiWidgets.LogViewState logState = new();
+ImGuiWidgets.LogViewOptions logOptions = new() { Size = new Vector2(0, 300) };
+
+log.Add(new LogEntry(LogViewLevel.Warning, "frame hitch: 41 ms", DateTime.Now, "render"));
+
+// Each frame.
+ImGuiWidgets.LogView("Console", log, logState, logOptions);
+```
+
+Rows are virtualized through `VirtualTable`, so a log of a hundred thousand lines costs only the
+rows on screen. The filter is the same `SearchBox` used elsewhere, matched against each message.
+While the list is hovered or focused, Ctrl+C copies the selection, Ctrl+A selects every row and
+Escape clears it; a right click offers Copy, Copy all visible and Clear selection. `OnCopy` takes
+the copied text instead of the clipboard.
+
+The index sees appends and a log that shrinks. A ring buffer that drops old lines as it adds new
+ones keeps its length, so tell the state with `EntriesRemovedFromStart(count)`; after editing
+entries in place, call `Invalidate()`. The widget is probe-visible as `{label}`, its filter as
+`{label}/filter`, its toggles by their captions (`{label}/Warn`, `{label}/Follow`) and its rows as
+`{label}/rows/[i]`.
+
 ### Step Grid
 
 The pattern is yours, row-major and edited in place: cell (row, step) is
@@ -1146,7 +1201,7 @@ These widgets are thin adapters that delegate to [`Hexa.NET.ImGui.Widgets`](http
 
 **Material Icons font**: `DatePicker` (Material `CalendarToday`, U+E935) and `FileTreeView` (`Home` U+E9B2, `Computer` U+E31E) render placeholder boxes unless a Material Icons font is registered in the atlas. `OpenFileDialog`, `SaveFileDialog` and `OpenFolderDialog` need the same font for their toolbar, breadcrumb and file-tree glyphs. Register it via `FontHelper.AddCustomFont(io, fontData, size, FontHelper.GetMaterialIconRanges(), mergeWithPrevious: true)` — not via `ImGuiAppConfig.Fonts`, which applies the Nerd Font mapping and leaves the glyphs unmapped. See `examples/ImGuiAppDemo` for a worked example. `YearPicker`, `RenameDialog`, `DialogMessageBox` and `ShowMessageBox` require no icon font.
 
-**Overlapping widgets**: Seven Hexa-backed widgets look like duplicates of an existing ktsu widget. Five are not: `HorizontalSplitter`/`VerticalSplitter` is a single drag handle where `DividerContainer` is a retained layout container; `IconTreeNode` is a single node with an icon glyph where `Tree.Branch` is a whole collapsible subtree with connector lines; `BufferingBar`/`Spinner` are determinate-linear and indeterminate where `RadialProgressBar`/`SkeletonLine` are determinate-radial and a shimmering placeholder; and the `TextCentered*`/`ImageCentered*` families each cover axes and overloads the other does not. Two do overlap: prefer **`Switch`** over `ToggleSwitch` (it marks itself for probes, animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, and draws its own label), and prefer **`Combo`** over `EnumCombo` unless you need Hexa's display-name overrides. Nothing is obsoleted — that is a breaking change — but new code should reach for the preferred one, and the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` shows the pairs side by side. The through-line: the ktsu originals call `ImGuiProbes.MarkItem`, so a UI test can address them by name; the Hexa adapters have to be marked by the test itself.
+**Overlapping widgets**: Seven Hexa-backed widgets look like duplicates of an existing ktsu widget. Five are not: `HorizontalSplitter`/`VerticalSplitter` is a single drag handle where `DividerContainer` is a retained layout container; `IconTreeNode` is a single node with an icon glyph where `Tree.Branch` is a whole collapsible subtree with connector lines; `BufferingBar`/`Spinner` are determinate-linear and indeterminate where `RadialProgressBar`/`SkeletonLine` are determinate-radial and a shimmering placeholder; and the `TextCentered*`/`ImageCentered*` families each cover axes and overloads the other does not. Two do overlap: prefer **`Switch`** over `ToggleSwitch` (it animates from `ImGui.GetIO().DeltaTime` rather than Hexa's animation clock, and draws its own label), and prefer **`Combo`** over `EnumCombo` unless you need Hexa's display-name overrides. Nothing is obsoleted — that is a breaking change — but new code should reach for the preferred one, and the "Hexa vs ktsu" comparison tab in `examples/ImGuiWidgetsDemo` shows the pairs side by side. Every widget in both families marks itself for UI probes, so a test addresses any of them by name: its label or id, or a kind name such as `spinner` or `image` for one that takes neither, separated with `ScopedId` when two share a window.
 
 **Deferred drawing**: The dialogs above and `DockedWindow` only draw when a per-frame pump runs. Call `ImGuiWidgets.DrawDeferred()` once per frame (at the end of `OnRender`) to draw every open dialog, message box and popup and advance Hexa's animation clock; call `ImGuiWidgets.DrawDeferredDocked()` instead if you use `DockedWindow` — it creates a dockspace over the main viewport and draws every registered docked window, and it already does everything `DrawDeferred()` does, so call only one of the two per frame (calling both draws every dialog twice). It *requires* `ImGuiConfigFlags.DockingEnable`, which `ImGuiAppConfig.EnableDocking = true` sets, and throws `InvalidOperationException` when the flag is off: ImGui only accepts that flag before the first frame, so the pump cannot turn it on itself, and Hexa's dockspace would silently do nothing without it. Showing a dialog before either pump has ever run throws `InvalidOperationException`, as does calling `Show()` on a dialog instance that is already shown (Hexa would register the same instance twice and permanently block input) — wait for the close callback, or create a new instance per showing. A pump is not needed just to keep animated widgets like `ToggleSwitch` correct — it self-ticks when unpumped — only to show dialogs or docked windows.
 

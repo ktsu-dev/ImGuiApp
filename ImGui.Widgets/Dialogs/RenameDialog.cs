@@ -79,10 +79,12 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
 			guard.Enter();
+			OpenDialogProbes.Add(this, nameof(RenameDialog), dialog.Name);
 
 			dialog.Show((_, result) =>
 			{
 				guard.Exit();
+				OpenDialogProbes.Remove(this);
 				onClosed(BuildRenameOutcome(
 					MapDialogResult(result, HexaDialogMessageBoxType.Ok),
 					dialog.DestinationPath,

@@ -6,6 +6,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
 using ktsu.ImGui.Probes;
+using ktsu.ImGui.Rendering;
 using ktsu.ImGui.Widgets;
 
 /// <summary>
