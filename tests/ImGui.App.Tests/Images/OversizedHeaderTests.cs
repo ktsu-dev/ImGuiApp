@@ -102,6 +102,26 @@ public class OversizedHeaderTests
 		Assert.IsTrue(exception.Message.Contains("too large", StringComparison.Ordinal), exception.Message);
 	}
 
+	[TestMethod]
+	[DataRow((byte)2, DisplayName = "Raw")]
+	[DataRow((byte)10, DisplayName = "Run-length encoded")]
+	public void Tga_HeaderWithNoPixelData_ThrowsBeforeAllocating(byte imageType)
+	{
+		// 16384x16384 at 32 bits passes the dimension check but would need a 1 GiB buffer.
+		byte[] file = new byte[18];
+		file[2] = imageType;
+		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(12), 16384);
+		BinaryPrimitives.WriteUInt16LittleEndian(file.AsSpan(14), 16384);
+		file[16] = 32;
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		InvalidImageDataException exception = Assert.ThrowsExactly<InvalidImageDataException>(() => ImageDecoder.Decode(file));
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.IsTrue(exception.Message.Contains("ended before", StringComparison.Ordinal), exception.Message);
+		Assert.IsLessThan(1024L * 1024, allocated, $"Allocated {allocated} bytes before rejecting the header.");
+	}
+
 	private static byte[] Png(int width, int height, byte colorType, byte bitDepth, byte[] imageData)
 	{
 		using MemoryStream file = new();

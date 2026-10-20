@@ -101,6 +101,8 @@ internal static class TgaDecoder
 		ValidateColorMappedImage(baseType, colorMap, pixelBits);
 
 		int bytesPerPixel = (pixelBits + 7) / 8;
+		EnsurePixelDataFits(data.Length - position, width, height, bytesPerPixel, runLengthEncoded);
+
 		ImagePixels image = new(width, height);
 		Span<byte> pixels = image.Pixels;
 
@@ -186,6 +188,31 @@ internal static class TgaDecoder
 		}
 
 		return image;
+	}
+
+	/// <summary>
+	/// Refuses a header whose declared image the remaining bytes cannot hold, before the RGBA buffer
+	/// is allocated. Without it an 18-byte header can force a buffer of about 2 GB to be allocated
+	/// only to fail on the first pixel.
+	/// </summary>
+	/// <param name="remaining">The bytes left after the header, ID field and colour map.</param>
+	/// <param name="width">The declared width.</param>
+	/// <param name="height">The declared height.</param>
+	/// <param name="bytesPerPixel">The bytes each stored pixel takes.</param>
+	/// <param name="runLengthEncoded">Whether the pixel data is run-length encoded.</param>
+	private static void EnsurePixelDataFits(int remaining, int width, int height, int bytesPerPixel, bool runLengthEncoded)
+	{
+		long pixelCount = (long)width * height;
+
+		// A run-length packet is a count byte and at least one pixel, and covers at most 128 pixels.
+		long minimumBytes = runLengthEncoded
+			? (pixelCount + 127) / 128 * (1 + bytesPerPixel)
+			: pixelCount * bytesPerPixel;
+
+		if (remaining < minimumBytes)
+		{
+			throw new InvalidImageDataException("TGA pixel data ended before the image was complete.");
+		}
 	}
 
 	private static bool AnyAlpha(ReadOnlySpan<byte> pixels)
