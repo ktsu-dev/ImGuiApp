@@ -2,6 +2,7 @@
 
 Changes since v3.75.0:
 
+- Clear main's quality gate: tolerances instead of exact float comparisons (#716) (matt-edmondson)
 - [minor] FilesystemBrowser: breadcrumbs, back/forward, places, search, sortable columns and thumbnails (#715) (matt-edmondson)
 - [minor] Two-finger touch scrolling, extension docs, and trim analysis for Widgets/Popups/Styler (#703) (matt-edmondson)
 - Merge main into claude/project-thread-m8gl9z (matt-edmondson)
