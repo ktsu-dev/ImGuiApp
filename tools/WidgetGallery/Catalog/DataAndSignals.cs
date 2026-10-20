@@ -13,6 +13,38 @@ using ktsu.ImGui.Widgets;
 /// <summary>The tiles in the DataAndSignals group.</summary>
 internal static class DataAndSignalsTiles
 {
+	private static GalleryEntry LogViewTile(GalleryCategory category)
+	{
+		DateTime origin = new(2026, 1, 1, 9, 41, 0, DateTimeKind.Unspecified);
+		(LogViewLevel Level, string Category, string Message)[] lines =
+		[
+			(LogViewLevel.Information, "io", "loaded textures/tile_017.png"),
+			(LogViewLevel.Debug, "render", "drew 412 batches"),
+			(LogViewLevel.Information, "audio", "mixed 12 voices"),
+			(LogViewLevel.Warning, "render", "frame hitch: 41 ms"),
+			(LogViewLevel.Warning, "render", "frame hitch: 41 ms"),
+			(LogViewLevel.Warning, "render", "frame hitch: 41 ms"),
+			(LogViewLevel.Information, "net", "packet 2201 acknowledged in 18 ms"),
+			(LogViewLevel.Error, "script", "NullReferenceException: Object reference not set\n   at Game.Update()"),
+			(LogViewLevel.Critical, "io", "save failed: disk full"),
+			(LogViewLevel.Information, "net", "reconnected to lobby"),
+		];
+		List<LogEntry> entries = [];
+
+		for (int i = 0; i < lines.Length; i++)
+		{
+			entries.Add(new LogEntry(lines[i].Level, lines[i].Message, origin.AddMilliseconds(i * 437), lines[i].Category));
+		}
+
+		ImGuiWidgets.LogViewState state = new() { CollapseRepeats = true };
+		state.Update(entries);
+		state.Click(3, shift: false, ctrl: false);
+		ImGuiWidgets.LogViewOptions options = new() { Size = new Vector2(560f, 190f) };
+
+		return new("LogView", category, [nameof(ImGuiWidgets.LogView), nameof(ImGuiWidgets.LogViewState)], _ =>
+			ImGuiWidgets.LogView("##log", entries, state, options));
+	}
+
 	/// <summary>Builds the group's entries.</summary>
 	/// <returns>The entries, in gallery order.</returns>
 	public static IEnumerable<GalleryEntry> Build()
@@ -142,6 +174,8 @@ internal static class DataAndSignalsTiles
 		int selectedEqBand = 2;
 		yield return new("ParametricEq", Category, [nameof(ImGuiWidgets.ParametricEq), nameof(ImGuiWidgets.EqResponse), nameof(ImGuiWidgets.LogFrequencyAxis)], _ =>
 			ImGuiWidgets.ParametricEq("##eq", eqBands, f => ImGuiWidgets.EqResponse.TotalDb(eqBands, f), eqAxis, ref selectedEqBand, new Vector2(360f, 150f)));
+
+		yield return LogViewTile(Category);
 
 		FlameGraphSample[] samples =
 		[

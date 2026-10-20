@@ -67,6 +67,7 @@ internal static class DemoSections
 		new(SearchBoxDemo.Show, SearchBoxDemo.ResetState),
 		new(GridDemo.Show, GridDemo.ResetState, GridDemo.Initialize),
 		new(VirtualTableDemo.Show, VirtualTableDemo.ResetState),
+		new(LogViewDemo.Show, LogViewDemo.ResetState),
 		new(DataTableDemo.Show, DataTableDemo.ResetState),
 		new(DividerDemo.Show, DividerDemo.ResetState, DividerDemo.Initialize),
 	];

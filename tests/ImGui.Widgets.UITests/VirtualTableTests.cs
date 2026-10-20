@@ -306,6 +306,34 @@ public sealed class VirtualTableTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void VirtualTable_RecordsItsScroll()
+	{
+		ImGuiWidgets.VirtualTableOptions small = new() { RowHeight = 20f, OuterSize = new System.Numerics.Vector2(300f, 200f) };
+		Start(() => ImGuiWidgets.VirtualTable(Label, 500, Columns, DrawRow, small));
+
+		System.Numerics.Vector2 center = CenterOf(Label);
+		Harness.Mouse.Wheel(center.X, center.Y, -10);
+		Step(2);
+
+		Assert.IsTrue(small.ScrollY > 0f, $"ScrollY is {small.ScrollY} after scrolling down.");
+		Assert.IsTrue(small.ScrollMaxY >= small.ScrollY, $"ScrollMaxY {small.ScrollMaxY} is below ScrollY {small.ScrollY}.");
+	}
+
+	[TestMethod]
+	public void VirtualTable_ScrollToBottomShowsTheLastRow()
+	{
+		ImGuiWidgets.VirtualTableOptions small = new() { RowHeight = 20f, OuterSize = new System.Numerics.Vector2(300f, 200f) };
+		Start(() => ImGuiWidgets.VirtualTable(Label, 500, Columns, DrawRow, small));
+
+		small.ScrollToBottom = true;
+		Step(2);
+
+		Assert.IsTrue(IsVisible(RowProbe(499)), "The last row is not in view after ScrollToBottom.");
+		Assert.IsFalse(small.ScrollToBottom, "ScrollToBottom was not reset once issued.");
+		Assert.AreEqual(small.ScrollMaxY, small.ScrollY, 0.5f);
+	}
+
+	[TestMethod]
 	public void VirtualTable_WithNoColumns_Throws() =>
 		Assert.ThrowsExactly<ArgumentException>(
 			() => ImGuiWidgets.VirtualTable(Label, 1, [], DrawRow));
