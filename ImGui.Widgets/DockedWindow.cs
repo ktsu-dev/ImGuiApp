@@ -2,6 +2,12 @@
 
 namespace ktsu.ImGui.Widgets;
 
+using System.Numerics;
+
+using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
+
 using HexaImWindow = Hexa.NET.ImGui.Widgets.ImWindow;
 
 public static partial class ImGuiWidgets
@@ -28,6 +34,9 @@ public static partial class ImGuiWidgets
 	/// <para>
 	/// Collapsing the window, or docking it as a tab behind another, keeps it registered. Only its
 	/// close button or <see cref="Close"/> unregisters it.
+	/// </para>
+	/// <para>
+	/// While it is drawn the window is marked for UI probes under its <see cref="Title"/>.
 	/// </para>
 	/// </remarks>
 	public abstract class DockedWindow
@@ -74,7 +83,12 @@ public static partial class ImGuiWidgets
 			public override string Name => owner.Title;
 
 			/// <inheritdoc/>
-			public override void DrawContent() => owner.DrawContent();
+			public override void DrawContent()
+			{
+				Vector2 position = ImGui.GetWindowPos();
+				ImGuiProbes.MarkRegion(owner.Title, position, position + ImGui.GetWindowSize());
+				owner.DrawContent();
+			}
 
 			/// <summary>
 			/// Vetoes every close but the close button's.

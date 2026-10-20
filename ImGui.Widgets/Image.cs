@@ -8,6 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Styler;
 
 /// <summary>
@@ -21,6 +22,7 @@ public static partial class ImGuiWidgets
 	/// <param name="textureId">The ID of the texture to display.</param>
 	/// <param name="size">The size of the image.</param>
 	/// <returns>True if the image is clicked; otherwise, false.</returns>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static bool Image(nint textureId, Vector2 size) => ImageImpl.Show(textureId, size, ImGuiVector4.One);
 
 	/// <summary>
@@ -30,6 +32,7 @@ public static partial class ImGuiWidgets
 	/// <param name="size">The size of the image.</param>
 	/// <param name="color">The color to apply to the image.</param>
 	/// <returns>True if the image is clicked; otherwise, false.</returns>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static bool Image(nint textureId, Vector2 size, ImGuiVector4 color) => ImageImpl.Show(textureId, size, color);
 
 	/// <summary>
@@ -38,6 +41,7 @@ public static partial class ImGuiWidgets
 	/// <param name="textureId">The ID of the texture to display.</param>
 	/// <param name="size">The size of the image.</param>
 	/// <returns>True if the image is clicked; otherwise, false.</returns>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static bool ImageCentered(nint textureId, Vector2 size) => ImageImpl.Centered(textureId, size, ImGuiVector4.One);
 
 	/// <summary>
@@ -47,6 +51,7 @@ public static partial class ImGuiWidgets
 	/// <param name="size">The size of the image.</param>
 	/// <param name="color">The color to apply to the image.</param>
 	/// <returns>True if the image is clicked; otherwise, false.</returns>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static bool ImageCentered(nint textureId, Vector2 size, ImGuiVector4 color) => ImageImpl.Centered(textureId, size, color);
 
 	/// <summary>
@@ -56,6 +61,7 @@ public static partial class ImGuiWidgets
 	/// <param name="size">The size of the image.</param>
 	/// <param name="containerSize">The size of the container.</param>
 	/// <returns>True if the image is clicked; otherwise, false.</returns>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static bool ImageCenteredWithin(nint textureId, Vector2 size, Vector2 containerSize) => ImageImpl.CenteredWithin(textureId, size, containerSize, ImGuiVector4.One);
 
 	/// <summary>
@@ -66,10 +72,14 @@ public static partial class ImGuiWidgets
 	/// <param name="containerSize">The size of the container.</param>
 	/// <param name="color">The color to apply to the image.</param>
 	/// <returns>True if the image is clicked; otherwise, false.</returns>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	public static bool ImageCenteredWithin(nint textureId, Vector2 size, Vector2 containerSize, ImGuiVector4 color) => ImageImpl.CenteredWithin(textureId, size, containerSize, color);
 
 	internal static class ImageImpl
 	{
+		/// <summary>The probe name every image widget marks itself under.</summary>
+		internal const string ImageProbeName = "image";
+
 		/// <summary>
 		/// Displays an image with the specified texture ID and size.
 		/// </summary>
@@ -101,6 +111,8 @@ public static partial class ImGuiWidgets
 					ImGui.Image(new ImTextureRef(texId: textureId), size);
 				}
 			}
+
+			ImGuiProbes.MarkItem(ImageProbeName);
 			return ImGui.IsItemClicked();
 		}
 

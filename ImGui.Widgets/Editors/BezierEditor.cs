@@ -4,6 +4,8 @@ namespace ktsu.ImGui.Widgets;
 
 using System.Numerics;
 
+using ktsu.ImGui.Probes;
+
 using HexaBezierCurve = Hexa.NET.Mathematics.BezierCurve;
 using HexaBezierWidget = Hexa.NET.ImGui.Widgets.Extras.ImGuiBezierWidget;
 
@@ -33,7 +35,10 @@ public static partial class ImGuiWidgets
 		// in a stack local, which the GC never relocates, so the pointer stays valid for the whole
 		// call. Do not copy this shape onto a ref parameter or a field; that is the unsafe case.
 		HexaBezierCurve curve = ToVendorBezier(points);
+		DrawListProbe.DrawnSpan span = DrawListProbe.Begin();
 		bool changed = HexaBezierWidget.Bezier(label, ref curve, size);
+		ImGuiProbes.MarkItem(label, "plot");
+		span.MarkSpan(label);
 		if (changed)
 		{
 			points = FromVendorBezier(curve);

@@ -222,4 +222,19 @@ public sealed class DockedWindowTests : WidgetTest
 
 		Assert.AreEqual(afterClose, window.DrawCount, "The close button did not close the window.");
 	}
+
+	[TestMethod]
+	public void DockedWindow_MarksItself()
+	{
+		window = new ProbeWindow("Inspector");
+		Start(ImGuiWidgets.DrawDeferredDocked, enableDocking: true);
+
+		window.Show();
+		Step(3);
+
+		Assert.IsTrue(IsVisible("Inspector"), "The docked window did not mark itself under its title.");
+		Rectangle frame = RectOf("Inspector");
+		Rectangle content = RectOf(Content);
+		Assert.IsTrue(content.MinX >= frame.MinX && content.MaxY <= frame.MaxY, $"The window's mark {frame} does not contain its content at {content}.");
+	}
 }

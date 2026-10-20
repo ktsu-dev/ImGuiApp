@@ -9,6 +9,8 @@ using System.IO;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 
+using ktsu.ImGui.App.Testing;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <see cref="ImGuiWidgets.RenameDialog"/> on its own.</summary>
@@ -133,5 +135,16 @@ public sealed class RenameDialogTests : WidgetTest
 		Assert.ThrowsExactly<InvalidOperationException>(
 			() => dialog.Show(outcomes.Add),
 			"Showing an already-open rename dialog was allowed.");
+	}
+
+	[TestMethod]
+	public void RenameDialog_IsVisibleWhileShown()
+	{
+		StartDialog();
+
+		Assert.IsTrue(IsVisible(nameof(ImGuiWidgets.RenameDialog)), "The rename dialog was not marked while it was shown.");
+		Rectangle window = RectOf(nameof(ImGuiWidgets.RenameDialog));
+		Rectangle button = FindDialogButtons()[0];
+		Assert.IsTrue(button.MinX >= window.MinX && button.MaxY <= window.MaxY, $"The rename dialog's mark {window} does not contain its button at {button}.");
 	}
 }

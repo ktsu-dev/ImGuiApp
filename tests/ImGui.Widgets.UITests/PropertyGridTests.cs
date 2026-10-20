@@ -412,4 +412,18 @@ public sealed class PropertyGridTests : WidgetTest
 
 		AssertSomethingWasDrawn("the property grid");
 	}
+
+	[TestMethod]
+	public void PropertyGrid_MarksItself()
+	{
+		Start(Draw);
+
+		Assert.IsTrue(IsVisible("Settings"), "The property grid did not mark itself.");
+		Assert.IsFalse(Harness.Probe.KnownNames.Any(name => name.EndsWith("Settings/Settings", StringComparison.Ordinal)), "The grid was marked inside its own scope.");
+		Assert.IsTrue(IsVisible("Settings/Enabled"), "The grid's rows lost their names.");
+
+		Rectangle grid = RectOf("Settings");
+		Rectangle row = RectOf("Settings/Enabled");
+		Assert.IsTrue(row.MinY >= grid.MinY && row.MaxY <= grid.MaxY, $"A row at {row} is outside the grid's mark {grid}.");
+	}
 }

@@ -238,4 +238,13 @@ public sealed class ColorWheelTests : WidgetTest
 
 		Assert.AreEqual(ImGuiMouseCursor.ResizeEw, Harness.MouseCursor, "Hovering the master slider did not show a horizontal resize cursor.");
 	}
+
+	[TestMethod]
+	public void LiftGammaGain_MarksItself()
+	{
+		Rectangle set = AssertMarksItself("Grade", DrawSet);
+		Rectangle gain = RectOf("Grade/Gain");
+
+		Assert.IsTrue(gain.MaxX <= set.MaxX && gain.MinX >= set.MinX, $"The Gain wheel at {gain} is outside the set's mark {set}.");
+	}
 }

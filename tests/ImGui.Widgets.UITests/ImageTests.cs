@@ -25,7 +25,6 @@ public sealed class ImageTests : WidgetTest
 	{
 		texture ??= CreateTestTexture();
 		clicked |= ImGuiWidgets.Image(texture.TextureId, Size);
-		Mark(Name);
 	}
 
 	[TestMethod]
@@ -76,7 +75,6 @@ public sealed class ImageTests : WidgetTest
 		{
 			texture ??= CreateTestTexture();
 			ImGuiWidgets.Image(texture.TextureId, Size, new ImGuiVector4(0f, 0f, 1f, 1f));
-			Mark(Name);
 		});
 
 		MoveAway();
@@ -143,5 +141,66 @@ public sealed class ImageTests : WidgetTest
 		Assert.IsTrue(
 			Math.Abs(imageCenter - (int)(container.X / 2f)) <= 20,
 			$"The image centered at {imageCenter} inside a {container.X}px container.");
+	}
+
+	[TestMethod]
+	public void Image_MarksItself()
+	{
+		Rectangle mark = AssertMarksItself(Name, DrawImage);
+
+		Assert.AreEqual((int)Size.X, mark.Width, $"The image marked {mark}, not the size it reserved.");
+	}
+
+	[TestMethod]
+	public void ImageCentered_MarksTheImageNotItsSpacer()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		Rectangle mark = AssertMarksItself(Name, () => ImGuiWidgets.ImageCentered((texture ??= CreateTestTexture()).TextureId, Size));
+
+		Assert.AreEqual((int)Size.X, mark.Width, $"The centered image marked {mark}, not the image.");
+	}
+
+	[TestMethod]
+	public void ImageCenteredWithin_MarksTheImageNotItsSpacer()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		Rectangle mark = AssertMarksItself(Name, () => ImGuiWidgets.ImageCenteredWithin((texture ??= CreateTestTexture()).TextureId, Size, new Vector2(300f, 200f)));
+
+		Assert.AreEqual((int)Size.X, mark.Width, $"The centered image marked {mark}, not the image.");
+	}
+
+	[TestMethod]
+	public void Images_InTheirOwnScopes_ResolveSeparately()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		Start(() =>
+		{
+			texture ??= CreateTestTexture();
+			using (new ImGuiWidgets.ScopedId("before"))
+			{
+				ImGuiWidgets.Image(texture.TextureId, Size);
+			}
+
+			using (new ImGuiWidgets.ScopedId("after"))
+			{
+				ImGuiWidgets.Image(texture.TextureId, Size);
+			}
+		});
+
+		Assert.IsTrue(RectOf("after/image").MinY > RectOf("before/image").MinY, "Two scoped images were not told apart.");
+	}
+
+	[TestMethod]
+	public void Images_WithoutScopes_AreAmbiguous()
+	{
+		ktsu.ImGui.App.ImGuiAppTextureInfo? texture = null;
+		Start(() =>
+		{
+			texture ??= CreateTestTexture();
+			ImGuiWidgets.Image(texture.TextureId, Size);
+			ImGuiWidgets.Image(texture.TextureId, Size);
+		});
+
+		Assert.IsTrue(Harness.Probe.IsAmbiguous(Name), "Two unscoped images resolved to one.");
 	}
 }

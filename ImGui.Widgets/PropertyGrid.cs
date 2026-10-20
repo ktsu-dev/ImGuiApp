@@ -203,6 +203,8 @@ public static partial class ImGuiWidgets
 		// flagged so that a section nested inside a collapsed one stays balanced on its own.
 		private int suppressDepth;
 
+		private readonly string id;
+
 		private bool disposed;
 
 		/// <summary>
@@ -221,6 +223,7 @@ public static partial class ImGuiWidgets
 		public PropertyGrid(string id, PropertyGridOptions? options)
 		{
 			Options = options ?? DefaultOptions;
+			this.id = id;
 			AdvanceTick();
 
 			ImGui.PushID(id);
@@ -269,7 +272,14 @@ public static partial class ImGuiWidgets
 				ImGui.EndTable();
 			}
 
+			// Marked once the grid's own scope is popped, so the name is the id and not id/id; the
+			// table is the last item while it drew.
 			ImGuiProbes.PopScope();
+			if (IsDrawing)
+			{
+				ImGuiProbes.MarkItem(id);
+			}
+
 			ImGui.PopID();
 		}
 

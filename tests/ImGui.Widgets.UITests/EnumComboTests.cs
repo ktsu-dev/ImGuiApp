@@ -48,11 +48,7 @@ public sealed class EnumComboTests : WidgetTest
 	[TestMethod]
 	public void EnumCombo_IsDrawn()
 	{
-		Start(() =>
-		{
-			Draw();
-			Mark(Label);
-		});
+		Start(Draw);
 
 		Assert.IsTrue(IsVisible(Label), "The enum combo drew no item.");
 		AssertSomethingWasDrawn("the enum combo");
@@ -63,11 +59,7 @@ public sealed class EnumComboTests : WidgetTest
 	{
 		value = Mode.Draft;
 
-		Start(() =>
-		{
-			Draw();
-			Mark(Label);
-		});
+		Start(Draw);
 
 		Click(Label);
 		ClickOption(2);
@@ -80,14 +72,13 @@ public sealed class EnumComboTests : WidgetTest
 	{
 		value = Mode.Review;
 
-		Start(() =>
-		{
-			Draw();
-			Mark(Label);
-		});
+		Start(Draw);
 
 		Step(5);
 
 		Assert.AreEqual(Mode.Review, value);
 	}
+
+	[TestMethod]
+	public void EnumCombo_MarksItself() => _ = AssertMarksItself(Label, Draw);
 }

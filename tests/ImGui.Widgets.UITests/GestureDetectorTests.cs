@@ -5,8 +5,6 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 using ktsu.ImGui.Widgets.Gestures;
 
@@ -36,10 +34,8 @@ public sealed class GestureDetectorTests : WidgetTest
 			resetRequested = false;
 		}
 
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		latest = ImGuiWidgets.GestureDetector(Label, Size);
 		seen |= latest.Gestures;
-		MarkSpan(Label, origin);
 	}
 
 	[TestMethod]
@@ -150,5 +146,13 @@ public sealed class GestureDetectorTests : WidgetTest
 
 		HarnessMouse.Up(0);
 		Step();
+	}
+
+	[TestMethod]
+	public void GestureDetector_MarksItself()
+	{
+		Rectangle mark = AssertMarksItself(Label, () => ImGuiWidgets.GestureDetector(Label, Size));
+
+		Assert.AreEqual((int)Size.X, mark.Width, $"The detector marked {mark}, not the region it claimed.");
 	}
 }

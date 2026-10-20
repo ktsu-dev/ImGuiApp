@@ -17,7 +17,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class IconTests : WidgetTest
 {
 	private const string Caption = "Documents";
-	private const string Name = "icon";
+	private const string Name = Caption;
 	private const float IconSize = 48f;
 
 	private ImGuiAppTextureInfo? texture;
@@ -29,7 +29,6 @@ public sealed class IconTests : WidgetTest
 	{
 		texture ??= CreateTestTexture();
 		ImGuiWidgets.Icon(Caption, texture.TextureId, IconSize, alignment);
-		Mark(Name);
 	}
 
 	private void DrawWithOptions()
@@ -46,8 +45,6 @@ public sealed class IconTests : WidgetTest
 				OnClick = () => clicks++,
 				OnDoubleClick = () => doubleClicks++,
 			});
-
-		Mark(Name);
 	}
 
 	[TestMethod]
@@ -133,7 +130,6 @@ public sealed class IconTests : WidgetTest
 				Hexa.NET.ImGui.ImGui.GetStyle().FramePadding);
 
 			ImGuiWidgets.Icon(Caption, texture.TextureId, IconSize, ImGuiWidgets.IconAlignment.Horizontal);
-			Mark(Name);
 		});
 
 		Rectangle rect = RectOf(Name);
@@ -162,4 +158,7 @@ public sealed class IconTests : WidgetTest
 
 		Assert.AreEqual(ImGuiMouseCursor.Arrow, Harness.MouseCursor, "An icon with nothing to click offered a hand.");
 	}
+
+	[TestMethod]
+	public void Icon_MarksItself() => _ = AssertMarksItself(Caption, Draw);
 }

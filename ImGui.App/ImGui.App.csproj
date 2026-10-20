@@ -38,6 +38,10 @@
     <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ImGui.Rendering\ImGui.Rendering.csproj" />
+  </ItemGroup>
+
   <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="Silk.NET" />
     <PackageReference Include="Silk.NET.Core" />

@@ -69,6 +69,7 @@ public static partial class ImGuiWidgets
 
 		HexaDialogManager.Draw();
 		HexaMessageBoxes.Draw();
+		OpenDialogProbes.MarkAll();
 		HexaPopupManager.Draw();
 		HexaAnimationManager.Tick();
 	}
@@ -105,6 +106,7 @@ public static partial class ImGuiWidgets
 		// WidgetManager.Draw internally calls DialogManager.Draw, MessageBoxes.Draw,
 		// PopupManager.Draw and AnimationManager.Tick, so this must not also call them.
 		HexaWidgetManager.Draw();
+		OpenDialogProbes.MarkAll();
 	}
 
 	/// <summary>

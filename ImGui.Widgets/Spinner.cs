@@ -8,6 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Color;
 
 using HexaSpinner = Hexa.NET.ImGui.Widgets.ImGuiSpinner;
@@ -23,6 +24,7 @@ public static partial class ImGuiWidgets
 	/// the right edge of the space it reserves. This insets the cursor by half the stroke before
 	/// drawing and reserves the stroke's width as well, so the whole arc is inside the item.
 	/// </remarks>
+	/// <para>Marked for UI probes as <c>spinner</c>; separate two in one window with <see cref="ScopedId"/>.</para>
 	/// <param name="radius">Radius of the spinner in pixels.</param>
 	/// <param name="thickness">Stroke thickness of the spinner arc in pixels.</param>
 	/// <param name="color">Color of the spinner arc.</param>
@@ -39,5 +41,6 @@ public static partial class ImGuiWidgets
 		ImGui.SetCursorScreenPos(origin);
 		ImGui.Dummy(new Vector2((radius * 2f) + (halfStroke * 2f), ((radius + framePaddingY) * 2f) + (insetY * 2f)));
 		ImGui.EndGroup();
+		ImGuiProbes.MarkItem("spinner");
 	}
 }

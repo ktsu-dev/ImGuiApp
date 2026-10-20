@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using HexaImageHelper = Hexa.NET.ImGui.Widgets.ImageHelper;
 
 public static partial class ImGuiWidgets
@@ -16,6 +18,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native Hexa.NET.ImGui image interop (ImTextureRef); the block is scoped to the draw call and retains no pointers.")]
 	public static void ImageCenteredV(nint textureId, Vector2 size)
 	{
@@ -23,6 +26,8 @@ public static partial class ImGuiWidgets
 		{
 			HexaImageHelper.ImageCenteredV(new ImTextureRef(texId: textureId), size);
 		}
+
+		ImGuiProbes.MarkItem(ImageImpl.ImageProbeName);
 	}
 
 	/// <summary>
@@ -30,6 +35,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native Hexa.NET.ImGui image interop (ImTextureRef); the block is scoped to the draw call and retains no pointers.")]
 	public static void ImageCenteredH(nint textureId, Vector2 size)
 	{
@@ -37,6 +43,8 @@ public static partial class ImGuiWidgets
 		{
 			HexaImageHelper.ImageCenteredH(new ImTextureRef(texId: textureId), size);
 		}
+
+		ImGuiProbes.MarkItem(ImageImpl.ImageProbeName);
 	}
 
 	/// <summary>
@@ -44,6 +52,7 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="size">Size to draw the image at, in pixels.</param>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native Hexa.NET.ImGui image interop (ImTextureRef); the block is scoped to the draw call and retains no pointers.")]
 	public static void ImageCenteredVH(nint textureId, Vector2 size)
 	{
@@ -51,6 +60,8 @@ public static partial class ImGuiWidgets
 		{
 			HexaImageHelper.ImageCenteredVH(new ImTextureRef(texId: textureId), size);
 		}
+
+		ImGuiProbes.MarkItem(ImageImpl.ImageProbeName);
 	}
 
 	/// <summary>
@@ -59,6 +70,7 @@ public static partial class ImGuiWidgets
 	/// <param name="textureId">Native texture handle to draw.</param>
 	/// <param name="imageSize">The image's natural size, in pixels.</param>
 	/// <param name="destinationSize">The box to fit the image inside, in pixels.</param>
+	/// <remarks>Marked for UI probes as <c>image</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native Hexa.NET.ImGui image interop (ImTextureRef); the block is scoped to the draw call and retains no pointers.")]
 	public static void ImageScaleTo(nint textureId, Vector2 imageSize, Vector2 destinationSize)
 	{
@@ -66,5 +78,7 @@ public static partial class ImGuiWidgets
 		{
 			HexaImageHelper.ImageScaleTo(new ImTextureRef(texId: textureId), imageSize, destinationSize);
 		}
+
+		ImGuiProbes.MarkItem(ImageImpl.ImageProbeName);
 	}
 }

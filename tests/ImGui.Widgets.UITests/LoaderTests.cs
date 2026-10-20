@@ -19,31 +19,20 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class LoaderTests : WidgetTest
 {
-	private const string Name = "loader";
 
 	[TestMethod]
 	public void Spinner_Draws()
 	{
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f));
-			MarkSpan(Name, origin);
-		});
+		Start(() => ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f)));
 
-		Assert.IsTrue(IsVisible(Name), "The spinner drew nothing.");
+		Assert.IsTrue(IsVisible("spinner"), "The spinner drew nothing.");
 		AssertSomethingWasDrawn("the spinner");
 	}
 
 	[TestMethod]
 	public void Spinner_Animates()
 	{
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f));
-			MarkSpan(Name, origin);
-		});
+		Start(() => ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f)));
 
 		MoveAway();
 		byte[] first = Snapshot();
@@ -63,9 +52,7 @@ public sealed class LoaderTests : WidgetTest
 			ImGui.SetCursorPosX(40f);
 			if (show)
 			{
-				Vector2 origin = ImGui.GetCursorScreenPos();
 				ImGuiWidgets.Spinner(16f, 6f, new Srgb(0.2f, 0.6f, 1f));
-				MarkSpan(Name, origin);
 			}
 			else
 			{
@@ -92,7 +79,7 @@ public sealed class LoaderTests : WidgetTest
 
 		// Anti-aliasing feathers a stroke by about a pixel either side of its geometry.
 		const int Feather = 1;
-		Rectangle item = RectOf(Name);
+		Rectangle item = RectOf("spinner");
 		Assert.IsTrue(minX >= item.MinX - Feather, $"The spinner drew at x={minX}, left of its item at x={item.MinX}.");
 		Assert.IsTrue(maxX <= item.MaxX + Feather, $"The spinner drew to x={maxX}, past its item's right edge at x={item.MaxX}.");
 	}
@@ -102,12 +89,7 @@ public sealed class LoaderTests : WidgetTest
 	{
 		float value = 0.2f;
 
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			ImGuiWidgets.BufferingBar(value, new Vector2(200f, 8f), new Srgb(0.1f, 0.1f, 0.1f), new Srgb(0.2f, 0.7f, 0.3f));
-			MarkSpan(Name, origin);
-		});
+		Start(() => ImGuiWidgets.BufferingBar(value, new Vector2(200f, 8f), new Srgb(0.1f, 0.1f, 0.1f), new Srgb(0.2f, 0.7f, 0.3f)));
 
 		MoveAway();
 		byte[] nearlyEmpty = Snapshot();
@@ -152,13 +134,9 @@ public sealed class LoaderTests : WidgetTest
 	[TestMethod]
 	public void SkeletonLine_ReservesALineAndShimmers()
 	{
-		Start(() =>
-		{
-			ImGuiWidgets.SkeletonLine("headline", 240f, 18f);
-			Mark(Name);
-		});
+		Start(() => ImGuiWidgets.SkeletonLine("headline", 240f, 18f));
 
-		Rectangle rect = RectOf(Name);
+		Rectangle rect = RectOf("headline");
 		byte[] first = Snapshot();
 		Step(20);
 
@@ -169,13 +147,9 @@ public sealed class LoaderTests : WidgetTest
 	[TestMethod]
 	public void SkeletonRect_ReservesTheSizeItIsGiven()
 	{
-		Start(() =>
-		{
-			ImGuiWidgets.SkeletonRect("thumbnail", new Vector2(120f, 90f));
-			Mark(Name);
-		});
+		Start(() => ImGuiWidgets.SkeletonRect("thumbnail", new Vector2(120f, 90f)));
 
-		Rectangle rect = RectOf(Name);
+		Rectangle rect = RectOf("thumbnail");
 
 		Assert.IsTrue(Math.Abs(rect.Width - 120) <= 2, $"The skeleton rectangle reserved {rect.Width}px of width rather than 120.");
 		Assert.IsTrue(Math.Abs(rect.Height - 90) <= 2, $"The skeleton rectangle reserved {rect.Height}px of height rather than 90.");
@@ -184,13 +158,9 @@ public sealed class LoaderTests : WidgetTest
 	[TestMethod]
 	public void SkeletonCircle_IsSquareAtItsDiameter()
 	{
-		Start(() =>
-		{
-			ImGuiWidgets.SkeletonCircle("avatar", 64f);
-			Mark(Name);
-		});
+		Start(() => ImGuiWidgets.SkeletonCircle("avatar", 64f));
 
-		Rectangle rect = RectOf(Name);
+		Rectangle rect = RectOf("avatar");
 
 		Assert.IsTrue(Math.Abs(rect.Width - 64) <= 2, $"The skeleton circle reserved {rect.Width}px rather than 64.");
 		Assert.AreEqual(rect.Width, rect.Height, "The skeleton circle's area was not square.");
@@ -261,5 +231,61 @@ public sealed class LoaderTests : WidgetTest
 		Step(2);
 
 		Assert.IsNull(BoundsOfDifference(blank), "A zero-sized skeleton drew something.");
+	}
+
+	[TestMethod]
+	public void Spinner_MarksItself() => _ = AssertMarksItself("spinner", () => ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f)));
+
+	[TestMethod]
+	public void BufferingBar_MarksItself() =>
+		_ = AssertMarksItself("buffering-bar", () => ImGuiWidgets.BufferingBar(0.5f, new Vector2(200f, 8f), new Srgb(0.1f, 0.1f, 0.1f), new Srgb(0.2f, 0.7f, 0.3f)));
+
+	[TestMethod]
+	public void SkeletonLine_MarksItself() => _ = AssertMarksItself("headline", () => ImGuiWidgets.SkeletonLine("headline", 240f, 18f));
+
+	[TestMethod]
+	public void SkeletonRect_MarksItself() => _ = AssertMarksItself("thumbnail", () => ImGuiWidgets.SkeletonRect("thumbnail", new Vector2(120f, 90f)));
+
+	[TestMethod]
+	public void SkeletonCircle_MarksItself() => _ = AssertMarksItself("avatar", () => ImGuiWidgets.SkeletonCircle("avatar", 64f));
+
+	[TestMethod]
+	public void SkeletonLine_OfNoSize_MarksNothing()
+	{
+		Start(() => ImGuiWidgets.SkeletonRect("nothing", new Vector2(0f, 20f)));
+
+		Assert.IsFalse(IsVisible("nothing"), "A skeleton with no width marked an item it never submitted.");
+	}
+
+	[TestMethod]
+	public void Spinners_InTheirOwnScopes_ResolveSeparately()
+	{
+		Start(() =>
+		{
+			using (new ImGuiWidgets.ScopedId("first"))
+			{
+				ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f));
+			}
+
+			using (new ImGuiWidgets.ScopedId("second"))
+			{
+				ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f));
+			}
+		});
+
+		Assert.IsTrue(RectOf("second/spinner").MinY > RectOf("first/spinner").MinY, "Two scoped spinners were not told apart.");
+	}
+
+	[TestMethod]
+	public void Spinners_WithoutScopes_AreAmbiguous()
+	{
+		Start(() =>
+		{
+			ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f));
+			ImGuiWidgets.Spinner(16f, 4f, new Srgb(0.2f, 0.6f, 1f));
+		});
+
+		Assert.IsTrue(IsVisible("spinner"), "The spinners were not marked.");
+		Assert.IsTrue(Harness.Probe.IsAmbiguous("spinner"), "Two unscoped spinners resolved to one.");
 	}
 }

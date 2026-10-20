@@ -49,8 +49,11 @@ public static partial class ImGuiWidgets
 
 			float height = ImGui.GetFrameHeight();
 			Vector2 buttonSize = new(height, height);
+			Vector2 origin = ImGui.GetCursorScreenPos();
 
-			if (RepeatButton("-##dec", buttonSize))
+			bool decremented = RepeatButton("-##dec", buttonSize);
+			ImGuiProbes.MarkItem(label, "decrement");
+			if (decremented)
 			{
 				int next = Math.Clamp(SafeAdd(value, -step), min, max);
 				if (next != value)
@@ -66,7 +69,7 @@ public static partial class ImGuiWidgets
 			float valueWidth = MathF.Max(ImGui.CalcTextSize(text).X + (ImGui.GetStyle().FramePadding.X * 2.0f), height * 1.5f);
 			Vector2 valueOrigin = ImGui.GetCursorScreenPos();
 			ImGui.InvisibleButton("##value", new Vector2(valueWidth, height));
-			ImGuiProbes.MarkItem("##value");
+			ImGuiProbes.MarkItem(label, "value");
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			Span<Vector4> colors = ImGui.GetStyle().Colors;
@@ -76,7 +79,10 @@ public static partial class ImGuiWidgets
 
 			ImGui.SameLine(0.0f, ImGui.GetStyle().ItemInnerSpacing.X);
 
-			if (RepeatButton("+##inc", buttonSize))
+			bool incremented = RepeatButton("+##inc", buttonSize);
+			ImGuiProbes.MarkItem(label, "increment");
+			Vector2 partsMax = ImGui.GetItemRectMax();
+			if (incremented)
 			{
 				int next = Math.Clamp(SafeAdd(value, step), min, max);
 				if (next != value)
@@ -94,22 +100,25 @@ public static partial class ImGuiWidgets
 				ImGui.TextUnformatted(visible);
 			}
 
+			ImGuiProbes.MarkRegion(label, origin, Vector2.Max(partsMax, ImGui.GetItemRectMax()));
 			ImGui.PopID();
 			return changed;
 		}
 
-		// A button that fires once on press, then repeatedly while held past the initial delay.
+		// A button that fires once on click, then repeatedly while held past the initial delay. Once a
+		// repeat has fired, the release that ends the hold is not another click: the value the user
+		// saw when they let go is the value they keep, as with Dear ImGui's own repeat buttons.
 		internal static bool RepeatButton(string label, Vector2 size)
 		{
 			uint id = ImGui.GetID(label);
-			bool fired = ImGui.Button(label, size);
+			bool repeatedBeforeThisFrame = HoldTime.TryGetValue(id, out float held) && held >= RepeatDelay;
+			bool fired = ImGui.Button(label, size) && !repeatedBeforeThisFrame;
 
 			if (ImGui.IsItemActive())
 			{
-				float prev = HoldTime.GetValueOrDefault(id, 0.0f);
-				float now = prev + ImGui.GetIO().DeltaTime;
+				float now = held + ImGui.GetIO().DeltaTime;
 				HoldTime[id] = now;
-				fired |= ShouldRepeat(prev, now, RepeatDelay, RepeatInterval);
+				fired |= ShouldRepeat(held, now, RepeatDelay, RepeatInterval);
 			}
 			else
 			{

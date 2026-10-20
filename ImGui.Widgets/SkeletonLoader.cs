@@ -11,6 +11,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 
 /// <summary>
 /// Provides custom ImGui widgets.
@@ -80,6 +81,7 @@ public static partial class ImGuiWidgets
 
 			Vector2 origin = ImGui.GetCursorScreenPos();
 			ImGui.Dummy(size);
+			ImGuiProbes.MarkItem(id);
 
 			Vector2 min = origin;
 			Vector2 max = origin + size;

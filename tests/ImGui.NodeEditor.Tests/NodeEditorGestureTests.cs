@@ -12,6 +12,7 @@ using Hexa.NET.ImNodes;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.NodeEditor;
 using ktsu.Keybinding.Core.Services;
 
@@ -41,6 +42,13 @@ public sealed class NodeEditorGestureTests : IDisposable
 		history = new NodeEditorHistory(engine);
 		renderer.History = history;
 	}
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
+	/// <summary>Saves the last frame of a failing test, before <see cref="Dispose"/> releases the harness.</summary>
+	[TestCleanup]
+	public void KeepFailureFrame() => TestContext.KeepFailureFrame(harness);
 
 	/// <inheritdoc/>
 	public void Dispose()

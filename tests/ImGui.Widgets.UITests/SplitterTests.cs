@@ -16,7 +16,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class SplitterTests : WidgetTest
 {
-	private const string Span = "splitter";
 
 	private float width = 200f;
 	private float height = 150f;
@@ -24,16 +23,12 @@ public sealed class SplitterTests : WidgetTest
 
 	private void DrawVertical()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		dragging |= ImGuiWidgets.VerticalSplitter("v-split", ref width, 80f, 400f, 200f);
-		MarkSpan(Span, origin);
 	}
 
 	private void DrawHorizontal()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		dragging |= ImGuiWidgets.HorizontalSplitter("h-split", ref height, 60f, 300f, 240f);
-		MarkSpan(Span, origin);
 	}
 
 	[TestMethod]
@@ -41,7 +36,7 @@ public sealed class SplitterTests : WidgetTest
 	{
 		Start(DrawVertical);
 
-		Assert.IsTrue(IsVisible(Span), "The splitter drew nothing.");
+		Assert.IsTrue(IsVisible("v-split"), "The splitter drew nothing.");
 		AssertSomethingWasDrawn("the vertical splitter");
 	}
 
@@ -51,7 +46,7 @@ public sealed class SplitterTests : WidgetTest
 		width = 200f;
 		Start(DrawVertical);
 
-		Vector2 center = CenterOf(Span);
+		Vector2 center = CenterOf("v-split");
 		Harness.Mouse.Drag(center.X, center.Y, center.X + 80f, center.Y);
 		Step();
 
@@ -65,7 +60,7 @@ public sealed class SplitterTests : WidgetTest
 		width = 200f;
 		Start(DrawVertical);
 
-		Vector2 center = CenterOf(Span);
+		Vector2 center = CenterOf("v-split");
 		Harness.Mouse.Drag(center.X, center.Y, center.X + 600f, center.Y);
 		Step();
 
@@ -78,7 +73,7 @@ public sealed class SplitterTests : WidgetTest
 		width = 200f;
 		Start(DrawVertical);
 
-		Vector2 center = CenterOf(Span);
+		Vector2 center = CenterOf("v-split");
 		Harness.Mouse.Drag(center.X, center.Y, center.X - 600f, center.Y);
 		Step();
 
@@ -108,7 +103,7 @@ public sealed class SplitterTests : WidgetTest
 		height = 150f;
 		Start(DrawHorizontal);
 
-		Vector2 center = CenterOf(Span);
+		Vector2 center = CenterOf("h-split");
 		Harness.Mouse.Drag(center.X, center.Y, center.X, center.Y + 60f);
 		Step();
 
@@ -122,7 +117,7 @@ public sealed class SplitterTests : WidgetTest
 		height = 150f;
 		Start(DrawHorizontal);
 
-		Vector2 center = CenterOf(Span);
+		Vector2 center = CenterOf("h-split");
 		Harness.Mouse.Drag(center.X, center.Y, center.X, center.Y - 60f);
 		Step();
 
@@ -135,7 +130,7 @@ public sealed class SplitterTests : WidgetTest
 		height = 150f;
 		Start(DrawHorizontal);
 
-		Vector2 center = CenterOf(Span);
+		Vector2 center = CenterOf("h-split");
 		Harness.Mouse.Drag(center.X, center.Y, center.X, center.Y + 600f);
 		Step();
 
@@ -159,7 +154,7 @@ public sealed class SplitterTests : WidgetTest
 	{
 		Start(DrawVertical);
 
-		Hover(Span);
+		Hover("v-split");
 
 		Assert.AreEqual(ImGuiMouseCursor.ResizeEw, Harness.MouseCursor, "Hovering a vertical splitter did not show a horizontal resize cursor.");
 	}
@@ -169,8 +164,14 @@ public sealed class SplitterTests : WidgetTest
 	{
 		Start(DrawHorizontal);
 
-		Hover(Span);
+		Hover("h-split");
 
 		Assert.AreEqual(ImGuiMouseCursor.ResizeNs, Harness.MouseCursor, "Hovering a horizontal splitter did not show a vertical resize cursor.");
 	}
+
+	[TestMethod]
+	public void VerticalSplitter_MarksItself() => _ = AssertMarksItself("v-split", DrawVertical);
+
+	[TestMethod]
+	public void HorizontalSplitter_MarksItself() => _ = AssertMarksItself("h-split", DrawHorizontal);
 }

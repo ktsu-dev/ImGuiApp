@@ -14,7 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class DbMeterTests : WidgetTest
 {
 	private const string Label = "output";
-	private const string Name = "meter";
+	private const string Name = Label;
 	private static readonly Vector2 Size = new(24f, 200f);
 
 	private float db = -20f;
@@ -23,7 +23,6 @@ public sealed class DbMeterTests : WidgetTest
 	private void Draw()
 	{
 		ImGuiWidgets.DbMeter(Label, db, Size, peakDb: peakDb);
-		Mark(Name);
 	}
 
 	[TestMethod]
@@ -92,4 +91,7 @@ public sealed class DbMeterTests : WidgetTest
 
 		Assert.IsTrue(IsVisible(Name), "A silent meter drew nothing at all, not even its frame.");
 	}
+
+	[TestMethod]
+	public void DbMeter_MarksItself() => _ = AssertMarksItself(Label, Draw);
 }

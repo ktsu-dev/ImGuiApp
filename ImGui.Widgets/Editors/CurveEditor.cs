@@ -9,6 +9,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 
 using HexaCurveContext = Hexa.NET.ImGui.Widgets.ImCurveEdit.CurveContext;
 using HexaCurveEdit = Hexa.NET.ImGui.Widgets.ImCurveEdit.ImCurveEdit;
@@ -36,14 +37,18 @@ public static partial class ImGuiWidgets
 		// whatever sits beside the editor. Keep room for a marker sitting on an edge.
 		Vector2 origin = ImGui.GetCursorScreenPos();
 		ImGui.PushClipRect(origin - new Vector2(PointMarkerMargin), origin + size + new Vector2(PointMarkerMargin), true);
+		bool changed;
 		try
 		{
-			return HexaCurveEdit.Edit(adapter, size, ImGui.GetID(id), null) != 0;
+			changed = HexaCurveEdit.Edit(adapter, size, ImGui.GetID(id), null) != 0;
 		}
 		finally
 		{
 			ImGui.PopClipRect();
 		}
+
+		ImGuiProbes.MarkRegion(id, origin, ImGui.GetItemRectMax());
+		return changed;
 	}
 
 	/// <summary>

@@ -126,6 +126,23 @@ public sealed class GradientEditorTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void GradientEditor_SelectionFollowsAStopTheCallerMovesPastItsNeighbour()
+	{
+		Start(Draw);
+
+		// Select red, then move it past green from outside the widget, as a position field or undo would (#582).
+		Click("Gradient/stop0");
+		stops[0] = stops[0] with { Position = 0.75f };
+		Step();
+		Harness.Keyboard.Press(ImGuiKey.Delete);
+		Step();
+
+		Assert.HasCount(2, stops);
+		Assert.IsFalse(stops.Any(stop => stop.Color == Red), "Delete removed a stop other than the selected one.");
+		Assert.IsTrue(stops.Any(stop => stop.Color == Green), "Delete removed green, the neighbour, instead of red.");
+	}
+
+	[TestMethod]
 	public void GradientEditor_DrawsTheSampledGradient()
 	{
 		Start(Draw);
@@ -137,6 +154,39 @@ public sealed class GradientEditorTests : WidgetTest
 
 		Assert.IsTrue(left.R > left.B, $"The left end is not red: R {left.R}, B {left.B}.");
 		Assert.IsTrue(right.B > right.R, $"The right end is not blue: R {right.R}, B {right.B}.");
+	}
+
+	[TestMethod]
+	public void GradientEditor_BarAndSwatchesDimInsideADisabledScope()
+	{
+		// Transparent stops show exactly what the bar and swatches are painted over, so the opaque
+		// stops must come out as that blended with their colour at the scope's alpha.
+		float disabledAlpha = 1f;
+		stops = [new(0f, Red.WithAlpha(0f)), new(1f, Red.WithAlpha(0f))];
+		Start(() =>
+		{
+			using (new ScopedDisable(true))
+			{
+				disabledAlpha = ImGui.GetStyle().Alpha;
+				Draw();
+			}
+		});
+
+		Rectangle bar = RectOf("Gradient/bar");
+		Rectangle swatch = RectOf("Gradient/stop0");
+		Vector2 inBar = new(bar.MinX + (bar.Width / 2), bar.MinY + (bar.Height / 4));
+		Vector2 inSwatch = new(swatch.MinX + (swatch.Width / 2), swatch.MaxY - 4);
+		CapturedFrame transparent = Harness.Capture();
+		Rgba32 underBar = transparent.GetPixel((int)inBar.X, (int)inBar.Y);
+		Rgba32 underSwatch = transparent.GetPixel((int)inSwatch.X, (int)inSwatch.Y);
+
+		stops = [new(0f, Red), new(1f, Red)];
+		Step();
+		CapturedFrame opaque = Harness.Capture();
+
+		Assert.IsLessThan(1f, disabledAlpha, "The disabled scope did not lower the style alpha.");
+		SwatchPaletteTests.AssertBlended(underBar, (255, 0, 0), disabledAlpha, opaque.GetPixel((int)inBar.X, (int)inBar.Y));
+		SwatchPaletteTests.AssertBlended(underSwatch, (255, 0, 0), disabledAlpha, opaque.GetPixel((int)inSwatch.X, (int)inSwatch.Y));
 	}
 
 	[TestMethod]
