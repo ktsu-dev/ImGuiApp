@@ -111,6 +111,61 @@ public sealed class FilesystemBrowserOverwriteTests
 	}
 
 	[TestMethod]
+	public void Escape_LeavesTheBrowserOpenAndChoosesNothing()
+	{
+		SaveAs("existing.txt");
+		Assert.IsTrue(IsVisible("filesystem-browser/overwrite/replace"));
+
+		harness.Keyboard.Press(ImGuiKey.Escape);
+		harness.Step(3);
+
+		Assert.IsNull(saved);
+		Assert.IsFalse(IsVisible("filesystem-browser/overwrite/replace"), "The question stayed open after Escape.");
+		Assert.IsTrue(IsVisible("filesystem-browser/confirm"), "Escape on the question closed the browser too.");
+	}
+
+	[TestMethod]
+	public void EscapeOnTheBrowserItself_StillClosesIt()
+	{
+		browser.FileSave("Save", file => saved = file.ToString(), "*.txt");
+		harness.Step(4);
+
+		harness.Keyboard.Press(ImGuiKey.Escape);
+		harness.Step(3);
+
+		Assert.IsNull(saved);
+		Assert.IsFalse(IsVisible("filesystem-browser/confirm"), "Escape with nothing above the browser should close it.");
+	}
+
+	/// <summary>
+	/// A folder separator typed into the save box used to throw on the frame it was typed, which
+	/// took the whole application down with it (#662).
+	/// </summary>
+	[TestMethod]
+	public void APathTypedAsTheName_IsReportedRatherThanThrown()
+	{
+		SaveAs("a/b.txt");
+
+		Assert.IsNull(saved, "A name holding a folder separator was chosen.");
+		Assert.IsTrue(IsVisible("prompt/OK"), "No Invalid File Name message appeared.");
+		Assert.IsTrue(IsVisible("filesystem-browser/confirm"), "The browser closed.");
+	}
+
+	[TestMethod]
+	public void EscapeOnTheInvalidNameMessage_LeavesTheBrowserOpen()
+	{
+		SaveAs("a/b.txt");
+		Assert.IsTrue(IsVisible("prompt/OK"));
+
+		harness.Keyboard.Press(ImGuiKey.Escape);
+		harness.Step(3);
+
+		Assert.IsNull(saved);
+		Assert.IsFalse(IsVisible("prompt/OK"), "The message stayed open after Escape.");
+		Assert.IsTrue(IsVisible("filesystem-browser/confirm"), "Escape on the message closed the browser too.");
+	}
+
+	[TestMethod]
 	public void SavingANewFile_DoesNotAsk()
 	{
 		SaveAs("new.txt");
