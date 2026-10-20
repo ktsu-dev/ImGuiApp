@@ -105,6 +105,9 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Rendering/IRenderer3D.cs` - The optional 3D extension a backend may implement, in its own package so `ImGui.Widgets` can use it; see [Backend-agnostic 3D](#backend-agnostic-3d)
 - `ImGui.Rendering/Renderer3DHost.cs` - Where a library finds the host's 3D renderer; `ImGui.App/Renderer3DRegistration.cs` installs the host's resolver from a module initializer
 - `ImGui.Widgets/Viewport3D.cs` - `ImGuiWidgets.Viewport3D`, the widget that owns a render target and drives a `Viewport3DState` camera; see [Viewport3D](#viewport3d)
+- `ImGui.App/ImGuiController/ImGuiContextHost.cs` - The ImGui context and frame cycle with no window or graphics API, shared by the desktop controller and the headless harness; see [Context host and renderers](#context-host-and-renderers)
+- `ImGui.App/ImGuiController/OpenGLRenderer.cs` - The OpenGL `IRendererBackend`/`IRenderer3D`: shader, buffers, textures, draw-data rendering
+- `ImGui.App/ImGuiController/ImGuiController.cs` - The Silk.NET window glue: input, size, cursor and input method around a host and an `OpenGLRenderer`
 - `ImGui.App/ImGuiController/GLRenderer3D.cs` - The OpenGL implementation: framebuffer targets, a second shader program, and full state restore
 - `ImGui.App.Testing/SoftwareRasterizer.ThreeD.cs` - The 3D fill: near clipping, depth, perspective-correct interpolation
 - `ImGui.App.Testing/DepthBuffer.cs` - The depth attachment, 0 near to 1 far, matching `Matrix4x4.CreatePerspectiveFieldOfView`
@@ -237,7 +240,7 @@ of them (measured in ImageGui, ktsu-dev/ImageGui#253). Drawing with one that was
 native code, and `ImGui.NodeEditor` needs `ImNodes`.
 
 `AutoDiscoverExtensions = false` still means none and overrides `Extensions`; `EffectiveExtensions`
-combines the two, and both `ImGuiController` and `ImGuiAppHarness` honour it, so a UI test sets up
+combines the two, and `ImGuiContextHost`, which both `ImGuiController` and `ImGuiAppHarness` run, honours it, so a UI test sets up
 what the application does. Detection is cached per extension, so a later `Initialize` asking for one
 that an earlier call left out still finds it. Hexa's ImNodes and ImPlot bindings have no
 `BeginFrame`, so their `Is...Available` is answered by `CreateContext`.
@@ -398,12 +401,12 @@ Four things to know before changing any of it:
   backend has to keep and a test can pin it. A resize keeps the id, so a caller need not rebind.
 
 **The OpenGL backend implements it** (`ImGui.App/ImGuiController/GLRenderer3D.cs`, reached
-through `ImGuiController`), so `TryGetRenderer3D` answers `true` in a desktop application as well
+through `OpenGLRenderer`), so `TryGetRenderer3D` answers `true` in a desktop application as well
 as under a headless harness. Three things to know before changing it:
 
 - **A target's handle is its colour texture's name**, and `GetTargetTexture` returns it unchanged.
   That is the only value guaranteed not to collide with a live `CreateTexture` name, which is what
-  makes both delete guards sound: `ImGuiController.DeleteTexture` refuses a target, and
+  makes both delete guards sound: `OpenGLRenderer.DeleteTexture` refuses a target, and
   `DeleteRenderTarget` refuses anything that is not one, freeing nothing either way.
 - **The shader adapts OpenGL to the software renderer's conventions, not the reverse.** It maps
   clip z from `[0, w]` (what `Matrix4x4.CreatePerspectiveFieldOfView` produces) onto OpenGL's
@@ -445,6 +448,31 @@ through the software renderer. Four things to know:
   because the DPI scale reaches a frame through the font, so this only matters on a backend that
   reports a framebuffer scale. A scale change changes the pixel size, which the bucket check picks up.
 
+### Context host and renderers
+
+Running ImGui on the desktop is three pieces in `ImGui.App/ImGuiController/` (#313):
+
+- **`ImGuiContextHost`** owns the context: creating it, the backend flags (`RendererHasTextures`,
+  `RendererHasVtxOffset`, `HasMouseCursors`), the extensions, `NewFrame`/`EndFrame`, and texture
+  reconciliation. It knows the renderer only through an `ITextureUploader`, because since
+  `RendererHasTextures` ImGui owns the atlas pixels and a renderer owns only texture handles.
+- **`OpenGLRenderer`** draws: it is the `IRendererBackend` and `IRenderer3D` that `ImGuiApp.renderer`
+  holds, and its `TextureUploader` writes ImGui's dirty rectangles straight into GL textures. Its
+  OpenGL calls go through the internal `IGLRenderer` seam, as `GLRenderer3D`'s go through `IGL3D`:
+  `GLRendererWrapper` forwards to a live context and is excluded from coverage, and
+  `OpenGLRendererTests` drive the renderer with real frames from an `ImGuiContextHost` over
+  `FakeGLRenderer`, which models the state it saves and restores.
+- **`ImGuiController`** is what is left: the Silk.NET window's input, size, cursor and input method,
+  wired around the other two.
+
+`ImGuiAppHarness` runs the same host with `BackendTextureUploader` over the `SoftwareRenderer`, which
+re-uploads a whole texture where GL writes a rectangle. That is why `ImGui.App` grants
+`ktsu.ImGui.App.Testing` `InternalsVisibleTo` and sets `PolyUseEmbeddedAttribute`: without it the two
+assemblies' Polyfill copies make every polyfilled call ambiguous. Before the split the harness kept a
+copy of the context setup, which had already drifted (it never declared `RendererHasVtxOffset`); a
+change to how the context is set up now reaches the application and every UI suite at once. The
+iOS head still sets its context up itself.
+
 ### Mouse cursors
 
 Dear ImGui only records which cursor a frame wants; a platform backend has to show it. Until
@@ -456,7 +484,7 @@ It writes only when the cursor changes, honours `ImGuiConfigFlags.NoMouseCursorC
 `io.MouseDrawCursor`, and leaves a pointer the application has captured (`CursorMode.Disabled` or
 `Raw`) alone.
 
-The headless context declares the same flag, and `ImGuiAppHarness.MouseCursor` reports what the
+The harness runs the same `ImGuiContextHost`, so it declares the same flag, and `ImGuiAppHarness.MouseCursor` reports what the
 last frame asked for, so a widget's cursor is a UI-test assertion like anything else.
 
 Widgets choose by what a press does, through `WidgetCursor.OnLastItem`: `Hand` for a custom click

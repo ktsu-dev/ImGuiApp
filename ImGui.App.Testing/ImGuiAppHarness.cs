@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
+using ktsu.ImGui.App.ImGuiController;
 using ktsu.ImGui.Probes;
 
 /// <summary>
@@ -26,7 +27,7 @@ public sealed class ImGuiAppHarness : IDisposable
 	private static ImGuiAppHarness? live;
 
 	private readonly ImGuiAppConfig config;
-	private readonly HeadlessImGuiContext context;
+	private readonly ImGuiContextHost context;
 	private bool disposed;
 
 	private ImGuiAppHarness(ImGuiAppConfig config, HarnessOptions options)
@@ -34,7 +35,12 @@ public sealed class ImGuiAppHarness : IDisposable
 		this.config = config;
 		Options = options;
 		Renderer = new SoftwareRenderer(options.Width, options.Height);
-		context = new HeadlessImGuiContext(options.Width, options.Height, options.DpiScale, Renderer);
+
+		// The same context host the desktop controller runs, so the context is set up, framed and
+		// torn down exactly as the application's is. Only what stands behind it differs: the
+		// software renderer instead of OpenGL, and injected input instead of a window's.
+		context = new ImGuiContextHost(new BackendTextureUploader(Renderer), config.EffectiveExtensions);
+		DisableLayoutPersistence();
 		Mouse = new HarnessMouse(this);
 		Keyboard = new HarnessKeyboard(this);
 	}
@@ -134,15 +140,6 @@ public sealed class ImGuiAppHarness : IDisposable
 		// each frame.
 		Hexa.NET.ImGui.ImGui.GetIO().ConfigMacOSXBehaviors = false;
 
-		// ImGuiController does this for a windowed application, and the harness replaces the
-		// controller. Without it ImGuizmo, ImNodes and ImPlot never learn the ImGui context and an
-		// application that draws with any of them faults inside native code rather than failing as
-		// a test. This is reflection-based detection, so it costs nothing when none are referenced,
-		// and it honours the configuration's choice of extensions as the controller does.
-		ImGuiExtensionManager.Initialize(config.AutoDiscoverExtensions ? config.Extensions : ImGuiAppExtensions.None);
-		ImGuiExtensionManager.SetImGuiContext();
-		ImGuiExtensionManager.CreateExtensionContexts();
-
 		live = harness;
 
 		// Items are recorded against the frame being rendered, which is FrameCount until the step
@@ -176,10 +173,7 @@ public sealed class ImGuiAppHarness : IDisposable
 				// target, so the last frame alone decides what a read sees. This has to precede
 				// NewFrame, which reuses the draw data the discarded frame points at.
 				Renderer.BeginDeferredFrame(Options.ClearColor);
-				context.BeginFrame(Options.FrameDelta);
-
-				// Must follow NewFrame, as it does in ImGuiController.
-				ImGuiExtensionManager.BeginFrame();
+				context.NewFrame(new System.Numerics.Vector2(Options.Width, Options.Height), new System.Numerics.Vector2(Options.DpiScale), Options.FrameDelta);
 
 				// Anything marshaled onto the UI thread has to run, or work queued from a worker
 				// never lands. An application that uploads a texture through the invoker would
@@ -189,7 +183,7 @@ public sealed class ImGuiAppHarness : IDisposable
 
 				ImGuiApp.RenderFrameContents(config, Options.FrameDelta);
 
-				context.EndFrameDeferred();
+				Renderer.DeferDrawData(context.EndFrame());
 				MouseCursor = ImGui.GetMouseCursor();
 				ImePlacement = ImeCaret.Requested;
 			}
@@ -314,6 +308,19 @@ public sealed class ImGuiAppHarness : IDisposable
 			: new CapturedFrame(Renderer.Target);
 	}
 
+	/// <summary>
+	/// Stops ImGui reading or writing layout and log files. Layout persisted between runs would
+	/// make a test depend on whatever ran before it, which is the opposite of what this harness is
+	/// for.
+	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui exposes the ini and log filenames as raw pointers, and clearing them is the only way to stop layout being persisted between test runs.")]
+	private static unsafe void DisableLayoutPersistence()
+	{
+		ImGuiIOPtr io = ImGui.GetIO();
+		io.IniFilename = null;
+		io.LogFilename = null;
+	}
+
 	/// <inheritdoc/>
 	public void Dispose()
 	{
@@ -326,13 +333,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		// context, and textures are about to be released underneath it.
 		Renderer.DiscardDeferredFrame();
 
-		// Extension teardown reaches into ImGui's context, so it has to happen while that context
-		// is still alive. Destroying the ImPlot context after ImGui's has gone faults in native code.
-		if (ReferenceEquals(live, this))
-		{
-			ImGuiExtensionManager.Cleanup();
-		}
-
+		// Releases the textures, the extensions and the context, in the order they depend on.
 		context.Dispose();
 		Renderer.Dispose();
 

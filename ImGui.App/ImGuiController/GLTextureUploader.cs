@@ -18,6 +18,8 @@ using Silk.NET.OpenGL;
 /// <param name="gl">The OpenGL context to issue calls against.</param>
 internal sealed class GLTextureUploader(IGL gl) : ITextureUploader
 {
+	private const int BytesPerPixel = 4;
+
 	private readonly IGL gl = gl;
 
 	/// <inheritdoc/>
@@ -38,15 +40,16 @@ internal sealed class GLTextureUploader(IGL gl) : ITextureUploader
 
 	/// <inheritdoc/>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Required for native OpenGL interop; the pixel pointer belongs to ImGui and is read within the upload call only.")]
-	public unsafe void Update(nint textureId, int sourceRowPixels, ImTextureRect rect, nint pixels)
+	public unsafe void Update(nint textureId, int width, int height, ImTextureRect rect, nint pixels)
 	{
 		gl.BindTexture(GLEnum.Texture2D, (uint)textureId);
+		byte* rectangle = (byte*)pixels + ((((long)rect.Y * width) + rect.X) * BytesPerPixel);
 
 		// The rectangle is read out of the middle of a full-atlas buffer, so the unpack stride has
 		// to describe that buffer rather than the rectangle. Leaving it set would misread every
 		// later upload, so it goes back to 0 straight after.
-		gl.PixelStore(GLEnum.UnpackRowLength, sourceRowPixels);
-		gl.TexSubImage2D(GLEnum.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, GLEnum.Rgba, GLEnum.UnsignedByte, (void*)pixels);
+		gl.PixelStore(GLEnum.UnpackRowLength, width);
+		gl.TexSubImage2D(GLEnum.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, GLEnum.Rgba, GLEnum.UnsignedByte, rectangle);
 		gl.PixelStore(GLEnum.UnpackRowLength, 0);
 		gl.CheckError("Update ImGui texture");
 	}

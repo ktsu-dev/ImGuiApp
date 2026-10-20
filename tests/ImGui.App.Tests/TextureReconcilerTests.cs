@@ -26,7 +26,7 @@ public sealed unsafe class TextureReconcilerTests
 
 		public nint NextId { get; set; } = 7;
 
-		public List<(nint TextureId, int SourceRowPixels, ImTextureRect Rect)> Updates { get; } = [];
+		public List<(nint TextureId, int Width, int Height, ImTextureRect Rect, nint Pixels)> Updates { get; } = [];
 
 		public nint Create(int width, int height, nint pixels)
 		{
@@ -34,10 +34,10 @@ public sealed unsafe class TextureReconcilerTests
 			return NextId;
 		}
 
-		public void Update(nint textureId, int sourceRowPixels, ImTextureRect rect, nint pixels)
+		public void Update(nint textureId, int width, int height, ImTextureRect rect, nint pixels)
 		{
 			Calls.Add($"update {rect.W}x{rect.H}@{rect.X},{rect.Y}");
-			Updates.Add((textureId, sourceRowPixels, rect));
+			Updates.Add((textureId, width, height, rect, pixels));
 		}
 
 		public void Destroy(nint textureId)
@@ -108,7 +108,9 @@ public sealed unsafe class TextureReconcilerTests
 		reconciler.Reconcile(texture.Ptr);
 
 		Assert.HasCount(2, uploader.Updates);
-		Assert.AreEqual(64, uploader.Updates[0].SourceRowPixels, "The stride must describe the whole atlas, not the rectangle, or the rows read at the wrong offset.");
+		Assert.AreEqual(64, uploader.Updates[0].Width, "The stride must describe the whole atlas, not the rectangle, or the rows read at the wrong offset.");
+		Assert.AreEqual(32, uploader.Updates[0].Height);
+		Assert.AreEqual((nint)texture.Ptr.GetPixels(), uploader.Updates[1].Pixels, "Every rectangle is described against the whole buffer, so an uploader that stores whole images can re-upload it.");
 		Assert.AreEqual(4, uploader.Updates[0].Rect.W);
 		Assert.AreEqual(11, uploader.Updates[1].Rect.Y);
 		Assert.AreEqual(ImTextureStatus.Ok, texture.Ptr.Status);

@@ -96,8 +96,8 @@ measurements worth asserting on, and it is covered by a test.
 
 ## Extensions and Docking
 
-The harness stands in for `ImGuiController`, so it performs the same setup that a windowed
-application gets: ImGuizmo, ImNodes and ImPlot are detected, handed the ImGui context, given their
+The harness runs the same context host as a windowed application, with the software renderer in
+place of OpenGL and injected input in place of a window's, so it performs the same setup: ImGuizmo, ImNodes and ImPlot are detected, handed the ImGui context, given their
 own contexts, and ticked once per frame. An application that draws with any of them renders under
 the harness rather than faulting inside native code.
 

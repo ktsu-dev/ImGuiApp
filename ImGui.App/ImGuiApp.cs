@@ -35,8 +35,8 @@ public static partial class ImGuiApp
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
 	internal static ImGuiController.ImGuiController? controller;
 
-	// The GPU texture/draw backend. Registered by the backend itself as soon as its GL
-	// context is ready (early in the ImGuiController constructor), so texture operations
+	// The GPU texture/draw backend (an OpenGLRenderer on the desktop). Registered by the
+	// controller as soon as the renderer exists (early in the ImGuiController constructor), so texture operations
 	// invoked from OnStart — which runs mid-construction, before `controller` is assigned —
 	// have a usable backend. See ImGuiController..ctor.
 	[SuppressMessage("Major Code Smell", "S2223:Non-constant static fields should not be visible", Justification = "Mutable static app-lifecycle state; single-instance by design, accessed via InternalsVisibleTo.")]
@@ -2819,7 +2819,7 @@ public static partial class ImGuiApp
 	/// <remarks>
 	/// This compares the <see cref="GL"/> the textures were uploaded against, not the ImGui context.
 	/// <see cref="ImGui.GetCurrentContext"/> returns the ImGui context pointer, which is created once
-	/// in <c>ImGuiController.Init</c> and never replaced, so comparing it could never report a change
+	/// in <c>ImGuiContextHost</c> and never replaced, so comparing it could never report a change
 	/// and the reload below was unreachable.
 	/// <para>
 	/// This detects a GL the application itself replaced. A driver-side reset that invalidates the

@@ -23,13 +23,14 @@ internal interface ITextureUploader
 
 	/// <summary>Uploads one rectangle into an existing texture.</summary>
 	/// <param name="textureId">The texture to write into.</param>
-	/// <param name="sourceRowPixels">
-	/// Row stride of the source buffer in pixels. The rectangle is read out of the middle of a
-	/// full-atlas buffer, so this is the atlas width rather than the rectangle width.
+	/// <param name="width">Width of the whole texture in pixels, which is the source buffer's row stride.</param>
+	/// <param name="height">Height of the whole texture in pixels.</param>
+	/// <param name="rect">The rectangle that changed.</param>
+	/// <param name="pixels">
+	/// The whole texture's RGBA32 pixel buffer, tightly packed. A renderer that can write a
+	/// rectangle reads it out of the middle of this; one that stores whole images re-uploads it all.
 	/// </param>
-	/// <param name="rect">The destination rectangle.</param>
-	/// <param name="pixels">Pointer to the rectangle's top-left pixel within the source buffer.</param>
-	public void Update(nint textureId, int sourceRowPixels, ImTextureRect rect, nint pixels);
+	public void Update(nint textureId, int width, int height, ImTextureRect rect, nint pixels);
 
 	/// <summary>Releases a texture.</summary>
 	/// <param name="textureId">The texture to release.</param>

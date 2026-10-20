@@ -4,10 +4,19 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ktsu.ImGui.App.Tests" />
+    <!-- The headless harness drives the same ImGuiContextHost the desktop controller does (#313),
+         rather than keeping a copy of the context setup that could drift from it. -->
+    <InternalsVisibleTo Include="ktsu.ImGui.App.Testing" />
   </ItemGroup>
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- ktsu.ImGui.App.Testing references Polyfill too and gets InternalsVisibleTo above, so
+         without this its own copy of the Polyfill types collides with this assembly's, making
+         every such call ambiguous. EmbeddedAttribute keeps this assembly's polyfilled members out
+         of what a friend assembly's overload resolution sees, as ImGui.Widgets does for NodeEditor. -->
+    <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
 
     <!-- The iOS head is opt-in rather than implied by the host OS. Building net10.0-ios needs
          `dotnet workload install ios`, which only the iOS workflow installs, so widening the
