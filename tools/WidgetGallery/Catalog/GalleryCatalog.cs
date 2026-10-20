@@ -28,6 +28,7 @@ internal static class GalleryCatalog
 		.. DialogsAndWindowsTiles.Build(),
 		.. MobileAndNavigationTiles.Build(),
 		.. MobileOverlayTiles.Build(),
+		.. MobilePolishTiles.Build(),
 	];
 
 	/// <summary>Gets every <c>ImGuiWidgets</c> member some entry claims to show.</summary>
