@@ -177,7 +177,7 @@ public static partial class ImGuiWidgets
 				}
 
 				DrawCheckerboard(drawList, min, extent);
-				drawList.AddRectFilled(min, max, colour.ToImGuiU32());
+				drawList.AddRectFilled(min, max, colour.ToImGuiU32Styled());
 				drawList.AddRect(min, max, border);
 
 				if (i == selectedIndex)
@@ -223,7 +223,7 @@ public static partial class ImGuiWidgets
 			Vector2 half = new(s / 2f, s / 2f);
 			Vector2 min = pointer - half;
 			Vector2 max = pointer + half;
-			foreground.AddRectFilled(min, max, colour.WithAlpha(colour.A * DragGhostAlpha).ToImGuiU32());
+			foreground.AddRectFilled(min, max, colour.WithAlpha(colour.A * DragGhostAlpha).ToImGuiU32Styled());
 			foreground.AddRect(min, max, ImGui.GetColorU32(ImGuiCol.Border));
 		}
 	}

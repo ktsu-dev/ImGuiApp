@@ -52,8 +52,9 @@ ImGui.PushStyleColor(ImGuiCol.Button, accent.ToImGuiVector4());
 ImGui.Button("Danger");
 ImGui.PopStyleColor();
 
-// Drawing straight into a draw list wants a packed color
-ImGui.GetWindowDrawList().AddRectFilled(min, max, accent.ToImGuiU32());
+// Drawing straight into a draw list wants a packed color. ToImGuiU32Styled applies the style
+// alpha, so the fill dims inside BeginDisabled like everything around it.
+ImGui.GetWindowDrawList().AddRectFilled(min, max, accent.ToImGuiU32Styled());
 ```
 
 ### Colors authored as sRGB
@@ -98,6 +99,7 @@ Conversions between the semantic linear `Color` and ImGui's types. Every convers
 | `ToImGuiVector4(this Color)` | `ImGuiVector4` | Converts to the strong sRGB vector |
 | `FromImGuiVector4(ImGuiVector4)` / `FromImGuiVector4(Vector4)` | `Color` | Reads a vector back as sRGB |
 | `ToImGuiU32(this Color)` | `uint` | Packs to `ImU32` (`0xAABBGGRR`), matching `ImGui.ColorConvertFloat4ToU32`. A pure pack — the global style alpha is not applied |
+| `ToImGuiU32Styled(this Color)` | `uint` | Packs for drawing, applying the global style alpha like `ImGui.GetColorU32`, so a fill dims inside a disabled or faded scope. Use it wherever a `Color` feeds a draw list |
 | `ToImGuiU32(this ImColor)` | `uint` | Packs an `ImColor`, applying the global style alpha exactly like `ImGui.GetColorU32` |
 
 ### `SrgbImGuiExtensions`
