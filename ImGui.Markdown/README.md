@@ -11,7 +11,8 @@ ImGui.Markdown renders CommonMark markdown directly inside Dear ImGui, using [Ma
 - **Headings, emphasis, and code**: Headings scale from the live font size, so DPI and accessibility scaling are respected automatically; bold and italic fall back to faux styling when no matching font is registered
 - **Lists**: Nested bullet, ordered, and task lists
 - **Blockquotes and thematic breaks**: Rendered with an indent bar and a horizontal rule respectively
-- **Tables**: Rendered with ImGui's native table API
+- **Tables**: Rendered with ImGui's native table API, honoring each column's `:--`, `:-:` and `--:` alignment marker
+- **Code blocks**: A line wider than the panel scrolls sideways inside it rather than wrapping or spilling past it
 - **Links**: Clickable, with an optional callback or automatic OS-open for http, https, and mailto schemes
 - **Images**: Local images via a resolver callback; remote or unresolved images fall back to a placeholder box with the alt text
 - **Code blocks**: Rendered as monospace text on a shaded panel, or handed to a `CodeBlockRenderer` hook — `ktsu.ImGui.SyntaxHighlighting` plugs into it for syntax highlighting

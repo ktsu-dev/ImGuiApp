@@ -62,6 +62,24 @@ public sealed class TimecodeFieldTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void TimecodeField_ReleasingAfterAHoldKeepsTheLastRepeatedFrame()
+	{
+		Start(Draw);
+
+		Rectangle rect = RectOf(Increment);
+		Harness.Mouse.MoveTo(rect.MinX + (rect.Width / 2f), rect.MinY + (rect.Height / 2f));
+		Step();
+		HarnessMouse.Down(0);
+		Step(30);
+		int whileHeld = frame;
+		HarnessMouse.Up(0);
+		Step(2);
+
+		Assert.IsTrue(whileHeld >= 2, $"Holding the button for half a second repeated to {whileHeld}.");
+		Assert.AreEqual(whileHeld, frame, "Releasing the button after a hold took one more step.");
+	}
+
+	[TestMethod]
 	public void TimecodeField_ShiftIncrementStepsOneSecond()
 	{
 		Start(Draw);

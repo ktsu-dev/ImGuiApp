@@ -46,12 +46,19 @@ internal static class ImGuiMarkdownDemo
 		Console.WriteLine(greeting);
 		```
 
+		A line too long for the panel scrolls sideways rather than wrapping:
+
+		```
+		dotnet test --project tests/ImGuiMarkdownDemo.UITests --configuration Release -- --filter "FullyQualifiedName~MarkdownDemoUITests" --show-stdout All --show-test-results all
+		```
+
 		## Table
 
-		| Feature | Status |
-		|---------|--------|
-		| Headings | Yes |
-		| Tables | Yes |
+		| Feature | Status | Order |
+		|:--------|:------:|------:|
+		| Headings | Yes | 1 |
+		| Tables | Yes | 2 |
+		| Column alignment | Yes | 10 |
 
 		---
 

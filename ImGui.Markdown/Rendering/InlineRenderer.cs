@@ -19,7 +19,8 @@ internal static class InlineRenderer
 	/// <param name="block">The paragraph, heading or table cell paragraph whose inlines to render.</param>
 	/// <param name="config">The active config.</param>
 	/// <param name="baseRole">The block's own role, which plain text takes and emphasis combines with.</param>
-	public static void Render(LeafBlock block, MarkdownConfig config, MarkdownFontRole baseRole = MarkdownFontRole.Body)
+	/// <param name="alignment">Where each wrapped line sits within the wrap width.</param>
+	public static void Render(LeafBlock block, MarkdownConfig config, MarkdownFontRole baseRole = MarkdownFontRole.Body, InlineAlignment alignment = InlineAlignment.Left)
 	{
 		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(block.Inline, baseRole);
 		if (runs.Count == 0)
@@ -33,7 +34,7 @@ internal static class InlineRenderer
 		ImGui.PushID(block.Span.Start);
 		try
 		{
-			RenderRuns(runs, config, baseRole);
+			RenderRuns(runs, config, baseRole, alignment);
 		}
 		finally
 		{
@@ -41,7 +42,7 @@ internal static class InlineRenderer
 		}
 	}
 
-	private static void RenderRuns(IReadOnlyList<InlineRun> runs, MarkdownConfig config, MarkdownFontRole baseRole)
+	private static void RenderRuns(IReadOnlyList<InlineRun> runs, MarkdownConfig config, MarkdownFontRole baseRole, InlineAlignment alignment)
 	{
 		float wrapWidth = config.WrapWidth ?? ImGui.GetContentRegionAvail().X;
 		if (wrapWidth <= 0.0f)
@@ -64,9 +65,10 @@ internal static class InlineRenderer
 		int linkIndex = 0;
 		foreach (LaidOutLine line in lines)
 		{
+			float lineX = origin.X + InlineLayout.AlignmentOffset(line.Width, wrapWidth, alignment);
 			foreach (LaidOutToken token in line.Tokens)
 			{
-				Vector2 pos = new(origin.X + token.X, origin.Y + y);
+				Vector2 pos = new(lineX + token.X, origin.Y + y);
 				DrawToken(token, pos, bodySize, config, drawList, token.LinkUrl is null ? textU32 : linkU32, ref linkIndex);
 			}
 
