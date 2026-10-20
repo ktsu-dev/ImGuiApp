@@ -34,6 +34,8 @@
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
+    <!-- For AnimationActivity: widgets ask for active frames through it without referencing this package. -->
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">

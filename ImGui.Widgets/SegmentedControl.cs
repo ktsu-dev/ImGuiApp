@@ -95,6 +95,10 @@ public static partial class ImGuiWidgets
 			float step = ImGui.GetIO().DeltaTime / AnimationDuration * MathF.Max(1.0f, MathF.Abs(selectedIndex - pos));
 			pos = selectedIndex > pos ? MathF.Min(selectedIndex, pos + step) : MathF.Max(selectedIndex, pos - step);
 			Highlight[id] = pos;
+			if (pos != selectedIndex)
+			{
+				AnimationActivity.RequestActiveFrame();
+			}
 
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			Span<Vector4> colors = ImGui.GetStyle().Colors;

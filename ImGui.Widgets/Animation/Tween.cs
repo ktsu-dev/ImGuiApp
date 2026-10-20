@@ -4,6 +4,8 @@ namespace ktsu.ImGui.Widgets.Animation;
 
 using System;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// Time-based interpolation from <see cref="Start"/> to <see cref="End"/> over <see cref="Duration"/>
 /// seconds, shaped by an easing function. Frame-rate independent: caller supplies <c>deltaTime</c>.
@@ -11,6 +13,10 @@ using System;
 /// <remarks>
 /// Single-value (float) interpolation. Compose two Tweens for a Vector2, three for a Vector3, etc.
 /// Set <see cref="Repeat"/> for an unbounded loop or <see cref="PingPong"/> for a back-and-forth.
+/// Every <see cref="Update"/> that leaves the tween still moving calls
+/// <see cref="AnimationActivity.RequestActiveFrame"/>, so the host keeps its active frame rate
+/// until the tween ends. A looping tween therefore keeps the application out of its idle rate
+/// for as long as it is updated.
 /// </remarks>
 public sealed class Tween
 {
@@ -115,6 +121,7 @@ public sealed class Tween
 		float t = Math.Clamp(cycle, 0.0f, 1.0f);
 		float eased = _curve(t);
 		Value = Start + ((End - Start) * eased);
+		AnimationActivity.RequestActiveFrame();
 		return Value;
 	}
 

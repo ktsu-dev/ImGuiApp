@@ -785,7 +785,7 @@ Two consequences worth knowing:
 ### Key Technical Details
 
 - **PID frame limiter** with auto-tuning (Coarse/Fine/Precision phases)
-- **Throttled rendering**: Different FPS for focused/unfocused/idle/minimized states
+- **Throttled rendering**: Different FPS for focused/unfocused/idle/minimized states. A widget that animates calls `AnimationActivity.RequestActiveFrame()` (in `ImGui.Probes`, the one package both `ImGui.App` and `ImGui.Widgets` reference) on each frame it still moves, and `UpdateWindowPerformance` takes the request once per frame and treats it like recent input, so the app is not idle mid-animation. `Tween`, `Spring`, `InertialScroll`, `Switch` and `SegmentedControl` request on their own; a new animated widget built on those primitives needs nothing more
 - **Font memory management** via `FontMemoryGuard` with GCHandle pinning and GPU detection
 - **Texture caching** with concurrent dictionary, auto-cleanup on context change
 - **ImGui extension auto-detection** via reflection for ImGuizmo, ImNodes, ImPlot
