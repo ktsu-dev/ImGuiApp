@@ -1242,7 +1242,7 @@ ImGuiWidgets is built on:
 
 - [Dear ImGui](https://github.com/ocornut/imgui) - The immediate mode GUI library these widgets draw into
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - The .NET bindings for Dear ImGui
-- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors here, with `Hexa.NET.ImGui.Widgets.Extras` supplying the curve and bezier editors
+- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors here
 - [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
 - [ktsu.Semantics](https://github.com/ktsu-dev/Semantics) - `Color`, path and string types used across the widget surface
 - [ktsu.TextFilter](https://github.com/ktsu-dev/TextFilter) - Glob, regex and fuzzy filtering behind `SearchBox`

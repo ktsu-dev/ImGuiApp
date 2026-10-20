@@ -70,6 +70,15 @@ public sealed class BezierEditorTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void BezierEditor_ShowsTheNumbersAboveThePlot()
+	{
+		Start(Draw);
+
+		Assert.IsTrue(IsVisible($"{Label}/values"), "The row of control point values was not drawn.");
+		Assert.IsLessThanOrEqualTo(RectOf($"{Label}/plot").MinY, RectOf($"{Label}/values").MaxY, "The values row is not above the plot.");
+	}
+
+	[TestMethod]
 	public void BezierEditor_LeftAlone_KeepsItsControlPoints()
 	{
 		BezierControlPoints original = new(new Vector2(0.25f, 0.1f), new Vector2(0.25f, 1f));
