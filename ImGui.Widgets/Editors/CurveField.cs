@@ -163,11 +163,25 @@ public static partial class ImGuiWidgets
 		for (int i = 0; i < curve.PointCount; i++)
 		{
 			Vector2 center = geometry.ToScreen(curve.GetPoint(i).Position);
-			ImGuiCol fill = i == selection ? ImGuiCol.SliderGrabActive : i == hovered ? ImGuiCol.ButtonHovered : ImGuiCol.SliderGrab;
-			drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 16);
+			drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(CurvePointFill(i, selection, hovered)), 16);
 			drawList.AddCircle(center, radius, ImGui.GetColorU32(ImGuiCol.Text), 16);
 		}
 
 		drawList.PopClipRect();
+	}
+
+	/// <summary>Picks a point's fill: the selected point stands out most, then the hovered one.</summary>
+	/// <param name="index">The point being drawn.</param>
+	/// <param name="selection">The selected point, or -1.</param>
+	/// <param name="hovered">The point under the pointer, or -1.</param>
+	/// <returns>The style colour to fill it with.</returns>
+	private static ImGuiCol CurvePointFill(int index, int selection, int hovered)
+	{
+		if (index == selection)
+		{
+			return ImGuiCol.SliderGrabActive;
+		}
+
+		return index == hovered ? ImGuiCol.ButtonHovered : ImGuiCol.SliderGrab;
 	}
 }
