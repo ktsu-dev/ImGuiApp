@@ -119,6 +119,16 @@ The widgets below are grouped by what they are for. Everything is a static metho
 - **`TimePicker`**: Hour and minute wheels, plus an AM/PM wheel on a twelve-hour clock, with an optional minute step
 - **`PullToRefresh`**: A scrolling region that refreshes when pulled down from its top, holding open with a spinner until the caller reports the refresh finished. Opened in a `using` block
 - **`LongPressMenu`**: A menu opened by holding something down, or right-clicking it; the target shrinks while held and bumps as the menu opens
+- **`Toaster`**: Snackbar messages queued one at a time at the bottom of the window, each with an optional action such as Undo. A message stays while hovered, and one with no duration stays until dismissed
+- **`ActionSheet`**: A stack of choices that slides up from the bottom with a separate Cancel button; destructive choices are drawn in the error colour, and a tap on the dimming or Escape cancels
+- **`BottomSheet`**: A panel dragged up from the bottom between peek, half and full heights. A flick carries it to the height it is heading for, and a drag below half the peek height closes it
+- **`NavigationDrawer`**: A panel that slides in from the left over a dimmed page, opened by a button or by swiping in from the window's edge, and closed by a tap or drag on the dimming
+- **`SearchOverlay`**: A full-window search page over a list of items, ranked by fuzzy match as you type, with arrow keys to move the highlight, Enter to choose and Escape or the back button to leave
+- **`FloatingActionButton`** / **`SpeedDial`**: A round button pinned to a corner of the window, and one that fans out labelled actions above it
+- **`BottomNavigationBar`**: A row of destinations at the foot of the window, with a sliding indicator under the chosen one. It can drive a `TabPanel` directly; set the panel's `ShowTabStrip` to false so the bar is its only tab strip
+- **`AppBar`**: A title bar with a leading button and trailing actions, which hides as the content scrolls down and returns as soon as it scrolls back up
+
+The overlays (`Toaster`, `ActionSheet`, `BottomSheet`, `NavigationDrawer` and `SearchOverlay`) are objects created over an `OverlayHost`, which the caller renders once per frame after the rest of the window. Each keeps its arithmetic in an ImGui-free state class, as the widgets above do.
 
 ### Motion and Gestures
 
