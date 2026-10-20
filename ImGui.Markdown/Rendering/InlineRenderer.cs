@@ -18,7 +18,8 @@ internal static class InlineRenderer
 	/// <summary>Lays out and draws the inline content of a block.</summary>
 	/// <param name="inline">The inline container to render.</param>
 	/// <param name="config">The active config.</param>
-	public static void Render(ContainerInline? inline, MarkdownConfig config)
+	/// <param name="alignment">Where each wrapped line sits within the wrap width.</param>
+	public static void Render(ContainerInline? inline, MarkdownConfig config, InlineAlignment alignment = InlineAlignment.Left)
 	{
 		IReadOnlyList<InlineRun> runs = InlineBuilder.Build(inline);
 		if (runs.Count == 0)
@@ -47,9 +48,10 @@ internal static class InlineRenderer
 		int linkIndex = 0;
 		foreach (LaidOutLine line in lines)
 		{
+			float lineX = origin.X + InlineLayout.AlignmentOffset(line.Width, wrapWidth, alignment);
 			foreach (LaidOutToken token in line.Tokens)
 			{
-				Vector2 pos = new(origin.X + token.X, origin.Y + y);
+				Vector2 pos = new(lineX + token.X, origin.Y + y);
 				DrawToken(token, pos, bodySize, config, drawList, token.LinkUrl is null ? textU32 : linkU32, ref linkIndex);
 			}
 
