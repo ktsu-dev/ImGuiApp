@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App.Testing;
 using ktsu.Semantics.Color;
 
@@ -82,6 +84,53 @@ public sealed class SwatchPaletteTests : WidgetTest
 
 		Assert.IsTrue(red.R > 200 && red.G < 60, $"The red swatch drew ({red.R}, {red.G}, {red.B}).");
 		Assert.IsGreaterThan(200, blue.B, $"The blue swatch drew ({blue.R}, {blue.G}, {blue.B}).");
+	}
+
+	[TestMethod]
+	public void SwatchPalette_DimsInsideADisabledScope()
+	{
+		// The swatch is painted over a checkerboard. Drawing it transparent first shows exactly what is
+		// underneath, so the disabled red must be that blended with red at the scope's alpha.
+		float disabledAlpha = 1f;
+		swatches[0] = Red.WithAlpha(0f);
+		Start(() =>
+		{
+			using (new ScopedDisable(true))
+			{
+				disabledAlpha = ImGui.GetStyle().Alpha;
+				Draw();
+			}
+		});
+
+		Vector2 centre = CenterOf($"{Label}/0");
+		Rgba32 under = Harness.Capture().GetPixel((int)centre.X, (int)centre.Y);
+
+		swatches[0] = Red;
+		Step();
+		Rgba32 dimmed = Harness.Capture().GetPixel((int)centre.X, (int)centre.Y);
+
+		Assert.IsLessThan(1f, disabledAlpha, "The disabled scope did not lower the style alpha.");
+		AssertBlended(under, (255, 0, 0), disabledAlpha, dimmed);
+	}
+
+	[TestMethod]
+	public void SwatchPalette_IsOpaqueOutsideADisabledScope()
+	{
+		Start(Draw);
+
+		Vector2 centre = CenterOf($"{Label}/0");
+		Rgba32 red = Harness.Capture().GetPixel((int)centre.X, (int)centre.Y);
+
+		Assert.AreEqual(new Rgba32(255, 0, 0, 255), red with { A = 255 });
+	}
+
+	internal static void AssertBlended(Rgba32 under, (int R, int G, int B) colour, float alpha, Rgba32 actual)
+	{
+		static int Mix(int below, int above, float a) => (int)MathF.Round((below * (1f - a)) + (above * a));
+
+		(int R, int G, int B) expected = (Mix(under.R, colour.R, alpha), Mix(under.G, colour.G, alpha), Mix(under.B, colour.B, alpha));
+		bool close = Math.Abs(expected.R - actual.R) <= 3 && Math.Abs(expected.G - actual.G) <= 3 && Math.Abs(expected.B - actual.B) <= 3;
+		Assert.IsTrue(close, $"Expected {expected} at alpha {alpha} over ({under.R}, {under.G}, {under.B}), drew ({actual.R}, {actual.G}, {actual.B}).");
 	}
 
 	[TestMethod]

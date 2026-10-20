@@ -132,7 +132,7 @@ public static partial class ImGuiWidgets
 
 						// The checkerboard shows through wherever the pixel is not opaque.
 						DrawCheckerboard(drawList, cellMin, cell);
-						drawList.AddRectFilled(cellMin, cellMax, color.ToImGuiU32());
+						drawList.AddRectFilled(cellMin, cellMax, color.ToImGuiU32Styled());
 					}
 					else
 					{

@@ -35,7 +35,7 @@ internal static class BlockRenderer
 				break;
 
 			case ParagraphBlock paragraph:
-				InlineRenderer.Render(paragraph.Inline, config);
+				InlineRenderer.Render(paragraph, config);
 				if (BlockSpacing.ShouldSpaceAfter(paragraph))
 				{
 					ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
@@ -80,9 +80,10 @@ internal static class BlockRenderer
 	{
 		float body = ImGui.GetFontSize();
 		float size = MarkdownSizing.HeadingPixelSize(body, heading.Level, config.HeadingScales);
-		using (new ScopedMarkdownFont(MarkdownSizing.HeadingRole(heading.Level), size, config))
+		MarkdownFontRole role = MarkdownSizing.HeadingRole(heading.Level);
+		using (new ScopedMarkdownFont(role, size, config))
 		{
-			InlineRenderer.Render(heading.Inline, config);
+			InlineRenderer.Render(heading, config, role);
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
@@ -185,28 +186,56 @@ internal static class BlockRenderer
 
 		float size = ImGui.GetFontSize();
 		const float pad = 4.0f;
-		Vector2 start = ImGui.GetCursorScreenPos();
 		float availWidth = ImGui.GetContentRegionAvail().X;
 
 		using (new ScopedMarkdownFont(MarkdownFontRole.Code, size, config))
 		{
 			Vector2 textSize = ImGui.CalcTextSize(text);
 			float blockHeight = textSize.Y + (pad * 2.0f);
-			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-			drawList.AddRectFilled(start, start + new Vector2(availWidth, blockHeight), MarkdownColors.InlineCodeBackground(), 3.0f);
+			float contentWidth = textSize.X + (pad * 2.0f);
 
-			// Position the text at an explicit padded offset. Using Dummy + TextUnformatted as separate
-			// items previously let ImGui insert ItemSpacing.Y between them, pushing the text below the
-			// shaded background. Drawing at start + pad and then reserving the full footprint avoids that.
-			ImGui.SetCursorScreenPos(new Vector2(start.X + pad, start.Y + pad));
-			ImGui.TextUnformatted(text);
+			// Code is never reflowed, so a line wider than the panel scrolls rather than spilling past
+			// it. The child is exactly the panel when everything fits, and grows by the scrollbar's
+			// height only when it is needed, so the scrollbar never covers the last line.
+			bool scrolls = contentWidth > availWidth;
+			float childHeight = blockHeight + (scrolls ? ImGui.GetStyle().ScrollbarSize : 0.0f);
 
-			ImGui.SetCursorScreenPos(start);
-			ImGui.Dummy(new Vector2(availWidth, blockHeight));
+			// Every code block needs its own child window: one shared name would share scroll state.
+			ImGui.PushID(code.Span.Start);
+			try
+			{
+				if (ImGui.BeginChild(CodeBlockChildId, new Vector2(availWidth, childHeight), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+				{
+					// The panel is painted at the child's own position rather than the scrolled cursor,
+					// so it stays put under the text as the text scrolls.
+					Vector2 panel = ImGui.GetWindowPos();
+					ImGui.GetWindowDrawList().AddRectFilled(panel, panel + new Vector2(availWidth, childHeight), MarkdownColors.InlineCodeBackground(), 3.0f);
+
+					// Position the text at an explicit padded offset. Using Dummy + TextUnformatted as
+					// separate items previously let ImGui insert ItemSpacing.Y between them, pushing the
+					// text below the shaded background. Drawing at start + pad and then reserving the full
+					// footprint avoids that.
+					Vector2 start = ImGui.GetCursorScreenPos();
+					ImGui.SetCursorScreenPos(new Vector2(start.X + pad, start.Y + pad));
+					ImGui.TextUnformatted(text);
+
+					ImGui.SetCursorScreenPos(start);
+					ImGui.Dummy(new Vector2(contentWidth, blockHeight));
+				}
+
+				ImGui.EndChild();
+			}
+			finally
+			{
+				ImGui.PopID();
+			}
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
 	}
+
+	/// <summary>The id of the child window each built-in code block scrolls in, under its own pushed id.</summary>
+	internal const string CodeBlockChildId = "##mdcode";
 
 	// LeafBlock (not CodeBlock specifically) because HtmlBlock shares the same Lines field and
 	// is rendered as plain text via this same extraction path.
@@ -265,22 +294,29 @@ internal static class BlockRenderer
 					if (rowBlock is Markdig.Extensions.Tables.TableRow row)
 					{
 						ImGui.TableNextRow();
-						using ScopedMarkdownFont? headerFont = row.IsHeader
-							? new ScopedMarkdownFont(MarkdownFontRole.Bold, ImGui.GetFontSize(), config)
-							: null;
 
+						// Each token pushes its own font, so the header's weight is passed down as the
+						// cells' base role rather than pushed around them, where every token would replace it.
+						MarkdownFontRole cellRole = row.IsHeader ? MarkdownFontRole.Bold : MarkdownFontRole.Body;
+
+						int column = 0;
 						foreach (Block cellBlock in row)
 						{
-							if (cellBlock is Markdig.Extensions.Tables.TableCell cell)
+							// A row with more cells than the table has columns would otherwise wrap
+							// its surplus onto a row of its own; GitHub drops the surplus too.
+							if (cellBlock is Markdig.Extensions.Tables.TableCell cell && column < columnCount)
 							{
 								ImGui.TableNextColumn();
+								InlineAlignment alignment = ColumnAlignment(table, column);
 								foreach (Block content in cell)
 								{
 									if (content is ParagraphBlock paragraph)
 									{
-										InlineRenderer.Render(paragraph.Inline, config);
+										InlineRenderer.Render(paragraph, config, cellRole, alignment);
 									}
 								}
+
+								column++;
 							}
 						}
 					}
@@ -295,6 +331,25 @@ internal static class BlockRenderer
 		}
 
 		ImGui.Dummy(new Vector2(0.0f, config.ParagraphSpacingPixels));
+	}
+
+	/// <summary>
+	/// The alignment a column's delimiter row asked for (<c>|:--|</c>, <c>|:-:|</c>, <c>|--:|</c>), or
+	/// left for a column with no marker or no definition at all.
+	/// </summary>
+	internal static InlineAlignment ColumnAlignment(Markdig.Extensions.Tables.Table table, int column)
+	{
+		if (column >= table.ColumnDefinitions.Count)
+		{
+			return InlineAlignment.Left;
+		}
+
+		return table.ColumnDefinitions[column].Alignment switch
+		{
+			Markdig.Extensions.Tables.TableColumnAlign.Center => InlineAlignment.Center,
+			Markdig.Extensions.Tables.TableColumnAlign.Right => InlineAlignment.Right,
+			_ => InlineAlignment.Left,
+		};
 	}
 
 	private static void RenderHtmlAsText(HtmlBlock html, MarkdownConfig config)

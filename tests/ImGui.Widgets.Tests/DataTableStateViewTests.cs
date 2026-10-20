@@ -56,6 +56,27 @@ public class DataTableStateViewTests
 		AssertView(state, 3);
 	}
 
+	/// <summary>
+	/// A hidden column's filter box isn't drawn, so its filter stops applying the moment the column
+	/// hides, and applies again when the column comes back (#562).
+	/// </summary>
+	[TestMethod]
+	public void HidingAFilteredColumn_ShowsTheRowsItsFilterHeldBack()
+	{
+		ImGuiWidgets.DataTableState<DataTablePerson> state = fixture.CreateState();
+		state.SetFilter(DataTableFixture.NameColumn, "a");
+		state.SetFilter(DataTableFixture.AgeColumn, "25");
+
+		state.SetColumnVisible(DataTableFixture.NameColumn, isVisible: false);
+
+		AssertView(state, 1, 3);
+		Assert.AreEqual("a", state.GetFilter(DataTableFixture.NameColumn), "The hidden column's filter was thrown away.");
+
+		state.SetColumnVisible(DataTableFixture.NameColumn, isVisible: true);
+
+		AssertView(state, 3);
+	}
+
 	[TestMethod]
 	public void ClearingAFilter_RestoresTheRows()
 	{
