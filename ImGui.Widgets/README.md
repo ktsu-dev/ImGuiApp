@@ -92,6 +92,7 @@ The widgets below are grouped by what they are for. Everything is a static metho
 
 ### Image and Colour
 
+- **`Viewport3D`**: A 3D view drawn through the host's `IRenderer3D` into a render target the widget owns, under an orbit camera held in a caller-owned `Viewport3DState`. Drag to orbit, middle-drag or Shift+drag to pan, scroll to dolly. Your callback gets a `Viewport3DFrame` with the renderer, the target and the view-projection to draw with. On a backend without 3D it draws an empty frame of the same size and returns `false`
 - **`PixelLoupe`**: A magnified grid of the pixels around the pointer while it is over an `ImageCanvas`, with the centre pixel outlined and read out as coordinates, RGBA and hex. The loupe is passive: it takes pixels from a callback you supply, never reads a texture back, and never takes a click, so the canvas keeps its pan and zoom
 
 ### Layout and Containers

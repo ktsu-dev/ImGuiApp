@@ -36,6 +36,10 @@
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ImGui.Rendering\ImGui.Rendering.csproj" />
+  </ItemGroup>
+
   <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="Silk.NET" />
     <PackageReference Include="Silk.NET.Core" />

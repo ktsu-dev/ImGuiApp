@@ -63,6 +63,7 @@ internal static class DemoSections
 		new(CropDemo.Show, CropDemo.ResetState),
 		new(TransformBoxDemo.Show, TransformBoxDemo.ResetState),
 		new(PixelLoupeDemo.Show, PixelLoupeDemo.ResetState),
+		new(Viewport3DDemo.Show, Viewport3DDemo.ResetState),
 		new(TabPanelDemo.Show, TabPanelDemo.ResetState, TabPanelDemo.Initialize),
 		new(SearchBoxDemo.Show, SearchBoxDemo.ResetState),
 		new(GridDemo.Show, GridDemo.ResetState, GridDemo.Initialize),

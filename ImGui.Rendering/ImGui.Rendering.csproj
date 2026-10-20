@@ -1,0 +1,23 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <RootNamespace>ktsu.ImGui.Rendering</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Packaging metadata only, as in ImGui.Probes: ktsu.ImGui.App and ktsu.ImGui.Widgets both
+         reference this package, so a copied DESCRIPTION.md would land beside theirs and publishing
+         would fail with NETSDK1152. -->
+    <Content Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

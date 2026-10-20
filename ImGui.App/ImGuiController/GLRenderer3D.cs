@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using ktsu.ImGui.Rendering;
 using Silk.NET.OpenGL;
 
 /// <summary>
