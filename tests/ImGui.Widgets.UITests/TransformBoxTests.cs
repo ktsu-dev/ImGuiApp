@@ -24,12 +24,12 @@ public sealed class TransformBoxTests : WidgetTest
 	private static readonly Vector2 ImageSize = new(32f, 32f);
 	private static readonly Vector2 CanvasSize = new(320f, 320f);
 	private static readonly Vector2 BoxOffset = new(100f, 100f);
-	private static readonly Vector2 BoxScale = new(100f, 50f);
 
 	private readonly ImGuiWidgets.ImageCanvasState canvas = new();
 	private readonly TransformBoxOptions options = new();
 	private ImGuiAppTextureInfo? texture;
 	private TransformBoxRect rect = TransformBoxRect.Unit;
+	private Vector2 boxScale = new(100f, 50f);
 	private Vector2 canvasMin;
 	private bool changed;
 	private bool sawHeld;
@@ -49,7 +49,7 @@ public sealed class TransformBoxTests : WidgetTest
 		ImGuiWidgets.ImageCanvas("img", texture.TextureId, ImageSize, canvas, CanvasSize);
 		canvasMin = ImGui.GetItemRectMin();
 
-		Matrix3x2 frameToScreen = Matrix3x2.CreateScale(BoxScale) * Matrix3x2.CreateTranslation(canvasMin + BoxOffset);
+		Matrix3x2 frameToScreen = Matrix3x2.CreateScale(boxScale) * Matrix3x2.CreateTranslation(canvasMin + BoxOffset);
 		TransformBoxResult result = ImGuiWidgets.TransformBox(Id, ref rect, frameToScreen, canvasMin, canvasMin + CanvasSize, options);
 		changed |= result.Changed;
 		sawHeld |= result.Held;
@@ -267,6 +267,47 @@ public sealed class TransformBoxTests : WidgetTest
 		Step(2);
 
 		Assert.IsTrue(PixelsChangedSince(before) > 0, "Moving the box changed nothing on screen.");
+	}
+
+	[TestMethod]
+	public void TransformBox_ClickingAHandleOfABoxUnderTheMinimumLeavesItAlone()
+	{
+		// Two pixels by one on screen, against the four pixel minimum (#595).
+		TransformBoxRect tiny = new(new Vector2(0.5f, 0.5f), new Vector2(0.52f, 0.52f));
+		rect = tiny;
+		Start(Draw);
+
+		DragFrom(BoxOffset + (tiny.Max * boxScale), Vector2.Zero);
+
+		Assert.IsTrue(sawHeld, "The click did not hold a handle.");
+		Assert.AreEqual(tiny, rect, "A click with no drag resized the box.");
+		Assert.IsFalse(changed, "A click with no drag reported a change.");
+	}
+
+	[TestMethod]
+	public void TransformBox_CornersOfAWideFrameShowDiagonalCursors()
+	{
+		// Five times wider than tall on screen, past the 2.4:1 at which every corner used to read as
+		// left-right (#596).
+		boxScale = new Vector2(200f, 40f);
+		Start(Draw);
+
+		(string Name, ImGuiMouseCursor Cursor)[] corners =
+		[
+			("box/topLeft", ImGuiMouseCursor.ResizeNwse),
+			("box/topRight", ImGuiMouseCursor.ResizeNesw),
+			("box/bottomRight", ImGuiMouseCursor.ResizeNwse),
+			("box/bottomLeft", ImGuiMouseCursor.ResizeNesw),
+			("box/right", ImGuiMouseCursor.ResizeEw),
+			("box/bottom", ImGuiMouseCursor.ResizeNs),
+		];
+
+		foreach ((string name, ImGuiMouseCursor cursor) in corners)
+		{
+			Hover(name);
+			Step();
+			Assert.AreEqual(cursor, Harness.MouseCursor, $"Hovering {name} showed the wrong cursor.");
+		}
 	}
 
 	private static void AssertVector(Vector2 expected, Vector2 actual)

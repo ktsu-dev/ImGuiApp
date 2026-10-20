@@ -225,7 +225,9 @@ public static partial class ImGuiWidgets
 			}
 
 			// The direction the handle pulls in on screen, which a turned or mirrored frame changes, so
-			// the cursor is picked from that rather than from the handle's name.
+			// the cursor is picked from that rather than from the handle's name. Each axis is normalised on
+			// screen before the two are combined, so a frame stretched wider than it is tall does not lean
+			// every corner towards a one-axis cursor (#596).
 			Vector2 outward = handle switch
 			{
 				TransformBoxHandle.Left => new Vector2(-1f, 0f),
@@ -238,10 +240,20 @@ public static partial class ImGuiWidgets
 				_ => new Vector2(1f, 1f),
 			};
 
-			ImGui.SetMouseCursor(ResizeCursorAlong(Vector2.TransformNormal(outward, rect.Shape() * frameToScreen)));
+			ImGui.SetMouseCursor(ResizeCursorAlong(OutwardOnScreen(outward, rect.Shape() * frameToScreen)));
 		}
 
-		private static ImGuiMouseCursor ResizeCursorAlong(Vector2 onScreen)
+		/// <summary>The screen direction of a handle's outward vector, with each frame axis normalised first.</summary>
+		internal static Vector2 OutwardOnScreen(Vector2 outward, Matrix3x2 frameToScreen)
+		{
+			Vector2 x = Vector2.TransformNormal(Vector2.UnitX, frameToScreen);
+			Vector2 y = Vector2.TransformNormal(Vector2.UnitY, frameToScreen);
+			x = x.LengthSquared() > 0f ? Vector2.Normalize(x) : x;
+			y = y.LengthSquared() > 0f ? Vector2.Normalize(y) : y;
+			return (outward.X * x) + (outward.Y * y);
+		}
+
+		internal static ImGuiMouseCursor ResizeCursorAlong(Vector2 onScreen)
 		{
 			float degrees = MathF.Atan2(onScreen.Y, onScreen.X) * (180f / MathF.PI);
 

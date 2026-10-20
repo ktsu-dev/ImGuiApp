@@ -215,6 +215,157 @@ public sealed class CodeTokenizerTests
 			$"An unknown language classified tokens: {TokenAssert.Describe(lines)}");
 	}
 
+	// Asserts that the literal, written after "x = " and followed by ";\ny = 1;", is a string from
+	// its first character to its last, and that the code after it is code again.
+	private static void AssertLiteralIsHeldTogether(string literal, string language)
+	{
+		const string Before = "x = ";
+		string code = $"{Before}{literal};\ny = 1;";
+		IReadOnlyList<HighlightedLine> lines = Highlight(code, language);
+
+		TokenAssert.Reconstructs(lines, code);
+		int offset = 0;
+		foreach (HighlightedLine line in lines)
+		{
+			foreach (HighlightedToken token in line.Tokens)
+			{
+				int end = offset + token.Text.Length;
+				bool insideLiteral = offset < Before.Length + literal.Length && end > Before.Length;
+				if (insideLiteral)
+				{
+					Assert.AreEqual(
+						TokenKind.StringLiteral,
+						token.Kind,
+						$"'{token.Text}' inside {literal} was not part of the string: {TokenAssert.Describe(lines)}");
+					Assert.IsTrue(
+						offset >= Before.Length && end <= Before.Length + literal.Length,
+						$"'{token.Text}' runs past the edges of {literal}: {TokenAssert.Describe(lines)}");
+				}
+
+				offset = end;
+			}
+
+			offset++;
+		}
+
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+	}
+
+	[TestMethod]
+	[DataRow("$\"\"\"\n    Hello {name}\n    \"\"\"")]
+	[DataRow("$$\"\"\"\n    {\"a\": {{n}}}\n    \"\"\"")]
+	[DataRow("$$$\"\"\"\n    {{{n}}}\n    \"\"\"")]
+	[DataRow("$\"\"\"Hello {name}\"\"\"")]
+	[DataRow("\"\"\"\"\n    A \"\"\" inside\n    \"\"\"\"")]
+	[DataRow("$\"\"\"\"\" five \"\"\"\" quotes \"\"\"\"\"")]
+	[DataRow("@$\"C:\\dir\\\"")]
+	[DataRow("$@\"say \"\"hi\"\"\"")]
+	public void CSharp_RawAndVerbatimInterpolatedStringsHoldTogether(string literal) =>
+		AssertLiteralIsHeldTogether(literal, "csharp");
+
+	[TestMethod]
+	[DataRow("f\"\"\"\n    Hello {name}\n    \"\"\"")]
+	[DataRow("f'''\n    Hello {name}\n    '''")]
+	[DataRow("r\"\"\"\n    C:\\dir\\\n    \"\"\"")]
+	[DataRow("r'''\n    \\d+\n    '''")]
+	[DataRow("rf\"\"\"\n    {path}\\n\n    \"\"\"")]
+	[DataRow("Fr'''\n    {path}\n    '''")]
+	[DataRow("b\"\"\"\n    bytes\n    \"\"\"")]
+	[DataRow("RB\"C:\\dir\\\"")]
+	[DataRow("F\"{name}\"")]
+	public void Python_PrefixedStringsHoldTogether(string literal) =>
+		AssertLiteralIsHeldTogether(literal, "python");
+
+	[TestMethod]
+	public void Python_RawStringDoesNotTreatBackslashAsAnEscape()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("p = r'C:\\dir\\'\nn = 2", "python");
+
+		TokenAssert.HasToken(lines, "r'C:\\dir\\'", TokenKind.StringLiteral);
+		TokenAssert.HasToken(lines, "2", TokenKind.Number);
+	}
+
+	[TestMethod]
+	[DataRow("c")]
+	[DataRow("cpp")]
+	[DataRow("javascript")]
+	[DataRow("typescript")]
+	public void EmptyBlockCommentClosesItself(string language)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("f(/**/);\nx = 1;\n/* x */ y = 2;", language);
+
+		TokenAssert.HasToken(lines, "/**/", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+		TokenAssert.HasToken(lines, "/* x */", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "2", TokenKind.Number);
+	}
+
+	[TestMethod]
+	public void LongerBlockCommentsKeepTheirKinds()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("/***/ a; /** doc */ b; /* x */ c = 1;", "c");
+
+		TokenAssert.HasToken(lines, "/***/", TokenKind.DocComment);
+		TokenAssert.HasToken(lines, "/** doc */", TokenKind.DocComment);
+		TokenAssert.HasToken(lines, "/* x */", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+	}
+
+	[TestMethod]
+	public void SlashStarSlashStillOpensAComment()
+	{
+		// C reads /*/ as an opener whose star is not the close's, so the comment runs to the next */.
+		IReadOnlyList<HighlightedLine> lines = Highlight("/*/ still */ x = 1;", "c");
+
+		TokenAssert.HasToken(lines, "/*/ still */", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+	}
+
+	[TestMethod]
+	[DataRow("echo ${#arr[@]} done")]
+	[DataRow("if [ $# -eq 0 ]; then exit; fi")]
+	[DataRow("echo ${x#y}")]
+	[DataRow("echo ${x##*/}")]
+	[DataRow("echo a#b")]
+	public void Shell_HashInsideAWordIsNotAComment(string code)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight(code, "bash");
+
+		Assert.IsFalse(
+			TokenAssert.Flatten(lines).Any(token => token.Kind == TokenKind.Comment),
+			$"A # inside a word started a comment: {TokenAssert.Describe(lines)}");
+	}
+
+	[TestMethod]
+	public void Shell_HashAfterWhitespaceOrAtLineStartIsAComment()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("# heading\necho hi # note\n  # indented", "bash");
+
+		TokenAssert.HasToken(lines, "# heading", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "# note", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "# indented", TokenKind.Comment);
+	}
+
+	[TestMethod]
+	public void Yaml_HashInsideAValueIsNotAComment()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("url: http://example.com/#frag\n# top\nkey: value # c", "yaml");
+
+		Assert.IsFalse(
+			lines[0].Tokens.Any(token => token.Kind == TokenKind.Comment),
+			$"The fragment started a comment: {TokenAssert.Describe(lines)}");
+		TokenAssert.HasToken(lines, "# top", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "# c", TokenKind.Comment);
+	}
+
+	[TestMethod]
+	public void Python_HashAnywhereIsStillAComment()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("x = 1#note", "python");
+
+		TokenAssert.HasToken(lines, "#note", TokenKind.Comment);
+	}
+
 	[TestMethod]
 	public void TokensAlwaysReconstructTheSource()
 	{
