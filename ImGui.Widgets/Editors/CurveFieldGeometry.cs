@@ -103,7 +103,7 @@ internal readonly record struct CurveFieldGeometry(Vector2 Origin, Vector2 Size,
 	{
 		Vector2 span = RangeMax - RangeMin;
 		return new Vector2(
-			span.X != 0f ? (value.X - RangeMin.X) / span.X : 0f,
-			span.Y != 0f ? (value.Y - RangeMin.Y) / span.Y : 0f);
+			MathF.Abs(span.X) > float.Epsilon ? (value.X - RangeMin.X) / span.X : 0f,
+			MathF.Abs(span.Y) > float.Epsilon ? (value.Y - RangeMin.Y) / span.Y : 0f);
 	}
 }
