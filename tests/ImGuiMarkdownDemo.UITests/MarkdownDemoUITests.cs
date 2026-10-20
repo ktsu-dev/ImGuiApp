@@ -6,8 +6,13 @@
 
 namespace ktsu.examples.ImGuiMarkdownDemo.UITests;
 
+using System.Runtime.InteropServices;
+
+using Hexa.NET.ImGui;
+
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Examples.Markdown;
 using ktsu.ImGui.Markdown;
 
@@ -21,8 +26,23 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class MarkdownDemoUITests
 {
-	private static ImGuiAppHarness StartDemo(HarnessOptions? options = null) =>
+	private ImGuiAppHarness? harness;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
+	[TestCleanup]
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
+
+	private static ImGuiAppHarness Launch(HarnessOptions? options = null) =>
 		ImGuiAppHarness.Start(ImGuiMarkdownDemo.BuildConfig(), options ?? new HarnessOptions());
+
+	/// <summary>Starts the demo as this test's harness, so a failure leaves its frame behind.</summary>
+	private ImGuiAppHarness StartDemo(HarnessOptions? options = null) => harness = Launch(options);
 
 	[TestMethod]
 	public void Config_UsesTheDemoTitleAndRenderCallback()
@@ -36,10 +56,10 @@ public sealed class MarkdownDemoUITests
 	[TestMethod]
 	public void Demo_RendersItsDocument()
 	{
-		using ImGuiAppHarness harness = StartDemo();
-		harness.Step(3);
+		ImGuiAppHarness demo = StartDemo();
+		demo.Step(3);
 
-		Rectangle? document = harness.Probe.Rect("markdown");
+		Rectangle? document = demo.Probe.Rect("markdown");
 		Assert.IsNotNull(document, "The demo never rendered its markdown document.");
 		Assert.IsGreaterThan(document.Value.MinY, document.Value.MaxY, "The document occupied no vertical space.");
 	}
@@ -47,10 +67,10 @@ public sealed class MarkdownDemoUITests
 	[TestMethod]
 	public void Demo_DrawsVisiblePixels()
 	{
-		using ImGuiAppHarness harness = StartDemo();
-		harness.Step(3);
+		ImGuiAppHarness demo = StartDemo();
+		demo.Step(3);
 
-		CapturedFrame frame = harness.Capture();
+		CapturedFrame frame = demo.Capture();
 		Assert.IsNotNull(frame.FindBounds(p => p.A > 0), "The frame was entirely blank.");
 	}
 
@@ -72,6 +92,49 @@ public sealed class MarkdownDemoUITests
 		Assert.Contains("> The best way", sample, "block quote");
 		Assert.Contains("| Feature | Status |", sample, "table");
 		Assert.Contains("---", sample, "thematic break");
+		Assert.Contains("|:------:|", sample, "centered table column");
+		Assert.Contains("|------:|", sample, "right-aligned table column");
+	}
+
+	[TestMethod]
+	public void CodeBlock_WithALongLine_ScrollsInsideThePanel()
+	{
+		using ImGuiAppHarness harness = StartDemo(new HarnessOptions { Width = 1600, Height = 1200 });
+		harness.Step(3);
+
+		ImGuiWindowPtr markdown = ImGuiP.FindWindowByName(ImGuiMarkdownDemo.WindowTitle);
+		List<ImGuiWindowPtr> blocks = CodeBlockWindows();
+		Assert.HasCount(2, blocks, "The demo has two code blocks, each scrolling in its own child window.");
+
+		// The second block holds the long command line.
+		ImGuiWindowPtr shortBlock = blocks.MinBy(w => w.Pos.Y)!;
+		ImGuiWindowPtr longBlock = blocks.MaxBy(w => w.Pos.Y)!;
+		float available = markdown.ContentRegionRect.Max.X - longBlock.Pos.X;
+
+		Assert.IsLessThanOrEqualTo(available + 0.5f, longBlock.Size.X, "The long block reserved more than the available width.");
+		Assert.IsGreaterThan(0.0f, longBlock.ScrollMax.X, "The long line cannot be scrolled to.");
+		Assert.AreEqual(0.0f, longBlock.ScrollMax.Y, "The long block should only scroll sideways.");
+
+		Assert.AreEqual(0.0f, shortBlock.ScrollMax.X, "A block whose lines fit should not scroll.");
+		Assert.IsFalse(shortBlock.ScrollbarX, "A block whose lines fit should show no scrollbar.");
+		Assert.IsTrue(longBlock.ScrollbarX, "The long block should show its horizontal scrollbar.");
+	}
+
+	private static unsafe List<ImGuiWindowPtr> CodeBlockWindows()
+	{
+		List<ImGuiWindowPtr> found = [];
+		ImGuiContextPtr context = ImGui.GetCurrentContext();
+		for (int i = 0; i < context.Windows.Size; i++)
+		{
+			ImGuiWindowPtr window = context.Windows.Data[i];
+			string name = Marshal.PtrToStringUTF8((nint)window.Name) ?? string.Empty;
+			if (name.Contains("##mdcode", StringComparison.Ordinal) && window.Active)
+			{
+				found.Add(window);
+			}
+		}
+
+		return found;
 	}
 
 	[TestMethod]
@@ -79,11 +142,11 @@ public sealed class MarkdownDemoUITests
 	{
 		// The renderer caches parsed documents by source. Stepping well past the first frame proves
 		// the cached path is re-entered cleanly rather than only working on the parse frame.
-		using ImGuiAppHarness harness = StartDemo();
-		harness.Step(30);
+		ImGuiAppHarness demo = StartDemo();
+		demo.Step(30);
 
-		Assert.AreEqual(30, harness.FrameCount);
-		Assert.IsNotNull(harness.Probe.Rect("markdown"), "The document stopped rendering.");
+		Assert.AreEqual(30, demo.FrameCount);
+		Assert.IsNotNull(demo.Probe.Rect("markdown"), "The document stopped rendering.");
 	}
 
 	[TestMethod]
@@ -91,8 +154,8 @@ public sealed class MarkdownDemoUITests
 	{
 		// GetOrLoadTexture needs a live session, so this runs inside the harness rather than as a
 		// plain unit test.
-		using ImGuiAppHarness harness = StartDemo();
-		harness.Step();
+		ImGuiAppHarness demo = StartDemo();
+		demo.Step();
 
 		MarkdownImageResult? resolved = ImGuiMarkdownDemo.ResolveImage("ktsu.png");
 
@@ -104,8 +167,8 @@ public sealed class MarkdownDemoUITests
 	[TestMethod]
 	public void ImageResolver_ReturnsNullForAFileThatIsNotThere()
 	{
-		using ImGuiAppHarness harness = StartDemo();
-		harness.Step();
+		ImGuiAppHarness demo = StartDemo();
+		demo.Step();
 
 		Assert.IsNull(ImGuiMarkdownDemo.ResolveImage("no-such-image.png"));
 	}
@@ -120,9 +183,9 @@ public sealed class MarkdownDemoUITests
 
 		static byte[] CaptureOnce()
 		{
-			using ImGuiAppHarness harness = StartDemo();
-			harness.Step(5);
-			return harness.Target.Pixels.ToArray();
+			using ImGuiAppHarness run = Launch();
+			run.Step(5);
+			return run.Target.Pixels.ToArray();
 		}
 	}
 
@@ -133,10 +196,10 @@ public sealed class MarkdownDemoUITests
 		// display. What is worth pinning is that it lands on screen with a real extent: a document
 		// laid out at zero width, or off the viewport, still satisfies "something was drawn".
 		HarnessOptions options = new() { Width = 1280, Height = 720 };
-		using ImGuiAppHarness harness = StartDemo(options);
-		harness.Step(3);
+		ImGuiAppHarness demo = StartDemo(options);
+		demo.Step(3);
 
-		Rectangle? measured = harness.Probe.Rect("markdown");
+		Rectangle? measured = demo.Probe.Rect("markdown");
 		Assert.IsNotNull(measured, "No document rendered.");
 		Rectangle document = measured.Value;
 

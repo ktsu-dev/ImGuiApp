@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.ImGui.Markdown.Tests;
 
@@ -42,4 +42,15 @@ public sealed class MarkdownSizingTests
 		Assert.AreEqual(MarkdownFontRole.Italic, MarkdownSizing.EmphasisRole(false, true));
 		Assert.AreEqual(MarkdownFontRole.BoldItalic, MarkdownSizing.EmphasisRole(true, true));
 	}
+
+	[TestMethod]
+	[DataRow(MarkdownFontRole.Body, false, false, MarkdownFontRole.Body)]
+	[DataRow(MarkdownFontRole.Body, true, true, MarkdownFontRole.BoldItalic)]
+	[DataRow(MarkdownFontRole.Bold, false, false, MarkdownFontRole.Bold)]
+	[DataRow(MarkdownFontRole.Bold, false, true, MarkdownFontRole.BoldItalic)]
+	[DataRow(MarkdownFontRole.Italic, true, false, MarkdownFontRole.BoldItalic)]
+	[DataRow(MarkdownFontRole.H1, false, false, MarkdownFontRole.H1)]
+	[DataRow(MarkdownFontRole.H3, true, true, MarkdownFontRole.H3)]
+	public void CombineRole_AddsEmphasisToTheBlockRole(MarkdownFontRole baseRole, bool bold, bool italic, MarkdownFontRole expected) =>
+		Assert.AreEqual(expected, MarkdownSizing.CombineRole(baseRole, bold, italic));
 }

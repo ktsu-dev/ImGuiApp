@@ -54,6 +54,8 @@ public sealed class FileDialogTests : WidgetTest
 		// open and one that already closed its own.
 		if (IsRunning)
 		{
+			// Cancelling steps frames, which would replace the one a failing test was looking at.
+			KeepFailureFrame();
 			CancelPicker();
 			CancelPicker();
 		}

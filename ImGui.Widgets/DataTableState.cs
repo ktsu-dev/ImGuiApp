@@ -119,7 +119,31 @@ public static partial class ImGuiWidgets
 
 		internal bool IsColumnVisible(int column) => visibleColumns[column];
 
-		internal void SetColumnVisible(int column, bool isVisible) => visibleColumns[column] = isVisible;
+		/// <summary>
+		/// Records whether the person has hidden a column. Hiding one moves the active cell off it, drops an
+		/// edit open on it, and stops its filter applying, since nothing on screen would show any of them.
+		/// </summary>
+		internal void SetColumnVisible(int column, bool isVisible)
+		{
+			if (visibleColumns[column] == isVisible)
+			{
+				return;
+			}
+
+			visibleColumns[column] = isVisible;
+
+			if (!isVisible)
+			{
+				OnColumnHidden(column);
+			}
+
+			// A hidden column's filter is kept rather than cleared, so it applies again when the column
+			// comes back. Either way the rows it holds back change now.
+			if (filterTexts[column].Length > 0)
+			{
+				Rebuild();
+			}
+		}
 
 		internal string GetFilter(int column) => filterTexts[column];
 
@@ -221,7 +245,7 @@ public static partial class ImGuiWidgets
 			for (int column = 0; column < Columns.Count; column++)
 			{
 				string filter = filterTexts[column];
-				if (filter.Length == 0)
+				if (filter.Length == 0 || !visibleColumns[column])
 				{
 					continue;
 				}

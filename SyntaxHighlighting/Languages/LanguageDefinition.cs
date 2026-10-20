@@ -10,6 +10,12 @@ public sealed record LineCommentRule
 	/// <summary>The text that opens the comment, for example <c>//</c>.</summary>
 	public required string Prefix { get; init; }
 
+	/// <summary>
+	/// Whether the prefix opens a comment only at the start of a line or after whitespace, as in shell
+	/// (<c>$#</c> and <c>${#name}</c> are not comments) and YAML (<c>http://host/#frag</c> is not one).
+	/// </summary>
+	public bool RequiresWhitespaceBefore { get; init; }
+
 	/// <summary>The kind emitted for the comment; use <see cref="TokenKind.DocComment"/> for doc comments.</summary>
 	public TokenKind Kind { get; init; } = TokenKind.Comment;
 }
@@ -47,6 +53,13 @@ public sealed record StringRule
 
 	/// <summary>Whether the literal may span lines; when <see langword="false"/> an unterminated literal ends at the newline.</summary>
 	public bool AllowMultiline { get; init; }
+
+	/// <summary>
+	/// Whether the last character of <see cref="Open"/> may repeat, with the literal closing only on a
+	/// run of that character as long as the one that opened it, as in a C# raw string: <c>""""</c>
+	/// opens a literal that only <c>""""</c> closes. <see cref="Close"/> is then the shortest close.
+	/// </summary>
+	public bool CloseMatchesOpeningRun { get; init; }
 
 	/// <summary>The kind emitted for the literal.</summary>
 	public TokenKind Kind { get; init; } = TokenKind.StringLiteral;

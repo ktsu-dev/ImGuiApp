@@ -48,7 +48,8 @@ public static partial class ImGuiWidgets
 	/// <para>
 	/// A drag starts from a press anywhere on a row, including on an item the row drew, once the mouse
 	/// has moved ImGui's drag threshold. A click that never moves that far is left to the row's items,
-	/// and so is a press in a text field, which is selecting text rather than picking the row up.
+	/// and so is a press on an item that uses the drag itself: a text field selecting text, or a slider,
+	/// drag field or other control whose value the drag is changing.
 	/// Each row is marked for probes as <c>row{index}</c> inside the tree's label.
 	/// </para>
 	/// </remarks>
@@ -169,19 +170,20 @@ public static partial class ImGuiWidgets
 				}
 			}
 
+			// A press on an item that takes the drag for itself — a text field selecting text, a slider
+			// or drag field changing its value — is that item's gesture, not the row's. Checked every
+			// frame the button is held rather than only when the drag would start, because an item can
+			// show what it is late: a slider pressed exactly at its own value edits nothing until the
+			// pointer moves along it, which may be after the pointer has already drifted far enough
+			// vertically to have picked the row up.
+			if (state.PressedRow >= 0 && ActiveItemOwnsTheDrag())
+			{
+				state.Release();
+			}
+
 			if (!state.IsDragging && state.PressedRow >= 0 && ImGui.IsMouseDragging(ImGuiMouseButton.Left))
 			{
-				// A press that landed in a text field is selecting text, not picking the row up. The
-				// field became active on the press, so by the time the mouse has moved far enough to
-				// be a drag, ImGui reports it as wanting the keyboard.
-				if (ImGui.GetIO().WantTextInput)
-				{
-					state.Release();
-				}
-				else
-				{
-					state.BeginDrag();
-				}
+				state.BeginDrag();
 			}
 
 			ReorderableTreeDrop? drop = state.IsDragging
@@ -205,6 +207,40 @@ public static partial class ImGuiWidgets
 			}
 
 			return null;
+		}
+
+		/// <summary>Whether the item the press made active is one that uses a mouse drag itself.</summary>
+		/// <remarks>
+		/// The window's move handle, which a press on a row's background activates, is not an item.
+		/// Otherwise three signs, any one of which is enough. A text field wants the keyboard. ImGui's sliders and
+		/// drag fields claim the left and right arrow keys the moment they activate, which a button or
+		/// selectable never does. And any item that has changed its value since it activated is being
+		/// edited by this press, which covers controls drawn with <c>ButtonBehavior</c>, such as
+		/// <see cref="ValueSlider(string, ref float, float, float, ValueSliderOptions?)"/> or a knob, that
+		/// claim no keys. A selectable or button held and dragged does none of these, so a row can
+		/// still be picked up by its name.
+		/// </remarks>
+		private static bool ActiveItemOwnsTheDrag()
+		{
+			if (ImGui.GetIO().WantTextInput)
+			{
+				return true;
+			}
+
+			if (ImGuiP.GetActiveID() == 0)
+			{
+				return false;
+			}
+
+			// A press on a row's background activates the window's own move handle, which claims every
+			// key. That is the press a row drag is made from, not an item, so it does not count.
+			ImGuiContextPtr context = ImGui.GetCurrentContext();
+			if (!context.MovingWindow.IsNull && context.ActiveId == context.MovingWindow.MoveId)
+			{
+				return false;
+			}
+
+			return context.ActiveIdUsingNavDirMask != 0 || context.ActiveIdHasBeenEditedBefore;
 		}
 
 		private static int RowAt(ReorderableTreeRowSpan[] spans, Vector2 point, float left, float right)

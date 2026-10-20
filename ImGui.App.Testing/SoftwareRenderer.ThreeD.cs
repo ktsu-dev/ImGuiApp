@@ -5,6 +5,7 @@ namespace ktsu.ImGui.App.Testing;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using ktsu.ImGui.Rendering;
 
 /// <summary>
 /// The software backend's <see cref="IRenderer3D"/> implementation.

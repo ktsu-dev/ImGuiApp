@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App;
+using ktsu.ImGui.Rendering;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;

@@ -13,6 +13,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Examples.Widgets;
 using ktsu.ImGui.Widgets;
 
@@ -55,7 +56,7 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Transform Box", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Transform Box", "Pixel Loupe", "Viewport3D", "TabPanel", "SearchBox", "Grid Layout",
 		"Virtual Table", "Data Table", "Divider Container",
 	];
 
@@ -67,6 +68,9 @@ public sealed class WidgetsDemoUITests
 
 	private ImGuiAppHarness harness = null!;
 
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
 	[TestInitialize]
 	public void SetUp()
 	{
@@ -77,7 +81,11 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>
 	/// Reports whether an item was drawn in the frame just rendered. Probe.Rect remembers the last
@@ -817,6 +825,24 @@ public sealed class WidgetsDemoUITests
 
 		Assert.IsTrue(PixelLoupeDemo.PixelX >= 0, "Hovering the middle of the image should pick a pixel.");
 		Assert.IsTrue(PixelLoupeDemo.PixelY >= 0, "Hovering the middle of the image should pick a pixel.");
+	}
+
+	[TestMethod]
+	public void Viewport3D_DrawsTheCubeAndADragOrbitsTheCamera()
+	{
+		OpenSection(AdvancedDemosTab, "Viewport3D");
+		Viewport3DDemo.Spin = false;
+		harness.Step(SettleFrames);
+
+		Assert.IsTrue(IsVisible("viewport_3d_demo"), "The viewport should be drawn when its section is open.");
+		Assert.IsTrue(Viewport3DDemo.LastFrameDrew, "The software renderer offers 3D, so the viewport should draw through it.");
+
+		Rectangle viewport = harness.Probe.Rect("viewport_3d_demo")
+			?? throw new InvalidOperationException("The viewport was never recorded by the probe.");
+		float yaw = Viewport3DDemo.Camera.Yaw;
+		harness.Mouse.Drag(viewport.MinX + (viewport.Width * 0.4f), viewport.MinY + (viewport.Height / 2), viewport.MinX + (viewport.Width * 0.6f), viewport.MinY + (viewport.Height / 2));
+
+		Assert.AreNotEqual(yaw, Viewport3DDemo.Camera.Yaw, "Dragging across the viewport should orbit the camera.");
 	}
 
 	[TestMethod]

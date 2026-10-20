@@ -443,7 +443,60 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
-			DrawUnifiedLines(hunk, options, tints);
+			DrawUnifiedLines(state, index, hunk, options, tints);
+		}
+
+		/// <summary>The inner width a hunk's table needs for its widest line to be reachable.</summary>
+		/// <remarks>
+		/// A text column that stretches, in a table that scrolls sideways, is only as wide as the box
+		/// unless the table is told how wide its inside is; ImGui then clips the line at the box's
+		/// edge and leaves the scroll range at zero. So the widest line is measured, once per hunk and
+		/// font, and the table is given room for it beside the fixed columns. The text column still
+		/// stretches, so a hunk of short lines fills the box rather than leaving a gap beside a narrow
+		/// column, and zero is returned when everything already fits, which keeps the table at the
+		/// box's own width.
+		/// <para>
+		/// The fixed columns are estimated from what they hold rather than read back from the table,
+		/// since the width has to be known before the table is begun. The estimate errs wide by a cell
+		/// of padding, which leaves a sliver of space after the longest line rather than clipping it.
+		/// </para>
+		/// </remarks>
+		/// <param name="state">The widget's per hunk layouts.</param>
+		/// <param name="index">The hunk's position in the diff.</param>
+		/// <param name="hunk">The hunk itself.</param>
+		/// <param name="options">How the hunk is drawn.</param>
+		/// <param name="sides">How many text columns the table has: one unified, two side by side.</param>
+		/// <returns>The inner width to pass to <c>BeginTable</c>, or zero.</returns>
+		private static float InnerWidth(DiffViewState state, int index, DiffHunk hunk, DiffViewOptions options, int sides)
+		{
+			float fontSize = ImGui.GetFontSize();
+			float text = state.WidestText(index, hunk, fontSize, static line => ImGui.CalcTextSize(line).X);
+
+			float marker = ImGui.CalcTextSize("+").X;
+			float number = 0.0f;
+			int numberColumns = 0;
+
+			if (options.CanShowLineNumbers)
+			{
+				int widestNumber = Math.Max(state.WidestNumber(index, hunk), 1);
+				number = ImGui.CalcTextSize(widestNumber.ToString(CultureInfo.InvariantCulture)).X;
+
+				// The unified view numbers both sides in its own two columns; the paired view gives each
+				// side one.
+				numberColumns = 2;
+			}
+
+			int columnsPerText = sides == 1 ? numberColumns + 2 : (numberColumns / 2) + 2;
+			int columns = columnsPerText * sides;
+			float padding = ImGui.GetStyle().CellPadding.X * 2.0f;
+
+			float needed = (sides * (text + marker))
+				+ (numberColumns * number)
+				+ ((columns + 1) * padding);
+
+			float available = ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ScrollbarSize;
+
+			return needed > available ? needed : 0.0f;
 		}
 
 		/// <summary>The box a hunk's table is drawn in.</summary>
@@ -468,7 +521,12 @@ public static partial class ImGuiWidgets
 			return new Vector2(0.0f, rows + ImGui.GetStyle().ScrollbarSize);
 		}
 
-		private static void DrawUnifiedLines(DiffHunk hunk, DiffViewOptions options, DiffRowTints tints)
+		private static void DrawUnifiedLines(
+			DiffViewState state,
+			int index,
+			DiffHunk hunk,
+			DiffViewOptions options,
+			DiffRowTints tints)
 		{
 			if (hunk.Lines.Count == 0)
 			{
@@ -476,8 +534,9 @@ public static partial class ImGuiWidgets
 			}
 
 			int columns = options.CanShowLineNumbers ? 4 : 2;
+			float innerWidth = InnerWidth(state, index, hunk, options, sides: 1);
 
-			if (!ImGui.BeginTable("lines", columns, HunkTableFlags, OuterSize(hunk.Lines.Count)))
+			if (!ImGui.BeginTable("lines", columns, HunkTableFlags, OuterSize(hunk.Lines.Count), innerWidth))
 			{
 				return;
 			}
@@ -533,8 +592,9 @@ public static partial class ImGuiWidgets
 			}
 
 			int perSide = options.CanShowLineNumbers ? 3 : 2;
+			float innerWidth = InnerWidth(state, index, hunk, options, sides: 2);
 
-			if (!ImGui.BeginTable("paired", perSide * 2, HunkTableFlags, OuterSize(rows.Count)))
+			if (!ImGui.BeginTable("paired", perSide * 2, HunkTableFlags, OuterSize(rows.Count), innerWidth))
 			{
 				return;
 			}
