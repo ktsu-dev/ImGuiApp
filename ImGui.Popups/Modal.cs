@@ -15,6 +15,7 @@ public static partial class ImGuiPopups
 	/// </summary>
 	public class Modal
 	{
+
 		/// <summary>
 		/// Gets or sets the title of the modal window.
 		/// </summary>
@@ -91,9 +92,15 @@ public static partial class ImGuiPopups
 
 			if (ImGui.BeginPopupModal(Name, ref result, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings))
 			{
+				// Escape belongs to the topmost popup. A modal drawn inside this one's content closes
+				// itself on the press and is gone by the time the content returns, and IsKeyPressed
+				// ignores key ownership, so the same press would close this one too (#649). Asked
+				// before the content draws, while a popup above this one is still open.
+				bool popupAbove = ImGui.IsPopupOpen(string.Empty, ImGuiPopupFlags.AnyPopupId);
+
 				OnShowContent();
 
-				if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+				if (!popupAbove && ImGui.IsKeyPressed(ImGuiKey.Escape))
 				{
 					ImGui.CloseCurrentPopup();
 				}

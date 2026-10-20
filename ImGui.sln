@@ -89,6 +89,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WidgetGallery", "tools\Widg
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WidgetGallery.UITests", "tests\WidgetGallery.UITests\WidgetGallery.UITests.csproj", "{3856AD20-9A5A-4279-BDB3-E5D8504114C2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.Rendering", "ImGui.Rendering\ImGui.Rendering.csproj", "{52EF7F37-84FD-4EF5-A313-4AF01B92643C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -579,6 +581,18 @@ Global
 		{3856AD20-9A5A-4279-BDB3-E5D8504114C2}.Release|x64.Build.0 = Release|Any CPU
 		{3856AD20-9A5A-4279-BDB3-E5D8504114C2}.Release|x86.ActiveCfg = Release|Any CPU
 		{3856AD20-9A5A-4279-BDB3-E5D8504114C2}.Release|x86.Build.0 = Release|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Debug|x64.Build.0 = Debug|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Debug|x86.Build.0 = Debug|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Release|x64.ActiveCfg = Release|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Release|x64.Build.0 = Release|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Release|x86.ActiveCfg = Release|Any CPU
+		{52EF7F37-84FD-4EF5-A313-4AF01B92643C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

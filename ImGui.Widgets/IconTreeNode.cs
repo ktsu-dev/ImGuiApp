@@ -5,6 +5,7 @@ namespace ktsu.ImGui.Widgets;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Color;
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Color;
 
 using HexaTreeNode = Hexa.NET.ImGui.Widgets.ImGuiTreeNode;
@@ -31,6 +32,8 @@ public static partial class ImGuiWidgets
 	{
 		Ensure.NotNull(label);
 		Ensure.NotNull(icon);
-		return HexaTreeNode.IconTreeNode(label, icon, iconColor.ToImGuiVector4(), flags);
+		bool open = HexaTreeNode.IconTreeNode(label, icon, iconColor.ToImGuiVector4(), flags);
+		ImGuiProbes.MarkItem(label);
+		return open;
 	}
 }

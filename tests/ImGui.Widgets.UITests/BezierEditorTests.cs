@@ -18,8 +18,10 @@ public sealed class BezierEditorTests : WidgetTest
 	private BezierControlPoints points = new(new Vector2(0.25f, 0.1f), new Vector2(0.25f, 1f));
 	private bool changed;
 
-	// The editor marks its own plot under its label, so no span is marked here.
-	private void Draw() => changed |= ImGuiWidgets.BezierEditor(Label, ref points, Size);
+	private void Draw()
+	{
+		changed |= ImGuiWidgets.BezierEditor(Label, ref points, Size);
+	}
 
 	[TestMethod]
 	public void BezierEditor_DrawsAtTheSizeItIsGiven()
@@ -54,7 +56,7 @@ public sealed class BezierEditorTests : WidgetTest
 		Start(Draw);
 
 		BezierControlPoints before = points;
-		Rectangle rect = RectOf(Label);
+		Rectangle rect = RectOf(Label + "/plot");
 
 		// The first control point sits a quarter of the way across and, with Y growing upward, a
 		// quarter of the way up from the bottom of the plot.
@@ -73,7 +75,7 @@ public sealed class BezierEditorTests : WidgetTest
 		Start(Draw);
 
 		Assert.IsTrue(IsVisible($"{Label}/values"), "The row of control point values was not drawn.");
-		Assert.IsLessThanOrEqualTo(RectOf(Label).MinY, RectOf($"{Label}/values").MaxY, "The values row is not above the plot.");
+		Assert.IsLessThanOrEqualTo(RectOf($"{Label}/plot").MinY, RectOf($"{Label}/values").MaxY, "The values row is not above the plot.");
 	}
 
 	[TestMethod]
@@ -87,4 +89,7 @@ public sealed class BezierEditorTests : WidgetTest
 		Assert.AreEqual(original, points, "The control points moved on their own.");
 		Assert.IsFalse(changed, "The editor reported a change nobody made.");
 	}
+
+	[TestMethod]
+	public void BezierEditor_MarksItself() => _ = AssertMarksItself(Label, Draw);
 }

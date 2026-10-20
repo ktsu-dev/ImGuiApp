@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Collections.Generic;
 
+using ktsu.ImGui.App.Testing;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
@@ -149,5 +151,35 @@ public sealed class MessageDialogTests : WidgetTest
 		ClickDialogButton(0);
 
 		Assert.AreEqual(2, outcomes.Count, $"The dialog reported [{string.Join(", ", outcomes)}] across two showings.");
+	}
+
+	[TestMethod]
+	public void ShowMessageBox_IsVisibleWhileShown()
+	{
+		StartWith(() => ImGuiWidgets.ShowMessageBox("Confirm", "All done.", MessageBoxButtons.Ok, outcomes.Add));
+
+		Assert.IsTrue(IsVisible("Confirm"), "The message box was not marked under its title.");
+		Rectangle box = RectOf("Confirm");
+		Rectangle button = FindDialogButtons()[0];
+		Assert.IsTrue(button.MinX >= box.MinX && button.MaxY <= box.MaxY, $"The message box's mark {box} does not contain its button at {button}.");
+
+		ClickDialogButton(0);
+		Step(2);
+
+		Assert.IsFalse(IsVisible("Confirm"), "The message box was still marked after it closed.");
+	}
+
+	[TestMethod]
+	public void DialogMessageBox_IsVisibleWhileShown()
+	{
+		ImGuiWidgets.DialogMessageBox box = new("Notice", "Saved.", MessageBoxButtons.Ok);
+		StartWith(() => box.Show(outcomes.Add));
+
+		Assert.IsTrue(IsVisible("Notice"), "The dialog message box was not marked under its title.");
+
+		ClickDialogButton(0);
+		Step(2);
+
+		Assert.IsFalse(IsVisible("Notice"), "The dialog message box was still marked after it closed.");
 	}
 }

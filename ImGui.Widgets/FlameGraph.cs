@@ -8,6 +8,10 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
+
 using HexaFlameGraph = Hexa.NET.ImGui.Widgets.ImGuiWidgetFlameGraph;
 
 /// <summary>
@@ -157,6 +161,7 @@ public static partial class ImGuiWidgets
 				}
 			}
 
+			Vector2 origin = ImGui.GetCursorScreenPos();
 			HexaFlameGraph.PlotFlame(
 				label,
 				Getter,
@@ -169,6 +174,7 @@ public static partial class ImGuiWidgets
 				resolvedOptions.ScaleMin,
 				resolvedOptions.ScaleMax,
 				resolvedOptions.GraphSize);
+			ImGuiProbes.MarkRegion(label, origin, ImGui.GetItemRectMax());
 		}
 		finally
 		{

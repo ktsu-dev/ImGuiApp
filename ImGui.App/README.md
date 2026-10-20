@@ -613,6 +613,7 @@ This feature automatically:
 - Disables **VSync** automatically to prevent interference with custom frame limiting
 - Detects when the window loses/gains focus and visibility state (minimized/hidden)
 - Tracks user input (keyboard, mouse movement, clicks, scrolling) for idle detection
+- Treats a running animation like recent input: a frame in which anything called `AnimationActivity.RequestActiveFrame()` (from `ktsu.ImGui.Probes`) keeps the application out of the idle rate, so a fling or a sliding panel doesn't stutter once the idle timeout passes. `Tween`, `Spring` and `InertialScroll` in `ktsu.ImGui.Widgets` request automatically while they move. It doesn't lift the unfocused or not-visible rates
 - Evaluates all applicable throttling conditions and selects the lowest frame rate
 - Saves significant CPU and GPU resources without affecting user experience
 - Provides instant transitions between different performance states

@@ -5,8 +5,6 @@ namespace ktsu.ImGui.Widgets.UITests;
 using System;
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,7 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class RadialProgressBarTests : WidgetTest
 {
-	private const string Name = "radial";
+	private const string Name = "radial-progress";
 	private const float Radius = 48f;
 
 	private float progress = 0.5f;
@@ -23,9 +21,7 @@ public sealed class RadialProgressBarTests : WidgetTest
 
 	private void Draw()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		ImGuiWidgets.RadialProgressBar(progress, Radius, textMode: textMode);
-		MarkSpan(Name, origin);
 	}
 
 	[TestMethod]
@@ -130,12 +126,7 @@ public sealed class RadialProgressBarTests : WidgetTest
 	{
 		float remaining = 30f;
 
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			ImGuiWidgets.RadialCountdown(remaining, 60f, Radius);
-			MarkSpan(Name, origin);
-		});
+		Start(() => ImGuiWidgets.RadialCountdown(remaining, 60f, Radius));
 
 		MoveAway();
 		byte[] halfway = Snapshot();
@@ -152,12 +143,7 @@ public sealed class RadialProgressBarTests : WidgetTest
 	{
 		float elapsed = 5f;
 
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			ImGuiWidgets.RadialCountUp(elapsed, 60f, Radius);
-			MarkSpan(Name, origin);
-		});
+		Start(() => ImGuiWidgets.RadialCountUp(elapsed, 60f, Radius));
 
 		MoveAway();
 		byte[] early = Snapshot();
@@ -168,4 +154,17 @@ public sealed class RadialProgressBarTests : WidgetTest
 
 		Assert.IsTrue(PixelsChangedSince(early) > 0, "A nearly finished count-up drew the same as one just started.");
 	}
+
+	// The ring's stroke is centred on the reserved circle's edge, so half its thickness (a fifth of
+	// the radius by default) paints outside the item, plus a pixel of anti-aliasing.
+	private const int RingOverhang = 6;
+
+	[TestMethod]
+	public void RadialProgressBar_MarksItself() => _ = AssertMarksItself(Name, Draw, tolerance: RingOverhang);
+
+	[TestMethod]
+	public void RadialCountdown_MarksItself() => _ = AssertMarksItself(Name, () => ImGuiWidgets.RadialCountdown(30f, 60f, Radius), tolerance: RingOverhang);
+
+	[TestMethod]
+	public void RadialCountUp_MarksItself() => _ = AssertMarksItself(Name, () => ImGuiWidgets.RadialCountUp(30f, 60f, Radius), tolerance: RingOverhang);
 }

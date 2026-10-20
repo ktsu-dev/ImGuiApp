@@ -5,6 +5,7 @@ namespace ktsu.ImGui.Popups;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -125,9 +126,14 @@ public partial class ImGuiPopups
 		private string Glob { get; set; } = "*";
 
 		/// <summary>
-		/// The filename entered by the user.
+		/// The filename entered by the user, as typed.
 		/// </summary>
-		private FileName FileName { get; set; } = new();
+		/// <remarks>
+		/// Kept as text rather than a <see cref="FileName"/> while it is edited, because a path typed or
+		/// pasted into the box passes through characters a file name cannot hold, and converting on every
+		/// frame threw on the first of them (#662). It is converted once, when the user confirms.
+		/// </remarks>
+		private string fileNameText = string.Empty;
 
 		/// <summary>
 		/// The modal instance for displaying the browser popup.
@@ -228,7 +234,7 @@ public partial class ImGuiPopups
 		/// <param name="glob">Glob pattern for filtering files. Several patterns may be separated by semicolons, for example <c>*.png;*.jpg</c>.</param>
 		private void OpenPopup(string title, FilesystemBrowserMode mode, FilesystemBrowserTarget target, Action<AbsoluteFilePath> onChooseFile, Action<AbsoluteDirectoryPath> onChooseDirectory, Vector2 customSize, string glob)
 		{
-			FileName = new();
+			fileNameText = string.Empty;
 			BrowserMode = mode;
 			BrowserTarget = target;
 			OnChooseFile = onChooseFile;
@@ -275,10 +281,8 @@ public partial class ImGuiPopups
 
 			if (BrowserMode == FilesystemBrowserMode.Save)
 			{
-				string fileName = FileName;
-				ImGui.InputText("##SaveAs", ref fileName, 256);
+				ImGui.InputText("##SaveAs", ref fileNameText, 256);
 				ImGuiProbes.MarkItem(ProbePrefix, "filename");
-				FileName = fileName.As<FileName>();
 			}
 
 			DrawConfirmButtons();
@@ -469,7 +473,7 @@ public partial class ImGuiPopups
 				else if (file is not null)
 				{
 					ChosenItem = file;
-					FileName = file.FileName;
+					fileNameText = file.FileName;
 					if (ImGui.IsMouseDoubleClicked(0))
 					{
 						ChooseItem();
@@ -512,8 +516,14 @@ public partial class ImGuiPopups
 		{
 			if (BrowserTarget == FilesystemBrowserTarget.File)
 			{
-				AbsoluteFilePath chosenFile = CurrentDirectory / FileName;
-				if (!MatchesGlob(FileName, Glob))
+				if (!TryGetFileName(fileNameText, out FileName? fileName))
+				{
+					PopupMessageOK.Open("Invalid File Name", "The file name contains a folder separator or a character\nthis system does not allow in file names.");
+					return;
+				}
+
+				AbsoluteFilePath chosenFile = CurrentDirectory / fileName;
+				if (!MatchesGlob(fileName, Glob))
 				{
 					PopupMessageOK.Open("Invalid File Name", "The file name does not match the glob pattern.");
 					return;
@@ -534,6 +544,26 @@ public partial class ImGuiPopups
 			}
 
 			ImGui.CloseCurrentPopup();
+		}
+
+		/// <summary>
+		/// Converts typed text to a <see cref="FileName"/>, reporting text that is not one rather than throwing.
+		/// </summary>
+		/// <param name="text">The text from the file name box.</param>
+		/// <param name="fileName">The file name, when the text is one.</param>
+		/// <returns><see langword="true"/> if the text is a valid file name; otherwise <see langword="false"/>.</returns>
+		internal static bool TryGetFileName(string text, [NotNullWhen(true)] out FileName? fileName)
+		{
+			try
+			{
+				fileName = text.As<FileName>();
+				return true;
+			}
+			catch (ArgumentException)
+			{
+				fileName = null;
+				return false;
+			}
 		}
 
 		/// <summary>Asks whether a save may replace a file that already exists.</summary>

@@ -29,6 +29,7 @@
     <PackageReference Include="ktsu.TextFilter" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
     <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+    <ProjectReference Include="..\ImGui.Rendering\ImGui.Rendering.csproj" />
     <ProjectReference Include="..\ImGui.Styler\ImGui.Styler.csproj" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>

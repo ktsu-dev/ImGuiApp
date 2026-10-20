@@ -3,9 +3,6 @@
 namespace ktsu.ImGui.Widgets.UITests;
 
 using System;
-using System.Numerics;
-
-using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App.Testing;
 
@@ -25,23 +22,18 @@ public sealed class DatePickerTests : WidgetTest
 {
 	private const string DateLabel = "Due";
 	private const string YearLabel = "Year";
-	private const string Span = "picker";
 
 	private DateTime date = new(2026, 3, 14, 0, 0, 0, DateTimeKind.Utc);
 	private bool changed;
 
 	private void DrawDatePicker()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.DatePicker(DateLabel, ref date);
-		MarkSpan(Span, origin);
 	}
 
 	private void DrawYearPicker()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.YearPicker(YearLabel, ref date);
-		MarkSpan(Span, origin);
 	}
 
 	[TestMethod]
@@ -49,7 +41,7 @@ public sealed class DatePickerTests : WidgetTest
 	{
 		Start(DrawDatePicker);
 
-		Assert.IsTrue(IsVisible(Span), "The date picker drew nothing.");
+		Assert.IsTrue(IsVisible(DateLabel), "The date picker drew nothing.");
 		AssertSomethingWasDrawn("the date picker");
 	}
 
@@ -85,9 +77,9 @@ public sealed class DatePickerTests : WidgetTest
 		MoveAway();
 		byte[] closed = Snapshot();
 
-		Click(Span);
+		Click(DateLabel);
 
-		Rectangle field = RectOf(Span);
+		Rectangle field = RectOf(DateLabel);
 		Rectangle opened = BoundsOfDifference(closed) ?? throw new InvalidOperationException("Clicking the field opened nothing.");
 
 		Assert.IsTrue(
@@ -105,9 +97,9 @@ public sealed class DatePickerTests : WidgetTest
 		date = original;
 		Start(DrawDatePicker);
 
-		Click(Span);
+		Click(DateLabel);
 
-		Rectangle field = RectOf(Span);
+		Rectangle field = RectOf(DateLabel);
 		Harness.Mouse.Click(field.MinX + 140f, field.MaxY + 105f);
 		Step();
 
@@ -120,7 +112,7 @@ public sealed class DatePickerTests : WidgetTest
 	{
 		Start(DrawYearPicker);
 
-		Assert.IsTrue(IsVisible(Span), "The year picker drew nothing.");
+		Assert.IsTrue(IsVisible(YearLabel), "The year picker drew nothing.");
 		AssertSomethingWasDrawn("the year picker");
 	}
 
@@ -130,7 +122,7 @@ public sealed class DatePickerTests : WidgetTest
 		date = new DateTime(2026, 3, 14, 0, 0, 0, DateTimeKind.Utc);
 		Start(DrawYearPicker);
 
-		ClickFraction(Span, 0.5f, 0.5f);
+		ClickFraction(YearLabel, 0.5f, 0.5f);
 
 		Assert.IsTrue(changed, "Clicking inside the year grid picked no year.");
 		Assert.AreEqual(3, date.Month, "Picking a year moved the month.");
@@ -144,6 +136,12 @@ public sealed class DatePickerTests : WidgetTest
 
 		// Unlike the date picker, the year grid draws no Material glyph, so it is fully rendered
 		// in a harness with no icon font registered.
-		Assert.IsTrue(IsVisible(Span), "The year picker drew nothing without an icon font.");
+		Assert.IsTrue(IsVisible(YearLabel), "The year picker drew nothing without an icon font.");
 	}
+
+	[TestMethod]
+	public void DatePicker_MarksItself() => _ = AssertMarksItself(DateLabel, DrawDatePicker);
+
+	[TestMethod]
+	public void YearPicker_MarksItself() => _ = AssertMarksItself(YearLabel, DrawYearPicker);
 }

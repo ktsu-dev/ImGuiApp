@@ -8,6 +8,7 @@ namespace ktsu.examples.ImGuiPopupsDemo.UITests;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Examples.Popups;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -28,6 +29,9 @@ public sealed class PopupsDemoUITests
 
 	private ImGuiAppHarness harness = null!;
 
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
+
 	[TestInitialize]
 	public void SetUp()
 	{
@@ -38,7 +42,11 @@ public sealed class PopupsDemoUITests
 	}
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>
 	/// Reports whether an item was drawn in the frame just rendered. Probe.Rect remembers the last

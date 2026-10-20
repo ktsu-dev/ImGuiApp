@@ -133,10 +133,12 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
 			guard.Enter();
+			OpenDialogProbes.Add(this, nameof(OpenFileDialog), dialog.Name);
 
 			dialog.Show((_, result) =>
 			{
 				guard.Exit();
+				OpenDialogProbes.Remove(this);
 				onClosed(BuildOutcome(dialog, result));
 			});
 		}
@@ -192,10 +194,12 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
 			guard.Enter();
+			OpenDialogProbes.Add(this, nameof(SaveFileDialog), dialog.Name);
 
 			dialog.Show((_, result) =>
 			{
 				guard.Exit();
+				OpenDialogProbes.Remove(this);
 				onClosed(new FileDialogOutcome(
 					MapDialogResult(result, HexaDialogMessageBoxType.Ok),
 					ResolveSaveTarget(dialog.SelectedFile, dialog.CurrentFolder),
@@ -229,10 +233,12 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
 			guard.Enter();
+			OpenDialogProbes.Add(this, nameof(OpenFolderDialog), dialog.Name);
 
 			dialog.Show((_, result) =>
 			{
 				guard.Exit();
+				OpenDialogProbes.Remove(this);
 				onClosed(new FolderDialogOutcome(
 					MapDialogResult(result, HexaDialogMessageBoxType.Ok),
 					TryParseDirectoryPath(dialog.SelectedFolder)));

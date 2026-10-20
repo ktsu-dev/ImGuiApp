@@ -13,6 +13,7 @@ using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
+using ktsu.ImGui.App.Testing.Support;
 using ktsu.ImGui.Examples.Widgets;
 using ktsu.ImGui.Widgets;
 
@@ -46,7 +47,11 @@ public sealed class WidgetsDemoUITests
 	[
 		"Mobile - Form Controls", "Property Grid", "Knobs", "Value Sliders", "Radial Progress Bar", "Color Indicators",
 		"Combo Boxes", "Text Utilities", "Scoped Utilities", "Tree View", "Reorderable Tree",
-		"Mobile - Decorators", "Mobile - Containers & Loaders", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
+		"Mobile - Decorators", "Mobile - Containers & Loaders", "Mobile - Swipeable List", "Mobile - Carousel",
+		"Mobile - Picker Wheel", "Mobile - Pull to Refresh", "Mobile - Long Press Menu",
+		"Mobile - Toasts", "Mobile - Action Sheet", "Mobile - Bottom Sheet", "Mobile - Navigation Drawer", "Mobile - Search Overlay",
+		"Mobile - Floating Action Button", "Mobile - Bottom Navigation", "Mobile - App Bar",
+		"Mobile - Accordion", "Mobile - Infinite List", "Mobile - Sticky Headers", "Mobile - Coach Marks", "Waveform", "Transport Scrubber", "Spectrum Analyzer", "Frame Time Graph", "Stereo Meters", "Channel Fader", "Color wheels", "Diff view", "Toolbar",
 		"Piano Keyboard",
 		"Parametric EQ",
 		"Step Grid",
@@ -55,8 +60,8 @@ public sealed class WidgetsDemoUITests
 
 	private static readonly string[] AdvancedDemoSections =
 	[
-		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Transform Box", "Pixel Loupe", "TabPanel", "SearchBox", "Grid Layout",
-		"Virtual Table", "Data Table", "Divider Container",
+		"Images & Icons", "ImageCanvas", "Levels Control", "Asset Browser", "Gradient Editor", "Swatch Palette", "Image Compare", "Crop Overlay", "Transform Box", "Pixel Loupe", "Viewport3D", "TabPanel", "SearchBox", "Grid Layout",
+		"Virtual Table", "Log View", "Data Table", "Divider Container",
 	];
 
 	private static readonly string[] NetNewSections =
@@ -66,6 +71,9 @@ public sealed class WidgetsDemoUITests
 	];
 
 	private ImGuiAppHarness harness = null!;
+
+	/// <summary>Gets or sets the context MSTest supplies for the running test.</summary>
+	public TestContext TestContext { get; set; } = null!;
 
 	[TestInitialize]
 	public void SetUp()
@@ -77,7 +85,11 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestCleanup]
-	public void TearDown() => harness?.Dispose();
+	public void TearDown()
+	{
+		TestContext.KeepFailureFrame(harness);
+		harness?.Dispose();
+	}
 
 	/// <summary>
 	/// Reports whether an item was drawn in the frame just rendered. Probe.Rect remembers the last
@@ -287,7 +299,7 @@ public sealed class WidgetsDemoUITests
 		foreach (string widget in new[]
 		{
 			"Wi-Fi##switchWifi", "Bluetooth##switchBluetooth", "##viewMode",
-			"All##chip0", "Unread##chip1", "##value", "Price##rangePrice",
+			"All##chip0", "Unread##chip1", "Quantity##stepperQuantity/value", "Price##rangePrice",
 		})
 		{
 			Assert.IsTrue(IsVisible(widget), $"The form controls section is missing '{widget}'.");
@@ -462,6 +474,175 @@ public sealed class WidgetsDemoUITests
 
 		Assert.IsTrue(IsVisible("Action##cardAction"), "card action");
 		Assert.IsTrue(IsVisible("Loading##skeletonToggle"), "skeleton toggle");
+	}
+
+	[TestMethod]
+	public void SwipeableList_FullSwipeDeletesTheRow()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Swipeable List");
+		string row = "swipe-Lunch on Friday?";
+		Rectangle rect = harness.Probe.Rect(row)
+			?? throw new InvalidOperationException("The first row was never recorded by the probe.");
+		float y = rect.MinY + (rect.Height * 0.5f);
+
+		// Most of the way across, slowly, which commits the outermost action without a second click.
+		harness.Mouse.Drag(rect.MaxX - 10f, y, rect.MinX + 10f, y, 60);
+		harness.Step(40);
+
+		CollectionAssert.DoesNotContain(SwipeableListItemDemo.Subjects.ToList(), "Lunch on Friday?");
+		Assert.AreEqual("Delete: Lunch on Friday?", SwipeableListItemDemo.LastAction);
+	}
+
+	[TestMethod]
+	public void Carousel_NextPageButtonTurnsThePage()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Carousel");
+		Assert.IsTrue(IsVisible("demoCarousel"), "The carousel section drew no carousel.");
+
+		harness.Click("Next page##carouselNext");
+		harness.Step(30);
+
+		Assert.AreEqual(1, CarouselDemo.Page);
+	}
+
+	[TestMethod]
+	public void PickerWheel_MouseWheelPicksTheNextSize()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Picker Wheel");
+		Rectangle rect = harness.Probe.Rect("demoSize")
+			?? throw new InvalidOperationException("The size wheel was never recorded by the probe.");
+
+		harness.Mouse.Wheel(rect.MinX + (rect.Width * 0.5f), rect.MinY + (rect.Height * 0.5f), -1);
+		harness.Step();
+
+		Assert.AreEqual("Large", PickerWheelDemo.Size);
+		Assert.IsTrue(IsVisible("demoAlarm/hour"), "The time picker was not drawn.");
+	}
+
+	[TestMethod]
+	public void PullToRefresh_ShowsTheFeed()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Pull to Refresh");
+
+		Assert.IsTrue(IsVisible("demoFeed"), "The pull-to-refresh section drew no feed.");
+		Assert.AreEqual(5, PullToRefreshDemo.Posts.Count);
+	}
+
+	[TestMethod]
+	public void LongPressMenu_RightClickThenChooseShare()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Long Press Menu");
+		Rectangle rect = harness.Probe.Rect("demoCard0")
+			?? throw new InvalidOperationException("The first card was never recorded by the probe.");
+
+		harness.Mouse.Click(rect.MinX + (rect.Width * 0.5f), rect.MinY + (rect.Height * 0.5f), button: 1);
+		harness.Step(2);
+		harness.Click("demoCard0/Share");
+		harness.Step(2);
+
+		Assert.AreEqual("Share Beach", LongPressMenuDemo.LastAction);
+	}
+
+	[TestMethod]
+	public void Toasts_SnackbarUndoRuns()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Toasts");
+
+		harness.Click("Show a snackbar##toastSnackbar");
+		harness.Step(20);
+		harness.Click("demoToasts/action");
+		harness.Step(20);
+
+		Assert.AreEqual(1, ToastDemo.Undone);
+	}
+
+	[TestMethod]
+	public void ActionSheet_AnswersWithTheButtonChosen()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Action Sheet");
+
+		harness.Click("Photo options##actionSheetOpen");
+		harness.Step(30);
+		harness.Click("demoActionSheet/Duplicate");
+		harness.Step(30);
+
+		Assert.AreEqual("Duplicate", ActionSheetDemo.LastAnswer);
+	}
+
+	[TestMethod]
+	public void BottomSheet_OpensAtHalf()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Bottom Sheet");
+
+		harness.Click("Half##bottomSheetHalf");
+		harness.Step(60);
+
+		Assert.AreEqual(BottomSheetDetent.Half, BottomSheetDemo.Sheet.Detent);
+		Assert.IsTrue(IsVisible("demoBottomSheet/handle"));
+		BottomSheetDemo.Sheet.Close();
+		harness.Step(60);
+	}
+
+	[TestMethod]
+	public void NavigationDrawer_PickingADestinationClosesIt()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Navigation Drawer");
+
+		harness.Click("Open drawer##drawerOpen");
+		harness.Step(60);
+		harness.Click("demoDrawer/Sent");
+		harness.Step(60);
+
+		Assert.AreEqual("Sent", NavigationDrawerDemo.Destination);
+		Assert.IsFalse(NavigationDrawerDemo.Drawer.IsOpen);
+	}
+
+	[TestMethod]
+	public void SearchOverlay_EnterChoosesTheBestMatch()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Search Overlay");
+
+		harness.Click("Search fruit##searchOpen");
+		harness.Step(30);
+		harness.Keyboard.Type("mango");
+		harness.Step(2);
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(30);
+
+		Assert.AreEqual("Mango", SearchOverlayDemo.Chosen);
+	}
+
+	[TestMethod]
+	public void FloatingActionButton_AddsANote()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Floating Action Button");
+
+		harness.Click("demoFab");
+		harness.Step();
+
+		Assert.AreEqual(4, FloatingActionButtonDemo.Notes);
+	}
+
+	[TestMethod]
+	public void BottomNavigation_SwitchesThePanel()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - Bottom Navigation");
+
+		harness.Click("demoBottomNav/Library");
+		harness.Step(2);
+
+		Assert.AreEqual(2, BottomNavigationBarDemo.Panel.ActiveTabIndex);
+	}
+
+	[TestMethod]
+	public void AppBar_ReportsItsButtons()
+	{
+		OpenSection(WidgetDemosTab, "Mobile - App Bar");
+
+		harness.Click("demoAppBar/Search");
+		harness.Step();
+
+		Assert.AreEqual("Search", AppBarDemo.LastAction);
 	}
 
 	[TestMethod]
@@ -820,6 +1001,24 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void Viewport3D_DrawsTheCubeAndADragOrbitsTheCamera()
+	{
+		OpenSection(AdvancedDemosTab, "Viewport3D");
+		Viewport3DDemo.Spin = false;
+		harness.Step(SettleFrames);
+
+		Assert.IsTrue(IsVisible("viewport_3d_demo"), "The viewport should be drawn when its section is open.");
+		Assert.IsTrue(Viewport3DDemo.LastFrameDrew, "The software renderer offers 3D, so the viewport should draw through it.");
+
+		Rectangle viewport = harness.Probe.Rect("viewport_3d_demo")
+			?? throw new InvalidOperationException("The viewport was never recorded by the probe.");
+		float yaw = Viewport3DDemo.Camera.Yaw;
+		harness.Mouse.Drag(viewport.MinX + (viewport.Width * 0.4f), viewport.MinY + (viewport.Height / 2), viewport.MinX + (viewport.Width * 0.6f), viewport.MinY + (viewport.Height / 2));
+
+		Assert.AreNotEqual(yaw, Viewport3DDemo.Camera.Yaw, "Dragging across the viewport should orbit the camera.");
+	}
+
+	[TestMethod]
 	public void TabPanel_AddsATabOnDemand()
 	{
 		OpenSection(AdvancedDemosTab, "TabPanel");
@@ -878,6 +1077,22 @@ public sealed class WidgetsDemoUITests
 	}
 
 	[TestMethod]
+	public void LogViewDemo_FilterReducesRows()
+	{
+		OpenSection(AdvancedDemosTab, "Log View");
+		Assert.AreEqual(LogViewDemo.Log.Count, LogViewDemo.State.VisibleCount, "The log should start unfiltered.");
+
+		harness.Click("logDemo/filter");
+		harness.Keyboard.Type("*hitch*");
+		harness.Step(3);
+
+		Assert.IsTrue(LogViewDemo.State.VisibleCount > 0, "The filter hid every hitch warning.");
+		Assert.IsTrue(
+			LogViewDemo.State.VisibleCount < LogViewDemo.Log.Count,
+			$"Filtering showed {LogViewDemo.State.VisibleCount} of {LogViewDemo.Log.Count} rows.");
+	}
+
+	[TestMethod]
 	public void GridLayout_ExposesItsConfiguration()
 	{
 		OpenSection(AdvancedDemosTab, "Grid Layout");
@@ -897,8 +1112,8 @@ public sealed class WidgetsDemoUITests
 	{
 		OpenSection(AdvancedDemosTab, "Divider Container");
 
-		Assert.IsTrue(IsVisible("DividerDemoLeft"), "left zone");
-		Assert.IsTrue(IsVisible("DividerDemoRight"), "right zone");
+		Assert.IsTrue(IsVisible("zone/DividerDemoLeft"), "left zone");
+		Assert.IsTrue(IsVisible("zone/DividerDemoRight"), "right zone");
 	}
 
 	[TestMethod]

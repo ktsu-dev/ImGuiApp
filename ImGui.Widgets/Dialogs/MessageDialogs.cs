@@ -90,11 +90,19 @@ public static partial class ImGuiWidgets
 		Ensure.NotNull(onClosed);
 		NotifyDialogShown();
 
+		// The message box is a struct Hexa stores by value, so the token is what identifies its
+		// probe entry; the window is the popup Hexa opens under the title.
+		object probeOwner = new();
+		OpenDialogProbes.Add(probeOwner, title, title);
 		_ = HexaMessageBox.Show(
 			title,
 			message,
 			userdata: null,
-			callback: (box, _) => onClosed(MapMessageBoxResult(box.Result)),
+			callback: (box, _) =>
+			{
+				OpenDialogProbes.Remove(probeOwner);
+				onClosed(MapMessageBoxResult(box.Result));
+			},
 			type: MapButtons(buttons));
 	}
 
@@ -109,6 +117,7 @@ public static partial class ImGuiWidgets
 	{
 		private readonly HexaDialogMessageBox dialog;
 		private readonly HexaDialogMessageBoxType type;
+		private readonly string title;
 		private readonly DialogShowGuard guard = new(nameof(DialogMessageBox));
 
 		/// <summary>
@@ -123,6 +132,7 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(title);
 			Ensure.NotNull(message);
 
+			this.title = title;
 			type = MapDialogButtons(buttons);
 			dialog = new HexaDialogMessageBox(title, message, type);
 		}
@@ -140,12 +150,14 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(onClosed);
 			NotifyDialogShown();
 			guard.Enter();
+			OpenDialogProbes.Add(this, title, dialog.Name);
 
 			// The configured type is passed through because Hexa aliases Yes to Ok in DialogResult;
 			// it is the only surviving evidence of which button the user pressed.
 			dialog.Show((_, result) =>
 			{
 				guard.Exit();
+				OpenDialogProbes.Remove(this);
 				onClosed(MapDialogResult(result, type));
 			});
 		}

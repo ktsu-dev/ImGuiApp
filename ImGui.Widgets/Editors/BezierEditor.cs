@@ -34,8 +34,8 @@ public static partial class ImGuiWidgets
 	/// numbers in the row above the plot. Every coordinate stays within 0..1: X because an easing
 	/// curve has to move forward in time, and Y so a handle never leaves the plot.
 	/// <para>
-	/// The plot is probe-marked as <paramref name="label"/> and the row of numbers as
-	/// <c>label/values</c>.
+	/// The whole editor is probe-marked as <paramref name="label"/>, the plot as <c>label/plot</c>
+	/// and the row of numbers as <c>label/values</c>.
 	/// </para>
 	/// </remarks>
 	public static bool BezierEditor(string label, ref BezierControlPoints points, float size = 128f)
@@ -44,6 +44,7 @@ public static partial class ImGuiWidgets
 
 		Vector2 frameSize = new(MathF.Max(size, 1f));
 		bool changed = false;
+		DrawListProbe.DrawnSpan span = DrawListProbe.Begin();
 
 		// The four numbers, for exact entry, sit above the plot at its width with the label beside
 		// them, as an ImGui field's label sits.
@@ -64,7 +65,7 @@ public static partial class ImGuiWidgets
 		ImGui.PushID(label);
 		ImGui.InvisibleButton("plot", frameSize);
 		ImGui.PopID();
-		ImGuiProbes.MarkItem(label);
+		ImGuiProbes.MarkItem(label, "plot");
 
 		uint id = ImGui.GetItemID();
 		ImGuiStoragePtr storage = ImGui.GetStateStorage();
@@ -96,6 +97,7 @@ public static partial class ImGuiWidgets
 		}
 
 		DrawBezier(geometry, points, grabbed >= 0 ? grabbed : hovered, radius);
+		span.MarkSpan(label);
 		return changed;
 	}
 

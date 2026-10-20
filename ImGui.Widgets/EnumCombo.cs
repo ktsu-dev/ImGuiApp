@@ -5,6 +5,8 @@ namespace ktsu.ImGui.Widgets;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
+using ktsu.ImGui.Probes;
+
 // Note: no `using HexaComboEnumHelper = ...` alias here. C# cannot alias an open generic type,
 // so Hexa's ComboEnumHelper<T> is written out in full at each call site below.
 
@@ -52,7 +54,9 @@ public static partial class ImGuiWidgets
 		internal static bool Combo<T>(string label, ref T value) where T : struct, Enum
 		{
 			Ensure.NotNull(label);
-			return Hexa.NET.ImGui.Widgets.ComboEnumHelper<T>.Combo(label, ref value);
+			bool changed = Hexa.NET.ImGui.Widgets.ComboEnumHelper<T>.Combo(label, ref value);
+			ImGuiProbes.MarkItem(label);
+			return changed;
 		}
 	}
 

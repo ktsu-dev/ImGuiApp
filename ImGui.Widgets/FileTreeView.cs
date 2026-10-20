@@ -4,6 +4,9 @@ namespace ktsu.ImGui.Widgets;
 
 using System.Numerics;
 
+using Hexa.NET.ImGui;
+
+using ktsu.ImGui.Probes;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 
@@ -32,7 +35,9 @@ public static partial class ImGuiWidgets
 		Ensure.NotNull(homeFolder);
 
 		string current = currentFolder.ToString();
+		Vector2 origin = ImGui.GetCursorScreenPos();
 		bool changed = HexaFileTreeView.FileTreeView(id, size, ref current, homeFolder.ToString());
+		ImGuiProbes.MarkRegion(id, origin, ImGui.GetItemRectMax());
 		if (changed)
 		{
 			currentFolder = current.As<AbsoluteDirectoryPath>();

@@ -2,12 +2,14 @@
 
 namespace ktsu.ImGui.WidgetGallery.Catalog;
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Rendering;
 using ktsu.ImGui.Widgets;
 using ktsu.ImGui.Widgets.Overlays;
 using ktsu.Semantics.Color;
@@ -124,6 +126,7 @@ internal static class LayoutAndContainersTiles
 		yield return TransformBoxTile(Category);
 
 		yield return PixelLoupeTile(Category);
+		yield return Viewport3DTile(Category);
 
 		bool enabled = true;
 		int count = 12;
@@ -394,6 +397,56 @@ internal static class LayoutAndContainersTiles
 				ImGuiWidgets.ToolbarSeparator();
 				ImGuiWidgets.ToolbarButton("Tune", "\uE429", new ToolbarButtonOptions { MinWidth = 56f });
 			}
+		});
+	}
+
+	private static GalleryEntry Viewport3DTile(GalleryCategory category)
+	{
+		ImGuiWidgets.Viewport3DState camera = new() { Distance = 5.5f, Yaw = 0.6f, Pitch = 0.45f };
+		return new("Viewport3D", category,
+			[nameof(ImGuiWidgets.Viewport3D), nameof(ImGuiWidgets.Viewport3DState), nameof(ImGuiWidgets.Viewport3DFrame)], _ =>
+			ImGuiWidgets.Viewport3D("##viewport3d", new Vector2(260f, 170f), camera, DrawShadedCube));
+	}
+
+	/// <summary>A cube with its shading baked into each face's colour, since the 3D renderer has no lighting.</summary>
+	private static void DrawShadedCube(ImGuiWidgets.Viewport3DFrame frame)
+	{
+		Vector3[] corners =
+		[
+			new(-1, -1, -1), new(1, -1, -1), new(1, 1, -1), new(-1, 1, -1),
+			new(-1, -1, 1), new(1, -1, 1), new(1, 1, 1), new(-1, 1, 1),
+		];
+		int[] faces = [4, 5, 6, 7, 1, 0, 3, 2, 5, 1, 2, 6, 0, 4, 7, 3, 7, 6, 2, 3, 0, 1, 5, 4];
+		Vector3[] normals = [Vector3.UnitZ, -Vector3.UnitZ, Vector3.UnitX, -Vector3.UnitX, Vector3.UnitY, -Vector3.UnitY];
+		Vector3 baseColor = new(0.30f, 0.55f, 0.95f);
+		Vector3 light = Vector3.Normalize(new Vector3(0.4f, 0.8f, 0.6f));
+
+		Vertex3D[] vertices = new Vertex3D[24];
+		uint[] indices = new uint[36];
+		for (int f = 0; f < 6; f++)
+		{
+			Vector3 shaded = baseColor * (0.35f + (0.65f * MathF.Max(0f, Vector3.Dot(normals[f], light))));
+			uint packed = (uint)(shaded.X * 255f) | ((uint)(shaded.Y * 255f) << 8) | ((uint)(shaded.Z * 255f) << 16) | 0xFF000000u;
+			for (int c = 0; c < 4; c++)
+			{
+				vertices[(f * 4) + c] = new Vertex3D(corners[faces[(f * 4) + c]], Vector2.Zero, packed);
+			}
+
+			uint v = (uint)(f * 4);
+			int i = f * 6;
+			indices[i] = v;
+			indices[i + 1] = v + 1;
+			indices[i + 2] = v + 2;
+			indices[i + 3] = v;
+			indices[i + 4] = v + 2;
+			indices[i + 5] = v + 3;
+		}
+
+		frame.Renderer.Draw(frame.Target, vertices, indices, new DrawState3D
+		{
+			ModelViewProjection = frame.ViewProjection,
+			Depth = DepthMode.TestAndWrite,
+			Cull = CullMode.None,
 		});
 	}
 }

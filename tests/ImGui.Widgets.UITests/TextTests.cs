@@ -19,18 +19,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class TextTests : WidgetTest
 {
 	private const string Sample = "Widgets";
-	private const string Name = "text";
+	private const string Name = Sample;
 
 	private bool show;
 
 	[TestMethod]
 	public void Text_DrawsTheString()
 	{
-		Start(() =>
-		{
-			ImGuiWidgets.Text(Sample);
-			Mark(Name);
-		});
+		Start(() => ImGuiWidgets.Text(Sample));
 
 		Rectangle rect = RectOf(Name);
 
@@ -125,5 +121,29 @@ public sealed class TextTests : WidgetTest
 		Rectangle changed = BoundsOfDifference(wide) ?? throw new InvalidOperationException("Narrowing the container moved nothing.");
 
 		Assert.IsTrue(changed.Width > 0, "The text did not move when its container narrowed.");
+	}
+
+	// A glyph is placed by its baseline rather than inside its line's box, so the font's descenders
+	// paint a couple of pixels past the item ImGui reports for the line.
+	private const int GlyphOverhang = 3;
+
+	[TestMethod]
+	public void Text_MarksItself() => _ = AssertMarksItself(Sample, () => ImGuiWidgets.Text(Sample), GlyphOverhang);
+
+	[TestMethod]
+	public void TextCentered_MarksTheTextNotItsSpacer()
+	{
+		Rectangle mark = AssertMarksItself(Sample, () => ImGuiWidgets.TextCentered(Sample), GlyphOverhang);
+
+		Assert.IsTrue(mark.Width > 10, $"The centered text marked {mark}, which is the spacer and not the text.");
+		Assert.IsTrue(Math.Abs(mark.MinX + (mark.Width / 2) - (Harness.Options.Width / 2)) <= 30, $"The centered text's mark {mark} is not in the middle.");
+	}
+
+	[TestMethod]
+	public void TextCenteredWithin_MarksTheTextNotItsSpacer()
+	{
+		Rectangle mark = AssertMarksItself(Sample, () => ImGuiWidgets.TextCenteredWithin(Sample, new Vector2(300f, 40f)), GlyphOverhang);
+
+		Assert.IsTrue(mark.Width > 10, $"The centered text marked {mark}, which is the spacer and not the text.");
 	}
 }

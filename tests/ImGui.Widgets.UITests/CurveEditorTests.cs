@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-using Hexa.NET.ImGui;
-
 using ktsu.ImGui.App.Testing;
 using ktsu.Semantics.Color;
 
@@ -84,16 +82,12 @@ public sealed class CurveEditorTests : WidgetTest
 
 	private void DrawSingleCurve()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.CurveEditor(curve, Size, Vector2.Zero, Vector2.One, ref selection, Label);
-		MarkSpan(Label, origin);
 	}
 
 	private void DrawMultiCurve()
 	{
-		Vector2 origin = ImGui.GetCursorScreenPos();
 		changed |= ImGuiWidgets.CurveEditor(source, Size, "curves");
-		MarkSpan("curves", origin);
 	}
 
 	[TestMethod]
@@ -205,12 +199,7 @@ public sealed class CurveEditorTests : WidgetTest
 			new CurveKnot(new Vector2(0f, 0f), CurvePointKind.Smooth),
 			new CurveKnot(new Vector2(1f, 1f), CurvePointKind.Smooth),
 		]);
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			changed |= ImGuiWidgets.CurveEditor(curve, Size, new Vector2(-1f), new Vector2(2f), ref selection, Label);
-			MarkSpan(Label, origin);
-		});
+		Start(() => changed |= ImGuiWidgets.CurveEditor(curve, Size, new Vector2(-1f), new Vector2(2f), ref selection, Label));
 		MoveAway();
 		Step();
 
@@ -226,12 +215,7 @@ public sealed class CurveEditorTests : WidgetTest
 	public void CurveEditor_SingleCurve_DraggingAPointOnAWiderRange_LandsWhereItWasDropped()
 	{
 		curve = BuildCurve();
-		Start(() =>
-		{
-			Vector2 origin = ImGui.GetCursorScreenPos();
-			changed |= ImGuiWidgets.CurveEditor(curve, Size, new Vector2(-0.5f, 0f), new Vector2(1.5f, 1f), ref selection, Label);
-			MarkSpan(Label, origin);
-		});
+		Start(() => changed |= ImGuiWidgets.CurveEditor(curve, Size, new Vector2(-0.5f, 0f), new Vector2(1.5f, 1f), ref selection, Label));
 
 		// The middle point (0.5, 0.8) sits halfway across X -0.5..1.5; a fifth of the width left is X 0.1.
 		Rectangle rect = RectOf(Label);
@@ -384,5 +368,19 @@ public sealed class CurveEditorTests : WidgetTest
 
 		Assert.AreEqual(0, source.Edits.Count, "The editor edited the source with no input.");
 		Assert.IsFalse(changed, "The editor reported a change with no input.");
+	}
+
+	[TestMethod]
+	public void CurveEditor_MarksItself()
+	{
+		curve = BuildCurve();
+		_ = AssertMarksItself(Label, DrawSingleCurve, tolerance: 7);
+	}
+
+	[TestMethod]
+	public void CurveEditor_FromASource_MarksItself()
+	{
+		source = new TwoLineSource();
+		_ = AssertMarksItself("curves", DrawMultiCurve, tolerance: 7);
 	}
 }

@@ -18,6 +18,9 @@ public static partial class ImGuiWidgets
 	/// </summary>
 	private const int SequencerStackAllocLimit = 64;
 
+	/// <summary>The probe name every sequencer marks itself under; the entry point takes no id.</summary>
+	private const string SequencerProbeName = "sequencer";
+
 	/// <summary>
 	/// Draws an editable timeline.
 	/// </summary>
@@ -29,6 +32,7 @@ public static partial class ImGuiWidgets
 	/// <param name="features">Which interactions to enable.</param>
 	/// <returns><see langword="true"/> if the sequencer reports a change this frame.</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+	/// <remarks>Marked for UI probes as <c>sequencer</c>; separate two in one window with <see cref="ScopedId"/>.</remarks>
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Hexa's SequenceInterface.Get hands back int* into caller-owned storage; the buffer is pinned for exactly the duration of the call and the adapter is unbound in a finally.")]
 	public static unsafe bool Sequencer(
 		SequenceSource source,
@@ -55,6 +59,7 @@ public static partial class ImGuiWidgets
 		SequenceRange[] before = ranges.ToArray();
 		SequenceAdapter adapter = new(source);
 		bool changed;
+		DrawListProbe.DrawnSpan span = DrawListProbe.Begin();
 
 		fixed (SequenceRange* pinned = buffer)
 		{
@@ -93,6 +98,7 @@ public static partial class ImGuiWidgets
 			source.SetItemRange(index, start, end);
 		}
 
+		span.MarkSpan(SequencerProbeName);
 		return changed;
 	}
 

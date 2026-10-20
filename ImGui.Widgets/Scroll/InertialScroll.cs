@@ -4,6 +4,8 @@ namespace ktsu.ImGui.Widgets.Scroll;
 
 using System;
 
+using ktsu.ImGui.Probes;
+
 /// <summary>
 /// One-dimensional scroll offset that coasts after release. Drives carousels, pickers, and
 /// long lists that should feel like native mobile scrollers rather than jumping to a stop
@@ -15,8 +17,9 @@ using System;
 /// delta and frame <c>deltaTime</c>; on release call <see cref="Fling"/> with the recorded
 /// velocity (the <c>Velocity</c> field on a <c>GestureResult</c> is a fine source).
 /// Each frame thereafter call <see cref="Update"/> to advance the coast and decay the
-/// velocity exponentially. <see cref="IsActive"/> stays true until the motion settles —
-/// gate frame-rate boosts on that flag.
+/// velocity exponentially. <see cref="IsActive"/> stays true until the motion settles, and each
+/// <see cref="Update"/> that leaves it coasting calls <see cref="AnimationActivity.RequestActiveFrame"/>
+/// so the host keeps its active frame rate meanwhile.
 /// </para>
 /// <para>
 /// Set <see cref="MinExtent"/> / <see cref="MaxExtent"/> to clamp to a content range; the
@@ -110,6 +113,11 @@ public sealed class InertialScroll(float initialPosition = 0.0f)
 		else if (MathF.Abs(Velocity) < MinVelocity)
 		{
 			Velocity = 0.0f;
+		}
+
+		if (IsActive)
+		{
+			AnimationActivity.RequestActiveFrame();
 		}
 
 		return Position;

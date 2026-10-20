@@ -22,4 +22,9 @@
     <PackageReference Include="ktsu.Keybinding" />
     <PackageReference Include="ktsu.UndoRedo" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Saves and attaches the last frame of a failing test; see ImGui.App.Testing's FailureFrames. -->
+    <Compile Include="..\Shared\FailureFrameCleanup.cs" Link="Shared\FailureFrameCleanup.cs" />
+  </ItemGroup>
 </Project>

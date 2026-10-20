@@ -7,6 +7,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.Probes;
+
 using ktsu.ImGui.Color;
 using ktsu.ImGui.Styler;
 
@@ -251,6 +253,7 @@ public static partial class ImGuiWidgets
 
 			ImGui.SetCursorScreenPos(cursorStartPos);
 			ImGui.Dummy(boundingBoxSize);
+			ImGuiProbes.MarkItem(textBlock);
 			bool isHovered = ImGui.IsItemHovered();
 			bool isMouseClicked = ImGui.IsMouseClicked(ImGuiMouseButton.Left);
 			bool isMouseDoubleClicked = ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);

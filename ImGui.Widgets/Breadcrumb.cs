@@ -21,6 +21,9 @@ public static partial class ImGuiWidgets
 	{
 		Ensure.NotNull(id);
 		Ensure.NotNull(path);
-		return HexaBreadcrumb.Breadcrumb(id, ref path);
+		DrawListProbe.DrawnSpan span = DrawListProbe.Begin();
+		bool changed = HexaBreadcrumb.Breadcrumb(id, ref path);
+		span.MarkSpan(id);
+		return changed;
 	}
 }

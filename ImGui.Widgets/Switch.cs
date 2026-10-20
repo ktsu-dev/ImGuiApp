@@ -66,6 +66,10 @@ public static partial class ImGuiWidgets
 			float delta = ImGui.GetIO().DeltaTime / AnimationDuration;
 			t = target > t ? MathF.Min(target, t + delta) : MathF.Max(target, t - delta);
 			Progress[id] = t;
+			if (t != target)
+			{
+				AnimationActivity.RequestActiveFrame();
+			}
 
 			float eased = Easing.OutCubic(Math.Clamp(t, 0.0f, 1.0f));
 
