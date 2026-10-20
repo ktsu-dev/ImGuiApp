@@ -90,6 +90,21 @@ public sealed class KnobTests : WidgetTest
 		Assert.IsTrue(value <= 1f, $"The knob ran past its maximum to {value}.");
 	}
 
+	// MathF.Round accepts at most 6 digits, but a format may ask for up to 99 decimals, as Dear
+	// ImGui's own drag controls allow. The drag must round without throwing.
+	[TestMethod]
+	[DataRow("%.7f")]
+	[DataRow("%.10f")]
+	public void Knob_DragsWithAFormatOfMoreThanSixDecimals(string format)
+	{
+		value = 0.5f;
+		Start(() => ImGuiWidgets.Knob(Label, ref value, 0f, 1f, format: format, variant: variant, size: 64f));
+
+		DragVertically(-60f);
+
+		Assert.IsTrue(value > 0.5f, $"Dragging up with format {format} left the value at {value}.");
+	}
+
 	[TestMethod]
 	public void Knob_IntegerOverload_Steps()
 	{
