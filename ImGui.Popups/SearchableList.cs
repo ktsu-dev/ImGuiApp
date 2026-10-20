@@ -113,22 +113,31 @@ public partial class ImGuiPopups
 
 			List<string> sortedStrings = [.. TextFilter.Rank(itemLookup.Keys, searchTerm)];
 
+			// Rank orders rather than filters, so its first entry is only the best match if it
+			// matches at all. With a term typed, the best match is the row the list highlights and
+			// the one Enter and OK take; with none matching, both keep the current choice (#581).
+			TItem? bestMatch = BestMatch(sortedStrings, itemLookup);
+
 			if (ImGui.BeginListBox("##List"))
 			{
-				DrawItemList(sortedStrings, itemLookup);
+				DrawItemList(sortedStrings, itemLookup, bestMatch);
 				ImGui.EndListBox();
 			}
 
-			// With a term typed, Enter takes the best match for it; with none, it confirms the
-			// current choice, or the first item when there is none.
+			// With a term typed, Enter takes the best match for it and does nothing when nothing
+			// matches; with no term, it confirms the current choice, or the first item when there
+			// is none.
 			if (enterPressed)
 			{
-				if (!string.IsNullOrEmpty(searchTerm) && sortedStrings.Count > 0)
+				if (string.IsNullOrEmpty(searchTerm))
 				{
-					cachedValue = itemLookup[sortedStrings[0]];
+					ConfirmSelectedItem();
 				}
-
-				ConfirmSelectedItem();
+				else if (bestMatch is not null)
+				{
+					cachedValue = bestMatch;
+					ConfirmSelectedItem();
+				}
 			}
 
 			// Picking an item is the choice, so it confirms rather than waiting for OK. Confirmed
@@ -144,6 +153,11 @@ public partial class ImGuiPopups
 			ImGuiProbes.MarkItem("searchable-list/ok");
 			if (okClicked)
 			{
+				if (bestMatch is not null)
+				{
+					cachedValue = bestMatch;
+				}
+
 				ConfirmSelectedItem();
 			}
 
@@ -170,11 +184,30 @@ public partial class ImGuiPopups
 		}
 
 		/// <summary>
+		/// Finds the item the typed term picks: the highest ranked one that actually matches it.
+		/// </summary>
+		/// <param name="sortedStrings">The item strings, ranked against the term.</param>
+		/// <param name="itemLookup">Lookup from item string to item.</param>
+		/// <returns>The best match, or null when no term is typed or nothing matches it.</returns>
+		private TItem? BestMatch(List<string> sortedStrings, Dictionary<string, TItem> itemLookup)
+		{
+			if (string.IsNullOrEmpty(searchTerm) || sortedStrings.Count == 0)
+			{
+				return null;
+			}
+
+			// Rank puts every match above every non-match, so only the first entry needs asking.
+			string first = sortedStrings[0];
+			return TextFilter.IsMatch(first, searchTerm, TextFilterType.Fuzzy) ? itemLookup[first] : null;
+		}
+
+		/// <summary>
 		/// Draws the ranked list of items, tracking the current selection.
 		/// </summary>
 		/// <param name="sortedStrings">The ranked item strings to display.</param>
 		/// <param name="itemLookup">Lookup from item string to item.</param>
-		private void DrawItemList(IEnumerable<string> sortedStrings, Dictionary<string, TItem> itemLookup)
+		/// <param name="bestMatch">The item the typed term picks, highlighted in place of the current choice.</param>
+		private void DrawItemList(IEnumerable<string> sortedStrings, Dictionary<string, TItem> itemLookup, TItem? bestMatch)
 		{
 			selectedItem = null;
 			foreach (string itemString in sortedStrings)
@@ -193,7 +226,7 @@ public partial class ImGuiPopups
 				// Compared with the default comparer rather than ==, which on an unconstrained type
 				// parameter is reference equality: a caller whose list is rebuilt each frame passes
 				// an equal but different instance, and the selection never draws as selected.
-				bool isSelected = EqualityComparer<TItem>.Default.Equals(item, cachedValue ?? selectedItem);
+				bool isSelected = EqualityComparer<TItem>.Default.Equals(item, bestMatch ?? cachedValue ?? selectedItem);
 				bool itemClicked = ImGui.Selectable(itemString, isSelected);
 				ImGuiProbes.MarkItem("searchable-list", itemString);
 				if (itemClicked)
