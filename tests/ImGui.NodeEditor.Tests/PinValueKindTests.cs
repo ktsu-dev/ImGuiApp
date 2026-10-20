@@ -48,13 +48,31 @@ public sealed class PinValueKindTests
 	}
 
 	/// <summary>
-	/// Dear ImGui has no InputLong, so a 64-bit integer needs an unsafe DragScalar. It is left out of
-	/// v1 rather than carried in on one unverified interop call.
+	/// Dear ImGui has no InputLong, so a 64-bit integer is edited through DragScalar on a node and
+	/// InputScalar in the inspector, both with <c>ImGuiDataType.S64</c> (#566).
 	/// </summary>
 	[TestMethod]
-	public void Classify_Int64_IsUnsupportedForNow()
+	public void Classify_Int64_IsInt64()
 	{
-		Assert.AreEqual(PinValueKind.Unsupported, PinValueKinds.Classify(typeof(long)));
+		Assert.AreEqual(PinValueKind.Int64, PinValueKinds.Classify(typeof(long)));
+		Assert.AreEqual(PinValueKind.Int64, PinValueKinds.Classify(typeof(long?)));
+	}
+
+	/// <summary>
+	/// Int64 was added after the other kinds, so it comes last and every kind before it keeps the
+	/// value it shipped with.
+	/// </summary>
+	[TestMethod]
+	public void TheShippedKinds_KeepTheirValues()
+	{
+		Assert.AreEqual(8, (int)PinValueKind.Enum);
+		Assert.AreEqual(9, (int)PinValueKind.Int64);
+	}
+
+	[TestMethod]
+	public void Classify_Decimal_IsUnsupported()
+	{
+		Assert.AreEqual(PinValueKind.Unsupported, PinValueKinds.Classify(typeof(decimal)));
 	}
 
 	[TestMethod]

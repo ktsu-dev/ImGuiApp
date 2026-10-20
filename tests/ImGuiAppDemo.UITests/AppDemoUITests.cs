@@ -421,6 +421,15 @@ public sealed class AppDemoUITests
 		Assert.IsTrue(IsVisible("Add Output Node"), "The editor should survive adding one of each node kind.");
 	}
 
+	/// <summary>Pinning is offered for the selection beside the other layout tools (#546).</summary>
+	[TestMethod]
+	public void CleanImNodes_OffersPinningTheSelection()
+	{
+		OpenTab(CleanImNodesTab);
+
+		Assert.IsTrue(IsVisible("Pin Selection"), "The clean ImNodes tab is missing 'Pin Selection'.");
+	}
+
 	[TestMethod]
 	public void CleanImNodes_PhysicsControlsRespond()
 	{

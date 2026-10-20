@@ -6,6 +6,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using ktsu.ForceDirectedLayout;
 using ktsu.ImGui.NodeEditor;
+using ktsu.ImGui.Probes;
 using ktsu.ImGui.Widgets;
 using ktsu.Keybinding.Core.Services;
 using ktsu.NodeGraph.Library.Operations;
@@ -446,6 +447,17 @@ internal sealed class CleanImNodesDemo : IDemoTab, IDisposable
 			if (DemoProbe.Button("Comment Selection"))
 			{
 				history.CreateCommentBoxAround(renderer.SelectedNodeIds, "Comment");
+			}
+
+			// Pinned nodes stay where they are while the layout moves everything else around them.
+			// The selection is pinned unless all of it already is, so one button covers a mixed one.
+			bool allPinned = renderer.SelectedNodeIds.Count > 0
+				&& renderer.SelectedNodeIds.All(id => engine.Nodes.FirstOrDefault(n => n.Id == id)?.IsPinned == true);
+			bool pinClicked = ImGui.Button(allPinned ? "Unpin Selection###pin-selection" : "Pin Selection###pin-selection");
+			ImGuiProbes.MarkItem("Pin Selection");
+			if (pinClicked)
+			{
+				history.SetNodesPinned(renderer.SelectedNodeIds, !allPinned);
 			}
 		}
 

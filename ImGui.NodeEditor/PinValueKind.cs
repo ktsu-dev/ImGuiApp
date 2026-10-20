@@ -38,6 +38,10 @@ public enum PinValueKind
 
 	/// <summary>Any enumeration, drawn as a list of its names.</summary>
 	Enum,
+
+	/// <inheritdoc cref="long"/>
+	/// <remarks>Last rather than beside <see cref="Int32"/>, so the members before it keep their values.</remarks>
+	Int64,
 }
 #pragma warning restore CA1720
 
@@ -57,10 +61,10 @@ public static class PinValueKinds
 	/// <param name="dataType">The pin's declared type, or null when it has none.</param>
 	/// <returns>Its kind, or <see cref="PinValueKind.Unsupported"/> if nothing here can edit it.</returns>
 	/// <remarks>
-	/// <c>long</c> is deliberately unsupported. Dear ImGui has no <c>InputLong</c>, so it needs an
-	/// unsafe <c>DragScalar</c> with <c>ImGuiDataType.S64</c>, which is not worth one unverified
-	/// interop call in v1. Adding it is an entry in <see cref="KindsByType"/> and a case in each
-	/// surface's switch.
+	/// Supported: <c>bool</c>, <c>int</c>, <c>long</c>, <c>float</c>, <c>double</c>, <c>string</c>,
+	/// <see cref="System.Numerics.Vector2"/>, <see cref="System.Numerics.Vector3"/>, any enum, and
+	/// the nullable form of each value type. Adding a type is an entry in <see cref="KindsByType"/>
+	/// and a case in each surface's switch.
 	/// </remarks>
 	public static PinValueKind Classify(Type? dataType)
 	{
@@ -93,6 +97,7 @@ public static class PinValueKinds
 	{
 		[typeof(bool)] = PinValueKind.Boolean,
 		[typeof(int)] = PinValueKind.Int32,
+		[typeof(long)] = PinValueKind.Int64,
 		[typeof(float)] = PinValueKind.Single,
 		[typeof(double)] = PinValueKind.Double,
 		[typeof(string)] = PinValueKind.String,

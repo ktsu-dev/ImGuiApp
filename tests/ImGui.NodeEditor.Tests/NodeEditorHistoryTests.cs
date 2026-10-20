@@ -42,6 +42,33 @@ public sealed class NodeEditorHistoryTests
 	}
 
 	[TestMethod]
+	public void SetNodesPinned_IsOneStep_ThatUndoesAndRedoes()
+	{
+		(Node source, Node target, _) = Pair();
+		using NodeEditorHistory history = NewHistory();
+
+		Assert.AreEqual(2, history.SetNodesPinned([source.Id, target.Id], pinned: true));
+		Assert.AreEqual("Pin 2 nodes", history.NextUndoDescription);
+		Assert.IsTrue(engine.Nodes.All(n => n.IsPinned));
+
+		Assert.IsTrue(history.Undo());
+		Assert.IsTrue(engine.Nodes.All(n => !n.IsPinned), "Undo should have unpinned both nodes in one step.");
+
+		Assert.IsTrue(history.Redo());
+		Assert.IsTrue(engine.Nodes.All(n => n.IsPinned));
+	}
+
+	[TestMethod]
+	public void SetNodesPinned_RecordsNothing_WhenNothingChanges()
+	{
+		(Node source, _, _) = Pair();
+		using NodeEditorHistory history = NewHistory();
+
+		Assert.AreEqual(0, history.SetNodesPinned([source.Id], pinned: false));
+		Assert.IsFalse(history.CanUndo);
+	}
+
+	[TestMethod]
 	public void Undo_AfterCreatingANode_RemovesIt_AndRedoPutsItBackUnderTheSameId()
 	{
 		using NodeEditorHistory history = NewHistory();

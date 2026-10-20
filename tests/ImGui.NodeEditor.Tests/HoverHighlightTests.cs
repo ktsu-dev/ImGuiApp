@@ -220,6 +220,26 @@ public sealed class HoverHighlightTests
 		return differing;
 	}
 
+	/// <summary>A pinned node is outlined so it can be told apart from the nodes the layout still moves.</summary>
+	[TestMethod]
+	public void APinnedNodeIsOutlined()
+	{
+		(Node source, _, _) = AChain();
+		Start();
+		harness.Mouse.MoveTo(Viewport.Width - 5, Viewport.Height - 5);
+		harness.Step(2);
+
+		Assert.IsTrue(renderer.TryGetNodeScreenRect(source.Id, out ScreenRect rect));
+		CapturedFrame unpinned = harness.Capture();
+
+		engine.SetNodePinned(source.Id, pinned: true);
+		harness.Step(2);
+		CapturedFrame pinned = harness.Capture();
+
+		ScreenRect around = new(rect.Min - new Vector2(4, 4), rect.Max + new Vector2(4, 4));
+		Assert.IsGreaterThan(0, PixelsDiffering(unpinned, pinned, around), "Pinning the node did not change how it was drawn.");
+	}
+
 	[TestMethod]
 	public void TheHoveredLinkIsDrawnOverTheNodeItPassesBehind()
 	{

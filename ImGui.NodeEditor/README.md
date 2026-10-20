@@ -150,7 +150,16 @@ if (renderer.SelectedNodeIds.Count > 0)
 }
 ```
 
-Editable types are bool, int, float, double, string, `Vector2`, `Vector3` and enums, plus `Nullable<T>` of those. Anything else, `long` included, draws no inline editor and a disabled row in the inspector. A connected input pin gets no editor either, because its value arrives along the link.
+Editable types are bool, int, long, float, double, string, `Vector2`, `Vector3` and enums, plus `Nullable<T>` of those. Anything else draws no inline editor and a disabled row in the inspector. A connected input pin gets no editor either, because its value arrives along the link.
+
+#### Which way to expose a parameter
+
+A tunable such as a threshold, a minimum area or a sigma is meant to be an **input pin with a default**, edited on the node when nothing is connected and in `NodeInspectorPanel` for the selected node. On a factory node it is an `[InputPin]` property with an initializer, and the node's instance holds it (see below). This is the same shape as a function parameter with a default value: the editor gives way when a value is plumbed in.
+
+The other two ways are complements rather than alternatives:
+
+- **A constant node linked to the pin** is right for a value that is computed elsewhere or shared by several nodes. Used for every tunable, it costs a node and a link per parameter and the graph stops being readable.
+- **Controls drawn in the node body** (see [Host content in a node body](#host-content-in-a-node-body)) suit one or two values you want visible while looking at the graph. More than that makes nodes large and the layout hard to read.
 
 #### Where a value lives
 

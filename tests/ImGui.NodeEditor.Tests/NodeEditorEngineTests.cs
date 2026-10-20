@@ -382,6 +382,47 @@ public sealed class NodeEditorEngineTests
 	}
 
 	[TestMethod]
+	public void SetNodePinned_ReportsWhetherAnythingChanged()
+	{
+		Node node = engine.CreateNode(new Vector2(0, 0), "Pinned", [], []);
+
+		Assert.IsTrue(engine.SetNodePinned(node.Id, pinned: true));
+		Assert.IsTrue(engine.Nodes[0].IsPinned);
+		Assert.IsFalse(engine.SetNodePinned(node.Id, pinned: true), "Pinning a pinned node changes nothing.");
+		Assert.IsFalse(engine.SetNodePinned(9999, pinned: true), "There is no such node.");
+
+		Assert.IsTrue(engine.SetNodePinned(node.Id, pinned: false));
+		Assert.IsFalse(engine.Nodes[0].IsPinned);
+	}
+
+	/// <summary>
+	/// A pinned node is held still, but it still takes part in the layout: the node linked to it
+	/// keeps being pushed and pulled by it, which is what makes pinning useful for anchoring a graph.
+	/// </summary>
+	[TestMethod]
+	public void UpdatePhysics_HoldsAPinnedNodeStillWhileItsNeighbourMoves()
+	{
+		Node anchor = engine.CreateNode(new Vector2(0, 0), "Anchor", [], ["Out"]);
+		Node free = engine.CreateNode(new Vector2(10, 0), "Free", ["In"], []);
+		engine.TryCreateLink(anchor.OutputPins[0].Id, free.InputPins[0].Id);
+		engine.UpdateNodeDimensions(anchor.Id, new Vector2(100, 50));
+		engine.UpdateNodeDimensions(free.Id, new Vector2(100, 50));
+		engine.SetNodePinned(anchor.Id, pinned: true);
+		engine.UpdatePhysicsSettings(new PhysicsSettings { Enabled = true });
+
+		for (int frame = 0; frame < 30; frame++)
+		{
+			engine.UpdatePhysics(1f / 60f);
+		}
+
+		Assert.AreEqual(new Vector2(0, 0), engine.Nodes.Single(n => n.Id == anchor.Id).Position, "The pinned node moved.");
+		Assert.IsGreaterThan(
+			10f,
+			Vector2.Distance(Vector2.Zero, engine.Nodes.Single(n => n.Id == free.Id).Position),
+			"The overlapping neighbour should have been pushed away from the pinned node.");
+	}
+
+	[TestMethod]
 	public void GetNodeLinks_ReturnsBothEndsOfAConnection()
 	{
 		(Node source, Node target) = TwoConnectedNodes();
@@ -910,6 +951,18 @@ public sealed class NodeEditorEngineTests
 		// their runtime types differ, so the runtime type has to be asserted separately.
 		Assert.AreEqual(50.0, value);
 		Assert.AreEqual(typeof(double), value?.GetType(), "The seed should have been converted to the pin's declared type, not left as the boxed int it was written as.");
+	}
+
+	/// <summary><c>DefaultValue = 5</c> on a <see langword="long"/> pin boxes an <see langword="int"/>, and reads back as <c>5L</c>.</summary>
+	[TestMethod]
+	public void CreateNodeFromSpecs_CoercesAnIntDefaultOnALongPin()
+	{
+		Node node = engine.CreateNodeFromSpecs(new Vector2(0, 0), "Ticks", [new PinSpec("Count", typeof(long), 5)], []);
+
+		object? value = engine.GetPinValue(node.InputPins[0].Id);
+
+		Assert.AreEqual(5L, value);
+		Assert.AreEqual(typeof(long), value?.GetType());
 	}
 
 	/// <summary>A default that cannot be converted at all is dropped rather than making the node uncreatable.</summary>

@@ -141,6 +141,34 @@ public sealed class ZoomTests
 	}
 
 	/// <summary>
+	/// Tests that a graph cleared and rebuilt between two frames is measured again, though the
+	/// rebuilt nodes reuse the old ids and measure exactly what the old ones did.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="NodeEditorEngine.Clear"/> starts the ids again from one, so the rebuilt nodes are
+	/// drawn under ids the renderer has measurements for, and the measurements have not changed. A
+	/// renderer that only reported a changed measurement left every node at zero size (#643).
+	/// </remarks>
+	[TestMethod]
+	public void ClearingAndRebuildingInOneFrame_MeasuresTheNewNodes()
+	{
+		BuildGraph();
+		Start();
+		harness.Step(10);
+
+		Vector2[] before = Dimensions();
+		Assert.IsTrue(before.All(size => size.X > 0f && size.Y > 0f), "the nodes should have been measured");
+
+		engine.Clear();
+		BuildGraph();
+		Assert.IsTrue(Dimensions().All(size => size == Vector2.Zero), "a rebuilt node starts with no size");
+
+		harness.Step(3);
+
+		CollectionAssert.AreEqual(before, Dimensions(), "the rebuilt nodes should have been given their measured sizes");
+	}
+
+	/// <summary>
 	/// Tests that zooming out and back in leaves the graph exactly where it started, so looking at
 	/// something is not an edit to it.
 	/// </summary>

@@ -113,6 +113,19 @@ public sealed class NodeInspectorPanelKindTests
 		Assert.AreEqual(42, engine.GetPinValue(pinId));
 	}
 
+	/// <summary>A value past what an <c>int</c> holds, so a row that went through 32 bits could not keep it.</summary>
+	[TestMethod]
+	public void Int64_TakesATypedValue()
+	{
+		int pinId = StartWith("Ticks", typeof(long), 5L);
+
+		harness.Click("Ticks");
+		harness.Step(1);
+		Retype("5000000000");
+
+		Assert.AreEqual(5_000_000_000L, engine.GetPinValue(pinId));
+	}
+
 	[TestMethod]
 	public void Single_TakesATypedValue()
 	{
@@ -198,21 +211,21 @@ public sealed class NodeInspectorPanelKindTests
 	}
 
 	/// <summary>
-	/// The ninth kind. A pin nothing can edit is still drawn — dropping it would show less than the
-	/// node has — but the row is disabled, so the same edit every other test here makes lands
-	/// nowhere. <c>long</c> is the documented example: Dear ImGui has no <c>InputLong</c>.
+	/// The unsupported kind. A pin nothing can edit is still drawn — dropping it would show less than
+	/// the node has — but the row is disabled, so the same edit every other test here makes lands
+	/// nowhere. <c>decimal</c> is the example: nothing here edits one.
 	/// </summary>
 	[TestMethod]
 	public void Unsupported_ShowsADisabledRow()
 	{
-		int pinId = StartWith("BigCount", typeof(long), 5L);
+		int pinId = StartWith("Price", typeof(decimal), 5m);
 
-		Assert.IsTrue(harness.Probe.WasSeenInFrame("BigCount", harness.FrameCount - 1));
+		Assert.IsTrue(harness.Probe.WasSeenInFrame("Price", harness.FrameCount - 1));
 
-		harness.Click("BigCount");
+		harness.Click("Price");
 		harness.Step(1);
 		Retype("999");
 
-		Assert.AreEqual(5L, engine.GetPinValue(pinId));
+		Assert.AreEqual(5m, engine.GetPinValue(pinId));
 	}
 }

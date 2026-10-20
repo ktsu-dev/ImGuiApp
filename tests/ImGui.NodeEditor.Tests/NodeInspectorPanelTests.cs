@@ -161,8 +161,7 @@ public sealed class NodeInspectorPanelTests
 
 	/// <summary>
 	/// A pin whose type <see cref="PinValueKinds.Classify"/> does not cover is shown, not omitted,
-	/// but has no working editor. <c>long</c> is the documented example: Dear ImGui has no
-	/// <c>InputLong</c>.
+	/// but has no working editor. <c>decimal</c> is the example: nothing here edits one.
 	/// </summary>
 	[TestMethod]
 	public void Draw_ForAnUnsupportedTypePin_ShowsARowButDisablesIt()
@@ -170,7 +169,7 @@ public sealed class NodeInspectorPanelTests
 		Node node = engine.CreateNodeFromSpecs(
 			new Vector2(0, 0),
 			"Blob Filter",
-			[new PinSpec("BigCount", typeof(long), 5L)],
+			[new PinSpec("BigCount", typeof(decimal), 5m)],
 			[]);
 		inspected = node.Id;
 		Start();
@@ -184,7 +183,7 @@ public sealed class NodeInspectorPanelTests
 		harness.Keyboard.Press(ImGuiKey.Enter);
 		harness.Step(3);
 
-		Assert.AreEqual(5L, engine.GetPinValue(node.InputPins[0].Id));
+		Assert.AreEqual(5m, engine.GetPinValue(node.InputPins[0].Id));
 	}
 
 	/// <summary>
