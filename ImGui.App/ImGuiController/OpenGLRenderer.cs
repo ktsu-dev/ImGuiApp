@@ -21,7 +21,7 @@ using Silk.NET.OpenGL;
 /// </remarks>
 internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 {
-	internal GL? _gl;
+	internal readonly GL? _gl;
 
 	internal int _attribLocationTex;
 	internal int _attribLocationProjMtx;
