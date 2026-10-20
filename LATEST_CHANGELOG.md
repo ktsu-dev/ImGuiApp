@@ -2,6 +2,7 @@
 
 Changes since v3.75.0:
 
+- [minor] Add the phase 4 mobile polish widgets (#710) (matt-edmondson)
 - [minor] Add the phase 3 mobile overlay and navigation widgets (#709) (matt-edmondson)
 - [minor] Add the phase 2 mobile gesture widgets (#708) (matt-edmondson)
 - Fix Escape in nested modals, path text in the save box, and Enter on a search with no match [patch] (#693) (matt-edmondson)
