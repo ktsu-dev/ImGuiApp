@@ -342,8 +342,20 @@ covered by `tests/ImGui.App.Tests/Clipboard/`.
 - **Linux and macOS** run `wl-paste`/`wl-copy`, `xclip` or `osascript` through `IClipboardProcesses`,
   found in fixed system folders rather than on the path (Sonar S4036), with a five-second timeout. A
   writer's standard output is never read: `xclip` and `wl-copy` leave a child serving the clipboard,
-  which holds it open until something else is copied.
+  which holds it open until something else is copied. For the same reason a tool's standard output and
+  error are always redirected, never inherited, and a writer's are closed straight after it starts:
+  `xclip`'s child keeps whatever it was given, so an inherited one held the application's own output
+  open and a script reading it hung until the next copy.
 - **iOS** gets the unsupported clipboard, and `SystemClipboardProcesses.cs` isn't compiled there.
+
+`RealClipboardTests` runs against each desktop's real clipboard with another program on the other end
+(`xclip`, wl-clipboard, PowerShell's Windows Forms clipboard, AppleScript with `sips`). It is opt-in through
+`IMGUI_REAL_CLIPBOARD=1`, since it replaces what was last copied, and skips otherwise.
+`.github/workflows/real-clipboard.yml` runs it on X11 (Xvfb), sway, GNOME's mutter and KDE's KWin, all
+headless, and on the Windows and macOS runners. Two things that bite reproducing it: mutter gives
+wl-clipboard focus only through a keyboard, which a headless session lacks until a
+`org.gnome.Mutter.RemoteDesktop` session creates a virtual one and is held open; and `kwin_wayland` has
+file capabilities that a container refuses to exec, so `setcap -r` it there.
 
 `PngEncoder` exists only so `ClipboardImage.FromPixels` can build the PNG form: eight-bit RGBA, the Sub
 filter on every row, no ancillary chunks.

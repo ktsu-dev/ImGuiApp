@@ -1,0 +1,157 @@
+name: Real Clipboard
+
+# Runs RealClipboardTests against each desktop's own clipboard, with another program on the other
+# end: X11 under Xvfb, Wayland under a headless sway (wlroots), GNOME's mutter and KDE's KWin, and
+# the Windows and macOS runners' own sessions. The image clipboard reaches each of these a
+# different way, through tools whose behaviour no fake reproduces (which of them holds a pipe open,
+# which needs keyboard focus), and the rest of the suite runs those tools only as stand-ins.
+#
+# The tests are opt-in through IMGUI_REAL_CLIPBOARD, because on a developer's machine they replace
+# whatever was last copied; that is why they are their own workflow rather than part of CI's test
+# step, and why they skip everywhere else.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ImGui.App/Clipboard/**"
+      - "ImGui.App/Images/**"
+      - "tests/ImGui.App.Tests/Clipboard/**"
+      - ".github/workflows/real-clipboard.yml"
+  pull_request:
+    paths:
+      - "ImGui.App/Clipboard/**"
+      - "ImGui.App/Images/**"
+      - "tests/ImGui.App.Tests/Clipboard/**"
+      - ".github/workflows/real-clipboard.yml"
+  schedule:
+    - cron: "0 3 * * 1" # Weekly, Monday 3 AM UTC, so a runner image change is noticed
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0"
+  IMGUI_REAL_CLIPBOARD: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  TESTINGPLATFORM_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  desktop:
+    name: ${{ matrix.desktop }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { desktop: x11, os: ubuntu-24.04 }
+          - { desktop: sway, os: ubuntu-24.04 }
+          - { desktop: gnome, os: ubuntu-24.04 }
+          - { desktop: kde, os: ubuntu-24.04 }
+          - { desktop: windows, os: windows-latest }
+          - { desktop: macos, os: macos-latest }
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Install the desktop
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          case "${{ matrix.desktop }}" in
+            x11)   sudo apt-get install -y -q xvfb xclip ;;
+            sway)  sudo apt-get install -y -q sway wl-clipboard ;;
+            gnome) sudo apt-get install -y -q mutter xwayland wl-clipboard xclip dbus python3-gi ;;
+            kde)   sudo apt-get install -y -q --no-install-recommends kwin-wayland wl-clipboard dbus ;;
+          esac
+
+      # Each session's environment goes into GITHUB_ENV so the test step runs inside it, as an
+      # application started on that desktop would.
+      - name: Start the desktop session
+        if: runner.os == 'Linux'
+        run: |
+          runtime="$RUNNER_TEMP/xdg"
+          mkdir -p "$runtime" && chmod 700 "$runtime"
+          echo "XDG_RUNTIME_DIR=$runtime" >> "$GITHUB_ENV"
+          export XDG_RUNTIME_DIR="$runtime"
+          case "${{ matrix.desktop }}" in
+            x11)
+              Xvfb :99 -screen 0 800x600x24 > "$RUNNER_TEMP/session.log" 2>&1 &
+              echo "DISPLAY=:99" >> "$GITHUB_ENV"
+              ;;
+            sway)
+              echo "xwayland disable" > "$RUNNER_TEMP/sway.conf"
+              WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman \
+                sway -c "$RUNNER_TEMP/sway.conf" > "$RUNNER_TEMP/session.log" 2>&1 &
+              echo "WAYLAND_DISPLAY=wayland-1" >> "$GITHUB_ENV"
+              ;;
+            gnome)
+              # mutter hands wl-clipboard focus only through a keyboard, and a headless session
+              # has none until a remote desktop session creates a virtual one, so one is held open.
+              bus="unix:path=$runtime/bus"
+              dbus-daemon --session --address="$bus" --fork
+              export DBUS_SESSION_BUS_ADDRESS="$bus"
+              echo "DBUS_SESSION_BUS_ADDRESS=$bus" >> "$GITHUB_ENV"
+              mutter --wayland --headless --virtual-monitor 800x600 --wayland-display=wayland-gnome \
+                > "$RUNNER_TEMP/session.log" 2>&1 &
+              sleep 5
+              cat > "$RUNNER_TEMP/keyboard.py" <<'EOF'
+          import time
+          from gi.repository import Gio, GLib
+          bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+          def call(path, iface, method, args=None):
+              return bus.call_sync('org.gnome.Mutter.RemoteDesktop', path, iface, method, args, None, 0, -1, None)
+          session = call('/org/gnome/Mutter/RemoteDesktop', 'org.gnome.Mutter.RemoteDesktop', 'CreateSession').unpack()[0]
+          iface = 'org.gnome.Mutter.RemoteDesktop.Session'
+          call(session, iface, 'Start')
+          call(session, iface, 'NotifyKeyboardKeycode', GLib.Variant('(ub)', (42, True)))
+          call(session, iface, 'NotifyKeyboardKeycode', GLib.Variant('(ub)', (42, False)))
+          print('keyboard ready', flush=True)
+          time.sleep(3600)
+          EOF
+              /usr/bin/python3 "$RUNNER_TEMP/keyboard.py" > "$RUNNER_TEMP/keyboard.log" 2>&1 &
+              sleep 2
+              echo "WAYLAND_DISPLAY=wayland-gnome" >> "$GITHUB_ENV"
+              # A GNOME session also has XWayland, which the clipboard falls back to.
+              echo "DISPLAY=$(grep -o 'Using public X11 display :[0-9]*' "$RUNNER_TEMP/session.log" | grep -o ':[0-9]*')" >> "$GITHUB_ENV"
+              echo "XAUTHORITY=$(ls "$runtime"/.mutter-Xwaylandauth.* | head -1)" >> "$GITHUB_ENV"
+              ;;
+            kde)
+              bus="unix:path=$runtime/bus"
+              dbus-daemon --session --address="$bus" --fork
+              echo "DBUS_SESSION_BUS_ADDRESS=$bus" >> "$GITHUB_ENV"
+              DBUS_SESSION_BUS_ADDRESS="$bus" kwin_wayland --virtual --no-lockscreen --socket wayland-kde \
+                > "$RUNNER_TEMP/session.log" 2>&1 &
+              echo "WAYLAND_DISPLAY=wayland-kde" >> "$GITHUB_ENV"
+              ;;
+          esac
+          sleep 3
+
+      - name: Build the tests
+        run: dotnet build tests/ImGui.App.Tests/ImGui.App.Tests.csproj -c Release
+
+      - name: Run the real clipboard tests
+        shell: bash
+        run: |
+          dotnet tests/ImGui.App.Tests/bin/Release/net10.0/ktsu.ImGui.App.Tests.dll \
+            --filter "FullyQualifiedName~RealClipboardTests" < /dev/null
+
+      - name: Show the session log
+        if: failure() && runner.os == 'Linux'
+        run: cat "$RUNNER_TEMP"/*.log || true
