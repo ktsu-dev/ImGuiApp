@@ -1287,7 +1287,8 @@ release computes the same version again. nuget.org then answers `Conflict` for e
 step accepts, so the tag lands on the newer commit while the package on nuget.org is still the older code.
 3.77.1 went out that way: its first run failed at the `packages.ktsu.dev` push (403), and the second, carrying
 #720, tagged v3.77.1 without publishing it. After a release fails partway, check that the next one gets a new
-version number, and if it doesn't, push another `[patch]` commit.
+version number, and if it doesn't, run CI by hand with `version-bump: patch` (a commit touching only
+Markdown starts no CI run, since `ci.yml` ignores `**.md`).
 
 ## Code Quality
 
