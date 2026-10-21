@@ -1282,6 +1282,13 @@ quality gate once already. The gallery only ever builds main.
 
 Uses `scripts/PSBuild.psm1` PowerShell module for CI pipeline. Version increments are controlled by commit message tags: `[major]`, `[minor]`, `[patch]`, `[pre]`. Auto-generated files (VERSION.md, CHANGELOG.md, LICENSE.md) should not be manually edited. CI runs on Windows, publishes to NuGet, uses SonarQube for analysis.
 
+A release that fails after its push to nuget.org leaves that version published but not tagged, and the next
+release computes the same version again. nuget.org then answers `Conflict` for every package, which the release
+step accepts, so the tag lands on the newer commit while the package on nuget.org is still the older code.
+3.77.1 went out that way: its first run failed at the `packages.ktsu.dev` push (403), and the second, carrying
+#720, tagged v3.77.1 without publishing it. After a release fails partway, check that the next one gets a new
+version number, and if it doesn't, push another `[patch]` commit.
+
 ## Code Quality
 
 Do not add global suppressions for warnings. Use explicit suppression attributes with justifications when needed, with preprocessor defines only as fallback. Make the smallest, most targeted suppressions possible.
