@@ -41,12 +41,14 @@ internal static class DeviceIndependentBitmap
 		uint colorsUsed = BinaryPrimitives.ReadUInt32LittleEndian(dib[32..]);
 
 		// A version 4 or 5 header holds its masks itself; the original one is followed by them.
-		int masks = headerSize == InfoHeaderSize ? compression switch
-		{
-			BitFields => 12,
-			AlphaBitFields => 16,
-			_ => 0,
-		} : RepeatsItsMasks(dib, headerSize, compression) ? 12 : 0;
+		int masks = headerSize == InfoHeaderSize
+			? compression switch
+			{
+				BitFields => 12,
+				AlphaBitFields => 16,
+				_ => 0,
+			}
+			: RepeatedMaskBytes(dib, headerSize, compression);
 		long paletteEntries = colorsUsed != 0 ? colorsUsed : bitCount <= 8 ? 1L << bitCount : 0;
 		long pixelOffset = headerSize + masks + (paletteEntries * 4);
 		if (pixelOffset > dib.Length)
@@ -64,23 +66,24 @@ internal static class DeviceIndependentBitmap
 		return file;
 	}
 
-	/// <summary>Whether a version 4 or 5 header with bit fields is followed by its own three masks again.</summary>
+	/// <summary>The bytes of a version 4 or 5 header's own three masks repeated after it, or zero when they are not.</summary>
 	/// <remarks>
 	/// The <c>CF_DIBV5</c> Windows synthesizes from a bitmap does this: a Windows Forms <c>SetImage</c>, or anything
 	/// else copying a <c>CF_BITMAP</c>, reads back with its masks both inside the header and after it. Taking the
 	/// pixels to start straight after the header reads those twelve bytes as pixels, which shifts the image by
 	/// three pixels and, for a narrow one, reads like a vertical flip.
 	/// </remarks>
-	private static bool RepeatsItsMasks(ReadOnlySpan<byte> dib, int headerSize, uint compression)
+	private static int RepeatedMaskBytes(ReadOnlySpan<byte> dib, int headerSize, uint compression)
 	{
 		const int MasksInHeader = InfoHeaderSize;
 		const int MaskBytes = 12;
-		return compression == BitFields
+		bool repeated = compression == BitFields
 			&& headerSize >= MasksInHeader + MaskBytes
 			&& dib.Length >= headerSize + MaskBytes
 			&& dib.Slice(MasksInHeader, MaskBytes).IndexOfAnyExcept((byte)0) >= 0
 			&& dib.Slice(headerSize, MaskBytes).SequenceEqual(dib.Slice(MasksInHeader, MaskBytes))
 			&& dib.Length - headerSize - MaskBytes >= PixelBytes(dib);
+		return repeated ? MaskBytes : 0;
 	}
 
 	private static long PixelBytes(ReadOnlySpan<byte> dib)

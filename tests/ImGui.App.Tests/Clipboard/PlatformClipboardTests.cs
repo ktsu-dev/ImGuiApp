@@ -193,8 +193,8 @@ public sealed partial class PlatformClipboardTests
 		ImagePixels fromRepeated = ImageDecoder.Decode(DeviceIndependentBitmap.ToBitmapFile(repeated)!);
 		ImagePixels fromPlain = ImageDecoder.Decode(DeviceIndependentBitmap.ToBitmapFile(plain)!);
 
-		CollectionAssert.AreEqual(fromPlain.ReadOnlyPixels.ToArray(), fromRepeated.ReadOnlyPixels.ToArray());
-		CollectionAssert.AreEqual(new byte[] { 255, 0, 0, 255 }, fromRepeated.ReadOnlyPixels[..4].ToArray(), "The top-left pixel is red.");
+		Assert.AreSequenceEqual(fromPlain.ReadOnlyPixels.ToArray(), fromRepeated.ReadOnlyPixels.ToArray());
+		Assert.AreSequenceEqual(new byte[] { 255, 0, 0, 255 }, fromRepeated.ReadOnlyPixels[..4].ToArray(), "The top-left pixel is red.");
 	}
 
 	[TestMethod]
