@@ -17,6 +17,7 @@ on:
     workflows:
       - "CI"
       - "iOS Workflow"
+      - "Real Clipboard"
     types: [completed]
 
 permissions:

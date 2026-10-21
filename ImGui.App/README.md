@@ -344,6 +344,9 @@ a `ClipboardImage` from your own PNG and BGRA rows. `IImageClipboard` is an inte
 in a clipboard of their own. Reading starts a short-lived process everywhere but Windows, bounded by a
 timeout of a few seconds.
 
+It is tested against the real clipboard on Windows, macOS, X11, and Wayland under GNOME, KDE and
+wlroots compositors such as sway, with another program reading what it writes and writing what it reads.
+
 ### Extensions: ImGuizmo, ImNodes and ImPlot
 
 By default `ImGuiApp` finds whichever of the three extensions your application references and sets
