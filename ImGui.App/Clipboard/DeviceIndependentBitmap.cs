@@ -46,7 +46,7 @@ internal static class DeviceIndependentBitmap
 			BitFields => 12,
 			AlphaBitFields => 16,
 			_ => 0,
-		} : 0;
+		} : RepeatsItsMasks(dib, headerSize, compression) ? 12 : 0;
 		long paletteEntries = colorsUsed != 0 ? colorsUsed : bitCount <= 8 ? 1L << bitCount : 0;
 		long pixelOffset = headerSize + masks + (paletteEntries * 4);
 		if (pixelOffset > dib.Length)
@@ -62,6 +62,33 @@ internal static class DeviceIndependentBitmap
 		dib.CopyTo(file.AsSpan(FileHeaderSize));
 
 		return file;
+	}
+
+	/// <summary>Whether a version 4 or 5 header with bit fields is followed by its own three masks again.</summary>
+	/// <remarks>
+	/// The <c>CF_DIBV5</c> Windows synthesizes from a bitmap does this: a Windows Forms <c>SetImage</c>, or anything
+	/// else copying a <c>CF_BITMAP</c>, reads back with its masks both inside the header and after it. Taking the
+	/// pixels to start straight after the header reads those twelve bytes as pixels, which shifts the image by
+	/// three pixels and, for a narrow one, reads like a vertical flip.
+	/// </remarks>
+	private static bool RepeatsItsMasks(ReadOnlySpan<byte> dib, int headerSize, uint compression)
+	{
+		const int MasksInHeader = InfoHeaderSize;
+		const int MaskBytes = 12;
+		return compression == BitFields
+			&& headerSize >= MasksInHeader + MaskBytes
+			&& dib.Length >= headerSize + MaskBytes
+			&& dib.Slice(MasksInHeader, MaskBytes).IndexOfAnyExcept((byte)0) >= 0
+			&& dib.Slice(headerSize, MaskBytes).SequenceEqual(dib.Slice(MasksInHeader, MaskBytes))
+			&& dib.Length - headerSize - MaskBytes >= PixelBytes(dib);
+	}
+
+	private static long PixelBytes(ReadOnlySpan<byte> dib)
+	{
+		long width = BinaryPrimitives.ReadInt32LittleEndian(dib[4..]);
+		long height = Math.Abs((long)BinaryPrimitives.ReadInt32LittleEndian(dib[8..]));
+		int bitCount = BinaryPrimitives.ReadUInt16LittleEndian(dib[14..]);
+		return ((width * bitCount) + 31) / 32 * 4 * height;
 	}
 
 	/// <summary>Builds a 32-bit bottom-up DIB, with an original info header, from top-down BGRA rows.</summary>

@@ -184,6 +184,20 @@ public sealed partial class PlatformClipboardTests
 	}
 
 	[TestMethod]
+	public void AVersion5Header_FollowedByItsMasksAgain_SkipsThem()
+	{
+		// What Windows synthesizes as CF_DIBV5 from a copied bitmap; found by RealClipboardTests on Windows.
+		byte[] repeated = Version5BitFields(3, 2, repeatMasks: true);
+		byte[] plain = Version5BitFields(3, 2, repeatMasks: false);
+
+		ImagePixels fromRepeated = ImageDecoder.Decode(DeviceIndependentBitmap.ToBitmapFile(repeated)!);
+		ImagePixels fromPlain = ImageDecoder.Decode(DeviceIndependentBitmap.ToBitmapFile(plain)!);
+
+		CollectionAssert.AreEqual(fromPlain.ReadOnlyPixels.ToArray(), fromRepeated.ReadOnlyPixels.ToArray());
+		CollectionAssert.AreEqual(new byte[] { 255, 0, 0, 255 }, fromRepeated.ReadOnlyPixels[..4].ToArray(), "The top-left pixel is red.");
+	}
+
+	[TestMethod]
 	public void AHeaderClaimingMoreThanThereIs_IsRefused()
 	{
 		byte[] tooBig = Header(size: DeviceIndependentBitmap.InfoHeaderSize, bitCount: 32, compression: 0, colorsUsed: 0, extra: 8);
@@ -307,6 +321,27 @@ public sealed partial class PlatformClipboardTests
 		{
 			_ = NativeMethods.CloseClipboard();
 		}
+	}
+
+	/// <summary>A bottom-up 32-bit DIB with a version 5 header and bit fields, the top row red, green, blue and the bottom yellow, cyan, magenta.</summary>
+	private static byte[] Version5BitFields(int width, int height, bool repeatMasks)
+	{
+		const int HeaderSize = 124;
+		byte[] masks = [.. BitConverter.GetBytes(0x00FF0000u), .. BitConverter.GetBytes(0x0000FF00u), .. BitConverter.GetBytes(0x000000FFu)];
+		byte[] header = new byte[HeaderSize];
+		BitConverter.GetBytes(HeaderSize).CopyTo(header, 0);
+		BitConverter.GetBytes(width).CopyTo(header, 4);
+		BitConverter.GetBytes(height).CopyTo(header, 8);
+		BitConverter.GetBytes((ushort)1).CopyTo(header, 12);
+		BitConverter.GetBytes((ushort)32).CopyTo(header, 14);
+		BitConverter.GetBytes(3u).CopyTo(header, 16);
+		masks.CopyTo(header, 40);
+		BitConverter.GetBytes(0xFF000000u).CopyTo(header, 52);
+
+		// Blue, green, red, alpha per pixel, bottom row first.
+		byte[] bottom = [0, 255, 255, 255, /**/ 255, 255, 0, 255, /**/ 255, 0, 255, 255];
+		byte[] top = [0, 0, 255, 255, /**/ 0, 255, 0, 255, /**/ 255, 0, 0, 255];
+		return [.. header, .. repeatMasks ? masks : [], .. bottom, .. top];
 	}
 
 	private static byte[] Header(int size, ushort bitCount, uint compression, uint colorsUsed, int extra)
