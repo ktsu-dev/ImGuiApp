@@ -117,7 +117,15 @@ jobs:
           bus = Gio.bus_get_sync(Gio.BusType.SESSION)
           def call(path, iface, method, args=None):
               return bus.call_sync('org.gnome.Mutter.RemoteDesktop', path, iface, method, args, None, 0, -1, None)
-          session = call('/org/gnome/Mutter/RemoteDesktop', 'org.gnome.Mutter.RemoteDesktop', 'CreateSession').unpack()[0]
+          # mutter takes its remote desktop name a few seconds after its socket appears.
+          for attempt in range(60):
+              try:
+                  session = call('/org/gnome/Mutter/RemoteDesktop', 'org.gnome.Mutter.RemoteDesktop', 'CreateSession').unpack()[0]
+                  break
+              except GLib.Error:
+                  time.sleep(0.5)
+          else:
+              raise SystemExit('mutter never offered a remote desktop session')
           iface = 'org.gnome.Mutter.RemoteDesktop.Session'
           call(session, iface, 'Start')
           call(session, iface, 'NotifyKeyboardKeycode', GLib.Variant('(ub)', (42, True)))
@@ -126,7 +134,8 @@ jobs:
           time.sleep(3600)
           EOF
               /usr/bin/python3 "$RUNNER_TEMP/keyboard.py" > "$RUNNER_TEMP/keyboard.log" 2>&1 &
-              sleep 2
+              for _ in $(seq 60); do grep -q 'keyboard ready' "$RUNNER_TEMP/keyboard.log" && break; sleep 0.5; done
+              grep -q 'keyboard ready' "$RUNNER_TEMP/keyboard.log" || { cat "$RUNNER_TEMP/keyboard.log"; exit 1; }
               echo "WAYLAND_DISPLAY=wayland-gnome" >> "$GITHUB_ENV"
               # A GNOME session also has XWayland, which the clipboard falls back to.
               echo "DISPLAY=$(grep -o 'Using public X11 display :[0-9]*' "$RUNNER_TEMP/session.log" | grep -o ':[0-9]*')" >> "$GITHUB_ENV"
