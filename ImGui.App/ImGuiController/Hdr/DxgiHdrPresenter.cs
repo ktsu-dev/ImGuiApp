@@ -197,10 +197,10 @@ internal sealed unsafe partial class DxgiHdrPresenter : IHdrPresenter
 	}
 
 	/// <inheritdoc />
-	public bool BeginOutput(int width, int height, out uint framebuffer)
+	public bool BeginOutput(int frameWidth, int frameHeight, out uint framebuffer)
 	{
 		framebuffer = this.framebuffer;
-		if (!EnsureTarget(width, height))
+		if (!EnsureTarget(frameWidth, frameHeight))
 		{
 			return false;
 		}

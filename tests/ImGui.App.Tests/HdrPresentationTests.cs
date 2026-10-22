@@ -142,7 +142,7 @@ public sealed class HdrPresentationTests
 
 		public (float Scale, float Limit) OutputRange(HdrDisplayInfo display) => (1f, (float)display.Headroom);
 
-		public bool BeginOutput(int width, int height, out uint framebuffer)
+		public bool BeginOutput(int frameWidth, int frameHeight, out uint framebuffer)
 		{
 			framebuffer = 0;
 			return true;

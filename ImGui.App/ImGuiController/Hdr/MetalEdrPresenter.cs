@@ -148,10 +148,10 @@ internal sealed partial class MetalEdrPresenter : IHdrPresenter
 	}
 
 	/// <inheritdoc />
-	public bool BeginOutput(int width, int height, out uint framebuffer)
+	public bool BeginOutput(int frameWidth, int frameHeight, out uint framebuffer)
 	{
 		framebuffer = this.framebuffer;
-		return EnsureTarget(Math.Max(1, width), Math.Max(1, height));
+		return EnsureTarget(Math.Max(1, frameWidth), Math.Max(1, frameHeight));
 	}
 
 	/// <inheritdoc />

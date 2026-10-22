@@ -26,11 +26,11 @@ internal interface IHdrPresenter : IDisposable
 	public (float Scale, float Limit) OutputRange(HdrDisplayInfo display);
 
 	/// <summary>Makes the target ready for a frame of the given size and gives its framebuffer.</summary>
-	/// <param name="width">The frame's width in pixels.</param>
-	/// <param name="height">The frame's height in pixels.</param>
+	/// <param name="frameWidth">The frame's width in pixels.</param>
+	/// <param name="frameHeight">The frame's height in pixels.</param>
 	/// <param name="framebuffer">The OpenGL framebuffer to draw the frame into.</param>
 	/// <returns>Whether the target is ready; false skips the frame.</returns>
-	public bool BeginOutput(int width, int height, out uint framebuffer);
+	public bool BeginOutput(int frameWidth, int frameHeight, out uint framebuffer);
 
 	/// <summary>Presents what was drawn since <see cref="BeginOutput"/>.</summary>
 	public void EndOutput();
