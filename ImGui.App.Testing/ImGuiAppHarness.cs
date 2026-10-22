@@ -141,6 +141,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		Hexa.NET.ImGui.ImGui.GetIO().ConfigMacOSXBehaviors = false;
 
 		live = harness;
+		ImGuiApp.HdrDisplay = options.HdrDisplay;
 
 		// Items are recorded against the frame being rendered, which is FrameCount until the step
 		// completes and increments it.
@@ -150,6 +151,33 @@ public sealed class ImGuiAppHarness : IDisposable
 
 		return harness;
 	}
+
+	/// <summary>
+	/// Gets or sets what the application is told the screen can show, as a screen turning HDR on or
+	/// off, or the window moving to another screen, would change it. Starts at
+	/// <see cref="HarnessOptions.HdrDisplay"/>.
+	/// </summary>
+	public HdrDisplayInfo HdrDisplay
+	{
+		get
+		{
+			ObjectDisposedException.ThrowIf(disposed, this);
+			return ImGuiApp.HdrDisplay;
+		}
+
+		set
+		{
+			ObjectDisposedException.ThrowIf(disposed, this);
+			ImGuiApp.HdrDisplay = Ensure.NotNull(value);
+		}
+	}
+
+	/// <summary>Gets the half-float pixels a texture was last given, when it was made from half floats.</summary>
+	/// <param name="textureId">The texture's id.</param>
+	/// <param name="rgba">The pixels, four values each, encoded by <see cref="HdrEncoding"/>.</param>
+	/// <returns>Whether the texture holds half floats.</returns>
+	public bool TryGetHalfFloatPixels(nint textureId, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Half[]? rgba) =>
+		Renderer.TryGetHalfFloatPixels(textureId, out rgba);
 
 	/// <summary>Advances exactly one frame.</summary>
 	public void Step() => Step(1);
@@ -341,6 +369,7 @@ public sealed class ImGuiAppHarness : IDisposable
 		{
 			live = null;
 			ImGuiProbes.SetProbe(null);
+			ImGuiApp.HdrDisplay = HdrDisplayInfo.Sdr;
 			ImGuiApp.EndExternalFrameSession();
 		}
 

@@ -20,7 +20,6 @@ using ktsu.Semantics.Strings;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-using Color = System.Drawing.Color;
 
 /// <summary>
 /// Provides static methods and properties to manage the ImGui application.
@@ -385,6 +384,7 @@ public static partial class ImGuiApp
 				}
 			);
 			DebugLogger.Log("Window.Load: ImGuiController created");
+			SetupHdrOutput(config);
 
 			ImGui.GetStyle().WindowRounding = 0;
 			window.WindowState = config.InitialWindowState.LayoutState;
@@ -664,6 +664,7 @@ public static partial class ImGuiApp
 		window!.Move += (p) =>
 		{
 			CaptureWindowNormalState();
+			RefreshHdrDisplay();
 			UpdateDpiScale();
 			CheckAndHandleContextChange();
 
@@ -805,12 +806,12 @@ public static partial class ImGuiApp
 				throw new InvalidOperationException("Fonts are not configured before Render()");
 			}
 
-			gl?.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
-			gl?.Clear(ClearBufferMask.ColorBufferBit);
+			BeginPresentedFrame();
 
 			RenderFrameContents(config, (float)delta);
 
 			controller?.Render();
+			EndPresentedFrame();
 
 			// Apply sleep-based frame rate limiting
 			ApplyFrameRateLimit();
@@ -1025,6 +1026,7 @@ public static partial class ImGuiApp
 	{
 		CleanupPinnedFontData();
 		FontHelper.CleanupCustomFonts();
+		CleanupHdrOutput();
 		CleanupController();
 		CleanupInputContext();
 		CleanupOpenGL();
@@ -2808,6 +2810,8 @@ public static partial class ImGuiApp
 		GlobalScale = 1.0f;
 		Textures.Clear();
 		currentGLContext = null;
+		hdrPresentation = null;
+		HdrDisplay = HdrDisplayInfo.Sdr;
 		overlayChrome.ResetState();
 		Config = new();
 	}

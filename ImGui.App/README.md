@@ -347,6 +347,48 @@ timeout of a few seconds.
 It is tested against the real clipboard on Windows, macOS, X11, and Wayland under GNOME, KDE and
 wlroots compositors such as sway, with another program reading what it writes and writing what it reads.
 
+### HDR Output
+
+Set `ImGuiAppConfig.HdrOutput = true` and, on an HDR screen, the window presents in HDR: textures can
+hold values brighter than white and the screen shows them that way, up to its peak. The interface
+itself looks exactly as it does in an SDR window, at the brightness the system shows SDR content at.
+
+```csharp
+ImGuiApp.Start(new ImGuiAppConfig
+{
+    HdrOutput = true,
+    OnRender = delta =>
+    {
+        HdrDisplayInfo display = ImGuiApp.HdrDisplay;
+        ImGui.Text($"HDR: {display.IsHdr}, headroom {display.Headroom:0.00}x");
+    },
+});
+
+// Half-float pixels in HdrEncoding's space: 1 is SDR white, 2.5 is two and a half times as bright.
+Half[] pixels = new Half[width * height * 4];
+pixels[0] = (Half)HdrEncoding.Encode(2.5f);
+ImGuiAppTextureInfo texture = ImGuiApp.CreateTexture(pixels, width, height);
+```
+
+- **Windows** presents through a Direct3D 11 half-float swap chain in scRGB, fed from OpenGL through
+  `WGL_NV_DX_interop2`. SDR white follows the system's "SDR content brightness" setting.
+- **macOS** presents through an extended dynamic range Metal layer, fed from OpenGL through an
+  IOSurface.
+- **Linux, iOS and anything else** present in SDR. So does a Windows or macOS machine whose driver
+  can't share the frame between the two APIs; the reason is written to the debug log.
+
+`ImGuiApp.HdrDisplay` says what the screen can show: whether it is in HDR, SDR white and peak in nits,
+and the headroom between them. It is asked again every second and whenever the window moves, so it
+follows the window to another screen and follows HDR being turned on or off; remake anything that
+depends on it when it changes. `IsHdrOutputActive` says whether the window presents through the HDR
+path at all.
+
+Half-float pixels are encoded with `HdrEncoding.Encode`, sRGB's curve continued past 1 and mirrored
+below 0, so a texture blends and filters like an RGBA8 one does. A renderer without half-float
+textures gets them converted to RGBA8, which shows them as an SDR screen would. Under
+`ImGuiAppHarness`, `HarnessOptions.HdrDisplay` and `harness.HdrDisplay` pretend to be an HDR screen,
+and `harness.TryGetHalfFloatPixels` reads back what a half-float texture holds.
+
 ### Extensions: ImGuizmo, ImNodes and ImPlot
 
 By default `ImGuiApp` finds whichever of the three extensions your application references and sets
@@ -564,6 +606,8 @@ The main entry point for creating and managing ImGui applications.
 | `IsIdle` | `bool` | Gets whether the application is currently idle |
 | `ScaleFactor` | `float` | Gets the current DPI scale factor |
 | `CompositorOwnsWindowGeometry` | `bool` | Gets whether the window manager, rather than the application, owns window position and size |
+| `HdrDisplay` | `HdrDisplayInfo` | Gets what the window's screen can show: HDR or not, SDR white, peak and headroom (see [HDR Output](#hdr-output)) |
+| `IsHdrOutputActive` | `bool` | Gets whether the window presents through the platform's HDR path |
 
 #### Methods
 
@@ -577,6 +621,8 @@ The main entry point for creating and managing ImGui applications.
 | `UpdateTexture` | `ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> rgba, int width, int height` | `void` | Replaces a texture's pixels, in place when the size is unchanged; callable from any thread |
 | `CreateTexture` | `ReadOnlySpan<byte> pixels, int width, int height, PixelLayout layout, int rowStride = 0` | `ImGuiAppTextureInfo` | As above, from BGRA, RGB, BGR or greyscale pixels, with optional row padding |
 | `UpdateTexture` | `ImGuiAppTextureInfo textureInfo, ReadOnlySpan<byte> pixels, int width, int height, PixelLayout layout, int rowStride = 0` | `void` | As above, from BGRA, RGB, BGR or greyscale pixels, with optional row padding |
+| `CreateTexture` | `ReadOnlySpan<Half> rgba, int width, int height` | `ImGuiAppTextureInfo` | Uploads half-float pixels encoded by `HdrEncoding`, which can hold values above white |
+| `UpdateTexture` | `ImGuiAppTextureInfo textureInfo, ReadOnlySpan<Half> rgba, int width, int height` | `void` | Replaces a half-float texture's pixels |
 | `DeleteTexture` | `nint textureId` | `void` | Deletes a texture and frees its resources |
 | `DeleteTexture` | `ImGuiAppTextureInfo textureInfo` | `void` | Deletes a texture and frees its resources (convenience overload) |
 | `CleanupAllTextures` | | `void` | Cleans up all loaded textures |
@@ -604,6 +650,7 @@ Configuration for the ImGui application.
 | `SaveIniSettings` | `bool` | `true` | Whether ImGui should save window settings to imgui.ini |
 | `Extensions` | `ImGuiAppExtensions` | `All` | Which of ImGuizmo, ImNodes and ImPlot are set up at launch. One left out costs nothing at startup and can be turned on later with `ImGuiApp.EnableExtensions` |
 | `PerformanceSettings` | `ImGuiAppPerformanceSettings` | `new()` | Performance settings for throttled rendering |
+| `HdrOutput` | `bool` | `false` | Present in HDR on an HDR screen, on Windows and macOS (see [HDR Output](#hdr-output)) |
 | `OnStart` | `Action` | `() => { }` | Called when the application starts |
 | `FrameWrapperFactory` | `Func<ScopedAction?>` | `() => null` | Factory for creating frame wrappers |
 | `OnUpdate` | `Action<float>` | `(delta) => { }` | Called each frame before rendering (param: delta time) |

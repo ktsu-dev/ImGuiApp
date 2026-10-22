@@ -204,6 +204,25 @@ public class ImGuiAppConfig
 	public ImGuiAppMenus BuiltInMenus { get; init; } = ImGuiAppMenus.All;
 
 	/// <summary>
+	/// Gets or sets whether the window presents in HDR when the screen it is on can show it. Default is false.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// When it is on, frames are drawn into a half-float target and handed to the platform's HDR
+	/// presentation: a DXGI scRGB swap chain on Windows and an extended dynamic range Metal layer on
+	/// macOS. Everything ImGui draws keeps its SDR look, placed at the screen's SDR white level, and a
+	/// texture made by <c>ImGuiApp.CreateTexture</c> from half-float pixels can hold
+	/// values above 1, which the screen shows brighter than white.
+	/// <c>ImGuiApp.HdrDisplay</c> says what the screen can do.
+	/// </para>
+	/// <para>
+	/// Elsewhere, or when the platform's presentation can't be set up, the window presents as it
+	/// always has and <c>ImGuiApp.HdrDisplay</c> reports an SDR screen.
+	/// </para>
+	/// </remarks>
+	public bool HdrOutput { get; init; }
+
+	/// <summary>
 	/// Gets or sets the action to be performed when the application window is moved or resized.
 	/// </summary>
 	public Action OnMoveOrResize { get; init; } = () => { };

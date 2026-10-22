@@ -98,7 +98,7 @@ public sealed class AppDemoUITests
 	[TestMethod]
 	public void Demo_RegistersEveryTab()
 	{
-		Assert.HasCount(15, ImGuiAppDemo.TabNames);
+		Assert.HasCount(16, ImGuiAppDemo.TabNames);
 
 		foreach (string tab in ImGuiAppDemo.TabNames)
 		{
@@ -110,7 +110,7 @@ public sealed class AppDemoUITests
 	public void EveryTab_RendersWithoutError()
 	{
 		// The broadest guard in the suite. Each tab's Render runs only while it is selected, so
-		// this is what actually executes all fifteen code paths -- including the three extension
+		// this is what actually executes all sixteen code paths -- including the three extension
 		// tabs, which fault inside native code if ImGuizmo, ImNodes or ImPlot were never handed the
 		// ImGui context.
 		foreach (string tab in ImGuiAppDemo.TabNames)
@@ -215,6 +215,26 @@ public sealed class AppDemoUITests
 
 		Assert.IsTrue(ImGuiAppDemo.GetTab<Viewport3DDemo>().LastFrameUsedRenderer3D, "The harness offers IRenderer3D, so the tab should use it.");
 		Assert.IsGreaterThan(2000, CountSaturatedPixelsIn("Viewport"), "The cube should be drawn inside the viewport.");
+	}
+
+	/// <summary>
+	/// The HDR tab remakes its ramp when the screen changes, and the ramp keeps values above white
+	/// for an HDR screen rather than having them flattened to RGBA8 on the way in.
+	/// </summary>
+	[TestMethod]
+	public void Hdr_RampRunsToTheScreensHeadroom()
+	{
+		OpenTab("HDR");
+		HdrDemo tab = ImGuiAppDemo.GetTab<HdrDemo>();
+		Assert.AreEqual(HdrDisplayInfo.Sdr, tab.RampDisplay, "The harness starts as an SDR screen.");
+
+		harness.HdrDisplay = HdrDisplayInfo.FromLuminance(200, 1000);
+		harness.Step(2);
+
+		Assert.AreEqual(5.0, tab.RampDisplay!.Headroom, 1e-9, "The ramp should be remade for the new screen.");
+		Assert.IsTrue(harness.TryGetHalfFloatPixels(tab.Ramp!.TextureId, out Half[]? pixels), "The ramp is a half-float texture.");
+		float brightest = HdrEncoding.Decode((float)pixels![(512 - 1) * 4]);
+		Assert.AreEqual(5f, brightest, 0.02f, "The ramp's right end is the screen's headroom.");
 	}
 
 	[TestMethod]

@@ -460,6 +460,37 @@ through the software renderer. Four things to know:
   because the DPI scale reaches a frame through the font, so this only matters on a backend that
   reports a framebuffer scale. A scale change changes the pixel size, which the bucket check picks up.
 
+### HDR output
+
+`ImGuiAppConfig.HdrOutput` presents in HDR on Windows and macOS (`ImGui.App/ImGuiApp.Hdr.cs`,
+`ImGui.App/ImGuiController/Hdr/`). Every frame is drawn as before, in sRGB-encoded values, into an
+RGBA16F framebuffer (`HdrCompositor`), so blending, filtering and the interface's look are unchanged;
+the only difference is that a half-float texture's values above 1 survive. A last pass decodes each
+pixel with `HdrEncoding`'s curve (sRGB continued past 1 and mirrored below 0), scales and limits it,
+and writes it into a platform presenter's framebuffer (`IHdrPresenter`):
+
+- **`DxgiHdrPresenter`** (Windows): a D3D11 FLIP_DISCARD R16G16B16A16_FLOAT swap chain in scRGB on
+  the window's HWND, its back buffer copied from a shared texture OpenGL draws into through
+  `WGL_NV_DX_interop2`. scRGB's 1.0 is 80 nits, so the scale is SDR white / 80, SDR white read from
+  `DisplayConfigGetDeviceInfo` (`WindowsDisplayConfig`), and the limit is the output's peak / 80. COM
+  is called through vtable slots by index; the indices are commented where declared.
+- **`MetalEdrPresenter`** (macOS): a `CAMetalLayer` in RGBA16Float with extended linear sRGB and
+  `wantsExtendedDynamicRangeContent`, over the content view; OpenGL draws into an IOSurface a Metal
+  texture shares, blitted to the drawable. EDR's 1.0 is SDR white, so the scale is 1 and the limit is
+  `NSScreen`'s maximum potential EDR value.
+
+Both flip rows, since Direct3D and Metal put a texture's first row at the top. While HDR is active the
+window stops swapping its own buffers (`ShouldSwapAutomatically`); three refused presents in a row and
+it goes back to SDR for good. Anything that fails while setting up leaves the window in SDR with the
+reason in the debug log. `HdrDisplay` is polled once a second and on every move.
+
+None of this has a test host: both presenters and the compositor are excluded from coverage, and the
+pure parts (`HdrEncoding`, `HdrDisplayInfo`, `WindowsDisplayConfig`'s packets, the OpenGL renderer's
+half-float textures) are tested in `HdrOutputTests`. `SoftwareRenderer` implements the internal
+`IHalfFloatTextures` by keeping the halves beside an RGBA8 conversion, so `HdrTextureTests` and the
+demo's HDR tab test check what a texture holds through `harness.TryGetHalfFloatPixels`, and
+`HarnessOptions.HdrDisplay` stands in for the screen. `ImGuiApp.Hdr.cs` is not compiled for iOS.
+
 ### Context host and renderers
 
 Running ImGui on the desktop is three pieces in `ImGui.App/ImGuiController/` (#313):

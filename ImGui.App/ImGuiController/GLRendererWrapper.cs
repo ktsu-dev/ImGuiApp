@@ -68,6 +68,32 @@ internal sealed class GLRendererWrapper : IGLRenderer
 		}
 	}
 
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The pixels are pinned for the upload only and the pointer is not retained.")]
+	public unsafe uint CreateHalfTexture(int width, int height, ReadOnlySpan<Half> rgba)
+	{
+		uint texture = gl.GenTexture();
+		gl.BindTexture(GLEnum.Texture2D, texture);
+		fixed (Half* pixels = rgba)
+		{
+			gl.TexImage2D(GLEnum.Texture2D, 0, (int)GLEnum.Rgba16f, (uint)width, (uint)height, 0, GLEnum.Rgba, GLEnum.HalfFloat, pixels);
+		}
+
+		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
+		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
+		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
+		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
+		return texture;
+	}
+
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The pixels are pinned for the upload only and the pointer is not retained.")]
+	public unsafe void ReplaceBoundHalfTexture(int width, int height, ReadOnlySpan<Half> rgba)
+	{
+		fixed (Half* pixels = rgba)
+		{
+			gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, (uint)width, (uint)height, GLEnum.Rgba, GLEnum.HalfFloat, pixels);
+		}
+	}
+
 	public void BlendEquation(GLEnum mode) => gl.BlendEquation(mode);
 
 	public void BlendEquationSeparate(GLEnum modeRgb, GLEnum modeAlpha) => gl.BlendEquationSeparate(modeRgb, modeAlpha);

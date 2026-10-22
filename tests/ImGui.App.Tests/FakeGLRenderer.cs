@@ -93,6 +93,18 @@ internal sealed class FakeGLRenderer : IGLRenderer
 	public void ReplaceBoundTexture(int width, int height, ReadOnlySpan<byte> rgba) =>
 		TextureWrites.Add(((uint)GetInteger(GLEnum.TextureBinding2D), width, height, rgba.Length));
 
+	public uint CreateHalfTexture(int width, int height, ReadOnlySpan<Half> rgba)
+	{
+		uint name = nextName++;
+		Calls.Add($"CreateHalfTexture({name})");
+		Integers[GLEnum.TextureBinding2D] = (int)name;
+		TextureWrites.Add((name, width, height, rgba.Length * 2));
+		return name;
+	}
+
+	public void ReplaceBoundHalfTexture(int width, int height, ReadOnlySpan<Half> rgba) =>
+		TextureWrites.Add(((uint)GetInteger(GLEnum.TextureBinding2D), width, height, rgba.Length * 2));
+
 	public void BlendEquation(GLEnum mode)
 	{
 		Integers[GLEnum.BlendEquationRgb] = (int)mode;

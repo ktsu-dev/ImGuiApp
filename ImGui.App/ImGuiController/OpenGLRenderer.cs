@@ -21,7 +21,7 @@ using Silk.NET.OpenGL;
 /// window's input in (#313). Every OpenGL call goes through <see cref="IGLRenderer"/>, so what this
 /// decides is tested without a graphics context.
 /// </remarks>
-internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
+internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D, IHalfFloatTextures
 {
 	private static readonly int VertexStride = Unsafe.SizeOf<ImDrawVert>();
 
@@ -91,9 +91,28 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D
 	}
 
 	/// <inheritdoc />
+	public nint CreateTexture(ReadOnlySpan<Half> rgba, int width, int height)
+	{
+		int previousTextureId = _gl.GetInteger(GLEnum.TextureBinding2D);
+		uint glTexture = _gl.CreateHalfTexture(width, height, rgba);
+		_gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
+		return (nint)glTexture;
+	}
+
+	/// <inheritdoc />
+	public bool UpdateTexture(nint id, ReadOnlySpan<Half> rgba, int width, int height)
+	{
+		int previousTextureId = _gl.GetInteger(GLEnum.TextureBinding2D);
+		_gl.BindTexture(GLEnum.Texture2D, (uint)id);
+		_gl.ReplaceBoundHalfTexture(width, height, rgba);
+		_gl.BindTexture(GLEnum.Texture2D, (uint)previousTextureId);
+		return true;
+	}
+
+	/// <inheritdoc />
 	/// <exception cref="ArgumentException">
 	/// <paramref name="id"/> is a render target. Its texture name comes from the same namespace as
-	/// <see cref="CreateTexture"/>'s, so deleting it here would free a live target's colour attachment;
+	/// <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>'s, so deleting it here would free a live target's colour attachment;
 	/// a target is released through <see cref="DeleteRenderTarget"/> only.
 	/// </exception>
 	public void DeleteTexture(nint id)

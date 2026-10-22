@@ -22,9 +22,10 @@ using Hexa.NET.ImGui;
 /// </remarks>
 /// <param name="width">Render target width in pixels.</param>
 /// <param name="height">Render target height in pixels.</param>
-public sealed partial class SoftwareRenderer(int width, int height) : IRendererBackend
+public sealed partial class SoftwareRenderer(int width, int height) : IRendererBackend, IHalfFloatTextures
 {
 	private readonly Dictionary<nint, TextureSource> textures = [];
+	private readonly Dictionary<nint, Half[]> halfFloatPixels = [];
 	private readonly Bitmap32 target = new(width, height);
 	private nint nextId = 1;
 	private bool disposed;
@@ -77,7 +78,7 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 	}
 
 	/// <summary>Replaces the contents of an existing texture.</summary>
-	/// <param name="id">A handle returned by <see cref="CreateTexture"/>.</param>
+	/// <param name="id">A handle returned by <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.</param>
 	/// <param name="rgba">Tightly packed RGBA8 pixels.</param>
 	/// <param name="width">Texture width in pixels.</param>
 	/// <param name="height">Texture height in pixels.</param>
@@ -85,12 +86,55 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 	public bool UpdateTexture(nint id, ReadOnlySpan<byte> rgba, int width, int height)
 	{
 		RasterizeDeferredDrawData();
+		halfFloatPixels.Remove(id);
 		textures[id] = new TextureSource(ToBitmap(rgba, width, height));
 		return true;
 	}
 
+	/// <summary>
+	/// Uploads a half-float texture. It is drawn as an SDR screen shows it, every value above 1 at
+	/// white, and the half-float pixels are kept for <see cref="TryGetHalfFloatPixels"/>.
+	/// </summary>
+	/// <param name="rgba">Tightly packed pixels, four values each, encoded by <see cref="HdrEncoding"/>.</param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <returns>A handle for later use.</returns>
+	public nint CreateTexture(ReadOnlySpan<Half> rgba, int width, int height)
+	{
+		nint id = CreateTexture(ToRgba8(rgba), width, height);
+		halfFloatPixels[id] = rgba.ToArray();
+		return id;
+	}
+
+	/// <summary>Replaces the contents of a half-float texture.</summary>
+	/// <param name="id">A handle returned by <see cref="CreateTexture(ReadOnlySpan{Half}, int, int)"/>.</param>
+	/// <param name="rgba">Tightly packed pixels, four values each.</param>
+	/// <param name="width">Texture width in pixels.</param>
+	/// <param name="height">Texture height in pixels.</param>
+	/// <returns>Always true.</returns>
+	public bool UpdateTexture(nint id, ReadOnlySpan<Half> rgba, int width, int height)
+	{
+		UpdateTexture(id, ToRgba8(rgba), width, height);
+		halfFloatPixels[id] = rgba.ToArray();
+		return true;
+	}
+
+	/// <summary>Gets the half-float pixels a texture was last given, when it was made from half floats.</summary>
+	/// <param name="id">The texture's handle.</param>
+	/// <param name="rgba">The pixels, four values each.</param>
+	/// <returns>Whether the texture holds half floats.</returns>
+	public bool TryGetHalfFloatPixels(nint id, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Half[]? rgba) =>
+		halfFloatPixels.TryGetValue(id, out rgba);
+
+	private static byte[] ToRgba8(ReadOnlySpan<Half> rgba)
+	{
+		byte[] bytes = new byte[rgba.Length];
+		HdrEncoding.ToRgba8(rgba, bytes);
+		return bytes;
+	}
+
 	/// <summary>Releases a texture.</summary>
-	/// <param name="id">A handle returned by <see cref="CreateTexture"/>.</param>
+	/// <param name="id">A handle returned by <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.</param>
 	/// <exception cref="ArgumentException">
 	/// <paramref name="id"/> is a render target's colour attachment. Those are released through
 	/// <see cref="DeleteRenderTarget"/> and nothing else — see <see cref="IsRenderTargetTexture"/>
@@ -106,10 +150,11 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 
 		RasterizeDeferredDrawData();
 		textures.Remove(id);
+		halfFloatPixels.Remove(id);
 	}
 
 	/// <summary>Looks up a texture by handle.</summary>
-	/// <param name="id">A handle returned by <see cref="CreateTexture"/>.</param>
+	/// <param name="id">A handle returned by <see cref="CreateTexture(ReadOnlySpan{byte}, int, int)"/>.</param>
 	/// <returns>The texture behind that handle.</returns>
 	public TextureSource GetTexture(nint id) => textures[id];
 
@@ -131,6 +176,7 @@ public sealed partial class SoftwareRenderer(int width, int height) : IRendererB
 
 		DiscardDeferredFrame();
 		textures.Clear();
+		halfFloatPixels.Clear();
 		disposed = true;
 	}
 
