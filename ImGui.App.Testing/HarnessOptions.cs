@@ -25,4 +25,10 @@ public sealed record HarnessOptions
 
 	/// <summary>Gets the color the render target is filled with before each frame.</summary>
 	public Rgba32 ClearColor { get; init; } = new(0, 0, 0, 255);
+
+	/// <summary>
+	/// Gets what the application is told the screen can show, through <see cref="ImGuiApp.HdrDisplay"/>.
+	/// An SDR screen by default, as the host's own screen would vary between runs.
+	/// </summary>
+	public HdrDisplayInfo HdrDisplay { get; init; } = HdrDisplayInfo.Sdr;
 }

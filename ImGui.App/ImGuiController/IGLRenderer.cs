@@ -51,6 +51,16 @@ internal interface IGLRenderer
 	/// <summary>Replaces the whole of the texture bound to <see cref="GLEnum.Texture2D"/>.</summary>
 	public void ReplaceBoundTexture(int width, int height, ReadOnlySpan<byte> rgba);
 
+	/// <summary>
+	/// Creates an RGBA16F texture holding <paramref name="rgba"/>, with linear filtering, and leaves it
+	/// bound to <see cref="GLEnum.Texture2D"/>.
+	/// </summary>
+	/// <returns>The texture's name.</returns>
+	public uint CreateHalfTexture(int width, int height, ReadOnlySpan<Half> rgba);
+
+	/// <summary>Replaces the whole of the texture bound to <see cref="GLEnum.Texture2D"/> from half-float pixels.</summary>
+	public void ReplaceBoundHalfTexture(int width, int height, ReadOnlySpan<Half> rgba);
+
 	/// <summary>Sets the blend equation for colour and alpha together.</summary>
 	public void BlendEquation(GLEnum mode);
 
