@@ -2810,8 +2810,7 @@ public static partial class ImGuiApp
 		GlobalScale = 1.0f;
 		Textures.Clear();
 		currentGLContext = null;
-		hdrCompositor = null;
-		hdrPresentFailures = 0;
+		hdrPresentation = null;
 		HdrDisplay = HdrDisplayInfo.Sdr;
 		overlayChrome.ResetState();
 		Config = new();

@@ -25,7 +25,7 @@ using Silk.NET.OpenGL;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage(Justification = "Issues OpenGL calls to a live context, which unit tests do not have; the arithmetic it performs on the GPU is HdrEncoding's, which is tested.")]
-internal sealed class HdrCompositor : IDisposable
+internal sealed class HdrCompositor : IHdrFrameTarget
 {
 	private const string VertexSource =
 		@"#version 330

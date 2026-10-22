@@ -3,7 +3,6 @@
 namespace ktsu.ImGui.App;
 
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -15,18 +14,11 @@ using ktsu.ImGui.App.ImGuiController.Hdr;
 /// </summary>
 public static partial class ImGuiApp
 {
-	/// <summary>How often the screen is asked whether it shows HDR, since the setting can change while the window is open.</summary>
-	private static readonly TimeSpan HdrDisplayPollInterval = TimeSpan.FromSeconds(1);
-
 	/// <summary>The colour every frame starts from, encoded.</summary>
 	private static readonly Vector4 FrameClearColor = new(.45f, .55f, .60f, 1f);
 
-	/// <summary>How many frames in a row the presenter may refuse before the window gives up on HDR.</summary>
-	private const int MaximumHdrPresentFailures = 3;
-
-	private static HdrCompositor? hdrCompositor;
-	private static int hdrPresentFailures;
-	private static long hdrDisplayPolledAt;
+	/// <summary>The window's HDR presentation, or null while it presents in SDR.</summary>
+	internal static HdrPresentation? hdrPresentation;
 
 	/// <summary>
 	/// Gets what the screen the window is on can show. An SDR screen, or a window that doesn't present
@@ -40,7 +32,7 @@ public static partial class ImGuiApp
 	public static HdrDisplayInfo HdrDisplay { get; internal set; } = HdrDisplayInfo.Sdr;
 
 	/// <summary>Gets whether the window presents through the platform's HDR presentation, whatever the screen is showing now.</summary>
-	public static bool IsHdrOutputActive => hdrCompositor is not null;
+	public static bool IsHdrOutputActive => hdrPresentation is not null;
 
 	/// <summary>
 	/// Creates a GPU texture from half-float pixels encoded by <see cref="HdrEncoding"/>, which can hold
@@ -118,6 +110,8 @@ public static partial class ImGuiApp
 	/// stops the window swapping its own OpenGL buffers, since the presenter shows each frame instead.
 	/// </summary>
 	/// <param name="config">The configuration.</param>
+	[ExcludeFromCodeCoverage(Justification = "Needs a live window and OpenGL context; what it sets up is HdrPresentation, which is tested.")]
+	[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The compositor is owned by the presentation it is handed to, which CleanupHdrOutput disposes.")]
 	internal static void SetupHdrOutput(ImGuiAppConfig config)
 	{
 		if (!config.HdrOutput || gl is null || window is null)
@@ -135,9 +129,10 @@ public static partial class ImGuiApp
 				return;
 			}
 
-			hdrCompositor = new HdrCompositor(gl, presenter);
 			string presenterName = presenter.GetType().Name;
+			HdrCompositor compositor = new(gl, presenter);
 			presenter = null;
+			hdrPresentation = new HdrPresentation(compositor, TimeProvider.System);
 			window.ShouldSwapAutomatically = false;
 			RefreshHdrDisplay();
 			DebugLogger.Log($"HDR output: presenting through {presenterName}, screen {HdrDisplay}");
@@ -152,6 +147,7 @@ public static partial class ImGuiApp
 		}
 	}
 
+	[ExcludeFromCodeCoverage(Justification = "Creates a platform presenter over a live window.")]
 	private static IHdrPresenter? CreateHdrPresenter(Silk.NET.OpenGL.GL context, Silk.NET.Windowing.IWindow host, out string reason)
 	{
 		Silk.NET.Maths.Vector2D<int> size = host.FramebufferSize;
@@ -173,31 +169,21 @@ public static partial class ImGuiApp
 	/// <param name="force">Whether to ask now whatever the interval, as when the window moves.</param>
 	internal static void RefreshHdrDisplay(bool force = true)
 	{
-		if (hdrCompositor is null)
+		if (hdrPresentation is not null)
 		{
-			return;
+			HdrDisplay = hdrPresentation.Refresh(force);
 		}
-
-		long now = Stopwatch.GetTimestamp();
-		if (!force && Stopwatch.GetElapsedTime(hdrDisplayPolledAt, now) < HdrDisplayPollInterval)
-		{
-			return;
-		}
-
-		hdrDisplayPolledAt = now;
-		HdrDisplayInfo display = hdrCompositor.Presenter.QueryDisplay();
-		hdrCompositor.Display = display;
-		HdrDisplay = display;
 	}
 
 	/// <summary>Points drawing at the half-float frame when presenting in HDR, and clears whichever target a frame draws into.</summary>
+	[ExcludeFromCodeCoverage(Justification = "Draws into a live window's OpenGL context; the HDR side is HdrPresentation.BeginFrame, which is tested.")]
 	internal static void BeginPresentedFrame()
 	{
-		if (hdrCompositor is not null && window is not null)
+		if (hdrPresentation is not null && window is not null)
 		{
-			RefreshHdrDisplay(force: false);
 			Silk.NET.Maths.Vector2D<int> size = window.FramebufferSize;
-			hdrCompositor.BeginFrame(size.X, size.Y, FrameClearColor);
+			hdrPresentation.BeginFrame(size.X, size.Y, FrameClearColor);
+			HdrDisplay = hdrPresentation.Display;
 			return;
 		}
 
@@ -211,30 +197,21 @@ public static partial class ImGuiApp
 	/// </summary>
 	internal static void EndPresentedFrame()
 	{
-		if (hdrCompositor is null)
+		if (hdrPresentation is null || hdrPresentation.EndFrame())
 		{
 			return;
 		}
 
-		if (hdrCompositor.EndFrame())
-		{
-			hdrPresentFailures = 0;
-			return;
-		}
-
-		if (++hdrPresentFailures >= MaximumHdrPresentFailures)
-		{
-			DebugLogger.Log("HDR output: the presenter stopped taking frames; presenting in SDR.");
-			CleanupHdrOutput();
-			window?.ShouldSwapAutomatically = true;
-		}
+		DebugLogger.Log("HDR output: the presenter stopped taking frames; presenting in SDR.");
+		CleanupHdrOutput();
+		window?.ShouldSwapAutomatically = true;
 	}
 
 	/// <summary>Releases the HDR presentation, before the OpenGL context it draws with.</summary>
 	internal static void CleanupHdrOutput()
 	{
-		hdrCompositor?.Dispose();
-		hdrCompositor = null;
+		hdrPresentation?.Dispose();
+		hdrPresentation = null;
 		HdrDisplay = HdrDisplayInfo.Sdr;
 	}
 

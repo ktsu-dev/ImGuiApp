@@ -535,6 +535,37 @@ callsAfterForced, "Forced validation should cause additional monitor access");
 	}
 
 	[TestMethod]
+	public void HalfFloatTextures_OnARendererWithoutThem_AreConvertedToRgba8()
+	{
+		ResetState();
+		ImGuiApp.Invoker = new Invoker.Invoker();
+		FakeRendererBackend backend = new() { NextHandle = 9 };
+		ImGuiApp.renderer = backend;
+		ImGuiApp.controller = null;
+		Half[] white = [(Half)1f, (Half)1f, (Half)1f, (Half)1f];
+		Half[] brighterThanWhite = [(Half)HdrEncoding.Encode(4f), (Half)0f, (Half)0.5f, (Half)1f];
+
+		ImGuiAppTextureInfo texture = ImGuiApp.CreateTexture(white, 1, 1);
+		ImGuiApp.UpdateTexture(texture, brighterThanWhite, 1, 1);
+
+		Assert.AreEqual(9, texture.TextureId);
+		CollectionAssert.AreEqual(new byte[] { 255, 255, 255, 255 }, backend.LastCreatedPixels);
+		Assert.AreEqual(9, backend.LastUpdatedTextureId);
+		Assert.AreEqual(255, backend.LastUpdatedPixels[0], "Above white shows as white, as on an SDR screen.");
+		Assert.AreEqual(0, backend.LastUpdatedPixels[1]);
+		Assert.AreEqual(128, backend.LastUpdatedPixels[2], 1);
+	}
+
+	[TestMethod]
+	public void HalfFloatTextures_RefuseASpanOfTheWrongLength()
+	{
+		ResetState();
+		Assert.ThrowsExactly<ArgumentException>(() => ImGuiApp.CreateTexture(new Half[3], 1, 1));
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => ImGuiApp.CreateTexture(new Half[4], 0, 1));
+		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.UpdateTexture(null!, new Half[4], 1, 1));
+	}
+
+	[TestMethod]
 	public void DeleteTexture_WithBackendRegisteredButControllerUnset_DeletesViaBackend()
 	{
 		ResetState();
