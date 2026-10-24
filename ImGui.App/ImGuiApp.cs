@@ -262,6 +262,16 @@ public static partial class ImGuiApp
 
 	internal static void InitializeWindow(ImGuiAppConfig config)
 	{
+		// A copy, not the configured instance: setting its layout to Normal on the same object would
+		// overwrite the configured layout before the load handler reads it, so a window saved
+		// maximized would always reopen restored.
+		LastNormalWindowState = new()
+		{
+			Size = config.InitialWindowState.Size,
+			Pos = config.InitialWindowState.Pos,
+			LayoutState = Silk.NET.Windowing.WindowState.Normal,
+		};
+
 		if (config.TestMode)
 		{
 			// In test mode, use the test window from config
@@ -309,9 +319,6 @@ public static partial class ImGuiApp
 				IsVisible = true,
 			};
 		}
-
-		LastNormalWindowState = config.InitialWindowState;
-		LastNormalWindowState.LayoutState = Silk.NET.Windowing.WindowState.Normal;
 
 		window = Window.Create(silkWindowOptions);
 	}

@@ -196,6 +196,33 @@ public sealed class ImGuiAppWindowManagementTests
 		}
 	}
 
+	[TestMethod]
+	public void InitializeWindow_WithMaximizedInitialState_KeepsTheConfiguredLayout()
+	{
+		Mock<IWindow> mockWindow = TestHelpers.CreateMockWindow();
+		ImGuiAppConfig config = new()
+		{
+			Title = "Test",
+			TestMode = true,
+			TestWindow = mockWindow.Object,
+			InitialWindowState = new ImGuiAppWindowState
+			{
+				Size = new Vector2(1280, 720),
+				Pos = new Vector2(488, 350),
+				LayoutState = WindowState.Maximized
+			}
+		};
+
+		ImGuiApp.InitializeWindow(config);
+
+		// The load handler maximizes the window from this, so it must survive window creation.
+		Assert.AreEqual(WindowState.Maximized, config.InitialWindowState.LayoutState);
+		Assert.AreNotSame(config.InitialWindowState, ImGuiApp.LastNormalWindowState);
+		Assert.AreEqual(WindowState.Normal, ImGuiApp.LastNormalWindowState.LayoutState);
+		Assert.AreEqual(new Vector2(1280, 720), ImGuiApp.LastNormalWindowState.Size);
+		Assert.AreEqual(new Vector2(488, 350), ImGuiApp.LastNormalWindowState.Pos);
+	}
+
 	#endregion
 
 	#region Window State Management Tests
