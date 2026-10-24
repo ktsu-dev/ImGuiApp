@@ -1,7 +1,6 @@
-## v3.78.1 (patch)
+## v3.78.2 (patch)
 
-Changes since v3.78.0:
+Changes since v3.78.1:
 
-- [patch] Reopen a window saved maximized as maximized (#725) (matt-edmondson)
-- [patch] Reopen a window saved maximized as maximized (Claude)
+- [patch] Apply a window icon set after launch again once the window shows (Claude)
 
