@@ -154,8 +154,9 @@ public static partial class ImGuiApp
 	internal static Silk.NET.Core.RawImage[]? windowIcons;
 
 	/// <summary>
-	/// Set when the icon is applied during Load, before the window is shown; cleared once it has been
-	/// applied again to the visible window. The Windows taskbar takes a button's icon from the window
+	/// Set on Windows whenever an icon is applied, since it may be before the window is shown, whether
+	/// during Load or from a later <see cref="SetWindowIcon"/> call; cleared once it has been applied
+	/// again to the visible window. The Windows taskbar takes a button's icon from the window
 	/// class when the button is created on show, and only picks up the window's own icon when that
 	/// icon changes afterwards, so an icon applied before the window is shown never reaches the
 	/// taskbar of an unpinned app.
@@ -334,7 +335,6 @@ public static partial class ImGuiApp
 			{
 				DebugLogger.Log("Window.Load: Setting window icon");
 				SetWindowIcon(config.IconPath);
-				windowIconReapplyPending = OperatingSystem.IsWindows();
 			}
 
 			DebugLogger.Log("Window.Load: Creating OpenGL factory");
@@ -1779,6 +1779,11 @@ public static partial class ImGuiApp
 
 		_ = TrySetMacOSApplicationIcon(iconPath);
 		windowIcons = [.. icons];
+
+		// An application that sets its icon after launch, as one drawing it on a worker does, may still
+		// land before the window is shown, so it gets the same second application once visible as an
+		// icon from the configuration. Applied again to a window already showing, it changes nothing.
+		windowIconReapplyPending = OperatingSystem.IsWindows();
 		Invoker.Invoke(ReapplyWindowIcon);
 	}
 
