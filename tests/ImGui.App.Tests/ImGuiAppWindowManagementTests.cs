@@ -795,6 +795,31 @@ public sealed class ImGuiAppWindowManagementTests
 	}
 
 	[TestMethod]
+	public void SetWindowIcon_AfterLaunch_IsAppliedAgainOnceTheWindowShows_OnWindows()
+	{
+		byte[] png = TestImageBuilder.Png(1, 1, colorType: 6, bitDepth: 8, [0x20, 0x40, 0x60, 0xFF]);
+		string path = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+		try
+		{
+			File.WriteAllBytes(path, png);
+			ImGuiApp.window = null;
+			ImGuiApp.Invoker = new ktsu.Invoker.Invoker();
+			ImGuiApp.windowIconReapplyPending = false;
+			ImGuiApp.SetWindowIcon(path);
+
+			Assert.AreEqual(OperatingSystem.IsWindows(), ImGuiApp.windowIconReapplyPending);
+		}
+		finally
+		{
+			ImGuiApp.windowIconReapplyPending = false;
+			if (File.Exists(path))
+			{
+				File.Delete(path);
+			}
+		}
+	}
+
+	[TestMethod]
 	public void ReapplyWindowIcon_BeforeAnyIconIsSet_DoesNothing()
 	{
 		ImGuiApp.window = null;
