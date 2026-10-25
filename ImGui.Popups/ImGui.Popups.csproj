@@ -8,6 +8,8 @@
          Warnings are errors here, so new reflection the trimmer can't follow fails the build. -->
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- For ResizableInputText, linked below, which hands Dear ImGui a native buffer it can grow. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +18,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One text field for every library in the suite (#553). Linked rather than referenced, since
+         this package does not depend on ktsu.ImGui.Widgets. -->
+    <Compile Include="..\ImGui.Widgets\ResizableInputText.cs" Link="ResizableInputText.cs" />
   </ItemGroup>
 
   <ItemGroup>

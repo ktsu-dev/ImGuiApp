@@ -122,6 +122,33 @@ public sealed class PropertyGridTests : WidgetTest
 		Assert.AreEqual("hello!", title, "The text row did not take the typed character.");
 	}
 
+	// Issue #553: text rows used a fixed 512-byte buffer, so activating one holding a longer value
+	// aborted the process, and one holding 511 bytes could not be typed into.
+	[TestMethod]
+	[DataRow(1500, 'x', DisplayName = "1500 ASCII characters")]
+	[DataRow(400, '\u6F22', DisplayName = "400 CJK characters")]
+	[DataRow(511, 'x', DisplayName = "Exactly the old capacity")]
+	public void PropertyGrid_TextRowsEditValuesLongerThanTheOldBuffer(int length, char filler)
+	{
+		string original = new(filler, length);
+		title = original;
+		configPath = original;
+		tags[0] = original;
+		StartGrid();
+
+		foreach (string row in (string[])["Title", "Config", "Tags/[0]"])
+		{
+			Click(row);
+			Harness.Keyboard.Press(Hexa.NET.ImGui.ImGuiKey.End);
+			Harness.Keyboard.Type("!");
+			Step(2);
+		}
+
+		Assert.AreEqual(original + "!", title, "The text row did not take the typed character.");
+		Assert.AreEqual(original + "!", configPath, "The path row did not take the typed character.");
+		Assert.AreEqual(original + "!", tags[0], "The list element did not take the typed character.");
+	}
+
 	[TestMethod]
 	public void PropertyGrid_ReadOnlyGridDoesNotEdit()
 	{

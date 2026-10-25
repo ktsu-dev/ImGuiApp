@@ -273,6 +273,80 @@ public sealed class FilesystemBrowserNavigationTests
 		Assert.AreEqual(Path.Join(folder, "fresh.txt"), chosen);
 	}
 
+	// Issue #553: the browser's text fields had fixed buffers (1024 bytes for the path, 256 for the
+	// name and the search), and Dear ImGui aborts the process when one is activated over more text
+	// than its buffer was said to hold. Each test pastes past the old limit in one frame, as a paste
+	// delivers it, so the buffer has to grow mid-edit.
+
+	[TestMethod]
+	public void APathLongerThanThePathBoxsOldBuffer_IsTakenWhole()
+	{
+		OpenAll();
+
+		harness.Click("filesystem-browser/path");
+		harness.Step(2);
+		harness.Keyboard.Press(ImGuiKey.A, ctrl: true);
+		string padded = Path.Join(folder, string.Concat(Enumerable.Repeat("." + Path.DirectorySeparatorChar, 700)), "beta");
+		Assert.IsGreaterThan(1024, padded.Length, "The path does not reach past the old buffer, so this tests nothing.");
+		ImGui.GetIO().AddInputCharactersUTF8(padded);
+		harness.Step(2);
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(3);
+
+		Assert.AreEqual(Path.Join(folder, "beta"), browser.Directory.WeakString);
+	}
+
+	[TestMethod]
+	public void ANameLongerThanTheNameBoxsOldBuffer_IsSavedWhole()
+	{
+		browser.FileSave("Save", file => chosen = file.ToString(), "*.txt");
+		harness.Step(4);
+
+		// 104 characters, so a valid name, but 304 bytes, past the old 256.
+		harness.Click("filesystem-browser/filename");
+		string name = new string('\u6F22', 100) + ".txt";
+		ImGui.GetIO().AddInputCharactersUTF8(name);
+		harness.Step(2);
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(3);
+
+		Assert.AreEqual(Path.Join(folder, name), chosen);
+	}
+
+	/// <summary>
+	/// The old buffer also kept a name short enough to be valid. Without it a name can be too long for
+	/// the system, which has to be refused with a message rather than thrown out of the frame.
+	/// </summary>
+	[TestMethod]
+	public void ANameTooLongForTheSystem_IsRefusedRatherThanThrown()
+	{
+		browser.FileSave("Save", file => chosen = file.ToString(), "*.txt");
+		harness.Step(4);
+
+		harness.Click("filesystem-browser/filename");
+		ImGui.GetIO().AddInputCharactersUTF8(new string('n', 300) + ".txt");
+		harness.Step(2);
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(3);
+
+		Assert.IsNull(chosen, "A name too long for the system was chosen.");
+	}
+
+	[TestMethod]
+	public void ASearchLongerThanTheSearchBoxsOldBuffer_StillFilters()
+	{
+		OpenAll();
+
+		harness.Click("filesystem-browser/search");
+		ImGui.GetIO().AddInputCharactersUTF8(new string('q', 300));
+		harness.Step(2);
+		harness.Keyboard.Type("z");
+		harness.Step(2);
+
+		Assert.IsFalse(IsVisible(Row("notes.txt")), "A search matching nothing kept a file.");
+		Assert.IsTrue(IsVisible("filesystem-browser/search"), "The browser stopped drawing after a long search.");
+	}
+
 	[TestMethod]
 	public void Thumbnails_AskTheHostForEachFileShown_AndADoubleClickedTileIsChosen()
 	{

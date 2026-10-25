@@ -7,6 +7,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Probes;
+using ktsu.ImGui.Widgets;
 using ktsu.CaseConverter;
 
 public partial class ImGuiPopups
@@ -109,7 +110,7 @@ public partial class ImGuiPopups
 		/// <returns>True if Enter is pressed.</returns>
 		protected override bool ShowEdit(ref string value)
 		{
-			bool changed = ImGui.InputText($"###{Modal.Title.ToSnakeCase()}_INPUT", ref value, 100, ImGuiInputTextFlags.EnterReturnsTrue);
+			bool changed = ResizableInputText.InputText($"###{Modal.Title.ToSnakeCase()}_INPUT", ref value, ImGuiInputTextFlags.EnterReturnsTrue);
 			ImGuiProbes.MarkItem("input/field");
 			return changed;
 		}

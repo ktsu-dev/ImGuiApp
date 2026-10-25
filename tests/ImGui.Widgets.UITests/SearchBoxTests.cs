@@ -56,6 +56,40 @@ public sealed class SearchBoxTests : WidgetTest
 		Assert.AreEqual("ap", filterText, "Typing did not reach the search box.");
 	}
 
+	// Issue #553: the box had a fixed 256-byte buffer, so activating it over a longer filter aborted
+	// the process, and a filter of 255 bytes could not be typed into.
+	[TestMethod]
+	[DataRow(600, 'a', DisplayName = "600 ASCII characters")]
+	[DataRow(100, '\u6F22', DisplayName = "100 CJK characters")]
+	[DataRow(255, 'a', DisplayName = "Exactly the old capacity")]
+	public void SearchBox_EditsAFilterLongerThanTheOldBuffer(int length, char filler)
+	{
+		string original = new(filler, length);
+		filterText = original;
+		Start(DrawPlain);
+
+		Click(Label);
+		Harness.Keyboard.Press(ImGuiKey.End);
+		Harness.Keyboard.Type("z");
+		Step(2);
+
+		Assert.AreEqual(original + "z", filterText);
+	}
+
+	[TestMethod]
+	public void SearchBox_TakesAPasteLargerThanItsBuffer()
+	{
+		Start(DrawPlain);
+		Click(Label);
+
+		// Many characters in one frame, as a paste delivers them, so the buffer has to grow mid-edit.
+		string pasted = new('p', 5000);
+		ImGui.GetIO().AddInputCharactersUTF8(pasted);
+		Step(2);
+
+		Assert.AreEqual(pasted, filterText);
+	}
+
 	[TestMethod]
 	public void SearchBox_EmptyFilter_ReturnsNothingByDefault()
 	{

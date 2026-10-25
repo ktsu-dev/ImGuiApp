@@ -12,8 +12,6 @@ public static partial class ImGuiWidgets
 	/// <summary>The editors a cell gets when its column doesn't supply one.</summary>
 	internal static class DataTableEditors
 	{
-		private const int TextCapacity = 1024;
-
 		private static readonly ImGuiInputTextCallback PlaceCaretAtEnd = CreatePlaceCaretAtEndCallback();
 
 		/// <summary>Draws a text box filling the cell.</summary>
@@ -29,8 +27,8 @@ public static partial class ImGuiWidgets
 			ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
 
 			return isCaretForcedToEnd
-				? ImGui.InputText(id, ref text, TextCapacity, ImGuiInputTextFlags.CallbackAlways, PlaceCaretAtEnd)
-				: ImGui.InputText(id, ref text, TextCapacity);
+				? ResizableInputText.InputText(id, ref text, ImGuiInputTextFlags.CallbackAlways, PlaceCaretAtEnd)
+				: ResizableInputText.InputText(id, ref text);
 		}
 
 		/// <summary>Draws a combo of an enum's names, filling the cell.</summary>

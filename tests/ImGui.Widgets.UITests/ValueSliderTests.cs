@@ -190,6 +190,22 @@ public sealed class ValueSliderTests : WidgetTest
 		Assert.AreEqual(100f, value, "A typed value past the maximum was not clamped, or its unit was not ignored.");
 	}
 
+	// Issue #553: the editor had a fixed 64-byte buffer and opens holding the formatted value and its
+	// unit, so a long unit aborted the process the moment the slider was opened for typing.
+	[TestMethod]
+	public void ValueSlider_OpensForTypingWithAUnitLongerThanTheOldBuffer()
+	{
+		options = new ValueSliderOptions { Unit = new string('u', 100) };
+		Start(Draw);
+
+		CtrlClick(Label);
+		Harness.Keyboard.Type("30");
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.AreEqual(30f, value);
+	}
+
 	[TestMethod]
 	public void ValueSlider_IntegerOverloadStepsInWholeNumbers()
 	{
