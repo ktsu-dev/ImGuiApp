@@ -125,6 +125,7 @@ This is the **ktsu ImGui Suite**, a collection of .NET libraries for building De
 - `ImGui.Widgets/TimelineView.cs` - The caller-owned window onto a timeline (duration, view start and length, follow-playhead) that the zoomable `Waveform` draws through. No ImGui dependency; two widgets over one clip share one instance, so zooming one zooms the other. `TimelineViewChrome.cs` holds the wheel handling and scrollbar drawing every such widget uses
 - `ImGui.Widgets/WaveformPeakCache.cs` - A min/max pyramid (blocks of 16, 64, 256… samples) answering any window in O(columns). Each column reduces every block its sample range touches, so its extremes are never narrower than the true ones and a one-sample spike shows at every zoom. Immutable, so it can be built on a worker thread. `WaveformPeakSource.cs` is the base a caller subclasses to serve peaks from its own store
 - `ImGui.Widgets/DividerZone.cs` - Resizable split pane layout
+- `ImGui.Widgets/DividerContainerLayout.cs` - The divider container's arithmetic with no ImGui dependency: a whole gap between zones and half of one at each end, every edge rounded once from its exact position, and each divider in the middle of its gap (#724)
 - `ImGui.Widgets/TabPanel.cs` - Tabbed interface with drag-and-drop
 - `ImGui.Widgets/FlameGraph.cs` - Hexa-backed flame graph with managed sample marshaling
 - `ImGui.Widgets/Splitter.cs` - Hexa-backed horizontal/vertical draggable splitters
