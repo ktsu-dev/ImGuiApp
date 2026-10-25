@@ -8,8 +8,6 @@
          Warnings are errors here, so new reflection the trimmer can't follow fails the build. -->
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
-    <!-- For ResizableInputText, linked below, which hands Dear ImGui a native buffer it can grow. -->
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

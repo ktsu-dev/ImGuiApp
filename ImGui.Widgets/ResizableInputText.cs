@@ -3,24 +3,34 @@
 namespace ktsu.ImGui.Widgets;
 
 using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Text;
 
 using Hexa.NET.ImGui;
 
 /// <summary>
-/// Text fields whose buffer grows with the text, for every <c>InputText</c> in the suite that edits a
+/// Text fields whose capacity follows the text, for every <c>InputText</c> in the suite that edits a
 /// <see cref="string"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Hexa's <c>InputText(label, ref string, maxLength)</c> tells Dear ImGui the buffer holds
-/// <c>maxLength</c> bytes whatever the string's real length, so activating a field whose value is
-/// already that long fails a native assertion and aborts the process, which .NET cannot catch
-/// (#553). These overloads hand ImGui a native buffer sized from the value and set
-/// <see cref="ImGuiInputTextFlags.CallbackResize"/>, so the buffer is reallocated whenever an edit
-/// needs more room: there is no length a value can have, typed or pasted, that the field refuses.
+/// Hexa's <c>InputText(label, ref string, maxLength)</c> allocates room for the larger of the string
+/// and <c>maxLength</c>, but tells Dear ImGui the buffer is <c>maxLength</c> bytes. With a fixed
+/// <c>maxLength</c>, activating a field whose value is already that long fails a native assertion and
+/// aborts the process, which .NET cannot catch (#553).
+/// </para>
+/// <para>
+/// These overloads pass a capacity worked out every frame from the value's own UTF-8 length: the
+/// value, its terminator, and headroom of <see cref="MinimumHeadroom"/> bytes or the value's own
+/// length, whichever is larger. The value always fits, so the assertion cannot fire however long it
+/// is.
+/// </para>
+/// <para>
+/// The trade-off: Dear ImGui fixes a field's capacity when the field is activated and does not take a
+/// larger one while it stays active, so one edit has room for the value it started with plus the
+/// headroom. Text typed or pasted past that within the same edit is cut, never an abort, and the next
+/// edit starts from the longer value with headroom again. Lifting that limit means growing the buffer
+/// inside the frame through <see cref="ImGuiInputTextFlags.CallbackResize"/>, which needs a native
+/// buffer and pointer code, which the quality gate refuses, so this stays managed.
 /// </para>
 /// <para>
 /// The file is compiled into <c>ktsu.ImGui.Widgets</c>, whose internals <c>ktsu.ImGui.NodeEditor</c>
@@ -29,113 +39,54 @@ using Hexa.NET.ImGui;
 /// </remarks>
 internal static class ResizableInputText
 {
-	/// <summary>Room left beyond the value's own bytes, so typing rarely needs a resize.</summary>
-	private const int Headroom = 64;
+	/// <summary>The least room, in UTF-8 bytes, an edit has beyond the value it started with.</summary>
+	internal const int MinimumHeadroom = 1024;
 
-	private static readonly ImGuiInputTextCallback Callback = CreateCallback();
-
-	/// <summary>A caller's own callback for the call in progress, given every event but the resize.</summary>
-	[ThreadStatic]
-	private static ImGuiInputTextCallback? forwardedCallback;
-
-	/// <summary>Draws a single-line text field editing <paramref name="text"/>, however long it grows.</summary>
+	/// <summary>Draws a single-line text field editing <paramref name="text"/>, whatever its length.</summary>
 	/// <param name="label">The ImGui label.</param>
 	/// <param name="text">The text being edited.</param>
-	/// <param name="flags">Flags for the field. <see cref="ImGuiInputTextFlags.CallbackResize"/> is always added.</param>
-	/// <param name="callback">
-	/// An optional callback for the events <paramref name="flags"/> asks for. It is never given the
-	/// resize event, which this class answers itself.
-	/// </param>
+	/// <param name="flags">Flags for the field.</param>
 	/// <returns>What <c>ImGui.InputText</c> returns: true when the text was edited, or when Enter was pressed with <see cref="ImGuiInputTextFlags.EnterReturnsTrue"/>.</returns>
-	internal static bool InputText(string label, ref string text, ImGuiInputTextFlags flags = ImGuiInputTextFlags.None, ImGuiInputTextCallback? callback = null) =>
-		Draw(label, hint: null, ref text, flags, callback);
+	internal static bool InputText(string label, ref string text, ImGuiInputTextFlags flags = ImGuiInputTextFlags.None)
+	{
+		text ??= string.Empty;
+		return ImGui.InputText(label, ref text, Capacity(text), flags);
+	}
+
+	/// <summary>Draws a single-line text field with a callback for the events <paramref name="flags"/> asks for.</summary>
+	/// <param name="label">The ImGui label.</param>
+	/// <param name="text">The text being edited.</param>
+	/// <param name="flags">Flags for the field.</param>
+	/// <param name="callback">The callback for the events <paramref name="flags"/> asks for.</param>
+	/// <returns>What <c>ImGui.InputText</c> returns.</returns>
+	internal static bool InputText(string label, ref string text, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback)
+	{
+		text ??= string.Empty;
+		return ImGui.InputText(label, ref text, Capacity(text), flags, callback);
+	}
 
 	/// <summary>Draws a single-line text field with a hint shown while it is empty.</summary>
 	/// <param name="label">The ImGui label.</param>
 	/// <param name="hint">The text shown while the field is empty.</param>
 	/// <param name="text">The text being edited.</param>
-	/// <param name="flags">Flags for the field. <see cref="ImGuiInputTextFlags.CallbackResize"/> is always added.</param>
+	/// <param name="flags">Flags for the field.</param>
 	/// <returns>What <c>ImGui.InputTextWithHint</c> returns.</returns>
-	internal static bool InputTextWithHint(string label, string hint, ref string text, ImGuiInputTextFlags flags = ImGuiInputTextFlags.None) =>
-		Draw(label, hint, ref text, flags, callback: null);
-
-	/// <summary>The buffer's size for a value of <paramref name="byteCount"/> UTF-8 bytes: the bytes, the terminator, and some headroom.</summary>
-	/// <param name="byteCount">The value's length in UTF-8 bytes.</param>
-	/// <returns>The size to allocate, in bytes.</returns>
-	internal static int InitialCapacity(int byteCount) => byteCount + 1 + Headroom;
-
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The buffer is allocated, grown and freed within this call; ImGui does not keep the pointer past it, and every write stays inside the size it is told.")]
-	private static unsafe bool Draw(string label, string? hint, ref string text, ImGuiInputTextFlags flags, ImGuiInputTextCallback? callback)
+	internal static bool InputTextWithHint(string label, string hint, ref string text, ImGuiInputTextFlags flags = ImGuiInputTextFlags.None)
 	{
-		Ensure.NotNull(label);
-		string value = text ?? string.Empty;
-
-		int byteCount = Encoding.UTF8.GetByteCount(value);
-		Buffer buffer = new()
-		{
-			Capacity = InitialCapacity(byteCount),
-		};
-		buffer.Data = (byte*)NativeMemory.Alloc((nuint)buffer.Capacity);
-
-		ImGuiInputTextCallback? outerCallback = forwardedCallback;
-		try
-		{
-			int written = Encoding.UTF8.GetBytes(value, new Span<byte>(buffer.Data, buffer.Capacity));
-			buffer.Data[written] = 0;
-
-			forwardedCallback = callback;
-			ImGuiInputTextFlags allFlags = flags | ImGuiInputTextFlags.CallbackResize;
-			bool result = hint is null
-				? ImGui.InputText(label, buffer.Data, (nuint)buffer.Capacity, allFlags, Callback, &buffer)
-				: ImGui.InputTextWithHint(label, hint, buffer.Data, (nuint)buffer.Capacity, allFlags, Callback, &buffer);
-
-			// The same rule Hexa's string overloads read the buffer back by: an edit, or an Enter-only
-			// field left after an edit.
-			if (result || ((flags & ImGuiInputTextFlags.EnterReturnsTrue) != 0 && ImGui.IsItemDeactivatedAfterEdit()))
-			{
-				int length = new ReadOnlySpan<byte>(buffer.Data, buffer.Capacity).IndexOf((byte)0);
-				text = Encoding.UTF8.GetString(buffer.Data, length < 0 ? buffer.Capacity : length);
-			}
-
-			return result;
-		}
-		finally
-		{
-			forwardedCallback = outerCallback;
-			NativeMemory.Free(buffer.Data);
-		}
+		text ??= string.Empty;
+		return ImGui.InputTextWithHint(label, hint, ref text, Capacity(text), flags);
 	}
 
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "Converting the method group to the callback delegate needs an unsafe context because the delegate type takes a pointer, but no pointer is touched here.")]
-	private static unsafe ImGuiInputTextCallback CreateCallback() => OnCallback;
-
-	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "ImGui passes a pointer valid for the call, and the user data is the Buffer on the stack of the Draw call that is running it.")]
-	private static unsafe int OnCallback(ImGuiInputTextCallbackData* data)
+	/// <summary>
+	/// The capacity to declare for <paramref name="text"/>: its UTF-8 bytes, the terminator, and
+	/// headroom of <see cref="MinimumHeadroom"/> or the text's own length, whichever is larger.
+	/// </summary>
+	/// <param name="text">The text the field holds this frame.</param>
+	/// <returns>The capacity in bytes, always larger than the text.</returns>
+	internal static nuint Capacity(string text)
 	{
-		if (data->EventFlag != ImGuiInputTextFlags.CallbackResize)
-		{
-			return forwardedCallback?.Invoke(data) ?? 0;
-		}
-
-		// ImGui asks for at least BufSize bytes and copies the text in itself once Buf points at them.
-		// Realloc keeps what the buffer already holds.
-		Buffer* buffer = (Buffer*)data->UserData;
-		int required = data->BufSize;
-		if (required > buffer->Capacity)
-		{
-			int grown = Math.Max(required, buffer->Capacity * 2);
-			buffer->Data = (byte*)NativeMemory.Realloc(buffer->Data, (nuint)grown);
-			buffer->Capacity = grown;
-		}
-
-		data->Buf = buffer->Data;
-		return 0;
-	}
-
-	/// <summary>The native buffer under edit, reachable from the resize callback through its user data.</summary>
-	private unsafe struct Buffer
-	{
-		public byte* Data;
-		public int Capacity;
+		Ensure.NotNull(text);
+		int byteCount = Encoding.UTF8.GetByteCount(text);
+		return (nuint)(byteCount + 1 + Math.Max(MinimumHeadroom, byteCount));
 	}
 }

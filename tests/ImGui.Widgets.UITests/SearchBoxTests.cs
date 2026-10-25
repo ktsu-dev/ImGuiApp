@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.App.Testing;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>Drives <c>ImGuiWidgets.SearchBox</c> on its own.</summary>
@@ -76,18 +78,39 @@ public sealed class SearchBoxTests : WidgetTest
 		Assert.AreEqual(original + "z", filterText);
 	}
 
+	// Dear ImGui fixes a field's capacity when it is activated, so each edit has room for the value it
+	// started with plus the headroom. Text past that within one edit is cut, never an abort, and the
+	// next edit starts with room again.
 	[TestMethod]
-	public void SearchBox_TakesAPasteLargerThanItsBuffer()
+	public void SearchBox_AnEditPastItsHeadroom_IsCutToIt()
 	{
 		Start(DrawPlain);
 		Click(Label);
 
-		// Many characters in one frame, as a paste delivers them, so the buffer has to grow mid-edit.
-		string pasted = new('p', 5000);
-		ImGui.GetIO().AddInputCharactersUTF8(pasted);
+		ImGui.GetIO().AddInputCharactersUTF8(new string('p', 5000));
 		Step(2);
 
-		Assert.AreEqual(pasted, filterText);
+		Assert.AreEqual(ResizableInputText.MinimumHeadroom, filterText.Length);
+	}
+
+	[TestMethod]
+	public void SearchBox_EachEditStartsWithRoomToGrow()
+	{
+		Start(DrawPlain);
+
+		string chunk = new('p', 1000);
+		for (int edit = 1; edit <= 3; edit++)
+		{
+			Click(Label);
+			Harness.Keyboard.Press(ImGuiKey.End);
+			ImGui.GetIO().AddInputCharactersUTF8(chunk);
+			Step(2);
+			Rectangle box = RectOf(Label);
+			Harness.Mouse.Click(box.MinX + 10f, box.MaxY + 100f);
+			Step(2);
+
+			Assert.AreEqual(edit * chunk.Length, filterText.Length, $"Edit {edit} did not have room for what was typed.");
+		}
 	}
 
 	[TestMethod]
