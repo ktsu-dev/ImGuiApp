@@ -1029,6 +1029,10 @@ public static class FontMemoryGuard
 				builder.AddChar(c);
 			}
 		}
+
+		// The minus sign value sliders write, which the loop above can't reach: it is in Mathematical
+		// Operators, not in any of those ranges.
+		builder.AddChar(0x2212);
 	}
 
 	private static void AddEssentialNerdFontRanges(ImFontGlyphRangesBuilderPtr builder)

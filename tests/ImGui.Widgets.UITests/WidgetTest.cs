@@ -74,7 +74,8 @@ public abstract class WidgetTest
 	/// <param name="draw">Draws the widget under test. Called once per frame.</param>
 	/// <param name="options">Viewport and determinism settings. Defaults to <see cref="DefaultViewport"/>.</param>
 	/// <param name="enableDocking">Whether the docking flag is set before the first frame.</param>
-	protected void Start(Action draw, HarnessOptions? options = null, bool enableDocking = false)
+	/// <param name="onStart">Runs once before the first frame, for setup such as registering a font.</param>
+	protected void Start(Action draw, HarnessOptions? options = null, bool enableDocking = false, Action? onStart = null)
 	{
 		ArgumentNullException.ThrowIfNull(draw);
 
@@ -84,6 +85,7 @@ public abstract class WidgetTest
 				Title = GetType().Name,
 				OnRender = _ => draw(),
 				EnableDocking = enableDocking,
+				OnStart = onStart ?? (() => { }),
 				SaveIniSettings = false,
 			},
 			options ?? DefaultViewport);
