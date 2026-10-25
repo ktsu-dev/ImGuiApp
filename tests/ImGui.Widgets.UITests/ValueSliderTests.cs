@@ -6,6 +6,7 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ImGui.App;
 using ktsu.ImGui.App.Testing;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -443,5 +444,76 @@ public sealed class ValueSliderTests : WidgetTest
 
 		Assert.IsTrue(activated, "IsItemActivated did not see the slider, so a caller cannot capture the value a drag starts from.");
 		Assert.IsTrue(deactivatedAfterEdit, "IsItemDeactivatedAfterEdit did not see the drag's end.");
+	}
+	[TestMethod]
+	public void ValueSlider_WritesATrueMinusSignWhenTheFontHasOne()
+	{
+		SignDrawn sign = DrawNegativeAndFindTheSign(withNerdFont: true);
+
+		Assert.IsTrue(sign.FontHasMinusSign, "The bundled Nerd Font should carry U+2212.");
+		Assert.IsTrue(sign.MinusSignDrawn, "A negative value should be written with U+2212.");
+		Assert.IsFalse(sign.HyphenDrawn);
+	}
+
+	[TestMethod]
+	public void ValueSlider_FallsBackToAHyphenWhenTheFontHasNoMinusSign()
+	{
+		// ImGui's default font, which a host outside ImGui.App draws with, has no U+2212, and neither
+		// does an atlas built from ImGui's default ranges; drawn, it would be the missing-glyph box (#648).
+		SignDrawn sign = DrawNegativeAndFindTheSign(withNerdFont: false);
+
+		Assert.IsFalse(sign.FontHasMinusSign, "ImGui's default font was expected to lack U+2212.");
+		Assert.IsTrue(sign.HyphenDrawn, "A negative value should fall back to a hyphen.");
+		Assert.IsFalse(sign.FallbackDrawn, "The missing-glyph box was drawn.");
+	}
+
+	[TestCleanup]
+	public void ReleaseFonts() => FontHelper.CleanupCustomFonts();
+
+	private readonly record struct SignDrawn(bool FontHasMinusSign, bool MinusSignDrawn, bool HyphenDrawn, bool FallbackDrawn);
+
+	private unsafe SignDrawn DrawNegativeAndFindTheSign(bool withNerdFont)
+	{
+		float negative = -7f;
+		SignDrawn found = default;
+		Start(
+			() =>
+			{
+				ImGui.PushItemWidth(FrameWidth);
+				ImGuiWidgets.ValueSlider(Label, ref negative, -10f, 10f, new ValueSliderOptions { Format = "0" });
+				ImGui.PopItemWidth();
+
+				// The face is the only text in the window, so a quad sampling a glyph's corner of the
+				// atlas is that glyph being drawn. Without U+2212, FindGlyph answers with the fallback.
+				ImFontBakedPtr baked = ImGui.GetFontBaked();
+				bool hasMinus = ImGui.GetFont().IsGlyphInFont(0x2212);
+				ImFontGlyphPtr hyphen = baked.FindGlyph('-');
+				ImFontGlyphPtr minus = baked.FindGlyph(0x2212);
+				Vector2 hyphenUv = new(hyphen.U0, hyphen.V0);
+				Vector2 minusUv = new(minus.U0, minus.V0);
+				ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+				bool hyphenDrawn = false;
+				bool minusDrawn = false;
+				for (int i = 0; i < drawList.VtxBuffer.Size; i++)
+				{
+					Vector2 uv = drawList.VtxBuffer.Data[i].Uv;
+					hyphenDrawn |= uv == hyphenUv;
+					minusDrawn |= uv == minusUv;
+				}
+
+				found = new SignDrawn(hasMinus, hasMinus && minusDrawn, hyphenDrawn, !hasMinus && minusDrawn);
+			},
+			onStart: withNerdFont ? UseTheNerdFont : null);
+		Step();
+		return found;
+	}
+
+	private static void UseTheNerdFont()
+	{
+		ImGuiIOPtr io = ImGui.GetIO();
+		if (FontHelper.AddInterfaceFont(io, null, 14f) is ImFontPtr font)
+		{
+			io.FontDefault = font;
+		}
 	}
 }

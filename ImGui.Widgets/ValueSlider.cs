@@ -297,7 +297,10 @@ public static partial class ImGuiWidgets
 			float fillMinX = frame.Min.X + (start * width);
 			float fillMaxX = frame.Min.X + (end * width);
 
-			string text = options.Prefix + ValueSliderState.Display(value, format, options.Unit, CultureInfo.CurrentCulture);
+			// U+2212 lies outside reduced glyph ranges and ImGui's default font, where it would draw as the
+			// missing-glyph box.
+			char minusSign = ImGui.GetFont().IsGlyphInFont(ValueSliderState.MinusSign) ? ValueSliderState.MinusSign : '-';
+			string text = options.Prefix + ValueSliderState.Display(value, format, options.Unit, CultureInfo.CurrentCulture, minusSign);
 			Vector2 textSize = ImGui.CalcTextSize(text);
 			Vector2 textPos = new(
 				MathF.Round(frame.Min.X + ((width - textSize.X) * 0.5f)),

@@ -62,14 +62,35 @@ public static partial class ImGuiWidgets
 		internal static string Format(double value, string format, string? unit, IFormatProvider culture)
 		{
 			string number = value.ToString(format, culture);
-
-			// "-0" reads as a value below zero; a slider resting on zero should say so plainly.
-			if (number.Length > 1 && number[0] == '-' && number.AsSpan(1).IndexOfAnyInRange('1', '9') < 0)
+			int signLength = SignLength(number, culture);
+			if (signLength == 0)
 			{
-				number = number[1..];
+				return number + unit;
 			}
 
-			return number + unit;
+			// "-0" reads as a value below zero; a slider resting on zero should say so plainly. A sign that
+			// stays is written as a hyphen, even where the culture writes U+2212, since this is the text the
+			// typing box opens with and the hyphen is the key people press.
+			string digits = number[signLength..];
+			return (digits.AsSpan().IndexOfAnyInRange('1', '9') < 0 ? digits : "-" + digits) + unit;
+		}
+
+		/// <summary>
+		/// Measures the sign at the start of a formatted number: a hyphen, U+2212, or the culture's own
+		/// negative sign, which on ICU is U+2212 for cultures such as sv-SE, nb-NO and fi-FI.
+		/// </summary>
+		/// <param name="number">The formatted number.</param>
+		/// <param name="culture">The culture it was formatted in.</param>
+		/// <returns>The sign's length, or 0 when the number has none.</returns>
+		private static int SignLength(string number, IFormatProvider culture)
+		{
+			string negativeSign = NumberFormatInfo.GetInstance(culture).NegativeSign;
+			if (negativeSign.Length > 0 && number.Length > negativeSign.Length && number.StartsWith(negativeSign, StringComparison.Ordinal))
+			{
+				return negativeSign.Length;
+			}
+
+			return number.Length > 1 && number[0] is '-' or MinusSign ? 1 : 0;
 		}
 
 		/// <summary>Writes a value as the slider's face shows it: as <see cref="Format"/> does, with a true minus sign.</summary>
@@ -77,16 +98,20 @@ public static partial class ImGuiWidgets
 		/// <param name="format">The .NET numeric format.</param>
 		/// <param name="unit">The unit written after the number, or null.</param>
 		/// <param name="culture">The culture to format in.</param>
+		/// <param name="minusSign">
+		/// The sign to write, U+2212 unless the font drawing it has no such glyph, when a hyphen reads
+		/// better than the missing-glyph box.
+		/// </param>
 		/// <returns>The text.</returns>
 		/// <remarks>
 		/// A hyphen is narrower and sits lower than the digits beside it. The text box a slider opens for
 		/// typing keeps the hyphen instead, since that's the key people press, and <see cref="TryParse"/>
 		/// reads either.
 		/// </remarks>
-		internal static string Display(double value, string format, string? unit, IFormatProvider culture)
+		internal static string Display(double value, string format, string? unit, IFormatProvider culture, char minusSign = MinusSign)
 		{
 			string text = Format(value, format, unit, culture);
-			return text.Length > 1 && text[0] == '-' ? MinusSign + text[1..] : text;
+			return text.Length > 1 && text[0] == '-' ? minusSign + text[1..] : text;
 		}
 
 		/// <summary>Reads a typed value, ignoring surrounding space and the prefix and unit if they were typed too.</summary>
