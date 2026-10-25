@@ -40,7 +40,13 @@ public static partial class ImGuiWidgets
 	/// </remarks>
 	public sealed class StickyHeaderList : IDisposable
 	{
+		/// <summary>Where a list's pinned header was last frame, relative to the list's window, keyed by the list's ImGui id.</summary>
+		private sealed record PinnedHeader(int Frame, Vector2 Offset, Vector2 Size);
+
+		private static readonly Dictionary<uint, PinnedHeader> PinnedHeaders = [];
+
 		private readonly string id;
+		private readonly uint key;
 		private readonly List<float> tops = [];
 		private readonly List<string> titles = [];
 		private readonly float headerHeight;
@@ -56,9 +62,11 @@ public static partial class ImGuiWidgets
 			Ensure.NotNull(id);
 			this.id = id;
 			headerHeight = ImGui.GetFrameHeight();
+			key = ImGui.GetID(id);
 			ImGui.BeginChild(id, size, ImGuiChildFlags.None, ImGuiWindowFlags.None);
 			Vector2 windowMin = ImGui.GetWindowPos();
 			ImGuiProbes.MarkRegion(id, windowMin, windowMin + ImGui.GetWindowSize());
+			BlockPinnedHeader();
 		}
 
 		/// <summary>Gets the title of the section whose header was pinned to the top, or null when none was. Known once the block has ended.</summary>
@@ -99,9 +107,34 @@ public static partial class ImGuiWidgets
 				Vector2 min = new(headerLeft, ImGui.GetWindowPos().Y + top - scroll);
 				DrawHeader(min, headerWidth, titles[index]);
 				ImGuiProbes.MarkRegion($"{id}/pinned", min, min + new Vector2(headerWidth, headerHeight));
+				PinnedHeaders[key] = new PinnedHeader(ImGui.GetFrameCount(), min - ImGui.GetWindowPos(), new Vector2(headerWidth, headerHeight));
+			}
+			else
+			{
+				PinnedHeaders.Remove(key);
 			}
 
 			ImGui.EndChild();
+		}
+
+		/// <summary>
+		/// Claims the mouse over the header pinned last frame, before any row is submitted. The pinned
+		/// header is painted over the rows once they are all known, but Dear ImGui gives the pointer to
+		/// the first item submitted under it, so without this the row hidden beneath the header would
+		/// be hovered and clicked through it. The rectangle is a frame old, which a header moving at
+		/// scroll speed never shows.
+		/// </summary>
+		private void BlockPinnedHeader()
+		{
+			if (!PinnedHeaders.TryGetValue(key, out PinnedHeader? last) || ImGui.GetFrameCount() - last.Frame != 1)
+			{
+				return;
+			}
+
+			Vector2 cursor = ImGui.GetCursorPos();
+			ImGui.SetCursorScreenPos(ImGui.GetWindowPos() + last.Offset);
+			ImGui.InvisibleButton("##pinned", last.Size, ImGuiButtonFlags.MouseButtonLeft | ImGuiButtonFlags.MouseButtonRight | ImGuiButtonFlags.MouseButtonMiddle);
+			ImGui.SetCursorPos(cursor);
 		}
 
 		private void DrawHeader(Vector2 min, float width, string title)
