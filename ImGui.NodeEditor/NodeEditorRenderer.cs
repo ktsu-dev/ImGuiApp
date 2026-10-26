@@ -9,6 +9,7 @@ using System.Linq;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
+using ktsu.ImGui.Widgets;
 
 /// <summary>
 /// Pure rendering class - only handles ImNodes display, no business logic
@@ -791,7 +792,7 @@ public partial class NodeEditorRenderer
 	private static (bool Changed, object? Value) EditString(string id, object? current)
 	{
 		string value = current as string ?? string.Empty;
-		return (ImGui.InputText(id, ref value, 256), value);
+		return (ResizableInputText.InputText(id, ref value), value);
 	}
 
 	/// <summary>Edit a <see cref="Vector2"/> pin as a two-component input box.</summary>

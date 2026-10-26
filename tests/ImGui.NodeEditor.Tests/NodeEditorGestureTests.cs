@@ -389,4 +389,28 @@ public sealed class NodeEditorGestureTests : IDisposable
 		history.Undo();
 		Assert.AreEqual("Preprocessing", engine.FindCommentBox(box.Id)!.Title);
 	}
+
+	/// <summary>Issue #553: the rename box had a fixed 256-byte buffer, and a title is not clamped to it.</summary>
+	[TestMethod]
+	public void RenamingACommentWithATitleLongerThanTheOldBuffer_ExtendsIt()
+	{
+		(Node _, CommentBox box) = StartWithABoxedNode();
+		string original = new('t', 400);
+		engine.RenameCommentBox(box.Id, original);
+		harness.Step(2);
+		Assert.IsTrue(renderer.TryGetCommentBoxScreenRect(box.Id, out ScreenRect rect));
+		Vector2 title = new(rect.Min.X + 30f, rect.Min.Y + 6f);
+
+		harness.Mouse.Click(title.X, title.Y);
+		harness.Mouse.Click(title.X, title.Y);
+		harness.Step(2);
+		Assert.AreEqual(box.Id, renderer.RenamingCommentBoxId, "A double-click on the title should open it for editing.");
+
+		harness.Keyboard.Press(ImGuiKey.End);
+		harness.Keyboard.Type("z");
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(2);
+
+		Assert.AreEqual(original + "z", engine.FindCommentBox(box.Id)!.Title);
+	}
 }

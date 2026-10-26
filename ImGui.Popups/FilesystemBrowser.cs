@@ -16,6 +16,7 @@ using ktsu.Extensions;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 using ktsu.ImGui.Probes;
+using ktsu.ImGui.Widgets;
 using ktsu.TextFilter;
 
 /// <summary>
@@ -505,7 +506,7 @@ public partial class ImGuiPopups
 
 			ImGui.SameLine();
 			ImGui.SetNextItemWidth(searchWidth);
-			if (ImGui.InputTextWithHint("##search", "Search this folder", ref searchText, 256))
+			if (ResizableInputText.InputTextWithHint("##search", "Search this folder", ref searchText))
 			{
 				visibleEntriesStale = true;
 			}
@@ -660,7 +661,7 @@ public partial class ImGuiPopups
 			}
 
 			ImGui.SetNextItemWidth(width);
-			bool entered = ImGui.InputText("##path-box", ref pathText, 1024, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
+			bool entered = ResizableInputText.InputText("##path-box", ref pathText, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
 			ImGuiProbes.MarkItem(ProbePrefix, "path");
 
 			if (entered)
@@ -1280,7 +1281,7 @@ public partial class ImGuiPopups
 			ImGui.TextUnformatted("File name");
 			ImGui.SameLine();
 			ImGui.SetNextItemWidth(width - (ImGui.GetCursorPosX() - startX));
-			bool entered = ImGui.InputText("##SaveAs", ref fileNameText, 256, ImGuiInputTextFlags.EnterReturnsTrue);
+			bool entered = ResizableInputText.InputText("##SaveAs", ref fileNameText, ImGuiInputTextFlags.EnterReturnsTrue);
 			ImGuiProbes.MarkItem(ProbePrefix, "filename");
 			if (entered)
 			{
@@ -1394,14 +1395,18 @@ public partial class ImGuiPopups
 					return;
 				}
 
-				AbsoluteFilePath chosenFile = CurrentDirectory / fileName;
 				if (!MatchesGlob(fileName, Glob))
 				{
 					PopupMessageOK.Open("Invalid File Name", "The file name does not match the glob pattern.");
 					return;
 				}
 
-				AbsoluteFilePath fullPath = Path.GetFullPath(chosenFile).As<AbsoluteFilePath>();
+				if (!TryGetFullPath(CurrentDirectory, fileName, out AbsoluteFilePath? fullPath))
+				{
+					PopupMessageOK.Open("Invalid File Name", "The file name is too long, or makes a path\nthis system does not allow.");
+					return;
+				}
+
 				if (BrowserMode == FilesystemBrowserMode.Save && ConfirmOverwrite && System.IO.File.Exists(fullPath))
 				{
 					AskToReplace(fullPath);
@@ -1451,6 +1456,30 @@ public partial class ImGuiPopups
 			catch (ArgumentException)
 			{
 				fileName = null;
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Puts a file name in a folder, reporting a path that cannot be one rather than throwing. The name
+		/// box takes text of any length, so a name can be valid on its own and still make a path the
+		/// system refuses, most often by being too long.
+		/// </summary>
+		/// <param name="folder">The folder the file is in.</param>
+		/// <param name="fileName">The file's name.</param>
+		/// <param name="fullPath">The file's full path, when there is one.</param>
+		/// <returns>True when the two make a valid path.</returns>
+		internal static bool TryGetFullPath(AbsoluteDirectoryPath folder, FileName fileName, [NotNullWhen(true)] out AbsoluteFilePath? fullPath)
+		{
+			try
+			{
+				AbsoluteFilePath chosenFile = folder / fileName;
+				fullPath = Path.GetFullPath(chosenFile).As<AbsoluteFilePath>();
+				return true;
+			}
+			catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+			{
+				fullPath = null;
 				return false;
 			}
 		}

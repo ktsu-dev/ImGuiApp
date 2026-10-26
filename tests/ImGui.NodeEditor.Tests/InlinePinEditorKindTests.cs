@@ -224,6 +224,27 @@ public sealed class InlinePinEditorKindTests
 	}
 
 	/// <summary>
+	/// Issue #553: the string editor had a fixed 256-byte buffer, so activating it over a longer value
+	/// aborted the process.
+	/// </summary>
+	[TestMethod]
+	public void String_ExtendsAValueLongerThanTheOldBuffer()
+	{
+		string original = new('a', 600);
+		int pinId = StartWith("Label", typeof(string), original);
+
+		Vector2 point = EditorPoint(0.5f);
+		harness.Mouse.Click(point.X, point.Y);
+		harness.Step(1);
+		harness.Keyboard.Press(ImGuiKey.End);
+		harness.Keyboard.Type("z");
+		harness.Keyboard.Press(ImGuiKey.Enter);
+		harness.Step(3);
+
+		Assert.AreEqual(original + "z", engine.GetPinValue(pinId));
+	}
+
+	/// <summary>
 	/// An <c>InputFloat2</c> is two boxes inside one item, so typing into the left quarter edits X
 	/// and leaves Y alone. Both halves are asserted: an editor that wrote a whole new vector would
 	/// pass the first and fail the second.

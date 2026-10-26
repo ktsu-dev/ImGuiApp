@@ -73,8 +73,6 @@ public static partial class ImGuiWidgets
 
 	internal static class ValueSliderImpl
 	{
-		private const uint EditCapacity = 64u;
-
 		// Frames the editor may go without the keyboard before it gives up: focus lands a frame after it
 		// is asked for, so one frame without it is expected.
 		private const int UnfocusedFramesAllowed = 2;
@@ -449,7 +447,7 @@ public static partial class ImGuiWidgets
 
 			// The editor takes the slider's own label, and so its id: it draws the label in the same
 			// place, and the caller's last-item queries keep pointing at the slider while it is open.
-			ImGui.InputText(label, ref edited, EditCapacity, ImGuiInputTextFlags.AutoSelectAll);
+			ResizableInputText.InputText(label, ref edited, ImGuiInputTextFlags.AutoSelectAll);
 			state.EditText = edited;
 
 			if (ImGui.IsItemDeactivated())

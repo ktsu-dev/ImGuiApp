@@ -19,10 +19,6 @@ public static partial class ImGuiWidgets
 {
 	public sealed partial class PropertyGrid
 	{
-		// How many characters a text row accepts. Generous for a name, and comfortably longer than
-		// any path a filesystem will hand back.
-		private const uint TextLength = 512u;
-
 		/// <summary>Draws a checkbox row.</summary>
 		/// <param name="label">The property name; text after <c>##</c> is hidden but used for the id.</param>
 		/// <param name="value">The value being edited.</param>
@@ -207,7 +203,7 @@ public static partial class ImGuiWidgets
 			}
 
 			value ??= string.Empty;
-			bool changed = ImGui.InputText(Hidden(label), ref value, TextLength);
+			bool changed = ResizableInputText.InputText(Hidden(label), ref value);
 			return EndRow(label, changed);
 		}
 
@@ -410,7 +406,7 @@ public static partial class ImGuiWidgets
 				changed = true;
 			}
 
-			changed |= ImGui.InputText(Hidden(label), ref value, TextLength);
+			changed |= ResizableInputText.InputText(Hidden(label), ref value);
 			ImGuiProbes.MarkItem(VisibleLabel(label));
 
 			ImGui.SameLine(0f, spacing);
