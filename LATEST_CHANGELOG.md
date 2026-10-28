@@ -1,6 +1,6 @@
-## v3.79.1-pre.2 (prerelease)
+## v3.79.1-pre.3 (prerelease)
 
-Changes since v3.79.1-pre.1:
+Changes since v3.79.1-pre.2:
 
-- Bump MSTest.Sdk from 4.5.1 to 4.5.2 (dependabot[bot])
+- Bump Markdig from 1.5.0 to 1.5.1 (dependabot[bot])
 
