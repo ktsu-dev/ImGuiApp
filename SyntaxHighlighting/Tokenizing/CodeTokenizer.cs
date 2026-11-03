@@ -277,19 +277,7 @@ internal static class CodeTokenizer
 				close = string.Concat(rule.Close, new string(repeated, extra));
 			}
 
-			int bodyStart = index + openLength;
-			index = ScanStringBody(source, bodyStart, rule, close, rule.Escape ?? rule.ScanEscape, out bool closed);
-			if (!closed && !rule.Escape.HasValue && rule.ScanEscape.HasValue)
-			{
-				// Skipping past the scan-only escape ran the literal off its line or the source, so it
-				// most likely ends in that character (r'C:\dir\'); read it again without the escape.
-				int plainEnd = ScanStringBody(source, bodyStart, rule, close, null, out bool plainClosed);
-				if (plainClosed)
-				{
-					index = plainEnd;
-					closed = true;
-				}
-			}
+			index = ScanLiteral(source, index + openLength, rule, close, out bool closed);
 
 			kind = rule.Kind;
 			body = new TokenBody(openLength, closed ? close.Length : 0, rule);
@@ -297,6 +285,27 @@ internal static class CodeTokenizer
 		}
 
 		return false;
+	}
+
+	// Scans a literal's body with its escape. A scan-only escape that runs the literal off its line or
+	// the source most likely means the literal ends in that character (r'C:\dir\'), so the body is
+	// read again without it, and that reading is kept when it closes.
+	private static int ScanLiteral(string source, int start, StringRule rule, string close, out bool closed)
+	{
+		int end = ScanStringBody(source, start, rule, close, rule.Escape ?? rule.ScanEscape, out closed);
+		if (closed || rule.Escape.HasValue || !rule.ScanEscape.HasValue)
+		{
+			return end;
+		}
+
+		int plainEnd = ScanStringBody(source, start, rule, close, null, out bool plainClosed);
+		if (!plainClosed)
+		{
+			return end;
+		}
+
+		closed = true;
+		return plainEnd;
 	}
 
 	private static int ScanStringBody(string source, int start, StringRule rule, string close, char? escape, out bool closed)
