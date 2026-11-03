@@ -108,7 +108,7 @@ public static class BuiltInLanguages
 		Aliases = ["c++", "cc", "cxx", "hpp"],
 		LineComments = [SlashComment],
 		BlockComments = [SlashStarDocComment, SlashStarComment],
-		Strings = [DoubleQuoted, SingleQuoted],
+		Strings = [CppRawString("R"), CppRawString("u8R"), CppRawString("uR"), CppRawString("UR"), CppRawString("LR"), DoubleQuoted, SingleQuoted],
 		Keywords =
 		[
 			"auto", "class", "concept", "const", "consteval", "constexpr", "constinit", "decltype",
@@ -318,6 +318,17 @@ public static class BuiltInLanguages
 		Escape = null,
 		AllowMultiline = true,
 		CloseMatchesOpeningRun = true,
+	};
+
+	// A C++11 raw string, with or without an encoding prefix: R"delim( … )delim", where the delimiter
+	// is up to 16 characters and the body has no escapes and may span lines.
+	private static StringRule CppRawString(string prefix) => new()
+	{
+		Open = prefix + "\"",
+		Close = "\"",
+		Escape = null,
+		AllowMultiline = true,
+		CloseRepeatsDelimiter = true,
 	};
 
 	// Every Python string prefix, in every case Python accepts, before each of the four quotes. A
