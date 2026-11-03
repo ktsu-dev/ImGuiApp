@@ -263,15 +263,9 @@ internal static class CodeTokenizer
 
 			int openLength = rule.Open.Length;
 			string close = rule.Close;
-			if (rule.CloseRepeatsDelimiter)
+			if (rule.CloseRepeatsDelimiter && !TryExtendByRawDelimiter(source, index, rule, ref openLength, ref close))
 			{
-				if (!TryReadRawDelimiter(source, index + openLength, out string delimiter))
-				{
-					continue;
-				}
-
-				openLength += delimiter.Length + 1;
-				close = string.Concat(")", delimiter, rule.Close);
+				continue;
 			}
 
 			if (rule.CloseMatchesOpeningRun)
@@ -335,6 +329,20 @@ internal static class CodeTokenizer
 		}
 
 		return source.Length;
+	}
+
+	// A C++ raw string opens with R"delim( and closes only on )delim", so the delimiter and its '('
+	// join the opener and the close gains the same delimiter. False when no valid delimiter follows.
+	private static bool TryExtendByRawDelimiter(string source, int index, StringRule rule, ref int openLength, ref string close)
+	{
+		if (!TryReadRawDelimiter(source, index + openLength, out string delimiter))
+		{
+			return false;
+		}
+
+		openLength += delimiter.Length + 1;
+		close = string.Concat(")", delimiter, rule.Close);
+		return true;
 	}
 
 	// A C++ raw-string delimiter: at most 16 characters, none of them a space, quote, parenthesis,
