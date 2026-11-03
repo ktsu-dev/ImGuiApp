@@ -286,6 +286,23 @@ public sealed class CodeTokenizerTests
 	}
 
 	[TestMethod]
+	[DataRow("r\"\\\"\"")]
+	[DataRow("r'\\''")]
+	[DataRow("r'[^\\']*'")]
+	[DataRow("R\"\\\"(.*?)\\\"\"")]
+	[DataRow("rb'\\''")]
+	[DataRow("r\"\"\"\nWrite \\\"\"\" to quote.\n\"\"\"")]
+	[DataRow("r'''\nit\\'''s\n'''")]
+	public void Python_RawStringBackslashStillKeepsAQuoteFromClosingIt(string literal)
+	{
+		AssertLiteralIsHeldTogether(literal, "python");
+
+		IReadOnlyList<HighlightedLine> lines = Highlight($"pat = {literal}\ncount = 1\nreturn count", "python");
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+		TokenAssert.HasToken(lines, "return", TokenKind.ControlKeyword);
+	}
+
+	[TestMethod]
 	[DataRow("c")]
 	[DataRow("cpp")]
 	[DataRow("javascript")]

@@ -277,7 +277,20 @@ internal static class CodeTokenizer
 				close = string.Concat(rule.Close, new string(repeated, extra));
 			}
 
-			index = ScanStringBody(source, index + openLength, rule, close, out bool closed);
+			int bodyStart = index + openLength;
+			index = ScanStringBody(source, bodyStart, rule, close, rule.Escape ?? rule.ScanEscape, out bool closed);
+			if (!closed && !rule.Escape.HasValue && rule.ScanEscape.HasValue)
+			{
+				// Skipping past the scan-only escape ran the literal off its line or the source, so it
+				// most likely ends in that character (r'C:\dir\'); read it again without the escape.
+				int plainEnd = ScanStringBody(source, bodyStart, rule, close, null, out bool plainClosed);
+				if (plainClosed)
+				{
+					index = plainEnd;
+					closed = true;
+				}
+			}
+
 			kind = rule.Kind;
 			body = new TokenBody(openLength, closed ? close.Length : 0, rule);
 			return true;
@@ -286,7 +299,7 @@ internal static class CodeTokenizer
 		return false;
 	}
 
-	private static int ScanStringBody(string source, int start, StringRule rule, string close, out bool closed)
+	private static int ScanStringBody(string source, int start, StringRule rule, string close, char? escape, out bool closed)
 	{
 		closed = false;
 		int scan = start;
@@ -301,7 +314,7 @@ internal static class CodeTokenizer
 				return scan;
 			}
 
-			if (rule.Escape.HasValue && current == rule.Escape.Value && scan + 1 < source.Length)
+			if (escape.HasValue && current == escape.Value && scan + 1 < source.Length)
 			{
 				scan += 2;
 				continue;
