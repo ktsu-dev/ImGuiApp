@@ -8,16 +8,19 @@ using System.Collections.Generic;
 /// <summary>
 /// A lexer for angle-bracket markup (XML, HTML). Markup has no keywords: meaning comes from
 /// position, so element names, attribute names and attribute values are classified structurally.
-/// Embedded script and style bodies are treated as text.
+/// The body of a raw-text element (<see cref="LanguageDefinition.RawTextElements"/>: HTML's script
+/// and style) is treated as text up to that element's closing tag.
 /// </summary>
 internal static class MarkupTokenizer
 {
 	/// <summary>Tokenizes markup source.</summary>
 	/// <param name="source">The source text.</param>
+	/// <param name="language">The markup definition, which names the raw-text elements.</param>
 	/// <returns>The tokens, in source order; concatenating their text reproduces the source.</returns>
-	public static IReadOnlyList<HighlightedToken> Tokenize(string source)
+	public static IReadOnlyList<HighlightedToken> Tokenize(string source, LanguageDefinition language)
 	{
 		Ensure.NotNull(source);
+		Ensure.NotNull(language);
 
 		List<HighlightedToken> tokens = [];
 		int index = 0;
@@ -26,7 +29,7 @@ internal static class MarkupTokenizer
 		{
 			if (source[index] == '<')
 			{
-				index = ReadMarkup(source, index, tokens);
+				index = ReadMarkup(source, index, language.RawTextElements, tokens);
 				continue;
 			}
 
@@ -36,7 +39,7 @@ internal static class MarkupTokenizer
 		return tokens;
 	}
 
-	private static int ReadMarkup(string source, int index, List<HighlightedToken> tokens)
+	private static int ReadMarkup(string source, int index, IReadOnlyCollection<string> rawTextElements, List<HighlightedToken> tokens)
 	{
 		if (Matches(source, index, "<!--"))
 		{
@@ -75,8 +78,62 @@ internal static class MarkupTokenizer
 		tokens.Add(new HighlightedToken(TokenKind.Punctuation, source[index..scan]));
 
 		int nameEnd = ReadName(source, scan);
-		tokens.Add(new HighlightedToken(TokenKind.Tag, source[scan..nameEnd]));
-		return ReadAttributes(source, nameEnd, tokens);
+		string name = source[scan..nameEnd];
+		tokens.Add(new HighlightedToken(TokenKind.Tag, name));
+		int tagEnd = ReadAttributes(source, nameEnd, tokens);
+
+		bool openedBody = !closing && tokens[^1] is { Kind: TokenKind.Punctuation, Text: ">" };
+		return openedBody && IsRawTextElement(rawTextElements, name)
+			? ReadRawText(source, tagEnd, name, tokens)
+			: tagEnd;
+	}
+
+	// A script or style body runs to the element's own closing tag, whatever it holds, so `i<n` or an
+	// apostrophe in a comment stays text. Only `</name` followed by something that cannot continue
+	// the name closes it, and the name matches in any case, as HTML reads it.
+	private static int ReadRawText(string source, int index, string name, List<HighlightedToken> tokens)
+	{
+		int scan = index;
+		while (scan < source.Length)
+		{
+			int close = source.IndexOf("</", scan, StringComparison.Ordinal);
+			if (close < 0)
+			{
+				scan = source.Length;
+				break;
+			}
+
+			int afterName = close + 2 + name.Length;
+			if (afterName <= source.Length
+				&& string.Compare(source, close + 2, name, 0, name.Length, StringComparison.OrdinalIgnoreCase) == 0
+				&& (afterName == source.Length || !IsNameChar(source[afterName])))
+			{
+				scan = close;
+				break;
+			}
+
+			scan = close + 2;
+		}
+
+		if (scan > index)
+		{
+			tokens.Add(new HighlightedToken(TokenKind.Plain, source[index..scan]));
+		}
+
+		return scan;
+	}
+
+	private static bool IsRawTextElement(IReadOnlyCollection<string> rawTextElements, string name)
+	{
+		foreach (string element in rawTextElements)
+		{
+			if (string.Equals(element, name, StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private static int ReadAttributes(string source, int index, List<HighlightedToken> tokens)

@@ -54,7 +54,7 @@ internal static class EmbeddedExpander
 		}
 
 		IReadOnlyList<HighlightedToken> inner = embedded.IsMarkup
-			? MarkupTokenizer.Tokenize(unescaped.Content)
+			? MarkupTokenizer.Tokenize(unescaped.Content, embedded)
 			: CodeTokenizer.Tokenize(unescaped.Content, embedded, expandEmbedded: false);
 
 		int before = tokens.Count;
