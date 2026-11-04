@@ -102,14 +102,16 @@ LanguageRegistry.Register(new LanguageDefinition
 });
 ```
 
-Two rule options cover delimiters that a plain prefix cannot describe. `LineCommentRule.RequiresWhitespaceBefore` opens a comment only at the start of a line or after whitespace, which is how shell and YAML read `#` (so `$#`, `${#name}` and `http://host/#frag` are not comments). `StringRule.CloseMatchesOpeningRun` lets the opener's last character repeat and closes only on a run as long as the one that opened it, which is how C# raw strings work (`""""` is closed only by `""""`).
+Three rule options cover delimiters that a plain prefix cannot describe. `LineCommentRule.RequiresWhitespaceBefore` opens a comment only at the start of a line or after whitespace, which is how shell and YAML read `#` (so `$#`, `${#name}` and `http://host/#frag` are not comments). `StringRule.CloseMatchesOpeningRun` lets the opener's last character repeat and closes only on a run as long as the one that opened it, which is how C# raw strings work (`""""` is closed only by `""""`). `StringRule.ScanEscape` names a character that keeps the next one from closing the literal but stays in its content as written, which is how Python raw strings read a backslash (`r"\""` is one literal); a literal that would run off its line because it ends in that character is read again without it.
 
 A block comment whose close overlaps its own opener at the match position, as `*/` does inside the doc opener `/**` in `/**/`, gives way to a shorter rule that matches there, so `/**/` is one empty comment rather than a doc comment running to the next `*/`.
+
+`StringRule.CloseRepeatsDelimiter` reads a delimiter of up to 16 characters and `(` after the opener, and closes only on `)`, that delimiter and the rule's close, which is how C++ raw strings work (`R"x( … )x"` is not closed by `)"`). The C++ definition uses it for `R"`, `u8R"`, `uR"`, `UR"` and `LR"`.
 
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
-- Embedding is one level deep and is not applied by the markup tokenizer, so `<script>` and `<style>` bodies inside HTML are still treated as markup text
+- Embedding is one level deep and is not applied by the markup tokenizer. `<script>` and `<style>` bodies inside HTML (`LanguageDefinition.RawTextElements`) are read as plain text up to their own closing tag, not highlighted as JavaScript or CSS
 - Doc comments written one `///` line at a time are tokenized a line at a time, so an XML construct split across lines is classified per line
 - Lines are not wrapped and nothing is drawn; this classifies code, a renderer decides what to do with it
 

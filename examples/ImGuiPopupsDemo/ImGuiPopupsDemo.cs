@@ -2,13 +2,18 @@
 
 namespace ktsu.ImGui.Examples.Popups;
 
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
+using ktsu.ImGui.App.Images;
 using ktsu.ImGui.Popups;
 using ktsu.ImGui.Probes;
+using ktsu.Semantics.Paths;
 
 internal static class ImGuiPopupsDemo
 {
@@ -110,12 +115,41 @@ internal static class ImGuiPopupsDemo
 	private static readonly ImGuiPopups.InputString popupInputString = new();
 	private static readonly ImGuiPopups.InputInt popupInputInt = new();
 	private static readonly ImGuiPopups.InputFloat popupInputFloat = new();
-	private static readonly ImGuiPopups.FilesystemBrowser popupFilesystemBrowser = new() { ConfirmOverwrite = true };
+	private static readonly ImGuiPopups.FilesystemBrowser popupFilesystemBrowser = new() { ConfirmOverwrite = true, ThumbnailResolver = DemoThumbnail };
+
+	/// <summary>Files the demo could not load a picture of, so it does not try again every frame.</summary>
+	private static readonly HashSet<string> filesWithoutThumbnails = [];
 	private static readonly ImGuiPopups.MessageOK popupMessageOK = new();
 	private static readonly ImGuiPopups.SearchableList<string> popupSearchableListFriends = new();
 	private static readonly ImGuiPopups.SearchableList<string> popupSearchableListColors = new();
 	private static readonly ImGuiPopups.Prompt popupPrompt = new();
 	private static readonly ImGuiPopups.Modal popupCustomModal = new();
+
+	/// <summary>
+	/// Supplies the browser's thumbnails from ImGuiApp's texture cache. A real application would decode
+	/// on a worker thread and return null until the picture is ready; the demo loads on the spot.
+	/// </summary>
+	/// <param name="file">The file the browser is showing.</param>
+	/// <returns>Its picture, or null for a file that is not one.</returns>
+	private static ImGuiPopups.FilesystemBrowserThumbnail? DemoThumbnail(AbsoluteFilePath file)
+	{
+		string extension = Path.GetExtension(file.WeakString).ToUpperInvariant();
+		if (extension is not (".PNG" or ".JPG" or ".JPEG" or ".BMP" or ".TGA") || filesWithoutThumbnails.Contains(file.WeakString))
+		{
+			return null;
+		}
+
+		try
+		{
+			ImGuiAppTextureInfo texture = ImGuiApp.GetOrLoadTexture(file);
+			return new ImGuiPopups.FilesystemBrowserThumbnail(texture.TextureId, new Vector2(texture.Width, texture.Height));
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidImageDataException)
+		{
+			filesWithoutThumbnails.Add(file.WeakString);
+			return null;
+		}
+	}
 
 	private static void OnStart()
 	{
@@ -298,7 +332,7 @@ internal static class ImGuiPopupsDemo
 			ImGui.SameLine();
 			if (DemoButton("Open Image File"))
 			{
-				popupFilesystemBrowser.FileOpen("Open Image File", file => lastFileOpened = file.ToString(), new Vector2(600, 500), "*.{png,jpg,jpeg,gif,bmp}");
+				popupFilesystemBrowser.FileOpen("Open Image File", file => lastFileOpened = file.ToString(), new Vector2(900, 600), "*.png;*.jpg;*.jpeg;*.bmp;*.tga");
 			}
 
 			ImGui.Text($"Last File Saved: {lastFileSaved}");

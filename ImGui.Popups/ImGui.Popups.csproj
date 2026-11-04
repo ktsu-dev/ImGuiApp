@@ -19,6 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- One text field for every library in the suite (#553). Linked rather than referenced, since
+         this package does not depend on ktsu.ImGui.Widgets. -->
+    <Compile Include="..\ImGui.Widgets\ResizableInputText.cs" Link="ResizableInputText.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.CaseConverter" />

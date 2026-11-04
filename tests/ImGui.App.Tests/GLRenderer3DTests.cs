@@ -4,6 +4,7 @@ namespace ktsu.ImGui.App.Tests;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -132,35 +133,35 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
-	public void DeleteTexture_OnTheController_RejectsARenderTarget()
+	public void DeleteTexture_OnTheOpenGLRenderer_RejectsARenderTarget()
 	{
 		FakeGL3D gl = new();
-		ImGuiController controller = ControllerOver(gl);
+		using OpenGLRenderer controller = ControllerOver(gl);
 		nint target = controller.CreateRenderTarget(16, 16, depth: true);
 		gl.Calls.Clear();
 
 		Assert.ThrowsExactly<ArgumentException>(() => controller.DeleteTexture(controller.GetTargetTexture(target)));
 
 		Assert.IsEmpty(gl.Calls, "A live target's colour attachment must survive the attempt.");
-		Assert.IsTrue(controller._renderer3D!.IsRenderTarget(target));
+		Assert.AreEqual(target, controller.GetTargetTexture(target), "The target should still be live.");
 	}
 
 	[TestMethod]
-	public void DeleteTexture_OnTheController_StillAcceptsAPlainTexture()
+	public void DeleteTexture_OnTheOpenGLRenderer_StillAcceptsAPlainTexture()
 	{
-		ImGuiController controller = ControllerOver(new FakeGL3D());
+		using OpenGLRenderer controller = ControllerOver(new FakeGL3D());
 		controller.CreateRenderTarget(16, 16, depth: false);
 
-		// With no GL context the plain path is the documented no-op; what matters is that the
-		// guard does not mistake an ordinary texture for a target.
+		// What matters is that the guard does not mistake an ordinary texture for a target.
 		controller.DeleteTexture(5);
 	}
 
 	[TestMethod]
-	public void Controller_ForwardsEveryRenderer3DCallToTheOpenGLRenderer()
+	public void OpenGLRenderer_ForwardsEveryRenderer3DCallToGLRenderer3D()
 	{
 		FakeGL3D gl = new();
-		IRenderer3D controller = ControllerOver(gl);
+		using OpenGLRenderer renderer = ControllerOver(gl);
+		IRenderer3D controller = renderer;
 
 		nint target = controller.CreateRenderTarget(16, 16, depth: true);
 		Assert.IsTrue(controller.ResizeRenderTarget(target, 32, 32));
@@ -172,19 +173,6 @@ public sealed class GLRenderer3DTests
 		Assert.HasCount(1, gl.Clears);
 		Assert.HasCount(1, gl.Draws);
 		CollectionAssert.Contains(gl.Calls, $"DeleteFramebuffer({FakeGL3D.FirstFramebuffer})");
-	}
-
-	[TestMethod]
-	public void Controller_WithoutAContext_RefusesRenderer3DCallsByName()
-	{
-		IRenderer3D controller = (ImGuiController)RuntimeHelpers.GetUninitializedObject(typeof(ImGuiController));
-
-		Assert.ThrowsExactly<InvalidOperationException>(() => controller.CreateRenderTarget(16, 16, depth: false));
-		Assert.ThrowsExactly<InvalidOperationException>(() => controller.ResizeRenderTarget(1, 16, 16));
-		Assert.ThrowsExactly<InvalidOperationException>(() => controller.DeleteRenderTarget(1));
-		Assert.ThrowsExactly<InvalidOperationException>(() => controller.GetTargetTexture(1));
-		Assert.ThrowsExactly<InvalidOperationException>(() => controller.Clear(1, Vector4.One, 1f));
-		Assert.ThrowsExactly<InvalidOperationException>(() => controller.Draw(1, Triangle, TriangleIndices, default));
 	}
 
 	[TestMethod]
@@ -437,10 +425,11 @@ public sealed class GLRenderer3DTests
 		IRendererBackend? previous = ImGuiApp.renderer;
 		try
 		{
-			ImGuiApp.renderer = ControllerOver(new FakeGL3D());
+			using OpenGLRenderer renderer = ControllerOver(new FakeGL3D());
+			ImGuiApp.renderer = renderer;
 
 			Assert.IsTrue(ImGuiApp.TryGetRenderer3D(out IRenderer3D? renderer3D));
-			Assert.IsInstanceOfType<ImGuiController>(renderer3D);
+			Assert.IsInstanceOfType<OpenGLRenderer>(renderer3D);
 		}
 		finally
 		{
@@ -448,19 +437,15 @@ public sealed class GLRenderer3DTests
 		}
 	}
 
-	/// <summary>A controller with no window or context, carrying a 3D renderer over the stand-in.</summary>
-	private static ImGuiController ControllerOver(FakeGL3D gl)
-	{
-		ImGuiController controller = (ImGuiController)RuntimeHelpers.GetUninitializedObject(typeof(ImGuiController));
-		controller._renderer3D = new GLRenderer3D(gl);
-		return controller;
-	}
+	/// <summary>An OpenGL renderer over stand-ins, carrying a 3D renderer over <paramref name="gl"/>.</summary>
+	[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The renderer owns the 3D renderer and disposes it with itself.")]
+	private static OpenGLRenderer ControllerOver(FakeGL3D gl) => new(new FakeGLRenderer(), new NullTextureUploader(), new GLRenderer3D(gl));
 
 	/// <summary>
 	/// Records calls and models the state <see cref="GLRenderer3D"/> reads and writes, so a test
 	/// can compare the context before and after a call.
 	/// </summary>
-	private sealed class FakeGL3D : IGL3D
+	internal sealed class FakeGL3D : IGL3D
 	{
 		public const uint FirstTexture = 100;
 		public const uint FirstFramebuffer = 200;

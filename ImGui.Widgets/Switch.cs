@@ -36,6 +36,9 @@ public static partial class ImGuiWidgets
 		// Seconds for the thumb to travel end to end.
 		private const float AnimationDuration = 0.12f;
 
+		/// <summary>How close the animation must be to its target to count as finished.</summary>
+		private const float AnimationTolerance = 1e-4f;
+
 		public static bool Draw(string label, ref bool value)
 		{
 			uint id = ImGui.GetID(label);
@@ -66,7 +69,7 @@ public static partial class ImGuiWidgets
 			float delta = ImGui.GetIO().DeltaTime / AnimationDuration;
 			t = target > t ? MathF.Min(target, t + delta) : MathF.Max(target, t - delta);
 			Progress[id] = t;
-			if (t != target)
+			if (MathF.Abs(t - target) > AnimationTolerance)
 			{
 				AnimationActivity.RequestActiveFrame();
 			}

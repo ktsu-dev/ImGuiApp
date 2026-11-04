@@ -298,7 +298,7 @@ public static partial class ImGuiWidgets
 			}
 
 			string edited = state.EditText;
-			ImGui.InputText("##edit", ref edited, 32u, ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.CharsNoBlank);
+			ResizableInputText.InputText("##edit", ref edited, ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.CharsNoBlank);
 			state.EditText = edited;
 			ImGuiProbes.MarkItem("edit");
 

@@ -5,8 +5,8 @@ namespace ktsu.ImGui.Widgets.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
-/// Tests the selection guard the single-curve editor puts in front of Hexa's widget. The widget
-/// itself needs a live ImGui context, but the guard is pure.
+/// Tests the selection guard of the single-curve editor. The widget itself needs a live ImGui
+/// context, but the guard is pure.
 /// </summary>
 [TestClass]
 public sealed class CurveFieldTests
@@ -69,44 +69,4 @@ public sealed class CurveFieldTests
 			}
 		}
 	}
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_CountUnchanged_KeepsValidSelection() =>
-		Assert.AreEqual(1, ImGuiWidgets.ResolveSelectionAfterEdit(1, 3, 3));
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_LastPointDeleted_ClearsSelection() =>
-		Assert.AreEqual(-1, ImGuiWidgets.ResolveSelectionAfterEdit(2, 3, 2));
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_MiddlePointDeleted_ClearsSelection()
-	{
-		// The regression this exists for. After deleting point 1 of 3, the vendor writes index 1 back
-		// out and it still addresses a real slot - the point that shifted down. A plain clamp would
-		// keep it and the next drag would move a point the user never grabbed.
-		Assert.AreEqual(-1, ImGuiWidgets.ResolveSelectionAfterEdit(1, 3, 2));
-		Assert.AreEqual(1, ImGuiWidgets.ClampSelection(1, 2));
-	}
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_FirstPointDeleted_ClearsSelection() =>
-		Assert.AreEqual(-1, ImGuiWidgets.ResolveSelectionAfterEdit(0, 3, 2));
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_PointAdded_KeepsSelection()
-	{
-		// Growth is the add gesture, which does not invalidate an existing selection.
-		Assert.AreEqual(1, ImGuiWidgets.ResolveSelectionAfterEdit(1, 3, 4));
-	}
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_NoSelection_StaysCleared()
-	{
-		Assert.AreEqual(-1, ImGuiWidgets.ResolveSelectionAfterEdit(-1, 3, 3));
-		Assert.AreEqual(-1, ImGuiWidgets.ResolveSelectionAfterEdit(-1, 3, 2));
-	}
-
-	[TestMethod]
-	public void ResolveSelectionAfterEdit_CurveEmptied_ClearsSelection() =>
-		Assert.AreEqual(-1, ImGuiWidgets.ResolveSelectionAfterEdit(0, 1, 0));
 }

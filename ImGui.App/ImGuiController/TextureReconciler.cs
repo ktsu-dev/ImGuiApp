@@ -83,7 +83,7 @@ internal sealed class TextureReconciler
 				for (int i = 0; i < tex.Updates.Size; i++)
 				{
 					ImTextureRect rect = tex.Updates[i];
-					uploader.Update((nint)(nuint)tex.GetTexID(), tex.Width, rect, (nint)tex.GetPixelsAt(rect.X, rect.Y));
+					uploader.Update((nint)(nuint)tex.GetTexID(), tex.Width, tex.Height, rect, (nint)tex.GetPixels());
 				}
 
 				tex.SetStatus(ImTextureStatus.Ok);

@@ -48,6 +48,16 @@ public sealed record StringRule
 	/// <summary>The escape character that neutralizes the next character, or <see langword="null"/> when the literal has none.</summary>
 	public char? Escape { get; init; } = '\\';
 
+	/// <summary>
+	/// A character that keeps the one after it from closing the literal while staying in the literal's
+	/// content as written, as a backslash does in a Python raw string: <c>r"\""</c> is one literal whose
+	/// value is <c>\"</c>. It only affects where the literal ends; <see cref="Escape"/> still decides
+	/// whether the content is unescaped. When honouring it would leave the literal unterminated, the
+	/// literal is scanned again without it, so a literal that ends in the character, such as the
+	/// invalid <c>r'C:\dir\'</c>, still closes at its last quote rather than running on.
+	/// </summary>
+	public char? ScanEscape { get; init; }
+
 	/// <summary>Whether a doubled closing delimiter escapes it, as in a C# verbatim string.</summary>
 	public bool DoubledCloseEscapes { get; init; }
 
@@ -60,6 +70,14 @@ public sealed record StringRule
 	/// opens a literal that only <c>""""</c> closes. <see cref="Close"/> is then the shortest close.
 	/// </summary>
 	public bool CloseMatchesOpeningRun { get; init; }
+
+	/// <summary>
+	/// Whether <see cref="Open"/> is followed by a delimiter of up to 16 characters and <c>(</c>, with
+	/// the literal closing only on <c>)</c>, that delimiter and <see cref="Close"/>, as in a C++ raw
+	/// string: <c>R"x( … )x"</c> is not closed by <c>)"</c>. When no <c>(</c> follows a valid delimiter
+	/// the rule does not match, and the text is read by the other rules.
+	/// </summary>
+	public bool CloseRepeatsDelimiter { get; init; }
 
 	/// <summary>The kind emitted for the literal.</summary>
 	public TokenKind Kind { get; init; } = TokenKind.StringLiteral;
@@ -132,6 +150,14 @@ public sealed record LanguageDefinition
 	/// embedded-language members.
 	/// </summary>
 	public bool IsMarkup { get; init; }
+
+	/// <summary>
+	/// For markup, the elements whose body is raw text rather than markup, matched case-insensitively:
+	/// <c>script</c> and <c>style</c> in HTML. Everything up to the element's own closing tag is emitted
+	/// as <see cref="TokenKind.Plain"/>, so a <c>&lt;</c> comparison or an apostrophe in the body cannot
+	/// open a tag or an attribute value. Ignored for definitions that are not <see cref="IsMarkup"/>.
+	/// </summary>
+	public IReadOnlyCollection<string> RawTextElements { get; init; } = [];
 
 	/// <summary>
 	/// Languages to look for inside this one's comments and strings — XML in a doc comment, JSON in a

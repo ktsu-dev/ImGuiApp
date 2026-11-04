@@ -180,7 +180,7 @@ public static partial class ImGuiWidgets
 			string edited = slot;
 
 			bool changed = false;
-			bool slotEdited = ImGui.InputText("##slot", ref edited, 8u, flags);
+			bool slotEdited = ResizableInputText.InputText("##slot", ref edited, flags);
 			ImGuiProbes.MarkItem(id, string.Create(CultureInfo.InvariantCulture, $"slot{i}"));
 			if (slotEdited)
 			{

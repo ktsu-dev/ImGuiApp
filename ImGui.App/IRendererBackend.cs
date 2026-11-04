@@ -7,12 +7,11 @@ using Hexa.NET.ImGui;
 
 /// <summary>
 /// Platform-agnostic seam for the GPU side of an ImGui frame. Each platform port
-/// provides an implementation: desktop uses <c>ktsu.ImGui.App.ImGuiController.ImGuiController</c>
-/// (OpenGL via Silk.NET); the future iOS port will provide a Metal-backed implementation.
+/// provides an implementation: desktop uses <c>ktsu.ImGui.App.ImGuiController.OpenGLRenderer</c>
+/// (OpenGL via Silk.NET), iOS a Metal-backed one, and the headless harness a software rasterizer.
 /// The interface deliberately covers only what differs between backends — atlas/user
-/// texture upload, texture release, and final draw-data submission. Per-frame state
-/// (input, NewFrame/EndFrame, font configuration) stays in the concrete backend until
-/// the broader split described in the iOS port plan is in place.
+/// texture upload, texture release, and final draw-data submission. The context and its
+/// frame cycle live in <c>ImGuiContextHost</c>, and window input in the platform's own glue.
 /// </summary>
 /// <remarks>
 /// Public because a host that drives its own frames through

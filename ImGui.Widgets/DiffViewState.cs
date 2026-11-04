@@ -30,6 +30,9 @@ public static partial class ImGuiWidgets
 		/// <summary>The longest a change summary bar is allowed to be, in characters.</summary>
 		internal const int SummaryWidth = 10;
 
+		/// <summary>How far the font key may move before a hunk is measured again.</summary>
+		private const float FontKeyTolerance = 1e-3f;
+
 		private readonly Dictionary<int, HunkLayout> layouts = [];
 
 		/// <summary>
@@ -169,7 +172,7 @@ public static partial class ImGuiWidgets
 
 			HunkLayout layout = LayoutFor(index, hunk);
 
-			if (layout.MeasuredFontKey != fontKey)
+			if (layout.MeasuredFontKey is not float measured || MathF.Abs(measured - fontKey) > FontKeyTolerance)
 			{
 				float widest = 0.0f;
 				foreach (DiffLine line in layout.Hunk.Lines)

@@ -78,7 +78,7 @@ public static partial class ImGuiWidgets
 		float framePadding = ImGui.GetStyle().FramePadding.X * 2;
 		string displayHint = options.ShowHint && (hintWidth + framePadding) <= availableWidth ? hint : string.Empty;
 
-		bool changed = ImGui.InputTextWithHint(options.Label, displayHint, ref filterText, 256);
+		bool changed = ResizableInputText.InputTextWithHint(options.Label, displayHint, ref filterText);
 		ImGuiProbes.MarkItem(options.Label);
 		bool isHovered = ImGui.IsItemHovered();
 		bool isRightMouseClicked = ImGui.IsMouseClicked(ImGuiMouseButton.Right);

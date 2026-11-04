@@ -7,32 +7,38 @@ using System.Numerics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
-/// Tests the bezier control-point conversion. The widget itself needs a live ImGui context.
+/// Tests which handle a press on the bezier editor picks up. The widget itself needs a live ImGui
+/// context.
 /// </summary>
 [TestClass]
 public sealed class BezierEditorTests
 {
+	private static readonly CurveFieldGeometry Square = new(new Vector2(10f, 20f), new Vector2(100f, 100f), Vector2.Zero, Vector2.One);
+
 	[TestMethod]
-	public void ToVendor_RoundTripsBothControlPoints()
+	public void HandleAt_PicksTheHandleUnderThePointer()
 	{
-		BezierControlPoints points = new(new Vector2(0.1f, 0.2f), new Vector2(0.8f, 0.9f));
+		BezierControlPoints points = new(new Vector2(0.25f, 0.25f), new Vector2(0.75f, 0.75f));
 
-		BezierControlPoints result = ImGuiWidgets.FromVendorBezier(ImGuiWidgets.ToVendorBezier(points));
-
-		Assert.AreEqual(points, result);
+		Assert.AreEqual(0, ImGuiWidgets.BezierHandleAt(Square, points, new Vector2(35f, 95f), 6f));
+		Assert.AreEqual(1, ImGuiWidgets.BezierHandleAt(Square, points, new Vector2(85f, 45f), 6f));
 	}
 
 	[TestMethod]
-	public void ToVendor_KeepsControlPointOrder()
+	public void HandleAt_EmptySpace_PicksNeither()
 	{
-		// The vendor type is an inline array; swapping the two would round-trip through an
-		// equality check that only compared the set, so assert each slot individually.
-		BezierControlPoints points = new(new Vector2(1f, 2f), new Vector2(3f, 4f));
+		BezierControlPoints points = new(new Vector2(0.25f, 0.25f), new Vector2(0.75f, 0.75f));
 
-		BezierControlPoints result = ImGuiWidgets.FromVendorBezier(ImGuiWidgets.ToVendorBezier(points));
+		Assert.AreEqual(-1, ImGuiWidgets.BezierHandleAt(Square, points, new Vector2(60f, 70f), 6f));
+	}
 
-		Assert.AreEqual(new Vector2(1f, 2f), result.First);
-		Assert.AreEqual(new Vector2(3f, 4f), result.Second);
+	[TestMethod]
+	public void HandleAt_OverlappingHandles_PicksTheNearer()
+	{
+		BezierControlPoints points = new(new Vector2(0.5f, 0.5f), new Vector2(0.52f, 0.5f));
+
+		// The second handle sits 2 px right of the first, so a press 2 px right of that is on both.
+		Assert.AreEqual(1, ImGuiWidgets.BezierHandleAt(Square, points, new Vector2(64f, 70f), 6f));
 	}
 
 	[TestMethod]

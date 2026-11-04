@@ -39,6 +39,7 @@ internal static class ImGuiAppDemo
 		demoTabs.Add(new NerdFontDemo());
 		demoTabs.Add(new ImGuizmoDemo());
 		demoTabs.Add(new Viewport3DDemo());
+		demoTabs.Add(new HdrDemo());
 		demoTabs.Add(new ImNodesDemo());
 		demoTabs.Add(new ImPlotDemo());
 		demoTabs.Add(new CleanImNodesDemo());
@@ -62,6 +63,9 @@ internal static class ImGuiAppDemo
 		// DrawDeferredDocked below draws the DockedWindow demo into a dockspace, which ImGui only
 		// permits when docking was enabled before the first frame.
 		EnableDocking = true,
+		// Presents through the platform's HDR path where there is one, so the HDR tab's ramp can run
+		// past white. Elsewhere the window presents in SDR exactly as it would without it.
+		HdrOutput = true,
 		// Note: EnableUnicodeSupport = true by default, so Unicode and emojis are automatically enabled!
 		Fonts = new Dictionary<string, byte[]>
 		{
@@ -98,6 +102,7 @@ internal static class ImGuiAppDemo
 		overlayClickThrough = false;
 		overlayCorner = OverlayCorner.TopRight;
 		GetTab<Viewport3DDemo>().ResetState();
+		GetTab<HdrDemo>().ResetState();
 	}
 
 	/// <summary>Gets the registered tab of the given type, so a test can read its state.</summary>

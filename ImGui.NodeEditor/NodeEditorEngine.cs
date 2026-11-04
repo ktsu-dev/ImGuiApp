@@ -910,6 +910,26 @@ public partial class NodeEditorEngine
 		}
 	}
 
+	/// <summary>Pin or unpin a node, so the layout holds it still or moves it again.</summary>
+	/// <param name="nodeId">The node.</param>
+	/// <param name="pinned">Whether it should be pinned.</param>
+	/// <returns>True if the node exists and its state changed.</returns>
+	/// <remarks>
+	/// A pinned node keeps pushing and pulling the others; only its own position is left alone. A
+	/// selection of mixed nodes is pinned or unpinned together with this, which a toggle cannot do.
+	/// </remarks>
+	public bool SetNodePinned(int nodeId, bool pinned)
+	{
+		int index = nodes.FindIndex(n => n.Id == nodeId);
+		if (index < 0 || nodes[index].IsPinned == pinned)
+		{
+			return false;
+		}
+
+		nodes[index] = nodes[index] with { IsPinned = pinned };
+		return true;
+	}
+
 	/// <summary>
 	/// Set which nodes are currently being dragged by the user.
 	/// Dragged nodes are temporarily excluded from physics simulation.

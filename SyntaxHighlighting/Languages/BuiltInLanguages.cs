@@ -108,7 +108,7 @@ public static class BuiltInLanguages
 		Aliases = ["c++", "cc", "cxx", "hpp"],
 		LineComments = [SlashComment],
 		BlockComments = [SlashStarDocComment, SlashStarComment],
-		Strings = [DoubleQuoted, SingleQuoted],
+		Strings = [CppRawString("R"), CppRawString("u8R"), CppRawString("uR"), CppRawString("UR"), CppRawString("LR"), DoubleQuoted, SingleQuoted],
 		Keywords =
 		[
 			"auto", "class", "concept", "const", "consteval", "constexpr", "constinit", "decltype",
@@ -230,6 +230,7 @@ public static class BuiltInLanguages
 		Name = "html",
 		Aliases = ["htm", "xhtml"],
 		IsMarkup = true,
+		RawTextElements = ["script", "style"],
 	};
 
 	/// <summary>CSS.</summary>
@@ -320,8 +321,21 @@ public static class BuiltInLanguages
 		CloseMatchesOpeningRun = true,
 	};
 
+	// A C++11 raw string, with or without an encoding prefix: R"delim( … )delim", where the delimiter
+	// is up to 16 characters and the body has no escapes and may span lines.
+	private static StringRule CppRawString(string prefix) => new()
+	{
+		Open = prefix + "\"",
+		Close = "\"",
+		Escape = null,
+		AllowMultiline = true,
+		CloseRepeatsDelimiter = true,
+	};
+
 	// Every Python string prefix, in every case Python accepts, before each of the four quotes. A
-	// prefix with r in it is raw, and only the triple-quoted forms may span lines.
+	// prefix with r in it is raw, and only the triple-quoted forms may span lines. A raw literal keeps
+	// its backslashes, but Python's lexer still skips the character after one when it looks for the
+	// closing quote, so r"\"" is one literal.
 	private static List<StringRule> PythonStrings()
 	{
 		string[] prefixes = ["", "f", "r", "b", "u", "t", "rf", "fr", "rb", "br", "rt", "tr"];
@@ -329,6 +343,7 @@ public static class BuiltInLanguages
 		List<StringRule> rules = [];
 		foreach (string prefix in prefixes)
 		{
+			bool raw = prefix.Contains('r', StringComparison.Ordinal);
 			foreach (string spelling in CaseVariants(prefix))
 			{
 				foreach (string quote in quotes)
@@ -337,7 +352,8 @@ public static class BuiltInLanguages
 					{
 						Open = spelling + quote,
 						Close = quote,
-						Escape = prefix.Contains('r', StringComparison.Ordinal) ? null : '\\',
+						Escape = raw ? null : '\\',
+						ScanEscape = raw ? '\\' : null,
 						AllowMultiline = quote.Length == 3,
 					});
 				}

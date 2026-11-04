@@ -57,6 +57,46 @@ public class ValueSliderStateTests
 	}
 
 	[TestMethod]
+	public void ACultureWritingU2212_StillDropsMinusZero_AndTypesAHyphen()
+	{
+		// sv-SE, nb-NO and fi-FI write U+2212 on ICU (#647). Built rather than looked up, like DecimalComma.
+		NumberFormatInfo swedish = new() { NumberDecimalSeparator = ",", NumberGroupSeparator = "\u00A0", NegativeSign = "\u2212" };
+
+		Assert.AreEqual("0,00", ImGuiWidgets.ValueSliderState.Format(-0.001, "0.00", null, swedish));
+		Assert.AreEqual("-1,50", ImGuiWidgets.ValueSliderState.Format(-1.5, "0.00", null, swedish));
+		Assert.AreEqual("\u22121,50", ImGuiWidgets.ValueSliderState.Display(-1.5, "0.00", null, swedish));
+		Assert.AreEqual("0,00", ImGuiWidgets.ValueSliderState.Display(-0.001, "0.00", null, swedish));
+		Assert.IsTrue(ImGuiWidgets.ValueSliderState.TryParse("-1,50", null, swedish, out double value));
+		Assert.AreEqual(-1.5, value);
+	}
+
+	[TestMethod]
+	public void ARealSwedishCulture_IsHandledTheSameWay()
+	{
+		CultureInfo swedish;
+		try
+		{
+			swedish = CultureInfo.GetCultureInfo("sv-SE", predefinedOnly: true);
+		}
+		catch (CultureNotFoundException)
+		{
+			Assert.Inconclusive("This runtime carries no culture data.");
+			return;
+		}
+
+		Assert.AreEqual("0,00", ImGuiWidgets.ValueSliderState.Format(-0.001, "0.00", null, swedish));
+		Assert.AreEqual("-1,50", ImGuiWidgets.ValueSliderState.Format(-1.5, "0.00", null, swedish));
+		Assert.AreEqual("\u22121,50", ImGuiWidgets.ValueSliderState.Display(-1.5, "0.00", null, swedish));
+	}
+
+	[TestMethod]
+	public void Display_WritesAHyphenWhenTheFontHasNoMinusSign()
+	{
+		Assert.AreEqual("-1.51", ImGuiWidgets.ValueSliderState.Display(-1.51, "0.00", null, Invariant, '-'));
+		Assert.AreEqual("0.0", ImGuiWidgets.ValueSliderState.Display(-0.01, "0.0", null, Invariant, '-'));
+	}
+
+	[TestMethod]
 	public void Format_UsesTheCultureGiven() =>
 		Assert.AreEqual("2,5", ImGuiWidgets.ValueSliderState.Format(2.5, "0.0", null, DecimalComma));
 

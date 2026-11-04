@@ -52,6 +52,16 @@ public sealed class InterfaceFontTests
 	}
 
 	[TestMethod]
+	public unsafe void ReducedRanges_IncludeTheMinusSign()
+	{
+		// Value sliders write negatives with U+2212, so the ranges a low-memory machine falls back to
+		// must still draw it (#648).
+		uint* ranges = FontMemoryGuard.GetReducedUnicodeRanges(ImGui.GetIO().Fonts);
+
+		Assert.IsTrue(RangesContain(ranges, 0x2212), "U+2212 MINUS SIGN is not in the reduced ranges.");
+	}
+
+	[TestMethod]
 	public void WithoutAnInterfaceFont_TheDefaultIsTheNerdFontAlone()
 	{
 		ImGuiApp.Config = new ImGuiAppConfig();

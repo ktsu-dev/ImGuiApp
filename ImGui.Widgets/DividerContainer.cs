@@ -103,7 +103,6 @@ public static partial class ImGuiWidgets
 		public void Tick(float dt)
 		{
 			ImGuiStylePtr style = ImGui.GetStyle();
-			Vector2 windowPadding = style.WindowPadding;
 			ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 			//lay the container out from the current draw cursor using the remaining content
 			//region, so it respects anything drawn before it instead of always filling the window
@@ -116,64 +115,56 @@ public static partial class ImGuiWidgets
 				_ => throw new NotImplementedException(),
 			};
 
-			Vector2 layoutMaskInverse = layout switch
+			Vector2 layoutMaskInverse = Vector2.One - layoutMask;
+
+			// The gap between zones is the window padding along the container's axis, so a rows
+			// layout follows the vertical padding and a columns layout the horizontal.
+			float gap = Vector2.Dot(style.WindowPadding, layoutMask);
+			float length = Vector2.Dot(containerSize, layoutMask);
+			DividerZoneSpan[] spans = DividerContainerLayout.Spans([.. Zones.Select(z => z.Size)], length, gap);
+
+			Vector2 origin = ImGui.GetCursorScreenPos();
+
+			// The zones are placed by position rather than by the cursor, which still moves past each
+			// of them, so the container itself must never scroll or show a scrollbar for that.
+			ImGui.SetNextWindowPos(origin);
+			ImGui.BeginChild(Id, containerSize, ImGuiChildFlags.None, ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+
+			foreach ((DividerZone z, int i) in Zones.WithIndex())
 			{
-				DividerLayout.Columns => new Vector2(0, 1),
-				DividerLayout.Rows => new Vector2(1, 0),
-				_ => throw new NotImplementedException(),
-			};
-
-			Vector2 cursorScreenPos = ImGui.GetCursorScreenPos();
-			Vector2 advance = cursorScreenPos;
-
-			ImGui.SetNextWindowPos(advance);
-			ImGui.BeginChild(Id, containerSize, ImGuiChildFlags.None, ImGuiWindowFlags.NoSavedSettings);
-
-			foreach (DividerZone z in Zones)
-			{
-				Vector2 zoneSize = CalculateZoneSize(z, windowPadding, containerSize, layoutMask, layoutMaskInverse);
-				ImGui.SetNextWindowPos(advance);
+				Vector2 zoneSize = (spans[i].Length * layoutMask) + (containerSize * layoutMaskInverse);
+				ImGui.SetNextWindowPos(origin + (spans[i].Start * layoutMask));
 				ImGui.BeginChild(z.Id, zoneSize, ImGuiChildFlags.Borders, ImGuiWindowFlags.NoSavedSettings);
 				z.Tick(dt);
 				ImGui.EndChild();
 				ImGuiProbes.MarkItem(Id, $"zone/{z.Id}");
-
-				advance += CalculateAdvance(z, windowPadding, containerSize, layoutMask);
 			}
 
 			ImGui.EndChild();
 			ImGuiProbes.MarkItem(Id);
 
 			//render the handles last otherwise they'll be covered by the other zones windows and wont receive hover events
-
-			//reset the advance to the top left of the container
-			advance = cursorScreenPos;
 			float resize = 0;
 			Vector2 mousePos = ImGui.GetMousePos();
 			bool resetSize = false;
-			foreach ((DividerZone z, int i) in Zones.WithIndex())
+			for (int i = 0; i < Zones.Count - 1; i++)
 			{
-				//draw the grab handle if we're not the last zone
-				if (z != Zones[^1])
-				{
-					DrawDividerHandle(z, i, advance, style, windowPadding, containerSize, layoutMask, layoutMaskInverse, mousePos, drawList, ref resize, ref resetSize);
-				}
-
-				advance += CalculateAdvance(z, windowPadding, containerSize, layoutMask);
+				float divider = DividerContainerLayout.DividerPosition(spans, i);
+				DrawDividerHandle(i, origin, divider, gap, containerSize, layoutMask, layoutMaskInverse, mousePos, drawList, ref resize, ref resetSize);
 			}
 
 			//do the actual resize at the end of the tick so that we don't mess with the dimensions of the layout mid rendering
 			ApplyResize(resize, resetSize);
 		}
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted from Tick to reduce cognitive complexity; the parameters thread the immediate-mode layout state (masks, padding, draw list) computed once by the caller, and bundling them would not improve readability.")]
-		private void DrawDividerHandle(DividerZone z, int i, Vector2 advance, ImGuiStylePtr style, Vector2 windowPadding, Vector2 containerSize, Vector2 layoutMask, Vector2 layoutMaskInverse, Vector2 mousePos, ImDrawListPtr drawList, ref float resize, ref bool resetSize)
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Private rendering helper extracted from Tick to reduce cognitive complexity; the parameters thread the immediate-mode layout state (masks, gap, draw list) computed once by the caller, and bundling them would not improve readability.")]
+		private void DrawDividerHandle(int i, Vector2 origin, float divider, float gap, Vector2 containerSize, Vector2 layoutMask, Vector2 layoutMaskInverse, Vector2 mousePos, ImDrawListPtr drawList, ref float resize, ref bool resetSize)
 		{
-			Vector2 zoneSize = CalculateZoneSize(z, windowPadding, containerSize, layoutMask, layoutMaskInverse);
-			Vector2 lineA = advance + (zoneSize * layoutMask) + (windowPadding * 0.5f * layoutMask);
-			Vector2 lineB = lineA + (zoneSize * layoutMaskInverse);
-			float lineWidth = style.WindowPadding.X * 0.5f;
-			float grabWidth = style.WindowPadding.X * 2;
+			DividerZone z = Zones[i];
+			Vector2 lineA = origin + (divider * layoutMask);
+			Vector2 lineB = lineA + (containerSize * layoutMaskInverse);
+			float lineWidth = gap * 0.5f;
+			float grabWidth = gap * 2;
 			Vector2 grabBox = new Vector2(grabWidth, grabWidth) * 0.5f;
 			Vector2 grabMin = lineA - (grabBox * layoutMask);
 			Vector2 grabMax = lineB + (grabBox * layoutMask);
@@ -202,7 +193,7 @@ public static partial class ImGuiWidgets
 			}
 			else if (DragIndex == i)
 			{
-				UpdateDragResize(z, advance, windowPadding, containerSize, layoutMask, mousePos, ref resize);
+				UpdateDragResize(i, origin, gap, containerSize, layoutMask, mousePos, ref resize);
 			}
 
 			ImColor lineColor = GetHandleLineColor(i, handleHovered);
@@ -219,7 +210,7 @@ public static partial class ImGuiWidgets
 			}
 		}
 
-		private void UpdateDragResize(DividerZone z, Vector2 advance, Vector2 windowPadding, Vector2 containerSize, Vector2 layoutMask, Vector2 mousePos, ref float resize)
+		private void UpdateDragResize(int i, Vector2 origin, float gap, Vector2 containerSize, Vector2 layoutMask, Vector2 mousePos, ref float resize)
 		{
 			if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
 			{
@@ -227,21 +218,10 @@ public static partial class ImGuiWidgets
 				return;
 			}
 
-			Vector2 mousePosLocal = mousePos - advance;
-
-			DividerZone first = Zones[0];
-			DividerZone last = Zones[^1];
-			if (first != last && z != first)
-			{
-				mousePosLocal += windowPadding * 0.5f * layoutMask;
-			}
-
-			float requestedSize = layout switch
-			{
-				DividerLayout.Columns => mousePosLocal.X / containerSize.X,
-				DividerLayout.Rows => mousePosLocal.Y / containerSize.Y,
-				_ => throw new NotImplementedException(),
-			};
+			// The zone takes whatever share puts its divider under the pointer.
+			float position = Vector2.Dot(mousePos - origin, layoutMask);
+			float length = Vector2.Dot(containerSize, layoutMask);
+			float requestedSize = DividerContainerLayout.FractionForDividerAt([.. Zones.Select(z => z.Size)], i, position, length, gap);
 			resize = Math.Clamp(requestedSize, 0.1f, 0.9f);
 		}
 
@@ -290,41 +270,6 @@ public static partial class ImGuiWidgets
 			{
 				DragIndex = -1;
 			}
-		}
-
-		private Vector2 CalculateZoneSize(DividerZone z, Vector2 windowPadding, Vector2 containerSize, Vector2 layoutMask, Vector2 layoutMaskInverse)
-		{
-			Vector2 zoneSize = (containerSize * z.Size * layoutMask) + (containerSize * layoutMaskInverse);
-
-			DividerZone first = Zones[0];
-			DividerZone last = Zones[^1];
-			if (first != last)
-			{
-				if (z == first || z == last)
-				{
-					zoneSize -= windowPadding * 0.5f * layoutMask;
-				}
-				else
-				{
-					zoneSize -= windowPadding * layoutMask;
-				}
-			}
-
-			return new Vector2((float)Math.Floor(zoneSize.X), (float)Math.Floor(zoneSize.Y));
-		}
-
-		private Vector2 CalculateAdvance(DividerZone z, Vector2 windowPadding, Vector2 containerSize, Vector2 layoutMask)
-		{
-			Vector2 advance = containerSize * z.Size * layoutMask;
-
-			DividerZone first = Zones[0];
-			DividerZone last = Zones[^1];
-			if (first != last && z == first)
-			{
-				advance += windowPadding * 0.5f * layoutMask;
-			}
-
-			return new Vector2((float)Math.Round(advance.X), (float)Math.Round(advance.Y));
 		}
 
 		/// <summary>

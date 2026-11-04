@@ -8,6 +8,7 @@ using System.Linq;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImNodes;
+using ktsu.ImGui.Widgets;
 
 /// <summary>
 /// Drawing and handling comment boxes. See <see cref="CommentBox"/>.
@@ -23,9 +24,6 @@ public partial class NodeEditorRenderer
 {
 	/// <summary>How large a comment box's resize handle is, at the view's own scale.</summary>
 	private const float CommentResizeHandleSize = 14f;
-
-	/// <summary>How long a title may be typed into the rename box.</summary>
-	private const int CommentTitleMaxLength = 256;
 
 	/// <summary>Where each comment box was drawn this frame, in screen space.</summary>
 	private readonly Dictionary<int, ScreenRect> commentBoxScreenRects = [];
@@ -394,7 +392,7 @@ public partial class NodeEditorRenderer
 			ImGui.SetKeyboardFocusHere();
 		}
 
-		bool entered = ImGui.InputText("rename", ref renameBuffer, CommentTitleMaxLength, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
+		bool entered = ResizableInputText.InputText("rename", ref renameBuffer, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
 		bool cancelled = ImGui.IsKeyPressed(ImGuiKey.Escape, repeat: false);
 		bool finished = entered || cancelled || ImGui.IsItemDeactivated() || (!justStarted && !ImGui.IsItemActive());
 

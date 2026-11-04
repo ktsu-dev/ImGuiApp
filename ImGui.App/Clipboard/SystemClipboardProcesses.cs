@@ -36,7 +36,12 @@ internal sealed class SystemClipboardProcesses : IClipboardProcesses
 		{
 			UseShellExecute = false,
 			RedirectStandardInput = input is not null,
-			RedirectStandardOutput = captureOutput,
+
+			// Always redirected, never inherited: xclip leaves a child serving the clipboard that keeps
+			// whatever standard output and error it was given, so an inherited one would hold the
+			// application's own open, and a script reading it would wait until something else is copied.
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
 			CreateNoWindow = true,
 		};
 		foreach (string argument in arguments)
@@ -62,6 +67,19 @@ internal sealed class SystemClipboardProcesses : IClipboardProcesses
 		using (process)
 		{
 			Task<byte[]> output = captureOutput ? ReadAllAsync(process.StandardOutput.BaseStream) : Task.FromResult(Array.Empty<byte>());
+			if (captureOutput)
+			{
+				// A tool's complaints are not the application's to print; the exit code is what counts.
+				_ = ReadAllAsync(process.StandardError.BaseStream);
+			}
+			else
+			{
+				// Nothing is read from a write, and the child left serving the clipboard would hold both
+				// pipes open for as long as it serves, so let go of them now.
+				process.StandardOutput.Dispose();
+				process.StandardError.Dispose();
+			}
+
 			if (input is not null)
 			{
 				try

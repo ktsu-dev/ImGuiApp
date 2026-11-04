@@ -18,8 +18,8 @@ using HexaCurvePoint = Hexa.NET.Mathematics.CurvePoint;
 public readonly record struct CurveKnot(Vector2 Position, CurvePointKind Kind);
 
 /// <summary>
-/// An editable curve. Wraps the curve representation the underlying widget expects, so no vendor
-/// type appears in this library's public surface.
+/// An editable curve. Wraps a Hexa.NET.Math curve, which does the sampling, so no vendor type
+/// appears in this library's public surface.
 /// </summary>
 /// <remarks>
 /// <see cref="Sample"/> recomputes the underlying sample cache when points have changed, so
@@ -148,19 +148,15 @@ public sealed class CurveData
 	}
 
 	/// <summary>
-	/// Gets a reference to the underlying curve for the editor to mutate in place.
+	/// Inserts a point, for the editor's add-a-point gesture, which keeps the points in X order.
 	/// </summary>
-	/// <returns>A reference to the wrapped curve.</returns>
-	/// <remarks>
-	/// Only for the editor entry point. Callers must invoke <see cref="MarkDirty"/> afterwards,
-	/// because the editor edits points directly and the sample cache goes stale.
-	/// </remarks>
-	internal ref HexaCurve AsVendorCurve() => ref curve;
-
-	/// <summary>
-	/// Marks the sample cache stale after an external edit.
-	/// </summary>
-	internal void MarkDirty() => needsCompute = true;
+	/// <param name="index">Where to insert it, from 0 to <see cref="PointCount"/>.</param>
+	/// <param name="point">The point to insert.</param>
+	internal void InsertPoint(int index, CurveKnot point)
+	{
+		curve.Points.Insert(index, ToVendor(point));
+		needsCompute = true;
+	}
 
 	/// <summary>
 	/// Converts a managed point to the vendor representation.

@@ -199,6 +199,24 @@ public sealed class SearchableListTests
 	/// <summary>
 	/// The search term reaches the ranking as it is typed, not only once Enter is pressed.
 	/// </summary>
+	/// <summary>
+	/// Issue #553: the search box had a fixed 255-byte buffer. A paste past it, in one frame as a
+	/// paste arrives, has to be kept whole and still be typed after.
+	/// </summary>
+	[TestMethod]
+	public void ASearchLongerThanTheOldBuffer_IsKeptWhole()
+	{
+		Open();
+
+		string pasted = new('x', 400);
+		ImGui.GetIO().AddInputCharactersUTF8(pasted);
+		harness.Step(2);
+		harness.Keyboard.Type("y");
+		harness.Step(2);
+
+		Assert.AreEqual(pasted + "y", list.SearchTerm);
+	}
+
 	[TestMethod]
 	public void TypingReordersTheRows()
 	{

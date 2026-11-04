@@ -77,6 +77,10 @@ public static class NodeInspectorPanel
 					DrawInt32(grid, engine, pin, label, current, editable);
 					break;
 
+				case PinValueKind.Int64:
+					DrawInt64(grid, engine, pin, label, current, editable);
+					break;
+
 				case PinValueKind.Single:
 					DrawSingle(grid, engine, pin, label, current, editable);
 					break;
@@ -124,6 +128,17 @@ public static class NodeInspectorPanel
 	private static void DrawInt32(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
 	{
 		int value = current as int? ?? 0;
+		bool changed = grid.Value(label, ref value);
+		long gesture = Gestures.Track(pin.Id);
+		if (changed && editable)
+		{
+			engine.SetPinValue(pin.Id, value, gesture);
+		}
+	}
+
+	private static void DrawInt64(ImGuiWidgets.PropertyGrid grid, NodeEditorEngine engine, Pin pin, string label, object? current, bool editable)
+	{
+		long value = current as long? ?? 0L;
 		bool changed = grid.Value(label, ref value);
 		long gesture = Gestures.Track(pin.Id);
 		if (changed && editable)

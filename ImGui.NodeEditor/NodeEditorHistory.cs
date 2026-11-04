@@ -269,6 +269,18 @@ public sealed class NodeEditorHistory : IDisposable
 		return Record(ids.Count == 1 ? "Delete node" : $"Delete {ids.Count} nodes", () => ids.Count(Engine.RemoveNode));
 	}
 
+	/// <summary>Pin or unpin nodes as one step. See <see cref="NodeEditorEngine.SetNodePinned"/>.</summary>
+	/// <param name="nodeIds">The nodes.</param>
+	/// <param name="pinned">Whether they should be pinned.</param>
+	/// <returns>How many changed. Nodes already in that state, or ids naming nothing, are skipped.</returns>
+	public int SetNodesPinned(IEnumerable<int> nodeIds, bool pinned)
+	{
+		Ensure.NotNull(nodeIds);
+		List<int> ids = [.. nodeIds.Distinct()];
+		string verb = pinned ? "Pin" : "Unpin";
+		return Record(ids.Count == 1 ? $"{verb} node" : $"{verb} {ids.Count} nodes", () => ids.Count(id => Engine.SetNodePinned(id, pinned)));
+	}
+
 	/// <summary>Duplicate nodes as one step. See <see cref="NodeEditorEngine.DuplicateNodes"/>.</summary>
 	/// <param name="nodeIds">The nodes.</param>
 	/// <param name="offset">Where each copy goes, relative to its original.</param>

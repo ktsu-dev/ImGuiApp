@@ -8,6 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.Probes;
+using ktsu.ImGui.Widgets;
 
 using ktsu.CaseConverter;
 using ktsu.TextFilter;
@@ -29,6 +30,9 @@ public partial class ImGuiPopups
 		private string Label { get; set; } = string.Empty;
 		private IEnumerable<TItem> Items { get; set; } = [];
 		private Modal Modal { get; } = new();
+
+		/// <summary>Gets the search term as typed so far, for tests.</summary>
+		internal string SearchTerm => searchTerm;
 
 		/// <summary>
 		/// Open the popup and set the title, label, and default value.
@@ -97,7 +101,7 @@ public partial class ImGuiPopups
 			// No EnterReturnsTrue: with it ImGui holds the edit back until Enter or loss of focus, so
 			// the term never reaches the ranking while the user types. Enter is read separately and
 			// handled once the list has been ranked with the term as it now stands.
-			ImGui.InputText("##Search", ref searchTerm, 255);
+			ResizableInputText.InputText("##Search", ref searchTerm);
 			bool enterPressed = (ImGui.IsItemActive() || ImGui.IsItemDeactivated())
 				&& (ImGui.IsKeyPressed(ImGuiKey.Enter) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter));
 			ImGuiProbes.MarkItem("searchable-list/search");

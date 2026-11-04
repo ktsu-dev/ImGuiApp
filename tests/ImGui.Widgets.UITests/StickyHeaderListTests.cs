@@ -19,6 +19,30 @@ public sealed class StickyHeaderListTests : WidgetTest
 	private static readonly string[] Letters = ["A", "B", "C", "D"];
 
 	private string? pinned;
+	private string? clicked;
+
+	// Sections of full-width buttons, so a row hidden under the pinned header can report a click.
+	private void DrawButtons()
+	{
+		using ImGuiWidgets.StickyHeaderList list = new(Id, new Vector2(300f, 240f));
+		foreach (string letter in new[] { "A", "B" })
+		{
+			list.Section(letter);
+			for (int i = 0; i < 12; i++)
+			{
+				string name = $"{letter}{i}";
+				if (ImGui.Button($"{letter} contact {i}", new Vector2(-1f, 0f)))
+				{
+					clicked = name;
+				}
+
+				Mark(name);
+			}
+		}
+
+		list.Dispose();
+		pinned = list.PinnedTitle;
+	}
 
 	private void Draw()
 	{
@@ -73,5 +97,31 @@ public sealed class StickyHeaderListTests : WidgetTest
 
 		Assert.IsTrue(pinned is "B" or "C", $"Pinned {pinned}.");
 		Assert.IsTrue(RectOf($"{Id}/pinned").MinY <= RectOf(Id).MinY + 1);
+	}
+
+	// Issue #712: the pinned header is painted over the rows, and has to take the pointer from them too.
+	[TestMethod]
+	public void ClickingThePinnedHeader_DoesNotClickTheRowBeneathIt()
+	{
+		Start(DrawButtons);
+		ScrollDown(1);
+		Step(2);
+		Assert.AreEqual("A", pinned);
+
+		Click($"{Id}/pinned");
+
+		Assert.IsNull(clicked, $"The row '{clicked}' hidden under the pinned header was clicked through it.");
+	}
+
+	[TestMethod]
+	public void WithAHeaderPinned_ARowBelowItStillTakesClicks()
+	{
+		Start(DrawButtons);
+		ScrollDown(1);
+		Step(2);
+
+		Click("A6");
+
+		Assert.AreEqual("A6", clicked);
 	}
 }

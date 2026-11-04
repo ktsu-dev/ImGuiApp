@@ -21,6 +21,12 @@ public sealed class TabPanelTests : WidgetTest
 
 	private void Draw() => panel.Draw();
 
+	private void AssertReportedOnce(int index, string message)
+	{
+		Assert.AreEqual(1, changedToIndex.Count, $"{message} Reported: [{string.Join(", ", changedToIndex)}].");
+		Assert.AreEqual(index, changedToIndex[0], message);
+	}
+
 	// Every tab header is marked under the panel's id, whether or not it is selected.
 	private void ClickTab(int index) => Click($"{PanelId}/{Labels[index]}");
 
@@ -157,5 +163,113 @@ public sealed class TabPanelTests : WidgetTest
 			Rectangle tab = RectOf($"{PanelId}/{label}");
 			Assert.IsTrue(tab.MinY >= strip.MinY - 1 && tab.MaxY <= strip.MaxY + 1, $"The '{label}' tab at {tab} is outside the strip {strip}.");
 		}
+	}
+
+	// Issue #711: a tab picked while the strip is hidden has to survive the strip coming back, and
+	// a removal must not swap the page under a hidden strip.
+
+	[TestMethod]
+	public void TabPanel_ATabPickedWhileTheStripIsHidden_SurvivesTheStripReturning()
+	{
+		panel = BuildPanel();
+		Start(Draw);
+		Step(3);
+		changedToIndex.Clear();
+
+		panel.ShowTabStrip = false;
+		panel.ActiveTabIndex = 2;
+		Step(2);
+		Assert.IsTrue(IsVisible("content-Third"), "The picked tab's content was not drawn while the strip was hidden.");
+
+		panel.ShowTabStrip = true;
+		Step(4);
+
+		Assert.AreEqual(2, panel.ActiveTabIndex, "Showing the strip again reverted the active tab.");
+		Assert.IsTrue(IsVisible("content-Third"), "The picked tab's content was not drawn once the strip returned.");
+		AssertReportedOnce(2, "The change was not reported exactly once.");
+	}
+
+	[TestMethod]
+	public void TabPanel_ATabPickedBeforeTheStripWasEverShown_IsTheOneItShows()
+	{
+		panel = BuildPanel();
+		panel.ShowTabStrip = false;
+		Start(Draw);
+
+		panel.ActiveTabIndex = 2;
+		Step(2);
+		panel.ShowTabStrip = true;
+		Step(4);
+
+		Assert.AreEqual(2, panel.ActiveTabIndex, "The strip's first frame selected a different tab.");
+		Assert.IsTrue(IsVisible("content-Third"), "The picked tab's content was not drawn.");
+	}
+
+	[TestMethod]
+	public void TabPanel_WithTheStripHidden_ReportsAPickedTab()
+	{
+		panel = BuildPanel();
+		panel.ShowTabStrip = false;
+		Start(Draw);
+		changedToIndex.Clear();
+
+		panel.ActiveTabIndex = 1;
+		Step(2);
+
+		AssertReportedOnce(1, "A tab picked under a hidden strip was not reported.");
+	}
+
+	[TestMethod]
+	public void TabPanel_WithTheStripHidden_RemovingAnEarlierTabKeepsTheSamePage()
+	{
+		panel = BuildPanel();
+		panel.ShowTabStrip = false;
+		Start(Draw);
+		panel.ActiveTabIndex = 1;
+		Step(2);
+		changedToIndex.Clear();
+
+		panel.RemoveTab(0);
+		Step(2);
+
+		Assert.IsTrue(IsVisible("content-Second"), "Removing an earlier tab changed the page shown.");
+		Assert.AreEqual("Second", panel.ActiveTab?.Label);
+		Assert.AreEqual(0, panel.ActiveTabIndex, "The active index did not follow its tab down.");
+		Assert.AreEqual(0, changedToIndex.Count, "A removal that left the same tab active reported a change.");
+	}
+
+	[TestMethod]
+	public void TabPanel_RemovingTheActiveTab_MovesToItsNeighbourAndReportsIt()
+	{
+		panel = BuildPanel();
+		panel.ShowTabStrip = false;
+		Start(Draw);
+		panel.ActiveTabIndex = 1;
+		Step(2);
+		changedToIndex.Clear();
+
+		panel.RemoveTab(1);
+		Step(2);
+
+		Assert.AreEqual("Third", panel.ActiveTab?.Label, "The active tab's neighbour did not take over.");
+		Assert.IsTrue(IsVisible("content-Third"));
+		AssertReportedOnce(1, "Moving to the neighbour was not reported once.");
+	}
+
+	[TestMethod]
+	public void TabPanel_WithTheStripShown_RemovingAnEarlierTabKeepsTheSamePageWithoutReporting()
+	{
+		panel = BuildPanel();
+		Start(Draw);
+		ClickTab(2);
+		Step(2);
+		changedToIndex.Clear();
+
+		panel.RemoveTab(0);
+		Step(4);
+
+		Assert.AreEqual("Third", panel.ActiveTab?.Label);
+		Assert.IsTrue(IsVisible("content-Third"));
+		Assert.AreEqual(0, changedToIndex.Count, "A removal that left the same tab active reported a change.");
 	}
 }

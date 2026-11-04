@@ -3,6 +3,7 @@
 namespace ktsu.ImGui.Widgets.UITests;
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
@@ -202,5 +203,85 @@ public sealed class DividerContainerTests : WidgetTest
 		}
 
 		Assert.IsTrue(RectOf($"{ContainerId}/zone/{RightZone}").MinX > RectOf($"{ContainerId}/zone/{LeftZone}").MinX, "The zones were not marked in order.");
+	}
+
+	// Issue #724: with three or more zones, or in rows, the gaps between zones, the two outer margins
+	// and the dividers' place in their gaps drifted apart.
+
+	[TestMethod]
+	[DataRow(ImGuiWidgets.DividerLayout.Columns, DisplayName = "Columns")]
+	[DataRow(ImGuiWidgets.DividerLayout.Rows, DisplayName = "Rows")]
+	public void DividerContainer_ThreeZones_HaveEqualGapsAndMarginsWithCentredDividers(ImGuiWidgets.DividerLayout layout)
+	{
+		AssertEvenlySpaced(layout, [("props", 0.24f), ("graph", 0.50f), ("views", 0.26f)]);
+	}
+
+	[TestMethod]
+	[DataRow(ImGuiWidgets.DividerLayout.Columns, DisplayName = "Columns")]
+	[DataRow(ImGuiWidgets.DividerLayout.Rows, DisplayName = "Rows")]
+	public void DividerContainer_TwoEvenZones_CentreTheirDivider(ImGuiWidgets.DividerLayout layout)
+	{
+		AssertEvenlySpaced(layout, [("v1", 0.5f), ("v2", 0.5f)]);
+	}
+
+	[TestMethod]
+	[DataRow(ImGuiWidgets.DividerLayout.Columns, DisplayName = "Columns")]
+	[DataRow(ImGuiWidgets.DividerLayout.Rows, DisplayName = "Rows")]
+	public void DividerContainer_FiveZones_HaveEqualGapsAndMarginsWithCentredDividers(ImGuiWidgets.DividerLayout layout)
+	{
+		AssertEvenlySpaced(layout, [("a", 0.1f), ("b", 0.3f), ("c", 0.15f), ("d", 0.25f), ("e", 0.2f)]);
+	}
+
+	[TestMethod]
+	public void DividerContainer_ThreeZones_DraggingTheSecondDividerFollowsThePointer()
+	{
+		container = new ImGuiWidgets.DividerContainer(ContainerId, ImGuiWidgets.DividerLayout.Columns);
+		container.Add("props", 0.24f, _ => { });
+		container.Add("graph", 0.50f, _ => { });
+		container.Add("views", 0.26f, _ => { });
+		Start(() => container.Tick(1f / 60f));
+
+		Vector2 handle = CenterOf($"{ContainerId}/divider/graph");
+		Harness.Mouse.Drag(handle.X, handle.Y, handle.X - 60f, handle.Y);
+		Step(2);
+
+		Assert.AreEqual(handle.X - 60f, CenterOf($"{ContainerId}/divider/graph").X, 1.5f, "The divider did not end up under the pointer.");
+		Assert.AreEqual(0.24f, container.GetSizes()[0], 0.0001f, "Dragging the second divider resized the first zone.");
+	}
+
+	private void AssertEvenlySpaced(ImGuiWidgets.DividerLayout layout, (string Id, float Size)[] zones)
+	{
+		container = new ImGuiWidgets.DividerContainer(ContainerId, layout);
+		foreach ((string id, float size) in zones)
+		{
+			container.Add(id, size, _ => { });
+		}
+
+		Start(() => container.Tick(1f / 60f));
+
+		bool columns = layout == ImGuiWidgets.DividerLayout.Columns;
+		float Lead(Rectangle r) => columns ? r.MinX : r.MinY;
+		float Trail(Rectangle r) => columns ? r.MaxX : r.MaxY;
+		float Middle(Rectangle r) => columns ? r.MinX + (r.Width / 2f) : r.MinY + (r.Height / 2f);
+
+		Rectangle whole = RectOf(ContainerId);
+		Rectangle[] rects = [.. zones.Select(z => RectOf($"{ContainerId}/zone/{z.Id}"))];
+
+		float leading = Lead(rects[0]) - Lead(whole);
+		float trailing = Trail(whole) - Trail(rects[^1]);
+		Assert.AreEqual(leading, trailing, 1f, $"The outer margins differ: {leading} before the first zone, {trailing} after the last.");
+		Assert.IsGreaterThan(0f, leading, "The first zone touches the container's edge.");
+
+		float firstGap = Lead(rects[1]) - Trail(rects[0]);
+		for (int i = 0; i < rects.Length - 1; i++)
+		{
+			float gap = Lead(rects[i + 1]) - Trail(rects[i]);
+			Assert.AreEqual(firstGap, gap, 0.01f, $"The gap after zone {i} is {gap}, the first is {firstGap}.");
+			Assert.AreEqual(leading * 2f, gap, 1f, $"The gap after zone {i} is not twice the outer margin.");
+
+			float divider = Middle(RectOf($"{ContainerId}/divider/{zones[i].Id}"));
+			float gapMiddle = (Trail(rects[i]) + Lead(rects[i + 1])) / 2f;
+			Assert.AreEqual(gapMiddle, divider, 0.01f, $"The divider after zone {i} is not centred in its gap.");
+		}
 	}
 }

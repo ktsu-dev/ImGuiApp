@@ -34,9 +34,16 @@ public static partial class ImGuiWidgets
 		private int activeTabIndex;
 		private int requestedTabIndex = -1;
 
+		// The tab the change callbacks last described, by id, so a tab that only moved index (because
+		// one before it was removed) is not reported as a change. Unset until the first draw or removal,
+		// so the tab a panel starts on is never reported.
+		private string? reportedTabId;
+		private bool hasReported;
+
 		/// <summary>
 		/// The index of the currently active tab. Setting it selects that tab on the next
-		/// <see cref="Draw"/>, as if its header had been clicked.
+		/// <see cref="Draw"/>, as if its header had been clicked, and the change callbacks report it from
+		/// that draw whether or not the tab strip is shown.
 		/// </summary>
 		public int ActiveTabIndex
 		{
@@ -372,20 +379,34 @@ public static partial class ImGuiWidgets
 		/// <returns>True if the tab was removed, false otherwise.</returns>
 		public bool RemoveTab(int index)
 		{
-			if (index >= 0 && index < Tabs.Count)
+			if (index < 0 || index >= Tabs.Count)
 			{
-				Tabs.RemoveAt(index);
-				if (activeTabIndex >= Tabs.Count)
-				{
-					activeTabIndex = Math.Max(0, Tabs.Count - 1);
-					TabChangedDelegate?.Invoke(ActiveTabIndex);
-					TabChangedByIdDelegate?.Invoke(ActiveTabId ?? string.Empty);
-				}
-
-				return true;
+				return false;
 			}
 
-			return false;
+			if (!hasReported)
+			{
+				// Whatever was showing before the removal is what listeners take to be active.
+				reportedTabId = ActiveTabId;
+				hasReported = true;
+			}
+
+			Tabs.RemoveAt(index);
+
+			// Keep the same tab active when one before it goes, and move to its neighbour (the tab that
+			// took its place, or the new last one) when the active tab itself goes.
+			if (index < activeTabIndex)
+			{
+				activeTabIndex--;
+			}
+
+			activeTabIndex = Math.Clamp(activeTabIndex, 0, Math.Max(0, Tabs.Count - 1));
+
+			// Tell a visible strip as well, since Dear ImGui tracks its own selection and would otherwise
+			// pick a tab of its own after the active one is closed.
+			requestedTabIndex = Tabs.Count > 0 ? activeTabIndex : -1;
+			ReportActiveTabIfChanged();
+			return true;
 		}
 
 		/// <summary>
@@ -414,9 +435,18 @@ public static partial class ImGuiWidgets
 				requestedTabIndex = -1;
 			}
 
+			if (!hasReported)
+			{
+				reportedTabId = ActiveTabId;
+				hasReported = true;
+			}
+
 			if (!ShowTabStrip)
 			{
-				requestedTabIndex = -1;
+				// Keep asking for the active tab, so the first frame the strip is shown again selects the
+				// tab that is actually active rather than whichever one Dear ImGui last had selected.
+				requestedTabIndex = ActiveTab is { IsVisible: true } ? activeTabIndex : -1;
+				ReportActiveTabIfChanged();
 				ActiveTab?.Content?.Invoke();
 				return;
 			}
@@ -517,15 +547,29 @@ public static partial class ImGuiWidgets
 			}
 
 			requestedTabIndex = -1;
-			if (activeTabIndex != i)
-			{
-				activeTabIndex = i;
-				TabChangedDelegate?.Invoke(i);
-				TabChangedByIdDelegate?.Invoke(tab.Id);
-			}
+			activeTabIndex = i;
+			ReportActiveTabIfChanged();
 
 			tab.Content?.Invoke();
 			ImGui.EndTabItem();
+		}
+
+		/// <summary>
+		/// Raises the change callbacks when the active tab is not the one they last reported. Every path
+		/// that changes the active tab comes through here, so a change is reported once whichever way it
+		/// happened: a click on the strip, <see cref="ActiveTabIndex"/>, or <see cref="RemoveTab(int)"/>.
+		/// </summary>
+		private void ReportActiveTabIfChanged()
+		{
+			string? activeId = ActiveTabId;
+			if (activeId == reportedTabId)
+			{
+				return;
+			}
+
+			reportedTabId = activeId;
+			TabChangedDelegate?.Invoke(activeTabIndex);
+			TabChangedByIdDelegate?.Invoke(activeId ?? string.Empty);
 		}
 	}
 

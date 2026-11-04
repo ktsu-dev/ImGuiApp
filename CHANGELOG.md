@@ -1,21 +1,128 @@
+## v3.79.1-pre.3 (prerelease)
+
+Changes since v3.79.1-pre.2:
+
+- Bump Markdig from 1.5.0 to 1.5.1 (dependabot[bot])
+
+## v3.79.1-pre.2 (prerelease)
+
+Changes since v3.79.1-pre.1:
+
+- Bump MSTest.Sdk from 4.5.1 to 4.5.2 (dependabot[bot])
+
+## v3.79.1-pre.1 (prerelease)
+
+Changes since v3.79.0:
+
+- Bump Markdig from 1.4.2 to 1.5.0 (dependabot[bot])
+- Bump the system group with 1 update (dependabot[bot])
+
+## v3.79.0 (minor)
+
+Changes since v3.78.0:
+
+- Size text fields from their value in managed code, with no native buffer (Claude)
+- Grow every text field's buffer with its text instead of giving it a fixed capacity (Claude)
+- Give every DividerContainer zone the same gap, whatever the zone count or layout (Claude)
+- Let StickyHeaderList's pinned header take the pointer from the rows beneath it (Claude)
+- Keep a TabPanel's tab across a hidden strip and tab removal (Claude)
+- [patch] Keep a value slider's minus sign readable in every culture and font (Claude)
+- [patch] Apply a window icon set after launch again once the window shows (Claude)
+- [patch] Reopen a window saved maximized as maximized (#725) (matt-edmondson)
+- [patch] Reopen a window saved maximized as maximized (Claude)
+
+## v3.78.3 (patch)
+
+Changes since v3.78.2:
+
+- [patch] Keep a value slider's minus sign readable in every culture and font (Claude)
+
+## v3.78.2 (patch)
+
+Changes since v3.78.1:
+
+- [patch] Apply a window icon set after launch again once the window shows (Claude)
+
+## v3.78.1 (patch)
+
+Changes since v3.78.0:
+
+- [patch] Reopen a window saved maximized as maximized (#725) (matt-edmondson)
+- [patch] Reopen a window saved maximized as maximized (Claude)
+
+## v3.78.0 (minor)
+
+Changes since v3.77.0:
+
+- [minor] Present in HDR on Windows and macOS, with half-float textures (#723) (matt-edmondson)
+- Say how to cut the replacement release, since a Markdown-only commit starts no CI (Claude)
+- Note how a half-failed release republishes the same version [patch] (Claude)
+- Answer the three new Sonar findings on the repeated-masks fix (Claude)
+- Read the bitmap Windows makes from a copied image the right way up [patch] (Claude)
+- Test the image clipboard against real desktops, and stop xclip holding the app's output [patch] (Claude)
+
+## v3.77.3 (patch)
+
+Changes since v3.77.2:
+
+- Say how to cut the replacement release, since a Markdown-only commit starts no CI (Claude)
+
+## v3.77.2 (patch)
+
+Changes since v3.77.1:
+
+- Note how a half-failed release republishes the same version [patch] (Claude)
+
+## v3.77.1 (patch)
+
+Changes since v3.77.0:
+
+- Answer the three new Sonar findings on the repeated-masks fix (Claude)
+- Read the bitmap Windows makes from a copied image the right way up [patch] (Claude)
+- Test the image clipboard against real desktops, and stop xclip holding the app's output [patch] (Claude)
+
+## v3.77.0 (minor)
+
+Changes since v3.76.0:
+
+- Keep the file browser inside the window it opens in [patch] (#718) (matt-edmondson)
+- Put OpenGLRenderer's GL calls behind a seam and test it with real frames (Claude)
+- Make OpenGLRenderer's GL field readonly (Claude)
+- Split ImGuiController into a GL-free context host and an OpenGL renderer (Claude)
+
+## v3.76.1 (patch)
+
+Changes since v3.76.0:
+
+- Keep the file browser inside the window it opens in [patch] (#718) (matt-edmondson)
+
 ## v3.76.0 (minor)
 
 Changes since v3.75.0:
 
+- Give ImGui.Rendering the package validation suppressions the others carry [patch] (#717) (matt-edmondson)
+- Clear main's quality gate: tolerances instead of exact float comparisons (#716) (matt-edmondson)
+- [minor] FilesystemBrowser: breadcrumbs, back/forward, places, search, sortable columns and thumbnails (#715) (matt-edmondson)
 - [minor] Two-finger touch scrolling, extension docs, and trim analysis for Widgets/Popups/Styler (#703) (matt-edmondson)
+- Merge main into claude/project-thread-m8gl9z (matt-edmondson)
 - [minor] Add the phase 4 mobile polish widgets (#710) (matt-edmondson)
 - [minor] Add the phase 3 mobile overlay and navigation widgets (#709) (matt-edmondson)
+- Pick a curve point's fill in its own method rather than a nested conditional (Claude)
 - [minor] Add the phase 2 mobile gesture widgets (#708) (matt-edmondson)
 - Fix Escape in nested modals, path text in the save box, and Enter on a search with no match [patch] (#693) (matt-edmondson)
 - [minor] Add LogView, a virtualized log with level filters and search (#706) (matt-edmondson)
 - Keep the active frame rate while an animation runs [minor] (#692) (matt-edmondson)
 - [minor] Mark every widget for UI probes (#707) (matt-edmondson)
 - Add ImGuiWidgets.Viewport3D and move the 3D contract into ktsu.ImGui.Rendering [minor] (#705) (matt-edmondson)
+- Merge remote-tracking branch 'origin/main' into fix699 (matt-edmondson)
 - [patch] Fix GradientEditor selection on reorder and two TransformBox bugs (#690) (matt-edmondson)
 - [patch] Fix three SyntaxHighlighting tokenizer bugs that recolored the rest of a document (#691) (matt-edmondson)
+- Compare curve range spans against epsilon rather than zero (Claude)
 - Reach long lines in code blocks and diff hunks, draw only visible code lines, keep rebuilt hunks collapsed [patch] (#704) (matt-edmondson)
 - Dim GradientEditor, SwatchPalette and themed code inside a disabled scope [patch] (#701) (matt-edmondson)
+- Draw the curve and bezier editors with ImGui and drop Hexa Extras [minor] (Claude)
 - Stop a hidden DataTable column from taking edits or filtering rows (#700) (matt-edmondson)
+- Node editor: re-measure rebuilt graphs, edit long pins, pin nodes from the UI [minor] (Claude)
 - Fix markdown fonts, link IDs, linked images, image placeholders and code spans [patch] (#698) (matt-edmondson)
 - ReorderableTree: let the last child leave its group, and leave slider drags to the slider (#697) (matt-edmondson)
 - Save the last frame of a failing UI test, and cover CapturedFrame and the frame wrapper order (#696) (matt-edmondson)

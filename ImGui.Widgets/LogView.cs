@@ -74,6 +74,9 @@ public static partial class ImGuiWidgets
 	internal static class LogViewImpl
 	{
 		private const string RowsLabel = "rows";
+
+		/// <summary>How far a column may drift from its measured width, in pixels, before the columns are rebuilt.</summary>
+		private const float WidthTolerance = 0.01f;
 		private const string ContextPopup = "##context";
 
 		private static readonly (LogViewLevel Level, string Label)[] LevelToggles =
@@ -136,7 +139,7 @@ public static partial class ImGuiWidgets
 			float levelWidth = ImGui.CalcTextSize("Information").X;
 			int columnCount = options.ShowCategory ? 4 : 3;
 
-			if (view.Columns.Length != columnCount || view.Columns[0].Width != timeWidth || view.Columns[1].Width != levelWidth)
+			if (view.Columns.Length != columnCount || MathF.Abs(view.Columns[0].Width - timeWidth) > WidthTolerance || MathF.Abs(view.Columns[1].Width - levelWidth) > WidthTolerance)
 			{
 				view.Columns = options.ShowCategory
 					?

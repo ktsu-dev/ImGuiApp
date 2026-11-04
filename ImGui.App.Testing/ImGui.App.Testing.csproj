@@ -4,10 +4,9 @@
 
   <PropertyGroup>
     <!-- net10.0 only, deliberately. This is test infrastructure consumed by test projects,
-         which target the latest runtime by convention. Multi-targeting also collides with
-         Polyfill: ImGui.App grants this assembly InternalsVisibleTo, so its internal Polyfill
-         extension methods are visible here, and on net8.0/net9.0 where Polyfill actually emits
-         code a second copy makes every such call ambiguous. -->
+         which target the latest runtime by convention. ImGui.App grants this assembly
+         InternalsVisibleTo, for ImGuiContextHost (#313), and marks its Polyfill members embedded
+         so they do not collide with this assembly's own copy. -->
     <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
     <RootNamespace>ktsu.ImGui.App.Testing</RootNamespace>

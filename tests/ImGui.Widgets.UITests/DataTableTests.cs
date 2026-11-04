@@ -381,6 +381,35 @@ public sealed class DataTableTests : WidgetTest
 		Assert.IsLessThanOrEqualTo(table.MaxY, cell.MaxY, $"{name} ends below the table, at {cell.MaxY} against the table's {table.MaxY}.");
 	}
 
+	// Issue #553: the text editor used to tell ImGui its buffer held 1024 bytes whatever the value's
+	// length, so a longer value aborted the process the moment its cell was edited, and one at 1023
+	// bytes could not be typed into.
+	[TestMethod]
+	[DataRow(1500, 'a', DisplayName = "1500 ASCII characters")]
+	[DataRow(400, '\u6F22', DisplayName = "400 CJK characters")]
+	[DataRow(1023, 'a', DisplayName = "Exactly the old capacity")]
+	public void EditingAValueLongerThanTheOldBuffer_AppendsATypedCharacter(int length, char filler)
+	{
+		string original = new(filler, length);
+		people[1] = people[1] with { Name = original };
+
+		// A fixed width, or the column grows to fit the long value and pushes its cells off screen.
+		state = new(
+		[
+			new ImGuiWidgets.DataTableColumn<DataTablePerson, string> { Label = "Name", Value = person => person.Name, OnEdit = nameEdits.Add, Flags = ImGuiTableColumnFlags.WidthFixed, Width = 200f },
+			new ImGuiWidgets.DataTableColumn<DataTablePerson, int> { Label = "Age", Value = person => person.Age },
+		]);
+		Start(Draw);
+		BeginEditing(1, "Name");
+
+		Harness.Keyboard.Press(ImGuiKey.End);
+		Harness.Keyboard.Type("z");
+		Harness.Keyboard.Press(ImGuiKey.Enter);
+		Step();
+
+		Assert.AreEqual(original + "z", nameEdits.Single().NewValue);
+	}
+
 	[TestMethod]
 	public void F2ThenTypingThenEnter_ReportsTheEditAndMovesDown()
 	{

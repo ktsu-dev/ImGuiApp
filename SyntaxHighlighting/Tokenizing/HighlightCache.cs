@@ -67,7 +67,7 @@ internal static class HighlightCache
 		}
 
 		IReadOnlyList<HighlightedToken> tokens = language.IsMarkup
-			? MarkupTokenizer.Tokenize(text)
+			? MarkupTokenizer.Tokenize(text, language)
 			: CodeTokenizer.Tokenize(text, language);
 
 		return LineSplitter.Split(tokens, tabWidth);

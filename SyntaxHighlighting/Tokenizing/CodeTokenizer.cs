@@ -263,6 +263,11 @@ internal static class CodeTokenizer
 
 			int openLength = rule.Open.Length;
 			string close = rule.Close;
+			if (rule.CloseRepeatsDelimiter && !TryExtendByRawDelimiter(source, index, rule, ref openLength, ref close))
+			{
+				continue;
+			}
+
 			if (rule.CloseMatchesOpeningRun)
 			{
 				// A raw string opened with more quotes than the rule names closes only on as many.
@@ -277,7 +282,8 @@ internal static class CodeTokenizer
 				close = string.Concat(rule.Close, new string(repeated, extra));
 			}
 
-			index = ScanStringBody(source, index + openLength, rule, close, out bool closed);
+			index = ScanLiteral(source, index + openLength, rule, close, out bool closed);
+
 			kind = rule.Kind;
 			body = new TokenBody(openLength, closed ? close.Length : 0, rule);
 			return true;
@@ -286,7 +292,28 @@ internal static class CodeTokenizer
 		return false;
 	}
 
-	private static int ScanStringBody(string source, int start, StringRule rule, string close, out bool closed)
+	// Scans a literal's body with its escape. A scan-only escape that runs the literal off its line or
+	// the source most likely means the literal ends in that character (r'C:\dir\'), so the body is
+	// read again without it, and that reading is kept when it closes.
+	private static int ScanLiteral(string source, int start, StringRule rule, string close, out bool closed)
+	{
+		int end = ScanStringBody(source, start, rule, close, rule.Escape ?? rule.ScanEscape, out closed);
+		if (closed || rule.Escape.HasValue || !rule.ScanEscape.HasValue)
+		{
+			return end;
+		}
+
+		int plainEnd = ScanStringBody(source, start, rule, close, null, out bool plainClosed);
+		if (!plainClosed)
+		{
+			return end;
+		}
+
+		closed = true;
+		return plainEnd;
+	}
+
+	private static int ScanStringBody(string source, int start, StringRule rule, string close, char? escape, out bool closed)
 	{
 		closed = false;
 		int scan = start;
@@ -301,7 +328,7 @@ internal static class CodeTokenizer
 				return scan;
 			}
 
-			if (rule.Escape.HasValue && current == rule.Escape.Value && scan + 1 < source.Length)
+			if (escape.HasValue && current == escape.Value && scan + 1 < source.Length)
 			{
 				scan += 2;
 				continue;
@@ -324,6 +351,47 @@ internal static class CodeTokenizer
 		}
 
 		return source.Length;
+	}
+
+	// A C++ raw string opens with R"delim( and closes only on )delim", so the delimiter and its '('
+	// join the opener and the close gains the same delimiter. False when no valid delimiter follows.
+	private static bool TryExtendByRawDelimiter(string source, int index, StringRule rule, ref int openLength, ref string close)
+	{
+		if (!TryReadRawDelimiter(source, index + openLength, out string delimiter))
+		{
+			return false;
+		}
+
+		openLength += delimiter.Length + 1;
+		close = string.Concat(")", delimiter, rule.Close);
+		return true;
+	}
+
+	// A C++ raw-string delimiter: at most 16 characters, none of them a space, quote, parenthesis,
+	// backslash or control character, ended by '('.
+	private static bool TryReadRawDelimiter(string source, int start, out string delimiter)
+	{
+		const int MaxLength = 16;
+		delimiter = string.Empty;
+		int scan = start;
+		while (scan < source.Length && scan - start <= MaxLength)
+		{
+			char current = source[scan];
+			if (current == '(')
+			{
+				delimiter = source[start..scan];
+				return true;
+			}
+
+			if (current is ' ' or ')' or '\\' or '"' || char.IsControl(current))
+			{
+				return false;
+			}
+
+			scan++;
+		}
+
+		return false;
 	}
 
 	private static bool TryReadDirective(string source, LanguageDefinition language, ref int index, out TokenKind kind, out TokenBody body)

@@ -286,6 +286,23 @@ public sealed class CodeTokenizerTests
 	}
 
 	[TestMethod]
+	[DataRow("r\"\\\"\"")]
+	[DataRow("r'\\''")]
+	[DataRow("r'[^\\']*'")]
+	[DataRow("R\"\\\"(.*?)\\\"\"")]
+	[DataRow("rb'\\''")]
+	[DataRow("r\"\"\"\nWrite \\\"\"\" to quote.\n\"\"\"")]
+	[DataRow("r'''\nit\\'''s\n'''")]
+	public void Python_RawStringBackslashStillKeepsAQuoteFromClosingIt(string literal)
+	{
+		AssertLiteralIsHeldTogether(literal, "python");
+
+		IReadOnlyList<HighlightedLine> lines = Highlight($"pat = {literal}\ncount = 1\nreturn count", "python");
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+		TokenAssert.HasToken(lines, "return", TokenKind.ControlKeyword);
+	}
+
+	[TestMethod]
 	[DataRow("c")]
 	[DataRow("cpp")]
 	[DataRow("javascript")]
@@ -364,6 +381,39 @@ public sealed class CodeTokenizerTests
 		IReadOnlyList<HighlightedLine> lines = Highlight("x = 1#note", "python");
 
 		TokenAssert.HasToken(lines, "#note", TokenKind.Comment);
+	}
+
+	[TestMethod]
+	[DataRow("R\"(\nUsage: tool \"src/*.cpp\" [options]\n  -o FILE   write to FILE\n)\"")]
+	[DataRow("R\"x( a )\" b )x\"")]
+	[DataRow("R\"end(\nsay ')' then )\" and go\n)end\"")]
+	[DataRow("u8R\"(\\n is two characters)\"")]
+	[DataRow("LR\"(C:\\dir\\)\"")]
+	[DataRow("uR\"(a)\"")]
+	[DataRow("UR\"(a)\"")]
+	[DataRow("R\"0123456789abcdef(sixteen)0123456789abcdef\"")]
+	public void Cpp_RawStringsHoldTogether(string literal)
+	{
+		AssertLiteralIsHeldTogether(literal, "cpp");
+
+		IReadOnlyList<HighlightedLine> lines = Highlight($"auto s = {literal};\nint after = 1;", "cpp");
+		TokenAssert.HasToken(lines, "int", TokenKind.Type);
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+		Assert.IsEmpty(
+			TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.Comment),
+			$"A raw string body opened a comment: {TokenAssert.Describe(lines)}");
+	}
+
+	[TestMethod]
+	public void Cpp_RawStringPrefixWithoutAValidDelimiterIsNotARawString()
+	{
+		// Seventeen delimiter characters is one too many, and a space cannot be in a delimiter, so
+		// neither of these opens a raw string: R is an identifier and the quotes an ordinary string.
+		IReadOnlyList<HighlightedLine> lines = Highlight("f(R\"0123456789abcdefg(x)\");\ng(R\"a b(x)\");", "cpp");
+
+		TokenAssert.HasToken(lines, "R", TokenKind.Plain);
+		TokenAssert.HasToken(lines, "\"0123456789abcdefg(x)\"", TokenKind.StringLiteral);
+		TokenAssert.HasToken(lines, "\"a b(x)\"", TokenKind.StringLiteral);
 	}
 
 	[TestMethod]

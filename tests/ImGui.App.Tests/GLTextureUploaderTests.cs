@@ -55,7 +55,7 @@ public sealed class GLTextureUploaderTests
 		using TestGL gl = new();
 		GLTextureUploader uploader = new(gl);
 
-		uploader.Update(3, sourceRowPixels: 512, new ImTextureRect(2, 4, 6, 8), 0);
+		uploader.Update(3, width: 512, height: 256, new ImTextureRect(2, 4, 6, 8), 0);
 
 		// A dirty rectangle is read out of the middle of the full atlas buffer, so the stride must
 		// describe the atlas while the upload happens and go back to 0 afterwards, or every later
@@ -69,12 +69,24 @@ public sealed class GLTextureUploaderTests
 	}
 
 	[TestMethod]
+	public void Update_ReadsTheRectangleFromItsPlaceInTheWholeBuffer()
+	{
+		using TestGL gl = new();
+		GLTextureUploader uploader = new(gl);
+
+		// Rows of 512 pixels, four bytes each: the rectangle at (2, 4) starts 4 rows and 2 pixels in.
+		uploader.Update(3, width: 512, height: 256, new ImTextureRect(2, 4, 6, 8), 0x10000);
+
+		Assert.AreEqual(0x10000 + (((4 * 512) + 2) * 4), gl.LastSubImagePixels);
+	}
+
+	[TestMethod]
 	public void Update_TargetsTheTextureItWasGiven()
 	{
 		using TestGL gl = new();
 		GLTextureUploader uploader = new(gl);
 
-		uploader.Update(11, 64, new ImTextureRect(0, 0, 1, 1), 0);
+		uploader.Update(11, 64, 64, new ImTextureRect(0, 0, 1, 1), 0);
 
 		Assert.Contains("BindTexture(11)", gl.Calls);
 	}

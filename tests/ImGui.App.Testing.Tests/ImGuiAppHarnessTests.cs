@@ -39,6 +39,41 @@ public sealed class ImGuiAppHarnessTests
 	}
 
 	[TestMethod]
+	public void Start_DisablesLayoutPersistence()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(new ImGuiAppConfig(), Window());
+
+		unsafe
+		{
+			Assert.IsTrue(ImGui.GetIO().Handle->IniFilename is null, "Persisting layout would let one test inherit another's state.");
+		}
+	}
+
+	[TestMethod]
+	public void Start_DeclaresWhatTheDesktopBackendDeclares()
+	{
+		// The harness runs the desktop controller's context host, so the backend it describes to
+		// ImGui is the desktop one. RendererHasVtxOffset is the flag a hand-copied setup once left out.
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(new ImGuiAppConfig(), Window());
+
+		ImGuiBackendFlags flags = ImGui.GetIO().BackendFlags;
+		Assert.IsTrue(flags.HasFlag(ImGuiBackendFlags.RendererHasTextures));
+		Assert.IsTrue(flags.HasFlag(ImGuiBackendFlags.RendererHasVtxOffset));
+		Assert.IsTrue(flags.HasFlag(ImGuiBackendFlags.HasMouseCursors));
+	}
+
+	[TestMethod]
+	public void Step_UsesTheDisplayMetricsItWasStartedWith()
+	{
+		using ImGuiAppHarness harness = ImGuiAppHarness.Start(new ImGuiAppConfig(), new HarnessOptions { Width = 320, Height = 240, DpiScale = 1.5f });
+
+		harness.Step();
+
+		Assert.AreEqual(new Vector2(320, 240), ImGui.GetIO().DisplaySize);
+		Assert.AreEqual(new Vector2(1.5f, 1.5f), ImGui.GetIO().DisplayFramebufferScale);
+	}
+
+	[TestMethod]
 	public void Step_AdvancesTheFrameCount()
 	{
 		using ImGuiAppHarness harness = ImGuiAppHarness.Start(new ImGuiAppConfig(), Window());

@@ -478,6 +478,8 @@ Application lifecycle and utilities.
 | `UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan<byte>, int, int)` | `void` | Replace a texture's pixels, in place when the size is unchanged |
 | `CreateTexture(ReadOnlySpan<byte>, int, int, PixelLayout, int)` | `ImGuiAppTextureInfo` | Upload BGRA, RGB, BGR or greyscale pixels, with optional row padding |
 | `UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan<byte>, int, int, PixelLayout, int)` | `void` | Replace a texture's pixels from any `PixelLayout`, with optional row padding |
+| `CreateTexture(ReadOnlySpan<Half>, int, int)` | `ImGuiAppTextureInfo` | Upload half-float pixels that can be brighter than white on an HDR screen |
+| `UpdateTexture(ImGuiAppTextureInfo, ReadOnlySpan<Half>, int, int)` | `void` | Replace a half-float texture's pixels |
 | `DeleteTexture(nint)` | `void` | Remove texture from GPU |
 | `EmsToPx(float)` | `int` | Convert EMs to pixels |
 | `PtsToPx(int)` | `int` | Convert points to pixels |
@@ -493,6 +495,7 @@ Application lifecycle and utilities.
 | `ScaleFactor` | `float` | DPI-based scale factor |
 | `GlobalScale` | `float` | User-adjustable UI scale |
 | `Invoker` | `Invoker` | Delegate invocation for window thread |
+| `HdrDisplay` | `HdrDisplayInfo` | What the window's screen can show: HDR or not, SDR white, peak and headroom |
 
 ### `ImGuiAppConfig`
 
@@ -515,6 +518,7 @@ Configuration for `ImGuiApp.Start()`.
 | `PerformanceSettings` | `ImGuiAppPerformanceSettings` | Throttling configuration |
 | `FontMemoryConfig` | `FontMemoryGuard.FontMemoryConfig` | Font memory limits |
 | `InitialWindowState` | `ImGuiAppWindowState` | Initial window size/position |
+| `HdrOutput` | `bool` | Present in HDR on an HDR screen, on Windows and macOS (default: false) |
 
 ### `ImGuiAppPerformanceSettings`
 
@@ -748,7 +752,7 @@ dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 The suite renders through the [Hexa.NET](https://github.com/HexaEngine/Hexa.NET.ImGui) bindings:
 
 - [Hexa.NET.ImGui](https://github.com/HexaEngine/Hexa.NET.ImGui) - .NET bindings for Dear ImGui, and for the `Hexa.NET.ImGuizmo`, `Hexa.NET.ImNodes` and `Hexa.NET.ImPlot` extensions that `ktsu.ImGui.App` auto-detects
-- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection, with `Hexa.NET.ImGui.Widgets.Extras`, behind the Hexa-backed widgets, dialogs and editors in `ktsu.ImGui.Widgets`
+- [Hexa.NET.ImGui.Widgets](https://github.com/HexaEngine/Hexa.NET.ImGui.Widgets) - The upstream widget collection behind the Hexa-backed widgets, dialogs and editors in `ktsu.ImGui.Widgets`
 - [Hexa.NET.Math](https://github.com/HexaEngine/Hexa.NET.Math) - The math types those widgets marshal through
 - [HexaGen](https://github.com/JunaMeinhold/HexaGen) - The binding generator and the `HexaGen.Runtime` the wrappers are built on
 

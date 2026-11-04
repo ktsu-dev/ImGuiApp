@@ -38,7 +38,7 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 # it by absolute bundle path. "cimgui.dylib" with an @rpath install name.
 OUT_LIB="$OUT_DIR/cimgui.dylib"
 
-if [ -f "$OUT_LIB" ]; then
+if [[ -f "$OUT_LIB" ]]; then
 	echo "cimgui dylib already present: $OUT_LIB; skipping build (cache hit)."
 	exit 0
 fi
