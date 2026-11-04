@@ -48,6 +48,16 @@ public sealed record StringRule
 	/// <summary>The escape character that neutralizes the next character, or <see langword="null"/> when the literal has none.</summary>
 	public char? Escape { get; init; } = '\\';
 
+	/// <summary>
+	/// A character that keeps the one after it from closing the literal while staying in the literal's
+	/// content as written, as a backslash does in a Python raw string: <c>r"\""</c> is one literal whose
+	/// value is <c>\"</c>. It only affects where the literal ends; <see cref="Escape"/> still decides
+	/// whether the content is unescaped. When honouring it would leave the literal unterminated, the
+	/// literal is scanned again without it, so a literal that ends in the character, such as the
+	/// invalid <c>r'C:\dir\'</c>, still closes at its last quote rather than running on.
+	/// </summary>
+	public char? ScanEscape { get; init; }
+
 	/// <summary>Whether a doubled closing delimiter escapes it, as in a C# verbatim string.</summary>
 	public bool DoubledCloseEscapes { get; init; }
 
