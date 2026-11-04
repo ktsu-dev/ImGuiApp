@@ -144,6 +144,14 @@ public sealed record LanguageDefinition
 	public bool IsMarkup { get; init; }
 
 	/// <summary>
+	/// For markup, the elements whose body is raw text rather than markup, matched case-insensitively:
+	/// <c>script</c> and <c>style</c> in HTML. Everything up to the element's own closing tag is emitted
+	/// as <see cref="TokenKind.Plain"/>, so a <c>&lt;</c> comparison or an apostrophe in the body cannot
+	/// open a tag or an attribute value. Ignored for definitions that are not <see cref="IsMarkup"/>.
+	/// </summary>
+	public IReadOnlyCollection<string> RawTextElements { get; init; } = [];
+
+	/// <summary>
 	/// Languages to look for inside this one's comments and strings — XML in a doc comment, JSON in a
 	/// fixture, SQL in a query string. Rules are tried in order and the first match wins; an empty
 	/// list (the default) turns the feature off for this language.

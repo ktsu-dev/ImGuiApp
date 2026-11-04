@@ -109,7 +109,7 @@ A block comment whose close overlaps its own opener at the match position, as `*
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
-- Embedding is one level deep and is not applied by the markup tokenizer, so `<script>` and `<style>` bodies inside HTML are still treated as markup text
+- Embedding is one level deep and is not applied by the markup tokenizer. `<script>` and `<style>` bodies inside HTML (`LanguageDefinition.RawTextElements`) are read as plain text up to their own closing tag, not highlighted as JavaScript or CSS
 - Doc comments written one `///` line at a time are tokenized a line at a time, so an XML construct split across lines is classified per line
 - Lines are not wrapped and nothing is drawn; this classifies code, a renderer decides what to do with it
 

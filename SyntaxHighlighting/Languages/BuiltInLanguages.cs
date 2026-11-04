@@ -230,6 +230,7 @@ public static class BuiltInLanguages
 		Name = "html",
 		Aliases = ["htm", "xhtml"],
 		IsMarkup = true,
+		RawTextElements = ["script", "style"],
 	};
 
 	/// <summary>CSS.</summary>
