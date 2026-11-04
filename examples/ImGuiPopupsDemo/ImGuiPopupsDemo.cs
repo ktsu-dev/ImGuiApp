@@ -10,7 +10,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 using ktsu.ImGui.Popups;
 using ktsu.ImGui.Probes;
 using ktsu.Semantics.Paths;

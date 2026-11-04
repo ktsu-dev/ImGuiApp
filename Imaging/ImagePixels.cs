@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 using System;
 
@@ -9,10 +9,10 @@ using System;
 /// major from the top left, with no row padding.
 /// </summary>
 /// <remarks>
-/// This is the currency type of <see cref="ImageDecoder"/> and the replacement for the third-party
-/// image type the texture cache used to be written against. It is deliberately minimal — it owns a
-/// buffer and knows its dimensions — because the only things this library does with a decoded image
-/// are upload it to the GPU and, for window icons, crop and scale it.
+/// This is the currency type of <see cref="ImageDecoder"/>, <see cref="PngEncoder"/> and
+/// <see cref="ImageResampler"/>. It is deliberately minimal: it owns a buffer, knows its dimensions,
+/// and offers the handful of whole-image operations its consumers need (crop, pad, fill, resize).
+/// Per-pixel work is done by the caller over <see cref="Pixels"/> or <see cref="GetRow"/>.
 /// </remarks>
 public sealed class ImagePixels
 {
@@ -114,6 +114,66 @@ public sealed class ImagePixels
 		pixels[i + 1] = g;
 		pixels[i + 2] = b;
 		pixels[i + 3] = a;
+	}
+
+	/// <summary>Gets one row of pixels, four bytes per pixel.</summary>
+	/// <param name="y">Row, from the top.</param>
+	/// <returns>A span over that row of this image's buffer; writing to it writes to the image.</returns>
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="y"/> is outside the image.</exception>
+	public Span<byte> GetRow(int y)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegative(y);
+		ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(y, Height);
+		return pixels.AsSpan(y * Width * 4, Width * 4);
+	}
+
+	/// <summary>Sets every pixel to one colour.</summary>
+	/// <param name="r">Red channel.</param>
+	/// <param name="g">Green channel.</param>
+	/// <param name="b">Blue channel.</param>
+	/// <param name="a">Alpha channel.</param>
+	public void Fill(byte r, byte g, byte b, byte a)
+	{
+		for (int i = 0; i < pixels.Length; i += 4)
+		{
+			pixels[i] = r;
+			pixels[i + 1] = g;
+			pixels[i + 2] = b;
+			pixels[i + 3] = a;
+		}
+	}
+
+	/// <summary>
+	/// Places this image, unscaled, in the centre of a larger canvas filled with one colour.
+	/// </summary>
+	/// <param name="width">Canvas width. Must be at least <see cref="Width"/>.</param>
+	/// <param name="height">Canvas height. Must be at least <see cref="Height"/>.</param>
+	/// <param name="r">Red channel of the fill.</param>
+	/// <param name="g">Green channel of the fill.</param>
+	/// <param name="b">Blue channel of the fill.</param>
+	/// <param name="a">Alpha channel of the fill.</param>
+	/// <returns>A new image of the canvas size.</returns>
+	/// <remarks>
+	/// The image's top left lands at <c>((width - Width) / 2, (height - Height) / 2)</c>, rounding
+	/// down, so an odd margin puts the extra pixel on the right and bottom.
+	/// </remarks>
+	/// <exception cref="ArgumentOutOfRangeException">The canvas is smaller than this image.</exception>
+	public ImagePixels Pad(int width, int height, byte r, byte g, byte b, byte a)
+	{
+		ArgumentOutOfRangeException.ThrowIfLessThan(width, Width);
+		ArgumentOutOfRangeException.ThrowIfLessThan(height, Height);
+
+		ImagePixels result = new(width, height);
+		result.Fill(r, g, b, a);
+		int left = (width - Width) / 2;
+		int top = (height - Height) / 2;
+		Span<byte> destination = result.Pixels;
+		for (int row = 0; row < Height; row++)
+		{
+			pixels.AsSpan(row * Width * 4, Width * 4).CopyTo(destination[((((top + row) * width) + left) * 4)..]);
+		}
+
+		return result;
 	}
 
 	/// <summary>Crops a rectangle out of this image.</summary>

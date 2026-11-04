@@ -4,7 +4,7 @@ namespace ktsu.ImGui.App.Tests;
 
 using System.IO;
 using System.Numerics;
-using ktsu.ImGui.App.Tests.Images;
+using ktsu.Imaging.Tests;
 using ktsu.Semantics.Paths;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -932,7 +932,7 @@ public sealed class ImGuiAppWindowManagementTests
 	[TestMethod]
 	public void UseImageBytes_WithNullAction_ThrowsArgumentNullException()
 	{
-		ktsu.ImGui.App.Images.ImagePixels image = new(100, 100);
+		ktsu.Imaging.ImagePixels image = new(100, 100);
 		Assert.ThrowsExactly<ArgumentNullException>(() => ImGuiApp.UseImageBytes(image, null!));
 	}
 

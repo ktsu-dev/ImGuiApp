@@ -2,7 +2,7 @@
 
 namespace ktsu.ImGui.App.Clipboard;
 
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 /// <summary>The image clipboard for the platform the application runs on, and helpers over any <see cref="IImageClipboard"/>.</summary>
 /// <remarks>

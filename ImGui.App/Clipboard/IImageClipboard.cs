@@ -7,7 +7,7 @@ namespace ktsu.ImGui.App.Clipboard;
 /// GLFW's and SDL's clipboards carry text only, so each platform reaches its own: the Win32 clipboard,
 /// the Wayland and X11 command-line tools, and the macOS pasteboard through AppleScript. The image
 /// travels as an encoded file rather than as pixels, so a reader only needs a codec to know what it
-/// holds; <see cref="ImageClipboard.TryReadPixels"/> decodes it with <see cref="Images.ImageDecoder"/>.
+/// holds; <see cref="ImageClipboard.TryReadPixels"/> decodes it with <see cref="ktsu.Imaging.ImageDecoder"/>.
 /// Get the platform's clipboard from <see cref="ImageClipboard.ForThisPlatform"/>; an application's
 /// tests can stand in their own implementation.
 /// </remarks>

@@ -1,0 +1,17 @@
+<Project>
+  <Sdk Name="MSTest.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <RootNamespace>ktsu.Imaging.Tests</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+    <EnableSourceLink>false</EnableSourceLink>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Imaging\Imaging.csproj" />
+  </ItemGroup>
+</Project>

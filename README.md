@@ -95,6 +95,12 @@ Turns source text into classified token runs, with built-in definitions for C#, 
 
 Draws what `ktsu.SyntaxHighlighting` classifies, inside Dear ImGui: a background panel, an optional line-number gutter, and colored token runs whose palette follows the host's light or dark theme. Standalone, with no dependency on `ktsu.ImGui.App`, and it doubles as the code-block renderer for `ktsu.ImGui.Markdown`.
 
+### Imaging - Image Decoding and Editing (UI-Agnostic)
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.Imaging?label=ktsu.Imaging&logo=nuget)](https://nuget.org/packages/ktsu.Imaging)
+
+Decodes PNG, JPEG, BMP and TGA into a straight-alpha RGBA8 buffer, crops, pads, fills and resizes it with a Lanczos-3 resampler, and writes it back out as PNG. No ImGui and no third-party imaging dependency, so command-line tools can use it in place of `SixLabors.ImageSharp`. `ktsu.ImGui.App` uses it for textures, window icons and the image clipboard.
+
 ### ForceDirectedLayout - Graph Layout Simulation
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ForceDirectedLayout?label=ktsu.ForceDirectedLayout&logo=nuget)](https://nuget.org/packages/ktsu.ForceDirectedLayout)
@@ -132,6 +138,7 @@ Install-Package ktsu.NodeGraph
 Install-Package ktsu.ImGui.Markdown
 Install-Package ktsu.SyntaxHighlighting
 Install-Package ktsu.ImGui.SyntaxHighlighting
+Install-Package ktsu.Imaging
 ```
 
 ### .NET CLI
@@ -145,6 +152,7 @@ dotnet add package ktsu.NodeGraph
 dotnet add package ktsu.ImGui.Markdown
 dotnet add package ktsu.SyntaxHighlighting
 dotnet add package ktsu.ImGui.SyntaxHighlighting
+dotnet add package ktsu.Imaging
 ```
 
 ### Package Reference

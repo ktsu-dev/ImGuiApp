@@ -301,7 +301,7 @@ message naming what was found.
 The decoder is also usable on its own, without starting an application:
 
 ```csharp
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 ImagePixels image = ImageDecoder.Load("photo.jpg");
 
@@ -322,7 +322,7 @@ wl-clipboard or xclip installed; when neither is, a read or write fails with a m
 
 ```csharp
 using ktsu.ImGui.App.Clipboard;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 IImageClipboard clipboard = ImageClipboard.ForThisPlatform();
 

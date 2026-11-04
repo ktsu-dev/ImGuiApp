@@ -22,4 +22,8 @@
     <!-- AnimationThrottlingTests drives the throttler with a real Tween. -->
     <ProjectReference Include="..\..\ImGui.Widgets\ImGui.Widgets.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The texture and window icon tests build their images in memory the same way the decoder tests do. -->
+    <Compile Include="..\Imaging.Tests\TestImageBuilder.cs" Link="Images\TestImageBuilder.cs" />
+  </ItemGroup>
 </Project>

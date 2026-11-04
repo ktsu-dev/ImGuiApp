@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 using System;
 using System.Buffers.Binary;
@@ -14,8 +14,7 @@ using System.IO.Compression;
 /// Covers the whole non-extension format: all five colour types, bit depths 1, 2, 4, 8 and 16,
 /// palettes, <c>tRNS</c> transparency in every form it takes, Adam7 interlacing, and all five
 /// scanline filters. Ancillary chunks other than <c>tRNS</c> are skipped, which includes <c>gAMA</c>
-/// and <c>iCCP</c> — pixels are taken at face value with no colour management, the same as the
-/// texture pipeline that consumes them. Inflation uses <see cref="ZLibStream"/> from the base class
+/// and <c>iCCP</c> — pixels are taken at face value with no colour management. Inflation uses <see cref="ZLibStream"/> from the base class
 /// library, so nothing here needs a compression dependency.
 /// </remarks>
 internal static class PngDecoder
@@ -480,7 +479,7 @@ internal static class PngDecoder
 			samples[channel] = sampleBytes == 1 ? row[index] : BinaryPrimitives.ReadUInt16BigEndian(row[index..]);
 		}
 
-		// A 16-bit sample is truncated to its high byte, which is what the GPU texture format holds.
+		// A 16-bit sample is truncated to its high byte, which is all an RGBA8 buffer holds.
 		int shift = sampleBytes == 1 ? 0 : 8;
 
 		switch (header.ColorType)

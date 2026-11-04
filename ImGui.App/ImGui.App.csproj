@@ -49,6 +49,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImGui.Rendering\ImGui.Rendering.csproj" />
+    <!-- Image decoding, resampling and PNG encoding: ImagePixels is part of this package's public surface. -->
+    <ProjectReference Include="..\Imaging\Imaging.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.Contains('-ios'))">

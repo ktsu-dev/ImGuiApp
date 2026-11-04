@@ -6,7 +6,7 @@ using System;
 using System.IO;
 
 using ktsu.ImGui.App;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 using ktsu.ImGui.App.Testing.Support;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;

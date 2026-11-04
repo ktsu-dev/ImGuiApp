@@ -12,7 +12,7 @@ using System.Linq;
 
 using Hexa.NET.ImGui;
 
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;

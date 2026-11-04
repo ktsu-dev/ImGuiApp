@@ -17,7 +17,7 @@ internal sealed class LinuxImageClipboard(IClipboardProcesses processes, bool wa
 {
 	private const string Png = "image/png";
 
-	/// <summary>The image types <see cref="Images.ImageDecoder"/> can read, best first: lossless before lossy.</summary>
+	/// <summary>The image types <see cref="ktsu.Imaging.ImageDecoder"/> can read, best first: lossless before lossy.</summary>
 	/// <remarks>WebP, GIF and the rest are left out, since picking one would fail to decode even when a readable type was on offer.</remarks>
 	private static readonly string[] DecodableTypes = [Png, "image/bmp", "image/x-bmp", "image/jpeg"];
 

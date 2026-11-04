@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Tests.Images;
+namespace ktsu.Imaging.Tests;
 
 using System;
 using System.Buffers.Binary;

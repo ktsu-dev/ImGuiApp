@@ -5,7 +5,7 @@ namespace ktsu.ImGui.App.Testing.Tests;
 using System;
 using System.IO;
 
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

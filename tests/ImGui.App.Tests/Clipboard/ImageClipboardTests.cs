@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 
 using ktsu.ImGui.App.Clipboard;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -43,30 +43,6 @@ public sealed class ImageClipboardTests
 		Assert.AreEqual(2, pixels.Width);
 		Assert.AreEqual(2, pixels.Height);
 		CollectionAssert.AreEqual(CornersRgba().GetBuffer(), pixels.GetBuffer());
-	}
-
-	[TestMethod]
-	public void APngWeEncode_DecodesToTheSamePixels()
-	{
-		ImagePixels source = CornersRgba();
-
-		ImagePixels decoded = ImageDecoder.Decode(PngEncoder.Encode(source));
-
-		Assert.AreEqual(source.Width, decoded.Width);
-		Assert.AreEqual(source.Height, decoded.Height);
-		CollectionAssert.AreEqual(source.GetBuffer(), decoded.GetBuffer());
-	}
-
-	[TestMethod]
-	public void APngWeEncode_OfAWideImage_DecodesToTheSamePixels()
-	{
-		ImagePixels source = new(37, 5);
-		Random random = new(7);
-		random.NextBytes(source.Pixels);
-
-		ImagePixels decoded = ImageDecoder.Decode(PngEncoder.Encode(source));
-
-		CollectionAssert.AreEqual(source.GetBuffer(), decoded.GetBuffer());
 	}
 
 	[TestMethod]
