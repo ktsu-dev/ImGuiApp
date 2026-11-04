@@ -263,6 +263,11 @@ internal static class CodeTokenizer
 
 			int openLength = rule.Open.Length;
 			string close = rule.Close;
+			if (rule.CloseRepeatsDelimiter && !TryExtendByRawDelimiter(source, index, rule, ref openLength, ref close))
+			{
+				continue;
+			}
+
 			if (rule.CloseMatchesOpeningRun)
 			{
 				// A raw string opened with more quotes than the rule names closes only on as many.
@@ -346,6 +351,47 @@ internal static class CodeTokenizer
 		}
 
 		return source.Length;
+	}
+
+	// A C++ raw string opens with R"delim( and closes only on )delim", so the delimiter and its '('
+	// join the opener and the close gains the same delimiter. False when no valid delimiter follows.
+	private static bool TryExtendByRawDelimiter(string source, int index, StringRule rule, ref int openLength, ref string close)
+	{
+		if (!TryReadRawDelimiter(source, index + openLength, out string delimiter))
+		{
+			return false;
+		}
+
+		openLength += delimiter.Length + 1;
+		close = string.Concat(")", delimiter, rule.Close);
+		return true;
+	}
+
+	// A C++ raw-string delimiter: at most 16 characters, none of them a space, quote, parenthesis,
+	// backslash or control character, ended by '('.
+	private static bool TryReadRawDelimiter(string source, int start, out string delimiter)
+	{
+		const int MaxLength = 16;
+		delimiter = string.Empty;
+		int scan = start;
+		while (scan < source.Length && scan - start <= MaxLength)
+		{
+			char current = source[scan];
+			if (current == '(')
+			{
+				delimiter = source[start..scan];
+				return true;
+			}
+
+			if (current is ' ' or ')' or '\\' or '"' || char.IsControl(current))
+			{
+				return false;
+			}
+
+			scan++;
+		}
+
+		return false;
 	}
 
 	private static bool TryReadDirective(string source, LanguageDefinition language, ref int index, out TokenKind kind, out TokenBody body)

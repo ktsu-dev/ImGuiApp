@@ -71,6 +71,14 @@ public sealed record StringRule
 	/// </summary>
 	public bool CloseMatchesOpeningRun { get; init; }
 
+	/// <summary>
+	/// Whether <see cref="Open"/> is followed by a delimiter of up to 16 characters and <c>(</c>, with
+	/// the literal closing only on <c>)</c>, that delimiter and <see cref="Close"/>, as in a C++ raw
+	/// string: <c>R"x( … )x"</c> is not closed by <c>)"</c>. When no <c>(</c> follows a valid delimiter
+	/// the rule does not match, and the text is read by the other rules.
+	/// </summary>
+	public bool CloseRepeatsDelimiter { get; init; }
+
 	/// <summary>The kind emitted for the literal.</summary>
 	public TokenKind Kind { get; init; } = TokenKind.StringLiteral;
 }

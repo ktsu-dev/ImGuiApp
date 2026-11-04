@@ -106,6 +106,8 @@ Three rule options cover delimiters that a plain prefix cannot describe. `LineCo
 
 A block comment whose close overlaps its own opener at the match position, as `*/` does inside the doc opener `/**` in `/**/`, gives way to a shorter rule that matches there, so `/**/` is one empty comment rather than a doc comment running to the next `*/`.
 
+`StringRule.CloseRepeatsDelimiter` reads a delimiter of up to 16 characters and `(` after the opener, and closes only on `)`, that delimiter and the rule's close, which is how C++ raw strings work (`R"x( … )x"` is not closed by `)"`). The C++ definition uses it for `R"`, `u8R"`, `uR"`, `UR"` and `LR"`.
+
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
