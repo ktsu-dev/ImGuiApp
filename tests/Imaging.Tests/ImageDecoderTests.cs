@@ -1,10 +1,9 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Tests.Images;
+namespace ktsu.Imaging.Tests;
 
 using System;
 using System.IO;
-using ktsu.ImGui.App.Images;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>

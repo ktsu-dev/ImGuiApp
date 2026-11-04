@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 using ktsu.ImGui.App.Clipboard;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

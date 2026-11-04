@@ -1,18 +1,18 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 using System;
 
 /// <summary>
 /// Converts caller-owned pixel buffers in any <see cref="PixelLayout"/>, with or without row padding,
-/// into the tightly packed RGBA8 that every renderer backend uploads.
+/// into the tightly packed RGBA8 that <see cref="ImagePixels"/> holds.
 /// </summary>
-internal static class PixelConverter
+public static class PixelConverter
 {
 	/// <summary>Gets the number of bytes one pixel occupies in <paramref name="layout"/>.</summary>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="layout"/> is not a defined value.</exception>
-	internal static int BytesPerPixel(PixelLayout layout) => layout switch
+	public static int BytesPerPixel(PixelLayout layout) => layout switch
 	{
 		PixelLayout.Rgba8 or PixelLayout.Bgra8 => 4,
 		PixelLayout.Rgb8 or PixelLayout.Bgr8 => 3,
@@ -38,7 +38,7 @@ internal static class PixelConverter
 	/// A dimension is not positive, the layout is unknown, or the stride is negative or shorter than a row of pixels.
 	/// </exception>
 	/// <exception cref="ArgumentException"><paramref name="source"/> is too short for the geometry.</exception>
-	internal static int Validate(ReadOnlySpan<byte> source, int width, int height, PixelLayout layout, int rowStride)
+	public static int Validate(ReadOnlySpan<byte> source, int width, int height, PixelLayout layout, int rowStride)
 	{
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
@@ -69,7 +69,7 @@ internal static class PixelConverter
 	/// <param name="layout">The source's pixel layout.</param>
 	/// <param name="stride">The effective row stride returned by <see cref="Validate"/>.</param>
 	/// <param name="destination">At least <paramref name="width"/> * <paramref name="height"/> * 4 bytes.</param>
-	internal static void ToRgba8(ReadOnlySpan<byte> source, int width, int height, PixelLayout layout, int stride, Span<byte> destination)
+	public static void ToRgba8(ReadOnlySpan<byte> source, int width, int height, PixelLayout layout, int stride, Span<byte> destination)
 	{
 		int bytesPerPixel = BytesPerPixel(layout);
 		int destinationRowBytes = width * 4;

@@ -8,7 +8,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 
 using ktsu.ImGui.App;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 using ktsu.ImGui.Widgets;
 
 /// <summary>Shows a levels control adjusting the ktsu logo, drawn from the logo's own luminance histogram.</summary>

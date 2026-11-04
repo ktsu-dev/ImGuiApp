@@ -10,7 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
 using ktsu.ImGui.App.ImGuiController;
-using ktsu.ImGui.App.Images;
+using ktsu.Imaging;
 using ktsu.ImGui.Probes;
 using ktsu.ImGui.Rendering;
 using ktsu.Invoker;

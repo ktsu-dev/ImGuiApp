@@ -1,18 +1,17 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Tests.Images;
+namespace ktsu.Imaging.Tests;
 
 using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
-using ktsu.ImGui.App.Images;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
 /// Headers whose dimensions or lengths overflow the decoders' size arithmetic must fail as
 /// <see cref="InvalidImageDataException"/>, the documented failure, and before allocating a buffer
-/// sized from them. Callers such as <c>ImGuiApp.ReloadAllTextures</c> catch only that exception.
+/// sized from them. Callers skipping one bad file catch only that exception.
 /// </summary>
 [TestClass]
 public class OversizedHeaderTests

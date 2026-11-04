@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 using System;
 using System.Buffers.Binary;
@@ -13,8 +13,7 @@ using System.Numerics;
 /// Handles the core header and every version of the info header, bit counts 1, 4, 8, 16, 24 and 32,
 /// bottom-up and top-down row order, and both <c>BI_RGB</c> and <c>BI_BITFIELDS</c> channel layouts.
 /// The run-length encoded variants (<c>BI_RLE4</c>, <c>BI_RLE8</c>) and embedded PNG/JPEG payloads
-/// are rejected rather than guessed at; they do not occur in the icons and textures this library
-/// loads.
+/// are rejected rather than guessed at.
 /// </remarks>
 internal static class BmpDecoder
 {

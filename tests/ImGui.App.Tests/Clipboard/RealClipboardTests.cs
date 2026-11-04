@@ -9,8 +9,8 @@ using System.Linq;
 using System.Text;
 
 using ktsu.ImGui.App.Clipboard;
-using ktsu.ImGui.App.Images;
-using ktsu.ImGui.App.Tests.Images;
+using ktsu.Imaging;
+using ktsu.Imaging.Tests;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

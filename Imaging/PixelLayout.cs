@@ -1,10 +1,10 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 /// <summary>
-/// The in-memory arrangement of 8-bit pixels that a texture can be created or updated from. Textures
-/// are always stored as RGBA8; any other layout is converted on the way in.
+/// The in-memory arrangement of 8-bit pixels in a caller-owned buffer. <see cref="PixelConverter"/>
+/// converts any of them to the RGBA8 that <see cref="ImagePixels"/> holds.
 /// </summary>
 /// <remarks>
 /// Named for the byte order in memory, not for a packed integer's bit order: <see cref="Bgra8"/> is

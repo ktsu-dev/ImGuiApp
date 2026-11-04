@@ -6,8 +6,8 @@ namespace ktsu.ImGui.App.Tests;
 
 using System.Diagnostics;
 using System.Numerics;
-using ktsu.ImGui.App.Images;
-using ktsu.ImGui.App.Tests.Images;
+using ktsu.Imaging;
+using ktsu.Imaging.Tests;
 using ktsu.Semantics.Paths;
 using ktsu.Semantics.Strings;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 /// <summary>The image container formats <see cref="ImageDecoder"/> recognises.</summary>
 public enum ImageFormat

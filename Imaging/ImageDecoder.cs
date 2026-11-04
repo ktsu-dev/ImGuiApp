@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 ktsu-dev contributors
 
-namespace ktsu.ImGui.App.Images;
+namespace ktsu.Imaging;
 
 using System;
 using System.Globalization;
@@ -12,10 +12,9 @@ using System.Text;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is the whole of the imaging this library needs: turn a file on disk into RGBA8 bytes to hand
-/// the GPU, and scale those bytes for window icons. It is implemented here rather than taken from a
-/// package so that the licence terms of an imaging library cannot constrain consumers of
-/// <c>ktsu.ImGui.App</c>; see the discussion in issue #354 and the earlier breakage in issue #230.
+/// Turns a file into tightly packed RGBA8 bytes. It is implemented here rather than taken from a
+/// third-party imaging package so that the licence terms or security advisories of such a package
+/// cannot constrain anything built on this one.
 /// </para>
 /// <para>
 /// PNG, JPEG, BMP and TGA are supported. The format is identified from the file's own bytes, not its
