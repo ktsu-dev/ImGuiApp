@@ -113,7 +113,7 @@ public class PngEncoderTests
 	[TestMethod]
 	public void Save_WritesAFileTheDecoderLoads()
 	{
-		string path = Path.Combine(Path.GetTempPath(), $"ktsu-imaging-{Guid.NewGuid():N}.png");
+		string path = Path.Join(Path.GetTempPath(), $"ktsu-imaging-{Guid.NewGuid():N}.png");
 		try
 		{
 			PngEncoder.Save(Corners(), path);
