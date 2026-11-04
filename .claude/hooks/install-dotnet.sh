@@ -51,12 +51,12 @@ install_from_container_image() {
 	esac
 
 	local index manifest digest layer work
-	index="$(curl -fsSL -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json' \
+	index="$(curl --proto '=https' --tlsv1.2 -fsSL -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json' \
 		"$registry/manifests/$2-noble")"
 	digest="$(jq -r --arg arch "$arch" \
 		'.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch and (.platform.variant // "") == "") | .digest' \
 		<<<"$index" | head -n1)"
-	manifest="$(curl -fsSL -H 'Accept: application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json' \
+	manifest="$(curl --proto '=https' --tlsv1.2 -fsSL -H 'Accept: application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json' \
 		"$registry/manifests/$digest")"
 
 	# A runtime image contributes its shared framework and nothing else, so its
@@ -76,7 +76,7 @@ install_from_container_image() {
 			sha256:*) ;;
 			*) echo "install-dotnet: unsupported layer digest $layer" >&2; rm -rf "$work"; return 1 ;;
 		esac
-		curl -fsSL -o "$work/layer.tgz" "$registry/blobs/$layer"
+		curl --proto '=https' --tlsv1.2 -fsSL -o "$work/layer.tgz" "$registry/blobs/$layer"
 		if [ "sha256:$(sha256sum "$work/layer.tgz" | awk '{print $1}')" != "$layer" ]; then
 			echo "install-dotnet: layer $layer does not match its digest" >&2
 			rm -rf "$work"
