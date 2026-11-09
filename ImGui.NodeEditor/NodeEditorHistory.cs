@@ -563,6 +563,7 @@ internal sealed class GraphChange
 		}
 
 		List<(Node, Node)> changedNodes = [];
+		List<NodeMove> moves = [];
 		List<(int, object?, object?)> changedValues = [];
 
 		foreach ((int id, NodeState was) in before.Nodes)
@@ -575,6 +576,14 @@ internal sealed class GraphChange
 			if (FieldsDiffer(was.Snapshot.Node, now.Snapshot.Node))
 			{
 				changedNodes.Add((was.Snapshot.Node, now.Snapshot.Node));
+			}
+
+			// A move is kept apart from the node's other fields, so undoing a step that only pinned
+			// or unpinned the node, or changed a pin's capacity, leaves the node wherever the layout
+			// has put it since rather than dragging it back to where it stood when the step was made.
+			if (was.Snapshot.Node.Position != now.Snapshot.Node.Position)
+			{
+				moves.Add(new NodeMove(id, was.Snapshot.Node.Position, now.Snapshot.Node.Position));
 			}
 
 			Dictionary<int, object?> nowValues = now.Snapshot.Pins.ToDictionary(p => p.PinId, p => p.Value);
@@ -601,6 +610,7 @@ internal sealed class GraphChange
 				.Where(b => boxesAfter.TryGetValue(b.Key, out CommentBox? now) && now != b.Value)
 				.Select(b => (b.Value, boxesAfter[b.Key]))],
 			ChangedNodes = changedNodes,
+			Moves = moves,
 			ChangedValues = changedValues,
 			WorldOrigin = before.WorldOrigin == after.WorldOrigin ? null : (before.WorldOrigin, after.WorldOrigin),
 		};
@@ -608,10 +618,10 @@ internal sealed class GraphChange
 
 	/// <summary>
 	/// Whether a node's own fields differ: the ones a user or a host sets, not the ones the layout and
-	/// the renderer keep writing.
+	/// the renderer keep writing. Position is not one of them here: a step that moved a node records
+	/// that as a <see cref="NodeMove"/>, so only a step that moved the node puts its position back.
 	/// </summary>
 	private static bool FieldsDiffer(Node was, Node now) =>
-		was.Position != now.Position ||
 		was.Name != now.Name ||
 		was.IsPinned != now.IsPinned ||
 		!was.InputPins.SequenceEqual(now.InputPins) ||

@@ -42,6 +42,69 @@ public sealed class NodeEditorHistoryTests
 	}
 
 	[TestMethod]
+	public void Undo_OfUnpin_DoesNotMoveTheNodeBackToWhereItWasWhenUnpinned()
+	{
+		// Unpinning is exactly when the layout is expected to move a node next, so undoing the unpin
+		// must put the pin back without dragging the node back across the canvas (#745).
+		Node node = engine.CreateNode(new Vector2(10, 10), "A", 1, 1);
+		Assert.IsTrue(engine.SetNodePinned(node.Id, true));
+		using NodeEditorHistory history = NewHistory();
+
+		Assert.AreEqual(1, history.SetNodesPinned([node.Id], pinned: false));
+		engine.UpdateNodePosition(node.Id, new Vector2(500, 500));
+
+		Assert.IsTrue(history.Undo());
+		Node undone = engine.Nodes.Single(n => n.Id == node.Id);
+		Assert.IsTrue(undone.IsPinned, "Undo should have pinned the node again.");
+		Assert.AreEqual(new Vector2(500, 500), undone.Position, "Undoing an unpin should leave the node where the layout put it.");
+
+		engine.UpdateNodePosition(node.Id, new Vector2(700, 700));
+		Assert.IsTrue(history.Redo());
+		Node redone = engine.Nodes.Single(n => n.Id == node.Id);
+		Assert.IsFalse(redone.IsPinned);
+		Assert.AreEqual(new Vector2(700, 700), redone.Position, "Redoing an unpin should not move the node either.");
+	}
+
+	[TestMethod]
+	public void Undo_OfCapacityChange_DoesNotMoveTheNode()
+	{
+		Node node = engine.CreateNode(new Vector2(10, 10), "A", 1, 1);
+		int pinId = node.InputPins[0].Id;
+		using NodeEditorHistory history = NewHistory();
+
+		history.Record("Widen pin", () => engine.SetPinAllowsMultipleConnections(pinId, true));
+		engine.UpdateNodePosition(node.Id, new Vector2(500, 500));
+
+		Assert.IsTrue(history.Undo());
+		Node undone = engine.Nodes.Single(n => n.Id == node.Id);
+		Assert.IsFalse(undone.InputPins[0].AllowsMultipleConnections, "Undo should have narrowed the pin again.");
+		Assert.AreEqual(new Vector2(500, 500), undone.Position, "Undoing a capacity change should not move the node.");
+	}
+
+	[TestMethod]
+	public void Undo_OfAStepThatMovedANode_StillRestoresItsPosition()
+	{
+		Node node = engine.CreateNode(new Vector2(10, 10), "A", 1, 1);
+		using NodeEditorHistory history = NewHistory();
+
+		history.Record("Move and pin", () =>
+		{
+			engine.UpdateNodePosition(node.Id, new Vector2(200, 200));
+			Assert.IsTrue(engine.SetNodePinned(node.Id, true));
+		});
+
+		Assert.IsTrue(history.Undo());
+		Node undone = engine.Nodes.Single(n => n.Id == node.Id);
+		Assert.AreEqual(new Vector2(10, 10), undone.Position, "A step that moved the node should still move it back.");
+		Assert.IsFalse(undone.IsPinned);
+
+		Assert.IsTrue(history.Redo());
+		Node redone = engine.Nodes.Single(n => n.Id == node.Id);
+		Assert.AreEqual(new Vector2(200, 200), redone.Position);
+		Assert.IsTrue(redone.IsPinned);
+	}
+
+	[TestMethod]
 	public void SetNodesPinned_IsOneStep_ThatUndoesAndRedoes()
 	{
 		(Node source, Node target, _) = Pair();
