@@ -822,6 +822,33 @@ public sealed class NodeEditorEngineTests
 	}
 
 	[TestMethod]
+	public void DuplicateNodes_OfAPairJoinedTwiceIntoANarrowedPin_CopiesBothLinks()
+	{
+		// Narrowing a pin leaves the links it already holds, so an input can hold two links while
+		// accepting one. The copied pin inherits the narrowed limit, and the copy must still carry both
+		// links: they were accepted once already, and copying them is not a new decision (#746).
+		Node first = engine.CreateNode(new Vector2(0, 0), "First", [], ["Out"]);
+		Node second = engine.CreateNode(new Vector2(0, 100), "Second", [], ["Out"]);
+		Node target = engine.CreateNode(new Vector2(300, 0), "Target", ["In"], []);
+		Assert.IsTrue(engine.SetPinAllowsMultipleConnections(target.InputPins[0].Id, allowMultiple: true));
+		Assert.IsTrue(engine.TryCreateLink(first.OutputPins[0].Id, target.InputPins[0].Id).Success);
+		Assert.IsTrue(engine.TryCreateLink(second.OutputPins[0].Id, target.InputPins[0].Id).Success);
+		Assert.IsTrue(engine.SetPinAllowsMultipleConnections(target.InputPins[0].Id, allowMultiple: false));
+		Assert.HasCount(2, engine.Links, "Narrowing the pin should have kept both of its links");
+
+		IReadOnlyList<Node> copies = engine.DuplicateNodes([first.Id, second.Id, target.Id], new Vector2(40, 40));
+
+		List<Link> copiedLinks = [.. engine.GetIncomingLinks(copies[2].Id)];
+		Assert.HasCount(2, copiedLinks, "Both links into the narrowed pin should have been copied");
+		CollectionAssert.AreEquivalent(
+			new[] { copies[0].OutputPins[0].Id, copies[1].OutputPins[0].Id },
+			copiedLinks.Select(l => l.OutputPinId).ToArray(),
+			"Each copied link should start at the copy of its original's source");
+		Assert.HasCount(4, engine.Links);
+		Assert.AreEqual(engine.Links.Count, engine.Links.Select(l => l.Id).Distinct().Count(), "Every link keeps an id of its own");
+	}
+
+	[TestMethod]
 	public void DuplicateNodes_DoesNotCopyALinkWithOneEndOutsideTheSelection()
 	{
 		// Quietly fanning the original's input into the copy would change what the graph computes
