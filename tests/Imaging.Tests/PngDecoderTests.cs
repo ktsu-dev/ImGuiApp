@@ -191,6 +191,23 @@ public class PngDecoderTests
 		Assert.ThrowsExactly<InvalidImageDataException>(
 			() => ImageDecoder.Decode(TestImageBuilder.Png(1, 1, colorType: 3, bitDepth: 8, [5], palette: [1, 2, 3])));
 
+	[TestMethod]
+	public void Decode_ImageDataWithPresetDictionary_Throws()
+	{
+		InvalidImageDataException exception = Assert.ThrowsExactly<InvalidImageDataException>(
+			() => ImageDecoder.Decode(Convert.FromHexString(PresetDictionaryPng)));
+
+		Assert.IsTrue(exception.Message.Contains("preset dictionary", StringComparison.Ordinal), exception.Message);
+	}
+
+	/// <summary>
+	/// A 1x1 RGBA PNG, with a valid CRC on every chunk, whose IDAT zlib stream sets FDICT (header
+	/// 78 BB) and was compressed against a preset dictionary, which PNG does not allow.
+	/// </summary>
+	private const string PresetDictionaryPng =
+		"89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000001149" +
+		"44415478BB0101010063F8CFC0F01F00050001FFBF002C1C0000000049454E44AE426082";
+
 	/// <summary>A 9x7 Adam7-interlaced RGBA PNG whose pixels follow the formula asserted above.</summary>
 	private const string InterlacedNineBySeven =
 		"iVBORw0KGgoAAAANSUhEUgAAAAkAAAAHCAYAAADam2dgAAAANUlEQVR4nGNkYGD4L8PA8A0fZmFQ" +
