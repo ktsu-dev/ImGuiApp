@@ -99,6 +99,39 @@ public class DiffViewStateTests
 	}
 
 	[TestMethod]
+	public void Pair_SingleChangedLineWithNoContext_IsOneRow()
+	{
+		IReadOnlyList<ImGuiWidgets.DiffRowPair> rows = ImGuiWidgets.DiffViewState.Pair(
+			Hunk(Removed("x"), Added("X")));
+
+		Assert.AreEqual(1, rows.Count);
+		Assert.AreEqual("x", rows[0].Left!.Text);
+		Assert.AreEqual("X", rows[0].Right!.Text);
+	}
+
+	[TestMethod]
+	public void Pair_SingleAddedLineWithNoContext_IsOneRowWithFillerOnTheLeft()
+	{
+		IReadOnlyList<ImGuiWidgets.DiffRowPair> rows = ImGuiWidgets.DiffViewState.Pair(
+			Hunk(Added("X")));
+
+		Assert.AreEqual(1, rows.Count);
+		Assert.IsNull(rows[0].Left);
+		Assert.AreEqual("X", rows[0].Right!.Text);
+	}
+
+	[TestMethod]
+	public void Pair_SingleRemovedLineWithNoContext_IsOneRowWithFillerOnTheRight()
+	{
+		IReadOnlyList<ImGuiWidgets.DiffRowPair> rows = ImGuiWidgets.DiffViewState.Pair(
+			Hunk(Removed("x")));
+
+		Assert.AreEqual(1, rows.Count);
+		Assert.AreEqual("x", rows[0].Left!.Text);
+		Assert.IsNull(rows[0].Right);
+	}
+
+	[TestMethod]
 	public void Pair_TwoRunsSeparatedByContext_DoesNotPairAcrossTheContext()
 	{
 		IReadOnlyList<ImGuiWidgets.DiffRowPair> rows = ImGuiWidgets.DiffViewState.Pair(
