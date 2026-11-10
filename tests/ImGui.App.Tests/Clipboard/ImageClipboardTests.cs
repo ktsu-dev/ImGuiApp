@@ -85,6 +85,21 @@ public sealed class ImageClipboardTests
 	}
 
 	[TestMethod]
+	public void ReadingPixels_OfAPngWithAPresetDictionary_SaysSo()
+	{
+		MemoryClipboard clipboard = new() { Held = Convert.FromHexString(PresetDictionaryPng) };
+
+		Assert.IsFalse(clipboard.TryReadPixels(out ImagePixels? pixels, out string? message));
+		Assert.IsNull(pixels);
+		StringAssert.StartsWith(message, "The clipboard's image couldn't be read");
+	}
+
+	/// <summary>A 1x1 PNG whose IDAT zlib stream uses a preset dictionary, which PNG forbids.</summary>
+	private const string PresetDictionaryPng =
+		"89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000001149" +
+		"44415478BB0101010063F8CFC0F01F00050001FFBF002C1C0000000049454E44AE426082";
+
+	[TestMethod]
 	public void ForThisPlatform_GivesAClipboard() => Assert.IsNotNull(ImageClipboard.ForThisPlatform());
 
 	[TestMethod]
