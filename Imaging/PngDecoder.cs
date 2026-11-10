@@ -304,10 +304,8 @@ internal static class PngDecoder
 				read += chunk;
 			}
 		}
-		catch (Exception ex) when (ex is InvalidDataException or IOException)
+		catch (InvalidDataException ex)
 		{
-			// Inflating from memory has no other source of IOException than zlib refusing the
-			// stream (ZLibException), so both mean the image data is malformed.
 			throw new InvalidImageDataException("PNG image data is not a valid zlib stream.", ex);
 		}
 
