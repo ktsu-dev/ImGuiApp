@@ -66,7 +66,7 @@ There is no JPEG, BMP or TGA encoder.
 
 ## Other pixel layouts
 
-`PixelConverter.ToRgba8(source, width, height, layout, rowStride, destination)` converts a buffer in any `PixelLayout` to RGBA8: `Rgba8`, `Bgra8`, `Rgb8`, `Bgr8` or `Gray8`, with an optional row stride. `PixelConverter.Validate` checks such a buffer and returns its stride, and `BytesPerPixel(layout)` gives its pixel size.
+`PixelConverter.ToRgba8(source, width, height, layout, stride, destination)` converts a buffer in any `PixelLayout` to RGBA8: `Rgba8`, `Bgra8`, `Rgb8`, `Bgr8` or `Gray8`. `stride` is the bytes from the start of one row to the start of the next, or `0` for tightly packed rows. It checks the buffer first and throws if the stride is shorter than a row, the source is too short, or `destination` is shorter than `width * height * 4` bytes. `PixelConverter.Validate` runs the same check on its own and returns the effective stride, and `BytesPerPixel(layout)` gives the pixel size.
 
 ## Coming from ImageSharp
 
