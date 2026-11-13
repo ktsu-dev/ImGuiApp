@@ -417,6 +417,86 @@ public sealed class CodeTokenizerTests
 	}
 
 	[TestMethod]
+	[DataRow("javascript")]
+	[DataRow("typescript")]
+	public void RegexLiteralHoldingSlashStarIsNotAComment(string language)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("x.replace(/\\/*$/, ''); /* real */ y", language);
+
+		TokenAssert.HasToken(lines, "/\\/*$/", TokenKind.StringLiteral);
+		TokenAssert.HasToken(lines, "y", TokenKind.Plain);
+		HighlightedToken[] comments = [.. TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.Comment)];
+		Assert.HasCount(1, comments, $"Expected only /* real */ as a comment: {TokenAssert.Describe(lines)}");
+		Assert.AreEqual("/* real */", comments[0].Text);
+	}
+
+	[TestMethod]
+	[DataRow("javascript")]
+	[DataRow("typescript")]
+	public void RegexLiteralHoldingAQuoteOpensNoString(string language)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("line.split(/\"/); z", language);
+
+		TokenAssert.HasToken(lines, "/\"/", TokenKind.StringLiteral);
+		TokenAssert.HasToken(lines, ")", TokenKind.Punctuation);
+		TokenAssert.HasToken(lines, ";", TokenKind.Punctuation);
+		TokenAssert.HasToken(lines, "z", TokenKind.Plain);
+		Assert.HasCount(
+			1,
+			TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.StringLiteral),
+			$"Something after the regex opened a string: {TokenAssert.Describe(lines)}");
+	}
+
+	[TestMethod]
+	[DataRow("javascript", "s = /[/]/g;")]
+	[DataRow("typescript", "s = /[/]/g;")]
+	[DataRow("javascript", "s=/[/]/g;")]
+	[DataRow("javascript", "return /[/]/g;")]
+	public void RegexLiteralKeepsItsClassAndFlags(string language, string code)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight(code, language);
+
+		TokenAssert.HasToken(lines, "/[/]/g", TokenKind.StringLiteral);
+		TokenAssert.HasToken(lines, ";", TokenKind.Punctuation);
+	}
+
+	[TestMethod]
+	[DataRow("javascript", "a / b / c")]
+	[DataRow("javascript", "(x) / 2 / y")]
+	[DataRow("javascript", "arr[i] / n / 3")]
+	[DataRow("javascript", "this / 2 / 1")]
+	[DataRow("typescript", "a / b / c")]
+	public void DivisionIsNotARegexLiteral(string language, string code)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight(code, language);
+
+		Assert.IsEmpty(
+			TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.StringLiteral),
+			$"Division was read as a regex literal: {TokenAssert.Describe(lines)}");
+		Assert.AreEqual(2, TokenAssert.Flatten(lines).Count(token => token is { Kind: TokenKind.Operator, Text: "/" }));
+	}
+
+	[TestMethod]
+	[DataRow("javascript")]
+	[DataRow("typescript")]
+	public void CommentsAtTheStartOfAStatementAreStillComments(string language)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("// comment\nx = 1;\n/* block */ y = 2;", language);
+
+		TokenAssert.HasToken(lines, "// comment", TokenKind.Comment);
+		TokenAssert.HasToken(lines, "/* block */", TokenKind.Comment);
+		Assert.IsEmpty(TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.StringLiteral));
+	}
+
+	[TestMethod]
+	public void LanguagesWithoutRegexLiteralsStillReadSlashStarAsAComment()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("x = (/*c*/ 1);", "csharp");
+
+		TokenAssert.HasToken(lines, "/*c*/", TokenKind.Comment);
+	}
+
+	[TestMethod]
 	public void TokensAlwaysReconstructTheSource()
 	{
 		string code = "public void Run() // go\n{\n\tvar s = \"x\";\n}\n";

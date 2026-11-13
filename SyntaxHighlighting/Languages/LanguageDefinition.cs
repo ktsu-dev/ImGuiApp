@@ -126,6 +126,17 @@ public sealed record LanguageDefinition
 	/// </summary>
 	public char? DirectivePrefix { get; init; }
 
+	/// <summary>
+	/// Whether a <c>/</c> may open a regular-expression literal, as in JavaScript and TypeScript, so a
+	/// <c>/*</c> or a quote inside <c>/…/</c> cannot open a comment or a string. A <c>/</c> opens one where
+	/// a value is expected: at the start of the source, after an operator or punctuation other than
+	/// <c>)</c>, <c>]</c> and <c>}</c>, or after a keyword such as <c>return</c> or <c>typeof</c>. After an
+	/// identifier, number, string or closing bracket it is division. The literal, its flags included, is
+	/// emitted as <see cref="TokenKind.StringLiteral"/>; one with no closing <c>/</c> on its line is not a
+	/// literal, and the <c>/</c> is read as an operator.
+	/// </summary>
+	public bool RegexLiterals { get; init; }
+
 	/// <summary>Whether an identifier immediately followed by <c>(</c> is emitted as <see cref="TokenKind.Function"/>.</summary>
 	public bool HighlightFunctionCalls { get; init; } = true;
 

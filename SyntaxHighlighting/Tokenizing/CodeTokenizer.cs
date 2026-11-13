@@ -18,6 +18,14 @@ internal static class CodeTokenizer
 	// instance, so re-tokenizing (a cache miss, or a document rendered per frame) does not rebuild them.
 	private static readonly ConditionalWeakTable<LanguageDefinition, KeywordLookup> Lookups = [];
 
+	// The keywords after which a JavaScript '/' opens a regular expression rather than dividing:
+	// each is followed by an expression, never by a value a '/' could divide.
+	private static readonly HashSet<string> RegexPrecedingKeywords =
+	[
+		"await", "case", "delete", "do", "else", "in", "instanceof", "new", "of", "return", "throw",
+		"typeof", "void", "yield",
+	];
+
 	/// <summary>Tokenizes source text against a language definition.</summary>
 	/// <param name="source">The source text.</param>
 	/// <param name="language">The language definition.</param>
@@ -39,6 +47,11 @@ internal static class CodeTokenizer
 		int index = 0;
 		int plainStart = 0;
 
+		// The last token that was not a comment, which decides whether a '/' opens a regular
+		// expression or divides.
+		TokenKind? previousKind = null;
+		string previousText = string.Empty;
+
 		void FlushPlain(int end)
 		{
 			if (end > plainStart)
@@ -50,6 +63,16 @@ internal static class CodeTokenizer
 		while (index < source.Length)
 		{
 			int start = index;
+
+			if (language.RegexLiterals && TryReadRegex(source, previousKind, previousText, ref index))
+			{
+				FlushPlain(start);
+				tokens.Add(new HighlightedToken(TokenKind.StringLiteral, source[start..index]));
+				previousKind = TokenKind.StringLiteral;
+				previousText = source[start..index];
+				plainStart = index;
+				continue;
+			}
 
 			if (TryReadBlockComment(source, lookup, ref index, out TokenKind kind, out TokenBody body)
 				|| TryReadLineComment(source, lookup, ref index, out kind, out body)
@@ -70,6 +93,12 @@ internal static class CodeTokenizer
 				else
 				{
 					tokens.Add(new HighlightedToken(classified, text));
+				}
+
+				if (kind is not TokenKind.Comment and not TokenKind.DocComment)
+				{
+					previousKind = classified;
+					previousText = text;
 				}
 
 				plainStart = index;
@@ -141,6 +170,81 @@ internal static class CodeTokenizer
 
 		return scan < source.Length ? source[scan] : '\0';
 	}
+
+	// A '/' opens a regular expression where an expression is expected, and divides after a value.
+	// It cannot open one before '*' or '/', which start comments. The literal runs to the next '/'
+	// outside a [...] class that no backslash escapes, then takes its flag letters; with no such '/'
+	// on the line it is not a literal at all.
+	private static bool TryReadRegex(string source, TokenKind? previousKind, string previousText, ref int index)
+	{
+		if (source[index] != '/'
+			|| index + 1 >= source.Length
+			|| source[index + 1] is '*' or '/'
+			|| !ExpectsExpression(previousKind, previousText))
+		{
+			return false;
+		}
+
+		bool inClass = false;
+		int scan = index + 1;
+		while (scan < source.Length)
+		{
+			char c = source[scan];
+			if (c is '\n' or '\r')
+			{
+				return false;
+			}
+
+			if (c == '\\')
+			{
+				if (scan + 1 >= source.Length || source[scan + 1] is '\n' or '\r')
+				{
+					return false;
+				}
+
+				scan += 2;
+				continue;
+			}
+
+			if (c == '[')
+			{
+				inClass = true;
+			}
+			else if (c == ']')
+			{
+				inClass = false;
+			}
+			else if (c == '/' && !inClass)
+			{
+				break;
+			}
+
+			scan++;
+		}
+
+		if (scan >= source.Length)
+		{
+			return false;
+		}
+
+		scan++;
+		while (scan < source.Length && char.IsAsciiLetter(source[scan]))
+		{
+			scan++;
+		}
+
+		index = scan;
+		return true;
+	}
+
+	private static bool ExpectsExpression(TokenKind? previousKind, string previousText) => previousKind switch
+	{
+		null => true,
+		TokenKind.Operator => true,
+		TokenKind.Punctuation => previousText is not (")" or "]" or "}"),
+		TokenKind.Keyword or TokenKind.ControlKeyword => RegexPrecedingKeywords.Contains(previousText),
+		_ => false,
+	};
 
 	private static bool TryReadBlockComment(string source, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
 	{
@@ -496,8 +600,10 @@ internal static class CodeTokenizer
 		if (language.OperatorCharacters.Contains(current, StringComparison.Ordinal))
 		{
 			kind = TokenKind.Operator;
-			int scan = index;
-			while (scan < source.Length && language.OperatorCharacters.Contains(source[scan], StringComparison.Ordinal))
+			int scan = index + 1;
+			while (scan < source.Length
+				&& language.OperatorCharacters.Contains(source[scan], StringComparison.Ordinal)
+				&& !(language.RegexLiterals && source[scan] == '/'))
 			{
 				scan++;
 			}
