@@ -489,6 +489,19 @@ public sealed class CodeTokenizerTests
 	}
 
 	[TestMethod]
+	[DataRow("x = /abc\ny/ 2;")]
+	[DataRow("x = /a\\\nb/ 2;")]
+	public void RegexLiteralThatDoesNotCloseOnItsLineIsNotALiteral(string code)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight(code, "javascript");
+
+		Assert.IsEmpty(
+			TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.StringLiteral),
+			$"An unclosed regex was read as a literal: {TokenAssert.Describe(lines)}");
+		TokenAssert.HasToken(lines, "2", TokenKind.Number);
+	}
+
+	[TestMethod]
 	public void LanguagesWithoutRegexLiteralsStillReadSlashStarAsAComment()
 	{
 		IReadOnlyList<HighlightedLine> lines = Highlight("x = (/*c*/ 1);", "csharp");

@@ -64,17 +64,14 @@ internal static class CodeTokenizer
 		{
 			int start = index;
 
-			if (language.RegexLiterals && TryReadRegex(source, previousKind, previousText, ref index))
-			{
-				FlushPlain(start);
-				tokens.Add(new HighlightedToken(TokenKind.StringLiteral, source[start..index]));
-				previousKind = TokenKind.StringLiteral;
-				previousText = source[start..index];
-				plainStart = index;
-				continue;
-			}
+			// A regex literal is emitted whole: it is not searched for an embedded language, and it
+			// does not spend a language hint meant for the next string.
+			TokenKind kind = TokenKind.Plain;
+			TokenBody body = TokenBody.None;
+			bool regex = language.RegexLiterals && TryReadRegex(source, previousKind, previousText, ref index, out kind, out body);
 
-			if (TryReadBlockComment(source, lookup, ref index, out TokenKind kind, out TokenBody body)
+			if (regex
+				|| TryReadBlockComment(source, lookup, ref index, out kind, out body)
 				|| TryReadLineComment(source, lookup, ref index, out kind, out body)
 				|| TryReadString(source, lookup, ref index, out kind, out body)
 				|| TryReadDirective(source, language, ref index, out kind, out body)
@@ -84,9 +81,9 @@ internal static class CodeTokenizer
 			{
 				FlushPlain(start);
 				string text = source[start..index];
-				TokenKind classified = Reclassify(kind, text, source, index, language);
+				TokenKind classified = regex ? kind : Reclassify(kind, text, source, index, language);
 
-				if (embeds)
+				if (embeds && !regex)
 				{
 					pendingHint = Embed(tokens, text, classified, body, language, pendingHint);
 				}
@@ -95,12 +92,7 @@ internal static class CodeTokenizer
 					tokens.Add(new HighlightedToken(classified, text));
 				}
 
-				if (kind is not TokenKind.Comment and not TokenKind.DocComment)
-				{
-					previousKind = classified;
-					previousText = text;
-				}
-
+				RememberSignificant(kind, classified, text, ref previousKind, ref previousText);
 				plainStart = index;
 				continue;
 			}
@@ -175,8 +167,10 @@ internal static class CodeTokenizer
 	// It cannot open one before '*' or '/', which start comments. The literal runs to the next '/'
 	// outside a [...] class that no backslash escapes, then takes its flag letters; with no such '/'
 	// on the line it is not a literal at all.
-	private static bool TryReadRegex(string source, TokenKind? previousKind, string previousText, ref int index)
+	private static bool TryReadRegex(string source, TokenKind? previousKind, string previousText, ref int index, out TokenKind kind, out TokenBody body)
 	{
+		kind = TokenKind.StringLiteral;
+		body = TokenBody.None;
 		if (source[index] != '/'
 			|| index + 1 >= source.Length
 			|| source[index + 1] is '*' or '/'
@@ -185,49 +179,13 @@ internal static class CodeTokenizer
 			return false;
 		}
 
-		bool inClass = false;
-		int scan = index + 1;
-		while (scan < source.Length)
-		{
-			char c = source[scan];
-			if (c is '\n' or '\r')
-			{
-				return false;
-			}
-
-			if (c == '\\')
-			{
-				if (scan + 1 >= source.Length || source[scan + 1] is '\n' or '\r')
-				{
-					return false;
-				}
-
-				scan += 2;
-				continue;
-			}
-
-			if (c == '[')
-			{
-				inClass = true;
-			}
-			else if (c == ']')
-			{
-				inClass = false;
-			}
-			else if (c == '/' && !inClass)
-			{
-				break;
-			}
-
-			scan++;
-		}
-
-		if (scan >= source.Length)
+		int close = FindRegexClose(source, index + 1);
+		if (close < 0)
 		{
 			return false;
 		}
 
-		scan++;
+		int scan = close + 1;
 		while (scan < source.Length && char.IsAsciiLetter(source[scan]))
 		{
 			scan++;
@@ -235,6 +193,47 @@ internal static class CodeTokenizer
 
 		index = scan;
 		return true;
+	}
+
+	// The index of the '/' that closes a regex body starting at start: the first one outside a [...]
+	// class that no backslash escapes, or -1 when the line or the source ends first.
+	private static int FindRegexClose(string source, int start)
+	{
+		bool inClass = false;
+		int scan = start;
+		while (scan < source.Length && source[scan] is not ('\n' or '\r'))
+		{
+			char c = source[scan];
+			if (c == '\\')
+			{
+				// An escape keeps the next character from closing the body, but not a line break.
+				scan++;
+				scan += scan < source.Length && source[scan] is not ('\n' or '\r') ? 1 : 0;
+				continue;
+			}
+
+			if (c == '/' && !inClass)
+			{
+				return scan;
+			}
+
+			inClass = c == '[' || (inClass && c != ']');
+			scan++;
+		}
+
+		return -1;
+	}
+
+	// Records the last token that is not a comment, which decides whether a '/' opens a regex.
+	private static void RememberSignificant(TokenKind kind, TokenKind classified, string text, ref TokenKind? previousKind, ref string previousText)
+	{
+		if (kind is TokenKind.Comment or TokenKind.DocComment)
+		{
+			return;
+		}
+
+		previousKind = classified;
+		previousText = text;
 	}
 
 	private static bool ExpectsExpression(TokenKind? previousKind, string previousText) => previousKind switch
