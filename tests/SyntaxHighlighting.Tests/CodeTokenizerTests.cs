@@ -417,6 +417,60 @@ public sealed class CodeTokenizerTests
 	}
 
 	[TestMethod]
+	[DataRow("1'000'000", "cpp")]
+	[DataRow("0xFF'FF'00'00u", "cpp")]
+	[DataRow("0b1010'1010", "cpp")]
+	[DataRow("1'000.5e1'0", "cpp")]
+	[DataRow("1'000'000", "c")]
+	[DataRow("0xFF'FF'00'00u", "c")]
+	public void DigitSeparatorStaysInsideTheNumber(string literal, string language)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight($"x = {literal};", language);
+
+		TokenAssert.HasToken(lines, literal, TokenKind.Number);
+		Assert.IsEmpty(
+			TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.StringLiteral),
+			$"A digit separator opened a character literal: {TokenAssert.Describe(lines)}");
+	}
+
+	[TestMethod]
+	public void Cpp_OddDigitSeparatorsLeaveTheTrailingCommentAComment()
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("int x = 1'000; // c", "cpp");
+
+		TokenAssert.HasToken(lines, "1'000", TokenKind.Number);
+		TokenAssert.HasToken(lines, ";", TokenKind.Punctuation);
+		TokenAssert.HasToken(lines, "// c", TokenKind.Comment);
+		Assert.IsEmpty(
+			TokenAssert.Flatten(lines).Where(token => token.Kind == TokenKind.StringLiteral),
+			$"A digit separator opened a character literal: {TokenAssert.Describe(lines)}");
+	}
+
+	[TestMethod]
+	public void Cpp_CharacterLiteralAfterANumberIsStillALiteral()
+	{
+		// The separator needs a digit on both sides, so a quote after a comma, or after a number
+		// with a letter next, still opens a character literal.
+		IReadOnlyList<HighlightedLine> lines = Highlight("f(1,'a'); g(2'b');", "cpp");
+
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+		TokenAssert.HasToken(lines, "'a'", TokenKind.StringLiteral);
+		TokenAssert.HasToken(lines, "2", TokenKind.Number);
+		TokenAssert.HasToken(lines, "'b'", TokenKind.StringLiteral);
+	}
+
+	[TestMethod]
+	[DataRow("javascript")]
+	[DataRow("python")]
+	public void LanguagesWithoutADigitSeparatorStillOpenAStringAfterANumber(string language)
+	{
+		IReadOnlyList<HighlightedLine> lines = Highlight("x = 1'000'", language);
+
+		TokenAssert.HasToken(lines, "1", TokenKind.Number);
+		TokenAssert.HasToken(lines, "'000'", TokenKind.StringLiteral);
+	}
+
+	[TestMethod]
 	public void TokensAlwaysReconstructTheSource()
 	{
 		string code = "public void Run() // go\n{\n\tvar s = \"x\";\n}\n";
