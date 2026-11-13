@@ -146,6 +146,7 @@ public static class BuiltInLanguages
 		Constants = ["true", "false", "null", "undefined", "NaN", "Infinity"],
 		IdentifierStartCharacters = "_$",
 		IdentifierCharacters = "_$",
+		RegexLiterals = true,
 		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
