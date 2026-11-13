@@ -126,6 +126,14 @@ public sealed record LanguageDefinition
 	/// </summary>
 	public char? DirectivePrefix { get; init; }
 
+	/// <summary>
+	/// The character that may separate digits inside a numeric literal, as <c>'</c> does in C++14 and C23
+	/// (<c>1'000'000</c>, <c>0xFF'FF</c>), or <see langword="null"/> when the language has none. It
+	/// continues a number only between two digits of the literal's base, so a character literal right
+	/// after a number, as in <c>f(1,'a')</c>, still opens a string.
+	/// </summary>
+	public char? DigitSeparator { get; init; }
+
 	/// <summary>Whether an identifier immediately followed by <c>(</c> is emitted as <see cref="TokenKind.Function"/>.</summary>
 	public bool HighlightFunctionCalls { get; init; } = true;
 
