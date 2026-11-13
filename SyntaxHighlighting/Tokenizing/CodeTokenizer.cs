@@ -81,7 +81,7 @@ internal static class CodeTokenizer
 			{
 				FlushPlain(start);
 				string text = source[start..index];
-				TokenKind classified = regex ? kind : Reclassify(kind, text, source, index, language);
+				TokenKind classified = Reclassify(kind, text, source, index, language);
 
 				if (embeds && !regex)
 				{
