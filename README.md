@@ -28,6 +28,7 @@
 - **Markdown Rendering**: CommonMark rendering (headings, emphasis, lists, tables, links, images) built on Markdig via `ktsu.ImGui.Markdown`, standalone and independent of `ktsu.ImGui.App`
 - **Syntax Highlighting**: Themed code rendering for fifteen languages, with an optional line-number gutter and cached tokenization via `ktsu.ImGui.SyntaxHighlighting`, standalone and independent of `ktsu.ImGui.App`. The data-driven tokenizer itself lives in the renderer-agnostic `ktsu.SyntaxHighlighting`, which knows nothing about ImGui
 - **Embedded Languages**: XML in a doc comment, JSON in a fixture string and SQL in a query string are recognized inside the host language and highlighted in place, or named outright with a `// lang=json` hint comment
+- **Command-Room Look**: A standby/emergency theme with hazard-striped EMERGENCY banners, segmented countdowns, sync gauges, hex sector maps, status lamps and pattern monitors via `ktsu.ImGui.Sortie`
 
 ## Libraries
 
@@ -94,6 +95,12 @@ Turns source text into classified token runs, with built-in definitions for C#, 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.SyntaxHighlighting?label=ktsu.ImGui.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.SyntaxHighlighting)
 
 Draws what `ktsu.SyntaxHighlighting` classifies, inside Dear ImGui: a background panel, an optional line-number gutter, and colored token runs whose palette follows the host's light or dark theme. Standalone, with no dependency on `ktsu.ImGui.App`, and it doubles as the code-block renderer for `ktsu.ImGui.Markdown`.
+
+### ImGui.Sortie - Command-Room Theme and Widgets
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Sortie?label=ktsu.ImGui.Sortie&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Sortie)
+
+Orange and red on black, with heavy condensed lettering: an EMERGENCY banner with hazard stripes, a seven-segment countdown, a sync-ratio gauge, a clickable hex sector map, framed panels, status lamps, readouts and a pattern monitor. `SortieStyle.Apply` switches every widget between the standby and emergency conditions at once, and `SortieTheme` puts the palette through `ktsu.ImGui.Styler`. An original homage with no franchise names, fonts or artwork.
 
 ### Imaging - Image Decoding and Editing (UI-Agnostic)
 

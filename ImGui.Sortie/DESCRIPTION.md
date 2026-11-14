@@ -1,0 +1,1 @@
+A command-room look for Dear ImGui: orange and red on black, heavy condensed type, hazard-striped EMERGENCY banners, segmented countdowns, sync-ratio gauges, hex sector maps, status lamps and pattern monitors. Two conditions, standby and emergency, recolour every widget at once, and a semantic theme lets the palette go through ktsu.ImGui.Styler like any other theme.
