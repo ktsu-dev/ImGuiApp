@@ -2,11 +2,11 @@
 
 namespace ktsu.ImGui.Phosphor;
 
-using System;
 using System.Collections.Generic;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
+using ktsu.ScopedAction;
 
 /// <summary>
 /// Applies the phosphor look to Dear ImGui's own widgets and remembers which tint the widgets in
@@ -56,7 +56,7 @@ public static class PhosphorStyle
 	/// </summary>
 	/// <param name="tint">Which phosphor to show.</param>
 	/// <returns>A scope that pops everything it pushed when disposed.</returns>
-	public static IDisposable Scope(PhosphorTint tint = PhosphorTint.Green) => new PhosphorScope(tint);
+	public static ScopedAction Scope(PhosphorTint tint = PhosphorTint.Green) => new PhosphorScope(tint);
 
 	internal static IReadOnlyList<(ImGuiCol Col, Vector4 Color)> Colors(PhosphorPalette p)
 	{
@@ -185,12 +185,8 @@ public static class PhosphorStyle
 		}
 	}
 
-	private sealed class PhosphorScope : IDisposable
+	private sealed class PhosphorScope : ScopedAction
 	{
-		private readonly int colorCount;
-		private readonly int varCount;
-		private bool disposed;
-
 		public PhosphorScope(PhosphorTint tint)
 		{
 			IReadOnlyList<(ImGuiCol Col, Vector4 Color)> colors = Colors(PhosphorPalette.For(tint));
@@ -204,22 +200,15 @@ public static class PhosphorStyle
 				ImGui.PushStyleVar(var, value);
 			}
 
-			colorCount = colors.Count;
-			varCount = FloatVars.Count;
+			int colorCount = colors.Count;
+			int varCount = FloatVars.Count;
 			tints.Push(tint);
-		}
-
-		public void Dispose()
-		{
-			if (disposed)
+			OnClose = () =>
 			{
-				return;
-			}
-
-			disposed = true;
-			ImGui.PopStyleVar(varCount);
-			ImGui.PopStyleColor(colorCount);
-			tints.Pop();
+				ImGui.PopStyleVar(varCount);
+				ImGui.PopStyleColor(colorCount);
+				tints.Pop();
+			};
 		}
 	}
 }

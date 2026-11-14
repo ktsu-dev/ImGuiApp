@@ -9,17 +9,33 @@ using ktsu.ImGui.Probes;
 public static partial class ImGuiPhosphor
 {
 	/// <summary>
-	/// Begins a panel outlined by corner brackets, with its title on an inverted tab at the top left.
-	/// Always pair with <see cref="EndFrame"/>, whatever this returns.
+	/// Opens a panel outlined by corner brackets, with its title on an inverted tab at the top left.
+	/// Dispose the returned scope to close the panel, whether or not its content was visible.
 	/// </summary>
 	/// <param name="title">The title, shown in capitals, and the panel's identity.</param>
 	/// <param name="size">Size of the panel; the available space where a component is zero or less.</param>
-	/// <returns>True when the panel's content is visible and should be drawn.</returns>
-	public static bool BeginFrame(string title, Vector2 size = default)
+	/// <returns>The open panel; read <see cref="PhosphorFrame.IsVisible"/> before drawing its content.</returns>
+	/// <example>
+	/// <code>
+	/// using (PhosphorFrame frame = ImGuiPhosphor.Frame("COMMS", new(400, 200)))
+	/// {
+	///     if (frame.IsVisible)
+	///     {
+	///         terminal.Draw("log");
+	///     }
+	/// }
+	/// </code>
+	/// </example>
+	public static PhosphorFrame Frame(string title, Vector2 size = default)
 	{
 		Ensure.NotNull(title);
+		return new PhosphorFrame(title, size);
+	}
+
+	/// <summary>Draws the frame's background, border, brackets and caption tab into the open child.</summary>
+	internal static void DrawFrameChrome(string title)
+	{
 		PhosphorPalette palette = PhosphorStyle.Palette;
-		bool visible = ImGui.BeginChild(title, size, ImGuiChildFlags.AlwaysUseWindowPadding, ImGuiWindowFlags.NoBackground);
 		Vector2 min = ImGui.GetWindowPos();
 		Vector2 max = min + ImGui.GetWindowSize() - Vector2.One;
 		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
@@ -41,9 +57,5 @@ public static partial class ImGuiPhosphor
 		}
 
 		ImGuiProbes.MarkRegion($"frame/{title}", min, max);
-		return visible;
 	}
-
-	/// <summary>Ends a panel begun with <see cref="BeginFrame"/>.</summary>
-	public static void EndFrame() => ImGui.EndChild();
 }

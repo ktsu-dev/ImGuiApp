@@ -150,76 +150,80 @@ internal static class ImGuiPhosphorDemo
 
 	private static void DrawTerminal(Vector2 size)
 	{
-		if (ImGuiPhosphor.BeginFrame("TERMINAL", size))
+		using (PhosphorFrame frame = ImGuiPhosphor.Frame("TERMINAL", size))
 		{
-			Terminal.Draw("log", new Vector2(-1f, -ImGui.GetFrameHeightWithSpacing()));
-			if (ImGuiPhosphor.Button("RUN DIAGNOSTIC"))
+			if (frame.IsVisible)
 			{
-				CommandsRun++;
-				Terminal.WriteLine($"> DIAGNOSTIC {CommandsRun:D2}");
-				Terminal.WriteLine("  ALL SYSTEMS WITHIN TOLERANCE");
-			}
+				Terminal.Draw("log", new Vector2(-1f, -ImGui.GetFrameHeightWithSpacing()));
+				if (ImGuiPhosphor.Button("RUN DIAGNOSTIC"))
+				{
+					CommandsRun++;
+					Terminal.WriteLine($"> DIAGNOSTIC {CommandsRun:D2}");
+					Terminal.WriteLine("  ALL SYSTEMS WITHIN TOLERANCE");
+				}
 
-			ImGui.SameLine();
-			if (ImGuiPhosphor.Button("ACKNOWLEDGE"))
-			{
-				AlertActive = false;
+				ImGui.SameLine();
+				if (ImGuiPhosphor.Button("ACKNOWLEDGE"))
+				{
+					AlertActive = false;
+				}
 			}
 		}
-
-		ImGuiPhosphor.EndFrame();
 	}
 
 	private static void DrawScope(Vector2 size)
 	{
-		if (ImGuiPhosphor.BeginFrame("SIGNAL", size))
+		using (PhosphorFrame frame = ImGuiPhosphor.Frame("SIGNAL", size))
 		{
-			Span<float> samples = stackalloc float[160];
-			for (int i = 0; i < samples.Length; i++)
+			if (frame.IsVisible)
 			{
-				float t = (i / (float)samples.Length * 4f * MathF.PI) + (time * 3f);
-				samples[i] = (0.6f * MathF.Sin(t)) + (0.25f * MathF.Sin((t * 3.7f) + 1f));
+				Span<float> samples = stackalloc float[160];
+				for (int i = 0; i < samples.Length; i++)
+				{
+					float t = (i / (float)samples.Length * 4f * MathF.PI) + (time * 3f);
+					samples[i] = (0.6f * MathF.Sin(t)) + (0.25f * MathF.Sin((t * 3.7f) + 1f));
+				}
+
+				ImGuiPhosphor.Oscilloscope("carrier", samples, new Vector2(-1f, -1f));
 			}
-
-			ImGuiPhosphor.Oscilloscope("carrier", samples, new Vector2(-1f, -1f));
 		}
-
-		ImGuiPhosphor.EndFrame();
 	}
 
 	private static void DrawNavigation(Vector2 size)
 	{
-		if (ImGuiPhosphor.BeginFrame("NAVIGATION", size))
+		using (PhosphorFrame frame = ImGuiPhosphor.Frame("NAVIGATION", size))
 		{
-			float radius = MathF.Floor(MathF.Min(ImGui.GetContentRegionAvail().Y, ImGui.GetContentRegionAvail().X * 0.5f) * 0.5f);
-			ImGuiPhosphor.RadarSweep("proximity", radius, Contacts);
-			ImGui.SameLine();
-			ImGuiPhosphor.VectorGrid("approach", new Vector2(-1f, radius * 2f));
+			if (frame.IsVisible)
+			{
+				float radius = MathF.Floor(MathF.Min(ImGui.GetContentRegionAvail().Y, ImGui.GetContentRegionAvail().X * 0.5f) * 0.5f);
+				ImGuiPhosphor.RadarSweep("proximity", radius, Contacts);
+				ImGui.SameLine();
+				ImGuiPhosphor.VectorGrid("approach", new Vector2(-1f, radius * 2f));
+			}
 		}
-
-		ImGuiPhosphor.EndFrame();
 	}
 
 	private static void DrawSystems(Vector2 size)
 	{
-		if (ImGuiPhosphor.BeginFrame("SYSTEMS", size))
+		using (PhosphorFrame frame = ImGuiPhosphor.Frame("SYSTEMS", size))
 		{
-			float readout = (ImGui.GetContentRegionAvail().X - (ImGui.GetStyle().ItemSpacing.X * 2f)) / 3f;
-			ImGuiPhosphor.Readout("VELOCITY", "0.42 C", readout);
-			ImGui.SameLine();
-			ImGuiPhosphor.Readout("HEADING", "214.07", readout);
-			ImGui.SameLine();
-			ImGuiPhosphor.Readout("CREW", "7 / 7", readout);
-			ImGuiPhosphor.StatusLight("LIFE SUPPORT", lit: true);
-			ImGui.SameLine();
-			ImGuiPhosphor.StatusLight("BEACON", lit: true, blinkHertz: 1f);
-			ImGui.SameLine();
-			ImGuiPhosphor.StatusLight("COMMS", lit: false);
-			ImGuiPhosphor.SegmentBar("FUEL", 0.63f);
-			ImGuiPhosphor.SegmentBar("COOLANT", 0.31f);
+			if (frame.IsVisible)
+			{
+				float readout = (ImGui.GetContentRegionAvail().X - (ImGui.GetStyle().ItemSpacing.X * 2f)) / 3f;
+				ImGuiPhosphor.Readout("VELOCITY", "0.42 C", readout);
+				ImGui.SameLine();
+				ImGuiPhosphor.Readout("HEADING", "214.07", readout);
+				ImGui.SameLine();
+				ImGuiPhosphor.Readout("CREW", "7 / 7", readout);
+				ImGuiPhosphor.StatusLight("LIFE SUPPORT", lit: true);
+				ImGui.SameLine();
+				ImGuiPhosphor.StatusLight("BEACON", lit: true, blinkHertz: 1f);
+				ImGui.SameLine();
+				ImGuiPhosphor.StatusLight("COMMS", lit: false);
+				ImGuiPhosphor.SegmentBar("FUEL", 0.63f);
+				ImGuiPhosphor.SegmentBar("COOLANT", 0.31f);
+			}
 		}
-
-		ImGuiPhosphor.EndFrame();
 	}
 
 	private static void Main() => ImGuiApp.Start(BuildConfig());

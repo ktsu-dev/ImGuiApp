@@ -21,7 +21,7 @@ artwork.
 - **Controls**: bracketed `Button`, blinking `StatusLight`, segmented `SegmentBar`
 - **Instruments**: `Oscilloscope` over a sample span, `RadarSweep` with fading `RadarContact`
   blips, and a scrolling perspective `VectorGrid`
-- **Frames**: `BeginFrame`/`EndFrame` draw a titled, bordered panel
+- **Frames**: `Frame` opens a titled, bordered panel as a scope; dispose it (a `using` block) to close the panel
 - **Terminal**: `PhosphorTerminal` types queued lines behind a blinking block cursor and scrolls
   old lines away
 
@@ -48,12 +48,13 @@ PhosphorStyle.Apply(PhosphorTint.Green);
 
 // Every frame
 ImGui.Begin("Console");
-if (ImGuiPhosphor.BeginFrame("COMMS", new(400, 200)))
+using (PhosphorFrame frame = ImGuiPhosphor.Frame("COMMS", new(400, 200)))
 {
-	terminal.Draw("log");
+	if (frame.IsVisible)
+	{
+		terminal.Draw("log");
+	}
 }
-
-ImGuiPhosphor.EndFrame();
 
 ImGuiPhosphor.Readout("DRIVE A", "STANDBY");
 ImGuiPhosphor.StatusLight("O2", lit: true, blinkHertz: 1f);
