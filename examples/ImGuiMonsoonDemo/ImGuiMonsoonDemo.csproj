@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.ScopedAction" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 </Project>

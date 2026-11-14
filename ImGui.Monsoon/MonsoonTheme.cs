@@ -8,6 +8,8 @@ using System.Numerics;
 
 using Hexa.NET.ImGui;
 
+using ktsu.ScopedAction;
+
 /// <summary>
 /// Applies the Monsoon look to Dear ImGui's own widgets: square corners, hairline neon borders,
 /// cyan for structure, magenta for whatever is being touched, amber for what needs reading.
@@ -64,7 +66,7 @@ public static class MonsoonTheme
 	/// Pushes the theme's colours and spacing until the returned scope is disposed.
 	/// </summary>
 	/// <returns>The scope; dispose it to pop everything it pushed.</returns>
-	public static IDisposable Scoped()
+	public static ScopedAction Scoped()
 	{
 		foreach (KeyValuePair<ImGuiCol, Vector4> entry in ColorMap)
 		{
@@ -161,20 +163,9 @@ public static class MonsoonTheme
 		};
 	}
 
-	private sealed class StyleScope(int colorCount, int varCount) : IDisposable
+	private sealed class StyleScope(int colorCount, int varCount) : ScopedAction(onOpen: null, onClose: () =>
 	{
-		private bool disposed;
-
-		public void Dispose()
-		{
-			if (disposed)
-			{
-				return;
-			}
-
-			disposed = true;
-			ImGui.PopStyleVar(varCount);
-			ImGui.PopStyleColor(colorCount);
-		}
-	}
+		ImGui.PopStyleVar(varCount);
+		ImGui.PopStyleColor(colorCount);
+	});
 }

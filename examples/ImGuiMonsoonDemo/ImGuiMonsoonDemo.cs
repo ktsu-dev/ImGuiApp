@@ -66,11 +66,12 @@ internal static class ImGuiMonsoonDemo
 	{
 		MonsoonWidgets.NeonSign("モンスーン", 44f);
 		ImGui.SameLine(0f, 24f);
-		ImGui.BeginGroup();
-		ImGui.Dummy(new Vector2(0f, 6f));
-		MonsoonWidgets.GlitchText("MONSOON // UPLINK 2049-B");
-		MonsoonWidgets.NeonText("SECTOR 7 / LEVEL 88 / NIGHT CYCLE", MonsoonPalette.TextDim, 0.05f);
-		ImGui.EndGroup();
+		using (new ScopedGroup())
+		{
+			ImGui.Dummy(new Vector2(0f, 6f));
+			MonsoonWidgets.GlitchText("MONSOON // UPLINK 2049-B");
+			MonsoonWidgets.NeonText("SECTOR 7 / LEVEL 88 / NIGHT CYCLE", MonsoonPalette.TextDim, 0.05f);
+		}
 
 		ImGui.SameLine(0f, 32f);
 		DrawMotionSelector();
@@ -103,7 +104,7 @@ internal static class ImGuiMonsoonDemo
 
 	private static void DrawMotionSelector()
 	{
-		ImGui.BeginGroup();
+		using ScopedGroup group = new();
 		int motion = (int)MonsoonEffects.Motion;
 		for (int i = 0; i < MotionLabels.Length; i++)
 		{
@@ -114,8 +115,6 @@ internal static class ImGuiMonsoonDemo
 
 			ImGuiProbes.MarkItem(MotionLabels[i]);
 		}
-
-		ImGui.EndGroup();
 	}
 
 	private static void DrawStatus()
