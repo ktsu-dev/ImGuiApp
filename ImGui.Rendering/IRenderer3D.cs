@@ -47,6 +47,13 @@ public enum BlendMode
 	/// <see cref="IRenderer3D.ToneMap"/> to keep the range.
 	/// </summary>
 	Additive,
+
+	/// <summary>
+	/// Premultiplied source-over: the source colour is added as it is, and the destination is scaled by
+	/// one minus the source alpha. For something that both emits and absorbs, such as a dusty volume:
+	/// its light is added and what was behind it is dimmed by how much it lets through.
+	/// </summary>
+	Premultiplied,
 }
 
 /// <summary>The storage a render target's colour attachment uses.</summary>

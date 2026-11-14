@@ -305,6 +305,29 @@ public sealed class VolumeTests : IDisposable
 	}
 
 	[TestMethod]
+	public void APremultipliedPassDimsWhatWasAlreadyDrawnBehindIt()
+	{
+		// A lit background at 0.5, then a dust-only slab one unit thick at extinction 1: what shows is
+		// the background dimmed by e^-1, since the slab emits nothing.
+		nint target = renderer.CreateRenderTarget(Size, Size, depth: false, RenderTargetFormat.Rgba16F);
+		renderer.Clear(target, new Vector4(0.5f, 0.5f, 0.5f, 1f), 1f);
+		Half[] values = new Half[2 * 2 * 2 * 4];
+		for (int i = 3; i < values.Length; i += 4)
+		{
+			values[i] = (Half)1f;
+		}
+
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 4, values);
+		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 1f)) with
+		{
+			Blend = BlendMode.Premultiplied,
+			Extinction = new Vector4(0f, 0f, 0f, 1f),
+		});
+
+		Assert.AreEqual(0.5f * MathF.Exp(-1f), Hdr(target, Size / 2, Size / 2).X, 0.01f);
+	}
+
+	[TestMethod]
 	public void AVolumeNeedsOneOrFourChannels() =>
 		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(1, 1, 1, 2, new Half[2]));
 

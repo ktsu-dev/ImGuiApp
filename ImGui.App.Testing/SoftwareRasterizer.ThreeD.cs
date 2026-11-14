@@ -457,7 +457,7 @@ public static partial class SoftwareRasterizer
 		Rgba32 final = blend switch
 		{
 			BlendMode.Alpha when source.A != 255 => BlendOver(source, target.GetPixel(x, y)),
-			BlendMode.Additive => HdrBuffer.ToRgba32(Blend(ToVector(source), ToVector(target.GetPixel(x, y)), blend)),
+			BlendMode.Additive or BlendMode.Premultiplied => HdrBuffer.ToRgba32(Blend(ToVector(source), ToVector(target.GetPixel(x, y)), blend)),
 			_ => source,
 		};
 
@@ -487,6 +487,7 @@ public static partial class SoftwareRasterizer
 		{
 			BlendMode.Alpha => new Vector4((colour * alpha) + (under * (1f - alpha)), alpha + (destination.W * (1f - alpha))),
 			BlendMode.Additive => new Vector4((colour * alpha) + under, alpha + destination.W),
+			BlendMode.Premultiplied => new Vector4(colour + (under * (1f - alpha)), alpha + (destination.W * (1f - alpha))),
 			_ => source,
 		};
 	}

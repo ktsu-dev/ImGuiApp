@@ -179,6 +179,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform vec3 VolumeSize;
 		uniform vec4 TargetSize;
 		uniform int Additive;
+		uniform int Premultiplied;
 		uniform float LowNoiseAmplitude;
 		uniform float LowNoiseScale;
 		uniform float HighNoiseAmplitude;
@@ -342,7 +343,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				transmittance *= exp(-dot(Extinction, value) * worldStep);
 			}
 
-			float alpha = Additive != 0 ? 1.0 : max(clamp(Color.a * column, 0.0, 1.0), 1.0 - transmittance);
+			float alpha = Additive != 0 ? 1.0 : Premultiplied != 0 ? 1.0 - transmittance : max(clamp(Color.a * column, 0.0, 1.0), 1.0 - transmittance);
 			if (light == vec3(0.0) && (Additive != 0 || alpha <= 0.0))
 			{
 				discard;
@@ -378,6 +379,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeSizeLocation;
 	private int volumeTargetSizeLocation;
 	private int volumeAdditiveLocation;
+	private int volumePremultipliedLocation;
 	private int volumeLowNoiseAmplitudeLocation;
 	private int volumeLowNoiseScaleLocation;
 	private int volumeHighNoiseAmplitudeLocation;
@@ -796,6 +798,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform3(volumeSizeLocation, from.Width, from.Height, from.Depth);
 			gl.Uniform4(volumeTargetSizeLocation, to.Width, to.Height, 0f, 0f);
 			gl.Uniform1(volumeAdditiveLocation, state.Blend == BlendMode.Additive ? 1 : 0);
+			gl.Uniform1(volumePremultipliedLocation, state.Blend == BlendMode.Premultiplied ? 1 : 0);
 			gl.Uniform1(volumeLowNoiseAmplitudeLocation, state.LowNoiseAmplitude);
 			gl.Uniform1(volumeLowNoiseScaleLocation, state.LowNoiseScale);
 			gl.Uniform1(volumeHighNoiseAmplitudeLocation, state.HighNoiseAmplitude);
@@ -908,6 +911,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeSizeLocation = gl.GetUniformLocation(volumeProgram, "VolumeSize");
 		volumeTargetSizeLocation = gl.GetUniformLocation(volumeProgram, "TargetSize");
 		volumeAdditiveLocation = gl.GetUniformLocation(volumeProgram, "Additive");
+		volumePremultipliedLocation = gl.GetUniformLocation(volumeProgram, "Premultiplied");
 		volumeLowNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "LowNoiseAmplitude");
 		volumeLowNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "LowNoiseScale");
 		volumeHighNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseAmplitude");
@@ -1023,6 +1027,13 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		{
 			// Colour accumulates scaled by its alpha; alpha accumulates as coverage.
 			gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.One, GLEnum.One, GLEnum.One);
+			return;
+		}
+
+		if (mode == BlendMode.Premultiplied)
+		{
+			// The source colour is already weighted; the destination is dimmed by what the source covers.
+			gl.BlendFuncSeparate(GLEnum.One, GLEnum.OneMinusSrcAlpha, GLEnum.One, GLEnum.OneMinusSrcAlpha);
 			return;
 		}
 

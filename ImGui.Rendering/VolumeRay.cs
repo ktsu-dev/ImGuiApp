@@ -13,11 +13,14 @@ public readonly record struct VolumeIntegral(Vector3 Light, float Transmittance,
 {
 	/// <summary>The colour and alpha the pass writes for this ray under a blend mode.</summary>
 	/// <param name="state">The pass.</param>
-	/// <returns>The output colour: the light, and for anything but additive, an alpha that covers what the volume blocks.</returns>
+	/// <returns>The output colour: the light, and for anything but additive, an alpha that covers what the volume blocks (for premultiplied, exactly the light it blocks).</returns>
 	public Vector4 Output(in VolumeDrawState state) =>
-		state.Blend == BlendMode.Additive
-			? new Vector4(Light, 1f)
-			: new Vector4(Light, MathF.Max(Math.Clamp(state.Color.W * Column, 0f, 1f), 1f - Transmittance));
+		state.Blend switch
+		{
+			BlendMode.Additive => new Vector4(Light, 1f),
+			BlendMode.Premultiplied => new Vector4(Light, 1f - Transmittance),
+			_ => new Vector4(Light, MathF.Max(Math.Clamp(state.Color.W * Column, 0f, 1f), 1f - Transmittance)),
+		};
 }
 
 /// <summary>

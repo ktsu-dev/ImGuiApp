@@ -235,6 +235,21 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void Draw_Premultiplied_AddsTheSourceAndDimsTheDestinationByItsAlpha()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+
+		renderer.Draw(target, Triangle, TriangleIndices, new DrawState3D { Blend = BlendMode.Premultiplied });
+
+		FakeGL3D.DrawRecord draw = gl.Draws.Single();
+		Assert.IsTrue(draw.Enabled.Contains(GLEnum.Blend));
+		Assert.AreEqual(GLEnum.One, draw.BlendSrcRgb, "The source is already weighted.");
+		Assert.AreEqual(GLEnum.OneMinusSrcAlpha, draw.BlendDstRgb);
+	}
+
+	[TestMethod]
 	public void ToneMap_DrawsOneTriangleIntoTheDestinationReadingTheSource()
 	{
 		FakeGL3D gl = FakeGL3D.WithUnusualState();
