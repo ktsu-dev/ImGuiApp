@@ -1,0 +1,31 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Packaging metadata only, so two DESCRIPTION.md files never land at one output path (NETSDK1152). -->
+    <Content Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ktsu.ImGui.Bulkhead.UITests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Semantics.Color" />
+    <PackageReference Include="ktsu.ThemeProvider" />
+    <PackageReference Include="ktsu.ScopedAction" />
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+    <ProjectReference Include="..\ImGui.Styler\ImGui.Styler.csproj" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

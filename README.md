@@ -83,6 +83,12 @@ Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine
 
 CommonMark markdown renderer built on Markdig, with pipe tables, task lists, and autolinks. Renders headings, emphasis, inline and block code, lists, blockquotes, tables, links, and images directly inside Dear ImGui. Standalone, with no dependency on `ktsu.ImGui.App`.
 
+### ImGui.Bulkhead - Starship Console Theme
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Bulkhead?label=ktsu.ImGui.Bulkhead&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Bulkhead)
+
+An LCARS-inspired look for Dear ImGui: a black-backed theme with warm pastel accents, and widgets drawn from end caps, elbows, pill buttons, segmented gauges and framed panels. See [its README](ImGui.Bulkhead/README.md).
+
 ### SyntaxHighlighting - Tokenizing (UI-Agnostic)
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.SyntaxHighlighting?label=ktsu.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.SyntaxHighlighting)
