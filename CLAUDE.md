@@ -391,9 +391,20 @@ on the CPU and uploading pixels through `CreateTexture`, which is what it had to
 buffers with a texture id and a clip rect and draws them, so every backend here is already a
 textured-triangle rasterizer; the 2D-ness lives in exactly three places — the projection is
 orthographic, there is no depth buffer, and the position is a `Vector2`. Making those three things
-parameters is the whole of it. Shaders, materials, lighting, instancing, MSAA, mipmaps and
-alternative target formats are deliberately absent: that list is where a rendering abstraction goes
-to die, because each item forces a backend-specific escape hatch. `Vertex3D` has **no normal** —
+parameters is the whole of it. Shaders, materials, lighting, instancing, MSAA and mipmaps are
+deliberately absent: that list is where a rendering abstraction goes to die, because each item forces
+a backend-specific escape hatch. **One target format beyond RGBA8 is the exception:**
+`RenderTargetFormat.Rgba16F`, with `BlendMode.Additive` and `IRenderer3D.ToneMap` (a fixed
+exposure/power/`ToneCurve` pass whose arithmetic is `ToneMap3D.Apply`, so a test can state the
+expected pixel without a context). It exists because thousands of overlapping, mostly transparent
+draws cannot be composited in eight bits — each faint contribution rounds per channel, which drifts
+the hue, and additive light saturates — and it needs no shader from the caller. The three members
+(`SupportsFormat`, the four-argument `CreateRenderTarget`, `ToneMap`) have **default implementations
+that refuse**, so an implementation written before them keeps compiling; a backend that supports them
+must declare them, and `OpenGLRenderer` must forward them explicitly, or the defaults silently hide
+the support (`OpenGLRenderer_ForwardsTheHighRangeMembersRatherThanLeavingThemToTheDefaults`). On the
+software renderer a float target keeps an `HdrBuffer` beside its bitmap, which mirrors it clamped, as
+sampling an unmapped float target does on a GPU. `Vertex3D` has **no normal** —
 the caller bakes shading into its colour, because a caller who wants real lighting wants shaders,
 and shaders cannot be made backend-agnostic without inventing a shading language.
 
@@ -458,7 +469,12 @@ calls `draw` with a `Viewport3DFrame` (renderer, target, view-projection, pixel 
 result, and turns the mouse into `Viewport3DState` camera moves: left-drag orbits, middle-drag or
 Shift+left-drag pans so the scene follows the pointer, the wheel dollies. It returns `false` and draws
 an empty frame of the clear colour when the host has no 3D renderer. `Viewport3DTests` covers it
-through the software renderer. Four things to know:
+through the software renderer. With `Viewport3DState.Format = RenderTargetFormat.Rgba16F` (and a
+renderer whose `SupportsFormat` agrees; otherwise it quietly draws in eight bits) the entry holds a
+second, eight-bit `Display` target: the callback draws into the float one, which is tone-mapped
+through `Viewport3DState.ToneMap` into the display one each frame, and that is what is shown. A format
+change replaces both targets rather than resizing them, and the sweep releases both. Four things to
+know:
 
 - **Why `ImGui.Widgets` does not reference `ImGui.App`, and must not.** Adding that reference (option
   C on #417) was explicitly ruled out: it would put Silk.NET, windowing and the image decoders under

@@ -38,6 +38,86 @@ public enum BlendMode
 
 	/// <summary>Straight-alpha source-over, the same compositing ImGui's own draws use.</summary>
 	Alpha,
+
+	/// <summary>
+	/// The source, scaled by its alpha, is added to the destination. Order-independent, so
+	/// overlapping glows, particles or point sprites accumulate the way light does. On an
+	/// <see cref="RenderTargetFormat.Rgba8"/> target the sum saturates at 1; draw into an
+	/// <see cref="RenderTargetFormat.Rgba16F"/> target and tone-map it with
+	/// <see cref="IRenderer3D.ToneMap"/> to keep the range.
+	/// </summary>
+	Additive,
+}
+
+/// <summary>The storage a render target's colour attachment uses.</summary>
+public enum RenderTargetFormat
+{
+	/// <summary>Eight bits per channel, values in [0, 1]. What every renderer supports, and what ImGui shows directly.</summary>
+	Rgba8,
+
+	/// <summary>
+	/// Sixteen-bit floating point per channel. Holds values above 1 and keeps faint contributions
+	/// that eight bits would round away, which is what many overlapping, mostly transparent draws
+	/// need. Not meant to be shown as it is: tone-map it into an <see cref="Rgba8"/> target with
+	/// <see cref="IRenderer3D.ToneMap"/> first.
+	/// </summary>
+	Rgba16F,
+}
+
+/// <summary>The curve <see cref="ToneMap3D"/> compresses exposed values into [0, 1] with.</summary>
+public enum ToneCurve
+{
+	/// <summary>Values above 1 are cut off. Exact below 1, so an image with no highlights passes through unchanged.</summary>
+	Clamp,
+
+	/// <summary><c>v / (1 + v)</c>. Never saturates; highlights compress gently and mid-tones darken a little.</summary>
+	Reinhard,
+
+	/// <summary><c>1 - exp(-v)</c>. Linear near black and saturates smoothly, like film or a photographic exposure.</summary>
+	Exponential,
+}
+
+/// <summary>
+/// How <see cref="IRenderer3D.ToneMap"/> turns a high-range target's values into displayable ones.
+/// </summary>
+/// <param name="Exposure">Multiplies every colour channel first.</param>
+/// <param name="Power">Raises the exposed value to this power before the curve: below 1 lifts faint detail, above 1 deepens contrast. Must be positive.</param>
+/// <param name="Curve">Compresses the result into [0, 1].</param>
+/// <remarks>
+/// Applied per colour channel, in the order exposure, power, curve; alpha is only clamped. The
+/// arithmetic is <see cref="Apply"/>, which every renderer's implementation must match, so a test
+/// can state the expected pixel without a graphics context.
+/// </remarks>
+public readonly record struct ToneMap3D(float Exposure, float Power, ToneCurve Curve)
+{
+	/// <summary>Gets the identity mapping for values already in range: exposure 1, power 1, clamped.</summary>
+	public static ToneMap3D Default { get; } = new(1f, 1f, ToneCurve.Clamp);
+
+	/// <summary>Maps one colour.</summary>
+	/// <param name="color">The high-range colour, straight alpha.</param>
+	/// <returns>The displayable colour, every channel in [0, 1].</returns>
+	public Vector4 Apply(Vector4 color) => new(Channel(color.X), Channel(color.Y), Channel(color.Z), Math.Clamp(color.W, 0f, 1f));
+
+	/// <summary>Maps one colour channel.</summary>
+	/// <param name="value">The high-range value.</param>
+	/// <returns>The displayable value in [0, 1].</returns>
+	public float Channel(float value)
+	{
+		float exposed = MathF.Max(value, 0f) * Exposure;
+		if (Power != 1f && exposed > 0f)
+		{
+			exposed = MathF.Pow(exposed, Power);
+		}
+
+		float curved = Curve switch
+		{
+			ToneCurve.Reinhard => exposed / (1f + exposed),
+			ToneCurve.Exponential => 1f - MathF.Exp(-exposed),
+			_ => exposed,
+		};
+
+		return Math.Clamp(curved, 0f, 1f);
+	}
 }
 
 /// <summary>What the index buffer describes.</summary>
@@ -127,6 +207,15 @@ public readonly record struct DrawState3D
 /// escape hatch. Vertex color, one optional texture and a matrix cover what consumers have actually
 /// asked for: a globe, a model preview, a node-editor background, a gizmo.
 /// </para>
+/// <para>
+/// <strong>One exception to the RGBA8-only rule: <see cref="RenderTargetFormat.Rgba16F"/>.</strong>
+/// Thousands of overlapping, mostly transparent draws (glows, particles, point sprites) cannot be
+/// composited in eight bits: each faint contribution rounds per channel, which drifts the hue, and
+/// additive light saturates. A float target, <see cref="BlendMode.Additive"/>, and one tone-mapping
+/// pass into an RGBA8 target (<see cref="ToneMap"/>) cover that without shaders or materials. The
+/// members carrying it have default implementations reporting no support, so an existing
+/// implementation keeps compiling and a caller asks <see cref="SupportsFormat"/> before relying on it.
+/// </para>
 /// </remarks>
 public interface IRenderer3D
 {
@@ -138,7 +227,7 @@ public interface IRenderer3D
 	public nint CreateRenderTarget(int width, int height, bool depth);
 
 	/// <summary>Resizes an existing target, discarding its contents.</summary>
-	/// <param name="target">A handle from <see cref="CreateRenderTarget"/>.</param>
+	/// <param name="target">A handle from <see cref="CreateRenderTarget(int, int, bool)"/>.</param>
 	/// <param name="width">New width in pixels. Must be positive.</param>
 	/// <param name="height">New height in pixels. Must be positive.</param>
 	/// <returns><see langword="true"/> if the target was resized; <see langword="false"/> if the handle is not one this renderer issued.</returns>
@@ -151,11 +240,11 @@ public interface IRenderer3D
 	public bool ResizeRenderTarget(nint target, int width, int height);
 
 	/// <summary>Releases a target and everything attached to it.</summary>
-	/// <param name="target">A handle from <see cref="CreateRenderTarget"/>.</param>
+	/// <param name="target">A handle from <see cref="CreateRenderTarget(int, int, bool)"/>.</param>
 	public void DeleteRenderTarget(nint target);
 
 	/// <summary>Gets the target's color attachment, usable as an ImGui texture id.</summary>
-	/// <param name="target">A handle from <see cref="CreateRenderTarget"/>.</param>
+	/// <param name="target">A handle from <see cref="CreateRenderTarget(int, int, bool)"/>.</param>
 	/// <returns>A texture id for <c>ImGui.Image</c>.</returns>
 	/// <remarks>
 	/// <strong>The returned id must never be passed to <c>IRendererBackend.DeleteTexture</c>.</strong>
@@ -168,15 +257,45 @@ public interface IRenderer3D
 	public nint GetTargetTexture(nint target);
 
 	/// <summary>Clears a target's color and depth attachments.</summary>
-	/// <param name="target">A handle from <see cref="CreateRenderTarget"/>.</param>
+	/// <param name="target">A handle from <see cref="CreateRenderTarget(int, int, bool)"/>.</param>
 	/// <param name="color">The color to fill with, straight alpha, each channel in [0, 1].</param>
 	/// <param name="depth">The depth to fill with. Far is 1.</param>
 	public void Clear(nint target, Vector4 color, float depth);
 
 	/// <summary>Draws indexed geometry into a target.</summary>
-	/// <param name="target">A handle from <see cref="CreateRenderTarget"/>.</param>
+	/// <param name="target">A handle from <see cref="CreateRenderTarget(int, int, bool)"/>.</param>
 	/// <param name="vertices">The vertices.</param>
 	/// <param name="indices">Indices into <paramref name="vertices"/>, grouped by <see cref="DrawState3D.Topology"/>.</param>
 	/// <param name="state">Everything about the draw that is not its vertices.</param>
 	public void Draw(nint target, ReadOnlySpan<Vertex3D> vertices, ReadOnlySpan<uint> indices, in DrawState3D state);
+
+	/// <summary>Whether this renderer can create targets in a format.</summary>
+	/// <param name="format">The format.</param>
+	/// <returns><see langword="true"/> if <see cref="CreateRenderTarget(int, int, bool, RenderTargetFormat)"/> accepts it.</returns>
+	/// <remarks>The default answers only for <see cref="RenderTargetFormat.Rgba8"/>, which every renderer supports.</remarks>
+	public bool SupportsFormat(RenderTargetFormat format) => format == RenderTargetFormat.Rgba8;
+
+	/// <summary>Creates an offscreen target with a colour attachment in the given format.</summary>
+	/// <param name="width">Width in pixels. Must be positive.</param>
+	/// <param name="height">Height in pixels. Must be positive.</param>
+	/// <param name="depth">Whether to attach a depth buffer.</param>
+	/// <param name="format">The colour attachment's format. <see cref="ResizeRenderTarget"/> keeps it.</param>
+	/// <returns>An opaque handle, released with <see cref="DeleteRenderTarget"/>.</returns>
+	/// <exception cref="NotSupportedException">The renderer does not support <paramref name="format"/>; see <see cref="SupportsFormat"/>.</exception>
+	public nint CreateRenderTarget(int width, int height, bool depth, RenderTargetFormat format) =>
+		format == RenderTargetFormat.Rgba8
+			? CreateRenderTarget(width, height, depth)
+			: throw new NotSupportedException($"This renderer has no {format} render targets.");
+
+	/// <summary>
+	/// Draws <paramref name="source"/> into <paramref name="destination"/> through a tone map, replacing
+	/// the destination's contents. The source normally holds <see cref="RenderTargetFormat.Rgba16F"/>
+	/// values and the destination is the <see cref="RenderTargetFormat.Rgba8"/> target that is shown.
+	/// </summary>
+	/// <param name="source">The target to read. Its whole area is stretched over the destination's.</param>
+	/// <param name="destination">The target to write. Must not be <paramref name="source"/>.</param>
+	/// <param name="toneMap">The mapping, as <see cref="ToneMap3D.Apply"/> computes it.</param>
+	/// <exception cref="NotSupportedException">The renderer cannot tone-map; true of every renderer whose <see cref="SupportsFormat"/> refuses <see cref="RenderTargetFormat.Rgba16F"/>.</exception>
+	public void ToneMap(nint source, nint destination, in ToneMap3D toneMap) =>
+		throw new NotSupportedException("This renderer cannot tone-map between render targets.");
 }

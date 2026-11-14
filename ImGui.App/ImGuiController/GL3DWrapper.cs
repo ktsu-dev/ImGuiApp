@@ -125,6 +125,8 @@ internal sealed class GL3DWrapper(GL gl) : IGL3D
 
 	public void Uniform1(int location, int value) => gl.Uniform1(location, value);
 
+	public void Uniform1(int location, float value) => gl.Uniform1(location, value);
+
 	public void UniformMatrix4(int location, ReadOnlySpan<float> value) => gl.UniformMatrix4(location, 1, false, value);
 
 	public uint GenBuffer() => gl.GenBuffer();
@@ -150,6 +152,8 @@ internal sealed class GL3DWrapper(GL gl) : IGL3D
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "A null offset means the start of the bound element buffer; it is never dereferenced here.")]
 	public unsafe void DrawElements(GLEnum mode, int count) =>
 		gl.DrawElements(mode, (uint)count, GLEnum.UnsignedInt, null);
+
+	public void DrawArrays(GLEnum mode, int first, int count) => gl.DrawArrays(mode, first, (uint)count);
 
 	private uint CompileShader(ShaderType type, string source)
 	{

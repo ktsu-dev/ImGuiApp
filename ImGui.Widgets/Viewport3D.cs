@@ -85,16 +85,31 @@ public static partial class ImGuiWidgets
 			int pixelWidth = Math.Max(1, (int)MathF.Ceiling(frameSize.X * MathF.Max(1f, framebufferScale.X)));
 			int pixelHeight = Math.Max(1, (int)MathF.Ceiling(frameSize.Y * MathF.Max(1f, framebufferScale.Y)));
 
-			Viewport3DTargets.Entry entry = Viewport3DTargets.Acquire(id, renderer, pixelWidth, pixelHeight, frame);
+			// A high-range scene needs a renderer that can hold it; without one the viewport draws in
+			// eight bits as it always has, rather than not at all.
+			RenderTargetFormat format = state.Format != RenderTargetFormat.Rgba8 && renderer.SupportsFormat(state.Format)
+				? state.Format
+				: RenderTargetFormat.Rgba8;
+
+			Viewport3DTargets.Entry entry = Viewport3DTargets.Acquire(id, renderer, pixelWidth, pixelHeight, frame, format);
 			Vector2 shown = new((float)pixelWidth / entry.Width, (float)pixelHeight / entry.Height);
 
 			renderer.Clear(entry.Handle, state.ClearColor, 1f);
 			Matrix4x4 viewProjection = state.ViewProjection((float)pixelWidth / pixelHeight) * Viewport3DTargets.ShownPart(shown);
 			draw(new Viewport3DFrame(renderer, entry.Handle, viewProjection, new Vector2(pixelWidth, pixelHeight)));
 
+			// A high-range scene is shown through its eight-bit display target, tone-mapped whole: the
+			// two are the same size, so the shown part maps onto the same texture coordinates.
+			nint shownTarget = entry.Handle;
+			if (entry.Display != 0)
+			{
+				renderer.ToneMap(entry.Handle, entry.Display, state.ToneMap);
+				shownTarget = entry.Display;
+			}
+
 			unsafe
 			{
-				drawList.AddImage(new ImTextureRef(texId: renderer.GetTargetTexture(entry.Handle)), origin, origin + frameSize, Vector2.Zero, shown, ImGui.GetColorU32(Vector4.One));
+				drawList.AddImage(new ImTextureRef(texId: renderer.GetTargetTexture(shownTarget)), origin, origin + frameSize, Vector2.Zero, shown, ImGui.GetColorU32(Vector4.One));
 			}
 
 			drew = true;
@@ -174,6 +189,11 @@ public static partial class ImGuiWidgets
 		/// <returns>The target handle, or zero when there is none.</returns>
 		internal static nint HandleFor(uint id) => Entries.TryGetValue(id, out Entry? entry) ? entry.Handle : 0;
 
+		/// <summary>Gets the entry held for <paramref name="id"/>, for tests.</summary>
+		/// <param name="id">The viewport's ImGui id.</param>
+		/// <returns>The entry.</returns>
+		internal static Entry EntryFor(uint id) => Entries[id];
+
 		/// <summary>Gets the ids of every target held, for tests.</summary>
 		internal static IReadOnlyCollection<uint> Ids => Entries.Keys;
 
@@ -203,19 +223,33 @@ public static partial class ImGuiWidgets
 		/// <param name="pixelWidth">The width the viewport needs, in pixels.</param>
 		/// <param name="pixelHeight">The height it needs.</param>
 		/// <param name="frame">The ImGui frame count.</param>
+		/// <param name="format">The format to draw the scene in. Anything but <see cref="RenderTargetFormat.Rgba8"/> also gets an eight-bit display target to tone-map into.</param>
 		/// <returns>The target, at least as large as asked.</returns>
-		internal static Entry Acquire(uint id, IRenderer3D renderer, int pixelWidth, int pixelHeight, int frame)
+		internal static Entry Acquire(uint id, IRenderer3D renderer, int pixelWidth, int pixelHeight, int frame, RenderTargetFormat format = RenderTargetFormat.Rgba8)
 		{
 			int width = Bucket(pixelWidth);
 			int height = Bucket(pixelHeight);
 
-			if (Entries.TryGetValue(id, out Entry? entry) && ReferenceEquals(entry.Owner, renderer))
+			if (Entries.TryGetValue(id, out Entry? entry) && ReferenceEquals(entry.Owner, renderer) && entry.Format != format)
+			{
+				// A format change is a new pair of targets, not a resize: storage cannot change format in place.
+				Release(entry, renderer);
+				Entries.Remove(id);
+				entry = null;
+			}
+
+			if (entry is not null && ReferenceEquals(entry.Owner, renderer))
 			{
 				if (entry.Width != width || entry.Height != height)
 				{
 					if (!renderer.ResizeRenderTarget(entry.Handle, width, height))
 					{
-						entry.Handle = renderer.CreateRenderTarget(width, height, depth: true);
+						entry.Handle = renderer.CreateRenderTarget(width, height, depth: true, format);
+					}
+
+					if (entry.Display != 0 && !renderer.ResizeRenderTarget(entry.Display, width, height))
+					{
+						entry.Display = renderer.CreateRenderTarget(width, height, depth: false);
 					}
 
 					entry.Width = width;
@@ -226,12 +260,26 @@ public static partial class ImGuiWidgets
 			{
 				// A target another renderer made belongs to that renderer, which is gone or is not
 				// the one drawing now, so it is forgotten rather than deleted through the wrong one.
-				entry = new Entry(renderer, renderer.CreateRenderTarget(width, height, depth: true), width, height);
+				entry = new Entry(renderer, renderer.CreateRenderTarget(width, height, depth: true, format), width, height)
+				{
+					Format = format,
+					Display = format == RenderTargetFormat.Rgba8 ? 0 : renderer.CreateRenderTarget(width, height, depth: false),
+				};
 				Entries[id] = entry;
 			}
 
 			entry.LastFrame = frame;
 			return entry;
+		}
+
+		/// <summary>Deletes an entry's targets through the renderer that made them.</summary>
+		private static void Release(Entry entry, IRenderer3D renderer)
+		{
+			renderer.DeleteRenderTarget(entry.Handle);
+			if (entry.Display != 0)
+			{
+				renderer.DeleteRenderTarget(entry.Display);
+			}
 		}
 
 		/// <summary>Releases targets whose viewports have stopped being drawn.</summary>
@@ -265,7 +313,7 @@ public static partial class ImGuiWidgets
 				Entries.Remove(id);
 				if (ReferenceEquals(entry.Owner, renderer))
 				{
-					renderer!.DeleteRenderTarget(entry.Handle);
+					Release(entry, renderer!);
 				}
 			}
 		}
@@ -291,6 +339,12 @@ public static partial class ImGuiWidgets
 
 			/// <summary>Gets or sets the last frame the viewport was drawn on.</summary>
 			internal int LastFrame { get; set; }
+
+			/// <summary>Gets the format the scene target was made in.</summary>
+			internal RenderTargetFormat Format { get; init; } = RenderTargetFormat.Rgba8;
+
+			/// <summary>Gets or sets the eight-bit target a high-range scene is tone-mapped into and shown from, or zero when the scene target is shown directly.</summary>
+			internal nint Display { get; set; }
 		}
 	}
 }

@@ -15,6 +15,13 @@ can draw 3D without depending on the application host.
   into its colour.
 - **`Renderer3DHost`** is where a library asks for the host's renderer. `ktsu.ImGui.App` installs its
   resolver automatically.
+- **High-range targets**: `CreateRenderTarget(width, height, depth, RenderTargetFormat.Rgba16F)` makes a
+  float target, `BlendMode.Additive` accumulates light into it, and `ToneMap(source, destination,
+  ToneMap3D)` maps it into an eight-bit target for display (exposure, then a power, then a `ToneCurve`:
+  `Clamp`, `Reinhard` or `Exponential`; `ToneMap3D.Apply` is the arithmetic). For thousands of
+  overlapping, mostly transparent draws, where eight bits round each faint contribution away and drift
+  the hue. Ask `SupportsFormat` first: these members have default implementations that report no
+  support, so an implementation written before them keeps compiling.
 
 Most applications never use this package directly: `ImGuiWidgets.Viewport3D` in `ktsu.ImGui.Widgets`
 owns the target and the camera, and hands your callback the renderer to draw with.
@@ -26,4 +33,12 @@ ImGuiWidgets.Viewport3D("scene", Vector2.Zero, cameraState, frame =>
 		ModelViewProjection = model * frame.ViewProjection,
 		Depth = DepthMode.TestAndWrite,
 	}));
+```
+
+For a high-range scene, set the camera state's format and tone map; the widget draws into a float
+target and shows it tone-mapped, falling back to eight bits on a renderer without float targets:
+
+```csharp
+cameraState.Format = RenderTargetFormat.Rgba16F;
+cameraState.ToneMap = new ToneMap3D(Exposure: 1f, Power: 0.6f, Curve: ToneCurve.Exponential);
 ```

@@ -83,8 +83,63 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			Out_Color = color;
 		}";
 
+	/// <summary>
+	/// A triangle covering the whole viewport, made from the vertex index alone so the tone-map pass
+	/// needs no vertex buffer: indices 0, 1, 2 give (0,0), (2,0), (0,2) in texture space.
+	/// </summary>
+	/// <remarks>
+	/// No row flip here, unlike <see cref="VertexSource"/>: both textures are stored the same way up,
+	/// so mapping the destination's rows straight onto the source's keeps the picture as it was.
+	/// </remarks>
+	internal const string ToneMapVertexSource =
+		@"#version 330
+		out vec2 Frag_UV;
+		void main()
+		{
+			vec2 corner = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+			Frag_UV = corner;
+			gl_Position = vec4((corner * 2.0) - 1.0, 0.0, 1.0);
+		}";
+
+	/// <summary>The tone map, matching <see cref="ToneMap3D.Apply"/> channel for channel.</summary>
+	internal const string ToneMapFragmentSource =
+		@"#version 330
+		in vec2 Frag_UV;
+		uniform sampler2D Source;
+		uniform float Exposure;
+		uniform float Power;
+		uniform int Curve;
+		layout (location = 0) out vec4 Out_Color;
+		void main()
+		{
+			vec4 color = texture(Source, Frag_UV);
+			vec3 value = max(color.rgb, vec3(0.0)) * Exposure;
+			if (Power != 1.0)
+			{
+				value = pow(value, vec3(Power));
+			}
+
+			if (Curve == 1)
+			{
+				value = value / (1.0 + value);
+			}
+			else if (Curve == 2)
+			{
+				value = 1.0 - exp(-value);
+			}
+
+			Out_Color = vec4(clamp(value, 0.0, 1.0), clamp(color.a, 0.0, 1.0));
+		}";
+
 	private readonly IGL3D gl = gl;
 	private readonly Dictionary<nint, Target> targets = [];
+
+	private uint toneMapProgram;
+	private int toneMapSourceLocation;
+	private int toneMapExposureLocation;
+	private int toneMapPowerLocation;
+	private int toneMapCurveLocation;
+	private uint toneMapVertexArray;
 
 	private uint program;
 	private int matrixLocation;
@@ -101,11 +156,20 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	public bool IsRenderTarget(nint id) => targets.ContainsKey(id);
 
 	/// <inheritdoc />
-	public nint CreateRenderTarget(int width, int height, bool depth)
+	public nint CreateRenderTarget(int width, int height, bool depth) =>
+		CreateRenderTarget(width, height, depth, RenderTargetFormat.Rgba8);
+
+	/// <inheritdoc />
+	public bool SupportsFormat(RenderTargetFormat format) => format is RenderTargetFormat.Rgba8 or RenderTargetFormat.Rgba16F;
+
+	/// <inheritdoc />
+	/// <exception cref="NotSupportedException">The format is not one this renderer knows.</exception>
+	public nint CreateRenderTarget(int width, int height, bool depth, RenderTargetFormat format)
 	{
 		ObjectDisposedException.ThrowIf(disposed, this);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+		GLEnum internalFormat = InternalFormatOf(format);
 
 		int previousTexture = gl.GetInteger(GLEnum.TextureBinding2D);
 		int previousRenderbuffer = gl.GetInteger(GLEnum.RenderbufferBinding);
@@ -118,7 +182,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
 		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
 		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
-		gl.TexImage2DEmpty(GLEnum.Texture2D, GLEnum.Rgba8, width, height);
+		gl.TexImage2DEmpty(GLEnum.Texture2D, internalFormat, width, height);
 
 		uint renderbuffer = 0;
 		if (depth)
@@ -143,13 +207,14 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		gl.BindRenderbuffer((uint)previousRenderbuffer);
 		gl.BindTexture(GLEnum.Texture2D, (uint)previousTexture);
 
+		Target created = new(framebuffer, color, renderbuffer, width, height, internalFormat);
 		if (status != GLEnum.FramebufferComplete)
 		{
-			Release(new Target(framebuffer, color, renderbuffer, width, height));
+			Release(created);
 			throw new InvalidOperationException($"The render target's framebuffer is incomplete ({status}).");
 		}
 
-		targets[(nint)color] = new Target(framebuffer, color, renderbuffer, width, height);
+		targets[(nint)color] = created;
 		return (nint)color;
 	}
 
@@ -169,7 +234,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		// already showing stays valid and the framebuffer stays attached to the same objects.
 		int previousTexture = gl.GetInteger(GLEnum.TextureBinding2D);
 		gl.BindTexture(GLEnum.Texture2D, existing.Color);
-		gl.TexImage2DEmpty(GLEnum.Texture2D, GLEnum.Rgba8, width, height);
+		gl.TexImage2DEmpty(GLEnum.Texture2D, existing.InternalFormat, width, height);
 		gl.BindTexture(GLEnum.Texture2D, (uint)previousTexture);
 
 		if (existing.Depth != 0)
@@ -307,7 +372,51 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		}
 	}
 
-	/// <summary>Releases every target and the program, buffers and vertex array behind them.</summary>
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">Either handle is not a live render target, or they are the same target.</exception>
+	public void ToneMap(nint source, nint destination, in ToneMap3D toneMap)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Target from = Resolve(source);
+		Target to = Resolve(destination);
+		if (source == destination)
+		{
+			throw new ArgumentException("A target cannot be tone-mapped into itself.", nameof(destination));
+		}
+
+		EnsureToneMapResources();
+
+		SavedState saved = SavedState.Capture(gl);
+		try
+		{
+			gl.BindFramebuffer(GLEnum.Framebuffer, to.Framebuffer);
+			gl.Viewport(0, 0, to.Width, to.Height);
+			gl.Disable(GLEnum.ScissorTest);
+			gl.Disable(GLEnum.DepthTest);
+			gl.Disable(GLEnum.CullFace);
+			gl.Disable(GLEnum.Blend);
+
+			gl.UseProgram(toneMapProgram);
+			gl.Uniform1(toneMapSourceLocation, 0);
+			gl.Uniform1(toneMapExposureLocation, toneMap.Exposure);
+			gl.Uniform1(toneMapPowerLocation, toneMap.Power);
+			gl.Uniform1(toneMapCurveLocation, (int)toneMap.Curve);
+
+			gl.ActiveTexture(GLEnum.Texture0);
+			gl.BindSampler(0, 0);
+			gl.BindTexture(GLEnum.Texture2D, from.Color);
+
+			// A vertex array must be bound to draw in a core profile, even with no attributes.
+			gl.BindVertexArray(toneMapVertexArray);
+			gl.DrawArrays(GLEnum.Triangles, 0, 3);
+		}
+		finally
+		{
+			saved.Restore(gl);
+		}
+	}
+
+	/// <summary>Releases every target and the programs, buffers and vertex arrays behind them.</summary>
 	public void Dispose()
 	{
 		if (disposed)
@@ -330,7 +439,36 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.DeleteBuffer(indexBuffer);
 		}
 
+		if (toneMapProgram != 0)
+		{
+			gl.DeleteProgram(toneMapProgram);
+			gl.DeleteVertexArray(toneMapVertexArray);
+		}
+
 		disposed = true;
+	}
+
+	private static GLEnum InternalFormatOf(RenderTargetFormat format) => format switch
+	{
+		RenderTargetFormat.Rgba8 => GLEnum.Rgba8,
+		RenderTargetFormat.Rgba16F => GLEnum.Rgba16f,
+		_ => throw new NotSupportedException($"No OpenGL storage for {format}."),
+	};
+
+	/// <summary>Creates the tone-map program and its empty vertex array the first time a tone map is asked for.</summary>
+	private void EnsureToneMapResources()
+	{
+		if (toneMapProgram != 0)
+		{
+			return;
+		}
+
+		toneMapProgram = gl.CreateProgram(ToneMapVertexSource, ToneMapFragmentSource);
+		toneMapSourceLocation = gl.GetUniformLocation(toneMapProgram, "Source");
+		toneMapExposureLocation = gl.GetUniformLocation(toneMapProgram, "Exposure");
+		toneMapPowerLocation = gl.GetUniformLocation(toneMapProgram, "Power");
+		toneMapCurveLocation = gl.GetUniformLocation(toneMapProgram, "Curve");
+		toneMapVertexArray = gl.GenVertexArray();
 	}
 
 	/// <summary>
@@ -417,6 +555,13 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 		gl.Enable(GLEnum.Blend);
 		gl.BlendEquationSeparate(GLEnum.FuncAdd, GLEnum.FuncAdd);
+		if (mode == BlendMode.Additive)
+		{
+			// Colour accumulates scaled by its alpha; alpha accumulates as coverage.
+			gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.One, GLEnum.One, GLEnum.One);
+			return;
+		}
+
 		gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.OneMinusSrcAlpha, GLEnum.One, GLEnum.OneMinusSrcAlpha);
 	}
 
@@ -450,8 +595,11 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		gl.DeleteTexture(target.Color);
 	}
 
-	/// <summary>A framebuffer, its colour texture and its optional depth renderbuffer (zero when absent).</summary>
-	private sealed record Target(uint Framebuffer, uint Color, uint Depth, int Width, int Height);
+	/// <summary>
+	/// A framebuffer, its colour texture and its optional depth renderbuffer (zero when absent), and
+	/// the colour texture's storage format, which a resize respecifies it with.
+	/// </summary>
+	private sealed record Target(uint Framebuffer, uint Color, uint Depth, int Width, int Height, GLEnum InternalFormat);
 
 	/// <summary>
 	/// Everything <see cref="Clear"/> and <see cref="Draw"/> may change, captured beforehand and put

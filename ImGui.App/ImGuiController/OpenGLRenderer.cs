@@ -144,6 +144,19 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D, IHalfFloat
 	public void Draw(nint target, ReadOnlySpan<Vertex3D> vertices, ReadOnlySpan<uint> indices, in DrawState3D state) =>
 		_renderer3D.Draw(target, vertices, indices, state);
 
+	// Forwarded explicitly: IRenderer3D's default implementations of these report no support, and
+	// leaving them to the defaults would silently hide what GLRenderer3D can do.
+
+	/// <inheritdoc />
+	public bool SupportsFormat(RenderTargetFormat format) => _renderer3D.SupportsFormat(format);
+
+	/// <inheritdoc />
+	public nint CreateRenderTarget(int width, int height, bool depth, RenderTargetFormat format) =>
+		_renderer3D.CreateRenderTarget(width, height, depth, format);
+
+	/// <inheritdoc />
+	public void ToneMap(nint source, nint destination, in ToneMap3D toneMap) => _renderer3D.ToneMap(source, destination, toneMap);
+
 	internal void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
 	{
 		// Set the viewport from the draw data every frame rather than relying on a resize event to

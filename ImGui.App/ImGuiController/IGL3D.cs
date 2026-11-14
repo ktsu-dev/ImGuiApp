@@ -138,6 +138,9 @@ internal interface IGL3D
 	/// <summary>Sets an integer uniform on the current program.</summary>
 	public void Uniform1(int location, int value);
 
+	/// <summary>Sets a float uniform on the current program.</summary>
+	public void Uniform1(int location, float value);
+
 	/// <summary>Sets a matrix uniform on the current program, column-major.</summary>
 	public void UniformMatrix4(int location, ReadOnlySpan<float> value);
 
@@ -170,4 +173,7 @@ internal interface IGL3D
 
 	/// <summary>Draws from the bound element buffer, reading 32-bit indices from its start.</summary>
 	public void DrawElements(GLEnum mode, int count);
+
+	/// <summary>Draws vertices in order without an index buffer.</summary>
+	public void DrawArrays(GLEnum mode, int first, int count);
 }

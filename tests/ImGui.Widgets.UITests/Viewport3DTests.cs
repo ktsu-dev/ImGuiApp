@@ -299,6 +299,50 @@ public sealed class Viewport3DTests : WidgetTest
 	}
 
 	[TestMethod]
+	public void Viewport3D_AHighRangeSceneIsShownThroughItsToneMap()
+	{
+		// A clear of 2.0 would show as white in eight bits; drawn in a float target and mapped at
+		// exposure 0.25 it has to come out mid-grey, which only happens if the scene kept the 2.0.
+		drawCube = false;
+		state.Format = RenderTargetFormat.Rgba16F;
+		state.ClearColor = new Vector4(2f, 2f, 2f, 1f);
+		state.ToneMap = new ToneMap3D(0.25f, 1f, ToneCurve.Clamp);
+		Start(Draw);
+
+		Rgba32 centre = PixelAt(CenterOf(Label));
+		Assert.AreEqual(128, centre.R, 3, $"The viewport showed {centre} rather than the tone-mapped grey.");
+
+		state.Format = RenderTargetFormat.Rgba8;
+		Step(2);
+		Assert.AreEqual(255, PixelAt(CenterOf(Label)).R, 1, "Back in eight bits the same clear saturates to white.");
+	}
+
+	[TestMethod]
+	public void Viewport3D_AHighRangeSceneHoldsADisplayTargetAndReleasesBoth()
+	{
+		// A second viewport keeps Viewport3D being called, which is what runs the release sweep.
+		state.Format = RenderTargetFormat.Rgba16F;
+		ImGuiWidgets.Viewport3DState other = new();
+		Start(() =>
+		{
+			Draw();
+			ImGuiWidgets.Viewport3D("other", new Vector2(64f, 64f), other, static _ => { });
+		});
+
+		ImGuiWidgets.Viewport3DTargets.Entry entry = ImGuiWidgets.Viewport3DTargets.EntryFor(ImGuiWidgets.Viewport3DTargets.Ids.Single(id => ImGuiWidgets.Viewport3DTargets.EntryFor(id).Format == RenderTargetFormat.Rgba16F));
+		Assert.AreNotEqual(0, entry.Display, "A float scene needs an eight-bit target to be shown from.");
+		Assert.AreEqual(lastFrame.Target, entry.Handle, "The draw callback draws into the float target, not the shown one.");
+		nint display = entry.Display;
+
+		showViewport = false;
+		Step(ImGuiWidgets.Viewport3DTargets.ReleaseAfterFrames + 2);
+
+		Assert.ThrowsExactly<ArgumentException>(() => Renderer.GetTargetTexture(display), "The display target outlived its viewport.");
+	}
+
+	private Rgba32 PixelAt(Vector2 point) => Harness.Target.GetPixel((int)point.X, (int)point.Y);
+
+	[TestMethod]
 	public void Viewport3D_TargetsMadeByAnEarlierRendererAreForgotten()
 	{
 		Start(Draw);
