@@ -366,6 +366,40 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void DrawVolume_WithADetailMap_BindsItOnUnitOneAndPutsTheBindingsBack()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 4, new Half[32]);
+		nint detail = renderer.CreateVolumeTexture(4, 4, 1, 4, new Half[64]);
+		string before = gl.Snapshot();
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.CreateScale(1f, 1f, 300f),
+			DetailMap = detail,
+			DetailFadeHeight = 50f,
+		});
+
+		Assert.AreEqual(1, gl.Uniforms[gl.GetUniformLocation(0, "HasDetail")]);
+		Assert.AreEqual(1, gl.Uniforms[gl.GetUniformLocation(0, "DetailMap")], "The detail map samples unit 1.");
+		Assert.AreEqual(50f, gl.Uniforms[gl.GetUniformLocation(0, "DetailFadeHeight")]);
+		Assert.AreEqual(300f, gl.Uniforms[gl.GetUniformLocation(0, "PlaneScale")], "The plane's thickness in world units comes from the box.");
+		Assert.AreEqual(before, gl.Snapshot(), "Unit 1's binding is put back too.");
+	}
+
+	[TestMethod]
+	public void DrawVolume_WithAnUnknownDetailMap_IsRejected()
+	{
+		using GLRenderer3D renderer = new(new FakeGL3D());
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.DrawVolume(target, volume, new VolumeDrawState { DetailMap = 999 }));
+	}
+
+	[TestMethod]
 	public void CreateVolumeTexture_RejectsAWrongSizedSpan()
 	{
 		using GLRenderer3D renderer = new(new FakeGL3D());
@@ -851,7 +885,7 @@ public sealed class GLRenderer3DTests
 			"; ",
 			integers.OrderBy(p => p.Key).Select(p => $"{p.Key}={p.Value}")
 				.Concat(textureByUnit.Where(p => p.Value != 0).OrderBy(p => p.Key.Unit).ThenBy(p => p.Key.Target).Select(p => $"Texture[{p.Key.Unit},{p.Key.Target}]={p.Value}"))
-				.Concat(samplerByUnit.OrderBy(p => p.Key).Select(p => $"Sampler[{p.Key}]={p.Value}"))
+				.Concat(samplerByUnit.Where(p => p.Value != 0).OrderBy(p => p.Key).Select(p => $"Sampler[{p.Key}]={p.Value}"))
 				.Append("Enabled=" + string.Join(",", enabled.OrderBy(e => e)))
 				.Append("Viewport=" + string.Join(",", viewport))
 				.Append("ClearColor=" + string.Join(",", clearColor))

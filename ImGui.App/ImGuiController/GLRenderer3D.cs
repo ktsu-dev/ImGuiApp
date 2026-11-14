@@ -150,7 +150,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		}";
 
 	/// <summary>
-	/// The emissive volume pass, matching <see cref="VolumeRay.Integrate"/> step for step: the same
+	/// The emissive volume pass, matching <see cref="VolumeRay"/> step for step: the same
 	/// unprojection, clip, sample count, jitter and fade. Rows: the 3D pass negates clip y so a target's
 	/// first row is its top, so a fragment in row r (from the bottom of the GL framebuffer, which is
 	/// the target's first row) has normalized device y = 1 − 2(r + ½)/height.
@@ -167,6 +167,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform vec4 Color3;
 		uniform vec4 Extinction;
 		uniform vec4 NoiseWeights;
+		uniform sampler3D DetailMap;
+		uniform int HasDetail;
+		uniform float DetailFadeHeight;
+		uniform float PlaneScale;
 		uniform int Channels;
 		uniform float FadeStart;
 		uniform float FadeEnd;
@@ -306,7 +310,8 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				}
 
 				float t = enter + ((float(i) + jitter) * stepSize);
-				vec4 value = texture(Volume, origin + (direction * t));
+				vec3 uvw = origin + (direction * t);
+				vec4 value = texture(Volume, uvw);
 				if (Channels == 1)
 				{
 					value = vec4(value.r, 0.0, 0.0, 0.0);
@@ -315,6 +320,12 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				if (value == vec4(0.0))
 				{
 					continue;
+				}
+
+				if (HasDetail != 0)
+				{
+					float weight = DetailFadeHeight > 0.0 ? exp(-abs(uvw.z - 0.5) * PlaneScale / DetailFadeHeight) : 1.0;
+					value *= max(vec4(0.0), vec4(1.0) + ((texture(DetailMap, vec3(uvw.xy, 0.5)) - vec4(1.0)) * weight));
 				}
 
 				vec3 world = mix(nearPoint, farPoint, t);
@@ -352,6 +363,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeColor3Location;
 	private int volumeExtinctionLocation;
 	private int volumeNoiseWeightsLocation;
+	private int volumeDetailMapLocation;
+	private int volumeHasDetailLocation;
+	private int volumeDetailFadeHeightLocation;
+	private int volumePlaneScaleLocation;
 	private int volumeChannelsLocation;
 	private int volumeFadeStartLocation;
 	private int volumeFadeEndLocation;
@@ -730,6 +745,12 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			throw new ArgumentException($"No volume texture with handle {volume}.", nameof(volume));
 		}
 
+		Volume? detail = null;
+		if (state.DetailMap != 0 && !volumes.TryGetValue(state.DetailMap, out detail))
+		{
+			throw new ArgumentException($"No volume texture with handle {state.DetailMap} for the detail map.", nameof(state));
+		}
+
 		if (!Matrix4x4.Invert(state.ViewProjection, out Matrix4x4 clipToWorld) || !Matrix4x4.Invert(state.VolumeToWorld, out Matrix4x4 worldToVolume))
 		{
 			return;
@@ -759,6 +780,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform4(volumeExtinctionLocation, state.Extinction.X, state.Extinction.Y, state.Extinction.Z, state.Extinction.W);
 			Vector4 noiseWeights = state.EffectiveNoiseWeights;
 			gl.Uniform4(volumeNoiseWeightsLocation, noiseWeights.X, noiseWeights.Y, noiseWeights.Z, noiseWeights.W);
+			gl.Uniform1(volumeDetailMapLocation, 1);
+			gl.Uniform1(volumeHasDetailLocation, detail is null ? 0 : 1);
+			gl.Uniform1(volumeDetailFadeHeightLocation, state.DetailFadeHeight);
+			gl.Uniform1(volumePlaneScaleLocation, new Vector3(state.VolumeToWorld.M31, state.VolumeToWorld.M32, state.VolumeToWorld.M33).Length());
 			gl.Uniform1(volumeChannelsLocation, from.Channels);
 			gl.Uniform1(volumeFadeStartLocation, state.FadeInStart);
 			gl.Uniform1(volumeFadeEndLocation, state.FadeInEnd);
@@ -777,6 +802,13 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.ActiveTexture(GLEnum.Texture0);
 			gl.BindSampler(0, 0);
 			gl.BindTexture(GLEnum.Texture3D, from.Texture);
+			if (detail is not null)
+			{
+				gl.ActiveTexture(GLEnum.Texture1);
+				gl.BindSampler(1, 0);
+				gl.BindTexture(GLEnum.Texture3D, detail.Texture);
+				gl.ActiveTexture(GLEnum.Texture0);
+			}
 
 			gl.BindVertexArray(volumeVertexArray);
 			gl.DrawArrays(GLEnum.Triangles, 0, 3);
@@ -859,6 +891,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeExtinctionLocation = gl.GetUniformLocation(volumeProgram, "Extinction");
 		volumeChannelsLocation = gl.GetUniformLocation(volumeProgram, "Channels");
 		volumeNoiseWeightsLocation = gl.GetUniformLocation(volumeProgram, "NoiseWeights");
+		volumeDetailMapLocation = gl.GetUniformLocation(volumeProgram, "DetailMap");
+		volumeHasDetailLocation = gl.GetUniformLocation(volumeProgram, "HasDetail");
+		volumeDetailFadeHeightLocation = gl.GetUniformLocation(volumeProgram, "DetailFadeHeight");
+		volumePlaneScaleLocation = gl.GetUniformLocation(volumeProgram, "PlaneScale");
 		volumeFadeStartLocation = gl.GetUniformLocation(volumeProgram, "FadeStart");
 		volumeFadeEndLocation = gl.GetUniformLocation(volumeProgram, "FadeEnd");
 		volumeSamplesPerVoxelLocation = gl.GetUniformLocation(volumeProgram, "SamplesPerVoxel");
@@ -1040,6 +1076,8 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		private readonly int texture;
 		private readonly int texture3D;
 		private readonly int sampler;
+		private readonly int texture3DUnit1;
+		private readonly int samplerUnit1;
 		private readonly int vertexArray;
 		private readonly int arrayBuffer;
 		private readonly int depthMask;
@@ -1067,7 +1105,11 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			program = gl.GetInteger(GLEnum.CurrentProgram);
 			activeTexture = gl.GetInteger(GLEnum.ActiveTexture);
 
-			// The texture and sampler bindings are per unit; this renderer only ever uses unit 0.
+			// The texture and sampler bindings are per unit; this renderer uses unit 0, and unit 1 for a
+			// volume's detail map.
+			gl.ActiveTexture(GLEnum.Texture1);
+			texture3DUnit1 = gl.GetInteger(GLEnum.TextureBinding3D);
+			samplerUnit1 = gl.GetInteger(GLEnum.SamplerBinding);
 			gl.ActiveTexture(GLEnum.Texture0);
 			texture = gl.GetInteger(GLEnum.TextureBinding2D);
 			texture3D = gl.GetInteger(GLEnum.TextureBinding3D);
@@ -1106,6 +1148,9 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.BindFramebuffer(GLEnum.ReadFramebuffer, (uint)readFramebuffer);
 			gl.UseProgram((uint)program);
 
+			gl.ActiveTexture(GLEnum.Texture1);
+			gl.BindTexture(GLEnum.Texture3D, (uint)texture3DUnit1);
+			gl.BindSampler(1, (uint)samplerUnit1);
 			gl.ActiveTexture(GLEnum.Texture0);
 			gl.BindTexture(GLEnum.Texture2D, (uint)texture);
 			gl.BindTexture(GLEnum.Texture3D, (uint)texture3D);

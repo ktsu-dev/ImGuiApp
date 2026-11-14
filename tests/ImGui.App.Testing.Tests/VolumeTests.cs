@@ -144,6 +144,30 @@ public sealed class VolumeTests : IDisposable
 	}
 
 	[TestMethod]
+	public void ADetailMapMultipliesTheVolumeAcrossItsFace()
+	{
+		// A constant volume, value 1, with a two-texel detail map: 0 on the left half, 2 on the right.
+		nint target = HdrTarget();
+		nint volume = Constant(2, 2, 2, 1f);
+		nint detail = renderer.CreateVolumeTexture(2, 1, 1, 1, [(Half)0f, (Half)2f]);
+
+		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 0.25f)) with { DetailMap = detail });
+
+		Assert.AreEqual(0f, Hdr(target, 0, Size / 2).X, 0.02f, "The left edge is multiplied by 0.");
+		Assert.AreEqual(0.5f, Hdr(target, Size - 1, Size / 2).X, 0.02f, "The right edge by 2: 0.25 thick, doubled.");
+	}
+
+	[TestMethod]
+	public void TheDetailFadesAwayFromTheMidPlane()
+	{
+		VolumeRay ray = VolumeRay.Create(new VolumeDrawState { VolumeToWorld = Matrix4x4.CreateScale(1f, 1f, 100f), DetailFadeHeight = 10f });
+
+		Assert.AreEqual(new Vector4(3f), ray.DetailFactor(new Vector4(3f), 0.5f), "In the plane the detail applies fully.");
+		Vector4 above = ray.DetailFactor(new Vector4(3f), 0.6f);
+		Assert.AreEqual(1f + (2f * MathF.Exp(-1f)), above.X, 1e-4f, "Ten units above, a factor e weaker.");
+	}
+
+	[TestMethod]
 	public void ANoiseWeightOfZeroLeavesAChannelSmooth()
 	{
 		// Strong noise, but weighted out of channel 0 and fully into channel 1: red stays even, green varies.

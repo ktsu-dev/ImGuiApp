@@ -30,7 +30,7 @@ can draw 3D without depending on the application host.
   `exp(-∫ Extinction · value ds)` in front of it, so a dust channel can darken what lies behind. Samples
   scale with the voxels crossed and start at a per-pixel offset, so there is no step to tune and no
   banding; `FadeInStart`/`FadeInEnd` silence the volume near the eye so geometry drawn there can take
-  over. Optional low- and high-frequency noise layers (`LowNoiseAmplitude`/`LowNoiseScale`, `HighNoiseAmplitude`/`HighNoiseScale`) multiply in world-fixed value noise for detail finer than the voxels, faded out below a few pixels (`PixelAngle`) so it does not shimmer, and weighted per channel (`NoiseWeights`) so, say, dust can be clumpier than starlight. `VolumeRay` is the per-pixel arithmetic every renderer matches. Ask `SupportsVolumes` first.
+  over. Optional low- and high-frequency noise layers (`LowNoiseAmplitude`/`LowNoiseScale`, `HighNoiseAmplitude`/`HighNoiseScale`) multiply in world-fixed value noise for detail finer than the voxels, faded out below a few pixels (`PixelAngle`) so it does not shimmer, and weighted per channel (`NoiseWeights`) so, say, dust can be clumpier than starlight. A `DetailMap` (a second, one-voxel-deep volume over the box's XY face) multiplies the channels about the mid-plane, fading over `DetailFadeHeight`, for planar structure finer than the 3D grid. `VolumeRay` is the per-pixel arithmetic every renderer matches. Ask `SupportsVolumes` first.
 
 Most applications never use this package directly: `ImGuiWidgets.Viewport3D` in `ktsu.ImGui.Widgets`
 owns the target and the camera, and hands your callback the renderer to draw with.

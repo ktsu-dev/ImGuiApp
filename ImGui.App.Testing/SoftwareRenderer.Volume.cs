@@ -79,6 +79,17 @@ public sealed partial class SoftwareRenderer
 			throw new ArgumentException($"No volume texture with handle {volume}.", nameof(volume));
 		}
 
+		Func<Vector2, Vector4>? detail = null;
+		if (state.DetailMap != 0)
+		{
+			if (!volumes.TryGetValue(state.DetailMap, out VolumeData? map))
+			{
+				throw new ArgumentException($"No volume texture with handle {state.DetailMap} for the detail map.", nameof(state));
+			}
+
+			detail = uv => map.Sample(new Vector3(uv, 0.5f));
+		}
+
 		RasterizeDeferredDrawData();
 
 		int width = resolved.Color.Width;
@@ -88,7 +99,7 @@ public sealed partial class SoftwareRenderer
 		{
 			for (int x = 0; x < width; x++)
 			{
-				VolumeIntegral integral = ray.Integrate(x, y, width, height, data.Sample, data.Width, data.Height, data.Depth);
+				VolumeIntegral integral = ray.Integrate(x, y, width, height, data.Sample, detail, data.Width, data.Height, data.Depth);
 				Vector4 output = integral.Output(state);
 				if (output.X <= 0f && output.Y <= 0f && output.Z <= 0f && (state.Blend == BlendMode.Additive || output.W <= 0f))
 				{

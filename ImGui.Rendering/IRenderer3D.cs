@@ -310,6 +310,22 @@ public readonly record struct VolumeDrawState
 	/// </summary>
 	public Vector4 NoiseWeights { get; init; }
 
+	/// <summary>
+	/// Gets an optional detail map: a volume texture (normally one voxel deep) covering the volume's XY
+	/// face, whose channels multiply the volume's, sampled at the same (u, v). It carries structure in a
+	/// plane (a galaxy's disk, a cloud layer) at a far finer resolution than a full 3D grid could
+	/// afford. Its effect fades with distance from the volume's mid-plane (w = ½), over
+	/// <see cref="DetailFadeHeight"/>. Zero: no detail map.
+	/// </summary>
+	public nint DetailMap { get; init; }
+
+	/// <summary>
+	/// Gets the world distance from the volume's mid-plane over which the detail map's effect falls by
+	/// a factor of e, so what lies far above or below the plane keeps the coarse volume's values.
+	/// Zero: the detail applies at every height.
+	/// </summary>
+	public float DetailFadeHeight { get; init; }
+
 	/// <summary>Gets <see cref="NoiseWeights"/> with its default applied.</summary>
 	public Vector4 EffectiveNoiseWeights => NoiseWeights == Vector4.Zero ? Vector4.One : NoiseWeights;
 

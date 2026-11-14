@@ -87,7 +87,21 @@ public sealed class VolumeRay
 	/// <param name="height">Voxels along Y.</param>
 	/// <param name="depth">Voxels along Z.</param>
 	/// <returns>The light reaching the eye, the transmittance through the whole ray, and channel 0's faded column.</returns>
-	public VolumeIntegral Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, Vector4> sample, int width, int height, int depth)
+	public VolumeIntegral Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, Vector4> sample, int width, int height, int depth) =>
+		Integrate(x, y, targetWidth, targetHeight, sample, null, width, height, depth);
+
+	/// <summary>Integrates the volume along one pixel's ray, with a detail map multiplying it about its mid-plane.</summary>
+	/// <param name="x">Column.</param>
+	/// <param name="y">Row, 0 at the top.</param>
+	/// <param name="targetWidth">The target's width in pixels.</param>
+	/// <param name="targetHeight">The target's height in pixels.</param>
+	/// <param name="sample">Samples the volume's channels at texture coordinates in [0, 1]³.</param>
+	/// <param name="detail">Samples <see cref="VolumeDrawState.DetailMap"/>'s channels at (u, v), or <see langword="null"/> for none.</param>
+	/// <param name="width">Voxels along X.</param>
+	/// <param name="height">Voxels along Y.</param>
+	/// <param name="depth">Voxels along Z.</param>
+	/// <returns>The light reaching the eye, the transmittance through the whole ray, and channel 0's faded column.</returns>
+	public VolumeIntegral Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, Vector4> sample, Func<Vector2, Vector4>? detail, int width, int height, int depth)
 	{
 		Ensure.NotNull(sample);
 		VolumeIntegral nothing = new(Vector3.Zero, 1f, 0f);
@@ -120,10 +134,16 @@ public sealed class VolumeRay
 		for (int i = 0; i < samples; i++)
 		{
 			float t = enter + ((i + jitter) * step);
-			Vector4 value = sample(origin + (direction * t));
+			Vector3 uvw = origin + (direction * t);
+			Vector4 value = sample(uvw);
 			if (value == Vector4.Zero)
 			{
 				continue;
+			}
+
+			if (detail is not null)
+			{
+				value *= DetailFactor(detail(new Vector2(uvw.X, uvw.Y)), uvw.Z);
 			}
 
 			Vector3 world = Vector3.Lerp(near, far, t);
@@ -140,6 +160,25 @@ public sealed class VolumeRay
 		}
 
 		return new VolumeIntegral(light, transmittance, column);
+	}
+
+	/// <summary>
+	/// How a detail map's sample multiplies the volume at a height: fully in the mid-plane, fading
+	/// towards no change over <see cref="VolumeDrawState.DetailFadeHeight"/> above and below it.
+	/// </summary>
+	/// <param name="detail">The detail map's channels at the sample's (u, v).</param>
+	/// <param name="w">The sample's volume coordinate across the plane, in [0, 1].</param>
+	/// <returns>The per-channel multiplier.</returns>
+	public Vector4 DetailFactor(Vector4 detail, float w)
+	{
+		float weight = 1f;
+		if (state.DetailFadeHeight > 0f)
+		{
+			float height = MathF.Abs(w - 0.5f) * new Vector3(state.VolumeToWorld.M31, state.VolumeToWorld.M32, state.VolumeToWorld.M33).Length();
+			weight = MathF.Exp(-height / state.DetailFadeHeight);
+		}
+
+		return Vector4.Max(Vector4.Zero, Vector4.One + ((detail - Vector4.One) * weight));
 	}
 
 	private static Vector3 Rgb(Vector4 colour) => new(colour.X, colour.Y, colour.Z);
