@@ -363,6 +363,7 @@ public sealed class GLRenderer3DTests
 		Assert.AreEqual(new Vector4(0f, 0f, 0f, 2.5f), gl.Uniforms[gl.GetUniformLocation(0, "Extinction")]);
 		Assert.AreEqual(4, gl.Uniforms[gl.GetUniformLocation(0, "Channels")]);
 		Assert.AreEqual(Vector4.One, gl.Uniforms[gl.GetUniformLocation(0, "NoiseWeights")], "Unset weights mean full noise in every channel.");
+		Assert.AreEqual(Vector3.One, gl.Uniforms[gl.GetUniformLocation(0, "NoiseStretch")], "Unset stretch means round cells.");
 	}
 
 	[TestMethod]

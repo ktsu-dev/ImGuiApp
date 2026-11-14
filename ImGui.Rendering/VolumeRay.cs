@@ -206,7 +206,7 @@ public sealed class VolumeRay
 	/// <returns>The multiplier, never negative.</returns>
 	public float Grain(Vector3 world, float distance)
 	{
-		Vector3 p = world + state.NoiseOffset;
+		Vector3 p = (world + state.NoiseOffset) / state.EffectiveNoiseStretch;
 		float footprint = distance * state.PixelAngle;
 		return Layer(p, footprint, state.LowNoiseAmplitude, state.LowNoiseScale, Vector3.Zero)
 			* Layer(p, footprint, state.HighNoiseAmplitude, state.HighNoiseScale, new Vector3(17.3f));

@@ -184,6 +184,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform float HighNoiseAmplitude;
 		uniform float HighNoiseScale;
 		uniform vec3 NoiseOffset;
+		uniform vec3 NoiseStretch;
 		uniform float PixelAngle;
 		layout (location = 0) out vec4 Out_Color;
 
@@ -230,7 +231,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 		float Grain(vec3 world, float distanceToEye)
 		{
-			vec3 p = world + NoiseOffset;
+			vec3 p = (world + NoiseOffset) / NoiseStretch;
 			float footprint = distanceToEye * PixelAngle;
 			return Layer(p, footprint, LowNoiseAmplitude, LowNoiseScale, vec3(0.0))
 				* Layer(p, footprint, HighNoiseAmplitude, HighNoiseScale, vec3(17.3));
@@ -382,6 +383,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeHighNoiseAmplitudeLocation;
 	private int volumeHighNoiseScaleLocation;
 	private int volumeNoiseOffsetLocation;
+	private int volumeNoiseStretchLocation;
 	private int volumePixelAngleLocation;
 
 	private uint toneMapProgram;
@@ -799,6 +801,8 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform1(volumeHighNoiseAmplitudeLocation, state.HighNoiseAmplitude);
 			gl.Uniform1(volumeHighNoiseScaleLocation, state.HighNoiseScale);
 			gl.Uniform3(volumeNoiseOffsetLocation, state.NoiseOffset.X, state.NoiseOffset.Y, state.NoiseOffset.Z);
+			Vector3 noiseStretch = state.EffectiveNoiseStretch;
+			gl.Uniform3(volumeNoiseStretchLocation, noiseStretch.X, noiseStretch.Y, noiseStretch.Z);
 			gl.Uniform1(volumePixelAngleLocation, state.PixelAngle);
 
 			gl.ActiveTexture(GLEnum.Texture0);
@@ -909,6 +913,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeHighNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseAmplitude");
 		volumeHighNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseScale");
 		volumeNoiseOffsetLocation = gl.GetUniformLocation(volumeProgram, "NoiseOffset");
+		volumeNoiseStretchLocation = gl.GetUniformLocation(volumeProgram, "NoiseStretch");
 		volumePixelAngleLocation = gl.GetUniformLocation(volumeProgram, "PixelAngle");
 		volumeVertexArray = gl.GenVertexArray();
 	}

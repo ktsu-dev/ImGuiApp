@@ -326,6 +326,17 @@ public readonly record struct VolumeDrawState
 	/// </summary>
 	public float DetailFadeHeight { get; init; }
 
+	/// <summary>
+	/// Gets how much longer the noise cells are along each world axis than their scale: (1, 8, 1) makes
+	/// them columns eight times taller than wide, so the noise in a thin layer at right angles to Y
+	/// looks the same from every direction instead of being sliced into streaks by oblique rays. Zero in
+	/// every axis means 1 in every axis.
+	/// </summary>
+	public Vector3 NoiseStretch { get; init; }
+
+	/// <summary>Gets <see cref="NoiseStretch"/> with its default applied.</summary>
+	public Vector3 EffectiveNoiseStretch => NoiseStretch == Vector3.Zero ? Vector3.One : NoiseStretch;
+
 	/// <summary>Gets <see cref="NoiseWeights"/> with its default applied.</summary>
 	public Vector4 EffectiveNoiseWeights => NoiseWeights == Vector4.Zero ? Vector4.One : NoiseWeights;
 

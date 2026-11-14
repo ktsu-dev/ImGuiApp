@@ -220,6 +220,26 @@ public sealed class VolumeTests : IDisposable
 	}
 
 	[TestMethod]
+	public void StretchedNoiseIsColumnsAlongTheStretchedAxis()
+	{
+		VolumeRay ray = VolumeRay.Create(new VolumeDrawState { LowNoiseAmplitude = 1f, LowNoiseScale = 1f, NoiseStretch = new Vector3(1f, 1000f, 1f) });
+
+		// Along Y, cells a thousand units tall: the grain barely changes over a few units. Along X it
+		// changes from cell to cell.
+		Vector3 p = new(0.3f, 0.2f, 0.7f);
+		float alongY = 0f;
+		float alongX = 0f;
+		for (int i = 1; i <= 8; i++)
+		{
+			alongY = MathF.Max(alongY, MathF.Abs(ray.Grain(p, 0f) - ray.Grain(p + new Vector3(0f, i, 0f), 0f)));
+			alongX = MathF.Max(alongX, MathF.Abs(ray.Grain(p, 0f) - ray.Grain(p + new Vector3(i, 0f, 0f), 0f)));
+		}
+
+		Assert.IsLessThan(0.05f, alongY);
+		Assert.IsGreaterThan(0.2f, alongX);
+	}
+
+	[TestMethod]
 	public void NoiseIsDeterministicAndInTheUnitInterval()
 	{
 		for (int i = 0; i < 1000; i++)
