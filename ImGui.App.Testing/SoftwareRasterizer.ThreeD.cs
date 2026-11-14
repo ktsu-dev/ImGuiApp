@@ -464,6 +464,15 @@ public static partial class SoftwareRasterizer
 		target.SetPixel(x, y, final);
 	}
 
+	/// <summary>Writes an unclamped floating-point colour, blended, into a target and its high-range attachment if it has one.</summary>
+	internal static void WriteFloat(Bitmap32 target, HdrBuffer? hdr, int x, int y, Vector4 source, BlendMode blend)
+	{
+		Vector4 under = hdr is not null ? hdr[x, y] : ToVector(target.GetPixel(x, y));
+		Vector4 blended = Blend(source, under, blend);
+		hdr?[x, y] = blended;
+		target.SetPixel(x, y, HdrBuffer.ToRgba32(blended));
+	}
+
 	/// <summary>
 	/// Blends a straight-alpha source over a destination in floating point, as the GPU's blend
 	/// equations for each <see cref="BlendMode"/> do.

@@ -23,6 +23,12 @@ can draw 3D without depending on the application host.
   overlapping, mostly transparent draws, where eight bits round each faint contribution away and drift
   the hue. Ask `SupportsFormat` first: these members have default implementations that report no
   support, so an implementation written before them keeps compiling.
+- **Emissive volumes**: `CreateVolumeTexture(width, height, depth, Half[])` uploads one float per voxel,
+  and `DrawVolume(target, volume, VolumeDrawState)` ray-marches it over every pixel, adding `Color ·
+  ∫ value ds` along each pixel's ray through the box `VolumeToWorld` places the texture in. Samples
+  scale with the voxels crossed and start at a per-pixel offset, so there is no step to tune and no
+  banding; `FadeInStart`/`FadeInEnd` silence the volume near the eye so geometry drawn there can take
+  over. `VolumeRay` is the per-pixel arithmetic every renderer matches. Ask `SupportsVolumes` first.
 
 Most applications never use this package directly: `ImGuiWidgets.Viewport3D` in `ktsu.ImGui.Widgets`
 owns the target and the camera, and hands your callback the renderer to draw with.

@@ -149,8 +149,133 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			Out_Color = vec4(mapped, clamp(color.a, 0.0, 1.0));
 		}";
 
+	/// <summary>
+	/// The emissive volume pass, matching <see cref="VolumeRay.Integrate"/> step for step: the same
+	/// unprojection, clip, sample count, jitter and fade. Rows: the 3D pass negates clip y so a target's
+	/// first row is its top, so a fragment in row r (from the bottom of the GL framebuffer, which is
+	/// the target's first row) has normalized device y = 1 − 2(r + ½)/height.
+	/// </summary>
+	internal const string VolumeFragmentSource =
+		@"#version 330
+		uniform sampler3D Volume;
+		uniform mat4 ClipToWorld;
+		uniform mat4 WorldToVolume;
+		uniform vec3 Eye;
+		uniform vec4 Color;
+		uniform float FadeStart;
+		uniform float FadeEnd;
+		uniform float SamplesPerVoxel;
+		uniform int MaxSamples;
+		uniform vec3 VolumeSize;
+		uniform vec4 TargetSize;
+		uniform int Additive;
+		layout (location = 0) out vec4 Out_Color;
+
+		vec3 Unproject(vec4 clip)
+		{
+			vec4 world = ClipToWorld * clip;
+			return world.xyz / world.w;
+		}
+
+		float Fade(float distance)
+		{
+			if (FadeEnd <= 0.0 && FadeStart <= 0.0)
+			{
+				return 1.0;
+			}
+
+			float t = clamp((distance - FadeStart) / max(FadeEnd - FadeStart, 1e-6), 0.0, 1.0);
+			return t * t * (3.0 - (2.0 * t));
+		}
+
+		void main()
+		{
+			float ndcX = (gl_FragCoord.x / TargetSize.x * 2.0) - 1.0;
+			float ndcY = 1.0 - (gl_FragCoord.y / TargetSize.y * 2.0);
+			vec3 nearPoint = Unproject(vec4(ndcX, ndcY, 0.0, 1.0));
+			vec3 farPoint = Unproject(vec4(ndcX, ndcY, 1.0, 1.0));
+
+			vec3 origin = (WorldToVolume * vec4(nearPoint, 1.0)).xyz;
+			vec3 direction = (WorldToVolume * vec4(farPoint, 1.0)).xyz - origin;
+
+			float enter = 0.0;
+			float exit = 1.0;
+			for (int axis = 0; axis < 3; axis++)
+			{
+				float o = origin[axis];
+				float d = direction[axis];
+				if (abs(d) < 1e-12)
+				{
+					if (o < 0.0 || o > 1.0)
+					{
+						discard;
+					}
+
+					continue;
+				}
+
+				float t0 = -o / d;
+				float t1 = (1.0 - o) / d;
+				enter = max(enter, min(t0, t1));
+				exit = min(exit, max(t0, t1));
+			}
+
+			if (exit <= enter)
+			{
+				discard;
+			}
+
+			vec3 voxels = direction * (exit - enter) * VolumeSize;
+			int samples = clamp(int(ceil(length(voxels) * SamplesPerVoxel)), 1, MaxSamples);
+			float stepSize = (exit - enter) / float(samples);
+			float worldStep = stepSize * distance(nearPoint, farPoint);
+
+			float a = 0.06711056 * (floor(gl_FragCoord.x) + 0.5);
+			float b = 0.00583715 * (floor(gl_FragCoord.y) + 0.5);
+			float jitter = mod(52.9829189 * mod(a + b, 1.0), 1.0);
+
+			float sum = 0.0;
+			for (int i = 0; i < MaxSamples; i++)
+			{
+				if (i >= samples)
+				{
+					break;
+				}
+
+				float t = enter + ((float(i) + jitter) * stepSize);
+				float value = texture(Volume, origin + (direction * t)).r;
+				if (value != 0.0)
+				{
+					sum += value * Fade(distance(mix(nearPoint, farPoint, t), Eye));
+				}
+			}
+
+			float column = sum * worldStep;
+			if (column <= 0.0)
+			{
+				discard;
+			}
+
+			Out_Color = vec4(Color.rgb * column, Additive != 0 ? 1.0 : clamp(Color.a * column, 0.0, 1.0));
+		}";
+
 	private readonly IGL3D gl = gl;
 	private readonly Dictionary<nint, Target> targets = [];
+	private readonly Dictionary<nint, Volume> volumes = [];
+
+	private uint volumeProgram;
+	private int volumeSamplerLocation;
+	private int volumeClipToWorldLocation;
+	private int volumeWorldToVolumeLocation;
+	private int volumeEyeLocation;
+	private int volumeColorLocation;
+	private int volumeFadeStartLocation;
+	private int volumeFadeEndLocation;
+	private int volumeSamplesPerVoxelLocation;
+	private int volumeMaxSamplesLocation;
+	private int volumeSizeLocation;
+	private int volumeTargetSizeLocation;
+	private int volumeAdditiveLocation;
 
 	private uint toneMapProgram;
 	private int toneMapSourceLocation;
@@ -159,6 +284,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int toneMapCurveLocation;
 	private int toneMapPreserveHueLocation;
 	private uint toneMapVertexArray;
+	private uint volumeVertexArray;
 
 	private uint program;
 	private int matrixLocation;
@@ -436,6 +562,115 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		}
 	}
 
+	/// <summary>Gets whether this renderer supports volume textures: it does.</summary>
+	public bool SupportsVolumes => true;
+
+	/// <summary>Whether an id is a volume texture this renderer issued.</summary>
+	/// <param name="id">The id to test.</param>
+	/// <returns><see langword="true"/> if it belongs to a live volume.</returns>
+	public bool IsVolume(nint id) => volumes.ContainsKey(id);
+
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">The span is not <c>width · height · depth</c> long.</exception>
+	public nint CreateVolumeTexture(int width, int height, int depth, ReadOnlySpan<Half> values)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(depth);
+		if (values.Length != width * height * depth)
+		{
+			throw new ArgumentException($"Expected {width * height * depth} values, got {values.Length}.", nameof(values));
+		}
+
+		int previousTexture = gl.GetInteger(GLEnum.TextureBinding3D);
+		int previousAlignment = gl.GetInteger(GLEnum.UnpackAlignment);
+
+		uint texture = gl.GenTexture();
+		gl.BindTexture(GLEnum.Texture3D, texture);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureWrapR, (int)GLEnum.ClampToEdge);
+
+		// Rows of two-byte texels are not four-byte aligned when the width is odd.
+		gl.PixelStore(GLEnum.UnpackAlignment, 1);
+		gl.TexImage3D(GLEnum.Texture3D, GLEnum.R16f, width, height, depth, GLEnum.Red, GLEnum.HalfFloat, MemoryMarshal.AsBytes(values));
+		gl.PixelStore(GLEnum.UnpackAlignment, previousAlignment);
+		gl.BindTexture(GLEnum.Texture3D, (uint)previousTexture);
+
+		volumes[(nint)texture] = new Volume(texture, width, height, depth);
+		return (nint)texture;
+	}
+
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">The handle is not a live volume.</exception>
+	public void DeleteVolumeTexture(nint volume)
+	{
+		if (!volumes.Remove(volume, out Volume? existing))
+		{
+			throw new ArgumentException($"{volume} is not a volume texture.", nameof(volume));
+		}
+
+		gl.DeleteTexture(existing.Texture);
+	}
+
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">Either handle is unknown.</exception>
+	public void DrawVolume(nint target, nint volume, in VolumeDrawState state)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Target to = Resolve(target);
+		if (!volumes.TryGetValue(volume, out Volume? from))
+		{
+			throw new ArgumentException($"No volume texture with handle {volume}.", nameof(volume));
+		}
+
+		if (!Matrix4x4.Invert(state.ViewProjection, out Matrix4x4 clipToWorld) || !Matrix4x4.Invert(state.VolumeToWorld, out Matrix4x4 worldToVolume))
+		{
+			return;
+		}
+
+		EnsureVolumeResources();
+
+		SavedState saved = SavedState.Capture(gl);
+		try
+		{
+			gl.BindFramebuffer(GLEnum.Framebuffer, to.Framebuffer);
+			gl.Viewport(0, 0, to.Width, to.Height);
+			gl.Disable(GLEnum.ScissorTest);
+			gl.Disable(GLEnum.DepthTest);
+			gl.Disable(GLEnum.CullFace);
+			ApplyBlend(state.Blend);
+
+			gl.UseProgram(volumeProgram);
+			gl.Uniform1(volumeSamplerLocation, 0);
+			gl.UniformMatrix4(volumeClipToWorldLocation, MemoryMarshal.CreateReadOnlySpan(ref clipToWorld.M11, 16));
+			gl.UniformMatrix4(volumeWorldToVolumeLocation, MemoryMarshal.CreateReadOnlySpan(ref worldToVolume.M11, 16));
+			gl.Uniform3(volumeEyeLocation, state.Eye.X, state.Eye.Y, state.Eye.Z);
+			gl.Uniform4(volumeColorLocation, state.Color.X, state.Color.Y, state.Color.Z, state.Color.W);
+			gl.Uniform1(volumeFadeStartLocation, state.FadeInStart);
+			gl.Uniform1(volumeFadeEndLocation, state.FadeInEnd);
+			gl.Uniform1(volumeSamplesPerVoxelLocation, state.EffectiveSamplesPerVoxel);
+			gl.Uniform1(volumeMaxSamplesLocation, state.EffectiveMaxSamples);
+			gl.Uniform3(volumeSizeLocation, from.Width, from.Height, from.Depth);
+			gl.Uniform4(volumeTargetSizeLocation, to.Width, to.Height, 0f, 0f);
+			gl.Uniform1(volumeAdditiveLocation, state.Blend == BlendMode.Additive ? 1 : 0);
+
+			gl.ActiveTexture(GLEnum.Texture0);
+			gl.BindSampler(0, 0);
+			gl.BindTexture(GLEnum.Texture3D, from.Texture);
+
+			gl.BindVertexArray(volumeVertexArray);
+			gl.DrawArrays(GLEnum.Triangles, 0, 3);
+		}
+		finally
+		{
+			saved.Restore(gl);
+		}
+	}
+
 	/// <summary>Releases every target and the programs, buffers and vertex arrays behind them.</summary>
 	public void Dispose()
 	{
@@ -450,6 +685,19 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		}
 
 		targets.Clear();
+
+		foreach (Volume volume in volumes.Values)
+		{
+			gl.DeleteTexture(volume.Texture);
+		}
+
+		volumes.Clear();
+
+		if (volumeProgram != 0)
+		{
+			gl.DeleteProgram(volumeProgram);
+			gl.DeleteVertexArray(volumeVertexArray);
+		}
 
 		if (program != 0)
 		{
@@ -474,6 +722,30 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		RenderTargetFormat.Rgba16F => GLEnum.Rgba16f,
 		_ => throw new NotSupportedException($"No OpenGL storage for {format}."),
 	};
+
+	/// <summary>Creates the volume program and its empty vertex array the first time a volume is drawn.</summary>
+	private void EnsureVolumeResources()
+	{
+		if (volumeProgram != 0)
+		{
+			return;
+		}
+
+		volumeProgram = gl.CreateProgram(ToneMapVertexSource, VolumeFragmentSource);
+		volumeSamplerLocation = gl.GetUniformLocation(volumeProgram, "Volume");
+		volumeClipToWorldLocation = gl.GetUniformLocation(volumeProgram, "ClipToWorld");
+		volumeWorldToVolumeLocation = gl.GetUniformLocation(volumeProgram, "WorldToVolume");
+		volumeEyeLocation = gl.GetUniformLocation(volumeProgram, "Eye");
+		volumeColorLocation = gl.GetUniformLocation(volumeProgram, "Color");
+		volumeFadeStartLocation = gl.GetUniformLocation(volumeProgram, "FadeStart");
+		volumeFadeEndLocation = gl.GetUniformLocation(volumeProgram, "FadeEnd");
+		volumeSamplesPerVoxelLocation = gl.GetUniformLocation(volumeProgram, "SamplesPerVoxel");
+		volumeMaxSamplesLocation = gl.GetUniformLocation(volumeProgram, "MaxSamples");
+		volumeSizeLocation = gl.GetUniformLocation(volumeProgram, "VolumeSize");
+		volumeTargetSizeLocation = gl.GetUniformLocation(volumeProgram, "TargetSize");
+		volumeAdditiveLocation = gl.GetUniformLocation(volumeProgram, "Additive");
+		volumeVertexArray = gl.GenVertexArray();
+	}
 
 	/// <summary>Creates the tone-map program and its empty vertex array the first time a tone map is asked for.</summary>
 	private void EnsureToneMapResources()
@@ -622,6 +894,9 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	/// </summary>
 	private sealed record Target(uint Framebuffer, uint Color, uint Depth, int Width, int Height, GLEnum InternalFormat);
 
+	/// <summary>A volume texture and its size in voxels.</summary>
+	private sealed record Volume(uint Texture, int Width, int Height, int Depth);
+
 	/// <summary>
 	/// Everything <see cref="Clear"/> and <see cref="Draw"/> may change, captured beforehand and put
 	/// back afterwards. Beyond the set ImGui's own renderer restores, that is the bound framebuffers,
@@ -635,6 +910,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		private readonly int program;
 		private readonly int activeTexture;
 		private readonly int texture;
+		private readonly int texture3D;
 		private readonly int sampler;
 		private readonly int vertexArray;
 		private readonly int arrayBuffer;
@@ -666,6 +942,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			// The texture and sampler bindings are per unit; this renderer only ever uses unit 0.
 			gl.ActiveTexture(GLEnum.Texture0);
 			texture = gl.GetInteger(GLEnum.TextureBinding2D);
+			texture3D = gl.GetInteger(GLEnum.TextureBinding3D);
 			sampler = gl.GetInteger(GLEnum.SamplerBinding);
 
 			vertexArray = gl.GetInteger(GLEnum.VertexArrayBinding);
@@ -703,6 +980,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 			gl.ActiveTexture(GLEnum.Texture0);
 			gl.BindTexture(GLEnum.Texture2D, (uint)texture);
+			gl.BindTexture(GLEnum.Texture3D, (uint)texture3D);
 			gl.BindSampler(0, (uint)sampler);
 			gl.ActiveTexture((GLEnum)activeTexture);
 

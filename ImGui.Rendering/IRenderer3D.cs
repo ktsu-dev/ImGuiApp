@@ -205,6 +205,63 @@ public readonly record struct DrawState3D
 }
 
 /// <summary>
+/// Everything about an emissive volume pass that is not the volume itself.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The pass casts a ray through every pixel of the target, from the near plane to the far plane of
+/// <see cref="ViewProjection"/>, intersects it with the volume's box, and adds
+/// <c>Color · ∫ value · ds</c> along it: the texture's value integrated over world distance, with the
+/// value sampled trilinearly. Emission only, with no absorption, which is what a glowing medium such
+/// as unresolved stars or gas lit from within looks like.
+/// </para>
+/// <para>
+/// The number of samples is set by how many voxels the ray crosses, and each pixel starts its samples
+/// at a hashed offset, so there is no banding from a fixed step and no step count to tune per scene.
+/// </para>
+/// </remarks>
+public readonly record struct VolumeDrawState
+{
+	/// <summary>Gets the same world-to-clip matrix a <see cref="DrawState3D"/> would carry; its inverse turns pixels into rays.</summary>
+	public Matrix4x4 ViewProjection { get; init; }
+
+	/// <summary>Gets the matrix placing the volume's unit cube ([0, 1] on each axis, texture coordinates) in the world.</summary>
+	public Matrix4x4 VolumeToWorld { get; init; }
+
+	/// <summary>Gets the eye position in world space, which <see cref="FadeInStart"/> and <see cref="FadeInEnd"/> measure from.</summary>
+	public Vector3 Eye { get; init; }
+
+	/// <summary>Gets the colour emitted per unit of value per unit of world distance. Not clamped: the result is meant for a float target.</summary>
+	public Vector4 Color { get; init; }
+
+	/// <summary>
+	/// Gets the distance from <see cref="Eye"/> within which the volume emits nothing. Emission rises
+	/// smoothly to full at <see cref="FadeInEnd"/>, so whatever the caller draws near the eye (such as
+	/// individual stars) can take over from the volume without counting its light twice. Both zero:
+	/// no fade.
+	/// </summary>
+	public float FadeInStart { get; init; }
+
+	/// <summary>Gets the distance from <see cref="Eye"/> at which the volume reaches full emission.</summary>
+	public float FadeInEnd { get; init; }
+
+	/// <summary>Gets how many samples are taken per voxel crossed; zero means 2.</summary>
+	public float SamplesPerVoxel { get; init; }
+
+	/// <summary>Gets the most samples one ray takes; zero means 1024.</summary>
+	public int MaxSamples { get; init; }
+
+	/// <summary>Gets how the result is combined with the target; normally <see cref="BlendMode.Additive"/>.</summary>
+	public BlendMode Blend { get; init; }
+
+	/// <summary>Gets <see cref="SamplesPerVoxel"/> with its default applied.</summary>
+	public float EffectiveSamplesPerVoxel => SamplesPerVoxel > 0 ? SamplesPerVoxel : 2f;
+
+	/// <summary>Gets <see cref="MaxSamples"/> with its default applied.</summary>
+	public int EffectiveMaxSamples => MaxSamples > 0 ? MaxSamples : 1024;
+}
+
+/// <summary>
 /// An optional extension a renderer backend may implement to draw 3D geometry into an offscreen
 /// target that can then be shown as an ImGui image.
 /// </summary>
@@ -321,4 +378,34 @@ public interface IRenderer3D
 	/// <exception cref="NotSupportedException">The renderer cannot tone-map; true of every renderer whose <see cref="SupportsFormat"/> refuses <see cref="RenderTargetFormat.Rgba16F"/>.</exception>
 	public void ToneMap(nint source, nint destination, in ToneMap3D toneMap) =>
 		throw new NotSupportedException("This renderer cannot tone-map between render targets.");
+
+	/// <summary>Gets whether this renderer supports volume textures and <see cref="DrawVolume"/>.</summary>
+	/// <remarks>The default answers <see langword="false"/>.</remarks>
+	public bool SupportsVolumes => false;
+
+	/// <summary>
+	/// Creates a volume texture holding one floating-point value per voxel, stored at half precision.
+	/// </summary>
+	/// <param name="width">Voxels along X. Must be positive.</param>
+	/// <param name="height">Voxels along Y. Must be positive.</param>
+	/// <param name="depth">Voxels along Z. Must be positive.</param>
+	/// <param name="values">The values, X fastest, then Y, then Z: <c>width · height · depth</c> of them.</param>
+	/// <returns>An opaque handle, released with <see cref="DeleteVolumeTexture"/>. Not an ImGui texture id.</returns>
+	/// <exception cref="NotSupportedException">The renderer has no volumes; see <see cref="SupportsVolumes"/>.</exception>
+	public nint CreateVolumeTexture(int width, int height, int depth, ReadOnlySpan<Half> values) =>
+		throw new NotSupportedException("This renderer has no volume textures.");
+
+	/// <summary>Releases a volume texture.</summary>
+	/// <param name="volume">A handle from <see cref="CreateVolumeTexture"/>.</param>
+	/// <exception cref="NotSupportedException">The renderer has no volumes.</exception>
+	public void DeleteVolumeTexture(nint volume) =>
+		throw new NotSupportedException("This renderer has no volume textures.");
+
+	/// <summary>Ray-marches an emissive volume over every pixel of a target; see <see cref="VolumeDrawState"/>.</summary>
+	/// <param name="target">A handle from <see cref="CreateRenderTarget(int, int, bool)"/>.</param>
+	/// <param name="volume">A handle from <see cref="CreateVolumeTexture"/>.</param>
+	/// <param name="state">The pass's matrices, colour, fade and sampling.</param>
+	/// <exception cref="NotSupportedException">The renderer has no volumes.</exception>
+	public void DrawVolume(nint target, nint volume, in VolumeDrawState state) =>
+		throw new NotSupportedException("This renderer has no volume textures.");
 }

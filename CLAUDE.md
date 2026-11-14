@@ -404,7 +404,17 @@ that refuse**, so an implementation written before them keeps compiling; a backe
 must declare them, and `OpenGLRenderer` must forward them explicitly, or the defaults silently hide
 the support (`OpenGLRenderer_ForwardsTheHighRangeMembersRatherThanLeavingThemToTheDefaults`). On the
 software renderer a float target keeps an `HdrBuffer` beside its bitmap, which mirrors it clamped, as
-sampling an unmapped float target does on a GPU. `Vertex3D` has **no normal** —
+sampling an unmapped float target does on a GPU. **The second exception is emissive volumes**:
+`CreateVolumeTexture` (one half float per voxel, an R16F 3D texture on OpenGL) and `DrawVolume`, a
+fixed full-screen ray-march pass (`VolumeDrawState`: view-projection, a box matrix for the texture,
+emission colour, an eye-distance fade, samples per voxel). It is still not a shader hook: the pass
+does one thing, emission-only integration, and `VolumeRay` is its per-pixel arithmetic, which the GL
+shader mirrors line for line (unprojection with the target's first row at NDC y = +1, slab clip,
+sample count from voxels crossed, interleaved-gradient-noise jitter, smoothstep fade) and the software
+renderer calls directly, so `VolumeTests` can state expected pixels. It exists for glowing media made
+of more points than can be drawn (unresolved stars, gas), which splatted sprites render with lattice
+and interference artifacts. On OpenGL the pass binds a 3D texture on unit 0, so `SavedState` restores
+`TextureBinding3D` too. `Vertex3D` has **no normal** —
 the caller bakes shading into its colour, because a caller who wants real lighting wants shaders,
 and shaders cannot be made backend-agnostic without inventing a shading language.
 
