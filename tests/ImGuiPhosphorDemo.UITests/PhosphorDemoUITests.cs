@@ -151,9 +151,9 @@ public sealed class PhosphorDemoUITests
 		ImGuiAppHarness demo = StartDemo();
 		demo.Step(60);
 		Directory.CreateDirectory(folder);
-		demo.Capture().SavePng(Path.Combine(folder, "phosphor-green.png"));
+		demo.Capture().SavePng(Path.Join(folder, "phosphor-green.png"));
 		demo.Click("AMBER");
 		demo.Step(30);
-		demo.Capture().SavePng(Path.Combine(folder, "phosphor-amber.png"));
+		demo.Capture().SavePng(Path.Join(folder, "phosphor-amber.png"));
 	}
 }

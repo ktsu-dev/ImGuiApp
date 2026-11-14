@@ -168,7 +168,7 @@ public static partial class ImGuiPhosphor
 		}
 
 		drawList.PopClipRect();
-		if (speed != 0f)
+		if (MathF.Abs(speed) > float.Epsilon)
 		{
 			AnimationActivity.RequestActiveFrame();
 		}
