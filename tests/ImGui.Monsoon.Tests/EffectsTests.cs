@@ -27,7 +27,7 @@ public sealed class EffectsTests
 		int same = 0;
 		for (long i = 0; i < 200; i++)
 		{
-			if (Noise.Hash(1u, i) == Noise.Hash(2u, i))
+			if (float.Abs(Noise.Hash(1u, i) - Noise.Hash(2u, i)) < 1e-6f)
 			{
 				same++;
 			}
@@ -76,7 +76,7 @@ public sealed class EffectsTests
 			GlitchFrame frame = Glitch.Compute(t, 5u, 0f, 6);
 			Assert.IsFalse(frame.Active);
 			Assert.AreEqual(0f, frame.Split);
-			Assert.IsTrue(frame.Offsets.All(o => o == 0f));
+			Assert.IsTrue(frame.Offsets.All(o => float.Abs(o) < 1e-6f));
 		}
 	}
 

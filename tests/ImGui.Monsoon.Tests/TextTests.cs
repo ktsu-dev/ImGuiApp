@@ -37,12 +37,9 @@ public sealed partial class TextTests
 	{
 		foreach (string text in new[] { "モンスーン", "データ", "状態" })
 		{
-			foreach (char c in text)
+			foreach (char c in text.Where(c => c is not ('状' or '態')))
 			{
-				if (c is not ('状' or '態'))
-				{
-					Assert.IsTrue(KatakanaGlyphs.CanDraw(c), $"'{c}' in {text} cannot be drawn.");
-				}
+				Assert.IsTrue(KatakanaGlyphs.CanDraw(c), $"'{c}' in {text} cannot be drawn.");
 			}
 		}
 	}

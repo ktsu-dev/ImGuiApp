@@ -116,9 +116,9 @@ public sealed class MonsoonDemoUITests
 	[TestMethod]
 	public void Screenshot_IsWrittenForReview()
 	{
-		string directory = Environment.GetEnvironmentVariable("MONSOON_SCREENSHOT_DIR") ?? Path.Combine(Path.GetTempPath(), "monsoon");
+		string directory = Environment.GetEnvironmentVariable("MONSOON_SCREENSHOT_DIR") ?? Path.Join(Path.GetTempPath(), "monsoon");
 		Directory.CreateDirectory(directory);
-		string path = Path.Combine(directory, "monsoon-demo.png");
+		string path = Path.Join(directory, "monsoon-demo.png");
 		Demo.Capture().SavePng(path);
 		Assert.IsTrue(File.Exists(path));
 	}

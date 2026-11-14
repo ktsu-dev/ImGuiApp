@@ -23,7 +23,7 @@ internal static class Flicker
 	internal static float Brightness(double time, uint seed, float amount)
 	{
 		float depth = Math.Clamp(amount, 0f, 1f);
-		if (depth == 0f)
+		if (depth <= 0f)
 		{
 			return 1f;
 		}

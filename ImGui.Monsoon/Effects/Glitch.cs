@@ -36,7 +36,7 @@ internal static class Glitch
 		int slices = Math.Max(1, sliceCount);
 		float strength = Math.Clamp(intensity, 0f, 1f);
 		float[] offsets = new float[slices];
-		if (strength == 0f)
+		if (strength <= 0f)
 		{
 			return new GlitchFrame(false, offsets, 0f);
 		}
