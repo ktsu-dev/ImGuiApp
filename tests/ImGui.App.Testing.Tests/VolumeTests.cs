@@ -117,6 +117,55 @@ public sealed class VolumeTests : IDisposable
 	}
 
 	[TestMethod]
+	public void NoiseVariesThePixelsButKeepsTheirAverage()
+	{
+		// A constant slab, 0.25 thick at value 1, with strong noise: pixels differ, but over the view
+		// the multiplier averages about 1, so the mean stays near 0.25.
+		nint target = HdrTarget();
+		nint volume = Constant(2, 2, 2, 1f);
+		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 0.25f)) with { NoiseAmplitude = 0.8f, NoiseScale = 0.05f });
+
+		float min = float.MaxValue;
+		float max = float.MinValue;
+		float sum = 0f;
+		for (int y = 0; y < Size; y++)
+		{
+			for (int x = 0; x < Size; x++)
+			{
+				float value = Hdr(target, x, y).X;
+				min = MathF.Min(min, value);
+				max = MathF.Max(max, value);
+				sum += value;
+			}
+		}
+
+		Assert.IsGreaterThan(0.05f, max - min, "Noise should vary the pixels.");
+		Assert.AreEqual(0.25f, sum / (Size * Size), 0.05f, "Noise should not change the average brightness much.");
+	}
+
+	[TestMethod]
+	public void NoiseFadesOutWhereItsCellsAreUnderAPixel()
+	{
+		VolumeRay ray = VolumeRay.Create(new VolumeDrawState { NoiseAmplitude = 1f, NoiseScale = 1f, PixelAngle = 1f });
+
+		// At distance 10 a pixel is 10 units: cells of 1 are far below a pixel, so no grain.
+		Assert.AreEqual(1f, ray.Grain(new Vector3(0.3f, 0.7f, 0.2f), 10f), 1e-6f);
+		Assert.AreNotEqual(1f, ray.Grain(new Vector3(0.3f, 0.7f, 0.2f), 0.01f), "Close up, the noise applies.");
+	}
+
+	[TestMethod]
+	public void NoiseIsDeterministicAndInTheUnitInterval()
+	{
+		for (int i = 0; i < 1000; i++)
+		{
+			Vector3 p = new(i * 0.731f, -i * 0.377f, i * 1.913f);
+			float n = VolumeRay.Noise(p);
+			Assert.IsTrue(n is >= 0f and < 1f, $"Noise {n} at {p}.");
+			Assert.AreEqual(n, VolumeRay.Noise(p));
+		}
+	}
+
+	[TestMethod]
 	public void JitterStaysInTheUnitInterval()
 	{
 		for (int y = 0; y < 64; y++)

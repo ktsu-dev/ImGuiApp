@@ -254,6 +254,29 @@ public readonly record struct VolumeDrawState
 	/// <summary>Gets how the result is combined with the target; normally <see cref="BlendMode.Additive"/>.</summary>
 	public BlendMode Blend { get; init; }
 
+	/// <summary>
+	/// Gets how strongly procedural noise modulates the emission: each sample is multiplied by
+	/// 1 + amplitude · (2n − 1) for a noise value n in [0, 1), so 0 is none and 1 swings from nothing
+	/// to double. Detail finer than the volume's voxels, as grain in a nebula or unresolved stars.
+	/// </summary>
+	public float NoiseAmplitude { get; init; }
+
+	/// <summary>Gets the noise's coarsest cell size in world units; a second octave is about three times finer.</summary>
+	public float NoiseScale { get; init; }
+
+	/// <summary>
+	/// Gets the offset added to world positions before the noise is evaluated, so a caller drawing in
+	/// a moving, camera-relative space can keep the noise fixed to its own world.
+	/// </summary>
+	public Vector3 NoiseOffset { get; init; }
+
+	/// <summary>
+	/// Gets the world size of one pixel per unit of distance from the eye (2·tan(fov/2) / height). Each
+	/// noise octave fades out where its cells shrink below a few pixels, so distant noise does not
+	/// shimmer. Zero: no fade.
+	/// </summary>
+	public float PixelAngle { get; init; }
+
 	/// <summary>Gets <see cref="SamplesPerVoxel"/> with its default applied.</summary>
 	public float EffectiveSamplesPerVoxel => SamplesPerVoxel > 0 ? SamplesPerVoxel : 2f;
 

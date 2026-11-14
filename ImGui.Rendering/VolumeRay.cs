@@ -101,7 +101,9 @@ public sealed class VolumeRay
 			float value = sample(origin + (direction * t));
 			if (value != 0f)
 			{
-				sum += value * Fade(Vector3.Distance(Vector3.Lerp(near, far, t), state.Eye));
+				Vector3 world = Vector3.Lerp(near, far, t);
+				float distance = Vector3.Distance(world, state.Eye);
+				sum += value * Fade(distance) * Grain(world, distance);
 			}
 		}
 
@@ -121,6 +123,77 @@ public sealed class VolumeRay
 		float t = Math.Clamp((distance - state.FadeInStart) / MathF.Max(state.FadeInEnd - state.FadeInStart, 1e-6f), 0f, 1f);
 		return t * t * (3f - (2f * t));
 	}
+
+	/// <summary>
+	/// The emission multiplier from <see cref="VolumeDrawState.NoiseAmplitude"/> at a world position:
+	/// two octaves of value noise, each faded out where its cells are under about two pixels across.
+	/// </summary>
+	/// <param name="world">The sample's world position.</param>
+	/// <param name="distance">Its distance from the eye.</param>
+	/// <returns>The multiplier, never negative.</returns>
+	public float Grain(Vector3 world, float distance)
+	{
+		if (state.NoiseAmplitude <= 0f || state.NoiseScale <= 0f)
+		{
+			return 1f;
+		}
+
+		Vector3 p = (world + state.NoiseOffset) / state.NoiseScale;
+		float footprint = distance * state.PixelAngle;
+		float coarse = OctaveWeight(state.NoiseScale, footprint);
+		float fine = OctaveWeight(state.NoiseScale / FineOctave, footprint);
+		float signal = (coarse * 0.65f * ((2f * Noise(p)) - 1f)) + (fine * 0.35f * ((2f * Noise((p * FineOctave) + new Vector3(17.3f))) - 1f));
+		return MathF.Max(0f, 1f + (state.NoiseAmplitude * signal));
+	}
+
+	/// <summary>How much finer the second noise octave is than the first.</summary>
+	public const float FineOctave = 3.1f;
+
+	/// <summary>
+	/// Value noise in [0, 1): hashed values at integer lattice points, blended with smoothstep weights.
+	/// The hash works on the lattice coordinates as 32-bit unsigned integers, so the GLSL version,
+	/// which does the same, gives the same values.
+	/// </summary>
+	/// <param name="p">The position in lattice units.</param>
+	/// <returns>The noise value.</returns>
+	public static float Noise(Vector3 p)
+	{
+		float fx = MathF.Floor(p.X);
+		float fy = MathF.Floor(p.Y);
+		float fz = MathF.Floor(p.Z);
+		int ix = (int)fx;
+		int iy = (int)fy;
+		int iz = (int)fz;
+		float tx = Smooth(p.X - fx);
+		float ty = Smooth(p.Y - fy);
+		float tz = Smooth(p.Z - fz);
+
+		float x00 = Lerp(Lattice(ix, iy, iz), Lattice(ix + 1, iy, iz), tx);
+		float x10 = Lerp(Lattice(ix, iy + 1, iz), Lattice(ix + 1, iy + 1, iz), tx);
+		float x01 = Lerp(Lattice(ix, iy, iz + 1), Lattice(ix + 1, iy, iz + 1), tx);
+		float x11 = Lerp(Lattice(ix, iy + 1, iz + 1), Lattice(ix + 1, iy + 1, iz + 1), tx);
+		return Lerp(Lerp(x00, x10, ty), Lerp(x01, x11, ty), tz);
+	}
+
+	/// <summary>A hashed value in [0, 1) for a lattice point.</summary>
+	private static float Lattice(int x, int y, int z)
+	{
+		uint h = unchecked(((uint)x * 0x8DA6B343u) ^ ((uint)y * 0xD8163841u) ^ ((uint)z * 0xCB1AB31Fu));
+		h ^= h >> 16;
+		h = unchecked(h * 0x7FEB352Du);
+		h ^= h >> 15;
+		h = unchecked(h * 0x846CA68Bu);
+		h ^= h >> 16;
+		return (h >> 8) * (1f / 16777216f);
+	}
+
+	/// <summary>Full weight where a noise cell spans three pixels or more, none at one pixel.</summary>
+	private float OctaveWeight(float cell, float footprint) =>
+		state.PixelAngle <= 0f ? 1f : Math.Clamp(((cell / MathF.Max(footprint, 1e-12f)) - 1f) / 2f, 0f, 1f);
+
+	private static float Smooth(float t) => t * t * (3f - (2f * t));
+
+	private static float Lerp(float a, float b, float t) => a + ((b - a) * t);
 
 	/// <summary>Where a ray enters and leaves the unit cube, as fractions of its length, clipped to [0, 1].</summary>
 	private static bool ClipToUnitCube(Vector3 origin, Vector3 direction, out float enter, out float exit)

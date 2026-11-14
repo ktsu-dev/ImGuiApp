@@ -365,6 +365,30 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void DrawVolume_PassesTheNoiseToTheShader()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, new Half[1]);
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.Identity,
+			NoiseAmplitude = 0.375f,
+			NoiseScale = 120f,
+			NoiseOffset = new Vector3(1f, 2f, 3f),
+			PixelAngle = 0.0025f,
+		});
+
+		Assert.AreEqual(0.375f, gl.Uniforms[gl.GetUniformLocation(0, "NoiseAmplitude")]);
+		Assert.AreEqual(120f, gl.Uniforms[gl.GetUniformLocation(0, "NoiseScale")]);
+		Assert.AreEqual(new Vector3(1f, 2f, 3f), gl.Uniforms[gl.GetUniformLocation(0, "NoiseOffset")]);
+		Assert.AreEqual(0.0025f, gl.Uniforms[gl.GetUniformLocation(0, "PixelAngle")]);
+	}
+
+	[TestMethod]
 	public void DrawVolume_PutsBackEveryPieceOfStateItTouched()
 	{
 		FakeGL3D gl = FakeGL3D.WithUnusualState();

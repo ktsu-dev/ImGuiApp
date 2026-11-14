@@ -169,7 +169,56 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform vec3 VolumeSize;
 		uniform vec4 TargetSize;
 		uniform int Additive;
+		uniform float NoiseAmplitude;
+		uniform float NoiseScale;
+		uniform vec3 NoiseOffset;
+		uniform float PixelAngle;
 		layout (location = 0) out vec4 Out_Color;
+
+		float Lattice(ivec3 c)
+		{
+			uvec3 u = uvec3(c);
+			uint h = (u.x * 0x8DA6B343u) ^ (u.y * 0xD8163841u) ^ (u.z * 0xCB1AB31Fu);
+			h ^= h >> 16u;
+			h *= 0x7FEB352Du;
+			h ^= h >> 15u;
+			h *= 0x846CA68Bu;
+			h ^= h >> 16u;
+			return float(h >> 8u) * (1.0 / 16777216.0);
+		}
+
+		float Noise(vec3 p)
+		{
+			vec3 f = floor(p);
+			ivec3 i = ivec3(f);
+			vec3 t = p - f;
+			t = t * t * (3.0 - (2.0 * t));
+			float x00 = mix(Lattice(i), Lattice(i + ivec3(1, 0, 0)), t.x);
+			float x10 = mix(Lattice(i + ivec3(0, 1, 0)), Lattice(i + ivec3(1, 1, 0)), t.x);
+			float x01 = mix(Lattice(i + ivec3(0, 0, 1)), Lattice(i + ivec3(1, 0, 1)), t.x);
+			float x11 = mix(Lattice(i + ivec3(0, 1, 1)), Lattice(i + ivec3(1, 1, 1)), t.x);
+			return mix(mix(x00, x10, t.y), mix(x01, x11, t.y), t.z);
+		}
+
+		float OctaveWeight(float cell, float footprint)
+		{
+			return PixelAngle <= 0.0 ? 1.0 : clamp(((cell / max(footprint, 1e-12)) - 1.0) / 2.0, 0.0, 1.0);
+		}
+
+		float Grain(vec3 world, float distanceToEye)
+		{
+			if (NoiseAmplitude <= 0.0 || NoiseScale <= 0.0)
+			{
+				return 1.0;
+			}
+
+			vec3 p = (world + NoiseOffset) / NoiseScale;
+			float footprint = distanceToEye * PixelAngle;
+			float coarse = OctaveWeight(NoiseScale, footprint);
+			float fine = OctaveWeight(NoiseScale / 3.1, footprint);
+			float signal = (coarse * 0.65 * ((2.0 * Noise(p)) - 1.0)) + (fine * 0.35 * ((2.0 * Noise((p * 3.1) + vec3(17.3))) - 1.0));
+			return max(0.0, 1.0 + (NoiseAmplitude * signal));
+		}
 
 		vec3 Unproject(vec4 clip)
 		{
@@ -246,7 +295,9 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				float value = texture(Volume, origin + (direction * t)).r;
 				if (value != 0.0)
 				{
-					sum += value * Fade(distance(mix(nearPoint, farPoint, t), Eye));
+					vec3 world = mix(nearPoint, farPoint, t);
+					float distanceToEye = distance(world, Eye);
+					sum += value * Fade(distanceToEye) * Grain(world, distanceToEye);
 				}
 			}
 
@@ -276,6 +327,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeSizeLocation;
 	private int volumeTargetSizeLocation;
 	private int volumeAdditiveLocation;
+	private int volumeNoiseAmplitudeLocation;
+	private int volumeNoiseScaleLocation;
+	private int volumeNoiseOffsetLocation;
+	private int volumePixelAngleLocation;
 
 	private uint toneMapProgram;
 	private int toneMapSourceLocation;
@@ -657,6 +712,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform3(volumeSizeLocation, from.Width, from.Height, from.Depth);
 			gl.Uniform4(volumeTargetSizeLocation, to.Width, to.Height, 0f, 0f);
 			gl.Uniform1(volumeAdditiveLocation, state.Blend == BlendMode.Additive ? 1 : 0);
+			gl.Uniform1(volumeNoiseAmplitudeLocation, state.NoiseAmplitude);
+			gl.Uniform1(volumeNoiseScaleLocation, state.NoiseScale);
+			gl.Uniform3(volumeNoiseOffsetLocation, state.NoiseOffset.X, state.NoiseOffset.Y, state.NoiseOffset.Z);
+			gl.Uniform1(volumePixelAngleLocation, state.PixelAngle);
 
 			gl.ActiveTexture(GLEnum.Texture0);
 			gl.BindSampler(0, 0);
@@ -744,6 +803,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeSizeLocation = gl.GetUniformLocation(volumeProgram, "VolumeSize");
 		volumeTargetSizeLocation = gl.GetUniformLocation(volumeProgram, "TargetSize");
 		volumeAdditiveLocation = gl.GetUniformLocation(volumeProgram, "Additive");
+		volumeNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "NoiseAmplitude");
+		volumeNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "NoiseScale");
+		volumeNoiseOffsetLocation = gl.GetUniformLocation(volumeProgram, "NoiseOffset");
+		volumePixelAngleLocation = gl.GetUniformLocation(volumeProgram, "PixelAngle");
 		volumeVertexArray = gl.GenVertexArray();
 	}
 
