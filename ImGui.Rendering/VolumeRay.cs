@@ -142,7 +142,17 @@ public sealed class VolumeRay
 		float footprint = distance * state.PixelAngle;
 		float coarse = OctaveWeight(state.NoiseScale, footprint);
 		float fine = OctaveWeight(state.NoiseScale / FineOctave, footprint);
-		float signal = (coarse * 0.65f * ((2f * Noise(p)) - 1f)) + (fine * 0.35f * ((2f * Noise((p * FineOctave) + new Vector3(17.3f))) - 1f));
+		// An octave faded out entirely is not evaluated: the fine one usually is, beyond close range.
+		float signal = 0f;
+		if (coarse > 0f)
+		{
+			signal += coarse * 0.65f * ((2f * Noise(p)) - 1f);
+		}
+
+		if (fine > 0f)
+		{
+			signal += fine * 0.35f * ((2f * Noise((p * FineOctave) + new Vector3(17.3f))) - 1f);
+		}
 		return MathF.Max(0f, 1f + (state.NoiseAmplitude * signal));
 	}
 

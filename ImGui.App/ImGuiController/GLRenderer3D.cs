@@ -216,7 +216,16 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			float footprint = distanceToEye * PixelAngle;
 			float coarse = OctaveWeight(NoiseScale, footprint);
 			float fine = OctaveWeight(NoiseScale / 3.1, footprint);
-			float signal = (coarse * 0.65 * ((2.0 * Noise(p)) - 1.0)) + (fine * 0.35 * ((2.0 * Noise((p * 3.1) + vec3(17.3))) - 1.0));
+			float signal = 0.0;
+			if (coarse > 0.0)
+			{
+				signal += coarse * 0.65 * ((2.0 * Noise(p)) - 1.0);
+			}
+
+			if (fine > 0.0)
+			{
+				signal += fine * 0.35 * ((2.0 * Noise((p * 3.1) + vec3(17.3))) - 1.0);
+			}
 			return max(0.0, 1.0 + (NoiseAmplitude * signal));
 		}
 
