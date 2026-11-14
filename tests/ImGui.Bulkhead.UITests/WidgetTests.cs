@@ -125,13 +125,22 @@ public sealed class WidgetTests
 	[TestMethod]
 	public void Panel_HostsContentAndSidebar()
 	{
-		ImGuiAppHarness app = Start(() => ImGuiBulkhead.Panel("Ops", Vector2.Zero, () =>
+		ImGuiAppHarness app = Start(() =>
 		{
-			if (ImGuiBulkhead.Button("Inner"))
+			using BulkheadPanel panel = ImGuiBulkhead.Panel("Ops", Vector2.Zero);
+			using (panel.Sidebar())
 			{
-				clicks++;
+				ImGuiBulkhead.Button("Side", new Vector2(ImGui.GetContentRegionAvail().X, 0), null, BulkheadCaps.None);
 			}
-		}, () => ImGuiBulkhead.Button("Side", new Vector2(ImGui.GetContentRegionAvail().X, 0), null, BulkheadCaps.None)));
+
+			using (panel.Content())
+			{
+				if (ImGuiBulkhead.Button("Inner"))
+				{
+					clicks++;
+				}
+			}
+		});
 
 		Assert.IsTrue(app.Probe.WasSeenInFrame("Ops", app.FrameCount - 1));
 		Rectangle side = app.Probe.Rect("Side") ?? throw new AssertFailedException("The sidebar did not draw.");
@@ -139,5 +148,46 @@ public sealed class WidgetTests
 		Assert.IsGreaterThanOrEqualTo(side.MaxX, inner.MinX, "The content overlaps the sidebar.");
 		app.Click("Inner");
 		Assert.AreEqual(1, clicks);
+	}
+
+	[TestMethod]
+	public void Panel_WithoutASidebarStillDraws()
+	{
+		ImGuiAppHarness app = Start(() =>
+		{
+			using BulkheadPanel panel = ImGuiBulkhead.Panel("Ops", Vector2.Zero);
+			using (panel.Content())
+			{
+				ImGuiBulkhead.Button("Inner");
+			}
+		});
+
+		Assert.IsTrue(app.Probe.WasSeenInFrame("Ops", app.FrameCount - 1));
+		Assert.IsTrue(app.Probe.WasSeenInFrame("Inner", app.FrameCount - 1));
+	}
+
+	[TestMethod]
+	public void Panel_RegionOpenedTwiceThrows()
+	{
+		Exception? thrown = null;
+		Start(() =>
+		{
+			using BulkheadPanel panel = ImGuiBulkhead.Panel("Ops", Vector2.Zero);
+			using (panel.Content())
+			{
+				ImGuiBulkhead.Button("Inner");
+			}
+
+			try
+			{
+				panel.Content().Dispose();
+			}
+			catch (InvalidOperationException exception)
+			{
+				thrown = exception;
+			}
+		});
+
+		Assert.IsInstanceOfType<InvalidOperationException>(thrown);
 	}
 }

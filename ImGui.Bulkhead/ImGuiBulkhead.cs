@@ -184,93 +184,27 @@ public static class ImGuiBulkhead
 	}
 
 	/// <summary>
-	/// Draws a framed panel: an elbow across the top carrying the title, a column down the left
-	/// (or a sidebar of the caller's own controls), an elbow across the bottom, and the content to
-	/// the right of the column.
+	/// Opens a framed panel: an elbow across the top carrying the title, a column down the left,
+	/// and an elbow across the bottom. Draw into it through <see cref="BulkheadPanel.Sidebar"/> and
+	/// <see cref="BulkheadPanel.Content"/>, each a scope of its own, and dispose the panel to close it.
 	/// </summary>
+	/// <example>
+	/// <code>
+	/// using (BulkheadPanel panel = ImGuiBulkhead.Panel("Main Console", Vector2.Zero))
+	/// {
+	/// 	using (panel.Sidebar()) { ImGuiBulkhead.Button("Status", new Vector2(-1f, 0f)); }
+	/// 	using (panel.Content()) { ImGui.TextUnformatted("All systems nominal"); }
+	/// }
+	/// </code>
+	/// </example>
 	/// <param name="title">The title, which may carry a <c>##</c> id suffix.</param>
 	/// <param name="size">The panel's size; non-positive components follow <c>ImGui</c>'s conventions.</param>
-	/// <param name="content">Draws the panel's content, inside a child window.</param>
-	/// <param name="sidebar">Optionally draws controls into the column, usually <see cref="Button"/>s as wide as it is.</param>
 	/// <param name="options">The frame's proportions and colours.</param>
-	public static void Panel(string title, Vector2 size, Action content, Action? sidebar = null, BulkheadPanelOptions? options = null)
+	/// <returns>The panel scope; dispose it to close the panel.</returns>
+	public static BulkheadPanel Panel(string title, Vector2 size, BulkheadPanelOptions? options = null)
 	{
 		Ensure.NotNull(title);
-		Ensure.NotNull(content);
-		BulkheadPanelOptions resolvedOptions = options ?? new BulkheadPanelOptions();
-		float frame = ImGui.GetFrameHeight();
-		Vector2 avail = ImGui.GetContentRegionAvail();
-		Vector2 resolved = new(
-			size.X > 0f ? size.X : Math.Max(1f, avail.X + size.X),
-			size.Y > 0f ? size.Y : Math.Max(1f, avail.Y + size.Y));
-		PanelLayout layout = PanelLayout.For(resolved, frame, resolvedOptions);
-
-		Vector4 color = resolvedOptions.Color ?? BulkheadPalette.Amber;
-		Vector4 columnColor = resolvedOptions.ColumnColor ?? BulkheadPalette.Shade(color, -0.25f);
-		Vector2 origin = ImGui.GetCursorScreenPos();
-		ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-		uint background = ImGui.GetColorU32(BulkheadPalette.Background);
-
-		ImGui.PushID(title);
-
-		// Top elbow, with the title cut into its bar on a black ground.
-		DrawElbow(drawList, origin, layout.TopElbow, BulkheadCorner.TopLeft, layout.ColumnWidth, layout.BarThickness, color, null);
-		string text = BulkheadDraw.DisplayText(title);
-		Vector2 textSize = ImGui.CalcTextSize(text);
-		float textRight = origin.X + resolved.X - (layout.BarThickness * 1.5f);
-		Vector2 boxMin = new(textRight - textSize.X - (frame * 0.5f), origin.Y);
-		Vector2 boxMax = new(textRight + (frame * 0.25f), origin.Y + layout.BarThickness);
-		if (boxMin.X > origin.X + layout.ColumnWidth + layout.BarThickness)
-		{
-			drawList.AddRectFilled(boxMin, boxMax, background);
-			drawList.AddText(new Vector2(boxMin.X + (frame * 0.25f), origin.Y + ((layout.BarThickness - textSize.Y) * 0.5f)), ImGui.GetColorU32(color), text);
-		}
-
-		// Bottom elbow.
-		Vector2 bottomOrigin = origin + new Vector2(0f, resolved.Y - layout.BottomElbow.Y);
-		DrawElbow(drawList, bottomOrigin, layout.BottomElbow, BulkheadCorner.BottomLeft, layout.ColumnWidth, layout.BarThickness, color, null);
-
-		// The column between them: the caller's sidebar, or one plain block.
-		Vector2 columnMin = origin + new Vector2(0f, layout.TopElbow.Y + resolvedOptions.Gap);
-		Vector2 columnSize = new(layout.ColumnWidth, layout.ColumnHeight);
-		if (columnSize.Y > 0f)
-		{
-			if (sidebar is null)
-			{
-				drawList.AddRectFilled(columnMin, columnMin + columnSize, ImGui.GetColorU32(columnColor));
-			}
-			else
-			{
-				ImGui.SetCursorScreenPos(columnMin);
-				if (ImGui.BeginChild("##sidebar", columnSize, ImGuiChildFlags.None, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground))
-				{
-					ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, resolvedOptions.Gap));
-					sidebar();
-					ImGui.PopStyleVar();
-				}
-
-				ImGui.EndChild();
-			}
-		}
-
-		// Content, right of the column and between the bars.
-		Vector2 contentMin = origin + layout.ContentOffset;
-		if (layout.ContentSize.X > 0f && layout.ContentSize.Y > 0f)
-		{
-			ImGui.SetCursorScreenPos(contentMin);
-			if (ImGui.BeginChild("##content", layout.ContentSize, ImGuiChildFlags.None, ImGuiWindowFlags.NoBackground))
-			{
-				content();
-			}
-
-			ImGui.EndChild();
-		}
-
-		ImGui.PopID();
-
-		ImGui.SetCursorScreenPos(origin);
-		ImGui.Dummy(resolved);
-		ImGuiProbes.MarkItem(title);
+		return new BulkheadPanel(title, size, options ?? new BulkheadPanelOptions());
 	}
 
 	/// <summary>How many of <paramref name="segments"/> a gauge at <paramref name="fraction"/> lights.</summary>
@@ -319,7 +253,7 @@ public static class ImGuiBulkhead
 		drawList.PopClipRect();
 	}
 
-	private static void DrawElbow(ImDrawListPtr drawList, Vector2 min, Vector2 size, BulkheadCorner corner, float columnWidth, float barThickness, Vector4 color, string? label)
+	internal static void DrawElbow(ImDrawListPtr drawList, Vector2 min, Vector2 size, BulkheadCorner corner, float columnWidth, float barThickness, Vector4 color, string? label)
 	{
 		BulkheadDraw.Elbow(drawList, min, size, corner, columnWidth, barThickness, ImGui.GetColorU32(color));
 		if (string.IsNullOrEmpty(label))

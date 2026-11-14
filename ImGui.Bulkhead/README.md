@@ -29,10 +29,21 @@ All on `ImGuiBulkhead`. Labels are drawn in upper case, and every widget marks i
 | `Elbow(id, size, corner, columnWidth, barThickness, color, label)` | The bent frame piece joining a column to a bar, in any of four corners |
 | `Header(title, width, color)` | A section heading: a capped bar with the title cut into it |
 | `Gauge(id, fraction, size, segments, color)` | A segmented level meter with rounded ends |
-| `Panel(title, size, content, sidebar, options)` | A framed region: two elbows, a sidebar column, and a content area, each in its own child window |
+| `Panel(title, size, options)` | A framed region: two elbows, a sidebar column and a content area. Returns a `BulkheadPanel` scope whose `Sidebar()` and `Content()` each return a scope for that child window |
 
 ```csharp
-ImGuiBulkhead.Panel("Main Console", Vector2.Zero, DrawContent, DrawSidebar);
+using (BulkheadPanel panel = ImGuiBulkhead.Panel("Main Console", Vector2.Zero))
+{
+	using (panel.Sidebar())
+	{
+		DrawSidebar();
+	}
+
+	using (panel.Content())
+	{
+		DrawContent();
+	}
+}
 
 static void DrawSidebar()
 {
@@ -49,3 +60,5 @@ static void DrawSidebar()
 `BulkheadPanelOptions` sets the column width, the bar thickness, the gap between pieces and the colours. Left at zero, sizes come from the frame height, so the panel scales with the font.
 
 The demo is `examples/ImGuiBulkheadDemo`, and `tests/ImGui.Bulkhead.UITests` drives it and every widget headlessly.
+
+Every Begin/End pair is a scope (`ktsu.ScopedAction`), so it is closed by `Dispose` and cannot be left unbalanced. Each region opens at most once per panel, in either order; a panel whose sidebar is never opened fills the column instead.

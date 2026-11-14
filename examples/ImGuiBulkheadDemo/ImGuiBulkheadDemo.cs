@@ -62,7 +62,19 @@ internal static class ImGuiBulkheadDemo
 
 	// ImGuiApp already draws OnRender inside a window covering the viewport, so the panel goes
 	// straight into it. A second full-screen window would sit behind that one and never be seen.
-	private static void Render() => ImGuiBulkhead.Panel("Main Console", Vector2.Zero, DrawContent, DrawSidebar);
+	private static void Render()
+	{
+		using BulkheadPanel panel = ImGuiBulkhead.Panel("Main Console", Vector2.Zero);
+		using (panel.Sidebar())
+		{
+			DrawSidebar();
+		}
+
+		using (panel.Content())
+		{
+			DrawContent();
+		}
+	}
 
 	private static void DrawSidebar()
 	{

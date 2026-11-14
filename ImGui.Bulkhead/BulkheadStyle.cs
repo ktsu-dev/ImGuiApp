@@ -36,7 +36,7 @@ public static class BulkheadStyle
 	/// application that otherwise looks different.
 	/// </summary>
 	/// <returns>The scope; dispose it to restore the previous look.</returns>
-	public static IDisposable Scope() => new BulkheadScope();
+	public static BulkheadStyleScope Scope() => new();
 
 	internal static readonly Vector2 ItemSpacing = new(6f, 6f);
 	internal static readonly Vector2 FramePadding = new(10f, 4f);
@@ -91,38 +91,6 @@ public static class BulkheadStyle
 				break;
 			default:
 				throw new ArgumentOutOfRangeException(nameof(variable), variable, "Not a Bulkhead style variable.");
-		}
-	}
-
-	private sealed class BulkheadScope : IDisposable
-	{
-		private readonly ScopedTheme theme = new(BulkheadTheme.Instance);
-		private bool disposed;
-
-		public BulkheadScope()
-		{
-			foreach ((ImGuiStyleVar variable, float value) in FloatVariables)
-			{
-				ImGui.PushStyleVar(variable, value);
-			}
-
-			ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, ItemSpacing);
-			ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, FramePadding);
-			ImGui.PushStyleColor(ImGuiCol.WindowBg, BulkheadPalette.Background);
-			ImGui.PushStyleColor(ImGuiCol.ChildBg, Vector4.Zero);
-		}
-
-		public void Dispose()
-		{
-			if (disposed)
-			{
-				return;
-			}
-
-			disposed = true;
-			ImGui.PopStyleColor(2);
-			ImGui.PopStyleVar(FloatVariables.Length + 2);
-			theme.Dispose();
 		}
 	}
 }
