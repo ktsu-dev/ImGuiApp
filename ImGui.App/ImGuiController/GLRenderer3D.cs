@@ -311,7 +311,9 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 				float t = enter + ((float(i) + jitter) * stepSize);
 				vec3 uvw = origin + (direction * t);
-				vec4 value = texture(Volume, uvw);
+				// An explicit LOD: implicit derivatives are undefined inside this divergent loop, and the
+				// textures have no mipmaps to choose between anyway.
+				vec4 value = textureLod(Volume, uvw, 0.0);
 				if (Channels == 1)
 				{
 					value = vec4(value.r, 0.0, 0.0, 0.0);
@@ -325,7 +327,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				if (HasDetail != 0)
 				{
 					float weight = DetailFadeHeight > 0.0 ? exp(-abs(uvw.z - 0.5) * PlaneScale / DetailFadeHeight) : 1.0;
-					value *= max(vec4(0.0), vec4(1.0) + ((texture(DetailMap, vec3(uvw.xy, 0.5)) - vec4(1.0)) * weight));
+					value *= max(vec4(0.0), vec4(1.0) + ((textureLod(DetailMap, vec3(uvw.xy, 0.5), 0.0) - vec4(1.0)) * weight));
 				}
 
 				vec3 world = mix(nearPoint, farPoint, t);
