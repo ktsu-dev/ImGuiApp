@@ -323,7 +323,7 @@ public sealed class GLRenderer3DTests
 		string before = gl.Snapshot();
 
 		Assert.IsTrue(renderer.SupportsVolumes);
-		nint volume = renderer.CreateVolumeTexture(3, 2, 5, new Half[30]);
+		nint volume = renderer.CreateVolumeTexture(3, 2, 5, 1, new Half[30]);
 
 		Assert.IsTrue(renderer.IsVolume(volume));
 		CollectionAssert.Contains(gl.Calls, "TexImage3D(R16f,3x2x5,Red,HalfFloat,60,align=1)", "Odd-width rows of two-byte texels need an alignment of one.");
@@ -331,10 +331,44 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void CreateVolumeTexture_WithFourChannels_UploadsRgbaHalfFloats()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+
+		renderer.CreateVolumeTexture(2, 2, 2, 4, new Half[32]);
+
+		CollectionAssert.Contains(gl.Calls, "TexImage3D(Rgba16f,2x2x2,Rgba,HalfFloat,64,align=1)");
+	}
+
+	[TestMethod]
+	public void DrawVolume_PassesTheChannelColoursAndExtinction()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 4, new Half[4]);
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.Identity,
+			Color1 = new Vector4(0.1f, 0.2f, 0.3f, 1f),
+			Color3 = new Vector4(0.7f, 0.8f, 0.9f, 1f),
+			Extinction = new Vector4(0f, 0f, 0f, 2.5f),
+		});
+
+		Assert.AreEqual(new Vector4(0.1f, 0.2f, 0.3f, 1f), gl.Uniforms[gl.GetUniformLocation(0, "Color1")]);
+		Assert.AreEqual(new Vector4(0.7f, 0.8f, 0.9f, 1f), gl.Uniforms[gl.GetUniformLocation(0, "Color3")]);
+		Assert.AreEqual(new Vector4(0f, 0f, 0f, 2.5f), gl.Uniforms[gl.GetUniformLocation(0, "Extinction")]);
+		Assert.AreEqual(4, gl.Uniforms[gl.GetUniformLocation(0, "Channels")]);
+	}
+
+	[TestMethod]
 	public void CreateVolumeTexture_RejectsAWrongSizedSpan()
 	{
 		using GLRenderer3D renderer = new(new FakeGL3D());
-		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(2, 2, 2, new Half[7]));
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(2, 2, 2, 1, new Half[7]));
 	}
 
 	[TestMethod]
@@ -343,7 +377,7 @@ public sealed class GLRenderer3DTests
 		FakeGL3D gl = FakeGL3D.WithUnusualState();
 		using GLRenderer3D renderer = new(gl);
 		nint target = renderer.CreateRenderTarget(32, 24, depth: true, RenderTargetFormat.Rgba16F);
-		nint volume = renderer.CreateVolumeTexture(4, 4, 4, new Half[64]);
+		nint volume = renderer.CreateVolumeTexture(4, 4, 4, 1, new Half[64]);
 
 		renderer.DrawVolume(target, volume, new VolumeDrawState
 		{
@@ -370,7 +404,7 @@ public sealed class GLRenderer3DTests
 		FakeGL3D gl = new();
 		using GLRenderer3D renderer = new(gl);
 		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
-		nint volume = renderer.CreateVolumeTexture(1, 1, 1, new Half[1]);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
 
 		renderer.DrawVolume(target, volume, new VolumeDrawState
 		{
@@ -398,7 +432,7 @@ public sealed class GLRenderer3DTests
 		FakeGL3D gl = FakeGL3D.WithUnusualState();
 		using GLRenderer3D renderer = new(gl);
 		nint target = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
-		nint volume = renderer.CreateVolumeTexture(2, 2, 2, new Half[8]);
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 1, new Half[8]);
 		string before = gl.Snapshot();
 
 		renderer.DrawVolume(target, volume, new VolumeDrawState { ViewProjection = Matrix4x4.Identity, VolumeToWorld = Matrix4x4.Identity, Blend = BlendMode.Additive });
@@ -412,7 +446,7 @@ public sealed class GLRenderer3DTests
 		FakeGL3D gl = new();
 		using GLRenderer3D renderer = new(gl);
 		nint target = renderer.CreateRenderTarget(8, 8, depth: false);
-		nint volume = renderer.CreateVolumeTexture(1, 1, 1, new Half[1]);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
 
 		renderer.DrawVolume(target, volume, new VolumeDrawState { ViewProjection = default, VolumeToWorld = Matrix4x4.Identity });
 
@@ -424,7 +458,7 @@ public sealed class GLRenderer3DTests
 	{
 		FakeGL3D gl = new();
 		using GLRenderer3D renderer = new(gl);
-		nint volume = renderer.CreateVolumeTexture(1, 1, 1, new Half[1]);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
 		gl.Calls.Clear();
 
 		renderer.DeleteVolumeTexture(volume);
@@ -441,7 +475,7 @@ public sealed class GLRenderer3DTests
 		IRenderer3D controller = renderer;
 
 		Assert.IsTrue(controller.SupportsVolumes);
-		nint volume = controller.CreateVolumeTexture(1, 1, 1, new Half[1]);
+		nint volume = controller.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
 		nint target = controller.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
 		controller.DrawVolume(target, volume, new VolumeDrawState { ViewProjection = Matrix4x4.Identity, VolumeToWorld = Matrix4x4.Identity });
 

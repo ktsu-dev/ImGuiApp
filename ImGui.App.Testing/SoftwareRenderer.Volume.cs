@@ -25,17 +25,23 @@ public sealed partial class SoftwareRenderer
 	/// <param name="width">Voxels along X.</param>
 	/// <param name="height">Voxels along Y.</param>
 	/// <param name="depth">Voxels along Z.</param>
-	/// <param name="values">The values, X fastest, then Y, then Z.</param>
+	/// <param name="channels">Values per voxel: 1 or 4.</param>
+	/// <param name="values">The values, channels interleaved, then X fastest, then Y, then Z.</param>
 	/// <returns>A handle, released with <see cref="DeleteVolumeTexture"/>.</returns>
-	/// <exception cref="ArgumentException">The span is not <c>width · height · depth</c> long.</exception>
-	public nint CreateVolumeTexture(int width, int height, int depth, ReadOnlySpan<Half> values)
+	/// <exception cref="ArgumentException">The span is the wrong length, or the channel count is not 1 or 4.</exception>
+	public nint CreateVolumeTexture(int width, int height, int depth, int channels, ReadOnlySpan<Half> values)
 	{
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(depth);
-		if (values.Length != width * height * depth)
+		if (channels is not (1 or 4))
 		{
-			throw new ArgumentException($"Expected {width * height * depth} values, got {values.Length}.", nameof(values));
+			throw new ArgumentException($"A volume has 1 or 4 channels, not {channels}.", nameof(channels));
+		}
+
+		if (values.Length != width * height * depth * channels)
+		{
+			throw new ArgumentException($"Expected {width * height * depth * channels} values, got {values.Length}.", nameof(values));
 		}
 
 		float[] data = new float[values.Length];
@@ -45,7 +51,7 @@ public sealed partial class SoftwareRenderer
 		}
 
 		nint handle = nextId++;
-		volumes[handle] = new VolumeData(width, height, depth, data);
+		volumes[handle] = new VolumeData(width, height, depth, channels, data);
 		return handle;
 	}
 
@@ -60,7 +66,7 @@ public sealed partial class SoftwareRenderer
 		}
 	}
 
-	/// <summary>Ray-marches an emissive volume over every pixel of a target.</summary>
+	/// <summary>Ray-marches a volume over every pixel of a target.</summary>
 	/// <param name="target">The target.</param>
 	/// <param name="volume">The volume.</param>
 	/// <param name="state">The pass.</param>
@@ -82,21 +88,20 @@ public sealed partial class SoftwareRenderer
 		{
 			for (int x = 0; x < width; x++)
 			{
-				float column = ray.Integrate(x, y, width, height, data.Sample, data.Width, data.Height, data.Depth);
-				if (column <= 0f)
+				VolumeIntegral integral = ray.Integrate(x, y, width, height, data.Sample, data.Width, data.Height, data.Depth);
+				Vector4 output = integral.Output(state);
+				if (output.X <= 0f && output.Y <= 0f && output.Z <= 0f && (state.Blend == BlendMode.Additive || output.W <= 0f))
 				{
 					continue;
 				}
 
-				Vector4 emitted = new(state.Color.X * column, state.Color.Y * column, state.Color.Z * column, Math.Clamp(state.Color.W * column, 0f, 1f));
-				Vector4 source = state.Blend == BlendMode.Additive ? emitted with { W = 1f } : emitted;
-				SoftwareRasterizer.WriteFloat(resolved.Color, resolved.Hdr, x, y, source, state.Blend);
+				SoftwareRasterizer.WriteFloat(resolved.Color, resolved.Hdr, x, y, output, state.Blend);
 			}
 		}
 	}
 
 	/// <summary>A volume's voxels, sampled trilinearly with clamp-to-edge, as a GPU samples a 3D texture.</summary>
-	private sealed class VolumeData(int width, int height, int depth, float[] values)
+	private sealed class VolumeData(int width, int height, int depth, int channels, float[] values)
 	{
 		public int Width { get; } = width;
 
@@ -104,7 +109,7 @@ public sealed partial class SoftwareRenderer
 
 		public int Depth { get; } = depth;
 
-		public float Sample(Vector3 uvw)
+		public Vector4 Sample(Vector3 uvw)
 		{
 			float fx = (uvw.X * Width) - 0.5f;
 			float fy = (uvw.Y * Height) - 0.5f;
@@ -116,16 +121,17 @@ public sealed partial class SoftwareRenderer
 			float ty = fy - y0;
 			float tz = fz - z0;
 
-			float c00 = Lerp(At(x0, y0, z0), At(x0 + 1, y0, z0), tx);
-			float c10 = Lerp(At(x0, y0 + 1, z0), At(x0 + 1, y0 + 1, z0), tx);
-			float c01 = Lerp(At(x0, y0, z0 + 1), At(x0 + 1, y0, z0 + 1), tx);
-			float c11 = Lerp(At(x0, y0 + 1, z0 + 1), At(x0 + 1, y0 + 1, z0 + 1), tx);
-			return Lerp(Lerp(c00, c10, ty), Lerp(c01, c11, ty), tz);
+			Vector4 c00 = Vector4.Lerp(At(x0, y0, z0), At(x0 + 1, y0, z0), tx);
+			Vector4 c10 = Vector4.Lerp(At(x0, y0 + 1, z0), At(x0 + 1, y0 + 1, z0), tx);
+			Vector4 c01 = Vector4.Lerp(At(x0, y0, z0 + 1), At(x0 + 1, y0, z0 + 1), tx);
+			Vector4 c11 = Vector4.Lerp(At(x0, y0 + 1, z0 + 1), At(x0 + 1, y0 + 1, z0 + 1), tx);
+			return Vector4.Lerp(Vector4.Lerp(c00, c10, ty), Vector4.Lerp(c01, c11, ty), tz);
 		}
 
-		private float At(int x, int y, int z) =>
-			values[(((Math.Clamp(z, 0, Depth - 1) * Height) + Math.Clamp(y, 0, Height - 1)) * Width) + Math.Clamp(x, 0, Width - 1)];
-
-		private static float Lerp(float a, float b, float t) => a + ((b - a) * t);
+		private Vector4 At(int x, int y, int z)
+		{
+			int i = ((((Math.Clamp(z, 0, Depth - 1) * Height) + Math.Clamp(y, 0, Height - 1)) * Width) + Math.Clamp(x, 0, Width - 1)) * channels;
+			return channels == 1 ? new Vector4(values[i], 0f, 0f, 0f) : new Vector4(values[i], values[i + 1], values[i + 2], values[i + 3]);
+		}
 	}
 }

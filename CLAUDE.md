@@ -405,10 +405,11 @@ must declare them, and `OpenGLRenderer` must forward them explicitly, or the def
 the support (`OpenGLRenderer_ForwardsTheHighRangeMembersRatherThanLeavingThemToTheDefaults`). On the
 software renderer a float target keeps an `HdrBuffer` beside its bitmap, which mirrors it clamped, as
 sampling an unmapped float target does on a GPU. **The second exception is emissive volumes**:
-`CreateVolumeTexture` (one half float per voxel, an R16F 3D texture on OpenGL) and `DrawVolume`, a
-fixed full-screen ray-march pass (`VolumeDrawState`: view-projection, a box matrix for the texture,
-emission colour, an eye-distance fade, samples per voxel). It is still not a shader hook: the pass
-does one thing, emission-only integration, and `VolumeRay` is its per-pixel arithmetic, which the GL
+`CreateVolumeTexture` (one or four half floats per voxel, an R16F or RGBA16F 3D texture on OpenGL)
+and `DrawVolume`, a fixed full-screen ray-march pass (`VolumeDrawState`: view-projection, a box
+matrix for the texture, a colour per channel, per-channel extinction, an eye-distance fade, samples
+per voxel). It is still not a shader hook: the pass does one thing, front-to-back emission with
+absorption, and `VolumeRay` is its per-pixel arithmetic, which the GL
 shader mirrors line for line (unprojection with the target's first row at NDC y = +1, slab clip,
 sample count from voxels crossed, interleaved-gradient-noise jitter, smoothstep fade) and the software
 renderer calls directly, so `VolumeTests` can state expected pixels. It exists for glowing media made

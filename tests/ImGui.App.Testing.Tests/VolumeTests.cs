@@ -106,7 +106,7 @@ public sealed class VolumeTests : IDisposable
 	{
 		// Two voxels along X, 0 and 1: halfway between their centres the value is 0.5.
 		nint target = HdrTarget();
-		nint volume = renderer.CreateVolumeTexture(2, 1, 1, [(Half)0f, (Half)1f]);
+		nint volume = renderer.CreateVolumeTexture(2, 1, 1, 1, [(Half)0f, (Half)1f]);
 
 		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 1f)));
 
@@ -166,6 +166,63 @@ public sealed class VolumeTests : IDisposable
 	}
 
 	[TestMethod]
+	public void FourChannelsEmitTheirOwnColours()
+	{
+		// Channel 1 at 1 and channel 2 at 0.5, through a slab 0.5 thick: green 1 · 0.5, blue 2 · 0.5 · 0.5.
+		nint target = HdrTarget();
+		Half[] values = new Half[2 * 2 * 2 * 4];
+		for (int i = 0; i < values.Length; i += 4)
+		{
+			values[i + 1] = (Half)1f;
+			values[i + 2] = (Half)0.5f;
+		}
+
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 4, values);
+		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 0.5f)) with
+		{
+			Color = new Vector4(1f, 0f, 0f, 1f),
+			Color1 = new Vector4(0f, 1f, 0f, 1f),
+			Color2 = new Vector4(0f, 0f, 2f, 1f),
+		});
+
+		Vector4 pixel = Hdr(target, Size / 2, Size / 2);
+		Assert.AreEqual(0f, pixel.X, 1e-6f, "Channel 0 is empty.");
+		Assert.AreEqual(0.5f, pixel.Y, 0.01f);
+		Assert.AreEqual(0.5f, pixel.Z, 0.01f);
+	}
+
+	[TestMethod]
+	public void ExtinctionInFrontDimsTheEmissionBehind()
+	{
+		// Along Z: the near half absorbs (channel 3), the far half emits (channel 0). Rays run from
+		// z = 0 to 1, so the emission at the back is seen through all the dust at the front.
+		const int Depth = 16;
+		Half[] values = new Half[Depth * 4];
+		for (int z = 0; z < Depth; z++)
+		{
+			values[(z * 4) + (z < Depth / 2 ? 3 : 0)] = (Half)1f;
+		}
+
+		nint volume = renderer.CreateVolumeTexture(1, 1, Depth, 4, values);
+		VolumeDrawState clear = State(Slab(-1f, 1f, 0f, 1f)) with { Color = new Vector4(1f, 1f, 1f, 1f) };
+		nint plain = HdrTarget();
+		renderer.DrawVolume(plain, volume, clear);
+		float unobstructed = Hdr(plain, Size / 2, Size / 2).X;
+
+		nint dimmed = HdrTarget();
+		renderer.DrawVolume(dimmed, volume, clear with { Extinction = new Vector4(0f, 0f, 0f, 4f) });
+		float behindDust = Hdr(dimmed, Size / 2, Size / 2).X;
+
+		// About half a unit of dust at extinction 4: the light behind is dimmed by about e^-2.
+		Assert.IsGreaterThan(0.3f, unobstructed);
+		Assert.AreEqual(MathF.Exp(-2f), behindDust / unobstructed, 0.05f);
+	}
+
+	[TestMethod]
+	public void AVolumeNeedsOneOrFourChannels() =>
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(1, 1, 1, 2, new Half[2]));
+
+	[TestMethod]
 	public void JitterStaysInTheUnitInterval()
 	{
 		for (int y = 0; y < 64; y++)
@@ -181,7 +238,7 @@ public sealed class VolumeTests : IDisposable
 	[TestMethod]
 	public void AVolumeOfTheWrongSizeIsRejectedAndAnUnknownOneToo()
 	{
-		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(2, 2, 2, new Half[7]));
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(2, 2, 2, 1, new Half[7]));
 		Assert.ThrowsExactly<ArgumentException>(() => renderer.DeleteVolumeTexture(12345));
 		Assert.ThrowsExactly<ArgumentException>(() => renderer.DrawVolume(HdrTarget(), 12345, State(Matrix4x4.Identity)));
 	}
@@ -191,7 +248,7 @@ public sealed class VolumeTests : IDisposable
 	{
 		IRenderer3D minimal = new MinimalRenderer();
 		Assert.IsFalse(minimal.SupportsVolumes);
-		Assert.ThrowsExactly<NotSupportedException>(() => minimal.CreateVolumeTexture(1, 1, 1, new Half[1]));
+		Assert.ThrowsExactly<NotSupportedException>(() => minimal.CreateVolumeTexture(1, 1, 1, 1, new Half[1]));
 		Assert.ThrowsExactly<NotSupportedException>(() => minimal.DrawVolume(1, 2, default));
 	}
 
@@ -219,7 +276,7 @@ public sealed class VolumeTests : IDisposable
 	{
 		Half[] values = new Half[width * height * depth];
 		Array.Fill(values, (Half)value);
-		return renderer.CreateVolumeTexture(width, height, depth, values);
+		return renderer.CreateVolumeTexture(width, height, depth, 1, values);
 	}
 
 	/// <summary>The red channel of a pixel, read through an identity tone map into an eight-bit target.</summary>

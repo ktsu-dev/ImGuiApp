@@ -166,8 +166,8 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D, IHalfFloat
 	public bool SupportsVolumes => _renderer3D.SupportsVolumes;
 
 	/// <inheritdoc />
-	public nint CreateVolumeTexture(int width, int height, int depth, ReadOnlySpan<Half> values) =>
-		_renderer3D.CreateVolumeTexture(width, height, depth, values);
+	public nint CreateVolumeTexture(int width, int height, int depth, int channels, ReadOnlySpan<Half> values) =>
+		_renderer3D.CreateVolumeTexture(width, height, depth, channels, values);
 
 	/// <inheritdoc />
 	public void DeleteVolumeTexture(nint volume) => _renderer3D.DeleteVolumeTexture(volume);

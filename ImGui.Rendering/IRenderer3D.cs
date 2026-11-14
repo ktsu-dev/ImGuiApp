@@ -231,8 +231,27 @@ public readonly record struct VolumeDrawState
 	/// <summary>Gets the eye position in world space, which <see cref="FadeInStart"/> and <see cref="FadeInEnd"/> measure from.</summary>
 	public Vector3 Eye { get; init; }
 
-	/// <summary>Gets the colour emitted per unit of value per unit of world distance. Not clamped: the result is meant for a float target.</summary>
+	/// <summary>
+	/// Gets the colour channel 0 emits per unit of value per unit of world distance. Not clamped: the
+	/// result is meant for a float target. A single-channel volume uses only this.
+	/// </summary>
 	public Vector4 Color { get; init; }
+
+	/// <summary>Gets the colour channel 1 of a four-channel volume emits, as <see cref="Color"/>.</summary>
+	public Vector4 Color1 { get; init; }
+
+	/// <summary>Gets the colour channel 2 of a four-channel volume emits, as <see cref="Color"/>.</summary>
+	public Vector4 Color2 { get; init; }
+
+	/// <summary>Gets the colour channel 3 of a four-channel volume emits, as <see cref="Color"/>.</summary>
+	public Vector4 Color3 { get; init; }
+
+	/// <summary>
+	/// Gets how strongly each channel absorbs light, per unit of value per unit of world distance:
+	/// along the ray, the light from farther away is dimmed by exp(−∫ extinction · value · ds) in front
+	/// of it, so a dust channel draws dark lanes over the glow behind it. Zero: emission only.
+	/// </summary>
+	public Vector4 Extinction { get; init; }
 
 	/// <summary>
 	/// Gets the distance from <see cref="Eye"/> within which the volume emits nothing. Emission rises
@@ -413,15 +432,17 @@ public interface IRenderer3D
 	public bool SupportsVolumes => false;
 
 	/// <summary>
-	/// Creates a volume texture holding one floating-point value per voxel, stored at half precision.
+	/// Creates a volume texture holding one or four floating-point values per voxel, stored at half
+	/// precision. Each channel has its own colour and extinction in <see cref="VolumeDrawState"/>.
 	/// </summary>
 	/// <param name="width">Voxels along X. Must be positive.</param>
 	/// <param name="height">Voxels along Y. Must be positive.</param>
 	/// <param name="depth">Voxels along Z. Must be positive.</param>
-	/// <param name="values">The values, X fastest, then Y, then Z: <c>width · height · depth</c> of them.</param>
+	/// <param name="channels">Values per voxel: 1 or 4.</param>
+	/// <param name="values">The values, channels interleaved, then X fastest, then Y, then Z: <c>width · height · depth · channels</c> of them.</param>
 	/// <returns>An opaque handle, released with <see cref="DeleteVolumeTexture"/>. Not an ImGui texture id.</returns>
 	/// <exception cref="NotSupportedException">The renderer has no volumes; see <see cref="SupportsVolumes"/>.</exception>
-	public nint CreateVolumeTexture(int width, int height, int depth, ReadOnlySpan<Half> values) =>
+	public nint CreateVolumeTexture(int width, int height, int depth, int channels, ReadOnlySpan<Half> values) =>
 		throw new NotSupportedException("This renderer has no volume textures.");
 
 	/// <summary>Releases a volume texture.</summary>

@@ -23,9 +23,11 @@ can draw 3D without depending on the application host.
   overlapping, mostly transparent draws, where eight bits round each faint contribution away and drift
   the hue. Ask `SupportsFormat` first: these members have default implementations that report no
   support, so an implementation written before them keeps compiling.
-- **Emissive volumes**: `CreateVolumeTexture(width, height, depth, Half[])` uploads one float per voxel,
-  and `DrawVolume(target, volume, VolumeDrawState)` ray-marches it over every pixel, adding `Color ·
-  ∫ value ds` along each pixel's ray through the box `VolumeToWorld` places the texture in. Samples
+- **Emissive volumes**: `CreateVolumeTexture(width, height, depth, channels, Half[])` uploads one or
+  four floats per voxel, and `DrawVolume(target, volume, VolumeDrawState)` ray-marches it over every
+  pixel, front to back, adding each channel's value times its colour (`Color`, `Color1`–`Color3`)
+  along each pixel's ray through the box `VolumeToWorld` places the texture in, attenuated by
+  `exp(-∫ Extinction · value ds)` in front of it, so a dust channel can darken what lies behind. Samples
   scale with the voxels crossed and start at a per-pixel offset, so there is no step to tune and no
   banding; `FadeInStart`/`FadeInEnd` silence the volume near the eye so geometry drawn there can take
   over. Optional low- and high-frequency noise layers (`LowNoiseAmplitude`/`LowNoiseScale`, `HighNoiseAmplitude`/`HighNoiseScale`) multiply in world-fixed value noise for detail finer than the voxels, faded out below a few pixels (`PixelAngle`) so it does not shimmer. `VolumeRay` is the per-pixel arithmetic every renderer matches. Ask `SupportsVolumes` first.

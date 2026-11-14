@@ -5,6 +5,21 @@ namespace ktsu.ImGui.Rendering;
 using System;
 using System.Numerics;
 
+/// <summary>What one pixel's ray through a volume gives.</summary>
+/// <param name="Light">The light reaching the eye: the channels' colours times their values, integrated front to back through the transmittance.</param>
+/// <param name="Transmittance">The fraction of light from behind the volume that gets through it, from the channels' extinction.</param>
+/// <param name="Column">Channel 0's value integrated over world distance with the fade applied, for the alpha of a non-additive pass.</param>
+public readonly record struct VolumeIntegral(Vector3 Light, float Transmittance, float Column)
+{
+	/// <summary>The colour and alpha the pass writes for this ray under a blend mode.</summary>
+	/// <param name="state">The pass.</param>
+	/// <returns>The output colour: the light, and for anything but additive, an alpha that covers what the volume blocks.</returns>
+	public Vector4 Output(in VolumeDrawState state) =>
+		state.Blend == BlendMode.Additive
+			? new Vector4(Light, 1f)
+			: new Vector4(Light, MathF.Max(Math.Clamp(state.Color.W * Column, 0f, 1f), 1f - Transmittance));
+}
+
 /// <summary>
 /// The arithmetic of <see cref="IRenderer3D.DrawVolume"/> for one pixel, which every renderer's
 /// implementation must match, so a test can state the expected value without a graphics context.
@@ -58,22 +73,27 @@ public sealed class VolumeRay
 		return value < 0 ? value + 1 : value;
 	}
 
-	/// <summary>Integrates the volume's value over world distance along one pixel's ray, with the fade applied.</summary>
+	/// <summary>
+	/// Integrates the volume along one pixel's ray, front to back: each step's emission, the channels
+	/// weighted by their colours, is added dimmed by the transmittance in front of it, and the step's
+	/// extinction then dims everything behind it.
+	/// </summary>
 	/// <param name="x">Column.</param>
 	/// <param name="y">Row, 0 at the top.</param>
 	/// <param name="targetWidth">The target's width in pixels.</param>
 	/// <param name="targetHeight">The target's height in pixels.</param>
-	/// <param name="sample">Samples the volume at texture coordinates in [0, 1]³.</param>
+	/// <param name="sample">Samples the volume's channels at texture coordinates in [0, 1]³; a single-channel volume returns its value in X and zero elsewhere.</param>
 	/// <param name="width">Voxels along X.</param>
 	/// <param name="height">Voxels along Y.</param>
 	/// <param name="depth">Voxels along Z.</param>
-	/// <returns>∫ value · fade · ds, in value × world units.</returns>
-	public float Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, float> sample, int width, int height, int depth)
+	/// <returns>The light reaching the eye, the transmittance through the whole ray, and channel 0's faded column.</returns>
+	public VolumeIntegral Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, Vector4> sample, int width, int height, int depth)
 	{
 		Ensure.NotNull(sample);
+		VolumeIntegral nothing = new(Vector3.Zero, 1f, 0f);
 		if (!IsValid)
 		{
-			return 0f;
+			return nothing;
 		}
 
 		float ndcX = ((x + 0.5f) / targetWidth * 2f) - 1f;
@@ -85,7 +105,7 @@ public sealed class VolumeRay
 		Vector3 direction = Vector3.Transform(far, worldToVolume) - origin;
 		if (!ClipToUnitCube(origin, direction, out float enter, out float exit))
 		{
-			return 0f;
+			return nothing;
 		}
 
 		Vector3 voxels = direction * (exit - enter) * new Vector3(width, height, depth);
@@ -94,21 +114,35 @@ public sealed class VolumeRay
 		float worldStep = step * Vector3.Distance(near, far);
 		float jitter = Jitter(x, y);
 
-		float sum = 0f;
+		Vector3 light = Vector3.Zero;
+		float transmittance = 1f;
+		float column = 0f;
 		for (int i = 0; i < samples; i++)
 		{
 			float t = enter + ((i + jitter) * step);
-			float value = sample(origin + (direction * t));
-			if (value != 0f)
+			Vector4 value = sample(origin + (direction * t));
+			if (value == Vector4.Zero)
 			{
-				Vector3 world = Vector3.Lerp(near, far, t);
-				float distance = Vector3.Distance(world, state.Eye);
-				sum += value * Fade(distance) * Grain(world, distance);
+				continue;
 			}
+
+			Vector3 world = Vector3.Lerp(near, far, t);
+			float distance = Vector3.Distance(world, state.Eye);
+			value *= Grain(world, distance);
+
+			// The fade silences emission near the eye, where the caller draws its own detail; matter
+			// there still absorbs, since it is still in front of what lies behind it.
+			float fade = Fade(distance);
+			Vector3 emission = (Rgb(state.Color) * value.X) + (Rgb(state.Color1) * value.Y) + (Rgb(state.Color2) * value.Z) + (Rgb(state.Color3) * value.W);
+			light += emission * (fade * transmittance * worldStep);
+			column += value.X * fade * worldStep;
+			transmittance *= MathF.Exp(-Vector4.Dot(state.Extinction, value) * worldStep);
 		}
 
-		return sum * worldStep;
+		return new VolumeIntegral(light, transmittance, column);
 	}
+
+	private static Vector3 Rgb(Vector4 colour) => new(colour.X, colour.Y, colour.Z);
 
 	/// <summary>The emission weight at a distance from the eye: 0 inside the fade's start, rising smoothly to 1 at its end.</summary>
 	/// <param name="distance">The distance.</param>

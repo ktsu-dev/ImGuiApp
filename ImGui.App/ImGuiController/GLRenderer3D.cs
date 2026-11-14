@@ -162,6 +162,11 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform mat4 WorldToVolume;
 		uniform vec3 Eye;
 		uniform vec4 Color;
+		uniform vec4 Color1;
+		uniform vec4 Color2;
+		uniform vec4 Color3;
+		uniform vec4 Extinction;
+		uniform int Channels;
 		uniform float FadeStart;
 		uniform float FadeEnd;
 		uniform float SamplesPerVoxel;
@@ -289,7 +294,9 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			float b = 0.00583715 * (floor(gl_FragCoord.y) + 0.5);
 			float jitter = mod(52.9829189 * mod(a + b, 1.0), 1.0);
 
-			float sum = 0.0;
+			vec3 light = vec3(0.0);
+			float transmittance = 1.0;
+			float column = 0.0;
 			for (int i = 0; i < MaxSamples; i++)
 			{
 				if (i >= samples)
@@ -298,22 +305,35 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				}
 
 				float t = enter + ((float(i) + jitter) * stepSize);
-				float value = texture(Volume, origin + (direction * t)).r;
-				if (value != 0.0)
+				vec4 value = texture(Volume, origin + (direction * t));
+				if (Channels == 1)
 				{
-					vec3 world = mix(nearPoint, farPoint, t);
-					float distanceToEye = distance(world, Eye);
-					sum += value * Fade(distanceToEye) * Grain(world, distanceToEye);
+					value = vec4(value.r, 0.0, 0.0, 0.0);
 				}
+
+				if (value == vec4(0.0))
+				{
+					continue;
+				}
+
+				vec3 world = mix(nearPoint, farPoint, t);
+				float distanceToEye = distance(world, Eye);
+				value *= Grain(world, distanceToEye);
+
+				float fade = Fade(distanceToEye);
+				vec3 emission = (Color.rgb * value.x) + (Color1.rgb * value.y) + (Color2.rgb * value.z) + (Color3.rgb * value.w);
+				light += emission * (fade * transmittance * worldStep);
+				column += value.x * fade * worldStep;
+				transmittance *= exp(-dot(Extinction, value) * worldStep);
 			}
 
-			float column = sum * worldStep;
-			if (column <= 0.0)
+			float alpha = Additive != 0 ? 1.0 : max(clamp(Color.a * column, 0.0, 1.0), 1.0 - transmittance);
+			if (light == vec3(0.0) && (Additive != 0 || alpha <= 0.0))
 			{
 				discard;
 			}
 
-			Out_Color = vec4(Color.rgb * column, Additive != 0 ? 1.0 : clamp(Color.a * column, 0.0, 1.0));
+			Out_Color = vec4(light, alpha);
 		}";
 
 	private readonly IGL3D gl = gl;
@@ -326,6 +346,11 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeWorldToVolumeLocation;
 	private int volumeEyeLocation;
 	private int volumeColorLocation;
+	private int volumeColor1Location;
+	private int volumeColor2Location;
+	private int volumeColor3Location;
+	private int volumeExtinctionLocation;
+	private int volumeChannelsLocation;
 	private int volumeFadeStartLocation;
 	private int volumeFadeEndLocation;
 	private int volumeSamplesPerVoxelLocation;
@@ -634,16 +659,21 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	public bool IsVolume(nint id) => volumes.ContainsKey(id);
 
 	/// <inheritdoc />
-	/// <exception cref="ArgumentException">The span is not <c>width · height · depth</c> long.</exception>
-	public nint CreateVolumeTexture(int width, int height, int depth, ReadOnlySpan<Half> values)
+	/// <exception cref="ArgumentException">The span is the wrong length, or the channel count is not 1 or 4.</exception>
+	public nint CreateVolumeTexture(int width, int height, int depth, int channels, ReadOnlySpan<Half> values)
 	{
 		ObjectDisposedException.ThrowIf(disposed, this);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(depth);
-		if (values.Length != width * height * depth)
+		if (channels is not (1 or 4))
 		{
-			throw new ArgumentException($"Expected {width * height * depth} values, got {values.Length}.", nameof(values));
+			throw new ArgumentException($"A volume has 1 or 4 channels, not {channels}.", nameof(channels));
+		}
+
+		if (values.Length != width * height * depth * channels)
+		{
+			throw new ArgumentException($"Expected {width * height * depth * channels} values, got {values.Length}.", nameof(values));
 		}
 
 		int previousTexture = gl.GetInteger(GLEnum.TextureBinding3D);
@@ -659,11 +689,19 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 		// Rows of two-byte texels are not four-byte aligned when the width is odd.
 		gl.PixelStore(GLEnum.UnpackAlignment, 1);
-		gl.TexImage3D(GLEnum.Texture3D, GLEnum.R16f, width, height, depth, GLEnum.Red, GLEnum.HalfFloat, MemoryMarshal.AsBytes(values));
+		gl.TexImage3D(
+			GLEnum.Texture3D,
+			channels == 1 ? GLEnum.R16f : GLEnum.Rgba16f,
+			width,
+			height,
+			depth,
+			channels == 1 ? GLEnum.Red : GLEnum.Rgba,
+			GLEnum.HalfFloat,
+			MemoryMarshal.AsBytes(values));
 		gl.PixelStore(GLEnum.UnpackAlignment, previousAlignment);
 		gl.BindTexture(GLEnum.Texture3D, (uint)previousTexture);
 
-		volumes[(nint)texture] = new Volume(texture, width, height, depth);
+		volumes[(nint)texture] = new Volume(texture, width, height, depth, channels);
 		return (nint)texture;
 	}
 
@@ -713,6 +751,11 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.UniformMatrix4(volumeWorldToVolumeLocation, MemoryMarshal.CreateReadOnlySpan(ref worldToVolume.M11, 16));
 			gl.Uniform3(volumeEyeLocation, state.Eye.X, state.Eye.Y, state.Eye.Z);
 			gl.Uniform4(volumeColorLocation, state.Color.X, state.Color.Y, state.Color.Z, state.Color.W);
+			gl.Uniform4(volumeColor1Location, state.Color1.X, state.Color1.Y, state.Color1.Z, state.Color1.W);
+			gl.Uniform4(volumeColor2Location, state.Color2.X, state.Color2.Y, state.Color2.Z, state.Color2.W);
+			gl.Uniform4(volumeColor3Location, state.Color3.X, state.Color3.Y, state.Color3.Z, state.Color3.W);
+			gl.Uniform4(volumeExtinctionLocation, state.Extinction.X, state.Extinction.Y, state.Extinction.Z, state.Extinction.W);
+			gl.Uniform1(volumeChannelsLocation, from.Channels);
 			gl.Uniform1(volumeFadeStartLocation, state.FadeInStart);
 			gl.Uniform1(volumeFadeEndLocation, state.FadeInEnd);
 			gl.Uniform1(volumeSamplesPerVoxelLocation, state.EffectiveSamplesPerVoxel);
@@ -806,6 +849,11 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeWorldToVolumeLocation = gl.GetUniformLocation(volumeProgram, "WorldToVolume");
 		volumeEyeLocation = gl.GetUniformLocation(volumeProgram, "Eye");
 		volumeColorLocation = gl.GetUniformLocation(volumeProgram, "Color");
+		volumeColor1Location = gl.GetUniformLocation(volumeProgram, "Color1");
+		volumeColor2Location = gl.GetUniformLocation(volumeProgram, "Color2");
+		volumeColor3Location = gl.GetUniformLocation(volumeProgram, "Color3");
+		volumeExtinctionLocation = gl.GetUniformLocation(volumeProgram, "Extinction");
+		volumeChannelsLocation = gl.GetUniformLocation(volumeProgram, "Channels");
 		volumeFadeStartLocation = gl.GetUniformLocation(volumeProgram, "FadeStart");
 		volumeFadeEndLocation = gl.GetUniformLocation(volumeProgram, "FadeEnd");
 		volumeSamplesPerVoxelLocation = gl.GetUniformLocation(volumeProgram, "SamplesPerVoxel");
@@ -970,7 +1018,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private sealed record Target(uint Framebuffer, uint Color, uint Depth, int Width, int Height, GLEnum InternalFormat);
 
 	/// <summary>A volume texture and its size in voxels.</summary>
-	private sealed record Volume(uint Texture, int Width, int Height, int Depth);
+	private sealed record Volume(uint Texture, int Width, int Height, int Depth, int Channels);
 
 	/// <summary>
 	/// Everything <see cref="Clear"/> and <see cref="Draw"/> may change, captured beforehand and put
