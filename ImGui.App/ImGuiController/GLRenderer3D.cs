@@ -109,14 +109,14 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform float Exposure;
 		uniform float Power;
 		uniform int Curve;
+		uniform int PreserveHue;
 		layout (location = 0) out vec4 Out_Color;
-		void main()
+		float MapChannel(float raw)
 		{
-			vec4 color = texture(Source, Frag_UV);
-			vec3 value = max(color.rgb, vec3(0.0)) * Exposure;
-			if (Power != 1.0)
+			float value = max(raw, 0.0) * Exposure;
+			if (Power != 1.0 && value > 0.0)
 			{
-				value = pow(value, vec3(Power));
+				value = pow(value, Power);
 			}
 
 			if (Curve == 1)
@@ -128,7 +128,25 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 				value = 1.0 - exp(-value);
 			}
 
-			Out_Color = vec4(clamp(value, 0.0, 1.0), clamp(color.a, 0.0, 1.0));
+			return clamp(value, 0.0, 1.0);
+		}
+
+		void main()
+		{
+			vec4 color = texture(Source, Frag_UV);
+			vec3 rgb = max(color.rgb, vec3(0.0));
+			vec3 mapped;
+			if (PreserveHue != 0)
+			{
+				float peak = max(rgb.r, max(rgb.g, rgb.b));
+				mapped = peak > 0.0 ? min(rgb * (MapChannel(peak) / peak), vec3(1.0)) : vec3(0.0);
+			}
+			else
+			{
+				mapped = vec3(MapChannel(rgb.r), MapChannel(rgb.g), MapChannel(rgb.b));
+			}
+
+			Out_Color = vec4(mapped, clamp(color.a, 0.0, 1.0));
 		}";
 
 	private readonly IGL3D gl = gl;
@@ -139,6 +157,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int toneMapExposureLocation;
 	private int toneMapPowerLocation;
 	private int toneMapCurveLocation;
+	private int toneMapPreserveHueLocation;
 	private uint toneMapVertexArray;
 
 	private uint program;
@@ -401,6 +420,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform1(toneMapExposureLocation, toneMap.Exposure);
 			gl.Uniform1(toneMapPowerLocation, toneMap.Power);
 			gl.Uniform1(toneMapCurveLocation, (int)toneMap.Curve);
+			gl.Uniform1(toneMapPreserveHueLocation, toneMap.PreserveHue ? 1 : 0);
 
 			gl.ActiveTexture(GLEnum.Texture0);
 			gl.BindSampler(0, 0);
@@ -468,6 +488,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		toneMapExposureLocation = gl.GetUniformLocation(toneMapProgram, "Exposure");
 		toneMapPowerLocation = gl.GetUniformLocation(toneMapProgram, "Power");
 		toneMapCurveLocation = gl.GetUniformLocation(toneMapProgram, "Curve");
+		toneMapPreserveHueLocation = gl.GetUniformLocation(toneMapProgram, "PreserveHue");
 		toneMapVertexArray = gl.GenVertexArray();
 	}
 

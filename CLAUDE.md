@@ -1,4 +1,4 @@
-﻿# CLAUDE.md
+# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -395,7 +395,7 @@ parameters is the whole of it. Shaders, materials, lighting, instancing, MSAA an
 deliberately absent: that list is where a rendering abstraction goes to die, because each item forces
 a backend-specific escape hatch. **One target format beyond RGBA8 is the exception:**
 `RenderTargetFormat.Rgba16F`, with `BlendMode.Additive` and `IRenderer3D.ToneMap` (a fixed
-exposure/power/`ToneCurve` pass whose arithmetic is `ToneMap3D.Apply`, so a test can state the
+exposure/power/`ToneCurve` pass, per channel or hue-preserving (`PreserveHue`), whose arithmetic is `ToneMap3D.Apply`, so a test can state the
 expected pixel without a context). It exists because thousands of overlapping, mostly transparent
 draws cannot be composited in eight bits — each faint contribution rounds per channel, which drifts
 the hue, and additive light saturates — and it needs no shader from the caller. The three members

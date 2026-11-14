@@ -166,6 +166,42 @@ public sealed class HdrRenderTargetTests : IDisposable
 	}
 
 	[TestMethod]
+	public void PreservingHueKeepsTheChannelRatiosOfABrightColour()
+	{
+		// A warm colour well into saturation: per channel, all three end up near 1 (white); preserving
+		// hue maps the brightest and scales the others with it, so the ratios survive.
+		Vector4 warm = new(8f, 4f, 2f, 1f);
+		ToneMap3D perChannel = new(1f, 1f, ToneCurve.Exponential);
+		ToneMap3D preserving = perChannel with { PreserveHue = true };
+
+		Vector4 washed = perChannel.Apply(warm);
+		Assert.IsGreaterThan(0.85f, washed.Z, "Per channel, the blue of a bright warm colour saturates too.");
+
+		Vector4 kept = preserving.Apply(warm);
+		Assert.AreEqual(perChannel.Channel(8f), kept.X, 1e-5f, "The brightest channel maps as it would on its own.");
+		Assert.AreEqual(0.5f, kept.Y / kept.X, 1e-5f);
+		Assert.AreEqual(0.25f, kept.Z / kept.X, 1e-5f);
+	}
+
+	[TestMethod]
+	public void ToneMapPreservingHueMatchesApplyOnTheSoftwareRenderer()
+	{
+		nint hdr = renderer.CreateRenderTarget(Size, Size, depth: false, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(Size, Size, depth: false);
+		Vector4 colour = new(6f, 3f, 1f, 1f);
+		renderer.Clear(hdr, colour, 1f);
+
+		ToneMap3D toneMap = new(0.5f, 1f, ToneCurve.Reinhard, PreserveHue: true);
+		renderer.ToneMap(hdr, shown, toneMap);
+
+		Vector4 expected = toneMap.Apply(colour);
+		Rgba32 actual = Pixel(shown);
+		Assert.AreEqual(expected.X * 255f, actual.R, 1f);
+		Assert.AreEqual(expected.Y * 255f, actual.G, 1f);
+		Assert.AreEqual(expected.Z * 255f, actual.B, 1f);
+	}
+
+	[TestMethod]
 	public void ToneMappingClampsNegativesAndAlpha()
 	{
 		Vector4 mapped = new ToneMap3D(1f, 1f, ToneCurve.Exponential).Apply(new Vector4(-1f, 0f, 0f, 2.5f));

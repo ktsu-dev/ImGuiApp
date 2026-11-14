@@ -83,12 +83,17 @@ public enum ToneCurve
 /// <param name="Exposure">Multiplies every colour channel first.</param>
 /// <param name="Power">Raises the exposed value to this power before the curve: below 1 lifts faint detail, above 1 deepens contrast. Must be positive.</param>
 /// <param name="Curve">Compresses the result into [0, 1].</param>
+/// <param name="PreserveHue">
+/// When <see langword="true"/>, the mapping is applied to the brightest channel and the other two are
+/// scaled with it, so a colour keeps its hue and saturation however bright it is. Per channel, a
+/// bright warm colour desaturates towards white, because every channel saturates separately.
+/// </param>
 /// <remarks>
-/// Applied per colour channel, in the order exposure, power, curve; alpha is only clamped. The
-/// arithmetic is <see cref="Apply"/>, which every renderer's implementation must match, so a test
-/// can state the expected pixel without a graphics context.
+/// Applied in the order exposure, power, curve; alpha is only clamped. The arithmetic is
+/// <see cref="Apply"/>, which every renderer's implementation must match, so a test can state the
+/// expected pixel without a graphics context.
 /// </remarks>
-public readonly record struct ToneMap3D(float Exposure, float Power, ToneCurve Curve)
+public readonly record struct ToneMap3D(float Exposure, float Power, ToneCurve Curve, bool PreserveHue = false)
 {
 	/// <summary>Gets the identity mapping for values already in range: exposure 1, power 1, clamped.</summary>
 	public static ToneMap3D Default { get; } = new(1f, 1f, ToneCurve.Clamp);
@@ -96,7 +101,25 @@ public readonly record struct ToneMap3D(float Exposure, float Power, ToneCurve C
 	/// <summary>Maps one colour.</summary>
 	/// <param name="color">The high-range colour, straight alpha.</param>
 	/// <returns>The displayable colour, every channel in [0, 1].</returns>
-	public Vector4 Apply(Vector4 color) => new(Channel(color.X), Channel(color.Y), Channel(color.Z), Math.Clamp(color.W, 0f, 1f));
+	public Vector4 Apply(Vector4 color)
+	{
+		float alpha = Math.Clamp(color.W, 0f, 1f);
+		if (!PreserveHue)
+		{
+			return new(Channel(color.X), Channel(color.Y), Channel(color.Z), alpha);
+		}
+
+		// The brightest channel is mapped and the others follow it, which keeps their ratios and so the hue.
+		Vector3 rgb = Vector3.Max(new Vector3(color.X, color.Y, color.Z), Vector3.Zero);
+		float peak = MathF.Max(rgb.X, MathF.Max(rgb.Y, rgb.Z));
+		if (peak <= 0f)
+		{
+			return new(0f, 0f, 0f, alpha);
+		}
+
+		Vector3 mapped = Vector3.Min(rgb * (Channel(peak) / peak), Vector3.One);
+		return new(mapped, alpha);
+	}
 
 	/// <summary>Maps one colour channel.</summary>
 	/// <param name="value">The high-range value.</param>

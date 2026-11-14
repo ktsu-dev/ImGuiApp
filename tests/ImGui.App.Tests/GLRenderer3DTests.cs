@@ -259,6 +259,22 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void ToneMap_PassesPreserveHueToTheShader()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(8, 8, depth: false);
+
+		renderer.ToneMap(hdr, shown, new ToneMap3D(1f, 1f, ToneCurve.Clamp, PreserveHue: true));
+		int location = gl.GetUniformLocation(0, "PreserveHue");
+		Assert.AreEqual(1, gl.Uniforms[location]);
+
+		renderer.ToneMap(hdr, shown, ToneMap3D.Default);
+		Assert.AreEqual(0, gl.Uniforms[location]);
+	}
+
+	[TestMethod]
 	public void ToneMap_PutsBackEveryPieceOfStateItTouched()
 	{
 		FakeGL3D gl = FakeGL3D.WithUnusualState();
