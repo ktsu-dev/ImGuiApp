@@ -26,6 +26,7 @@
 - **Scoped Styling**: RAII-pattern disposable wrappers for colors, styles, fonts, themes, disable states, and UI scaling
 - **Color Utilities**: HSL/HSLA color creation, accessibility-focused contrast calculations, color manipulation extensions, and semantic color palettes
 - **Markdown Rendering**: CommonMark rendering (headings, emphasis, lists, tables, links, images) built on Markdig via `ktsu.ImGui.Markdown`, standalone and independent of `ktsu.ImGui.App`
+- **Retro CRT Look**: Green or amber phosphor themes, a scanline and vignette overlay, glowing text, readouts, a radar sweep, an oscilloscope and a typing terminal, inspired by late-70s science-fiction ship computers, via `ktsu.ImGui.Phosphor`
 - **Syntax Highlighting**: Themed code rendering for fifteen languages, with an optional line-number gutter and cached tokenization via `ktsu.ImGui.SyntaxHighlighting`, standalone and independent of `ktsu.ImGui.App`. The data-driven tokenizer itself lives in the renderer-agnostic `ktsu.SyntaxHighlighting`, which knows nothing about ImGui
 - **Embedded Languages**: XML in a doc comment, JSON in a fixture string and SQL in a query string are recognized inside the host language and highlighted in place, or named outright with a `// lang=json` hint comment
 
@@ -83,6 +84,12 @@ Attribute-driven visual node editor built on ImNodes. Includes `NodeEditorEngine
 
 CommonMark markdown renderer built on Markdig, with pipe tables, task lists, and autolinks. Renders headings, emphasis, inline and block code, lists, blockquotes, tables, links, and images directly inside Dear ImGui. Standalone, with no dependency on `ktsu.ImGui.App`.
 
+### ImGui.Phosphor - Retro CRT Theme and Widgets
+
+[![NuGet](https://img.shields.io/nuget/v/ktsu.ImGui.Phosphor?label=ktsu.ImGui.Phosphor&logo=nuget)](https://nuget.org/packages/ktsu.ImGui.Phosphor)
+
+A phosphor-terminal look inspired by the ship computers of late-70s science fiction: green and amber themes, a CRT overlay with scanlines, vignette and optional flicker, glowing text, readouts, status lights, segment bars, alert banners, an oscilloscope, a radar sweep, a perspective grid, titled frames and a terminal that types its output. An original homage with no bundled fonts or artwork.
+
 ### SyntaxHighlighting - Tokenizing (UI-Agnostic)
 
 [![NuGet](https://img.shields.io/nuget/v/ktsu.SyntaxHighlighting?label=ktsu.SyntaxHighlighting&logo=nuget)](https://nuget.org/packages/ktsu.SyntaxHighlighting)
@@ -136,6 +143,7 @@ Install-Package ktsu.ImGui.Popups
 Install-Package ktsu.ImGui.Styler
 Install-Package ktsu.NodeGraph
 Install-Package ktsu.ImGui.Markdown
+Install-Package ktsu.ImGui.Phosphor
 Install-Package ktsu.SyntaxHighlighting
 Install-Package ktsu.ImGui.SyntaxHighlighting
 Install-Package ktsu.Imaging
@@ -150,6 +158,7 @@ dotnet add package ktsu.ImGui.Popups
 dotnet add package ktsu.ImGui.Styler
 dotnet add package ktsu.NodeGraph
 dotnet add package ktsu.ImGui.Markdown
+dotnet add package ktsu.ImGui.Phosphor
 dotnet add package ktsu.SyntaxHighlighting
 dotnet add package ktsu.ImGui.SyntaxHighlighting
 dotnet add package ktsu.Imaging
@@ -164,6 +173,7 @@ dotnet add package ktsu.Imaging
 <PackageReference Include="ktsu.ImGui.Styler" Version="x.y.z" />
 <PackageReference Include="ktsu.NodeGraph" Version="x.y.z" />
 <PackageReference Include="ktsu.ImGui.Markdown" Version="x.y.z" />
+<PackageReference Include="ktsu.ImGui.Phosphor" Version="x.y.z" />
 <PackageReference Include="ktsu.SyntaxHighlighting" Version="x.y.z" />
 <PackageReference Include="ktsu.ImGui.SyntaxHighlighting" Version="x.y.z" />
 ```
@@ -426,6 +436,22 @@ ImGuiMarkdown.Render("""
 
     A **CommonMark** renderer for *Dear ImGui*, with `inline code` and [links](https://github.com/ktsu-dev).
     """);
+ImGui.End();
+```
+
+### Retro CRT Console
+
+```csharp
+using ktsu.ImGui.Phosphor;
+using Hexa.NET.ImGui;
+
+PhosphorStyle.Apply(PhosphorTint.Amber);
+
+ImGui.Begin("Console");
+ImGuiPhosphor.Readout("DRIVE A", "STANDBY");
+ImGuiPhosphor.SegmentBar("FUEL", 0.62f);
+ImGuiPhosphor.RadarSweep("radar", radius: 80f);
+ImGuiPhosphor.CrtOverlay();
 ImGui.End();
 ```
 
@@ -752,6 +778,7 @@ dotnet run --project examples/ImGuiWidgetsDemo
 dotnet run --project examples/ImGuiPopupsDemo
 dotnet run --project examples/ImGuiStylerDemo
 dotnet run --project examples/ImGuiMarkdownDemo
+dotnet run --project examples/ImGuiPhosphorDemo
 dotnet run --project examples/ImGuiSyntaxHighlightingDemo
 ```
 
