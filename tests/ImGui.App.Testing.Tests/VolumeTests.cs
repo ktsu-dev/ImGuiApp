@@ -123,7 +123,7 @@ public sealed class VolumeTests : IDisposable
 		// the multiplier averages about 1, so the mean stays near 0.25.
 		nint target = HdrTarget();
 		nint volume = Constant(2, 2, 2, 1f);
-		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 0.25f)) with { NoiseAmplitude = 0.8f, NoiseScale = 0.05f });
+		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 0.25f)) with { LowNoiseAmplitude = 0.8f, LowNoiseScale = 0.05f });
 
 		float min = float.MaxValue;
 		float max = float.MinValue;
@@ -146,7 +146,7 @@ public sealed class VolumeTests : IDisposable
 	[TestMethod]
 	public void NoiseFadesOutWhereItsCellsAreUnderAPixel()
 	{
-		VolumeRay ray = VolumeRay.Create(new VolumeDrawState { NoiseAmplitude = 1f, NoiseScale = 1f, PixelAngle = 1f });
+		VolumeRay ray = VolumeRay.Create(new VolumeDrawState { LowNoiseAmplitude = 1f, LowNoiseScale = 1f, HighNoiseAmplitude = 1f, HighNoiseScale = 0.3f, PixelAngle = 1f });
 
 		// At distance 10 a pixel is 10 units: cells of 1 are far below a pixel, so no grain.
 		Assert.AreEqual(1f, ray.Grain(new Vector3(0.3f, 0.7f, 0.2f), 10f), 1e-6f);

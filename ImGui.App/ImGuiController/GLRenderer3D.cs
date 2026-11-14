@@ -169,8 +169,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform vec3 VolumeSize;
 		uniform vec4 TargetSize;
 		uniform int Additive;
-		uniform float NoiseAmplitude;
-		uniform float NoiseScale;
+		uniform float LowNoiseAmplitude;
+		uniform float LowNoiseScale;
+		uniform float HighNoiseAmplitude;
+		uniform float HighNoiseScale;
 		uniform vec3 NoiseOffset;
 		uniform float PixelAngle;
 		layout (location = 0) out vec4 Out_Color;
@@ -205,28 +207,23 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			return PixelAngle <= 0.0 ? 1.0 : clamp(((cell / max(footprint, 1e-12)) - 1.0) / 2.0, 0.0, 1.0);
 		}
 
-		float Grain(vec3 world, float distanceToEye)
+		float Layer(vec3 p, float footprint, float amplitude, float scale, vec3 shift)
 		{
-			if (NoiseAmplitude <= 0.0 || NoiseScale <= 0.0)
+			if (amplitude <= 0.0 || scale <= 0.0)
 			{
 				return 1.0;
 			}
 
-			vec3 p = (world + NoiseOffset) / NoiseScale;
-			float footprint = distanceToEye * PixelAngle;
-			float coarse = OctaveWeight(NoiseScale, footprint);
-			float fine = OctaveWeight(NoiseScale / 3.1, footprint);
-			float signal = 0.0;
-			if (coarse > 0.0)
-			{
-				signal += coarse * 0.65 * ((2.0 * Noise(p)) - 1.0);
-			}
+			float weight = OctaveWeight(scale, footprint);
+			return weight <= 0.0 ? 1.0 : max(0.0, 1.0 + (amplitude * weight * ((2.0 * Noise((p / scale) + shift)) - 1.0)));
+		}
 
-			if (fine > 0.0)
-			{
-				signal += fine * 0.35 * ((2.0 * Noise((p * 3.1) + vec3(17.3))) - 1.0);
-			}
-			return max(0.0, 1.0 + (NoiseAmplitude * signal));
+		float Grain(vec3 world, float distanceToEye)
+		{
+			vec3 p = world + NoiseOffset;
+			float footprint = distanceToEye * PixelAngle;
+			return Layer(p, footprint, LowNoiseAmplitude, LowNoiseScale, vec3(0.0))
+				* Layer(p, footprint, HighNoiseAmplitude, HighNoiseScale, vec3(17.3));
 		}
 
 		vec3 Unproject(vec4 clip)
@@ -336,8 +333,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeSizeLocation;
 	private int volumeTargetSizeLocation;
 	private int volumeAdditiveLocation;
-	private int volumeNoiseAmplitudeLocation;
-	private int volumeNoiseScaleLocation;
+	private int volumeLowNoiseAmplitudeLocation;
+	private int volumeLowNoiseScaleLocation;
+	private int volumeHighNoiseAmplitudeLocation;
+	private int volumeHighNoiseScaleLocation;
 	private int volumeNoiseOffsetLocation;
 	private int volumePixelAngleLocation;
 
@@ -721,8 +720,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform3(volumeSizeLocation, from.Width, from.Height, from.Depth);
 			gl.Uniform4(volumeTargetSizeLocation, to.Width, to.Height, 0f, 0f);
 			gl.Uniform1(volumeAdditiveLocation, state.Blend == BlendMode.Additive ? 1 : 0);
-			gl.Uniform1(volumeNoiseAmplitudeLocation, state.NoiseAmplitude);
-			gl.Uniform1(volumeNoiseScaleLocation, state.NoiseScale);
+			gl.Uniform1(volumeLowNoiseAmplitudeLocation, state.LowNoiseAmplitude);
+			gl.Uniform1(volumeLowNoiseScaleLocation, state.LowNoiseScale);
+			gl.Uniform1(volumeHighNoiseAmplitudeLocation, state.HighNoiseAmplitude);
+			gl.Uniform1(volumeHighNoiseScaleLocation, state.HighNoiseScale);
 			gl.Uniform3(volumeNoiseOffsetLocation, state.NoiseOffset.X, state.NoiseOffset.Y, state.NoiseOffset.Z);
 			gl.Uniform1(volumePixelAngleLocation, state.PixelAngle);
 
@@ -812,8 +813,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeSizeLocation = gl.GetUniformLocation(volumeProgram, "VolumeSize");
 		volumeTargetSizeLocation = gl.GetUniformLocation(volumeProgram, "TargetSize");
 		volumeAdditiveLocation = gl.GetUniformLocation(volumeProgram, "Additive");
-		volumeNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "NoiseAmplitude");
-		volumeNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "NoiseScale");
+		volumeLowNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "LowNoiseAmplitude");
+		volumeLowNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "LowNoiseScale");
+		volumeHighNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseAmplitude");
+		volumeHighNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseScale");
 		volumeNoiseOffsetLocation = gl.GetUniformLocation(volumeProgram, "NoiseOffset");
 		volumePixelAngleLocation = gl.GetUniformLocation(volumeProgram, "PixelAngle");
 		volumeVertexArray = gl.GenVertexArray();

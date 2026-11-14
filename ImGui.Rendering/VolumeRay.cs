@@ -125,39 +125,31 @@ public sealed class VolumeRay
 	}
 
 	/// <summary>
-	/// The emission multiplier from <see cref="VolumeDrawState.NoiseAmplitude"/> at a world position:
-	/// two octaves of value noise, each faded out where its cells are under about two pixels across.
+	/// The emission multiplier from the two noise layers at a world position: the low- and
+	/// high-frequency layers, each faded out where its cells are under about two pixels across, multiplied.
 	/// </summary>
 	/// <param name="world">The sample's world position.</param>
 	/// <param name="distance">Its distance from the eye.</param>
 	/// <returns>The multiplier, never negative.</returns>
 	public float Grain(Vector3 world, float distance)
 	{
-		if (state.NoiseAmplitude <= 0f || state.NoiseScale <= 0f)
+		Vector3 p = world + state.NoiseOffset;
+		float footprint = distance * state.PixelAngle;
+		return Layer(p, footprint, state.LowNoiseAmplitude, state.LowNoiseScale, Vector3.Zero)
+			* Layer(p, footprint, state.HighNoiseAmplitude, state.HighNoiseScale, new Vector3(17.3f));
+	}
+
+	/// <summary>One noise layer's multiplier; a layer with no amplitude, or faded out entirely, is not evaluated.</summary>
+	private float Layer(Vector3 p, float footprint, float amplitude, float scale, Vector3 shift)
+	{
+		if (amplitude <= 0f || scale <= 0f)
 		{
 			return 1f;
 		}
 
-		Vector3 p = (world + state.NoiseOffset) / state.NoiseScale;
-		float footprint = distance * state.PixelAngle;
-		float coarse = OctaveWeight(state.NoiseScale, footprint);
-		float fine = OctaveWeight(state.NoiseScale / FineOctave, footprint);
-		// An octave faded out entirely is not evaluated: the fine one usually is, beyond close range.
-		float signal = 0f;
-		if (coarse > 0f)
-		{
-			signal += coarse * 0.65f * ((2f * Noise(p)) - 1f);
-		}
-
-		if (fine > 0f)
-		{
-			signal += fine * 0.35f * ((2f * Noise((p * FineOctave) + new Vector3(17.3f))) - 1f);
-		}
-		return MathF.Max(0f, 1f + (state.NoiseAmplitude * signal));
+		float weight = OctaveWeight(scale, footprint);
+		return weight <= 0f ? 1f : MathF.Max(0f, 1f + (amplitude * weight * ((2f * Noise((p / scale) + shift)) - 1f)));
 	}
-
-	/// <summary>How much finer the second noise octave is than the first.</summary>
-	public const float FineOctave = 3.1f;
 
 	/// <summary>
 	/// Value noise in [0, 1): hashed values at integer lattice points, blended with smoothstep weights.

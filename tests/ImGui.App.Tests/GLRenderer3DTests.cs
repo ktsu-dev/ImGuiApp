@@ -376,14 +376,18 @@ public sealed class GLRenderer3DTests
 		{
 			ViewProjection = Matrix4x4.Identity,
 			VolumeToWorld = Matrix4x4.Identity,
-			NoiseAmplitude = 0.375f,
-			NoiseScale = 120f,
+			LowNoiseAmplitude = 0.375f,
+			LowNoiseScale = 1200f,
+			HighNoiseAmplitude = 0.25f,
+			HighNoiseScale = 120f,
 			NoiseOffset = new Vector3(1f, 2f, 3f),
 			PixelAngle = 0.0025f,
 		});
 
-		Assert.AreEqual(0.375f, gl.Uniforms[gl.GetUniformLocation(0, "NoiseAmplitude")]);
-		Assert.AreEqual(120f, gl.Uniforms[gl.GetUniformLocation(0, "NoiseScale")]);
+		Assert.AreEqual(0.375f, gl.Uniforms[gl.GetUniformLocation(0, "LowNoiseAmplitude")]);
+		Assert.AreEqual(1200f, gl.Uniforms[gl.GetUniformLocation(0, "LowNoiseScale")]);
+		Assert.AreEqual(0.25f, gl.Uniforms[gl.GetUniformLocation(0, "HighNoiseAmplitude")]);
+		Assert.AreEqual(120f, gl.Uniforms[gl.GetUniformLocation(0, "HighNoiseScale")]);
 		Assert.AreEqual(new Vector3(1f, 2f, 3f), gl.Uniforms[gl.GetUniformLocation(0, "NoiseOffset")]);
 		Assert.AreEqual(0.0025f, gl.Uniforms[gl.GetUniformLocation(0, "PixelAngle")]);
 	}

@@ -255,14 +255,20 @@ public readonly record struct VolumeDrawState
 	public BlendMode Blend { get; init; }
 
 	/// <summary>
-	/// Gets how strongly procedural noise modulates the emission: each sample is multiplied by
-	/// 1 + amplitude · (2n − 1) for a noise value n in [0, 1), so 0 is none and 1 swings from nothing
-	/// to double. Detail finer than the volume's voxels, as grain in a nebula or unresolved stars.
+	/// Gets how strongly the low-frequency noise layer modulates the emission: each sample is
+	/// multiplied by 1 + amplitude · (2n − 1) for a noise value n in [0, 1), so 0 is none and 1 swings
+	/// from nothing to double. Large clumps and lanes; the two layers multiply.
 	/// </summary>
-	public float NoiseAmplitude { get; init; }
+	public float LowNoiseAmplitude { get; init; }
 
-	/// <summary>Gets the noise's coarsest cell size in world units; a second octave is about three times finer.</summary>
-	public float NoiseScale { get; init; }
+	/// <summary>Gets the low-frequency layer's cell size in world units.</summary>
+	public float LowNoiseScale { get; init; }
+
+	/// <summary>Gets how strongly the high-frequency noise layer modulates the emission: fine grain, as <see cref="LowNoiseAmplitude"/>.</summary>
+	public float HighNoiseAmplitude { get; init; }
+
+	/// <summary>Gets the high-frequency layer's cell size in world units.</summary>
+	public float HighNoiseScale { get; init; }
 
 	/// <summary>
 	/// Gets the offset added to world positions before the noise is evaluated, so a caller drawing in

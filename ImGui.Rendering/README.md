@@ -28,7 +28,7 @@ can draw 3D without depending on the application host.
   ∫ value ds` along each pixel's ray through the box `VolumeToWorld` places the texture in. Samples
   scale with the voxels crossed and start at a per-pixel offset, so there is no step to tune and no
   banding; `FadeInStart`/`FadeInEnd` silence the volume near the eye so geometry drawn there can take
-  over. Optional `NoiseAmplitude`/`NoiseScale` add two octaves of world-fixed value noise for detail finer than the voxels, faded out below a few pixels (`PixelAngle`) so it does not shimmer. `VolumeRay` is the per-pixel arithmetic every renderer matches. Ask `SupportsVolumes` first.
+  over. Optional low- and high-frequency noise layers (`LowNoiseAmplitude`/`LowNoiseScale`, `HighNoiseAmplitude`/`HighNoiseScale`) multiply in world-fixed value noise for detail finer than the voxels, faded out below a few pixels (`PixelAngle`) so it does not shimmer. `VolumeRay` is the per-pixel arithmetic every renderer matches. Ask `SupportsVolumes` first.
 
 Most applications never use this package directly: `ImGuiWidgets.Viewport3D` in `ktsu.ImGui.Widgets`
 owns the target and the camera, and hands your callback the renderer to draw with.
