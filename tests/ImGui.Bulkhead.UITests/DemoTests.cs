@@ -41,7 +41,7 @@ public sealed class DemoTests
 		if (!string.IsNullOrEmpty(directory))
 		{
 			Directory.CreateDirectory(directory);
-			harness!.Capture().SavePng(Path.Combine(directory, $"{Path.GetFileName(name)}.png"));
+			harness!.Capture().SavePng(Path.Join(directory, $"{Path.GetFileName(name)}.png"));
 		}
 	}
 
