@@ -1,0 +1,27 @@
+<Project>
+  <Sdk Name="Microsoft.NET.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
+    <RootNamespace>ktsu.ImGui.Monsoon</RootNamespace>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Packaging metadata only, kept out of a consumer's output so two DESCRIPTION.md files never
+         land at the same relative path (NETSDK1152). -->
+    <Content Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <None Update="DESCRIPTION.md" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
