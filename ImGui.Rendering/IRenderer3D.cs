@@ -302,6 +302,17 @@ public readonly record struct VolumeDrawState
 	/// </summary>
 	public float PixelAngle { get; init; }
 
+	/// <summary>
+	/// Gets how strongly the noise modulates each channel: a channel's value is multiplied by
+	/// max(0, 1 + weight · (grain − 1)), so 0 leaves it smooth, 1 applies the noise as it is and more
+	/// exaggerates it, as for gas and dust that are clumpier than starlight. Zero in every channel
+	/// means 1 in every channel.
+	/// </summary>
+	public Vector4 NoiseWeights { get; init; }
+
+	/// <summary>Gets <see cref="NoiseWeights"/> with its default applied.</summary>
+	public Vector4 EffectiveNoiseWeights => NoiseWeights == Vector4.Zero ? Vector4.One : NoiseWeights;
+
 	/// <summary>Gets <see cref="SamplesPerVoxel"/> with its default applied.</summary>
 	public float EffectiveSamplesPerVoxel => SamplesPerVoxel > 0 ? SamplesPerVoxel : 2f;
 

@@ -166,6 +166,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		uniform vec4 Color2;
 		uniform vec4 Color3;
 		uniform vec4 Extinction;
+		uniform vec4 NoiseWeights;
 		uniform int Channels;
 		uniform float FadeStart;
 		uniform float FadeEnd;
@@ -318,7 +319,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 				vec3 world = mix(nearPoint, farPoint, t);
 				float distanceToEye = distance(world, Eye);
-				value *= Grain(world, distanceToEye);
+				value *= max(vec4(0.0), vec4(1.0) + (NoiseWeights * (Grain(world, distanceToEye) - 1.0)));
 
 				float fade = Fade(distanceToEye);
 				vec3 emission = (Color.rgb * value.x) + (Color1.rgb * value.y) + (Color2.rgb * value.z) + (Color3.rgb * value.w);
@@ -350,6 +351,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	private int volumeColor2Location;
 	private int volumeColor3Location;
 	private int volumeExtinctionLocation;
+	private int volumeNoiseWeightsLocation;
 	private int volumeChannelsLocation;
 	private int volumeFadeStartLocation;
 	private int volumeFadeEndLocation;
@@ -755,6 +757,8 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.Uniform4(volumeColor2Location, state.Color2.X, state.Color2.Y, state.Color2.Z, state.Color2.W);
 			gl.Uniform4(volumeColor3Location, state.Color3.X, state.Color3.Y, state.Color3.Z, state.Color3.W);
 			gl.Uniform4(volumeExtinctionLocation, state.Extinction.X, state.Extinction.Y, state.Extinction.Z, state.Extinction.W);
+			Vector4 noiseWeights = state.EffectiveNoiseWeights;
+			gl.Uniform4(volumeNoiseWeightsLocation, noiseWeights.X, noiseWeights.Y, noiseWeights.Z, noiseWeights.W);
 			gl.Uniform1(volumeChannelsLocation, from.Channels);
 			gl.Uniform1(volumeFadeStartLocation, state.FadeInStart);
 			gl.Uniform1(volumeFadeEndLocation, state.FadeInEnd);
@@ -854,6 +858,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		volumeColor3Location = gl.GetUniformLocation(volumeProgram, "Color3");
 		volumeExtinctionLocation = gl.GetUniformLocation(volumeProgram, "Extinction");
 		volumeChannelsLocation = gl.GetUniformLocation(volumeProgram, "Channels");
+		volumeNoiseWeightsLocation = gl.GetUniformLocation(volumeProgram, "NoiseWeights");
 		volumeFadeStartLocation = gl.GetUniformLocation(volumeProgram, "FadeStart");
 		volumeFadeEndLocation = gl.GetUniformLocation(volumeProgram, "FadeEnd");
 		volumeSamplesPerVoxelLocation = gl.GetUniformLocation(volumeProgram, "SamplesPerVoxel");

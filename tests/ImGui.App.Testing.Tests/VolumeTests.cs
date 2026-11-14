@@ -144,6 +144,48 @@ public sealed class VolumeTests : IDisposable
 	}
 
 	[TestMethod]
+	public void ANoiseWeightOfZeroLeavesAChannelSmooth()
+	{
+		// Strong noise, but weighted out of channel 0 and fully into channel 1: red stays even, green varies.
+		nint target = HdrTarget();
+		Half[] values = new Half[2 * 2 * 2 * 4];
+		for (int i = 0; i < values.Length; i += 4)
+		{
+			values[i] = (Half)1f;
+			values[i + 1] = (Half)1f;
+		}
+
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 4, values);
+		renderer.DrawVolume(target, volume, State(Slab(-1f, 1f, 0f, 0.25f)) with
+		{
+			Color = new Vector4(1f, 0f, 0f, 1f),
+			Color1 = new Vector4(0f, 1f, 0f, 1f),
+			LowNoiseAmplitude = 0.8f,
+			LowNoiseScale = 0.05f,
+			NoiseWeights = new Vector4(0f, 1f, 0f, 0f),
+		});
+
+		float minRed = float.MaxValue;
+		float maxRed = float.MinValue;
+		float minGreen = float.MaxValue;
+		float maxGreen = float.MinValue;
+		for (int y = 0; y < Size; y++)
+		{
+			for (int x = 0; x < Size; x++)
+			{
+				Vector4 pixel = Hdr(target, x, y);
+				minRed = MathF.Min(minRed, pixel.X);
+				maxRed = MathF.Max(maxRed, pixel.X);
+				minGreen = MathF.Min(minGreen, pixel.Y);
+				maxGreen = MathF.Max(maxGreen, pixel.Y);
+			}
+		}
+
+		Assert.AreEqual(0f, maxRed - minRed, 0.01f, "Channel 0 is not noisy.");
+		Assert.IsGreaterThan(0.05f, maxGreen - minGreen, "Channel 1 is.");
+	}
+
+	[TestMethod]
 	public void NoiseFadesOutWhereItsCellsAreUnderAPixel()
 	{
 		VolumeRay ray = VolumeRay.Create(new VolumeDrawState { LowNoiseAmplitude = 1f, LowNoiseScale = 1f, HighNoiseAmplitude = 1f, HighNoiseScale = 0.3f, PixelAngle = 1f });

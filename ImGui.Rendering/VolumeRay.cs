@@ -128,7 +128,7 @@ public sealed class VolumeRay
 
 			Vector3 world = Vector3.Lerp(near, far, t);
 			float distance = Vector3.Distance(world, state.Eye);
-			value *= Grain(world, distance);
+			value *= Vector4.Max(Vector4.Zero, Vector4.One + (state.EffectiveNoiseWeights * (Grain(world, distance) - 1f)));
 
 			// The fade silences emission near the eye, where the caller draws its own detail; matter
 			// there still absorbs, since it is still in front of what lies behind it.
