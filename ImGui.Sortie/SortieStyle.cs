@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Numerics;
 
 using Hexa.NET.ImGui;
+using ktsu.ScopedAction;
 
 /// <summary>
 /// Applies the command-display look to Dear ImGui's own widgets and remembers which condition the widgets in
@@ -185,12 +186,8 @@ public static class SortieStyle
 		}
 	}
 
-	private sealed class SortieScope : IDisposable
+	private sealed class SortieScope : ScopedAction
 	{
-		private readonly int colorCount;
-		private readonly int varCount;
-		private bool disposed;
-
 		public SortieScope(SortieCondition condition)
 		{
 			IReadOnlyList<(ImGuiCol Col, Vector4 Color)> colors = Colors(SortiePalette.For(condition));
@@ -204,22 +201,15 @@ public static class SortieStyle
 				ImGui.PushStyleVar(var, value);
 			}
 
-			colorCount = colors.Count;
-			varCount = FloatVars.Count;
+			int colorCount = colors.Count;
+			int varCount = FloatVars.Count;
 			conditions.Push(condition);
-		}
-
-		public void Dispose()
-		{
-			if (disposed)
+			OnClose = () =>
 			{
-				return;
-			}
-
-			disposed = true;
-			ImGui.PopStyleVar(varCount);
-			ImGui.PopStyleColor(colorCount);
-			conditions.Pop();
+				ImGui.PopStyleVar(varCount);
+				ImGui.PopStyleColor(colorCount);
+				conditions.Pop();
+			};
 		}
 	}
 }

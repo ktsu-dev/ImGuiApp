@@ -31,11 +31,12 @@ using ktsu.ImGui.Sortie;
 
 SortieStyle.Apply(SortieCondition.Standby);
 
-ImGuiSortie.BeginPanel("RESERVE POWER", new Vector2(320, 240), "03");
-ImGuiSortie.Countdown("ACTIVE LIMIT", remaining, digitHeight: 44f);
-ImGuiSortie.SyncGauge("SYNC RATIO", 0.85f);
-ImGuiSortie.StatusLamp("UMBILICAL", SortieLamp.Alert, blink: true);
-ImGuiSortie.EndPanel();
+using (ImGuiSortie.Panel("RESERVE POWER", new Vector2(320, 240), "03"))
+{
+	ImGuiSortie.Countdown("ACTIVE LIMIT", remaining, digitHeight: 44f);
+	ImGuiSortie.SyncGauge("SYNC RATIO", 0.85f);
+	ImGuiSortie.StatusLamp("UMBILICAL", SortieLamp.Alert, blink: true);
+}
 
 if (ImGuiSortie.Button("SORTIE", new Vector2(180, 40), SortieLamp.Alert))
 {
@@ -59,7 +60,7 @@ using (SortieStyle.Scope(SortieCondition.Emergency))
 | `StatusLamp(label, lamp, blink)` | Labelled lamp | `status-lamp/{label}` |
 | `PatternMonitor(label, samples, size, lamp)` | Waveform over a grid | `pattern-monitor/{label}` |
 | `HexGrid(label, size, radius, lit, out clicked)` | Clickable hex map | the label |
-| `BeginPanel(title, size, code)` / `EndPanel()` | Framed panel | `panel/{title}` |
+| `Panel(title, size, code)` (a scoped action, use in `using`) | Framed panel | `panel/{title}` |
 | `HeavyText(text, pixelHeight)` | Condensed heavy lettering | `heavy-text/{text}` |
 | `Readout(label, value, unit, lamp)` | Label, value and unit row | `readout/{label}` |
 
