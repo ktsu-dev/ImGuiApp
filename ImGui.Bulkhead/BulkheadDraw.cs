@@ -147,11 +147,11 @@ internal static class BulkheadDraw
 			return requested;
 		}
 
-		if (requested == 0f)
+		if (requested < 0f)
 		{
-			return natural;
+			return Math.Max(1f, ImGui.GetContentRegionAvail().X + requested);
 		}
 
-		return Math.Max(1f, ImGui.GetContentRegionAvail().X + requested);
+		return natural;
 	}
 }
