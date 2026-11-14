@@ -18,7 +18,8 @@ can draw 3D without depending on the application host.
 - **High-range targets**: `CreateRenderTarget(width, height, depth, RenderTargetFormat.Rgba16F)` makes a
   float target, `BlendMode.Additive` accumulates light into it, and `ToneMap(source, destination,
   ToneMap3D)` maps it into an eight-bit target for display (exposure, then a power, then a `ToneCurve`:
-  `Clamp`, `Reinhard` or `Exponential`; `ToneMap3D.Apply` is the arithmetic). For thousands of
+  `Clamp`, `Reinhard` or `Exponential`, per channel or, with `PreserveHue`, on the brightest channel
+  so bright colours keep their hue; `ToneMap3D.Apply` is the arithmetic). For thousands of
   overlapping, mostly transparent draws, where eight bits round each faint contribution away and drift
   the hue. Ask `SupportsFormat` first: these members have default implementations that report no
   support, so an implementation written before them keeps compiling.
