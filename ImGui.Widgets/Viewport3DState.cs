@@ -62,12 +62,29 @@ public static partial class ImGuiWidgets
 		/// <summary>Gets or sets the point the camera orbits and looks at.</summary>
 		public Vector3 Target { get; set; }
 
+		/// <summary>
+		/// Gets or sets the smallest distance this camera may sit from its target; <see cref="MinimumDistance"/>
+		/// by default. Any positive value avoids the degenerate view, so a scene whose units are large
+		/// (light years, say, with planets inside them) can lower it to get close to small things.
+		/// </summary>
+		/// <exception cref="ArgumentOutOfRangeException">Not positive.</exception>
+		public float DistanceFloor
+		{
+			get;
+			set
+			{
+				ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, 0f);
+				field = value;
+				Distance = MathF.Max(value, Distance);
+			}
+		} = MinimumDistance;
+
 		/// <summary>Gets or sets how far the eye sits from <see cref="Target"/>.</summary>
-		/// <remarks>Clamped to at least <see cref="MinimumDistance"/>.</remarks>
+		/// <remarks>Clamped to at least <see cref="DistanceFloor"/>.</remarks>
 		public float Distance
 		{
 			get;
-			set => field = MathF.Max(MinimumDistance, value);
+			set => field = MathF.Max(DistanceFloor, value);
 		} = 5f;
 
 		/// <summary>Gets or sets the rotation about the world up axis, in radians.</summary>

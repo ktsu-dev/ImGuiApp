@@ -201,6 +201,28 @@ public class Viewport3DStateTests
 	}
 
 	[TestMethod]
+	public void ALowerDistanceFloor_LetsTheCameraCloseInWithAFiniteView()
+	{
+		ImGuiWidgets.Viewport3DState camera = new() { DistanceFloor = 1e-12f, NearPlane = 1e-16f, Distance = 1e-10f };
+
+		Assert.AreEqual(1e-10f, camera.Distance, 0f);
+		Assert.IsTrue(float.IsFinite(camera.ViewProjection(1f).M11));
+
+		camera.Distance = 0f;
+		Assert.AreEqual(1e-12f, camera.Distance, 0f, "Still clamped, to the new floor.");
+	}
+
+	[TestMethod]
+	public void RaisingTheDistanceFloor_PullsTheCameraBackToIt()
+	{
+		// Set in this order, the floor arrives after the distance and has to pull it back.
+		ImGuiWidgets.Viewport3DState camera = new() { Distance = 0.5f, DistanceFloor = 2f };
+
+		Assert.AreEqual(2f, camera.Distance, 0f);
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => camera.DistanceFloor = 0f);
+	}
+
+	[TestMethod]
 	public void ADegenerateFieldOfView_IsRefusedAtTheSetterRatherThanInTheMatrix()
 	{
 		ImGuiWidgets.Viewport3DState camera = new();
