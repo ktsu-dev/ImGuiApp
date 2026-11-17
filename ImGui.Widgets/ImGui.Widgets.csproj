@@ -24,6 +24,7 @@
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="Hexa.NET.ImGui.Widgets" />
     <PackageReference Include="Hexa.NET.Math" />
+    <PackageReference Include="ktsu.CaseConverter" />
     <PackageReference Include="ktsu.Extensions" />
     <PackageReference Include="ktsu.Keybinding" />
     <PackageReference Include="ktsu.ScopedAction" />
@@ -31,6 +32,8 @@
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
     <PackageReference Include="ktsu.TextFilter" />
+    <PackageReference Include="ktsu.ThemeProvider" />
+    <PackageReference Include="ktsu.ThemeProvider.ImGui" />
     <ProjectReference Include="..\ImGui.Color\ImGui.Color.csproj" />
     <ProjectReference Include="..\ImGui.Probes\ImGui.Probes.csproj" />
     <ProjectReference Include="..\ImGui.Rendering\ImGui.Rendering.csproj" />
