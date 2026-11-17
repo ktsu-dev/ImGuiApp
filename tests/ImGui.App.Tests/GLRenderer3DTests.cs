@@ -176,6 +176,380 @@ public sealed class GLRenderer3DTests
 	}
 
 	[TestMethod]
+	public void OpenGLRenderer_ForwardsTheHighRangeMembersRatherThanLeavingThemToTheDefaults()
+	{
+		// IRenderer3D's defaults for these refuse, so a missing forward would silently report no
+		// float targets on the one backend that has them.
+		FakeGL3D gl = new();
+		using OpenGLRenderer renderer = ControllerOver(gl);
+		IRenderer3D controller = renderer;
+
+		Assert.IsTrue(controller.SupportsFormat(RenderTargetFormat.Rgba16F));
+		nint hdr = controller.CreateRenderTarget(16, 16, depth: true, RenderTargetFormat.Rgba16F);
+		nint shown = controller.CreateRenderTarget(16, 16, depth: false);
+		controller.ToneMap(hdr, shown, ToneMap3D.Default);
+
+		CollectionAssert.Contains(gl.Calls, "TexImage2D(Rgba16f,16x16)");
+		Assert.HasCount(1, gl.Draws);
+	}
+
+	[TestMethod]
+	public void CreateRenderTarget_Rgba16F_AllocatesAFloatColourTexture()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+
+		Assert.IsTrue(renderer.SupportsFormat(RenderTargetFormat.Rgba16F));
+		renderer.CreateRenderTarget(64, 32, depth: true, RenderTargetFormat.Rgba16F);
+
+		CollectionAssert.Contains(gl.Calls, "TexImage2D(Rgba16f,64x32)");
+		CollectionAssert.Contains(gl.Calls, "RenderbufferStorage(DepthComponent24,64x32)");
+	}
+
+	[TestMethod]
+	public void ResizeRenderTarget_KeepsAFloatTargetsFormat()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
+		gl.Calls.Clear();
+
+		Assert.IsTrue(renderer.ResizeRenderTarget(target, 40, 20));
+
+		CollectionAssert.Contains(gl.Calls, "TexImage2D(Rgba16f,40x20)");
+	}
+
+	[TestMethod]
+	public void Draw_Additive_AddsTheSourceScaledByItsAlpha()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+
+		renderer.Draw(target, Triangle, TriangleIndices, new DrawState3D { Blend = BlendMode.Additive });
+
+		FakeGL3D.DrawRecord draw = gl.Draws.Single();
+		Assert.IsTrue(draw.Enabled.Contains(GLEnum.Blend));
+		Assert.AreEqual(GLEnum.SrcAlpha, draw.BlendSrcRgb);
+		Assert.AreEqual(GLEnum.One, draw.BlendDstRgb, "Additive keeps the whole destination.");
+	}
+
+	[TestMethod]
+	public void Draw_Premultiplied_AddsTheSourceAndDimsTheDestinationByItsAlpha()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+
+		renderer.Draw(target, Triangle, TriangleIndices, new DrawState3D { Blend = BlendMode.Premultiplied });
+
+		FakeGL3D.DrawRecord draw = gl.Draws.Single();
+		Assert.IsTrue(draw.Enabled.Contains(GLEnum.Blend));
+		Assert.AreEqual(GLEnum.One, draw.BlendSrcRgb, "The source is already weighted.");
+		Assert.AreEqual(GLEnum.OneMinusSrcAlpha, draw.BlendDstRgb);
+	}
+
+	[TestMethod]
+	public void ToneMap_DrawsOneTriangleIntoTheDestinationReadingTheSource()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(32, 24, depth: true, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(32, 24, depth: false);
+
+		renderer.ToneMap(hdr, shown, new ToneMap3D(0.5f, 0.8f, ToneCurve.Exponential));
+
+		FakeGL3D.DrawRecord draw = gl.Draws.Single();
+		Assert.AreEqual(GLEnum.Triangles, draw.Mode);
+		Assert.AreEqual(3, draw.Count, "One triangle covers the viewport.");
+		Assert.AreEqual((int)FakeGL3D.FirstFramebuffer + 1, draw.Framebuffer, "It draws into the destination's framebuffer.");
+		Assert.AreEqual((int)hdr, draw.Texture, "It samples the source's colour texture.");
+		Assert.AreEqual("0,0,32,24", draw.Viewport);
+		Assert.IsFalse(draw.Enabled.Contains(GLEnum.Blend), "The destination is replaced, not blended into.");
+		Assert.IsFalse(draw.Enabled.Contains(GLEnum.DepthTest));
+		Assert.IsFalse(draw.Enabled.Contains(GLEnum.ScissorTest));
+		CollectionAssert.Contains(gl.Uniforms.Values.ToArray(), 0.5f);
+		CollectionAssert.Contains(gl.Uniforms.Values.ToArray(), 0.8f);
+		CollectionAssert.Contains(gl.Uniforms.Values.ToArray(), (int)ToneCurve.Exponential);
+	}
+
+	[TestMethod]
+	public void ToneMap_PassesPreserveHueToTheShader()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(8, 8, depth: false);
+
+		renderer.ToneMap(hdr, shown, new ToneMap3D(1f, 1f, ToneCurve.Clamp, PreserveHue: true));
+		int location = gl.GetUniformLocation(0, "PreserveHue");
+		Assert.AreEqual(1, gl.Uniforms[location]);
+
+		renderer.ToneMap(hdr, shown, ToneMap3D.Default);
+		Assert.AreEqual(0, gl.Uniforms[location]);
+	}
+
+	[TestMethod]
+	public void ToneMap_PutsBackEveryPieceOfStateItTouched()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(16, 16, depth: false);
+		string before = gl.Snapshot();
+
+		renderer.ToneMap(hdr, shown, ToneMap3D.Default);
+
+		Assert.AreEqual(before, gl.Snapshot());
+	}
+
+	[TestMethod]
+	public void ToneMap_CompilesItsProgramOnceAndOnlyWhenFirstNeeded()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(16, 16, depth: false);
+		Assert.AreEqual(0, gl.ProgramsCreated);
+
+		renderer.ToneMap(hdr, shown, ToneMap3D.Default);
+		renderer.ToneMap(hdr, shown, ToneMap3D.Default);
+
+		Assert.AreEqual(1, gl.ProgramsCreated);
+	}
+
+	[TestMethod]
+	public void ToneMap_IntoItselfOrAnUnknownTarget_IsRejected()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
+
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.ToneMap(hdr, hdr, ToneMap3D.Default));
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.ToneMap(hdr, 5, ToneMap3D.Default));
+		Assert.IsEmpty(gl.Draws);
+	}
+
+	[TestMethod]
+	public void CreateVolumeTexture_UploadsHalfFloatsUnpaddedAndPutsTheBindingsBack()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		string before = gl.Snapshot();
+
+		Assert.IsTrue(renderer.SupportsVolumes);
+		nint volume = renderer.CreateVolumeTexture(3, 2, 5, 1, new Half[30]);
+
+		Assert.IsTrue(renderer.IsVolume(volume));
+		CollectionAssert.Contains(gl.Calls, "TexImage3D(R16f,3x2x5,Red,HalfFloat,60,align=1)", "Odd-width rows of two-byte texels need an alignment of one.");
+		Assert.AreEqual(before, gl.Snapshot(), "The 3D binding and the unpack alignment are put back.");
+	}
+
+	[TestMethod]
+	public void CreateVolumeTexture_WithFourChannels_UploadsRgbaHalfFloats()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+
+		renderer.CreateVolumeTexture(2, 2, 2, 4, new Half[32]);
+
+		CollectionAssert.Contains(gl.Calls, "TexImage3D(Rgba16f,2x2x2,Rgba,HalfFloat,64,align=1)");
+	}
+
+	[TestMethod]
+	public void DrawVolume_PassesTheChannelColoursAndExtinction()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 4, new Half[4]);
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.Identity,
+			Color1 = new Vector4(0.1f, 0.2f, 0.3f, 1f),
+			Color3 = new Vector4(0.7f, 0.8f, 0.9f, 1f),
+			Extinction = new Vector4(0f, 0f, 0f, 2.5f),
+		});
+
+		Assert.AreEqual(new Vector4(0.1f, 0.2f, 0.3f, 1f), gl.Uniforms[gl.GetUniformLocation(0, "Color1")]);
+		Assert.AreEqual(new Vector4(0.7f, 0.8f, 0.9f, 1f), gl.Uniforms[gl.GetUniformLocation(0, "Color3")]);
+		Assert.AreEqual(new Vector4(0f, 0f, 0f, 2.5f), gl.Uniforms[gl.GetUniformLocation(0, "Extinction")]);
+		Assert.AreEqual(4, gl.Uniforms[gl.GetUniformLocation(0, "Channels")]);
+		Assert.AreEqual(Vector4.One, gl.Uniforms[gl.GetUniformLocation(0, "NoiseWeights")], "Unset weights mean full noise in every channel.");
+		Assert.AreEqual(Vector3.One, gl.Uniforms[gl.GetUniformLocation(0, "NoiseStretch")], "Unset stretch means round cells.");
+	}
+
+	[TestMethod]
+	public void DrawVolume_WithADetailMap_BindsItOnUnitOneAndPutsTheBindingsBack()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 4, new Half[32]);
+		nint detail = renderer.CreateVolumeTexture(4, 4, 1, 4, new Half[64]);
+		string before = gl.Snapshot();
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.CreateScale(1f, 1f, 300f),
+			DetailMap = detail,
+			DetailFadeHeight = 50f,
+		});
+
+		Assert.AreEqual(1, gl.Uniforms[gl.GetUniformLocation(0, "HasDetail")]);
+		Assert.AreEqual(1, gl.Uniforms[gl.GetUniformLocation(0, "DetailMap")], "The detail map samples unit 1.");
+		Assert.AreEqual(50f, gl.Uniforms[gl.GetUniformLocation(0, "DetailFadeHeight")]);
+		Assert.AreEqual(300f, gl.Uniforms[gl.GetUniformLocation(0, "PlaneScale")], "The plane's thickness in world units comes from the box.");
+		Assert.AreEqual(before, gl.Snapshot(), "Unit 1's binding is put back too.");
+	}
+
+	[TestMethod]
+	public void DrawVolume_WithAnUnknownDetailMap_IsRejected()
+	{
+		using GLRenderer3D renderer = new(new FakeGL3D());
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.DrawVolume(target, volume, new VolumeDrawState { DetailMap = 999 }));
+	}
+
+	[TestMethod]
+	public void CreateVolumeTexture_RejectsAWrongSizedSpan()
+	{
+		using GLRenderer3D renderer = new(new FakeGL3D());
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.CreateVolumeTexture(2, 2, 2, 1, new Half[7]));
+	}
+
+	[TestMethod]
+	public void DrawVolume_DrawsOneTriangleIntoTheTargetReadingTheVolume()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(32, 24, depth: true, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(4, 4, 4, 1, new Half[64]);
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.Identity,
+			Color = new Vector4(0.5f, 0.25f, 0.125f, 1f),
+			Blend = BlendMode.Additive,
+		});
+
+		FakeGL3D.DrawRecord draw = gl.Draws.Single();
+		Assert.AreEqual(3, draw.Count);
+		Assert.AreEqual((int)FakeGL3D.FirstFramebuffer, draw.Framebuffer);
+		Assert.AreEqual((int)volume, draw.Texture3D, "The volume is bound as a 3D texture.");
+		Assert.AreEqual("0,0,32,24", draw.Viewport);
+		Assert.AreEqual(GLEnum.One, draw.BlendDstRgb, "Additive keeps the whole destination.");
+		Assert.IsFalse(draw.Enabled.Contains(GLEnum.DepthTest));
+		CollectionAssert.Contains(gl.Uniforms.Values.ToArray(), new Vector4(0.5f, 0.25f, 0.125f, 1f));
+		CollectionAssert.Contains(gl.Uniforms.Values.ToArray(), new Vector3(4, 4, 4));
+	}
+
+	[TestMethod]
+	public void DrawVolume_PassesTheNoiseToTheShader()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState
+		{
+			ViewProjection = Matrix4x4.Identity,
+			VolumeToWorld = Matrix4x4.Identity,
+			LowNoiseAmplitude = 0.375f,
+			LowNoiseScale = 1200f,
+			HighNoiseAmplitude = 0.25f,
+			HighNoiseScale = 120f,
+			NoiseOffset = new Vector3(1f, 2f, 3f),
+			PixelAngle = 0.0025f,
+		});
+
+		Assert.AreEqual(0.375f, gl.Uniforms[gl.GetUniformLocation(0, "LowNoiseAmplitude")]);
+		Assert.AreEqual(1200f, gl.Uniforms[gl.GetUniformLocation(0, "LowNoiseScale")]);
+		Assert.AreEqual(0.25f, gl.Uniforms[gl.GetUniformLocation(0, "HighNoiseAmplitude")]);
+		Assert.AreEqual(120f, gl.Uniforms[gl.GetUniformLocation(0, "HighNoiseScale")]);
+		Assert.AreEqual(new Vector3(1f, 2f, 3f), gl.Uniforms[gl.GetUniformLocation(0, "NoiseOffset")]);
+		Assert.AreEqual(0.0025f, gl.Uniforms[gl.GetUniformLocation(0, "PixelAngle")]);
+	}
+
+	[TestMethod]
+	public void DrawVolume_PutsBackEveryPieceOfStateItTouched()
+	{
+		FakeGL3D gl = FakeGL3D.WithUnusualState();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
+		nint volume = renderer.CreateVolumeTexture(2, 2, 2, 1, new Half[8]);
+		string before = gl.Snapshot();
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState { ViewProjection = Matrix4x4.Identity, VolumeToWorld = Matrix4x4.Identity, Blend = BlendMode.Additive });
+
+		Assert.AreEqual(before, gl.Snapshot());
+	}
+
+	[TestMethod]
+	public void DrawVolume_WithASingularMatrix_DrawsNothing()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint target = renderer.CreateRenderTarget(8, 8, depth: false);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
+
+		renderer.DrawVolume(target, volume, new VolumeDrawState { ViewProjection = default, VolumeToWorld = Matrix4x4.Identity });
+
+		Assert.IsEmpty(gl.Draws);
+	}
+
+	[TestMethod]
+	public void DeleteVolumeTexture_DeletesItAndRejectsAnythingElse()
+	{
+		FakeGL3D gl = new();
+		using GLRenderer3D renderer = new(gl);
+		nint volume = renderer.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
+		gl.Calls.Clear();
+
+		renderer.DeleteVolumeTexture(volume);
+
+		CollectionAssert.Contains(gl.Calls, $"DeleteTexture({volume})");
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.DeleteVolumeTexture(volume));
+	}
+
+	[TestMethod]
+	public void OpenGLRenderer_ForwardsVolumesAndRefusesToDeleteOneAsATexture()
+	{
+		FakeGL3D gl = new();
+		using OpenGLRenderer renderer = ControllerOver(gl);
+		IRenderer3D controller = renderer;
+
+		Assert.IsTrue(controller.SupportsVolumes);
+		nint volume = controller.CreateVolumeTexture(1, 1, 1, 1, new Half[1]);
+		nint target = controller.CreateRenderTarget(8, 8, depth: false, RenderTargetFormat.Rgba16F);
+		controller.DrawVolume(target, volume, new VolumeDrawState { ViewProjection = Matrix4x4.Identity, VolumeToWorld = Matrix4x4.Identity });
+
+		Assert.HasCount(1, gl.Draws);
+		Assert.ThrowsExactly<ArgumentException>(() => renderer.DeleteTexture(volume));
+		controller.DeleteVolumeTexture(volume);
+	}
+
+	[TestMethod]
+	public void Dispose_ReleasesTheToneMapProgramToo()
+	{
+		FakeGL3D gl = new();
+		GLRenderer3D renderer = new(gl);
+		nint hdr = renderer.CreateRenderTarget(16, 16, depth: false, RenderTargetFormat.Rgba16F);
+		nint shown = renderer.CreateRenderTarget(16, 16, depth: false);
+		renderer.ToneMap(hdr, shown, ToneMap3D.Default);
+
+		renderer.Dispose();
+
+		CollectionAssert.Contains(gl.Calls, $"DeleteProgram({FakeGL3D.FirstProgram})");
+	}
+
+	[TestMethod]
 	public void ResizeRenderTarget_KeepsTheHandleAndRespecifiesBothAttachments()
 	{
 		FakeGL3D gl = new();
@@ -453,7 +827,8 @@ public sealed class GLRenderer3DTests
 		public const uint FirstProgram = 600;
 
 		private readonly Dictionary<GLEnum, int> integers = [];
-		private readonly Dictionary<int, int> textureByUnit = [];
+		private readonly Dictionary<string, int> uniformLocations = [];
+		private readonly Dictionary<(int Unit, GLEnum Target), int> textureByUnit = [];
 		private readonly Dictionary<int, int> samplerByUnit = [];
 		private readonly HashSet<GLEnum> enabled = [];
 		private readonly int[] viewport = new int[4];
@@ -490,8 +865,10 @@ public sealed class GLRenderer3DTests
 			gl.integers[GLEnum.ReadFramebufferBinding] = 8;
 			gl.integers[GLEnum.CurrentProgram] = 9;
 			gl.integers[GLEnum.ActiveTexture] = (int)GLEnum.Texture3;
-			gl.textureByUnit[0] = 11;
-			gl.textureByUnit[3] = 33;
+			gl.textureByUnit[(0, GLEnum.Texture2D)] = 11;
+			gl.textureByUnit[(3, GLEnum.Texture2D)] = 33;
+			gl.textureByUnit[(0, GLEnum.Texture3D)] = 44;
+			gl.integers[GLEnum.UnpackAlignment] = 8;
 			gl.samplerByUnit[0] = 12;
 			gl.integers[GLEnum.RenderbufferBinding] = 15;
 			gl.integers[GLEnum.VertexArrayBinding] = 13;
@@ -523,8 +900,8 @@ public sealed class GLRenderer3DTests
 		public string Snapshot() => string.Join(
 			"; ",
 			integers.OrderBy(p => p.Key).Select(p => $"{p.Key}={p.Value}")
-				.Concat(textureByUnit.OrderBy(p => p.Key).Select(p => $"Texture[{p.Key}]={p.Value}"))
-				.Concat(samplerByUnit.OrderBy(p => p.Key).Select(p => $"Sampler[{p.Key}]={p.Value}"))
+				.Concat(textureByUnit.Where(p => p.Value != 0).OrderBy(p => p.Key.Unit).ThenBy(p => p.Key.Target).Select(p => $"Texture[{p.Key.Unit},{p.Key.Target}]={p.Value}"))
+				.Concat(samplerByUnit.Where(p => p.Value != 0).OrderBy(p => p.Key).Select(p => $"Sampler[{p.Key}]={p.Value}"))
 				.Append("Enabled=" + string.Join(",", enabled.OrderBy(e => e)))
 				.Append("Viewport=" + string.Join(",", viewport))
 				.Append("ClearColor=" + string.Join(",", clearColor))
@@ -532,7 +909,8 @@ public sealed class GLRenderer3DTests
 
 		public int GetInteger(GLEnum pname) => pname switch
 		{
-			GLEnum.TextureBinding2D => textureByUnit.GetValueOrDefault(ActiveUnit),
+			GLEnum.TextureBinding2D => textureByUnit.GetValueOrDefault((ActiveUnit, GLEnum.Texture2D)),
+			GLEnum.TextureBinding3D => textureByUnit.GetValueOrDefault((ActiveUnit, GLEnum.Texture3D)),
 			GLEnum.SamplerBinding => samplerByUnit.GetValueOrDefault(ActiveUnit),
 			_ => integers.GetValueOrDefault(pname),
 		};
@@ -563,7 +941,7 @@ public sealed class GLRenderer3DTests
 
 		public uint GenTexture() => nextTexture++;
 
-		public void BindTexture(GLEnum target, uint texture) => textureByUnit[ActiveUnit] = (int)texture;
+		public void BindTexture(GLEnum target, uint texture) => textureByUnit[(ActiveUnit, target)] = (int)texture;
 
 		public void TexParameter(GLEnum target, GLEnum pname, int param)
 		{
@@ -674,15 +1052,25 @@ public sealed class GLRenderer3DTests
 			return nextProgram++;
 		}
 
-		public int GetUniformLocation(uint program, string name) => name.Length;
+		/// <summary>A distinct location per uniform name, as a real program gives, so no two uniforms share a slot.</summary>
+		public int GetUniformLocation(uint program, string name)
+		{
+			if (!uniformLocations.TryGetValue(name, out int location))
+			{
+				location = uniformLocations.Count + 1;
+				uniformLocations[name] = location;
+			}
+
+			return location;
+		}
 
 		public void UseProgram(uint program) => integers[GLEnum.CurrentProgram] = (int)program;
 
 		public void DeleteProgram(uint program) => Calls.Add($"DeleteProgram({program})");
 
-		public void Uniform1(int location, int value)
-		{
-		}
+		public void Uniform1(int location, int value) => Uniforms[location] = value;
+
+		public void Uniform1(int location, float value) => Uniforms[location] = value;
 
 		public void UniformMatrix4(int location, ReadOnlySpan<float> value) => LastMatrix = value.ToArray();
 
@@ -726,8 +1114,43 @@ public sealed class GLRenderer3DTests
 				[.. enabled],
 				integers.GetValueOrDefault(GLEnum.DepthWritemask) != 0,
 				(GLEnum)integers.GetValueOrDefault(GLEnum.FrontFace),
-				(GLEnum)integers.GetValueOrDefault(GLEnum.CullFaceMode)));
+				(GLEnum)integers.GetValueOrDefault(GLEnum.CullFaceMode),
+				(GLEnum)integers.GetValueOrDefault(GLEnum.BlendSrcRgb),
+				(GLEnum)integers.GetValueOrDefault(GLEnum.BlendDstRgb),
+				integers.GetValueOrDefault(GLEnum.CurrentProgram),
+				textureByUnit.GetValueOrDefault((0, GLEnum.Texture2D)),
+				textureByUnit.GetValueOrDefault((0, GLEnum.Texture3D))));
 		}
+
+		public void DrawArrays(GLEnum mode, int first, int count)
+		{
+			Calls.Add($"DrawArrays({mode},{first},{count})");
+			Draws.Add(new DrawRecord(
+				mode,
+				count,
+				integers.GetValueOrDefault(GLEnum.DrawFramebufferBinding),
+				string.Join(",", viewport),
+				[.. enabled],
+				integers.GetValueOrDefault(GLEnum.DepthWritemask) != 0,
+				(GLEnum)integers.GetValueOrDefault(GLEnum.FrontFace),
+				(GLEnum)integers.GetValueOrDefault(GLEnum.CullFaceMode),
+				(GLEnum)integers.GetValueOrDefault(GLEnum.BlendSrcRgb),
+				(GLEnum)integers.GetValueOrDefault(GLEnum.BlendDstRgb),
+				integers.GetValueOrDefault(GLEnum.CurrentProgram),
+				textureByUnit.GetValueOrDefault((0, GLEnum.Texture2D)),
+				textureByUnit.GetValueOrDefault((0, GLEnum.Texture3D))));
+		}
+
+		public Dictionary<int, object> Uniforms { get; } = [];
+
+		public void Uniform3(int location, float x, float y, float z) => Uniforms[location] = new Vector3(x, y, z);
+
+		public void Uniform4(int location, float x, float y, float z, float w) => Uniforms[location] = new Vector4(x, y, z, w);
+
+		public void TexImage3D(GLEnum target, GLEnum internalFormat, int width, int height, int depth, GLEnum format, GLEnum type, ReadOnlySpan<byte> data) =>
+			Calls.Add($"TexImage3D({internalFormat},{width}x{height}x{depth},{format},{type},{data.Length},align={integers.GetValueOrDefault(GLEnum.UnpackAlignment)})");
+
+		public void PixelStore(GLEnum pname, int param) => integers[pname] = param;
 
 		public sealed record DrawRecord(
 			GLEnum Mode,
@@ -737,7 +1160,12 @@ public sealed class GLRenderer3DTests
 			HashSet<GLEnum> Enabled,
 			bool DepthWrite,
 			GLEnum FrontFace,
-			GLEnum CullFaceMode);
+			GLEnum CullFaceMode,
+			GLEnum BlendSrcRgb,
+			GLEnum BlendDstRgb,
+			int Program,
+			int Texture,
+			int Texture3D);
 
 		public sealed record ClearRecord(ClearBufferMask Mask, int Framebuffer, bool DepthWrite, bool ScissorTest, string Color);
 	}

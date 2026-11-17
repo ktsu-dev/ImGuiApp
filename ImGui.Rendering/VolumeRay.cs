@@ -1,0 +1,309 @@
+// Copyright (c) 2023-2026 ktsu-dev contributors
+
+namespace ktsu.ImGui.Rendering;
+
+using System;
+using System.Numerics;
+
+/// <summary>What one pixel's ray through a volume gives.</summary>
+/// <param name="Light">The light reaching the eye: the channels' colours times their values, integrated front to back through the transmittance.</param>
+/// <param name="Transmittance">The fraction of light from behind the volume that gets through it, from the channels' extinction.</param>
+/// <param name="Column">Channel 0's value integrated over world distance with the fade applied, for the alpha of a non-additive pass.</param>
+public readonly record struct VolumeIntegral(Vector3 Light, float Transmittance, float Column)
+{
+	/// <summary>The colour and alpha the pass writes for this ray under a blend mode.</summary>
+	/// <param name="state">The pass.</param>
+	/// <returns>The output colour: the light, and for anything but additive, an alpha that covers what the volume blocks (for premultiplied, exactly the light it blocks).</returns>
+	public Vector4 Output(in VolumeDrawState state) =>
+		state.Blend switch
+		{
+			BlendMode.Additive => new Vector4(Light, 1f),
+			BlendMode.Premultiplied => new Vector4(Light, 1f - Transmittance),
+			_ => new Vector4(Light, MathF.Max(Math.Clamp(state.Color.W * Column, 0f, 1f), 1f - Transmittance)),
+		};
+}
+
+/// <summary>
+/// The arithmetic of <see cref="IRenderer3D.DrawVolume"/> for one pixel, which every renderer's
+/// implementation must match, so a test can state the expected value without a graphics context.
+/// </summary>
+/// <remarks>
+/// A pixel's ray runs from the near plane to the far plane: both points come from the inverse of the
+/// view-projection, taking normalized device coordinates with y up and the target's first row at the
+/// top, and depth 0 at the near plane and 1 at the far one, as
+/// <see cref="Matrix4x4.CreatePerspectiveFieldOfView"/> produces. It is carried into the volume's unit
+/// cube by the inverse of <see cref="VolumeDrawState.VolumeToWorld"/> and clipped to the cube.
+/// </remarks>
+public sealed class VolumeRay
+{
+	private readonly Matrix4x4 clipToWorld;
+	private readonly Matrix4x4 worldToVolume;
+	private readonly VolumeDrawState state;
+
+	private VolumeRay(Matrix4x4 clipToWorld, Matrix4x4 worldToVolume, VolumeDrawState state)
+	{
+		this.clipToWorld = clipToWorld;
+		this.worldToVolume = worldToVolume;
+		this.state = state;
+	}
+
+	/// <summary>Gets whether both matrices were invertible; a ray from one that was not integrates to zero.</summary>
+	public bool IsValid { get; init; }
+
+	/// <summary>Prepares the per-pass inverses.</summary>
+	/// <param name="state">The pass.</param>
+	/// <returns>The ray builder.</returns>
+	public static VolumeRay Create(in VolumeDrawState state)
+	{
+		bool clip = Matrix4x4.Invert(state.ViewProjection, out Matrix4x4 clipToWorld);
+		bool volume = Matrix4x4.Invert(state.VolumeToWorld, out Matrix4x4 worldToVolume);
+		return new VolumeRay(clipToWorld, worldToVolume, state) { IsValid = clip && volume };
+	}
+
+	/// <summary>
+	/// A per-pixel offset in [0, 1) for where the ray's samples start within their step, so a fixed step
+	/// does not band. Interleaved gradient noise, which the shader computes identically.
+	/// </summary>
+	/// <param name="x">Column.</param>
+	/// <param name="y">Row.</param>
+	/// <returns>The offset.</returns>
+	public static float Jitter(int x, int y)
+	{
+		float a = 0.06711056f * (x + 0.5f);
+		float b = 0.00583715f * (y + 0.5f);
+		float inner = (a + b) % 1f;
+		float value = 52.9829189f * inner % 1f;
+		return value < 0 ? value + 1 : value;
+	}
+
+	/// <summary>
+	/// Integrates the volume along one pixel's ray, front to back: each step's emission, the channels
+	/// weighted by their colours, is added dimmed by the transmittance in front of it, and the step's
+	/// extinction then dims everything behind it.
+	/// </summary>
+	/// <param name="x">Column.</param>
+	/// <param name="y">Row, 0 at the top.</param>
+	/// <param name="targetWidth">The target's width in pixels.</param>
+	/// <param name="targetHeight">The target's height in pixels.</param>
+	/// <param name="sample">Samples the volume's channels at texture coordinates in [0, 1]³; a single-channel volume returns its value in X and zero elsewhere.</param>
+	/// <param name="width">Voxels along X.</param>
+	/// <param name="height">Voxels along Y.</param>
+	/// <param name="depth">Voxels along Z.</param>
+	/// <returns>The light reaching the eye, the transmittance through the whole ray, and channel 0's faded column.</returns>
+	public VolumeIntegral Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, Vector4> sample, int width, int height, int depth) =>
+		Integrate(x, y, targetWidth, targetHeight, sample, null, width, height, depth);
+
+	/// <summary>Integrates the volume along one pixel's ray, with a detail map multiplying it about its mid-plane.</summary>
+	/// <param name="x">Column.</param>
+	/// <param name="y">Row, 0 at the top.</param>
+	/// <param name="targetWidth">The target's width in pixels.</param>
+	/// <param name="targetHeight">The target's height in pixels.</param>
+	/// <param name="sample">Samples the volume's channels at texture coordinates in [0, 1]³.</param>
+	/// <param name="detail">Samples <see cref="VolumeDrawState.DetailMap"/>'s channels at (u, v), or <see langword="null"/> for none.</param>
+	/// <param name="width">Voxels along X.</param>
+	/// <param name="height">Voxels along Y.</param>
+	/// <param name="depth">Voxels along Z.</param>
+	/// <returns>The light reaching the eye, the transmittance through the whole ray, and channel 0's faded column.</returns>
+	public VolumeIntegral Integrate(int x, int y, int targetWidth, int targetHeight, Func<Vector3, Vector4> sample, Func<Vector2, Vector4>? detail, int width, int height, int depth)
+	{
+		Ensure.NotNull(sample);
+		VolumeIntegral nothing = new(Vector3.Zero, 1f, 0f);
+		if (!IsValid)
+		{
+			return nothing;
+		}
+
+		float ndcX = ((x + 0.5f) / targetWidth * 2f) - 1f;
+		float ndcY = 1f - ((y + 0.5f) / targetHeight * 2f);
+		Vector3 near = Unproject(new Vector4(ndcX, ndcY, 0f, 1f));
+		Vector3 far = Unproject(new Vector4(ndcX, ndcY, 1f, 1f));
+
+		Vector3 origin = Vector3.Transform(near, worldToVolume);
+		Vector3 direction = Vector3.Transform(far, worldToVolume) - origin;
+		if (!ClipToUnitCube(origin, direction, out float enter, out float exit))
+		{
+			return nothing;
+		}
+
+		Vector3 voxels = direction * (exit - enter) * new Vector3(width, height, depth);
+		int samples = Math.Clamp((int)MathF.Ceiling(voxels.Length() * state.EffectiveSamplesPerVoxel), 1, state.EffectiveMaxSamples);
+		float step = (exit - enter) / samples;
+		float worldStep = step * Vector3.Distance(near, far);
+		float jitter = Jitter(x, y);
+
+		Vector3 light = Vector3.Zero;
+		float transmittance = 1f;
+		float column = 0f;
+		for (int i = 0; i < samples; i++)
+		{
+			float t = enter + ((i + jitter) * step);
+			Vector3 uvw = origin + (direction * t);
+			Vector4 value = sample(uvw);
+			if (value == Vector4.Zero)
+			{
+				continue;
+			}
+
+			if (detail is not null)
+			{
+				value *= DetailFactor(detail(new Vector2(uvw.X, uvw.Y)), uvw.Z);
+			}
+
+			Vector3 world = Vector3.Lerp(near, far, t);
+			float distance = Vector3.Distance(world, state.Eye);
+			value *= Vector4.Max(Vector4.Zero, Vector4.One + (state.EffectiveNoiseWeights * (Grain(world, distance) - 1f)));
+
+			// The fade silences emission near the eye, where the caller draws its own detail; matter
+			// there still absorbs, since it is still in front of what lies behind it.
+			float fade = Fade(distance);
+			Vector3 emission = (Rgb(state.Color) * value.X) + (Rgb(state.Color1) * value.Y) + (Rgb(state.Color2) * value.Z) + (Rgb(state.Color3) * value.W);
+			light += emission * (fade * transmittance * worldStep);
+			column += value.X * fade * worldStep;
+			transmittance *= MathF.Exp(-Vector4.Dot(state.Extinction, value) * worldStep);
+		}
+
+		return new VolumeIntegral(light, transmittance, column);
+	}
+
+	/// <summary>
+	/// How a detail map's sample multiplies the volume at a height: fully in the mid-plane, fading
+	/// towards no change over <see cref="VolumeDrawState.DetailFadeHeight"/> above and below it.
+	/// </summary>
+	/// <param name="detail">The detail map's channels at the sample's (u, v).</param>
+	/// <param name="w">The sample's volume coordinate across the plane, in [0, 1].</param>
+	/// <returns>The per-channel multiplier.</returns>
+	public Vector4 DetailFactor(Vector4 detail, float w)
+	{
+		float weight = 1f;
+		if (state.DetailFadeHeight > 0f)
+		{
+			float height = MathF.Abs(w - 0.5f) * new Vector3(state.VolumeToWorld.M31, state.VolumeToWorld.M32, state.VolumeToWorld.M33).Length();
+			weight = MathF.Exp(-height / state.DetailFadeHeight);
+		}
+
+		return Vector4.Max(Vector4.Zero, Vector4.One + ((detail - Vector4.One) * weight));
+	}
+
+	private static Vector3 Rgb(Vector4 colour) => new(colour.X, colour.Y, colour.Z);
+
+	/// <summary>The emission weight at a distance from the eye: 0 inside the fade's start, rising smoothly to 1 at its end.</summary>
+	/// <param name="distance">The distance.</param>
+	/// <returns>The weight.</returns>
+	public float Fade(float distance)
+	{
+		if (state.FadeInEnd <= 0f && state.FadeInStart <= 0f)
+		{
+			return 1f;
+		}
+
+		float t = Math.Clamp((distance - state.FadeInStart) / MathF.Max(state.FadeInEnd - state.FadeInStart, 1e-6f), 0f, 1f);
+		return t * t * (3f - (2f * t));
+	}
+
+	/// <summary>
+	/// The emission multiplier from the two noise layers at a world position: the low- and
+	/// high-frequency layers, each faded out where its cells are under about two pixels across, multiplied.
+	/// </summary>
+	/// <param name="world">The sample's world position.</param>
+	/// <param name="distance">Its distance from the eye.</param>
+	/// <returns>The multiplier, never negative.</returns>
+	public float Grain(Vector3 world, float distance)
+	{
+		Vector3 p = (world + state.NoiseOffset) / state.EffectiveNoiseStretch;
+		float footprint = distance * state.PixelAngle;
+		return Layer(p, footprint, state.LowNoiseAmplitude, state.LowNoiseScale, Vector3.Zero)
+			* Layer(p, footprint, state.HighNoiseAmplitude, state.HighNoiseScale, new Vector3(17.3f));
+	}
+
+	/// <summary>One noise layer's multiplier; a layer with no amplitude, or faded out entirely, is not evaluated.</summary>
+	private float Layer(Vector3 p, float footprint, float amplitude, float scale, Vector3 shift)
+	{
+		if (amplitude <= 0f || scale <= 0f)
+		{
+			return 1f;
+		}
+
+		float weight = OctaveWeight(scale, footprint);
+		return weight <= 0f ? 1f : MathF.Max(0f, 1f + (amplitude * weight * ((2f * Noise((p / scale) + shift)) - 1f)));
+	}
+
+	/// <summary>
+	/// Value noise in [0, 1): hashed values at integer lattice points, blended with smoothstep weights.
+	/// The hash works on the lattice coordinates as 32-bit unsigned integers, so the GLSL version,
+	/// which does the same, gives the same values.
+	/// </summary>
+	/// <param name="p">The position in lattice units.</param>
+	/// <returns>The noise value.</returns>
+	public static float Noise(Vector3 p)
+	{
+		float fx = MathF.Floor(p.X);
+		float fy = MathF.Floor(p.Y);
+		float fz = MathF.Floor(p.Z);
+		int ix = (int)fx;
+		int iy = (int)fy;
+		int iz = (int)fz;
+		float tx = Smooth(p.X - fx);
+		float ty = Smooth(p.Y - fy);
+		float tz = Smooth(p.Z - fz);
+
+		float x00 = Lerp(Lattice(ix, iy, iz), Lattice(ix + 1, iy, iz), tx);
+		float x10 = Lerp(Lattice(ix, iy + 1, iz), Lattice(ix + 1, iy + 1, iz), tx);
+		float x01 = Lerp(Lattice(ix, iy, iz + 1), Lattice(ix + 1, iy, iz + 1), tx);
+		float x11 = Lerp(Lattice(ix, iy + 1, iz + 1), Lattice(ix + 1, iy + 1, iz + 1), tx);
+		return Lerp(Lerp(x00, x10, ty), Lerp(x01, x11, ty), tz);
+	}
+
+	/// <summary>A hashed value in [0, 1) for a lattice point.</summary>
+	private static float Lattice(int x, int y, int z)
+	{
+		uint h = unchecked(((uint)x * 0x8DA6B343u) ^ ((uint)y * 0xD8163841u) ^ ((uint)z * 0xCB1AB31Fu));
+		h ^= h >> 16;
+		h = unchecked(h * 0x7FEB352Du);
+		h ^= h >> 15;
+		h = unchecked(h * 0x846CA68Bu);
+		h ^= h >> 16;
+		return (h >> 8) * (1f / 16777216f);
+	}
+
+	/// <summary>Full weight where a noise cell spans three pixels or more, none at one pixel.</summary>
+	private float OctaveWeight(float cell, float footprint) =>
+		state.PixelAngle <= 0f ? 1f : Math.Clamp(((cell / MathF.Max(footprint, 1e-12f)) - 1f) / 2f, 0f, 1f);
+
+	private static float Smooth(float t) => t * t * (3f - (2f * t));
+
+	private static float Lerp(float a, float b, float t) => a + ((b - a) * t);
+
+	/// <summary>Where a ray enters and leaves the unit cube, as fractions of its length, clipped to [0, 1].</summary>
+	private static bool ClipToUnitCube(Vector3 origin, Vector3 direction, out float enter, out float exit)
+	{
+		enter = 0f;
+		exit = 1f;
+		for (int axis = 0; axis < 3; axis++)
+		{
+			float o = axis == 0 ? origin.X : axis == 1 ? origin.Y : origin.Z;
+			float d = axis == 0 ? direction.X : axis == 1 ? direction.Y : direction.Z;
+			if (MathF.Abs(d) < 1e-12f)
+			{
+				if (o is < 0f or > 1f)
+				{
+					return false;
+				}
+
+				continue;
+			}
+
+			float t0 = -o / d;
+			float t1 = (1f - o) / d;
+			enter = MathF.Max(enter, MathF.Min(t0, t1));
+			exit = MathF.Min(exit, MathF.Max(t0, t1));
+		}
+
+		return exit > enter;
+	}
+
+	private Vector3 Unproject(Vector4 clip)
+	{
+		Vector4 world = Vector4.Transform(clip, clipToWorld);
+		return new Vector3(world.X, world.Y, world.Z) / world.W;
+	}
+}

@@ -122,6 +122,11 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D, IHalfFloat
 			throw new ArgumentException($"Texture {id} is a render target's colour attachment. Release it with DeleteRenderTarget.", nameof(id));
 		}
 
+		if (_renderer3D.IsVolume(id))
+		{
+			throw new ArgumentException($"Texture {id} is a volume texture. Release it with DeleteVolumeTexture.", nameof(id));
+		}
+
 		_gl.DeleteTexture((uint)id);
 	}
 
@@ -143,6 +148,32 @@ internal sealed class OpenGLRenderer : IRendererBackend, IRenderer3D, IHalfFloat
 	/// <inheritdoc />
 	public void Draw(nint target, ReadOnlySpan<Vertex3D> vertices, ReadOnlySpan<uint> indices, in DrawState3D state) =>
 		_renderer3D.Draw(target, vertices, indices, state);
+
+	// Forwarded explicitly: IRenderer3D's default implementations of these report no support, and
+	// leaving them to the defaults would silently hide what GLRenderer3D can do.
+
+	/// <inheritdoc />
+	public bool SupportsFormat(RenderTargetFormat format) => _renderer3D.SupportsFormat(format);
+
+	/// <inheritdoc />
+	public nint CreateRenderTarget(int width, int height, bool depth, RenderTargetFormat format) =>
+		_renderer3D.CreateRenderTarget(width, height, depth, format);
+
+	/// <inheritdoc />
+	public void ToneMap(nint source, nint destination, in ToneMap3D toneMap) => _renderer3D.ToneMap(source, destination, toneMap);
+
+	/// <inheritdoc />
+	public bool SupportsVolumes => _renderer3D.SupportsVolumes;
+
+	/// <inheritdoc />
+	public nint CreateVolumeTexture(int width, int height, int depth, int channels, ReadOnlySpan<Half> values) =>
+		_renderer3D.CreateVolumeTexture(width, height, depth, channels, values);
+
+	/// <inheritdoc />
+	public void DeleteVolumeTexture(nint volume) => _renderer3D.DeleteVolumeTexture(volume);
+
+	/// <inheritdoc />
+	public void DrawVolume(nint target, nint volume, in VolumeDrawState state) => _renderer3D.DrawVolume(target, volume, state);
 
 	internal void SetupRenderState(ImDrawDataPtr drawDataPtr, int framebufferWidth, int framebufferHeight)
 	{

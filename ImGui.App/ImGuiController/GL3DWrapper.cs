@@ -125,6 +125,23 @@ internal sealed class GL3DWrapper(GL gl) : IGL3D
 
 	public void Uniform1(int location, int value) => gl.Uniform1(location, value);
 
+	public void Uniform1(int location, float value) => gl.Uniform1(location, value);
+
+	public void Uniform3(int location, float x, float y, float z) => gl.Uniform3(location, x, y, z);
+
+	public void Uniform4(int location, float x, float y, float z, float w) => gl.Uniform4(location, x, y, z, w);
+
+	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "The span is pinned for the duration of the upload, which copies it.")]
+	public unsafe void TexImage3D(GLEnum target, GLEnum internalFormat, int width, int height, int depth, GLEnum format, GLEnum type, ReadOnlySpan<byte> data)
+	{
+		fixed (byte* pixels = data)
+		{
+			gl.TexImage3D(target, 0, (int)internalFormat, (uint)width, (uint)height, (uint)depth, 0, format, type, pixels);
+		}
+	}
+
+	public void PixelStore(GLEnum pname, int param) => gl.PixelStore(pname, param);
+
 	public void UniformMatrix4(int location, ReadOnlySpan<float> value) => gl.UniformMatrix4(location, 1, false, value);
 
 	public uint GenBuffer() => gl.GenBuffer();
@@ -150,6 +167,8 @@ internal sealed class GL3DWrapper(GL gl) : IGL3D
 	[SuppressMessage("Major Code Smell", "S6640:Make sure that using \"unsafe\" is safe here", Justification = "A null offset means the start of the bound element buffer; it is never dereferenced here.")]
 	public unsafe void DrawElements(GLEnum mode, int count) =>
 		gl.DrawElements(mode, (uint)count, GLEnum.UnsignedInt, null);
+
+	public void DrawArrays(GLEnum mode, int first, int count) => gl.DrawArrays(mode, first, (uint)count);
 
 	private uint CompileShader(ShaderType type, string source)
 	{

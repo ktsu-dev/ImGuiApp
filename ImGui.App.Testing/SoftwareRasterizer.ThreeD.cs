@@ -53,6 +53,18 @@ public static partial class SoftwareRasterizer
 		in ClipVertex b,
 		in ClipVertex c,
 		TextureSource? texture,
+		in DrawState3D state) =>
+		FillTriangle3D(target, null, depth, a, b, c, texture, state);
+
+	/// <summary>As <see cref="FillTriangle3D(Bitmap32, DepthBuffer?, in ClipVertex, in ClipVertex, in ClipVertex, TextureSource?, in DrawState3D)"/>, blending into a high-range buffer when there is one.</summary>
+	internal static void FillTriangle3D(
+		Bitmap32 target,
+		HdrBuffer? hdr,
+		DepthBuffer? depth,
+		in ClipVertex a,
+		in ClipVertex b,
+		in ClipVertex c,
+		TextureSource? texture,
 		in DrawState3D state)
 	{
 		Ensure.NotNull(target);
@@ -63,7 +75,7 @@ public static partial class SoftwareRasterizer
 		// A triangle clipped by one plane is a triangle or a quad, so at most one extra triangle.
 		for (int i = 2; i < count; i++)
 		{
-			FillProjected(target, depth, polygon[0], polygon[i - 1], polygon[i], texture, state);
+			FillProjected(target, hdr, depth, polygon[0], polygon[i - 1], polygon[i], texture, state);
 		}
 	}
 
@@ -82,6 +94,16 @@ public static partial class SoftwareRasterizer
 	/// </remarks>
 	public static void DrawLine3D(
 		Bitmap32 target,
+		DepthBuffer? depth,
+		in ClipVertex a,
+		in ClipVertex b,
+		in DrawState3D state) =>
+		DrawLine3D(target, null, depth, a, b, state);
+
+	/// <summary>As <see cref="DrawLine3D(Bitmap32, DepthBuffer?, in ClipVertex, in ClipVertex, in DrawState3D)"/>, blending into a high-range buffer when there is one.</summary>
+	internal static void DrawLine3D(
+		Bitmap32 target,
+		HdrBuffer? hdr,
 		DepthBuffer? depth,
 		in ClipVertex a,
 		in ClipVertex b,
@@ -134,7 +156,7 @@ public static partial class SoftwareRasterizer
 			float invW = invW0 + ((invW1 - invW0) * t);
 			float weight = invW <= 0f ? 0.5f : invW1 * t / invW;
 
-			Write(target, x, y, Interpolate2(near.Color, far.Color, weight), state.Blend);
+			Write(target, hdr, x, y, Interpolate2(near.Color, far.Color, weight), state.Blend);
 		}
 	}
 
@@ -173,6 +195,7 @@ public static partial class SoftwareRasterizer
 
 	private static void FillProjected(
 		Bitmap32 target,
+		HdrBuffer? hdr,
 		DepthBuffer? depth,
 		in ClipVertex a,
 		in ClipVertex b,
@@ -189,7 +212,7 @@ public static partial class SoftwareRasterizer
 		{
 			for (int x = bounds.MinX; x < bounds.MaxX; x++)
 			{
-				ShadePixel(target, depth, triangle, texture, state, x, y);
+				ShadePixel(target, hdr, depth, triangle, texture, state, x, y);
 			}
 		}
 	}
@@ -271,6 +294,7 @@ public static partial class SoftwareRasterizer
 	/// Covers, depth-tests and shades one pixel.
 	/// </summary>
 	/// <param name="target">The colour attachment.</param>
+	/// <param name="hdr">The high-range colour attachment, or null for an eight-bit target.</param>
 	/// <param name="depth">The depth attachment, or null.</param>
 	/// <param name="triangle">The projected triangle.</param>
 	/// <param name="texture">Texture to modulate by, or null.</param>
@@ -279,6 +303,7 @@ public static partial class SoftwareRasterizer
 	/// <param name="y">Row.</param>
 	private static void ShadePixel(
 		Bitmap32 target,
+		HdrBuffer? hdr,
 		DepthBuffer? depth,
 		in ProjectedTriangle triangle,
 		TextureSource? texture,
@@ -325,7 +350,7 @@ public static partial class SoftwareRasterizer
 			source = Modulate(source, texture.Sample(uv.X, uv.Y));
 		}
 
-		Write(target, x, y, source, state.Blend);
+		Write(target, hdr, x, y, source, state.Blend);
 	}
 
 	/// <summary>
@@ -417,14 +442,57 @@ public static partial class SoftwareRasterizer
 		return true;
 	}
 
-	private static void Write(Bitmap32 target, int x, int y, Rgba32 source, BlendMode blend)
+	private static void Write(Bitmap32 target, HdrBuffer? hdr, int x, int y, Rgba32 source, BlendMode blend)
 	{
-		Rgba32 final = blend == BlendMode.Alpha && source.A != 255
-			? BlendOver(source, target.GetPixel(x, y))
-			: source;
+		if (hdr is not null)
+		{
+			// The high-range attachment is the real one; the eight-bit bitmap mirrors it clamped, which
+			// is what showing a float target without tone-mapping it shows on a GPU too.
+			Vector4 blended = Blend(ToVector(source), hdr[x, y], blend);
+			hdr[x, y] = blended;
+			target.SetPixel(x, y, HdrBuffer.ToRgba32(blended));
+			return;
+		}
+
+		Rgba32 final = blend switch
+		{
+			BlendMode.Alpha when source.A != 255 => BlendOver(source, target.GetPixel(x, y)),
+			BlendMode.Additive or BlendMode.Premultiplied => HdrBuffer.ToRgba32(Blend(ToVector(source), ToVector(target.GetPixel(x, y)), blend)),
+			_ => source,
+		};
 
 		target.SetPixel(x, y, final);
 	}
+
+	/// <summary>Writes an unclamped floating-point colour, blended, into a target and its high-range attachment if it has one.</summary>
+	internal static void WriteFloat(Bitmap32 target, HdrBuffer? hdr, int x, int y, Vector4 source, BlendMode blend)
+	{
+		Vector4 under = hdr is not null ? hdr[x, y] : ToVector(target.GetPixel(x, y));
+		Vector4 blended = Blend(source, under, blend);
+		hdr?[x, y] = blended;
+		target.SetPixel(x, y, HdrBuffer.ToRgba32(blended));
+	}
+
+	/// <summary>
+	/// Blends a straight-alpha source over a destination in floating point, as the GPU's blend
+	/// equations for each <see cref="BlendMode"/> do.
+	/// </summary>
+	private static Vector4 Blend(Vector4 source, Vector4 destination, BlendMode blend)
+	{
+		float alpha = source.W;
+		Vector3 colour = new(source.X, source.Y, source.Z);
+		Vector3 under = new(destination.X, destination.Y, destination.Z);
+
+		return blend switch
+		{
+			BlendMode.Alpha => new Vector4((colour * alpha) + (under * (1f - alpha)), alpha + (destination.W * (1f - alpha))),
+			BlendMode.Additive => new Vector4((colour * alpha) + under, alpha + destination.W),
+			BlendMode.Premultiplied => new Vector4(colour + (under * (1f - alpha)), alpha + (destination.W * (1f - alpha))),
+			_ => source,
+		};
+	}
+
+	private static Vector4 ToVector(Rgba32 colour) => new(colour.R / 255f, colour.G / 255f, colour.B / 255f, colour.A / 255f);
 
 	private static float EdgeXY(Vector3 a, Vector3 b, Vector2 p) =>
 		((b.X - a.X) * (p.Y - a.Y)) - ((b.Y - a.Y) * (p.X - a.X));

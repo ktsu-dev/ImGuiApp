@@ -83,8 +83,319 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			Out_Color = color;
 		}";
 
+	/// <summary>
+	/// A triangle covering the whole viewport, made from the vertex index alone so the tone-map pass
+	/// needs no vertex buffer: indices 0, 1, 2 give (0,0), (2,0), (0,2) in texture space.
+	/// </summary>
+	/// <remarks>
+	/// No row flip here, unlike <see cref="VertexSource"/>: both textures are stored the same way up,
+	/// so mapping the destination's rows straight onto the source's keeps the picture as it was.
+	/// </remarks>
+	internal const string ToneMapVertexSource =
+		@"#version 330
+		out vec2 Frag_UV;
+		void main()
+		{
+			vec2 corner = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+			Frag_UV = corner;
+			gl_Position = vec4((corner * 2.0) - 1.0, 0.0, 1.0);
+		}";
+
+	/// <summary>The tone map, matching <see cref="ToneMap3D.Apply"/> channel for channel.</summary>
+	internal const string ToneMapFragmentSource =
+		@"#version 330
+		in vec2 Frag_UV;
+		uniform sampler2D Source;
+		uniform float Exposure;
+		uniform float Power;
+		uniform int Curve;
+		uniform int PreserveHue;
+		layout (location = 0) out vec4 Out_Color;
+		float MapChannel(float raw)
+		{
+			float value = max(raw, 0.0) * Exposure;
+			if (Power != 1.0 && value > 0.0)
+			{
+				value = pow(value, Power);
+			}
+
+			if (Curve == 1)
+			{
+				value = value / (1.0 + value);
+			}
+			else if (Curve == 2)
+			{
+				value = 1.0 - exp(-value);
+			}
+
+			return clamp(value, 0.0, 1.0);
+		}
+
+		void main()
+		{
+			vec4 color = texture(Source, Frag_UV);
+			vec3 rgb = max(color.rgb, vec3(0.0));
+			vec3 mapped;
+			if (PreserveHue != 0)
+			{
+				float peak = max(rgb.r, max(rgb.g, rgb.b));
+				mapped = peak > 0.0 ? min(rgb * (MapChannel(peak) / peak), vec3(1.0)) : vec3(0.0);
+			}
+			else
+			{
+				mapped = vec3(MapChannel(rgb.r), MapChannel(rgb.g), MapChannel(rgb.b));
+			}
+
+			Out_Color = vec4(mapped, clamp(color.a, 0.0, 1.0));
+		}";
+
+	/// <summary>
+	/// The emissive volume pass, matching <see cref="VolumeRay"/> step for step: the same
+	/// unprojection, clip, sample count, jitter and fade. Rows: the 3D pass negates clip y so a target's
+	/// first row is its top, so a fragment in row r (from the bottom of the GL framebuffer, which is
+	/// the target's first row) has normalized device y = 1 − 2(r + ½)/height.
+	/// </summary>
+	internal const string VolumeFragmentSource =
+		@"#version 330
+		uniform sampler3D Volume;
+		uniform mat4 ClipToWorld;
+		uniform mat4 WorldToVolume;
+		uniform vec3 Eye;
+		uniform vec4 Color;
+		uniform vec4 Color1;
+		uniform vec4 Color2;
+		uniform vec4 Color3;
+		uniform vec4 Extinction;
+		uniform vec4 NoiseWeights;
+		uniform sampler3D DetailMap;
+		uniform int HasDetail;
+		uniform float DetailFadeHeight;
+		uniform float PlaneScale;
+		uniform int Channels;
+		uniform float FadeStart;
+		uniform float FadeEnd;
+		uniform float SamplesPerVoxel;
+		uniform int MaxSamples;
+		uniform vec3 VolumeSize;
+		uniform vec4 TargetSize;
+		uniform int Additive;
+		uniform int Premultiplied;
+		uniform float LowNoiseAmplitude;
+		uniform float LowNoiseScale;
+		uniform float HighNoiseAmplitude;
+		uniform float HighNoiseScale;
+		uniform vec3 NoiseOffset;
+		uniform vec3 NoiseStretch;
+		uniform float PixelAngle;
+		layout (location = 0) out vec4 Out_Color;
+
+		float Lattice(ivec3 c)
+		{
+			uvec3 u = uvec3(c);
+			uint h = (u.x * 0x8DA6B343u) ^ (u.y * 0xD8163841u) ^ (u.z * 0xCB1AB31Fu);
+			h ^= h >> 16u;
+			h *= 0x7FEB352Du;
+			h ^= h >> 15u;
+			h *= 0x846CA68Bu;
+			h ^= h >> 16u;
+			return float(h >> 8u) * (1.0 / 16777216.0);
+		}
+
+		float Noise(vec3 p)
+		{
+			vec3 f = floor(p);
+			ivec3 i = ivec3(f);
+			vec3 t = p - f;
+			t = t * t * (3.0 - (2.0 * t));
+			float x00 = mix(Lattice(i), Lattice(i + ivec3(1, 0, 0)), t.x);
+			float x10 = mix(Lattice(i + ivec3(0, 1, 0)), Lattice(i + ivec3(1, 1, 0)), t.x);
+			float x01 = mix(Lattice(i + ivec3(0, 0, 1)), Lattice(i + ivec3(1, 0, 1)), t.x);
+			float x11 = mix(Lattice(i + ivec3(0, 1, 1)), Lattice(i + ivec3(1, 1, 1)), t.x);
+			return mix(mix(x00, x10, t.y), mix(x01, x11, t.y), t.z);
+		}
+
+		float OctaveWeight(float cell, float footprint)
+		{
+			return PixelAngle <= 0.0 ? 1.0 : clamp(((cell / max(footprint, 1e-12)) - 1.0) / 2.0, 0.0, 1.0);
+		}
+
+		float Layer(vec3 p, float footprint, float amplitude, float scale, vec3 shift)
+		{
+			if (amplitude <= 0.0 || scale <= 0.0)
+			{
+				return 1.0;
+			}
+
+			float weight = OctaveWeight(scale, footprint);
+			return weight <= 0.0 ? 1.0 : max(0.0, 1.0 + (amplitude * weight * ((2.0 * Noise((p / scale) + shift)) - 1.0)));
+		}
+
+		float Grain(vec3 world, float distanceToEye)
+		{
+			vec3 p = (world + NoiseOffset) / NoiseStretch;
+			float footprint = distanceToEye * PixelAngle;
+			return Layer(p, footprint, LowNoiseAmplitude, LowNoiseScale, vec3(0.0))
+				* Layer(p, footprint, HighNoiseAmplitude, HighNoiseScale, vec3(17.3));
+		}
+
+		vec3 Unproject(vec4 clip)
+		{
+			vec4 world = ClipToWorld * clip;
+			return world.xyz / world.w;
+		}
+
+		float Fade(float distance)
+		{
+			if (FadeEnd <= 0.0 && FadeStart <= 0.0)
+			{
+				return 1.0;
+			}
+
+			float t = clamp((distance - FadeStart) / max(FadeEnd - FadeStart, 1e-6), 0.0, 1.0);
+			return t * t * (3.0 - (2.0 * t));
+		}
+
+		void main()
+		{
+			float ndcX = (gl_FragCoord.x / TargetSize.x * 2.0) - 1.0;
+			float ndcY = 1.0 - (gl_FragCoord.y / TargetSize.y * 2.0);
+			vec3 nearPoint = Unproject(vec4(ndcX, ndcY, 0.0, 1.0));
+			vec3 farPoint = Unproject(vec4(ndcX, ndcY, 1.0, 1.0));
+
+			vec3 origin = (WorldToVolume * vec4(nearPoint, 1.0)).xyz;
+			vec3 direction = (WorldToVolume * vec4(farPoint, 1.0)).xyz - origin;
+
+			float enter = 0.0;
+			float exit = 1.0;
+			for (int axis = 0; axis < 3; axis++)
+			{
+				float o = origin[axis];
+				float d = direction[axis];
+				if (abs(d) < 1e-12)
+				{
+					if (o < 0.0 || o > 1.0)
+					{
+						discard;
+					}
+
+					continue;
+				}
+
+				float t0 = -o / d;
+				float t1 = (1.0 - o) / d;
+				enter = max(enter, min(t0, t1));
+				exit = min(exit, max(t0, t1));
+			}
+
+			if (exit <= enter)
+			{
+				discard;
+			}
+
+			vec3 voxels = direction * (exit - enter) * VolumeSize;
+			int samples = clamp(int(ceil(length(voxels) * SamplesPerVoxel)), 1, MaxSamples);
+			float stepSize = (exit - enter) / float(samples);
+			float worldStep = stepSize * distance(nearPoint, farPoint);
+
+			float a = 0.06711056 * (floor(gl_FragCoord.x) + 0.5);
+			float b = 0.00583715 * (floor(gl_FragCoord.y) + 0.5);
+			float jitter = mod(52.9829189 * mod(a + b, 1.0), 1.0);
+
+			vec3 light = vec3(0.0);
+			float transmittance = 1.0;
+			float column = 0.0;
+			for (int i = 0; i < MaxSamples; i++)
+			{
+				if (i >= samples)
+				{
+					break;
+				}
+
+				float t = enter + ((float(i) + jitter) * stepSize);
+				vec3 uvw = origin + (direction * t);
+				// An explicit LOD: implicit derivatives are undefined inside this divergent loop, and the
+				// textures have no mipmaps to choose between anyway.
+				vec4 value = textureLod(Volume, uvw, 0.0);
+				if (Channels == 1)
+				{
+					value = vec4(value.r, 0.0, 0.0, 0.0);
+				}
+
+				if (value == vec4(0.0))
+				{
+					continue;
+				}
+
+				if (HasDetail != 0)
+				{
+					float weight = DetailFadeHeight > 0.0 ? exp(-abs(uvw.z - 0.5) * PlaneScale / DetailFadeHeight) : 1.0;
+					value *= max(vec4(0.0), vec4(1.0) + ((textureLod(DetailMap, vec3(uvw.xy, 0.5), 0.0) - vec4(1.0)) * weight));
+				}
+
+				vec3 world = mix(nearPoint, farPoint, t);
+				float distanceToEye = distance(world, Eye);
+				value *= max(vec4(0.0), vec4(1.0) + (NoiseWeights * (Grain(world, distanceToEye) - 1.0)));
+
+				float fade = Fade(distanceToEye);
+				vec3 emission = (Color.rgb * value.x) + (Color1.rgb * value.y) + (Color2.rgb * value.z) + (Color3.rgb * value.w);
+				light += emission * (fade * transmittance * worldStep);
+				column += value.x * fade * worldStep;
+				transmittance *= exp(-dot(Extinction, value) * worldStep);
+			}
+
+			float alpha = Additive != 0 ? 1.0 : Premultiplied != 0 ? 1.0 - transmittance : max(clamp(Color.a * column, 0.0, 1.0), 1.0 - transmittance);
+			if (light == vec3(0.0) && (Additive != 0 || alpha <= 0.0))
+			{
+				discard;
+			}
+
+			Out_Color = vec4(light, alpha);
+		}";
+
 	private readonly IGL3D gl = gl;
 	private readonly Dictionary<nint, Target> targets = [];
+	private readonly Dictionary<nint, Volume> volumes = [];
+
+	private uint volumeProgram;
+	private int volumeSamplerLocation;
+	private int volumeClipToWorldLocation;
+	private int volumeWorldToVolumeLocation;
+	private int volumeEyeLocation;
+	private int volumeColorLocation;
+	private int volumeColor1Location;
+	private int volumeColor2Location;
+	private int volumeColor3Location;
+	private int volumeExtinctionLocation;
+	private int volumeNoiseWeightsLocation;
+	private int volumeDetailMapLocation;
+	private int volumeHasDetailLocation;
+	private int volumeDetailFadeHeightLocation;
+	private int volumePlaneScaleLocation;
+	private int volumeChannelsLocation;
+	private int volumeFadeStartLocation;
+	private int volumeFadeEndLocation;
+	private int volumeSamplesPerVoxelLocation;
+	private int volumeMaxSamplesLocation;
+	private int volumeSizeLocation;
+	private int volumeTargetSizeLocation;
+	private int volumeAdditiveLocation;
+	private int volumePremultipliedLocation;
+	private int volumeLowNoiseAmplitudeLocation;
+	private int volumeLowNoiseScaleLocation;
+	private int volumeHighNoiseAmplitudeLocation;
+	private int volumeHighNoiseScaleLocation;
+	private int volumeNoiseOffsetLocation;
+	private int volumeNoiseStretchLocation;
+	private int volumePixelAngleLocation;
+
+	private uint toneMapProgram;
+	private int toneMapSourceLocation;
+	private int toneMapExposureLocation;
+	private int toneMapPowerLocation;
+	private int toneMapCurveLocation;
+	private int toneMapPreserveHueLocation;
+	private uint toneMapVertexArray;
+	private uint volumeVertexArray;
 
 	private uint program;
 	private int matrixLocation;
@@ -101,11 +412,20 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 	public bool IsRenderTarget(nint id) => targets.ContainsKey(id);
 
 	/// <inheritdoc />
-	public nint CreateRenderTarget(int width, int height, bool depth)
+	public nint CreateRenderTarget(int width, int height, bool depth) =>
+		CreateRenderTarget(width, height, depth, RenderTargetFormat.Rgba8);
+
+	/// <inheritdoc />
+	public bool SupportsFormat(RenderTargetFormat format) => format is RenderTargetFormat.Rgba8 or RenderTargetFormat.Rgba16F;
+
+	/// <inheritdoc />
+	/// <exception cref="NotSupportedException">The format is not one this renderer knows.</exception>
+	public nint CreateRenderTarget(int width, int height, bool depth, RenderTargetFormat format)
 	{
 		ObjectDisposedException.ThrowIf(disposed, this);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+		GLEnum internalFormat = InternalFormatOf(format);
 
 		int previousTexture = gl.GetInteger(GLEnum.TextureBinding2D);
 		int previousRenderbuffer = gl.GetInteger(GLEnum.RenderbufferBinding);
@@ -118,7 +438,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
 		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
 		gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
-		gl.TexImage2DEmpty(GLEnum.Texture2D, GLEnum.Rgba8, width, height);
+		gl.TexImage2DEmpty(GLEnum.Texture2D, internalFormat, width, height);
 
 		uint renderbuffer = 0;
 		if (depth)
@@ -143,13 +463,14 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		gl.BindRenderbuffer((uint)previousRenderbuffer);
 		gl.BindTexture(GLEnum.Texture2D, (uint)previousTexture);
 
+		Target created = new(framebuffer, color, renderbuffer, width, height, internalFormat);
 		if (status != GLEnum.FramebufferComplete)
 		{
-			Release(new Target(framebuffer, color, renderbuffer, width, height));
+			Release(created);
 			throw new InvalidOperationException($"The render target's framebuffer is incomplete ({status}).");
 		}
 
-		targets[(nint)color] = new Target(framebuffer, color, renderbuffer, width, height);
+		targets[(nint)color] = created;
 		return (nint)color;
 	}
 
@@ -169,7 +490,7 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		// already showing stays valid and the framebuffer stays attached to the same objects.
 		int previousTexture = gl.GetInteger(GLEnum.TextureBinding2D);
 		gl.BindTexture(GLEnum.Texture2D, existing.Color);
-		gl.TexImage2DEmpty(GLEnum.Texture2D, GLEnum.Rgba8, width, height);
+		gl.TexImage2DEmpty(GLEnum.Texture2D, existing.InternalFormat, width, height);
 		gl.BindTexture(GLEnum.Texture2D, (uint)previousTexture);
 
 		if (existing.Depth != 0)
@@ -307,7 +628,207 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		}
 	}
 
-	/// <summary>Releases every target and the program, buffers and vertex array behind them.</summary>
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">Either handle is not a live render target, or they are the same target.</exception>
+	public void ToneMap(nint source, nint destination, in ToneMap3D toneMap)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Target from = Resolve(source);
+		Target to = Resolve(destination);
+		if (source == destination)
+		{
+			throw new ArgumentException("A target cannot be tone-mapped into itself.", nameof(destination));
+		}
+
+		EnsureToneMapResources();
+
+		SavedState saved = SavedState.Capture(gl);
+		try
+		{
+			gl.BindFramebuffer(GLEnum.Framebuffer, to.Framebuffer);
+			gl.Viewport(0, 0, to.Width, to.Height);
+			gl.Disable(GLEnum.ScissorTest);
+			gl.Disable(GLEnum.DepthTest);
+			gl.Disable(GLEnum.CullFace);
+			gl.Disable(GLEnum.Blend);
+
+			gl.UseProgram(toneMapProgram);
+			gl.Uniform1(toneMapSourceLocation, 0);
+			gl.Uniform1(toneMapExposureLocation, toneMap.Exposure);
+			gl.Uniform1(toneMapPowerLocation, toneMap.Power);
+			gl.Uniform1(toneMapCurveLocation, (int)toneMap.Curve);
+			gl.Uniform1(toneMapPreserveHueLocation, toneMap.PreserveHue ? 1 : 0);
+
+			gl.ActiveTexture(GLEnum.Texture0);
+			gl.BindSampler(0, 0);
+			gl.BindTexture(GLEnum.Texture2D, from.Color);
+
+			// A vertex array must be bound to draw in a core profile, even with no attributes.
+			gl.BindVertexArray(toneMapVertexArray);
+			gl.DrawArrays(GLEnum.Triangles, 0, 3);
+		}
+		finally
+		{
+			saved.Restore(gl);
+		}
+	}
+
+	/// <summary>Gets whether this renderer supports volume textures: it does.</summary>
+	public bool SupportsVolumes => true;
+
+	/// <summary>Whether an id is a volume texture this renderer issued.</summary>
+	/// <param name="id">The id to test.</param>
+	/// <returns><see langword="true"/> if it belongs to a live volume.</returns>
+	public bool IsVolume(nint id) => volumes.ContainsKey(id);
+
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">The span is the wrong length, or the channel count is not 1 or 4.</exception>
+	public nint CreateVolumeTexture(int width, int height, int depth, int channels, ReadOnlySpan<Half> values)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(depth);
+		if (channels is not (1 or 4))
+		{
+			throw new ArgumentException($"A volume has 1 or 4 channels, not {channels}.", nameof(channels));
+		}
+
+		if (values.Length != width * height * depth * channels)
+		{
+			throw new ArgumentException($"Expected {width * height * depth * channels} values, got {values.Length}.", nameof(values));
+		}
+
+		int previousTexture = gl.GetInteger(GLEnum.TextureBinding3D);
+		int previousAlignment = gl.GetInteger(GLEnum.UnpackAlignment);
+
+		uint texture = gl.GenTexture();
+		gl.BindTexture(GLEnum.Texture3D, texture);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureMinFilter, (int)GLEnum.Linear);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureMagFilter, (int)GLEnum.Linear);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureWrapS, (int)GLEnum.ClampToEdge);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureWrapT, (int)GLEnum.ClampToEdge);
+		gl.TexParameter(GLEnum.Texture3D, GLEnum.TextureWrapR, (int)GLEnum.ClampToEdge);
+
+		// Rows of two-byte texels are not four-byte aligned when the width is odd.
+		gl.PixelStore(GLEnum.UnpackAlignment, 1);
+		gl.TexImage3D(
+			GLEnum.Texture3D,
+			channels == 1 ? GLEnum.R16f : GLEnum.Rgba16f,
+			width,
+			height,
+			depth,
+			channels == 1 ? GLEnum.Red : GLEnum.Rgba,
+			GLEnum.HalfFloat,
+			MemoryMarshal.AsBytes(values));
+		gl.PixelStore(GLEnum.UnpackAlignment, previousAlignment);
+		gl.BindTexture(GLEnum.Texture3D, (uint)previousTexture);
+
+		volumes[(nint)texture] = new Volume(texture, width, height, depth, channels);
+		return (nint)texture;
+	}
+
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">The handle is not a live volume.</exception>
+	public void DeleteVolumeTexture(nint volume)
+	{
+		if (!volumes.Remove(volume, out Volume? existing))
+		{
+			throw new ArgumentException($"{volume} is not a volume texture.", nameof(volume));
+		}
+
+		gl.DeleteTexture(existing.Texture);
+	}
+
+	/// <inheritdoc />
+	/// <exception cref="ArgumentException">Either handle is unknown.</exception>
+	public void DrawVolume(nint target, nint volume, in VolumeDrawState state)
+	{
+		ObjectDisposedException.ThrowIf(disposed, this);
+		Target to = Resolve(target);
+		if (!volumes.TryGetValue(volume, out Volume? from))
+		{
+			throw new ArgumentException($"No volume texture with handle {volume}.", nameof(volume));
+		}
+
+		Volume? detail = null;
+		if (state.DetailMap != 0 && !volumes.TryGetValue(state.DetailMap, out detail))
+		{
+			throw new ArgumentException($"No volume texture with handle {state.DetailMap} for the detail map.", nameof(state));
+		}
+
+		if (!Matrix4x4.Invert(state.ViewProjection, out Matrix4x4 clipToWorld) || !Matrix4x4.Invert(state.VolumeToWorld, out Matrix4x4 worldToVolume))
+		{
+			return;
+		}
+
+		EnsureVolumeResources();
+
+		SavedState saved = SavedState.Capture(gl);
+		try
+		{
+			gl.BindFramebuffer(GLEnum.Framebuffer, to.Framebuffer);
+			gl.Viewport(0, 0, to.Width, to.Height);
+			gl.Disable(GLEnum.ScissorTest);
+			gl.Disable(GLEnum.DepthTest);
+			gl.Disable(GLEnum.CullFace);
+			ApplyBlend(state.Blend);
+
+			gl.UseProgram(volumeProgram);
+			gl.Uniform1(volumeSamplerLocation, 0);
+			gl.UniformMatrix4(volumeClipToWorldLocation, MemoryMarshal.CreateReadOnlySpan(ref clipToWorld.M11, 16));
+			gl.UniformMatrix4(volumeWorldToVolumeLocation, MemoryMarshal.CreateReadOnlySpan(ref worldToVolume.M11, 16));
+			gl.Uniform3(volumeEyeLocation, state.Eye.X, state.Eye.Y, state.Eye.Z);
+			gl.Uniform4(volumeColorLocation, state.Color.X, state.Color.Y, state.Color.Z, state.Color.W);
+			gl.Uniform4(volumeColor1Location, state.Color1.X, state.Color1.Y, state.Color1.Z, state.Color1.W);
+			gl.Uniform4(volumeColor2Location, state.Color2.X, state.Color2.Y, state.Color2.Z, state.Color2.W);
+			gl.Uniform4(volumeColor3Location, state.Color3.X, state.Color3.Y, state.Color3.Z, state.Color3.W);
+			gl.Uniform4(volumeExtinctionLocation, state.Extinction.X, state.Extinction.Y, state.Extinction.Z, state.Extinction.W);
+			Vector4 noiseWeights = state.EffectiveNoiseWeights;
+			gl.Uniform4(volumeNoiseWeightsLocation, noiseWeights.X, noiseWeights.Y, noiseWeights.Z, noiseWeights.W);
+			gl.Uniform1(volumeDetailMapLocation, 1);
+			gl.Uniform1(volumeHasDetailLocation, detail is null ? 0 : 1);
+			gl.Uniform1(volumeDetailFadeHeightLocation, state.DetailFadeHeight);
+			gl.Uniform1(volumePlaneScaleLocation, new Vector3(state.VolumeToWorld.M31, state.VolumeToWorld.M32, state.VolumeToWorld.M33).Length());
+			gl.Uniform1(volumeChannelsLocation, from.Channels);
+			gl.Uniform1(volumeFadeStartLocation, state.FadeInStart);
+			gl.Uniform1(volumeFadeEndLocation, state.FadeInEnd);
+			gl.Uniform1(volumeSamplesPerVoxelLocation, state.EffectiveSamplesPerVoxel);
+			gl.Uniform1(volumeMaxSamplesLocation, state.EffectiveMaxSamples);
+			gl.Uniform3(volumeSizeLocation, from.Width, from.Height, from.Depth);
+			gl.Uniform4(volumeTargetSizeLocation, to.Width, to.Height, 0f, 0f);
+			gl.Uniform1(volumeAdditiveLocation, state.Blend == BlendMode.Additive ? 1 : 0);
+			gl.Uniform1(volumePremultipliedLocation, state.Blend == BlendMode.Premultiplied ? 1 : 0);
+			gl.Uniform1(volumeLowNoiseAmplitudeLocation, state.LowNoiseAmplitude);
+			gl.Uniform1(volumeLowNoiseScaleLocation, state.LowNoiseScale);
+			gl.Uniform1(volumeHighNoiseAmplitudeLocation, state.HighNoiseAmplitude);
+			gl.Uniform1(volumeHighNoiseScaleLocation, state.HighNoiseScale);
+			gl.Uniform3(volumeNoiseOffsetLocation, state.NoiseOffset.X, state.NoiseOffset.Y, state.NoiseOffset.Z);
+			Vector3 noiseStretch = state.EffectiveNoiseStretch;
+			gl.Uniform3(volumeNoiseStretchLocation, noiseStretch.X, noiseStretch.Y, noiseStretch.Z);
+			gl.Uniform1(volumePixelAngleLocation, state.PixelAngle);
+
+			gl.ActiveTexture(GLEnum.Texture0);
+			gl.BindSampler(0, 0);
+			gl.BindTexture(GLEnum.Texture3D, from.Texture);
+			if (detail is not null)
+			{
+				gl.ActiveTexture(GLEnum.Texture1);
+				gl.BindSampler(1, 0);
+				gl.BindTexture(GLEnum.Texture3D, detail.Texture);
+				gl.ActiveTexture(GLEnum.Texture0);
+			}
+
+			gl.BindVertexArray(volumeVertexArray);
+			gl.DrawArrays(GLEnum.Triangles, 0, 3);
+		}
+		finally
+		{
+			saved.Restore(gl);
+		}
+	}
+
+	/// <summary>Releases every target and the programs, buffers and vertex arrays behind them.</summary>
 	public void Dispose()
 	{
 		if (disposed)
@@ -322,6 +843,19 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 		targets.Clear();
 
+		foreach (Volume volume in volumes.Values)
+		{
+			gl.DeleteTexture(volume.Texture);
+		}
+
+		volumes.Clear();
+
+		if (volumeProgram != 0)
+		{
+			gl.DeleteProgram(volumeProgram);
+			gl.DeleteVertexArray(volumeVertexArray);
+		}
+
 		if (program != 0)
 		{
 			gl.DeleteProgram(program);
@@ -330,7 +864,79 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.DeleteBuffer(indexBuffer);
 		}
 
+		if (toneMapProgram != 0)
+		{
+			gl.DeleteProgram(toneMapProgram);
+			gl.DeleteVertexArray(toneMapVertexArray);
+		}
+
 		disposed = true;
+	}
+
+	private static GLEnum InternalFormatOf(RenderTargetFormat format) => format switch
+	{
+		RenderTargetFormat.Rgba8 => GLEnum.Rgba8,
+		RenderTargetFormat.Rgba16F => GLEnum.Rgba16f,
+		_ => throw new NotSupportedException($"No OpenGL storage for {format}."),
+	};
+
+	/// <summary>Creates the volume program and its empty vertex array the first time a volume is drawn.</summary>
+	private void EnsureVolumeResources()
+	{
+		if (volumeProgram != 0)
+		{
+			return;
+		}
+
+		volumeProgram = gl.CreateProgram(ToneMapVertexSource, VolumeFragmentSource);
+		volumeSamplerLocation = gl.GetUniformLocation(volumeProgram, "Volume");
+		volumeClipToWorldLocation = gl.GetUniformLocation(volumeProgram, "ClipToWorld");
+		volumeWorldToVolumeLocation = gl.GetUniformLocation(volumeProgram, "WorldToVolume");
+		volumeEyeLocation = gl.GetUniformLocation(volumeProgram, "Eye");
+		volumeColorLocation = gl.GetUniformLocation(volumeProgram, "Color");
+		volumeColor1Location = gl.GetUniformLocation(volumeProgram, "Color1");
+		volumeColor2Location = gl.GetUniformLocation(volumeProgram, "Color2");
+		volumeColor3Location = gl.GetUniformLocation(volumeProgram, "Color3");
+		volumeExtinctionLocation = gl.GetUniformLocation(volumeProgram, "Extinction");
+		volumeChannelsLocation = gl.GetUniformLocation(volumeProgram, "Channels");
+		volumeNoiseWeightsLocation = gl.GetUniformLocation(volumeProgram, "NoiseWeights");
+		volumeDetailMapLocation = gl.GetUniformLocation(volumeProgram, "DetailMap");
+		volumeHasDetailLocation = gl.GetUniformLocation(volumeProgram, "HasDetail");
+		volumeDetailFadeHeightLocation = gl.GetUniformLocation(volumeProgram, "DetailFadeHeight");
+		volumePlaneScaleLocation = gl.GetUniformLocation(volumeProgram, "PlaneScale");
+		volumeFadeStartLocation = gl.GetUniformLocation(volumeProgram, "FadeStart");
+		volumeFadeEndLocation = gl.GetUniformLocation(volumeProgram, "FadeEnd");
+		volumeSamplesPerVoxelLocation = gl.GetUniformLocation(volumeProgram, "SamplesPerVoxel");
+		volumeMaxSamplesLocation = gl.GetUniformLocation(volumeProgram, "MaxSamples");
+		volumeSizeLocation = gl.GetUniformLocation(volumeProgram, "VolumeSize");
+		volumeTargetSizeLocation = gl.GetUniformLocation(volumeProgram, "TargetSize");
+		volumeAdditiveLocation = gl.GetUniformLocation(volumeProgram, "Additive");
+		volumePremultipliedLocation = gl.GetUniformLocation(volumeProgram, "Premultiplied");
+		volumeLowNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "LowNoiseAmplitude");
+		volumeLowNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "LowNoiseScale");
+		volumeHighNoiseAmplitudeLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseAmplitude");
+		volumeHighNoiseScaleLocation = gl.GetUniformLocation(volumeProgram, "HighNoiseScale");
+		volumeNoiseOffsetLocation = gl.GetUniformLocation(volumeProgram, "NoiseOffset");
+		volumeNoiseStretchLocation = gl.GetUniformLocation(volumeProgram, "NoiseStretch");
+		volumePixelAngleLocation = gl.GetUniformLocation(volumeProgram, "PixelAngle");
+		volumeVertexArray = gl.GenVertexArray();
+	}
+
+	/// <summary>Creates the tone-map program and its empty vertex array the first time a tone map is asked for.</summary>
+	private void EnsureToneMapResources()
+	{
+		if (toneMapProgram != 0)
+		{
+			return;
+		}
+
+		toneMapProgram = gl.CreateProgram(ToneMapVertexSource, ToneMapFragmentSource);
+		toneMapSourceLocation = gl.GetUniformLocation(toneMapProgram, "Source");
+		toneMapExposureLocation = gl.GetUniformLocation(toneMapProgram, "Exposure");
+		toneMapPowerLocation = gl.GetUniformLocation(toneMapProgram, "Power");
+		toneMapCurveLocation = gl.GetUniformLocation(toneMapProgram, "Curve");
+		toneMapPreserveHueLocation = gl.GetUniformLocation(toneMapProgram, "PreserveHue");
+		toneMapVertexArray = gl.GenVertexArray();
 	}
 
 	/// <summary>
@@ -417,6 +1023,20 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 
 		gl.Enable(GLEnum.Blend);
 		gl.BlendEquationSeparate(GLEnum.FuncAdd, GLEnum.FuncAdd);
+		if (mode == BlendMode.Additive)
+		{
+			// Colour accumulates scaled by its alpha; alpha accumulates as coverage.
+			gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.One, GLEnum.One, GLEnum.One);
+			return;
+		}
+
+		if (mode == BlendMode.Premultiplied)
+		{
+			// The source colour is already weighted; the destination is dimmed by what the source covers.
+			gl.BlendFuncSeparate(GLEnum.One, GLEnum.OneMinusSrcAlpha, GLEnum.One, GLEnum.OneMinusSrcAlpha);
+			return;
+		}
+
 		gl.BlendFuncSeparate(GLEnum.SrcAlpha, GLEnum.OneMinusSrcAlpha, GLEnum.One, GLEnum.OneMinusSrcAlpha);
 	}
 
@@ -450,8 +1070,14 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		gl.DeleteTexture(target.Color);
 	}
 
-	/// <summary>A framebuffer, its colour texture and its optional depth renderbuffer (zero when absent).</summary>
-	private sealed record Target(uint Framebuffer, uint Color, uint Depth, int Width, int Height);
+	/// <summary>
+	/// A framebuffer, its colour texture and its optional depth renderbuffer (zero when absent), and
+	/// the colour texture's storage format, which a resize respecifies it with.
+	/// </summary>
+	private sealed record Target(uint Framebuffer, uint Color, uint Depth, int Width, int Height, GLEnum InternalFormat);
+
+	/// <summary>A volume texture and its size in voxels.</summary>
+	private sealed record Volume(uint Texture, int Width, int Height, int Depth, int Channels);
 
 	/// <summary>
 	/// Everything <see cref="Clear"/> and <see cref="Draw"/> may change, captured beforehand and put
@@ -466,7 +1092,10 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 		private readonly int program;
 		private readonly int activeTexture;
 		private readonly int texture;
+		private readonly int texture3D;
 		private readonly int sampler;
+		private readonly int texture3DUnit1;
+		private readonly int samplerUnit1;
 		private readonly int vertexArray;
 		private readonly int arrayBuffer;
 		private readonly int depthMask;
@@ -494,9 +1123,14 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			program = gl.GetInteger(GLEnum.CurrentProgram);
 			activeTexture = gl.GetInteger(GLEnum.ActiveTexture);
 
-			// The texture and sampler bindings are per unit; this renderer only ever uses unit 0.
+			// The texture and sampler bindings are per unit; this renderer uses unit 0, and unit 1 for a
+			// volume's detail map.
+			gl.ActiveTexture(GLEnum.Texture1);
+			texture3DUnit1 = gl.GetInteger(GLEnum.TextureBinding3D);
+			samplerUnit1 = gl.GetInteger(GLEnum.SamplerBinding);
 			gl.ActiveTexture(GLEnum.Texture0);
 			texture = gl.GetInteger(GLEnum.TextureBinding2D);
+			texture3D = gl.GetInteger(GLEnum.TextureBinding3D);
 			sampler = gl.GetInteger(GLEnum.SamplerBinding);
 
 			vertexArray = gl.GetInteger(GLEnum.VertexArrayBinding);
@@ -532,8 +1166,12 @@ internal sealed class GLRenderer3D(IGL3D gl) : IRenderer3D, IDisposable
 			gl.BindFramebuffer(GLEnum.ReadFramebuffer, (uint)readFramebuffer);
 			gl.UseProgram((uint)program);
 
+			gl.ActiveTexture(GLEnum.Texture1);
+			gl.BindTexture(GLEnum.Texture3D, (uint)texture3DUnit1);
+			gl.BindSampler(1, (uint)samplerUnit1);
 			gl.ActiveTexture(GLEnum.Texture0);
 			gl.BindTexture(GLEnum.Texture2D, (uint)texture);
+			gl.BindTexture(GLEnum.Texture3D, (uint)texture3D);
 			gl.BindSampler(0, (uint)sampler);
 			gl.ActiveTexture((GLEnum)activeTexture);
 
