@@ -1,11 +1,6 @@
-## v3.80.0 (minor)
+## v3.80.1-pre.1 (prerelease)
 
-Changes since v3.79.0:
+Changes since v3.80.0:
 
-- Add a SessionStart hook for Claude Code cloud sessions (#713) (matt-edmondson)
-- Use Path.Join for the temporary PNG path in PngEncoderTests (Claude)
-- [minor] Move image decoding into ktsu.Imaging (Claude)
-- Read C++ raw string literals as one string [minor] (#742) (matt-edmondson)
-- Read HTML script and style bodies as text up to their closing tag [minor] (#741) (matt-edmondson)
-- Keep a backslashed quote inside a Python raw string [minor] (#740) (matt-edmondson)
+- Bump MSTest.Sdk from 4.5.2 to 4.5.3 (#756) (dependabot[bot])
 
