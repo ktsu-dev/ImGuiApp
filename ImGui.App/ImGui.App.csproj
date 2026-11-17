@@ -64,6 +64,7 @@
     <PackageReference Include="Silk.NET.Windowing" />
     <PackageReference Include="Silk.NET.Windowing.Common" />
     <PackageReference Include="Silk.NET.Windowing.Sdl" />
+    <PackageReference Include="System.Text.Json" VersionOverride="11.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
