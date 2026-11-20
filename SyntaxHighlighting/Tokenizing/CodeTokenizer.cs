@@ -55,7 +55,7 @@ internal static class CodeTokenizer
 				|| TryReadLineComment(source, lookup, ref index, out kind, out body)
 				|| TryReadString(source, lookup, ref index, out kind, out body)
 				|| TryReadDirective(source, language, ref index, out kind, out body)
-				|| TryReadNumber(source, ref index, out kind, out body)
+				|| TryReadNumber(source, language, ref index, out kind, out body)
 				|| TryReadIdentifier(source, language, lookup, ref index, out kind, out body)
 				|| TryReadSymbol(source, language, ref index, out kind, out body))
 			{
@@ -424,7 +424,7 @@ internal static class CodeTokenizer
 		return scan < 0 || source[scan] == '\n';
 	}
 
-	private static bool TryReadNumber(string source, ref int index, out TokenKind kind, out TokenBody body)
+	private static bool TryReadNumber(string source, LanguageDefinition language, ref int index, out TokenKind kind, out TokenBody body)
 	{
 		kind = TokenKind.Number;
 		body = TokenBody.None;
@@ -445,8 +445,12 @@ internal static class CodeTokenizer
 				&& (c == '+' || c == '-')
 				&& (source[scan - 1] == 'e' || source[scan - 1] == 'E');
 			bool fraction = c == '.' && scan + 1 < source.Length && char.IsAsciiDigit(source[scan + 1]);
+			bool separator = c == language.DigitSeparator
+				&& scan + 1 < source.Length
+				&& IsDigitOfBase(source[scan - 1], hex)
+				&& IsDigitOfBase(source[scan + 1], hex);
 
-			if (char.IsAsciiLetterOrDigit(c) || c == '_' || fraction || exponentSign)
+			if (char.IsAsciiLetterOrDigit(c) || c == '_' || fraction || exponentSign || separator)
 			{
 				scan++;
 				continue;
@@ -458,6 +462,10 @@ internal static class CodeTokenizer
 		index = scan;
 		return true;
 	}
+
+	// A digit separator joins two digits of the literal's base, so 0xFF'FF continues over hex letters
+	// while 1'a' (a number, then a character literal) does not.
+	private static bool IsDigitOfBase(char c, bool hex) => hex ? char.IsAsciiHexDigit(c) : char.IsAsciiDigit(c);
 
 	private static bool TryReadIdentifier(string source, LanguageDefinition language, KeywordLookup lookup, ref int index, out TokenKind kind, out TokenBody body)
 	{

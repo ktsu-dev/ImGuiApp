@@ -98,6 +98,7 @@ public static class BuiltInLanguages
 		Types = ["bool", "char", "double", "float", "int", "long", "short", "size_t", "void"],
 		Constants = ["NULL", "true", "false"],
 		DirectivePrefix = '#',
+		DigitSeparator = '\'',
 		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 
@@ -125,6 +126,7 @@ public static class BuiltInLanguages
 		Types = ["bool", "char", "double", "float", "int", "long", "short", "signed", "size_t", "void", "wchar_t"],
 		Constants = ["true", "false", "nullptr", "NULL"],
 		DirectivePrefix = '#',
+		DigitSeparator = '\'',
 		EmbeddedLanguages = BuiltInEmbeddedRules.Default,
 	};
 

@@ -108,6 +108,8 @@ A block comment whose close overlaps its own opener at the match position, as `*
 
 `StringRule.CloseRepeatsDelimiter` reads a delimiter of up to 16 characters and `(` after the opener, and closes only on `)`, that delimiter and the rule's close, which is how C++ raw strings work (`R"x( … )x"` is not closed by `)"`). The C++ definition uses it for `R"`, `u8R"`, `uR"`, `UR"` and `LR"`.
 
+`LanguageDefinition.DigitSeparator` names a character that may sit between two digits of a numeric literal, which is how C and C++ read `'` (`1'000'000`, `0xFF'FF'00'00u`). It joins the number only with a digit of the literal's base on both sides, so the character literal in `f(1,'a')` still opens a string.
+
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
