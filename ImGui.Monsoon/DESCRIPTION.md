@@ -1,0 +1,1 @@
+A neon-noir theme and widget library for Dear ImGui: magenta, cyan and amber light on blue-black, translucent glass panels with rain running down them, glitching and flickering text, dense data readouts, a targeting grid, and katakana signs drawn as vector neon tubes so no CJK font is needed.
