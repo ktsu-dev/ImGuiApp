@@ -108,9 +108,12 @@ A block comment whose close overlaps its own opener at the match position, as `*
 
 `StringRule.CloseRepeatsDelimiter` reads a delimiter of up to 16 characters and `(` after the opener, and closes only on `)`, that delimiter and the rule's close, which is how C++ raw strings work (`R"x( … )x"` is not closed by `)"`). The C++ definition uses it for `R"`, `u8R"`, `uR"`, `UR"` and `LR"`.
 
+`LanguageDefinition.RegexLiterals` lets a `/` open a regular-expression literal where a value is expected: at the start, after an operator, after punctuation other than `)`, `]` and `}`, or after a keyword such as `return` or `typeof`. After an identifier, number, string or closing bracket it divides. The literal runs to the next unescaped `/` outside a `[...]` class on the same line and takes its flags, so `/\/*$/` and `/"/` open no comment or string. JavaScript and TypeScript set it.
+
 ## Limitations
 
 - Highlighting is lexical, not semantic: user-defined type names are not distinguished from other identifiers, and a call is recognized by the `(` that follows it
+- A JavaScript `/` after `}` is read as division, so a regex literal that starts a statement after a block (`} /x/.test(s)`) is not recognized
 - Embedding is one level deep and is not applied by the markup tokenizer. `<script>` and `<style>` bodies inside HTML (`LanguageDefinition.RawTextElements`) are read as plain text up to their own closing tag, not highlighted as JavaScript or CSS
 - Doc comments written one `///` line at a time are tokenized a line at a time, so an XML construct split across lines is classified per line
 - Lines are not wrapped and nothing is drawn; this classifies code, a renderer decides what to do with it
