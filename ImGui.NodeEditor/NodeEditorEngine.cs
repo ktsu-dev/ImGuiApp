@@ -447,7 +447,8 @@ public partial class NodeEditorEngine
 	/// <returns>The new nodes, in the order their originals were named.</returns>
 	/// <remarks>
 	/// A link is copied when <em>both</em> of its ends are being copied, so duplicating a connected
-	/// pair gives a connected pair rather than two loose nodes. A link with one end outside the set
+	/// pair gives a connected pair rather than two loose nodes. Every such link is copied, including
+	/// one into a pin narrowed by <see cref="SetPinAllowsMultipleConnections"/> after it was drawn. A link with one end outside the set
 	/// is not copied: the copy is a new node, and quietly fanning the original's input into it would
 	/// change what the graph computes without the user asking for it.
 	/// <para>
@@ -535,10 +536,12 @@ public partial class NodeEditorEngine
 
 		foreach (Link link in internalLinks)
 		{
-			// Through TryCreateLink rather than around it, so a copied link is subject to the same
-			// rules as one the user drew. Both ends are pins that did not exist a moment ago, so it
-			// cannot fail; going through the front door is what keeps that true if the rules change.
-			TryCreateLink(originalPinToCopiedPin[link.OutputPinId], originalPinToCopiedPin[link.InputPinId]);
+			// Around TryCreateLink rather than through it, as RestoreLink does: this link was accepted
+			// once already, and copying it is not a new decision. Its rules can refuse a link the
+			// original legitimately holds - SetPinAllowsMultipleConnections narrows a pin without
+			// dropping the links it has, so an input can hold two links while accepting one, and the
+			// copied pin inherits the narrowed limit.
+			links.Add(new Link(nextLinkId++, originalPinToCopiedPin[link.OutputPinId], originalPinToCopiedPin[link.InputPinId]));
 		}
 
 		return copies;
