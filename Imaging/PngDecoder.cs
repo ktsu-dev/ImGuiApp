@@ -279,6 +279,14 @@ internal static class PngDecoder
 
 	private static byte[] Inflate(MemoryStream compressed, int expectedLength)
 	{
+		// PNG forbids a preset dictionary (FDICT, bit 5 of the second zlib header byte). zlib would
+		// answer it with Z_NEED_DICT, which .NET reports as a ZLibException, an IOException rather
+		// than an InvalidDataException, so reject it here as malformed like any other bad stream.
+		if (compressed.Length >= 2 && (compressed.GetBuffer()[1] & 0x20) != 0)
+		{
+			throw new InvalidImageDataException("PNG image data uses a preset dictionary, which PNG does not allow.");
+		}
+
 		compressed.Position = 0;
 		byte[] result = new byte[expectedLength];
 		try
