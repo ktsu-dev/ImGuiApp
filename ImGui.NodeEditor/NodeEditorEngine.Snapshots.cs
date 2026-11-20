@@ -151,8 +151,9 @@ public partial class NodeEditorEngine
 	}
 
 	/// <summary>
-	/// Put a node's own fields back — where it is, what it is called, whether it is pinned, and its
-	/// pins' capacity — leaving what the layout and the renderer measure alone.
+	/// Put a node's own fields back — what it is called, whether it is pinned, and its pins' capacity —
+	/// leaving its position and what the layout and the renderer measure alone. A step that moved the
+	/// node records the move separately, and puts the position back with <see cref="UpdateNodePosition"/>.
 	/// </summary>
 	/// <param name="state">The node as it should be.</param>
 	/// <returns>True if the node exists.</returns>
@@ -167,7 +168,6 @@ public partial class NodeEditorEngine
 		Node current = nodes[index];
 		nodes[index] = current with
 		{
-			Position = state.Position,
 			Name = state.Name,
 			IsPinned = state.IsPinned,
 			InputPins = [.. state.InputPins],
