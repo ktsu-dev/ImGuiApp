@@ -1,0 +1,1 @@
+A starship-console look for Dear ImGui, inspired by LCARS-style interfaces: a black-backed theme with warm pastel accents, and widgets drawn from rounded end caps, elbows, pill buttons, segmented gauges and framed panels.
