@@ -63,19 +63,37 @@ public static class PixelConverter
 	/// <summary>
 	/// Writes <paramref name="source"/> into <paramref name="destination"/> as tightly packed RGBA8.
 	/// </summary>
-	/// <param name="source">The source pixels, already checked by <see cref="Validate"/>.</param>
+	/// <param name="source">The source pixels.</param>
 	/// <param name="width">Width in pixels.</param>
 	/// <param name="height">Height in pixels.</param>
 	/// <param name="layout">The source's pixel layout.</param>
-	/// <param name="stride">The effective row stride returned by <see cref="Validate"/>.</param>
+	/// <param name="stride">
+	/// Bytes from the start of one row to the start of the next, or 0 for tightly packed rows, as for
+	/// <see cref="Validate"/>.
+	/// </param>
 	/// <param name="destination">At least <paramref name="width"/> * <paramref name="height"/> * 4 bytes.</param>
+	/// <remarks>The source is checked by <see cref="Validate"/> first, so it throws what that throws.</remarks>
+	/// <exception cref="ArgumentOutOfRangeException">
+	/// A dimension is not positive, the layout is unknown, or the stride is negative or shorter than a row of pixels.
+	/// </exception>
+	/// <exception cref="ArgumentException">
+	/// <paramref name="source"/> is too short for the geometry, or <paramref name="destination"/> is shorter
+	/// than <paramref name="width"/> * <paramref name="height"/> * 4 bytes.
+	/// </exception>
 	public static void ToRgba8(ReadOnlySpan<byte> source, int width, int height, PixelLayout layout, int stride, Span<byte> destination)
 	{
-		int bytesPerPixel = BytesPerPixel(layout);
-		int destinationRowBytes = width * 4;
+		int rowStride = Validate(source, width, height, layout, stride);
+		int destinationRowBytes = checked(width * 4);
+		long required = (long)destinationRowBytes * height;
+		if (destination.Length < required)
+		{
+			throw new ArgumentException($"Expected at least {required} bytes for {width}x{height} RGBA8 pixels but got {destination.Length}.", nameof(destination));
+		}
+
+		int sourceRowBytes = width * BytesPerPixel(layout);
 		for (int y = 0; y < height; y++)
 		{
-			ReadOnlySpan<byte> sourceRow = source.Slice(y * stride, width * bytesPerPixel);
+			ReadOnlySpan<byte> sourceRow = source.Slice(y * rowStride, sourceRowBytes);
 			Span<byte> destinationRow = destination.Slice(y * destinationRowBytes, destinationRowBytes);
 			ConvertRow(sourceRow, destinationRow, layout);
 		}

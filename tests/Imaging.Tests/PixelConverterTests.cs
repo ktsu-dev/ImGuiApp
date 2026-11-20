@@ -111,4 +111,50 @@ public class PixelConverterTests
 	{
 		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PixelConverter.Validate(new byte[4], 1, 1, (PixelLayout)99, 0));
 	}
+
+	// Two rows of two pixels, every pixel different, in each layout's own byte order. Converted, every
+	// layout gives the four pixels below (alpha is opaque wherever the layout has none).
+	[TestMethod]
+	[DataRow(PixelLayout.Rgba8, new byte[] { 1, 2, 3, 255, 4, 5, 6, 255, 7, 8, 9, 255, 10, 11, 12, 255 })]
+	[DataRow(PixelLayout.Bgra8, new byte[] { 3, 2, 1, 255, 6, 5, 4, 255, 9, 8, 7, 255, 12, 11, 10, 255 })]
+	[DataRow(PixelLayout.Rgb8, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 })]
+	[DataRow(PixelLayout.Bgr8, new byte[] { 3, 2, 1, 6, 5, 4, 9, 8, 7, 12, 11, 10 })]
+	public void ToRgba8_WithAZeroStride_ReadsTightlyPackedRows(PixelLayout layout, byte[] source)
+	{
+		byte[] destination = new byte[16];
+
+		PixelConverter.ToRgba8(source, 2, 2, layout, 0, destination);
+
+		Assert.AreSequenceEqual(new byte[] { 1, 2, 3, 255, 4, 5, 6, 255, 7, 8, 9, 255, 10, 11, 12, 255 }, destination);
+	}
+
+	[TestMethod]
+	public void ToRgba8_WithAZeroStride_ReadsTightlyPackedGray8Rows()
+	{
+		byte[] destination = new byte[16];
+
+		PixelConverter.ToRgba8([1, 2, 3, 4], 2, 2, PixelLayout.Gray8, 0, destination);
+
+		Assert.AreSequenceEqual(new byte[] { 1, 1, 1, 255, 2, 2, 2, 255, 3, 3, 3, 255, 4, 4, 4, 255 }, destination);
+	}
+
+	[TestMethod]
+	public void ToRgba8_RejectsAStrideShorterThanARow()
+	{
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PixelConverter.ToRgba8(new byte[16], 2, 2, PixelLayout.Rgba8, 4, new byte[16]));
+	}
+
+	[TestMethod]
+	public void ToRgba8_RejectsATooShortSource()
+	{
+		Assert.ThrowsExactly<ArgumentException>(() => PixelConverter.ToRgba8(new byte[15], 2, 2, PixelLayout.Rgba8, 0, new byte[16]));
+	}
+
+	[TestMethod]
+	public void ToRgba8_RejectsATooShortDestinationByName()
+	{
+		ArgumentException thrown = Assert.ThrowsExactly<ArgumentException>(() => PixelConverter.ToRgba8(new byte[16], 2, 2, PixelLayout.Rgba8, 0, new byte[15]));
+
+		Assert.AreEqual("destination", thrown.ParamName);
+	}
 }
